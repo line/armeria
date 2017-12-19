@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -73,7 +73,6 @@ final class DefaultPathMapping extends AbstractPathMapping {
     private final Set<String> paramNames;
 
     private final String loggerName;
-    private final String metricName;
 
     /**
      * Create a {@link DefaultPathMapping} instance from given {@code pathPattern}.
@@ -127,7 +126,6 @@ final class DefaultPathMapping extends AbstractPathMapping {
         this.paramNames = ImmutableSet.copyOf(paramNames);
 
         loggerName = loggerName(pathPattern);
-        metricName = pathPattern;
     }
 
     /**
@@ -169,8 +167,8 @@ final class DefaultPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricName() {
-        return metricName;
+    public String meterTag() {
+        return pathPattern;
     }
 
     @Override

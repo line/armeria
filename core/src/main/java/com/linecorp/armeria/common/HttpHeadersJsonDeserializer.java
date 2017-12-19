@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -49,7 +49,7 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
             throws IOException {
         final JsonNode tree = p.getCodec().readTree(p);
         if (!tree.isObject()) {
-            ctx.reportMappingException("HTTP headers must be an object.");
+            ctx.reportInputMismatch(HttpHeaders.class, "HTTP headers must be an object.");
             return null;
         }
 
@@ -78,8 +78,9 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
     private static void addHeader(DeserializationContext ctx, HttpHeaders headers,
                                   AsciiString name, JsonNode valueNode) throws JsonMappingException {
         if (!valueNode.isTextual()) {
-            ctx.reportMappingException("HTTP header '%s' contains %s (%s); only strings are allowed.",
-                                       name, valueNode.getNodeType(), valueNode);
+            ctx.reportInputMismatch(HttpHeaders.class,
+                                    "HTTP header '%s' contains %s (%s); only strings are allowed.",
+                                    name, valueNode.getNodeType(), valueNode);
         }
 
         headers.add(name, valueNode.asText());

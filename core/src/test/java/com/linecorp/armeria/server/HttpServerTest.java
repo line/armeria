@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -38,6 +38,9 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
@@ -77,13 +80,13 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -104,6 +107,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
+import io.netty.util.NetUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -154,49 +158,89 @@ public class HttpServerTest {
 
             sb.service("/delay/{delay}", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                    ctx.eventLoop().schedule(() -> res.respond(HttpStatus.OK),
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    HttpResponse res = HttpResponse.from(responseFuture);
+                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
                                              delayMillis, TimeUnit.MILLISECONDS);
+                    return res;
+                }
+            });
+
+            sb.service("/delay-deferred/{delay}", new HttpService() {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    HttpResponse res = HttpResponse.from(responseFuture);
+                    final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
+                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
+                                             delayMillis, TimeUnit.MILLISECONDS);
+                    return res;
                 }
             });
 
             sb.service("/delay-custom/{delay}", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    HttpResponse res = HttpResponse.from(responseFuture);
                     ctx.setRequestTimeoutHandler(
-                            () -> res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out"));
+                            () -> responseFuture.complete(
+                                    HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                    ctx.eventLoop().schedule(() -> res.respond(HttpStatus.OK),
+                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
                                              delayMillis, TimeUnit.MILLISECONDS);
+                    return res;
+                }
+            });
+
+            sb.service("/delay-custom-deferred/{delay}", new HttpService() {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    HttpResponse res = HttpResponse.from(responseFuture);
+                    ctx.setRequestTimeoutHandler(
+                            () -> responseFuture.complete(HttpResponse.of(
+                                    HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
+                    final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
+                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
+                                             delayMillis, TimeUnit.MILLISECONDS);
+                    return res;
                 }
             });
 
             sb.service("/informed_delay/{delay}", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
+                    HttpResponseWriter res = HttpResponse.streaming();
 
                     // Send 9 informational responses before sending the actual response.
                     for (int i = 1; i <= 9; i++) {
                         ctx.eventLoop().schedule(
-                                () -> res.respond(HttpStatus.PROCESSING),
+                                () -> res.write(HttpHeaders.of(HttpStatus.PROCESSING)),
                                 delayMillis * i / 10, TimeUnit.MILLISECONDS);
                     }
 
                     // Send the actual response.
                     ctx.eventLoop().schedule(
-                            () -> res.respond(HttpStatus.OK),
+                            () -> {
+                                res.write(HttpHeaders.of(HttpStatus.OK));
+                                res.close();
+                            },
                             delayMillis, TimeUnit.MILLISECONDS);
+                    return res;
                 }
             });
 
             sb.service("/content_delay/{delay}", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
                     final boolean pooled = "pooled".equals(ctx.query());
 
+                    HttpResponseWriter res = HttpResponse.streaming();
                     res.write(HttpHeaders.of(HttpStatus.OK));
 
                     // Send 10 characters ('0' - '9') at fixed rate.
@@ -220,31 +264,32 @@ public class HttpServerTest {
                                 },
                                 delayMillis * i / 10, TimeUnit.MILLISECONDS);
                     }
+                    return res;
                 }
             });
 
             sb.serviceUnder("/path", new AbstractHttpService() {
                 @Override
-                protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                 ctx.mappedPath().length()));
-                    res.close();
+                protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpHeaders.of(HttpStatus.OK)
+                                                      .setInt(HttpHeaderNames.CONTENT_LENGTH,
+                                                              ctx.mappedPath().length()));
                 }
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                 ctx.mappedPath().length()));
-                    res.write(HttpData.ofAscii(ctx.mappedPath()));
-                    res.close();
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.OK)
+                                       .setInt(HttpHeaderNames.CONTENT_LENGTH,
+                                               ctx.mappedPath().length()),
+                            HttpData.ofAscii(ctx.mappedPath()));
                 }
             });
 
             sb.service("/echo", new AbstractHttpService() {
                 @Override
-                protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+                    HttpResponseWriter res = HttpResponse.streaming();
                     res.write(HttpHeaders.of(HttpStatus.OK));
                     req.subscribe(new Subscriber<HttpObject>() {
                         private Subscription subscription;
@@ -273,6 +318,7 @@ public class HttpServerTest {
                             res.close();
                         }
                     });
+                    return res;
                 }
             });
 
@@ -281,97 +327,97 @@ public class HttpServerTest {
 
             sb.serviceUnder("/zeroes", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long length = Long.parseLong(ctx.mappedPath().substring(1));
+                    HttpResponseWriter res = HttpResponse.streaming();
                     res.write(HttpHeaders.of(HttpStatus.OK)
                                          .setLong(HttpHeaderNames.CONTENT_LENGTH, length));
 
                     stream(res, length, STREAMING_CONTENT_CHUNK_LENGTH);
+                    return res;
                 }
             });
 
             sb.service("/strings", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain"));
-
-                    res.write(HttpData.ofUtf8("Armeria "));
-                    res.write(HttpData.ofUtf8("is "));
-                    res.write(HttpData.ofUtf8("awesome!"));
-                    res.close();
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8),
+                            HttpData.ofUtf8("Armeria "),
+                            HttpData.ofUtf8("is "),
+                            HttpData.ofUtf8("awesome!"));
                 }
             }.decorate(HttpEncodingService.class));
 
             sb.service("/images", new AbstractHttpService() {
-                @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "image/png"));
-
-                    res.write(HttpData.ofUtf8("Armeria "));
-                    res.write(HttpData.ofUtf8("is "));
-                    res.write(HttpData.ofUtf8("awesome!"));
-                    res.close();
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PNG),
+                            HttpData.ofUtf8("Armeria "),
+                            HttpData.ofUtf8("is "),
+                            HttpData.ofUtf8("awesome!"));
                 }
             }.decorate(HttpEncodingService.class));
 
             sb.service("/small", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     String response = Strings.repeat("a", 1023);
-                    res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
-                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
-                    res.write(HttpData.ofUtf8(response));
-                    res.close();
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.OK)
+                                       .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                       .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()),
+                            HttpData.ofUtf8(response));
                 }
             }.decorate(HttpEncodingService.class));
 
             sb.service("/large", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     String response = Strings.repeat("a", 1024);
-                    res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
-                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
-                    res.write(HttpData.ofUtf8(response));
-                    res.close();
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.OK)
+                                       .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                       .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()),
+                            HttpData.ofUtf8(response));
                 }
             }.decorate(HttpEncodingService.class));
 
             sb.service("/sslsession", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     if (ctx.sessionProtocol().isTls()) {
                         assertNotNull(ctx.sslSession());
                     } else {
                         assertNull(ctx.sslSession());
                     }
-                    res.respond(HttpStatus.OK);
+                    return HttpResponse.of(HttpStatus.OK);
                 }
             }.decorate(HttpEncodingService.class));
 
             sb.service("/headers", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
-                                         .add(AsciiString.of("x-custom-header1"), "custom1")
-                                         .add(AsciiString.of("X-Custom-Header2"), "custom2"));
-
-                    res.write(HttpData.ofUtf8("headers"));
-                    res.close();
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                       .add(AsciiString.of("x-custom-header1"), "custom1")
+                                       .add(AsciiString.of("X-Custom-Header2"), "custom2"),
+                            HttpData.ofUtf8("headers"));
                 }
             }.decorate(HttpEncodingService.class));
 
             sb.service("/trailers", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    res.write(HttpHeaders.of(HttpStatus.OK));
-                    res.write(HttpData.ofAscii("trailers incoming!"));
-                    res.write(HttpHeaders.of(AsciiString.of("foo"), "bar"));
-                    res.close();
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.OK),
+                            HttpData.ofAscii("trailers incoming!"),
+                            HttpHeaders.of(AsciiString.of("foo"), "bar"));
                 }
             });
+
+            sb.service("/head-headers-only", ((ctx, req) -> HttpResponse.of(HttpHeaders.of(HttpStatus.OK))));
 
             final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
                     s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
@@ -453,7 +499,17 @@ public class HttpServerTest {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay/2000").aggregate().get();
         assertThat(res.headers().status(), is(HttpStatus.SERVICE_UNAVAILABLE));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
+        assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
+        assertThat(requestLogs.take().statusCode(), is(503));
+    }
+
+    @Test(timeout = 10000)
+    public void testTimeout_deferred() throws Exception {
+        serverRequestTimeoutMillis = 100L;
+        final AggregatedHttpMessage res = client().get("/delay-deferred/2000").aggregate().get();
+        assertThat(res.headers().status(), is(HttpStatus.SERVICE_UNAVAILABLE));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
         assertThat(requestLogs.take().statusCode(), is(503));
     }
@@ -463,7 +519,17 @@ public class HttpServerTest {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay-custom/2000").aggregate().get();
         assertThat(res.headers().status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
+        assertThat(res.content().toStringUtf8(), is("timed out"));
+        assertThat(requestLogs.take().statusCode(), is(200));
+    }
+
+    @Test(timeout = 10000)
+    public void testTimeout_customHandler_deferred() throws Exception {
+        serverRequestTimeoutMillis = 100L;
+        final AggregatedHttpMessage res = client().get("/delay-custom-deferred/2000").aggregate().get();
+        assertThat(res.headers().status(), is(HttpStatus.OK));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("timed out"));
         assertThat(requestLogs.take().statusCode(), is(200));
     }
@@ -479,7 +545,7 @@ public class HttpServerTest {
         });
 
         assertThat(res.headers().status(), is(HttpStatus.SERVICE_UNAVAILABLE));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
         assertThat(requestLogs.take().statusCode(), is(503));
     }
@@ -521,7 +587,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTooLargeContent() throws Exception {
         clientWriteTimeoutMillis = 0L;
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.POST, "/count");
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/count");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         stream(req, MAX_CONTENT_LENGTH + 1, 1024);
@@ -529,7 +595,7 @@ public class HttpServerTest {
         final AggregatedHttpMessage res = f.get();
 
         assertThat(res.status(), is(HttpStatus.REQUEST_ENTITY_TOO_LARGE));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("413 Request Entity Too Large"));
     }
 
@@ -680,6 +746,22 @@ public class HttpServerTest {
         assertThat(res.status(), is(HttpStatus.OK));
     }
 
+    @Test
+    public void testHeadHeadersOnly() throws Exception {
+        final int port = server.httpPort();
+        try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
+            s.setSoTimeout(10000);
+            final InputStream in = s.getInputStream();
+            final OutputStream out = s.getOutputStream();
+            out.write("HEAD /head-headers-only HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+
+            // Should neither be chunked nor have content.
+            assertThat(new String(ByteStreams.toByteArray(in)), is(
+                    "HTTP/1.1 200 OK\r\n" +
+                    "content-length: 0\r\n\r\n"));
+        }
+    }
+
     private void runStreamingRequestTest(String path) throws InterruptedException, ExecutionException {
         // Disable timeouts and length limits so that test does not fail due to slow transfer.
         clientWriteTimeoutMillis = 0;
@@ -687,7 +769,7 @@ public class HttpServerTest {
         serverRequestTimeoutMillis = 0;
         serverMaxRequestLength = 0;
 
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.POST, path);
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, path);
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         // Stream a large of the max memory.
@@ -700,8 +782,7 @@ public class HttpServerTest {
             final AggregatedHttpMessage res = f.get();
 
             assertThat(res.status(), is(HttpStatus.OK));
-            assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE),
-                       is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+            assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
             assertThat(res.content().toStringUtf8(), is(String.valueOf(expectedContentLength)));
         } finally {
             // Make sure the stream is closed even when this test fails due to timeout.
@@ -732,7 +813,7 @@ public class HttpServerTest {
         clientMaxResponseLength = 0;
         serverRequestTimeoutMillis = 0;
 
-        DefaultHttpRequest request = new DefaultHttpRequest(HttpMethod.POST, "/echo");
+        HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/echo");
         HttpResponse response = client().execute(request);
         request.write(HttpData.ofUtf8("a"));
         Thread.sleep(2000);
@@ -778,7 +859,7 @@ public class HttpServerTest {
 
         res.subscribe(consumer);
 
-        res.closeFuture().get();
+        res.completionFuture().get();
         assertThat(status.get(), is(HttpStatus.OK));
         assertThat(consumer.numReceivedBytes(), is(STREAMING_CONTENT_LENGTH));
     }
@@ -863,19 +944,27 @@ public class HttpServerTest {
         }
 
         @Override
-        protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+        protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+            CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+            HttpResponse res = HttpResponse.from(responseFuture);
             req.subscribe(new StreamConsumer(ctx.eventLoop(), slow) {
                 @Override
                 public void onError(Throwable cause) {
-                    res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
-                                MediaType.PLAIN_TEXT_UTF_8, Throwables.getStackTraceAsString(cause));
+                    responseFuture.complete(
+                            HttpResponse.of(
+                                    HttpStatus.INTERNAL_SERVER_ERROR,
+                                    MediaType.PLAIN_TEXT_UTF_8,
+                                    Throwables.getStackTraceAsString(cause)));
                 }
 
                 @Override
                 public void onComplete() {
-                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "%d", numReceivedBytes());
+                    responseFuture.complete(
+                            HttpResponse.of(
+                                    HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "%d", numReceivedBytes()));
                 }
             });
+            return res;
         }
     }
 

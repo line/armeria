@@ -1,7 +1,7 @@
 import com.google.common.base.CaseFormat
 
 ext {
-    requiredProjects = rootProject.ext.publishedJavaProjects + project(':testing-internal')
+    requiredProjects = rootProject.ext.javaProjects - project
 }
 
 // Evaluate other projects first so that their dependencies are fully populated.
@@ -35,7 +35,7 @@ task shadedTest(group: 'Verification',
                 description: 'Runs the unit tests with the shaded JARs.')
 tasks.test.dependsOn tasks.shadedTest
 
-rootProject.ext.publishedJavaProjects.each { testProject ->
+requiredProjects.each { testProject ->
     def shadedTestJarExtractTask = tasks.create(shadedName(testProject, 'TestJarExtract'), Copy) {
         def shadedTestJarTask = testProject.tasks.shadedTestJar
         dependsOn shadedTestJarTask

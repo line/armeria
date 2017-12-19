@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,12 +24,12 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
-import org.apache.http.Header;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -47,33 +47,32 @@ import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.TestConverters.NaiveIntConverter;
-import com.linecorp.armeria.server.TestConverters.NaiveStringConverter;
-import com.linecorp.armeria.server.TestConverters.TypedNumberConverter;
-import com.linecorp.armeria.server.TestConverters.TypedStringConverter;
-import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
+import com.linecorp.armeria.server.TestConverters.NaiveIntConverterFunction;
+import com.linecorp.armeria.server.TestConverters.NaiveStringConverterFunction;
+import com.linecorp.armeria.server.TestConverters.TypedNumberConverterFunction;
+import com.linecorp.armeria.server.TestConverters.TypedStringConverterFunction;
+import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
-import com.linecorp.armeria.server.annotation.Converter;
+import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Optional;
+import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -86,8 +85,8 @@ public class AnnotatedHttpServiceTest {
         protected void configure(ServerBuilder sb) throws Exception {
             // Case 1, 2, and 3, with a converter map
             sb.annotatedService("/1", new MyAnnotatedService1(),
-                                ImmutableMap.of(Integer.class, new NaiveIntConverter()),
-                                LoggingService.newDecorator());
+                                LoggingService.newDecorator(),
+                                new TypedNumberConverterFunction());
 
             // Case 4, 5, and 6
             sb.annotatedService("/2", new MyAnnotatedService2(),
@@ -115,6 +114,12 @@ public class AnnotatedHttpServiceTest {
 
             sb.annotatedService("/9", new MyAnnotatedService9(),
                                 LoggingService.newDecorator());
+
+            sb.annotatedService("/10", new MyAnnotatedService10(),
+                                LoggingService.newDecorator());
+
+            sb.annotatedService("/11", new MyAnnotatedService11(),
+                                LoggingService.newDecorator());
         }
     };
 
@@ -126,8 +131,8 @@ public class AnnotatedHttpServiceTest {
         }
     };
 
-    @Converter(target = Number.class, value = TypedNumberConverter.class)
-    @Converter(target = String.class, value = TypedStringConverter.class)
+    @ResponseConverter(NaiveIntConverterFunction.class)
+    @ResponseConverter(TypedStringConverterFunction.class)
     public static class MyAnnotatedService1 {
         // Case 1: returns Integer type and handled by builder-default Integer -> HttpResponse converter.
         @Get
@@ -146,7 +151,7 @@ public class AnnotatedHttpServiceTest {
         // Case 3: returns String type and handled by custom String -> HttpResponse converter.
         @Get
         @Path("/string/:var")
-        @Converter(NaiveStringConverter.class)
+        @ResponseConverter(NaiveStringConverterFunction.class)
         public CompletionStage<String> returnString(@Param("var") String var) {
             return CompletableFuture.supplyAsync(() -> var);
         }
@@ -209,10 +214,17 @@ public class AnnotatedHttpServiceTest {
             future.completeExceptionally(new AnticipatedException("bad var!"));
             return future;
         }
+
+        // Log warning.
+        @Get("/warn/:var")
+        public String warn() {
+            return "warn";
+        }
     }
 
-    @Converter(target = Number.class, value = TypedNumberConverter.class)
-    @Converter(target = String.class, value = TypedStringConverter.class)
+    @ResponseConverter(TypedNumberConverterFunction.class)
+    @ResponseConverter(TypedStringConverterFunction.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService2 {
         // Case 4: returns Integer type and handled by class-default Number -> HttpResponse converter.
         @Get
@@ -231,7 +243,7 @@ public class AnnotatedHttpServiceTest {
         // Case 6: returns String type and handled by custom String -> HttpResponse converter.
         @Get
         @Path("/string/{var}")
-        @Converter(NaiveStringConverter.class)
+        @ResponseConverter(NaiveStringConverterFunction.class)
         public String returnString(@Param("var") String var) {
             return var;
         }
@@ -241,9 +253,19 @@ public class AnnotatedHttpServiceTest {
         public String returnBoolean(@Param("var") boolean var) {
             return Boolean.toString(var);
         }
+
+        @Get("/null1")
+        public Object returnNull1() {
+            return null;
+        }
+
+        @Get("/null2")
+        public CompletionStage<Object> returnNull2() {
+            return CompletableFuture.completedFuture(null);
+        }
     }
 
-    @Converter(target = Number.class, value = TypedNumberConverter.class)
+    @ResponseConverter(TypedNumberConverterFunction.class)
     public static class MyAnnotatedService3 {
         @Get
         @Path("/int/{var}")
@@ -252,7 +274,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = String.class, value = TypedStringConverter.class)
+    @ResponseConverter(TypedStringConverterFunction.class)
     public static class MyAnnotatedService4 {
         @Get
         @Path("/string/{var}")
@@ -268,7 +290,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     // Aggregation Test
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService5 {
         @Post
         @Path("/a/string")
@@ -288,7 +310,7 @@ public class AnnotatedHttpServiceTest {
         @Path("/a/string-async2")
         public HttpResponse postStringAsync2(AggregatedHttpMessage message, RequestContext ctx) {
             validateContext(ctx);
-            DefaultHttpResponse response = new DefaultHttpResponse();
+            HttpResponseWriter response = HttpResponse.streaming();
             response.write(HttpHeaders.of(HttpStatus.OK));
             response.write(message.content());
             response.close();
@@ -316,7 +338,7 @@ public class AnnotatedHttpServiceTest {
     /**
      * An annotated service that's used for testing non-default path mappings.
      */
-    @Converter(target = String.class, value = TypedStringConverter.class)
+    @ResponseConverter(TypedStringConverterFunction.class)
     public static class MyAnnotatedService6 {
 
         @Get
@@ -354,7 +376,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService7 {
 
         @Get("/param/get")
@@ -390,18 +412,20 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/param/default1")
         public String paramDefault1(RequestContext ctx,
-                                    @Param("username") @Optional("hello") String username,
-                                    @Param("password") @Optional("world") String password,
-                                    @Param("extra") @Optional String extra) {
+                                    @Param("username") @Default("hello") String username,
+                                    @Param("password") @Default("world") Optional<String> password,
+                                    @Param("extra") Optional<String> extra,
+                                    @Param("number") Optional<Integer> number) {
             // "extra" might be null because there is no default value specified.
             validateContext(ctx);
-            return username + "/" + password + "/" + (extra != null ? extra : "(null)");
+            return username + "/" + password.get() + "/" + extra.orElse("(null)") +
+                   (number.isPresent() ? "/" + number.get() : "");
         }
 
         @Get
         @Path("/param/default2")
         public String paramDefault2(RequestContext ctx,
-                                    @Param("username") @Optional("hello") String username,
+                                    @Param("username") @Default("hello") String username,
                                     @Param("password") String password) {
             validateContext(ctx);
             return username + "/" + password;
@@ -417,7 +441,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService8 {
 
         @Get("/same/path")
@@ -466,7 +490,7 @@ public class AnnotatedHttpServiceTest {
 
     @ProduceType("application/xml")
     @ProduceType("application/json")
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService9 {
 
         @Get("/same/path")
@@ -479,6 +503,91 @@ public class AnnotatedHttpServiceTest {
         @ConsumeType("application/json")
         public String post() {
             return "POST";
+        }
+    }
+
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    public static class MyAnnotatedService10 {
+
+        @Get("/syncThrow")
+        public String sync() {
+            throw new IllegalArgumentException("foo");
+        }
+
+        @Get("/asyncThrow")
+        public CompletableFuture<String> async() {
+            throw new IllegalArgumentException("bar");
+        }
+
+        @Get("/asyncThrowWrapped")
+        public CompletableFuture<String> asyncThrowWrapped() {
+            return CompletableFuture.supplyAsync(() -> {
+                throw new IllegalArgumentException("hoge");
+            });
+        }
+
+        @Get("/syncThrow401")
+        public String sync401() {
+            throw HttpStatusException.of(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Get("/asyncThrow401")
+        public CompletableFuture<String> async401() {
+            throw HttpStatusException.of(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Get("/asyncThrowWrapped401")
+        public CompletableFuture<String> asyncThrowWrapped401() {
+            return CompletableFuture.supplyAsync(() -> {
+                throw HttpStatusException.of(HttpStatus.UNAUTHORIZED);
+            });
+        }
+    }
+
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    public static class MyAnnotatedService11 {
+
+        @Get("/aHeader")
+        public String aHeader(@Header("if-match") String ifMatch) {
+            if ("737060cd8c284d8af7ad3082f209582d".equalsIgnoreCase(ifMatch)) {
+                return "matched";
+            }
+            return "unMatched";
+        }
+
+        @Post("/customHeader")
+        public String customHeader(@Header("a-name") String name) {
+            return name + " is awesome";
+        }
+
+        @Get("/headerDefault")
+        public String headerDefault(RequestContext ctx,
+                                    @Header("username") @Default("hello") String username,
+                                    @Header("password") @Default("world") Optional<String> password,
+                                    @Header("extra") Optional<String> extra,
+                                    @Header("number") Optional<Integer> number) {
+            validateContext(ctx);
+            return username + "/" + password.get() + "/" + extra.orElse("(null)") +
+                   (number.isPresent() ? "/" + number.get() : "");
+        }
+
+        @Get("/headerWithParam")
+        public String headerWithParam(RequestContext ctx,
+                                      @Header("username") @Default("hello") String username,
+                                      @Header("password") @Default("world") Optional<String> password,
+                                      @Param("extra") Optional<String> extra,
+                                      @Param("number") int number) {
+            validateContext(ctx);
+            return username + "/" + password.get() + "/" + extra.orElse("(null)") + "/" + number;
+        }
+
+        @Get
+        @Path("/headerWithoutValue")
+        public String headerWithoutValue(RequestContext ctx,
+                                         @Header("username") @Default("hello") String username,
+                                         @Header("password") String password) {
+            validateContext(ctx);
+            return username + "/" + password;
         }
     }
 
@@ -519,6 +628,9 @@ public class AnnotatedHttpServiceTest {
             // Not-mapped HTTP method (Post).
             testStatusCode(hc, post("/2/string/blah"), 405);
 
+            testBody(hc, get("/2/null1"), "(null)");
+            testBody(hc, get("/2/null2"), "(null)");
+
             // Test the case where multiple annotated services are bound under the same path prefix.
             testBody(hc, get("/3/int/42"), "Number[42]");
             testBody(hc, get("/3/string/blah"), "String[blah]");
@@ -534,12 +646,12 @@ public class AnnotatedHttpServiceTest {
             // Exact pattern
             testBody(hc, get("/6/exact"), "String[exact:/6/exact]");
             // Prefix pattern
-            testBody(hc, get("/6/prefix/foo"),  "String[prefix:/6/prefix/foo:/foo]");
+            testBody(hc, get("/6/prefix/foo"), "String[prefix:/6/prefix/foo:/foo]");
             // Glob pattern
-            testBody(hc, get("/6/glob1/bar"),  "String[glob1:/6/glob1/bar]");
-            testBody(hc, get("/6/baz/glob2"),  "String[glob2:/6/baz/glob2:0]");
+            testBody(hc, get("/6/glob1/bar"), "String[glob1:/6/glob1/bar]");
+            testBody(hc, get("/6/baz/glob2"), "String[glob2:/6/baz/glob2:0]");
             // Regex pattern
-            testBody(hc, get("/6/regex/foo/bar"),  "String[regex:/6/regex/foo/bar:foo/bar]");
+            testBody(hc, get("/6/regex/foo/bar"), "String[regex:/6/regex/foo/bar:foo/bar]");
         }
     }
 
@@ -569,7 +681,7 @@ public class AnnotatedHttpServiceTest {
                               "username", "line4", "password", "armeria4"), "line4/armeria4");
 
             testBody(hc, get("/7/param/default1"), "hello/world/(null)");
-            testBody(hc, get("/7/param/default1?extra=people"), "hello/world/people");
+            testBody(hc, get("/7/param/default1?extra=people&number=1"), "hello/world/people/1");
 
             // Precedence test. (path variable > query string parameter)
             testBody(hc, get("/7/param/precedence/line5?username=dot&password=armeria5"), "line5/armeria5");
@@ -603,11 +715,29 @@ public class AnnotatedHttpServiceTest {
             testBodyAndContentType(hc, post(uri, "application/json"),
                                    "POST/JSON/BOTH", "application/json");
 
-            testBody(hc, post(uri),"POST");
+            testBody(hc, post(uri), "POST");
 
             // No match on 'Accept' header list.
             testStatusCode(hc, post(uri, null, "application/json"), 406);
             testStatusCode(hc, get(uri, "application/json;charset=UTF-8;q=0.9, text/html;q=0.7"), 406);
+        }
+    }
+
+    @Test
+    public void testServiceThrowIllegalArgumentException() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testStatusCode(hc, get("/10/syncThrow"), 400);
+            testStatusCode(hc, get("/10/asyncThrow"), 400);
+            testStatusCode(hc, get("/10/asyncThrowWrapped"), 400);
+        }
+    }
+
+    @Test
+    public void testServiceThrowHttpResponseException() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testStatusCode(hc, get("/10/syncThrow401"), 401);
+            testStatusCode(hc, get("/10/asyncThrow401"), 401);
+            testStatusCode(hc, get("/10/asyncThrowWrapped401"), 401);
         }
     }
 
@@ -634,43 +764,71 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    private static void testBodyAndContentType(CloseableHttpClient hc, HttpRequestBase req,
-                                               String body, String contentType) throws IOException {
+    @Test
+    public void testRequestHeaderInjection() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpRequestBase request = get("/11/aHeader");
+            request.setHeader(org.apache.http.HttpHeaders.IF_MATCH, "737060cd8c284d8af7ad3082f209582d");
+            testBody(hc, request, "matched");
+
+            request = post("/11/customHeader");
+            request.setHeader("a-name", "minwoox");
+            testBody(hc, request, "minwoox is awesome");
+
+            request = get("/11/headerDefault");
+            testBody(hc, request, "hello/world/(null)");
+
+            request = get("/11/headerDefault");
+            request.setHeader("extra", "people");
+            request.setHeader("number", "1");
+            testBody(hc, request, "hello/world/people/1");
+
+            request = get("/11/headerWithParam?extra=people&number=2");
+            request.setHeader("username", "trustin");
+            request.setHeader("password", "hyangtack");
+            testBody(hc, request, "trustin/hyangtack/people/2");
+
+            testStatusCode(hc, get("/11/headerWithoutValue"), 400);
+        }
+    }
+
+    static void testBodyAndContentType(CloseableHttpClient hc, HttpRequestBase req,
+                                       String body, String contentType) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, body, null, contentType);
         }
     }
 
-    private static void testBody(CloseableHttpClient hc, HttpRequestBase req,
-                                 String body) throws IOException {
+    static void testBody(CloseableHttpClient hc, HttpRequestBase req,
+                         String body) throws IOException {
         testBody(hc, req, body, null);
     }
 
-    private static void testBody(CloseableHttpClient hc, HttpRequestBase req,
-                                 String body, @Nullable Charset encoding) throws IOException {
+    static void testBody(CloseableHttpClient hc, HttpRequestBase req,
+                         String body, @Nullable Charset encoding) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, body, encoding, null);
         }
     }
 
-    private static void testStatusCode(CloseableHttpClient hc, HttpRequestBase req,
-                                       int statusCode) throws IOException {
+    static void testStatusCode(CloseableHttpClient hc, HttpRequestBase req,
+                               int statusCode) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, statusCode, null, null, null);
         }
     }
 
-    private static void testForm(CloseableHttpClient hc, HttpPost req) throws IOException {
+    static void testForm(CloseableHttpClient hc, HttpPost req) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, EntityUtils.toString(req.getEntity()), null, null);
         }
     }
 
-    private static void checkResult(org.apache.http.HttpResponse res,
-                                    int statusCode,
-                                    @Nullable String body,
-                                    @Nullable Charset encoding,
-                                    @Nullable String contentType) throws IOException {
+    static void checkResult(org.apache.http.HttpResponse res,
+                            int statusCode,
+                            @Nullable String body,
+                            @Nullable Charset encoding,
+                            @Nullable String contentType) throws IOException {
         final HttpStatus status = HttpStatus.valueOf(statusCode);
         assertThat(res.getStatusLine().toString(), is("HTTP/1.1 " + status));
         if (body != null) {
@@ -681,9 +839,9 @@ public class AnnotatedHttpServiceTest {
             }
         }
 
-        final Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
+        final org.apache.http.Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
         if (contentType != null) {
-            assertThat(header.getValue(), is(contentType));
+            assertThat(MediaType.parse(header.getValue()), is(MediaType.parse(contentType)));
         } else if (statusCode >= 400) {
             assertThat(header.getValue(), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
         } else {
@@ -691,31 +849,31 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    private static HttpRequestBase get(String uri) {
+    static HttpRequestBase get(String uri) {
         return request(HttpMethod.GET, uri, null, null);
     }
 
-    private static HttpRequestBase get(String uri, String accept) {
+    static HttpRequestBase get(String uri, String accept) {
         return request(HttpMethod.GET, uri, null, accept);
     }
 
-    private static HttpRequestBase post(String uri) {
+    static HttpRequestBase post(String uri) {
         return request(HttpMethod.POST, uri, null, null);
     }
 
-    private static HttpRequestBase post(String uri, String contentType) {
+    static HttpRequestBase post(String uri, String contentType) {
         return request(HttpMethod.POST, uri, contentType, null);
     }
 
-    private static HttpRequestBase post(String uri, String contentType, String accept) {
+    static HttpRequestBase post(String uri, String contentType, String accept) {
         return request(HttpMethod.POST, uri, contentType, accept);
     }
 
-    private static HttpPost form(String uri) {
+    static HttpPost form(String uri) {
         return form(uri, null, "armeria", "armeria");
     }
 
-    private static HttpPost form(String uri, Charset charset, String... kv) {
+    static HttpPost form(String uri, Charset charset, String... kv) {
         final HttpPost req = (HttpPost) request(HttpMethod.POST, uri, MediaType.FORM_DATA.toString());
 
         final List<NameValuePair> params = new ArrayList<>();
@@ -729,11 +887,11 @@ public class AnnotatedHttpServiceTest {
         return req;
     }
 
-    private static HttpRequestBase request(HttpMethod method, String uri, String contentType) {
+    static HttpRequestBase request(HttpMethod method, String uri, String contentType) {
         return request(method, uri, contentType, null);
     }
 
-    private static HttpRequestBase request(HttpMethod method, String uri, String contentType, String accept) {
+    static HttpRequestBase request(HttpMethod method, String uri, String contentType, String accept) {
         final HttpRequestBase req;
         switch (method) {
             case GET:
@@ -754,13 +912,13 @@ public class AnnotatedHttpServiceTest {
         return req;
     }
 
-    private static void validateContext(RequestContext ctx) {
+    static void validateContext(RequestContext ctx) {
         if (RequestContext.current() != ctx) {
             throw new RuntimeException("ServiceRequestContext instances are not same!");
         }
     }
 
-    private static void validateContextAndRequest(RequestContext ctx, Object req) {
+    static void validateContextAndRequest(RequestContext ctx, Object req) {
         validateContext(ctx);
         if (RequestContext.current().request() != req) {
             throw new RuntimeException("HttpRequest instances are not same!");

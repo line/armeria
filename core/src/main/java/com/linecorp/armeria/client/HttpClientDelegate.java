@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -31,6 +30,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -49,7 +49,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final Endpoint endpoint = ctx.endpoint().resolve().withDefaultPort(ctx.sessionProtocol().defaultPort());
+        final Endpoint endpoint = ctx.endpoint().resolve(ctx)
+                                     .withDefaultPort(ctx.sessionProtocol().defaultPort());
         autoFillHeaders(ctx, endpoint, req);
         if (!sanitizePath(req)) {
             req.abort();
@@ -125,13 +126,13 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     }
 
     private static boolean sanitizePath(HttpRequest req) {
-        final String[] pathAndQuery = splitPathAndQuery(req.path());
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             return false;
         }
 
-        final String path = pathAndQuery[0];
-        final String query = pathAndQuery[1];
+        final String path = pathAndQuery.path();
+        final String query = pathAndQuery.query();
         final String newPathAndQuery;
         if (query != null) {
             newPathAndQuery = path + '?' + query;
@@ -170,9 +171,9 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                 } else {
                     // If pipelining is enabled, return as soon as the request is fully sent.
                     // If pipelining is disabled, return after the response is fully received.
-                    final CompletableFuture<Void> closeFuture =
-                            factory.useHttp1Pipelining() ? req.closeFuture() : res.closeFuture();
-                    closeFuture.whenComplete((ret, cause) -> release(pool, poolKey, channel));
+                    final CompletableFuture<Void> completionFuture =
+                            factory.useHttp1Pipelining() ? req.completionFuture() : res.completionFuture();
+                    completionFuture.whenComplete((ret, cause) -> release(pool, poolKey, channel));
                 }
             }
         } finally {

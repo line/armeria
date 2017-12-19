@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 
-final class ClassPathHttpVfs implements HttpVfs {
+final class ClassPathHttpVfs extends AbstractHttpVfs {
 
     private final ClassLoader classLoader;
     private final String rootDir;
@@ -78,7 +78,7 @@ final class ClassPathHttpVfs implements HttpVfs {
     }
 
     @Override
-    public String toString() {
+    public String meterTag() {
         return "classpath:" + rootDir;
     }
 

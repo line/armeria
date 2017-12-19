@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -44,15 +44,14 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.InvalidResponseException;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -72,7 +71,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
     private final Client<HttpRequest, HttpResponse> httpClient;
     private final SerializationFormat serializationFormat;
     private final TProtocolFactory protocolFactory;
-    private final String mediaType;
+    private final MediaType mediaType;
     private final Map<Class<?>, ThriftServiceMetadata> metadataMap = new ConcurrentHashMap<>();
 
     THttpClientDelegate(Client<HttpRequest, HttpResponse> httpClient,
@@ -80,7 +79,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         this.httpClient = httpClient;
         this.serializationFormat = serializationFormat;
         protocolFactory = ThriftProtocolFactories.get(serializationFormat);
-        mediaType = serializationFormat.mediaType().toString();
+        mediaType = serializationFormat.mediaType();
     }
 
     @Override
@@ -116,11 +115,10 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
             ctx.logBuilder().requestContent(call, new ThriftCall(header, tArgs));
 
-            final DefaultHttpRequest httpReq = new DefaultHttpRequest(
+            final HttpRequest httpReq = HttpRequest.of(
                     HttpHeaders.of(HttpMethod.POST, ctx.path())
-                               .set(HttpHeaderNames.CONTENT_TYPE, mediaType), true);
-            httpReq.write(HttpData.of(outTransport.getArray(), 0, outTransport.length()));
-            httpReq.close();
+                               .contentType(mediaType),
+                    HttpData.of(outTransport.getArray(), 0, outTransport.length()));
 
             ctx.logBuilder().deferResponseContent();
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -51,10 +51,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -69,7 +69,7 @@ import io.netty.util.AsciiString;
 
 /**
  * An {@link HttpService} that dispatches its requests to a web application running in an embedded
- * <a href="http://www.eclipse.org/jetty/">Jetty</a>.
+ * <a href="https://www.eclipse.org/jetty/">Jetty</a>.
  *
  * @see JettyServiceBuilder
  */
@@ -232,18 +232,18 @@ public final class JettyService implements HttpService {
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final ArmeriaConnector connector = this.connector;
 
-        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final HttpResponseWriter res = HttpResponse.streaming();
 
         req.aggregate().handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
+                res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
                 return;
             }
 
             boolean success = false;
             try {
-                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport();
+                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport(req.method());
                 final HttpChannel httpChannel = new HttpChannel(
                         connector,
                         connector.getHttpConfiguration(),
@@ -282,10 +282,9 @@ public final class JettyService implements HttpService {
             res.write(headers);
             for (;;) {
                 final HttpData data = out.poll();
-                if (data == null) {
+                if (data == null || !res.write(data)) {
                     break;
                 }
-                res.write(data);
             }
             res.close();
         } catch (Throwable t) {
@@ -298,7 +297,7 @@ public final class JettyService implements HttpService {
             ServiceRequestContext ctx, AggregatedHttpMessage aReq, Request jReq) {
 
         jReq.setDispatcherType(DispatcherType.REQUEST);
-        jReq.setAsyncSupported(true, "armeria");
+        jReq.setAsyncSupported(false, "armeria");
         jReq.setSecure(ctx.sessionProtocol().isTls());
         jReq.setMetaData(toRequestMetadata(ctx, aReq));
 
@@ -344,14 +343,25 @@ public final class JettyService implements HttpService {
 
         final HttpHeaders headers = HttpHeaders.of(HttpStatus.valueOf(info.getStatus()));
         info.getFields().forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
+
+        if (transport.method != HttpMethod.HEAD) {
+            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, transport.contentLength);
+        }
+
         return headers;
     }
 
     private static final class ArmeriaHttpTransport implements HttpTransport {
 
+        final HttpMethod method;
         final Queue<HttpData> out = new ArrayDeque<>();
+        long contentLength;
         MetaData.Response info;
         Throwable cause;
+
+        ArmeriaHttpTransport(HttpMethod method) {
+            this.method = method;
+        }
 
         @Override
         public void send(MetaData.Response info, boolean head,
@@ -377,6 +387,7 @@ public final class JettyService implements HttpService {
                 out.add(HttpData.of(data));
             }
 
+            contentLength += length;
             callback.succeeded();
         }
 

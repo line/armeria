@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.http.HttpHeaders;
@@ -263,17 +264,18 @@ public class HttpFileServiceTest {
 
             // Test if the 'If-Modified-Since' header works as expected after the file is modified.
             req = new HttpGet(newUri("/fs/bar.html"));
-            req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
+            Date now = new Date();
+            req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, httpDate(now));
 
-            // HTTP-date has no sub-second precision; wait until the current second changes.
-            Thread.sleep(1000);
-
+            // HTTP-date has no sub-second precision; just add a few seconds to the time.
             Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
+            assertThat(barFile.setLastModified(now.getTime() + TimeUnit.SECONDS.toMillis(5)),
+                       is(true));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 final String newLastModified = assert200Ok(res, "text/html", expectedContentB);
 
-                // Ensure that the 'Last-Modified' header did not change.
+                // Ensure that the 'Last-Modified' changed.
                 assertThat(newLastModified, is(not(lastModified)));
             }
 
@@ -339,7 +341,11 @@ public class HttpFileServiceTest {
     }
 
     private static String currentHttpDate() {
-        return DateFormatter.format(new Date());
+        return httpDate(new Date());
+    }
+
+    private static String httpDate(Date date) {
+        return DateFormatter.format(date);
     }
 
     private static String newUri(String path) {

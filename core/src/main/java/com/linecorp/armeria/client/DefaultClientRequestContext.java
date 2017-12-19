@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.Iterator;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -32,15 +34,19 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.util.Attribute;
 
 /**
  * Default {@link ClientRequestContext} implementation.
  */
 public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
+    static final ThreadLocal<Consumer<ClientRequestContext>> THREAD_LOCAL_CONTEXT_CUSTOMIZER =
+            new ThreadLocal<>();
 
     private final EventLoop eventLoop;
     private final ClientOptions options;
@@ -62,11 +68,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param request the request associated with this context
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, SessionProtocol sessionProtocol, Endpoint endpoint,
+            EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, Endpoint endpoint,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Object request) {
 
-        super(sessionProtocol, method, path, query, request);
+        super(meterRegistry, sessionProtocol, method, path, query, request);
 
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.options = requireNonNull(options, "options");
@@ -85,6 +92,46 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             headersCopy.set(headers);
             attr(HTTP_HEADERS).set(headersCopy);
         }
+        runThreadLocalContextCustomizer();
+    }
+
+    private void runThreadLocalContextCustomizer() {
+        final Consumer<ClientRequestContext> customizer = THREAD_LOCAL_CONTEXT_CUSTOMIZER.get();
+        if (customizer != null) {
+            customizer.accept(this);
+        }
+    }
+
+    private DefaultClientRequestContext(DefaultClientRequestContext ctx) {
+        super(ctx.meterRegistry(), ctx.sessionProtocol(),
+              ctx.method(), ctx.path(), ctx.query(), ctx.request());
+
+        this.eventLoop = ctx.eventLoop();
+        this.options = ctx.options();
+        this.endpoint = ctx.endpoint();
+        this.fragment = ctx.fragment();
+
+        log = new DefaultRequestLog(this);
+
+        writeTimeoutMillis = ctx.writeTimeoutMillis();
+        responseTimeoutMillis = ctx.responseTimeoutMillis();
+        maxResponseLength = ctx.maxResponseLength();
+
+        for (Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
+            addAttr(i.next());
+        }
+        runThreadLocalContextCustomizer();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void addAttr(Attribute<?> attribute) {
+        final Attribute<T> a = (Attribute<T>) attribute;
+        attr(a.key()).set(a.get());
+    }
+
+    @Override
+    public ClientRequestContext newDerivedContext() {
+        return new DefaultClientRequestContext(this);
     }
 
     @Override

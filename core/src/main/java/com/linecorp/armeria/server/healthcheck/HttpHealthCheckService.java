@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,7 +23,7 @@ import java.util.List;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -126,14 +126,13 @@ public class HttpHealthCheckService extends AbstractHttpService {
     }
 
     @Override
-    protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) throws Exception {
-        res.write(newResponse(ctx).headers()); // Send without the content.
-        res.close();
+    protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        return HttpResponse.of(newResponse(ctx).headers()); // Send without the content.
     }
 
     @Override
-    protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-        res.respond(newResponse(ctx));
+    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+        return HttpResponse.of(newResponse(ctx));
     }
 
     private AggregatedHttpMessage newResponse(ServiceRequestContext ctx) {

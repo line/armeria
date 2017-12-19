@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -103,11 +103,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private void configureHttp(ChannelPipeline p) {
         p.addLast(new Http2PrefaceOrHttpHandler());
-        configureRequestCountingHandlers(p);
+        configureIdleTimeoutHandler(p);
         p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1C));
     }
 
-    private void configureRequestCountingHandlers(ChannelPipeline p) {
+    private void configureIdleTimeoutHandler(ChannelPipeline p) {
         if (config.idleTimeoutMillis() > 0) {
             p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis()));
         }
@@ -166,15 +166,18 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p));
-            configureRequestCountingHandlers(p);
+            configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H2));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            p.addLast(new HttpServerCodec());
+            p.addLast(new HttpServerCodec(
+                    config.defaultMaxHttp1InitialLineLength(),
+                    config.defaultMaxHttp1HeaderSize(),
+                    config.defaultMaxHttp1ChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
-            configureRequestCountingHandlers(p);
+            configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1));
         }
     }
@@ -208,7 +211,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            final HttpServerCodec http1codec = new HttpServerCodec();
+            final HttpServerCodec http1codec = new HttpServerCodec(
+                    config.defaultMaxHttp1InitialLineLength(),
+                    config.defaultMaxHttp1HeaderSize(),
+                    config.defaultMaxHttp1ChunkSize());
 
             String baseName = name;
             baseName = addAfter(p, baseName, http1codec);

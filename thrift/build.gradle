@@ -1,7 +1,3 @@
-plugins {
-    id 'me.champeau.gradle.jmh' version '0.4.4'
-}
-
 managedDependencies {
     // Thrift
     compile 'org.apache.thrift:libthrift'
@@ -9,6 +5,10 @@ managedDependencies {
     // Jetty, for testing TServlet interoperability.
     testCompile 'org.eclipse.jetty:jetty-webapp'
     testCompile 'org.eclipse.jetty.http2:http2-server'
+
+    // Dropwizard and Prometheus, for testing metrics integration
+    testCompile 'io.dropwizard.metrics:metrics-core'
+    testCompile 'io.prometheus:simpleclient_common'
 }
 
 // Keep the original Guava references in ThriftListenableFuture,
@@ -23,7 +23,3 @@ tasks.shadedJar.doLast {
         }
     }
 }
-
-configurations.jmh.extendsFrom configurations.testRuntimeClasspath
-
-tasks.checkstyleJmh.enabled = false

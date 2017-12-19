@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,8 +19,8 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -45,8 +45,8 @@ public abstract class RetryingClientBuilder<
     private static final BackoffSpec DEFAULT_BACKOFF_SPEC = BackoffSpec.parse(Flags.defaultBackoffSpec());
 
     final RetryStrategy<I, O> retryStrategy;
-    Supplier<? extends Backoff> backoffSupplier = () -> DEFAULT_BACKOFF_SPEC.build();
     int defaultMaxAttempts = DEFAULT_BACKOFF_SPEC.maxAttempts;
+    long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
 
     /**
      * Creates a new builder with the specified retry strategy.
@@ -61,21 +61,7 @@ public abstract class RetryingClientBuilder<
     }
 
     /**
-     * Sets the {@link Supplier} that provides a {@link Backoff}. The {@link Backoff} will be used to
-     * calculate next delay to retry when the {@link RetryStrategy#shouldRetry(Request, Response)}
-     * returns {@code true}.
-     *
-     * @return {@link T} to support method chaining.
-     */
-    public T backoffSupplier(Supplier<? extends Backoff> backoffSupplier) {
-        this.backoffSupplier = requireNonNull(backoffSupplier, "backoffSupplier");
-        return self();
-    }
-
-    /**
-     * Sets the {@code defaultMaxAttempts}. When a client sets the {@link Backoff} and does not invoke the
-     * {@link Backoff#withMaxAttempts(int)}, the client could retry infinitely in certain circumstance.
-     * This would prevent that situation. The value will be set by the default value in
+     * Sets the {@code defaultMaxAttempts}. The value will be set by the default value in
      * {@link Flags#DEFAULT_BACKOFF_SPEC}, if the client dose not specify.
      *
      * @return {@link T} to support method chaining.
@@ -85,6 +71,35 @@ public abstract class RetryingClientBuilder<
                       "defaultMaxAttempts: %s (expected: > 0)", defaultMaxAttempts);
         this.defaultMaxAttempts = defaultMaxAttempts;
         return self();
+    }
+
+    /**
+     * Sets the response timeout for each attempt in milliseconds. When requests in {@link RetryingClient}
+     * are made, corresponding responses are timed out by this value. {@code 0} disables the timeout.
+     * It will be set by the default value in {@link Flags#defaultResponseTimeoutMillis()}, if the client
+     * dose not specify.
+     *
+     * @return {@link T} to support method chaining.
+     */
+    public T responseTimeoutMillisForEachAttempt(long responseTimeoutMillisForEachAttempt) {
+        checkArgument(responseTimeoutMillisForEachAttempt >= 0,
+                      "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
+                      responseTimeoutMillisForEachAttempt);
+        this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+        return self();
+    }
+
+    /**
+     * Sets the response timeout for each attempt. When requests in {@link RetryingClient} are made,
+     * corresponding responses are timed out by this value. {@code 0} disables the timeout.
+     *
+     * @return {@link T} to support method chaining.
+     */
+    public T responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
+        checkArgument(
+                !requireNonNull(responseTimeoutForEachAttempt, "responseTimeoutForEachAttempt").isNegative(),
+                "responseTimeoutForEachAttempt: %s (expected: >= 0)", responseTimeoutForEachAttempt);
+        return responseTimeoutMillisForEachAttempt(responseTimeoutForEachAttempt.toMillis());
     }
 
     /**
@@ -106,7 +121,7 @@ public abstract class RetryingClientBuilder<
     ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
                           .add("retryStrategy", retryStrategy)
-                          .add("backoff", backoffSupplier.get())
-                          .add("defaultMaxAttempts", defaultMaxAttempts);
+                          .add("defaultMaxAttempts", defaultMaxAttempts)
+                          .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt);
     }
 }

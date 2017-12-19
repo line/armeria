@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,21 +26,21 @@ public class PrefixAddingPathMappingTest {
 
     @Test
     public void testLoggerName() {
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofGlob("/bar/**")).loggerName())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).loggerName())
                 .isEqualTo("foo.bar.__");
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofGlob("bar")).loggerName())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("bar")).loggerName())
                 .isEqualTo("foo.__.bar");
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofRegex("/(foo|bar)")).loggerName())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofRegex("/(foo|bar)")).loggerName())
                 .isEqualTo("foo.regex.__foo_bar_");
     }
 
     @Test
     public void testMetricName() {
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofGlob("/bar/**")).metricName())
-                .isEqualTo("/foo/bar/**");
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofGlob("bar")).metricName())
-                .isEqualTo("/foo/**/bar");
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofRegex("/(foo|bar)")).metricName())
-                .isEqualTo("/foo/regex:/(foo|bar)");
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).meterTag())
+                .isEqualTo("prefix:/foo/,glob:/bar/**");
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("bar")).meterTag())
+                .isEqualTo("prefix:/foo/,glob:/**/bar");
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofRegex("/(foo|bar)")).meterTag())
+                .isEqualTo("prefix:/foo/,regex:/(foo|bar)");
     }
 }

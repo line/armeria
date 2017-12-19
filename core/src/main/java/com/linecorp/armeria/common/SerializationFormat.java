@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -55,6 +55,8 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     public static final SerializationFormat UNKNOWN;
 
     /**
+     * Thrift TBinary serialization format.
+     *
      * @deprecated Use {@code ThriftSerializationFormats.BINARY}. Note that the value of this field will be
      *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
@@ -62,6 +64,8 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     public static final SerializationFormat THRIFT_BINARY;
 
     /**
+     * Thrift TCompact serialization format.
+     *
      * @deprecated Use {@code ThriftSerializationFormats.COMPACT}. Note that the value of this field will be
      *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
@@ -69,6 +73,8 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     public static final SerializationFormat THRIFT_COMPACT;
 
     /**
+     * Thrift TJSON serialization format.
+     *
      * @deprecated Use {@code ThriftSerializationFormats.JSON}. Note that the value of this field will be
      *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
@@ -76,6 +82,8 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     public static final SerializationFormat THRIFT_JSON;
 
     /**
+     * Thrift TText serialization format.
+     *
      * @deprecated Use {@code ThriftSerializationFormats.TEXT}. Note that the value of this field will be
      *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
@@ -150,6 +158,8 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     }
 
     /**
+     * Returns the set of all known Thrift serialization formats.
+     *
      * @deprecated Use {@code ThriftSerializationFormats.values()}.
      *
      * @throws IllegalStateException if {@code armeria-thrift} module is not loaded
@@ -223,6 +233,8 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     }
 
     /**
+     * Finds the {@link SerializationFormat} which is accepted by the specified media range.
+     *
      * @deprecated Use {@link #find(MediaType...)}.
      */
     @Deprecated

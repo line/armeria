@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,24 +17,24 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.PathAndQuery;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 
 final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements HttpClient {
 
-    DefaultHttpClient(ClientBuilderParams params,
-                      Client<HttpRequest, HttpResponse> delegate,
-                      SessionProtocol sessionProtocol, Endpoint endpoint) {
-        super(params, delegate, sessionProtocol, endpoint);
+    DefaultHttpClient(ClientBuilderParams params, Client<HttpRequest, HttpResponse> delegate,
+                      MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
+        super(params, delegate, meterRegistry, sessionProtocol, endpoint);
     }
 
     @Override
@@ -46,14 +46,14 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         final String concatPaths = concatPaths(uri().getRawPath(), req.path());
         req.path(concatPaths);
 
-        final String[] pathAndQuery = splitPathAndQuery(concatPaths);
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(concatPaths);
         if (pathAndQuery == null) {
             req.abort();
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + concatPaths));
         }
 
-        return execute(eventLoop, req.method(), pathAndQuery[0], pathAndQuery[1], null, req, cause -> {
-            final DefaultHttpResponse res = new DefaultHttpResponse();
+        return execute(eventLoop, req.method(), pathAndQuery.path(), pathAndQuery.query(), null, req, cause -> {
+            final HttpResponseWriter res = HttpResponse.streaming();
             res.close(cause);
             return res;
         });
@@ -65,6 +65,6 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
-        return execute(eventLoop, aggregatedReq.toHttpRequest());
+        return execute(eventLoop, HttpRequest.of(aggregatedReq));
     }
 }

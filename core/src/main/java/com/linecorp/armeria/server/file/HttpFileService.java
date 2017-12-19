@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,15 +22,16 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.text.ParseException;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.Map;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.HttpData;
@@ -38,10 +39,10 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.util.LruMap;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
@@ -49,6 +50,8 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.server.file.HttpVfs.Entry;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * An {@link HttpService} that serves static files from a file system.
@@ -98,18 +101,33 @@ public final class HttpFileService extends AbstractHttpService {
 
     private final HttpFileServiceConfig config;
 
-    /**
-     * An LRU cache map that releases the buffer that contains the cached content.
-     */
-    private final Map<String, CachedEntry> cache;
+    @Nullable
+    private final LoadingCache<PathAndEncoding, CachedEntry> cache;
 
     HttpFileService(HttpFileServiceConfig config) {
         this.config = requireNonNull(config, "config");
 
         if (config.maxCacheEntries() != 0) {
-            cache = Collections.synchronizedMap(new LruMap<String, CachedEntry>(config.maxCacheEntries()));
+            cache = Caffeine.newBuilder()
+                            .maximumSize(config.maxCacheEntries())
+                            .recordStats()
+                            .build(this::getEntryWithoutCache);
         } else {
             cache = null;
+        }
+    }
+
+    @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        final MeterRegistry registry = cfg.server().meterRegistry();
+        if (cache != null) {
+            CaffeineMetricSupport.setup(
+                    registry,
+                    new MeterIdPrefix("armeria.server.file.vfsCache",
+                                      "hostnamePattern", cfg.virtualHost().hostnamePattern(),
+                                      "pathMapping", cfg.pathMapping().meterTag(),
+                                      "vfs", config.vfs().meterTag()),
+                    cache);
         }
     }
 
@@ -121,13 +139,12 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     @Override
-    protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
         final Entry entry = getEntry(ctx, req);
         final long lastModifiedMillis = entry.lastModifiedMillis();
 
         if (lastModifiedMillis == 0) {
-            res.respond(HttpStatus.NOT_FOUND);
-            return;
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
 
         long ifModifiedSinceMillis = Long.MIN_VALUE;
@@ -150,23 +167,20 @@ public final class HttpFileService extends AbstractHttpService {
         }
 
         if (lastModifiedMillis < ifModifiedSinceMillis) {
-            res.write(HttpHeaders.of(HttpStatus.NOT_MODIFIED)
-                                 .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
-                                 .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis));
-            res.close();
-            return;
+            return HttpResponse.of(
+                    HttpHeaders.of(HttpStatus.NOT_MODIFIED)
+                               .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
+                               .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis));
         }
 
         final HttpData data;
         try {
             data = entry.readContent();
         } catch (FileNotFoundException ignored) {
-            res.respond(HttpStatus.NOT_FOUND);
-            return;
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             logger.warn("{} Unexpected exception reading a file:", ctx, e);
-            res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
-            return;
+            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
@@ -174,14 +188,13 @@ public final class HttpFileService extends AbstractHttpService {
                                          .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
                                          .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis);
         if (entry.mediaType() != null) {
-            headers.set(HttpHeaderNames.CONTENT_TYPE, entry.mediaType().toString());
+            headers.contentType(entry.mediaType());
         }
         if (entry.contentEncoding() != null) {
             headers.set(HttpHeaderNames.CONTENT_ENCODING, entry.contentEncoding());
         }
-        res.write(headers);
-        res.write(data);
-        res.close();
+
+        return HttpResponse.of(headers, data);
     }
 
     private Entry getEntry(ServiceRequestContext ctx, HttpRequest req) {
@@ -228,14 +241,12 @@ public final class HttpFileService extends AbstractHttpService {
             return config.vfs().get(path, contentEncoding);
         }
 
-        CachedEntry e = cache.get(path);
-        if (e != null) {
-            return e;
-        }
+        return cache.get(new PathAndEncoding(path, contentEncoding));
+    }
 
-        e = new CachedEntry(config.vfs().get(path, contentEncoding), config.maxCacheEntrySizeBytes());
-        cache.put(path, e);
-        return e;
+    private CachedEntry getEntryWithoutCache(PathAndEncoding pathAndEncoding) {
+        return new CachedEntry(config.vfs().get(pathAndEncoding.path, pathAndEncoding.contentEncoding),
+                               config.maxCacheEntrySizeBytes());
     }
 
     private Entry getEntryWithSupportedEncodings(String path,
@@ -365,6 +376,34 @@ public final class HttpFileService extends AbstractHttpService {
         FileServiceContentEncoding(String extension, String headerValue) {
             this.extension = extension;
             this.headerValue = headerValue;
+        }
+    }
+
+    private static final class PathAndEncoding {
+        private final String path;
+        @Nullable
+        private final String contentEncoding;
+
+        PathAndEncoding(String path, @Nullable String contentEncoding) {
+            this.path = path;
+            this.contentEncoding = contentEncoding;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof PathAndEncoding)) {
+                return false;
+            }
+            return path.equals(((PathAndEncoding) obj).path) &&
+                   Objects.equals(contentEncoding, ((PathAndEncoding) obj).contentEncoding);
+        }
+
+        @Override
+        public int hashCode() {
+            return path.hashCode() * 31 + Objects.hashCode(contentEncoding);
         }
     }
 }

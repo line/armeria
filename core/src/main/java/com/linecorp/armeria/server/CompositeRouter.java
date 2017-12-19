@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,12 +24,15 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A {@link Router} implementation that enables composing multiple {@link Router}s into one.
  */
-class CompositeRouter<I, O> implements Router<O> {
+final class CompositeRouter<I, O> implements Router<O> {
 
     private final List<Router<I>> delegates;
     private final Function<PathMapped<I>, PathMapped<O>> resultMapper;
@@ -45,7 +48,7 @@ class CompositeRouter<I, O> implements Router<O> {
 
     @Override
     public PathMapped<O> find(PathMappingContext mappingCtx) {
-        for (Router<I> delegate : delegates()) {
+        for (Router<I> delegate : delegates) {
             final PathMapped<I> result = delegate.find(mappingCtx);
             if (result.isPresent()) {
                 return resultMapper.apply(result);
@@ -56,11 +59,27 @@ class CompositeRouter<I, O> implements Router<O> {
     }
 
     @Override
-    public void dump(OutputStream output) {
-        delegates().forEach(delegate -> delegate.dump(output));
+    public boolean registerMetrics(MeterRegistry registry, MeterIdPrefix idPrefix) {
+        final int numDelegates = delegates.size();
+        switch (numDelegates) {
+            case 0:
+                return false;
+            case 1:
+                return delegates.get(0).registerMetrics(registry, idPrefix);
+            default:
+                boolean registered = false;
+                for (int i = 0; i < numDelegates; i++) {
+                    final MeterIdPrefix delegateIdPrefix = idPrefix.withTags("index", String.valueOf(i));
+                    if (delegates.get(i).registerMetrics(registry, delegateIdPrefix)) {
+                        registered = true;
+                    }
+                }
+                return registered;
+        }
     }
 
-    protected final List<Router<I>> delegates() {
-        return delegates;
+    @Override
+    public void dump(OutputStream output) {
+        delegates.forEach(delegate -> delegate.dump(output));
     }
 }

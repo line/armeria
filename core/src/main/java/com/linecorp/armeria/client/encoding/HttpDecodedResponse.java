@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -91,10 +91,10 @@ class HttpDecodedResponse extends FilteredHttpResponse {
     }
 
     @Override
-    protected void beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        if (responseDecoder == null) {
-            return;
+    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        if (responseDecoder != null) {
+            responseDecoder.finish();
         }
-        responseDecoder.finish();
+        return cause;
     }
 }

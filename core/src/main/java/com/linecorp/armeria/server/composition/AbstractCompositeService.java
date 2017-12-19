@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.composition;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -24,21 +25,26 @@ import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.PathMappingContext;
-import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.Routers;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCallbackInvoker;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextWrapper;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A skeletal {@link Service} implementation that enables composing multiple {@link Service}s into one.
@@ -46,9 +52,9 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
  * <pre>{@code
  * public class MyService extends AbstractCompositeService<HttpRequest, HttpResponse> {
  *     public MyService() {
- *         super(CompositeServiceEntry.ofPrefix("/foo/"), new FooService()),
- *               CompositeServiceEntry.ofPrefix("/bar/"), new BarService()),
- *               CompositeServiceEntry.ofCatchAll(), new OtherService()));
+ *         super(CompositeServiceEntry.ofPrefix("/foo/", new FooService()),
+ *               CompositeServiceEntry.ofPrefix("/bar/", new BarService()),
+ *               CompositeServiceEntry.ofCatchAll(new OtherService()));
  *     }
  * }
  * }</pre>
@@ -62,7 +68,8 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
 public abstract class AbstractCompositeService<I extends Request, O extends Response> implements Service<I, O> {
 
     private final List<CompositeServiceEntry<I, O>> services;
-    private final Router<Service<I, O>> router;
+    private Server server;
+    private Router<Service<I, O>> router;
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
@@ -79,11 +86,21 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         requireNonNull(services, "services");
 
         this.services = ImmutableList.copyOf(services);
-        router = Routers.ofCompositeServiceEntry(this, this.services);
     }
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
+        checkState(server == null, "cannot be added to more than one server");
+        server = cfg.server();
+        router = Routers.ofCompositeService(services);
+
+        final MeterRegistry registry = server.meterRegistry();
+        final MeterIdPrefix meterIdPrefix =
+                new MeterIdPrefix("armeria.server.router.compositeServiceCache",
+                                  "hostnamePattern", cfg.virtualHost().hostnamePattern(),
+                                  "pathMapping", cfg.pathMapping().meterTag());
+
+        router.registerMetrics(registry, meterIdPrefix);
         for (CompositeServiceEntry<I, O> e : services()) {
             ServiceCallbackInvoker.invokeServiceAdded(cfg, e.service());
         }
@@ -122,7 +139,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         final PathMappingContext mappingCtx = ctx.pathMappingContext();
         final PathMapped<Service<I, O>> mapped = findService(mappingCtx.overridePath(ctx.mappedPath()));
         if (!mapped.isPresent()) {
-            throw ResourceNotFoundException.get();
+            throw HttpStatusException.of(HttpStatus.NOT_FOUND);
         }
 
         final Optional<String> childPrefix = mapped.mapping().prefix();
@@ -150,6 +167,12 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
             super(delegate);
             this.pathMapping = pathMapping;
             this.mappedPath = mappedPath;
+        }
+
+        @Override
+        public ServiceRequestContext newDerivedContext() {
+            final ServiceRequestContext derivedCtx = super.newDerivedContext();
+            return new CompositeServiceRequestContext(derivedCtx, pathMapping, mappedPath);
         }
 
         @Override

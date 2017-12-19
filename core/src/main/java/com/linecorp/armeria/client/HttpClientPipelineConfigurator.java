@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,6 +23,8 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -79,6 +81,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -193,7 +196,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     /**
-     * @see <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>
+     * See <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>.
      */
     private void configureAsHttps(Channel ch, InetSocketAddress remoteAddr) {
         final ChannelPipeline p = ch.pipeline();
@@ -235,7 +238,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                         return;
                     }
 
-                    addBeforeSessionHandler(p, newHttp1Codec());
+                    addBeforeSessionHandler(p, newHttp1Codec(
+                            clientFactory.maxHttp1InitialLineLength(),
+                            clientFactory.maxHttp1HeaderSize(),
+                            clientFactory.maxHttp1ChunkSize()));
                     protocol = H1;
                 }
                 finishSuccessfully(p, protocol);
@@ -277,7 +283,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 pipeline.addLast(new DowngradeHandler());
                 pipeline.addLast(http2Handler);
             } else {
-                Http1ClientCodec http1Codec = newHttp1Codec();
+                Http1ClientCodec http1Codec = newHttp1Codec(
+                        clientFactory.maxHttp1InitialLineLength(),
+                        clientFactory.maxHttp1HeaderSize(),
+                        clientFactory.maxHttp1ChunkSize());
                 Http2ClientUpgradeCodec http2ClientUpgradeCodec =
                         new Http2ClientUpgradeCodec(http2Handler);
                 HttpClientUpgradeHandler http2UpgradeHandler =
@@ -291,7 +300,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 pipeline.addLast(new UpgradeRequestHandler(http2Handler.responseDecoder()));
             }
         } else {
-            pipeline.addLast(newHttp1Codec());
+            pipeline.addLast(newHttp1Codec(
+                    clientFactory.maxHttp1InitialLineLength(),
+                    clientFactory.maxHttp1HeaderSize(),
+                    clientFactory.maxHttp1ChunkSize()));
 
             // NB: We do not call finishSuccessfully() immediately here
             //     because it assumes HttpSessionHandler to be in the pipeline,
@@ -312,6 +324,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         if (protocol == H1 || protocol == H1C) {
             addBeforeSessionHandler(pipeline, new Http1ResponseDecoder(pipeline.channel()));
+        } else if (protocol == H2 || protocol == H2C) {
+            final int initialWindow = clientFactory.initialHttp2ConnectionWindowSize();
+            if (initialWindow > DEFAULT_WINDOW_SIZE) {
+                incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
+            }
         }
 
         final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
@@ -320,6 +337,15 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
+    }
+
+    private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
+        try {
+            final Http2Connection connection = pipeline.get(Http2ClientConnectionHandler.class).connection();
+            connection.local().flowController().incrementWindowSize(connection.connectionStream(), delta);
+        } catch (Http2Exception e) {
+            logger.warn("Failed to increment local flowController window size: {}", delta, e);
+        }
     }
 
     void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
@@ -358,7 +384,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         /**
-         * Sends the initial upgrade request, which is {@code "HEAD / HTTP/1.1"}
+         * Sends the initial upgrade request, which is {@code "HEAD / HTTP/1.1"}.
          */
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -572,19 +598,31 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
         Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
+        final Http2Settings http2Settings = http2Settings();
+
         final Http2ResponseDecoder listener = new Http2ResponseDecoder(conn, ch, encoder);
-
         final Http2ClientConnectionHandler handler =
-                new Http2ClientConnectionHandler(decoder, encoder, new Http2Settings(), listener);
-
+                new Http2ClientConnectionHandler(decoder, encoder, http2Settings, listener);
         // Setup post build options
         handler.gracefulShutdownTimeoutMillis(clientFactory.idleTimeoutMillis());
 
         return handler;
     }
 
-    private static Http1ClientCodec newHttp1Codec() {
-        return new Http1ClientCodec() {
+    private Http2Settings http2Settings() {
+        final Http2Settings http2Settings = new Http2Settings();
+        if (clientFactory.initialHttp2StreamWindowSize() != DEFAULT_WINDOW_SIZE) {
+            http2Settings.initialWindowSize(clientFactory.initialHttp2StreamWindowSize());
+        }
+        if (clientFactory.http2MaxFrameSize() != DEFAULT_MAX_FRAME_SIZE) {
+            http2Settings.maxFrameSize(clientFactory.http2MaxFrameSize());
+        }
+        return http2Settings;
+    }
+
+    private static Http1ClientCodec newHttp1Codec(
+            int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
+        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize) {
             @Override
             public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
                 HttpSession.get(ctx.channel()).deactivate();

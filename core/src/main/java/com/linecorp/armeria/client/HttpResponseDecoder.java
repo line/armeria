@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,11 +29,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
@@ -71,7 +70,7 @@ abstract class HttpResponseDecoder {
 
         final HttpResponseWrapper newRes =
                 new HttpResponseWrapper(req, res, logBuilder, responseTimeoutMillis, maxContentLength);
-        final HttpResponseWriter oldRes = responses.put(id, newRes);
+        final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
@@ -116,7 +115,7 @@ abstract class HttpResponseDecoder {
         return disconnectWhenFinished && !hasUnfinishedResponses();
     }
 
-    static final class HttpResponseWrapper implements HttpResponseWriter, Runnable {
+    static final class HttpResponseWrapper implements StreamWriter<HttpObject>, Runnable {
         private final HttpRequest request;
         private final DecodedHttpResponse delegate;
         private final RequestLogBuilder logBuilder;
@@ -133,8 +132,8 @@ abstract class HttpResponseDecoder {
             this.maxContentLength = maxContentLength;
         }
 
-        CompletableFuture<Void> closeFuture() {
-            return delegate.closeFuture();
+        CompletableFuture<Void> completionFuture() {
+            return delegate.completionFuture();
         }
 
         void scheduleTimeout(ChannelHandlerContext ctx) {
@@ -170,13 +169,13 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void run() {
-            if (request != null) {
-                request.abort();
-            }
-
             final ResponseTimeoutException cause = ResponseTimeoutException.get();
             delegate.close(cause);
             logBuilder.endResponse(cause);
+
+            if (request != null) {
+                request.abort();
+            }
         }
 
         @Override
@@ -213,22 +212,18 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void close() {
-            if (request != null) {
-                request.abort();
-            }
-
             if (cancelTimeout()) {
                 delegate.close();
                 logBuilder.endResponse();
+            }
+
+            if (request != null) {
+                request.abort();
             }
         }
 
         @Override
         public void close(Throwable cause) {
-            if (request != null) {
-                request.abort();
-            }
-
             if (cancelTimeout()) {
                 delegate.close(cause);
                 logBuilder.endResponse(cause);
@@ -237,35 +232,10 @@ abstract class HttpResponseDecoder {
                     logger.warn("Unexpected exception:", cause);
                 }
             }
-        }
 
-        @Override
-        public void respond(HttpStatus status) {
-            delegate.respond(status);
-        }
-
-        @Override
-        public void respond(HttpStatus status,
-                            MediaType mediaType, String content) {
-            delegate.respond(status, mediaType, content);
-        }
-
-        @Override
-        public void respond(HttpStatus status,
-                            MediaType mediaType, String format, Object... args) {
-            delegate.respond(status, mediaType, format, args);
-        }
-
-        @Override
-        public void respond(HttpStatus status,
-                            MediaType mediaType, byte[] content) {
-            delegate.respond(status, mediaType, content);
-        }
-
-        @Override
-        public void respond(HttpStatus status,
-                            MediaType mediaType, byte[] content, int offset, int length) {
-            delegate.respond(status, mediaType, content, offset, length);
+            if (request != null) {
+                request.abort();
+            }
         }
 
         @Override

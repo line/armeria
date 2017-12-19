@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
@@ -73,13 +72,19 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         final HttpResponseWrapper resWrapper =
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
-        resWrapper.closeFuture().whenComplete((unused, cause) -> {
-            // Ensure that the scheduled timeout is not executed.
-            resWrapper.cancelTimeout();
+        resWrapper.completionFuture().whenComplete((unused, cause) -> {
             if (cause != null) {
+                // Ensure that the resWrapper is closed.
+                // This is needed in case the response is aborted by the client.
+                resWrapper.close(cause);
+
                 // Disconnect when the response has been closed with an exception because there's no way
                 // to recover from it in HTTP/1.
                 channel().close();
+            } else {
+                // Ensure that the resWrapper is closed.
+                // This is needed in case the response is aborted by the client.
+                resWrapper.close();
             }
         });
 
@@ -182,7 +187,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         if (msg instanceof LastHttpContent) {
-                            final HttpResponseWriter res = removeResponse(resId++);
+                            final HttpResponseWrapper res = removeResponse(resId++);
                             assert this.res == res;
                             this.res = null;
 
@@ -219,7 +224,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
         state = State.DISCARD;
 
-        final HttpResponseWriter res = this.res;
+        final HttpResponseWrapper res = this.res;
         this.res = null;
 
         if (res != null) {

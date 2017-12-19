@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -75,7 +75,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private final ClientRequestContext ctx;
     private final Client<HttpRequest, HttpResponse> httpClient;
-    private final DefaultHttpRequest req;
+    private final HttpRequestWriter req;
     private final CallOptions callOptions;
     private final ArmeriaMessageFramer messageFramer;
     private final GrpcMessageMarshaller<I, O> marshaller;
@@ -93,7 +93,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     ArmeriaClientCall(
             ClientRequestContext ctx,
             Client<HttpRequest, HttpResponse> httpClient,
-            DefaultHttpRequest req,
+            HttpRequestWriter req,
             MethodDescriptor<I, O> method,
             int maxOutboundMessageSizeBytes,
             int maxInboundMessageSizeBytes,
@@ -141,12 +141,10 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         try {
             res = httpClient.execute(ctx, req);
         } catch (Exception e) {
-            try (SafeCloseable ignored = RequestContext.push(ctx)) {
-                listener.onClose(Status.fromThrowable(e), EMPTY_METADATA);
-            }
+            close(Status.fromThrowable(e));
             return;
         }
-        res.subscribe(responseReader);
+        res.subscribe(responseReader, ctx.eventLoop(), true);
     }
 
     @Override
@@ -175,14 +173,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (cause != null) {
             status = status.withCause(cause);
         }
-        responseReader.cancel();
-        req.close(status.asException());
-        if (listener != null) {
-            try (SafeCloseable ignored = RequestContext.push(ctx)) {
-                listener.onClose(status, EMPTY_METADATA);
-            }
-            notifyExecutor();
-        }
+        close(status);
+        req.abort();
     }
 
     @Override
@@ -236,12 +228,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportStatus(Status status) {
-        responseReader.cancel();
-        try (SafeCloseable ignored = RequestContext.push(ctx)) {
-            listener.onClose(status, EMPTY_METADATA);
-        }
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status), null);
-        notifyExecutor();
+        close(status);
     }
 
     private void prepareHeaders(HttpHeaders headers, Compressor compressor) {
@@ -257,8 +244,17 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                             TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis())));
     }
 
+    private void close(Status status) {
+        responseReader.cancel();
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+            listener.onClose(status, EMPTY_METADATA);
+        }
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status), null);
+        notifyExecutor();
+    }
+
     /**
-     * Armeria does not support {@link CallOptions} set by the user, however GRPC stubs set an {@link Executor}
+     * Armeria does not support {@link CallOptions} set by the user, however gRPC stubs set an {@link Executor}
      * within blocking stubs which is used to notify the stub when processing is finished. It's unclear why
      * the stubs use a loop and {@link java.util.concurrent.Future#isDone()} instead of just blocking on
      * {@link java.util.concurrent.Future#get}, but we make sure to run the {@link Executor} so the stub can

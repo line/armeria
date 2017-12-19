@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,10 +23,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.buffer.ByteBuf;
@@ -107,8 +108,15 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final HttpHeaders nettyHeaders = nettyReq.headers();
                     final int id = ++receivedRequests;
 
+                    // Validate the method.
+                    if (!HttpMethod.isSupported(nettyReq.method().name())) {
+                        fail(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                        return;
+                    }
+
                     // Validate the 'content-length' header.
                     final String contentLengthStr = nettyHeaders.get(HttpHeaderNames.CONTENT_LENGTH);
+                    final boolean contentEmpty;
                     if (contentLengthStr != null) {
                         final long contentLength;
                         try {
@@ -121,6 +129,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             fail(ctx, HttpResponseStatus.BAD_REQUEST);
                             return;
                         }
+
+                        contentEmpty = contentLength == 0;
+                    } else {
+                        contentEmpty = true;
                     }
 
                     nettyHeaders.set(ExtensionHeaderNames.SCHEME.text(), scheme);
@@ -132,6 +144,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             HttpUtil.isKeepAlive(nettyReq),
                             inboundTrafficController,
                             cfg.defaultMaxRequestLength());
+
+                    // Close the request early when it is sure that there will be
+                    // neither content nor trailing headers.
+                    if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
+                        req.close();
+                    }
 
                     ctx.fireChannelRead(req);
                 } else {
@@ -161,7 +179,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     if (req.isOpen()) {
-                        req.write(HttpData.of(data));
+                        req.write(new ByteBufHttpData(data.retain(), false));
                     }
                 }
 

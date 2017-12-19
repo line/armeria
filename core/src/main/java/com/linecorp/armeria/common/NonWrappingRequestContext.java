@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,6 +30,7 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.Attribute;
@@ -40,6 +41,7 @@ import io.netty.util.AttributeKey;
  */
 public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
+    private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
     private final HttpMethod method;
@@ -59,8 +61,10 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * @param request the request associated with this context
      */
     protected NonWrappingRequestContext(
-            SessionProtocol sessionProtocol, HttpMethod method, String path, @Nullable String query,
-            Object request) {
+            MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            HttpMethod method, String path, @Nullable String query, Object request) {
+
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
@@ -127,6 +131,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @SuppressWarnings("unchecked")
     public final <T> T request() {
         return (T) request;
+    }
+
+    @Override
+    public final MeterRegistry meterRegistry() {
+        return meterRegistry;
     }
 
     @Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -50,6 +50,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.Channel;
@@ -406,7 +407,13 @@ public class RequestContextTest {
 
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
-            super(SessionProtocol.HTTP, HttpMethod.GET, "/", null, new DefaultHttpRequest());
+            super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
+                  HttpMethod.GET, "/", null, HttpRequest.streaming());
+        }
+
+        @Override
+        public RequestContext newDerivedContext() {
+            throw new UnsupportedOperationException();
         }
 
         @Override

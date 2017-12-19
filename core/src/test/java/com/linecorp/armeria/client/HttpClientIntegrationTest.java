@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -29,7 +28,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
-import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
@@ -46,7 +44,6 @@ import com.google.common.io.Closeables;
 import com.linecorp.armeria.client.encoding.DeflateStreamDecoderFactory;
 import com.linecorp.armeria.client.encoding.HttpDecodingClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -86,7 +83,7 @@ public class HttpClientIntegrationTest {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             HttpResponse res = delegate().serve(ctx, req);
-            DefaultHttpResponse decorated = new DefaultHttpResponse();
+            HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -121,7 +118,7 @@ public class HttpClientIntegrationTest {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             HttpResponse res = delegate().serve(ctx, req);
-            DefaultHttpResponse decorated = new DefaultHttpResponse();
+            HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -158,12 +155,12 @@ public class HttpClientIntegrationTest {
     private static class PooledContentService extends AbstractHttpService {
 
         @Override
-        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                 throws Exception {
             ByteBuf buf = ctx.alloc().buffer();
             buf.writeCharSequence("pooled content", StandardCharsets.UTF_8);
             releasedByteBuf.set(buf);
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, new ByteBufHttpData(buf, false));
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, new ByteBufHttpData(buf, false));
         }
     }
 
@@ -176,19 +173,17 @@ public class HttpClientIntegrationTest {
             sb.service("/httptestbody", new AbstractHttpService() {
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                     HttpResponseWriter res) {
-                    doGetOrPost(req, res);
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return doGetOrPost(req);
                 }
 
                 @Override
-                protected void doPost(ServiceRequestContext ctx, HttpRequest req,
-                                      HttpResponseWriter res) {
-                    doGetOrPost(req, res);
+                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+                    return doGetOrPost(req);
                 }
 
-                private void doGetOrPost(HttpRequest req, HttpResponseWriter res) {
-                    final CharSequence contentType = req.headers().get(HttpHeaderNames.CONTENT_TYPE);
+                private HttpResponse doGetOrPost(HttpRequest req) {
+                        final MediaType contentType = req.headers().contentType();
                     if (contentType != null) {
                         throw new IllegalArgumentException(
                                 "Serialization format is none, so content type should not be set: " +
@@ -202,64 +197,62 @@ public class HttpClientIntegrationTest {
                                 accept);
                     }
 
-                    req.aggregate().handle(voidFunction((aReq, cause) -> {
+                    return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
                         if (cause != null) {
-                            res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
-                                        MediaType.PLAIN_TEXT_UTF_8, Throwables.getStackTraceAsString(cause));
-                            return;
+                            return HttpResponse.of(
+                                    HttpStatus.INTERNAL_SERVER_ERROR,
+                                    MediaType.PLAIN_TEXT_UTF_8, Throwables.getStackTraceAsString(cause));
                         }
 
-                        res.write(HttpHeaders.of(HttpStatus.OK)
-                                             .set(HttpHeaderNames.CACHE_CONTROL, "alwayscache"));
-                        res.write(HttpData.ofUtf8(String.format(
-                                Locale.ENGLISH,
-                                "METHOD: %s|ACCEPT: %s|BODY: %s",
-                                req.method().name(), accept,
-                                aReq.content().toString(StandardCharsets.UTF_8))));
-                        res.close();
-                    })).exceptionally(CompletionActions::log);
+                        return HttpResponse.of(
+                                HttpHeaders.of(HttpStatus.OK)
+                                           .set(HttpHeaderNames.CACHE_CONTROL, "alwayscache"),
+                                HttpData.ofUtf8(
+                                        "METHOD: %s|ACCEPT: %s|BODY: %s",
+                                        req.method().name(), accept,
+                                        aReq.content().toString(StandardCharsets.UTF_8)));
+                    }).exceptionally(CompletionActions::log));
                 }
             });
 
             sb.service("/not200", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                     HttpResponseWriter res) {
-                    res.respond(HttpStatus.NOT_FOUND);
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.NOT_FOUND);
                 }
             });
 
             sb.service("/useragent", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     String ua = req.headers().get(HttpHeaderNames.USER_AGENT, "undefined");
-                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, ua);
+                    return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, ua);
                 }
             });
 
             sb.service("/hello/world", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "success");
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "success");
                 }
             });
 
             sb.service("/encoding", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    res.write(HttpHeaders.of(HttpStatus.OK));
-                    res.write(HttpData.ofUtf8("some content to compress "));
-                    res.write(HttpData.ofUtf8("more content to compress"));
-                    res.close();
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.OK),
+                            HttpData.ofUtf8("some content to compress "),
+                            HttpData.ofUtf8("more content to compress"));
                 }
             }.decorate(HttpEncodingService.class));
 
             sb.service("/encoding-toosmall", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "small content");
+                    return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "small content");
                 }
             }.decorate(HttpEncodingService.class));
 

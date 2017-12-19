@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -131,8 +131,9 @@ class HttpEncodedResponse extends FilteredHttpResponse {
     }
 
     @Override
-    protected void beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
         closeEncoder();
+        return cause;
     }
 
     private void closeEncoder() {
@@ -154,10 +155,10 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             // Content-Encoding.
             return false;
         }
-        if (headers.contains(HttpHeaderNames.CONTENT_TYPE)) {
+        if (headers.contentType() != null) {
             // Make sure the content type is worth encoding.
             try {
-                MediaType contentType = MediaType.parse(headers.get(HttpHeaderNames.CONTENT_TYPE));
+                MediaType contentType = headers.contentType();
                 if (!encodableContentTypePredicate.test(contentType)) {
                     return false;
                 }

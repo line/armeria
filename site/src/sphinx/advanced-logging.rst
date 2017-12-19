@@ -1,8 +1,8 @@
-.. _`Logback`: http://logback.qos.ch/
+.. _`Logback`: https://logback.qos.ch/
 .. _`RequestContextExportingAppender`: apidocs/index.html?com/linecorp/armeria/common/logback/RequestContextExportingAppender.html
 .. _`BuiltInProperty`: apidocs/index.html?com/linecorp/armeria/common/logback/BuiltInProperty.html
 .. _`RequestContext`: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
-.. _`MDC`: http://logback.qos.ch/manual/mdc.html
+.. _`MDC`: https://logback.qos.ch/manual/mdc.html
 
 .. _advanced-logging:
 
@@ -91,7 +91,7 @@ access the attribute value is ``attrs.bar``, which follows the form of ``attrs.<
 Using an alternative string converter for a custom attribute
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 By default, `RequestContextExportingAppender`_ uses ``Object.toString()`` to convert an attribute value into
-an `MDC`_ value. If you want an alternative string repredentation of an attribute value, you can define
+an `MDC`_ value. If you want an alternative string representation of an attribute value, you can define
 a ``Function`` class with a public no-args constructor that transforms an attribute value into a ``String``:
 
 .. code-block:: java

@@ -5,7 +5,7 @@
  *  version 2.0 (the "License"); you may not use this file except in compliance
  *  with the License. You may obtain a copy of the License at:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -112,8 +112,27 @@ public final class Flags {
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
+            4096; // from Netty default maxHttp1InitialLineLength
+    private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
+            getInt("defaultMaxHttp1InitialLineLength",
+                   DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH,
+                   value -> value >= 0);
+
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE = 8192; // from Netty default maxHeaderSize
+    private static final int DEFAULT_MAX_HTTP1_HEADER_SIZE =
+            getInt("defaultMaxHttp1HeaderSize",
+                   DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE,
+                   value -> value >= 0);
+
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE = 8192; // from Netty default maxChunkSize
+    private static final int DEFAULT_MAX_HTTP1_CHUNK_SIZE =
+            getInt("defaultMaxHttp1ChunkSize",
+                   DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE,
+                   value -> value >= 0);
+
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
-    private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", true);
+    private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2,maxAttempts=10";
@@ -135,6 +154,10 @@ public final class Flags {
     private static final String DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC = "maximumSize=256";
     private static final Optional<String> COMPOSITE_SERVICE_CACHE_SPEC =
             caffeineSpec("compositeServiceCache", DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC);
+
+    private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
+    private static final Optional<String> PARSED_PATH_CACHE_SPEC =
+            caffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
 
     static {
         if (!Epoll.isAvailable()) {
@@ -298,6 +321,44 @@ public final class Flags {
     }
 
     /**
+     * Returns the default maximum length of an HTTP/1 response initial line.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxHttp1InitialLineLength=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultMaxHttp1InitialLineLength() {
+        return DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH;
+    }
+
+    /**
+     * Returns the default maximum length of all headers in an HTTP/1 response.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxHttp1HeaderSize=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultMaxHttp1HeaderSize() {
+        return DEFAULT_MAX_HTTP1_HEADER_SIZE;
+    }
+
+    /**
+     * Returns the default maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceed it.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE}.
+     * Specify theb {@code -Dcom.linecorp.armeria.defaultMaxHttp1ChunkSize=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultMaxHttp1ChunkSize() {
+        return DEFAULT_MAX_HTTP1_CHUNK_SIZE;
+    }
+
+    /**
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp2Preface(boolean)} option.
      * Note that this value has effect only if a user did not specify it.
      *
@@ -312,8 +373,8 @@ public final class Flags {
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp1Pipelining(boolean)} option.
      * Note that this value has effect only if a user did not specify it.
      *
-     * <p>This flag is enabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=false} JVM option to disable it.
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=true} JVM option to enable it.
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
@@ -343,6 +404,19 @@ public final class Flags {
      */
     public static Optional<String> routeCacheSpec() {
         return ROUTE_CACHE_SPEC;
+    }
+
+    /**
+     * Returns the value of the {@code parsedPathCache} parameter. It would be used to create a Caffeine
+     * {@link Cache} instance using {@link Caffeine#from(String)} mapping raw HTTP paths to parsed pair of
+     * path and query, after validation.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_PARSED_PATH_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.parsedPathCache=<spec>} JVM option to override the default value.
+     * Also, specify {@code -Dcom.linecorp.armeria.parsedPathCache=off} JVM option to disable it.
+     */
+    public static Optional<String> parsedPathCacheSpec() {
+        return PARSED_PATH_CACHE_SPEC;
     }
 
     /**

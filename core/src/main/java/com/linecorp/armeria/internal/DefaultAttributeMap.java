@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -240,8 +240,8 @@ public class DefaultAttributeMap implements AttributeMap {
                 // We only update the linked-list structure if prev != null because if it is null this
                 // DefaultAttribute acts also as head. The head must never be removed completely and just be
                 // marked as removed as all synchronization is done on the head itself for each bucket.
-                // The head itself will be GC'ed once the DefaultAttributeMap is GC'ed. So at most 5 heads will
-                // be removed lazy as the array size is 5.
+                // The head itself will be GC'ed once the DefaultAttributeMap is GC'ed. So at most 4 heads will
+                // be removed lazy as the array size is 4.
                 if (prev != null) {
                     prev.next = next;
 

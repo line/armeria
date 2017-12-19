@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,14 +21,12 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
@@ -47,6 +45,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -57,6 +56,7 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -75,7 +75,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServerHandler.class);
 
-    private static final String ERROR_CONTENT_TYPE = MediaType.PLAIN_TEXT_UTF_8.toString();
+    private static final MediaType ERROR_CONTENT_TYPE = MediaType.PLAIN_TEXT_UTF_8;
 
     private static final Set<HttpMethod> ALLOWED_METHODS =
             Sets.immutableEnumSet(HttpMethod.DELETE, HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS,
@@ -241,27 +241,25 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         // Validate and split path and query.
-        final String[] pathAndQuery = splitPathAndQuery(originalPath);
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(originalPath);
         if (pathAndQuery == null) {
             // Reject requests without a valid path.
             respond(ctx, req, HttpStatus.NOT_FOUND);
             return;
         }
 
-        final String path = pathAndQuery[0];
-        @Nullable
-        final String query = pathAndQuery[1];
         final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
-        final PathMappingContext mappingCtx = DefaultPathMappingContext.of(host, hostname,
-                                                                           path, query, headers,
-                                                                           host.producibleMediaTypes());
+        final PathMappingContext mappingCtx = DefaultPathMappingContext.of(
+                host, hostname, pathAndQuery.path(), pathAndQuery.query(), headers,
+                host.producibleMediaTypes());
         // Find the service that matches the path.
         final PathMapped<ServiceConfig> mapped;
         try {
             mapped = host.findServiceConfig(mappingCtx);
-        } catch (HttpResponseException cause) {
+        } catch (HttpStatusException cause) {
+            // We do not need to handle HttpResponseException here because we do not use it internally.
             respond(ctx, req, cause.httpStatus());
             return;
         } catch (Throwable cause) {
@@ -282,19 +280,22 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final Channel channel = ctx.channel();
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, protocol, mappingCtx, mappingResult, req, getSSLSession(channel));
+                serviceCfg, channel, serviceCfg.server().meterRegistry(),
+                protocol, mappingCtx, mappingResult, req, getSSLSession(channel));
 
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-            final HttpResponse res;
+            HttpResponse res;
             try {
                 req.init(reqCtx);
                 res = service.serve(reqCtx, req);
+            } catch (HttpResponseException cause) {
+                res = cause.httpResponse();
             } catch (Throwable cause) {
                 logBuilder.endRequest(cause);
                 logBuilder.endResponse(cause);
-                if (cause instanceof HttpResponseException) {
-                    respond(ctx, req, ((HttpResponseException) cause).httpStatus());
+                if (cause instanceof HttpStatusException) {
+                    respond(ctx, req, ((HttpStatusException) cause).httpStatus());
                 } else {
                     logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
                     respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -309,7 +310,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             gracefulShutdownSupport.inc();
             unfinishedRequests++;
 
-            req.closeFuture().handle(voidFunction((ret, cause) -> {
+            if (pathAndQuery.query() == null && mapped.mapping().paramNames().isEmpty()) {
+                reqCtx.log().addListener(log -> {
+                    HttpStatus status = log.responseHeaders().status();
+                    if (status != null && status.code() >= 200 && status.code() < 400) {
+                        pathAndQuery.storeInCache(originalPath);
+                    }
+                }, RequestLogAvailability.COMPLETE);
+            }
+
+            req.completionFuture().handle(voidFunction((ret, cause) -> {
                 if (cause == null) {
                     logBuilder.endRequest();
                 } else {
@@ -317,7 +327,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
             })).exceptionally(CompletionActions::log);
 
-            res.closeFuture().handle(voidFunction((ret, cause) -> {
+            res.completionFuture().handle(voidFunction((ret, cause) -> {
                 req.abort();
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
                 eventLoop.execute(() -> {
@@ -408,7 +418,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         respond(ctx, req,
                 AggregatedHttpMessage.of(
                         HttpHeaders.of(status)
-                                   .set(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE),
+                                   .contentType(ERROR_CONTENT_TYPE),
                         content));
     }
 
@@ -433,7 +443,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                    DecodedHttpRequest req, AggregatedHttpMessage res) {
 
         // No need to consume further since the response is ready.
-        req.abort();
+        req.close();
 
         final boolean trailingHeadersEmpty = res.trailingHeaders().isEmpty();
         final boolean contentAndTrailingHeadersEmpty = res.content().isEmpty() && trailingHeadersEmpty;
@@ -452,7 +462,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     /**
      * Sets the keep alive header as per:
-     * - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
+     * - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
      */
     private void addKeepAliveHeaders(HttpRequest req, AggregatedHttpMessage res) {
         if (protocol == H1 || protocol == H1C) {
@@ -469,7 +479,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      * Sets the 'content-length' header to the response.
      */
     private static void setContentLength(HttpRequest req, AggregatedHttpMessage res) {
-        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+        // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
         // prohibits to send message body for below cases.
         // and in those cases, content should be empty.
         if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(res.status())) {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.TransportType;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
@@ -73,10 +75,17 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap baseBootstrap;
     private final Consumer<? super SslContextBuilder> sslContextCustomizer;
+    private final int initialHttp2ConnectionWindowSize;
+    private final int initialHttp2StreamWindowSize;
+    private final int http2MaxFrameSize;
+    private final int maxHttp1InitialLineLength;
+    private final int maxHttp1HeaderSize;
+    private final int maxHttp1ChunkSize;
     private final long idleTimeoutMillis;
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListenerImpl connectionPoolListener;
+    private MeterRegistry meterRegistry;
 
     private final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> pools = new MapMaker().weakKeys()
                                                                                             .makeMap();
@@ -91,9 +100,11 @@ final class HttpClientFactory extends AbstractClientFactory {
             Map<ChannelOption<?>, Object> socketOptions,
             Consumer<? super SslContextBuilder> sslContextCustomizer,
             Function<? super EventLoopGroup,
-                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
+                    ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
+            int initialHttp2ConnectionWindowSize, int initialHttp2StreamWindowSize, int http2MaxFrameSize,
+            int maxHttp1InitialLineLength, int maxHttp1HeaderSize, int maxHttp1ChunkSize,
             long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
-            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener, MeterRegistry meterRegistry) {
 
         final Bootstrap baseBootstrap = new Bootstrap();
         baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
@@ -109,10 +120,17 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.shutdownWorkerGroupOnClose = shutdownWorkerGroupOnClose;
         this.baseBootstrap = baseBootstrap;
         this.sslContextCustomizer = sslContextCustomizer;
+        this.initialHttp2ConnectionWindowSize = initialHttp2ConnectionWindowSize;
+        this.initialHttp2StreamWindowSize = initialHttp2StreamWindowSize;
+        this.http2MaxFrameSize = http2MaxFrameSize;
+        this.maxHttp1InitialLineLength = maxHttp1InitialLineLength;
+        this.maxHttp1HeaderSize = maxHttp1HeaderSize;
+        this.maxHttp1ChunkSize = maxHttp1ChunkSize;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.useHttp2Preface = useHttp2Preface;
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.connectionPoolListener = new ConnectionPoolListenerImpl(connectionPoolListener);
+        this.meterRegistry = meterRegistry;
 
         clientDelegate = new HttpClientDelegate(this);
         eventLoopScheduler = new EventLoopScheduler(workerGroup);
@@ -128,6 +146,30 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     Consumer<? super SslContextBuilder> sslContextCustomizer() {
         return sslContextCustomizer;
+    }
+
+    int initialHttp2ConnectionWindowSize() {
+        return initialHttp2ConnectionWindowSize;
+    }
+
+    int initialHttp2StreamWindowSize() {
+        return initialHttp2StreamWindowSize;
+    }
+
+    int http2MaxFrameSize() {
+        return http2MaxFrameSize;
+    }
+
+    int maxHttp1InitialLineLength() {
+        return maxHttp1InitialLineLength;
+    }
+
+    int maxHttp1HeaderSize() {
+        return maxHttp1HeaderSize;
+    }
+
+    int maxHttp1ChunkSize() {
+        return maxHttp1ChunkSize;
     }
 
     long idleTimeoutMillis() {
@@ -167,6 +209,16 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
+
+    @Override
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
 
@@ -203,7 +255,7 @@ final class HttpClientFactory extends AbstractClientFactory {
                                             Client<HttpRequest, HttpResponse> delegate) {
         return new DefaultHttpClient(
                 new DefaultClientBuilderParams(this, uri, HttpClient.class, options),
-                delegate, scheme.sessionProtocol(), endpoint);
+                delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
     }
 
     private static void validateClientType(Class<?> clientType) {

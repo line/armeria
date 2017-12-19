@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -50,6 +50,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -65,10 +66,10 @@ import io.grpc.ServerServiceDefinition;
  */
 final class HandlerRegistry {
     private final List<ServerServiceDefinition> services;
-    private final ImmutableMap<String, ServerMethodDefinition<?, ?>> methods;
+    private final Map<String, ServerMethodDefinition<?, ?>> methods;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
-                            ImmutableMap<String, ServerMethodDefinition<?, ?>> methods) {
+                            Map<String, ServerMethodDefinition<?, ?>> methods) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
     }
@@ -80,6 +81,10 @@ final class HandlerRegistry {
 
     List<ServerServiceDefinition> services() {
         return services;
+    }
+
+    Map<String, ServerMethodDefinition<?, ?>> methods() {
+        return methods;
     }
 
     static class Builder {

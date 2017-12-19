@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,7 +29,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
     private final String prefix;
     private final boolean stripPrefix;
     private final String loggerName;
-    private final String metricName;
+    private final String meterTag;
     private final Optional<String> triePath;
     private final String strVal;
 
@@ -42,7 +42,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
         this.prefix = prefix;
         this.stripPrefix = stripPrefix;
         loggerName = loggerName(prefix);
-        metricName = prefix + "**";
+        meterTag = PREFIX + prefix;
         triePath = Optional.of(prefix + '*');
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
@@ -69,8 +69,8 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricName() {
-        return metricName;
+    public String meterTag() {
+        return meterTag;
     }
 
     @Override

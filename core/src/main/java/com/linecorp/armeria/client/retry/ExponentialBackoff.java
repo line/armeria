@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.base.MoreObjects;
 
 final class ExponentialBackoff extends AbstractBackoff {
-    private long currentDelayMillis;
+    private final long initialDelayMillis;
     private final long maxDelayMillis;
     private final double multiplier;
 
@@ -30,19 +30,19 @@ final class ExponentialBackoff extends AbstractBackoff {
                       "initialDelayMillis: %s (expected: >= 0)", initialDelayMillis);
         checkArgument(initialDelayMillis <= maxDelayMillis, "maxDelayMillis: %s (expected: >= %s)",
                       maxDelayMillis, initialDelayMillis);
-        currentDelayMillis = initialDelayMillis;
+        this.initialDelayMillis = initialDelayMillis;
         this.maxDelayMillis = maxDelayMillis;
         this.multiplier = multiplier;
     }
 
     @Override
     protected long doNextDelayMillis(int numAttemptsSoFar) {
-        if (currentDelayMillis >= maxDelayMillis) {
-            return maxDelayMillis;
+        if (numAttemptsSoFar == 1) {
+            return initialDelayMillis;
         }
-        long nextDelay = currentDelayMillis;
-        currentDelayMillis = saturatedMultiply(currentDelayMillis, multiplier);
-        return nextDelay;
+        final long nextDelay =
+                saturatedMultiply(initialDelayMillis, Math.pow(multiplier, numAttemptsSoFar - 1));
+        return Math.min(nextDelay, maxDelayMillis);
     }
 
     private static long saturatedMultiply(long left, double right) {
@@ -53,7 +53,7 @@ final class ExponentialBackoff extends AbstractBackoff {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("currentDelayMillis", currentDelayMillis)
+                          .add("initialDelayMillis", initialDelayMillis)
                           .add("maxDelayMillis", maxDelayMillis)
                           .add("multiplier", multiplier)
                           .toString();

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,12 +21,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
     @Override
-    @SuppressWarnings("unchecked")
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new WeightedRoundRobinSelector(endpointGroup);
     }
@@ -49,10 +49,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
             this.endpointGroup = endpointGroup;
             endpointsAndWeights = new EndpointsAndWeights(endpointGroup.endpoints());
-            if (endpointGroup instanceof DynamicEndpointGroup) {
-                ((DynamicEndpointGroup) endpointGroup).addListener(
-                        endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
-            }
+            endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
         }
 
         @Override
@@ -66,7 +63,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        public Endpoint select() {
+        public Endpoint select(ClientRequestContext ctx) {
             int currentSequence = sequence.getAndIncrement();
             return endpointsAndWeights.selectEndpoint(currentSequence);
         }

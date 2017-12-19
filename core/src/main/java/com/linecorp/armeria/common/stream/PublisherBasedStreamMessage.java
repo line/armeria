@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,16 +19,19 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.RequestContext;
+
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Adapts a {@link Publisher} into a {@link StreamMessage}.
@@ -43,7 +46,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             PublisherBasedStreamMessage.class, AbortableSubscriber.class, "subscriber");
 
     private final Publisher<? extends T> publisher;
-    private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
     @SuppressWarnings("unused") // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;
     private volatile boolean publishedAny;
@@ -64,7 +67,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public boolean isOpen() {
-        return !closeFuture.isDone();
+        return !completionFuture.isDone();
     }
 
     @Override
@@ -73,29 +76,37 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        subscribe(subscriber, false);
+    public final void subscribe(Subscriber<? super T> subscriber) {
+        subscribe(subscriber, defaultSubscriberExecutor(), false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        requireNonNull(subscriber, "subscriber");
-        subscribe0(subscriber, null);
+    public final void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
+        subscribe(subscriber, defaultSubscriberExecutor(), withPooledObjects);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
         subscribe(subscriber, executor, false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                                boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         subscribe0(subscriber, executor);
     }
 
-    private void subscribe0(Subscriber<? super T> subscriber, Executor executor) {
+    /**
+     * Returns the default {@link EventExecutor} which will be used when a user subscribes using
+     * {@link #subscribe(Subscriber)} or {@link #subscribe(Subscriber, boolean)}.
+     */
+    protected EventExecutor defaultSubscriberExecutor() {
+        return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
+    }
+
+    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor) {
         final AbortableSubscriber s = new AbortableSubscriber(this, subscriber, executor);
         if (!subscriberUpdater.compareAndSet(this, null, s)) {
             failLateSubscriber(executor, subscriber, this.subscriber.subscriber);
@@ -104,7 +115,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         publisher.subscribe(s);
     }
 
-    private static void failLateSubscriber(@Nullable Executor executor,
+    private static void failLateSubscriber(EventExecutor executor,
                                            Subscriber<?> lateSubscriber, Subscriber<?> oldSubscriber) {
         final Throwable cause;
         if (oldSubscriber instanceof AbortingSubscriber) {
@@ -113,15 +124,10 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             cause = new IllegalStateException("subscribed by other subscriber already");
         }
 
-        if (executor != null) {
-            executor.execute(() -> {
-                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-                lateSubscriber.onError(cause);
-            });
-        } else {
+        executor.execute(() -> {
             lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
             lateSubscriber.onError(cause);
-        }
+        });
     }
 
     @Override
@@ -132,7 +138,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             return;
         }
 
-        final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.get(), null);
+        final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.get(),
+                                                                      ImmediateEventExecutor.INSTANCE);
         if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
             this.subscriber.abort();
             return;
@@ -143,21 +150,21 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<Void> closeFuture() {
-        return closeFuture;
+    public CompletableFuture<Void> completionFuture() {
+        return completionFuture;
     }
 
     @VisibleForTesting
     static final class AbortableSubscriber implements Subscriber<Object>, Subscription {
         private final PublisherBasedStreamMessage<?> parent;
-        private final Executor executor;
+        private final EventExecutor executor;
         private Subscriber<Object> subscriber;
         private volatile boolean abortPending;
         private volatile Subscription subscription;
 
         @SuppressWarnings("unchecked")
         AbortableSubscriber(PublisherBasedStreamMessage<?> parent,
-                            Subscriber<?> subscriber, Executor executor) {
+                            Subscriber<?> subscriber, EventExecutor executor) {
             this.parent = parent;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
@@ -165,12 +172,17 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void request(long n) {
+            final Subscription subscription = this.subscription;
             assert subscription != null;
             subscription.request(n);
         }
 
         @Override
         public void cancel() {
+            // 'subscription' can never be null here because 'subscriber.onSubscriber()' is invoked
+            // only after 'subscription' is set. See onSubscribe0().
+            assert subscription != null;
+
             // Don't cancel but just abort if abort is pending.
             cancelOrAbort(!abortPending);
         }
@@ -183,9 +195,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void cancelOrAbort(boolean cancel) {
-            assert subscription != null;
-            final Executor executor = this.executor;
-            if (executor == null) {
+            if (executor.inEventLoop()) {
                 cancelOrAbort0(cancel);
             } else {
                 executor.execute(() -> cancelOrAbort0(cancel));
@@ -193,8 +203,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void cancelOrAbort0(boolean cancel) {
-            final CompletableFuture<Void> closeFuture = parent.closeFuture();
-            if (closeFuture.isDone()) {
+            final CompletableFuture<Void> completionFuture = parent.completionFuture();
+            if (completionFuture.isDone()) {
                 return;
             }
 
@@ -202,7 +212,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             // Replace the subscriber with a placeholder so that it can be garbage-collected and
             // we conform to the Reactive Streams specification rule 3.13.
             if (!(subscriber instanceof AbortingSubscriber)) {
-                this.subscriber = NeverInvokedSubscriber.get();
+                this.subscriber = NoopSubscriber.get();
             }
 
             try {
@@ -213,28 +223,28 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 try {
                     subscription.cancel();
                 } finally {
-                    closeFuture.completeExceptionally(
+                    completionFuture.completeExceptionally(
                             cancel ? CancelledSubscriptionException.get() : AbortedStreamException.get());
                 }
             }
         }
 
         @Override
-        public void onSubscribe(Subscription s) {
-            subscription = s;
-            if (executor == null) {
-                onSubscribe0();
+        public void onSubscribe(Subscription subscription) {
+            if (executor.inEventLoop()) {
+                onSubscribe0(subscription);
             } else {
-                executor.execute(this::onSubscribe0);
+                executor.execute(() -> onSubscribe0(subscription));
             }
         }
 
-        private void onSubscribe0() {
+        private void onSubscribe0(Subscription subscription) {
             try {
+                this.subscription = subscription;
                 subscriber.onSubscribe(this);
             } finally {
                 if (abortPending) {
-                    cancelOrAbort(false);
+                    cancelOrAbort0(false);
                 }
             }
         }
@@ -242,8 +252,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         @Override
         public void onNext(Object obj) {
             parent.publishedAny = true;
-            final Executor executor = this.executor;
-            if (executor == null) {
+            if (executor.inEventLoop()) {
                 subscriber.onNext(obj);
             } else {
                 executor.execute(() -> subscriber.onNext(obj));
@@ -252,8 +261,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onError(Throwable cause) {
-            final Executor executor = this.executor;
-            if (executor == null) {
+            if (executor.inEventLoop()) {
                 onError0(cause);
             } else {
                 executor.execute(() -> onError0(cause));
@@ -264,14 +272,13 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             try {
                 subscriber.onError(cause);
             } finally {
-                parent.closeFuture().completeExceptionally(cause);
+                parent.completionFuture().completeExceptionally(cause);
             }
         }
 
         @Override
         public void onComplete() {
-            final Executor executor = this.executor;
-            if (executor == null) {
+            if (executor.inEventLoop()) {
                 onComplete0();
             } else {
                 executor.execute(this::onComplete0);
@@ -282,7 +289,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             try {
                 subscriber.onComplete();
             } finally {
-                parent.closeFuture().complete(null);
+                parent.completionFuture().complete(null);
             }
         }
     }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,7 @@ import org.springframework.validation.annotation.Validated;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
  * Settings for armeria servers, e.g.,
@@ -177,10 +177,10 @@ public class ArmeriaSettings {
     private long gracefulShutdownTimeoutMillis = 40000;
 
     /**
-     * Whether to decorate all services with {@link DropwizardMetricCollectingService}.
+     * Whether to decorate all services with {@link MetricCollectingService}.
      * The default is {@code true}.
      */
-    private boolean enableDropwizardMetrics = true;
+    private boolean enableMetrics = true;
 
     public List<Port> getPorts() {
         return ports;
@@ -233,11 +233,11 @@ public class ArmeriaSettings {
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
     }
 
-    public boolean isEnableDropwizardMetrics() {
-        return enableDropwizardMetrics;
+    public boolean isEnableMetrics() {
+        return enableMetrics;
     }
 
-    public void setEnableDropwizardMetrics(boolean enableDropwizardMetrics) {
-        this.enableDropwizardMetrics = enableDropwizardMetrics;
+    public void setEnableMetrics(boolean enableMetrics) {
+        this.enableMetrics = enableMetrics;
     }
 }

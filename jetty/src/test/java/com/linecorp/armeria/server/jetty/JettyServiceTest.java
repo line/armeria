@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -40,6 +40,7 @@ import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
 import org.eclipse.jetty.server.handler.DefaultHandler;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.thread.ThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -79,6 +80,12 @@ public class JettyServiceTest extends WebAppContainerTest {
             sb.serviceUnder(
                     "/default/",
                     new JettyServiceBuilder().handler(new DefaultHandler()).build());
+
+            final ResourceHandler resourceHandler = new ResourceHandler();
+            resourceHandler.setResourceBase(webAppRoot().getPath());
+            sb.serviceUnder(
+                    "/resources/",
+                    new JettyServiceBuilder().handler(resourceHandler).build());
         }
     };
 
@@ -124,5 +131,10 @@ public class JettyServiceTest extends WebAppContainerTest {
                 assertThat(EntityUtils.toByteArray(res.getEntity()).length, is(greaterThan(0)));
             }
         }
+    }
+
+    @Test
+    public void resourceHandlerWithLargeResource() throws Exception {
+        testLarge("/resources/large.txt");
     }
 }

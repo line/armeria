@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -36,7 +36,7 @@ import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
 
 /**
- * A {@link Subscriber} to read HTTP messages and pass to GRPC business logic.
+ * A {@link Subscriber} to read HTTP messages and pass to gRPC business logic.
  */
 public class HttpStreamReader implements Subscriber<HttpObject> {
 
@@ -52,6 +52,8 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
     private Subscription subscription;
 
     private int deferredInitialMessageRequest;
+
+    private volatile boolean cancelled;
 
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
                             ArmeriaMessageDeframer deframer,
@@ -75,6 +77,10 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
     @Override
     public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
+        if (cancelled) {
+            subscription.cancel();
+            return;
+        }
         if (deferredInitialMessageRequest > 0) {
             request(deferredInitialMessageRequest);
         }
@@ -82,6 +88,9 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
 
     @Override
     public void onNext(HttpObject obj) {
+        if (cancelled) {
+            return;
+        }
         if (obj instanceof HttpHeaders) {
             // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
             // and client though as everything else is identical.
@@ -89,7 +98,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
             if (grpcStatus != null) {
                 Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
-                if (status.getCode().equals(Status.OK.getCode())) {
+                if (status.getCode() == Status.OK.getCode()) {
                    // Successful response, finish delivering messages before returning the status.
                    closeDeframer();
                 }
@@ -131,15 +140,22 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
 
     @Override
     public void onError(Throwable cause) {
+        if (cancelled) {
+            return;
+        }
         transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
     }
 
     @Override
     public void onComplete() {
+        if (cancelled) {
+            return;
+        }
         closeDeframer();
     }
 
     public void cancel() {
+        cancelled = true;
         if (subscription != null) {
             subscription.cancel();
         }

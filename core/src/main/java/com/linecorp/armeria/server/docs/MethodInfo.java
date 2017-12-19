@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -88,7 +87,7 @@ public final class MethodInfo {
                         comparing(TypeSignature::signature),
                         requireNonNull(exceptionTypeSignatures, "exceptionTypeSignatures"));
         this.endpoints = ImmutableSortedSet.copyOf(
-                Comparator.comparing(e -> e.hostnamePattern() + ':' + e.path()),
+                comparing(e -> e.hostnamePattern() + ':' + e.path()),
                 requireNonNull(endpoints, "endpoints"));
         this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
                                          .map(HttpHeaders::copyOf)

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -44,14 +44,18 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
+import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.internal.TransportType;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -130,6 +134,10 @@ public final class Server implements AutoCloseable {
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
 
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
+
+        // Server-wide cache metrics.
+        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsedPathCache");
+        PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
     }
 
     /**
@@ -167,6 +175,13 @@ public final class Server implements AutoCloseable {
      */
     public Optional<ServerPort> activePort() {
         return Optional.ofNullable(primaryActivePort);
+    }
+
+    /**
+     * Returns the {@link MeterRegistry} that collects various stats.
+     */
+    public MeterRegistry meterRegistry() {
+        return config().meterRegistry();
     }
 
     /**
@@ -449,6 +464,15 @@ public final class Server implements AutoCloseable {
      */
     public int numConnections() {
         return connectionLimitingHandler.numConnections();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("config", config())
+                          .add("activePorts", activePorts())
+                          .add("state", stateManager.state())
+                          .toString();
     }
 
     enum StateType {

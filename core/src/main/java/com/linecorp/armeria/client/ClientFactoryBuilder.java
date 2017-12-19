@@ -5,7 +5,7 @@
  *  version 2.0 (the "License"); you may not use this file except in compliance
  *  with the License. You may obtain a copy of the License at:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,11 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -38,9 +43,12 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.internal.TransportType;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
@@ -81,9 +89,6 @@ public final class ClientFactoryBuilder {
             ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
             EpollChannelOption.EPOLL_MODE);
 
-    private static final String MESSAGE_MUTUALLY_EXCLUSIVE =
-            "eventLoopGroup() and useDaemonThreads/numWorkerThreads() are mutually exclusive.";
-
     // Netty-related properties:
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnClose;
@@ -92,12 +97,19 @@ public final class ClientFactoryBuilder {
     private Function<? super EventLoopGroup,
             ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
             DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY;
+    private int initialHttp2ConnectionWindowSize = DEFAULT_WINDOW_SIZE;
+    private int initialHttp2StreamWindowSize = DEFAULT_WINDOW_SIZE;
+    private int http2MaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
+    private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
+    private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
 
     // Armeria-related properties:
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
     private KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener = DEFAULT_CONNECTION_POOL_LISTENER;
+    private MeterRegistry meterRegistry = Metrics.globalRegistry;
 
     /**
      * Creates a new instance.
@@ -177,6 +189,86 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
+     * window size</a>. The HTTP/2 connection is first established with
+     * {@value Http2CodecUtil#DEFAULT_WINDOW_SIZE} bytes of connection flow-control window size,
+     * and it is changed if and only if {@code initialHttp2ConnectionWindowSize} is set.
+     * Note that this setting affects the connection-level window size, not the window size of streams.
+     *
+     * @see #initialHttp2StreamWindowSize(int)
+     */
+    public ClientFactoryBuilder initialHttp2ConnectionWindowSize(int initialHttp2ConnectionWindowSize) {
+        checkArgument(initialHttp2ConnectionWindowSize >= DEFAULT_WINDOW_SIZE,
+                      "initialHttp2ConnectionWindowSize: %s (expected: >= %s and <= %s)",
+                      initialHttp2ConnectionWindowSize, DEFAULT_WINDOW_SIZE, MAX_INITIAL_WINDOW_SIZE);
+        this.initialHttp2ConnectionWindowSize = initialHttp2ConnectionWindowSize;
+        return this;
+    }
+
+    /**
+     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * for HTTP/2 stream-level flow control. Note that this setting affects the window size of all streams,
+     * not the connection-level window size.
+     *
+     * @see #initialHttp2ConnectionWindowSize(int)
+     */
+    public ClientFactoryBuilder initialHttp2StreamWindowSize(int initialHttp2StreamWindowSize) {
+        checkArgument(initialHttp2StreamWindowSize > 0,
+                      "initialHttp2StreamWindowSize: %s (expected: > 0 and <= %s)",
+                      initialHttp2StreamWindowSize, MAX_INITIAL_WINDOW_SIZE);
+        this.initialHttp2StreamWindowSize = initialHttp2StreamWindowSize;
+        return this;
+    }
+
+    /**
+     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * that indicates the size of the largest frame payload that this client is willing to receive.
+     */
+    public ClientFactoryBuilder http2MaxFrameSize(int http2MaxFrameSize) {
+        checkArgument(http2MaxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND &&
+                      http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
+                      "http2MaxFramSize: %s (expected: >= %s and <= %s)",
+                      http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
+        this.http2MaxFrameSize = http2MaxFrameSize;
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of an HTTP/1 response initial line.
+     */
+    public ClientFactoryBuilder maxHttp1InitialLineLength(int maxHttp1InitialLineLength) {
+        checkArgument(maxHttp1InitialLineLength >= 0,
+                      "maxHttp1InitialLineLength: %s (expected: >= 0)",
+                      maxHttp1InitialLineLength);
+        this.maxHttp1InitialLineLength = maxHttp1InitialLineLength;
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of all headers in an HTTP/1 response.
+     */
+    public ClientFactoryBuilder maxHttp1HeaderSize(int maxHttp1HeaderSize) {
+        checkArgument(maxHttp1HeaderSize >= 0,
+                      "maxHttp1HeaderSize: %s (expected: >= 0)",
+                      maxHttp1HeaderSize);
+        this.maxHttp1HeaderSize = maxHttp1HeaderSize;
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceed it.
+     */
+    public ClientFactoryBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
+        checkArgument(maxHttp1ChunkSize >= 0,
+                      "maxHttp1ChunkSize: %s (expected: >= 0)",
+                      maxHttp1ChunkSize);
+        this.maxHttp1ChunkSize = maxHttp1ChunkSize;
+        return this;
+    }
+
+    /**
      * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
      * progress for this amount of time.
      */
@@ -224,20 +316,32 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the {@link MeterRegistry} which collects various stats.
+     */
+    public ClientFactoryBuilder meterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
         return new DefaultClientFactory(new HttpClientFactory(
                 workerGroup, shutdownWorkerGroupOnClose, socketOptions, sslContextCustomizer,
-                addressResolverGroupFactory, idleTimeoutMillis, useHttp2Preface, useHttp1Pipelining,
-                connectionPoolListener));
+                addressResolverGroupFactory, initialHttp2ConnectionWindowSize, initialHttp2StreamWindowSize,
+                http2MaxFrameSize, maxHttp1InitialLineLength, maxHttp1HeaderSize,
+                maxHttp1ChunkSize, idleTimeoutMillis, useHttp2Preface,
+                useHttp1Pipelining, connectionPoolListener, meterRegistry));
     }
 
     @Override
     public String toString() {
         return toString(this, workerGroup, shutdownWorkerGroupOnClose, socketOptions,
-                        sslContextCustomizer, addressResolverGroupFactory, idleTimeoutMillis,
-                        useHttp2Preface, useHttp1Pipelining, connectionPoolListener);
+                        sslContextCustomizer, addressResolverGroupFactory, initialHttp2ConnectionWindowSize,
+                        initialHttp2StreamWindowSize, http2MaxFrameSize, maxHttp1InitialLineLength,
+                        maxHttp1HeaderSize, maxHttp1ChunkSize, idleTimeoutMillis,
+                        useHttp2Preface, useHttp1Pipelining, connectionPoolListener, meterRegistry);
     }
 
     static String toString(
@@ -247,14 +351,21 @@ public final class ClientFactoryBuilder {
             Consumer<? super SslContextBuilder> sslContextCustomizer,
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
-            long idleTimeoutMillis,
-            boolean useHttp2Preface,
-            boolean useHttp1Pipelining,
-            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+            int initialHttp2ConnectionWindowSize, int initialHttp2StreamWindowSize, int http2MaxFrameSize,
+            int maxHttp1InitialLineLength, int maxHttp1HeaderSize, int maxHttp1ChunkSize,
+            long idleTimeoutMillis, boolean useHttp2Preface,
+            boolean useHttp1Pipelining, KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener,
+            MeterRegistry meterRegistry) {
 
-        final ToStringHelper helper = MoreObjects.toStringHelper(self);
+        final ToStringHelper helper = MoreObjects.toStringHelper(self).omitNullValues();
         helper.add("workerGroup", workerGroup + " (shutdownOnClose=" + shutdownWorkerGroupOnClose + ')')
               .add("socketOptions", socketOptions)
+              .add("initialHttp2ConnectionWindowSize", initialHttp2ConnectionWindowSize)
+              .add("initialHttp2StreamWindowSize", initialHttp2StreamWindowSize)
+              .add("http2MaxFrameSize", http2MaxFrameSize)
+              .add("maxHttp1InitialLineLength", maxHttp1InitialLineLength)
+              .add("maxHttp1HeaderSize", maxHttp1HeaderSize)
+              .add("maxHttp1ChunkSize", maxHttp1ChunkSize)
               .add("idleTimeoutMillis", idleTimeoutMillis)
               .add("useHttp2Preface", useHttp2Preface)
               .add("useHttp1Pipelining", useHttp1Pipelining);
@@ -270,6 +381,8 @@ public final class ClientFactoryBuilder {
         if (addressResolverGroupFactory != DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY) {
             helper.add("addressResolverGroupFactory", addressResolverGroupFactory);
         }
+
+        helper.add("meterRegistry", meterRegistry);
 
         return helper.toString();
     }

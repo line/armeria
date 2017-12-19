@@ -6,7 +6,7 @@ function addSlackInvitation(parent) {
   div.className = 'slack-invitation';
   var script = document.createElement('script');
   script.type = 'text/javascript';
-  script.src = 'https://slackin-line-armeria.herokuapp.com/slackin.js';
+  script.src = 'https://line-slacknow.herokuapp.com/line-armeria/slackin.js';
   div.appendChild(script);
   li.appendChild(div);
   parent.appendChild(li);
@@ -32,7 +32,7 @@ function addBadges(parent) {
   addBadge(div, 'https://img.shields.io/appveyor/ci/trustin/armeria/master.svg?label=appveyor&style=flat-square',
     'https://ci.appveyor.com/project/trustin/armeria/branch/master');
   addBadge(div, 'https://img.shields.io/maven-central/v/com.linecorp.armeria/armeria.svg?style=flat-square',
-    'http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.linecorp.armeria%22%20AND%20a%3A%22armeria%22');
+    'https://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.linecorp.armeria%22%20AND%20a%3A%22armeria%22');
   addBadge(div, 'https://img.shields.io/codecov/c/github/line/armeria/master.svg?style=flat-square',
     'https://codecov.io/gh/line/armeria');
   li.appendChild(div);

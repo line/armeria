@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -85,13 +85,13 @@ final class THttpClientFactory extends DecoratingClientFactory {
             @SuppressWarnings("unchecked")
             final T client = (T) new DefaultTHttpClient(
                     new DefaultClientBuilderParams(this, uri, THttpClient.class, options),
-                    delegate, scheme.sessionProtocol(), newEndpoint(uri));
+                    delegate, meterRegistry(), scheme.sessionProtocol(), newEndpoint(uri));
             return client;
         } else {
             // Create a THttpClient without path.
             final THttpClient thriftClient = new DefaultTHttpClient(
                     new DefaultClientBuilderParams(this, pathlessUri(uri), THttpClient.class, options),
-                    delegate, scheme.sessionProtocol(), newEndpoint(uri));
+                    delegate, meterRegistry(), scheme.sessionProtocol(), newEndpoint(uri));
 
             @SuppressWarnings("unchecked")
             T client = (T) Proxy.newProxyInstance(

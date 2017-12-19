@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -51,10 +51,12 @@ public interface StreamWriter<T> {
      * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
      *         stream has been closed already.
      */
-    boolean write(Supplier<? extends T> o);
+    default boolean write(Supplier<? extends T> o) {
+        return write(o.get());
+    }
 
     /**
-     * Performs the specified {@code task} when there's enough demans from the {@link Subscriber}.
+     * Performs the specified {@code task} when there are enough demands from the {@link Subscriber}.
      *
      * @return the future that completes successfully when the {@code task} finishes or
      *         exceptionally when the {@link StreamMessage} is closed unexpectedly.
@@ -72,4 +74,12 @@ public interface StreamWriter<T> {
      * signal that the {@link Subscriber} did not consume the stream completely.
      */
     void close(Throwable cause);
+
+    /**
+     * Writes the given object and closes the stream successfully.
+     */
+    default void close(T obj) {
+        write(obj);
+        close();
+    }
 }

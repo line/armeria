@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -99,9 +98,7 @@ public abstract class HttpAuthService extends SimpleDecoratingService<HttpReques
         if (cause != null) {
             logger.warn("Unexpected exception during authorization.", cause);
         }
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(HttpStatus.UNAUTHORIZED);
-        return res;
+        return HttpResponse.of(HttpStatus.UNAUTHORIZED);
     }
 
     @Override

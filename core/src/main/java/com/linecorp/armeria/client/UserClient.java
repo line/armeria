@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,8 +21,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -32,8 +30,8 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
 
 /**
  * A base class for implementing a user's entry point for sending a {@link Request}.
@@ -47,11 +45,9 @@ import io.netty.util.Attribute;
  */
 public abstract class UserClient<I extends Request, O extends Response> implements ClientBuilderParams {
 
-    static final ThreadLocal<Function<HttpHeaders, HttpHeaders>> THREAD_LOCAL_HEADER_MANIPULATOR =
-            new ThreadLocal<>();
-
     private final ClientBuilderParams params;
     private final Client<I, O> delegate;
+    private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
     private final Endpoint endpoint;
 
@@ -60,13 +56,15 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      *
      * @param params the parameters used for constructing the client
      * @param delegate the {@link Client} that will process {@link Request}s
+     * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the {@link Client}
      * @param endpoint the {@link Endpoint} of the {@link Client}
      */
-    protected UserClient(ClientBuilderParams params,
-                         Client<I, O> delegate, SessionProtocol sessionProtocol, Endpoint endpoint) {
+    protected UserClient(ClientBuilderParams params, Client<I, O> delegate, MeterRegistry meterRegistry,
+                         SessionProtocol sessionProtocol, Endpoint endpoint) {
         this.params = params;
         this.delegate = delegate;
+        this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
         this.endpoint = endpoint;
     }
@@ -150,31 +148,19 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
         if (eventLoop == null) {
             final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
             ctx = new DefaultClientRequestContext(
-                    releasableEventLoop.get(), sessionProtocol, endpoint,
+                    releasableEventLoop.get(), meterRegistry, sessionProtocol, endpoint,
                     method, path, query, fragment, options(), req);
             ctx.log().addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
         } else {
-            ctx = new DefaultClientRequestContext(
-                    eventLoop, sessionProtocol, endpoint, method, path, query, fragment, options(), req);
+            ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol, endpoint,
+                                                  method, path, query, fragment, options(), req);
         }
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
-            runThreadLocalHeaderManipulator(ctx);
             return delegate().execute(ctx, req);
         } catch (Throwable cause) {
             ctx.logBuilder().endResponse(cause);
             return fallback.apply(cause);
         }
-    }
-
-    private static void runThreadLocalHeaderManipulator(ClientRequestContext ctx) {
-        final Function<HttpHeaders, HttpHeaders> manipulator = THREAD_LOCAL_HEADER_MANIPULATOR.get();
-        if (manipulator == null) {
-            return;
-        }
-
-        final Attribute<HttpHeaders> attr = ctx.attr(ClientRequestContext.HTTP_HEADERS);
-        final HttpHeaders headers = attr.get();
-        attr.set(manipulator.apply(headers != null ? headers : new DefaultHttpHeaders()));
     }
 }

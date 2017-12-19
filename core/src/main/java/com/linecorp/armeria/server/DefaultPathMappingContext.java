@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -155,13 +155,9 @@ final class DefaultPathMappingContext implements PathMappingContext {
 
     @VisibleForTesting
     static MediaType resolveConsumeType(HttpHeaders headers) {
-        final String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
+        final MediaType contentType = headers.contentType();
         if (contentType != null) {
-            try {
-                return MediaType.parse(contentType);
-            } catch (IllegalArgumentException e) {
-                logger.debug("Failed to parse the 'content-type' header: {}", contentType, e);
-            }
+            return contentType;
         }
         return null;
     }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,71 +17,66 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
+import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A {@link RuntimeException} that is raised when an armeria internal http exception has occurred.
- * This class is the general class of exceptions produced by a failed request or a reset stream.
+ * A {@link RuntimeException} that is raised to send an HTTP response with the content specified
+ * by a user. This class holds an {@link HttpResponse} which would be sent back to the client who
+ * sent the corresponding request.
+ *
+ * @see HttpStatusException
  */
 public class HttpResponseException extends RuntimeException {
 
-    private static final Map<Integer, HttpResponseException> EXCEPTIONS = new ConcurrentHashMap<>();
-
     /**
-     * Returns a new {@link HttpResponseException} instance with the HTTP status code.
+     * Returns a new {@link HttpResponseException} instance with the specified HTTP status code.
      */
     public static HttpResponseException of(int statusCode) {
         return of(HttpStatus.valueOf(statusCode));
     }
 
     /**
-     * Returns a new {@link HttpResponseException} instance with the {@link HttpStatus}.
+     * Returns a new {@link HttpResponseException} instance with the specified {@link HttpStatus}.
      */
     public static HttpResponseException of(HttpStatus httpStatus) {
         requireNonNull(httpStatus, "httpStatus");
-        if (Flags.verboseExceptions()) {
-            return new HttpResponseException(httpStatus);
-        } else {
-            final int statusCode = httpStatus.code();
-            return EXCEPTIONS.computeIfAbsent(statusCode, code ->
-                    Exceptions.clearTrace(new HttpResponseException(code)));
-        }
+        return new HttpResponseException(HttpResponse.of(httpStatus));
+    }
+
+    /**
+     * Returns a new {@link HttpResponseException} instance with the specified {@link AggregatedHttpMessage}.
+     */
+    public static HttpResponseException of(AggregatedHttpMessage httpMessage) {
+        return of(HttpResponse.of(requireNonNull(httpMessage, "httpMessage")));
+    }
+
+    /**
+     * Returns a new {@link HttpResponseException} instance with the specified {@link HttpResponse}.
+     */
+    public static HttpResponseException of(HttpResponse httpResponse) {
+        return new HttpResponseException(httpResponse);
     }
 
     private static final long serialVersionUID = 3487991462085151316L;
 
-    private final HttpStatus httpStatus;
+    private final HttpResponse httpResponse;
 
     /**
-     * Creates a new instance with HTTP status code.
+     * Creates a new instance with the specified {@link HttpResponse}.
      */
-    public HttpResponseException(int statusCode) {
-        this(HttpStatus.valueOf(statusCode));
+    protected HttpResponseException(HttpResponse httpResponse) {
+        this.httpResponse = requireNonNull(httpResponse, "httpResponse");
     }
 
     /**
-     * Creates a new instance.
+     * Returns the {@link HttpResponse} which would be sent back to the client who sent the
+     * corresponding request.
      */
-    public HttpResponseException(HttpStatus httpStatus) {
-        super(requireNonNull(httpStatus, "httpStatus").toString());
-        if (100 <= httpStatus.code() && httpStatus.code() < 400) {
-            throw new IllegalArgumentException(
-                    "httpStatus: " + httpStatus +
-                    " (expected: a status that's neither informational, success nor redirection)");
-        }
-        this.httpStatus = httpStatus;
-    }
-
-    /**
-     * Returns the {@link HttpStatus} that will be sent to a client.
-     */
-    public HttpStatus httpStatus() {
-        return httpStatus;
+    public HttpResponse httpResponse() {
+        return httpResponse;
     }
 
     @Override

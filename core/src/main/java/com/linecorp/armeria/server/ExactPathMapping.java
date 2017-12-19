@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,14 +28,14 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     private final String exactPath;
     private final String loggerName;
+    private final String meterTag;
     private final Optional<String> exactPathOpt;
-    private final String strVal;
 
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
         loggerName = loggerName(exactPath);
-        strVal = PREFIX + exactPath;
+        meterTag = PREFIX + exactPath;
     }
 
     @Override
@@ -55,8 +55,8 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricName() {
-        return exactPath;
+    public String meterTag() {
+        return meterTag;
     }
 
     @Override
@@ -71,7 +71,7 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     public int hashCode() {
-        return strVal.hashCode();
+        return meterTag.hashCode();
     }
 
     @Override
@@ -82,6 +82,6 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     public String toString() {
-        return strVal;
+        return meterTag;
     }
 }

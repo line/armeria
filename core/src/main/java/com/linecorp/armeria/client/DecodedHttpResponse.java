@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,14 +16,13 @@
 
 package com.linecorp.armeria.client;
 
-import org.reactivestreams.Subscriber;
-
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 
 final class DecodedHttpResponse extends DefaultHttpResponse {
 
@@ -44,8 +43,8 @@ final class DecodedHttpResponse extends DefaultHttpResponse {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber) {
-        subscribe(subscriber, eventLoop);
+    protected EventExecutor defaultSubscriberExecutor() {
+        return eventLoop;
     }
 
     @Override

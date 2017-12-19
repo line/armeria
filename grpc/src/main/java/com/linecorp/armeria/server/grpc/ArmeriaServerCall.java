@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -107,7 +107,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     // Only set once.
     private ServerCall.Listener<I> listener;
 
-    @Nullable private final String clientAcceptEncoding;
+    @Nullable
+    private final String clientAcceptEncoding;
 
     private Compressor compressor;
     private boolean messageCompression;
@@ -167,7 +168,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
 
-        headers.setObject(HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType());
+        headers.contentType(serializationFormat.mediaType());
 
         if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
             compressor = Codec.Identity.NONE;
@@ -264,7 +265,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void setCompression(String compressorName) {
         checkState(!sendHeadersCalled, "sendHeaders has been called");
-        compressor =  compressorRegistry.lookupCompressor(compressorName);
+        compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
         messageFramer.setCompressor(compressor);
     }

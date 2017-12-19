@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,7 +29,8 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
  * {@code "<host>"} or {@code "<host>:<port>"} in the authority part of a URI.
  *
  * <p>A group endpoint has {@link #groupName()} and it can be represented as {@code "group:<groupName>"}
- * in the authority part of a URI. It can be resolved into a host endpoint with {@link #resolve()}.
+ * in the authority part of a URI. It can be resolved into a host endpoint with
+ * {@link #resolve(ClientRequestContext)}.
  */
 public final class Endpoint {
 
@@ -116,14 +117,15 @@ public final class Endpoint {
     }
 
     /**
-     * Resolves this endpoint into a host endpoint.
+     * Resolves this endpoint into a host endpoint associated with the specified
+     * {@link ClientRequestContext}.
      *
      * @return the {@link Endpoint} resolved by {@link EndpointGroupRegistry}.
      *         {@code this} if this endpoint is already a host endpoint.
      */
-    public Endpoint resolve() {
+    public Endpoint resolve(ClientRequestContext ctx) {
         if (isGroup()) {
-            return EndpointGroupRegistry.selectNode(groupName);
+            return EndpointGroupRegistry.selectNode(ctx, groupName);
         } else {
             return this;
         }

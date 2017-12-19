@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,10 +24,9 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -58,9 +57,10 @@ public class ManagedHttpHealthCheckService extends HttpHealthCheckService {
             .of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8("Not supported."));
 
     @Override
-    protected void doPut(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) throws Exception {
-        updateHealthStatus(ctx, req).thenAccept(res::respond)
-                                    .exceptionally(Functions.voidFunction(res::close));
+    protected HttpResponse doPut(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        return HttpResponse.from(
+                updateHealthStatus(ctx, req).thenApply(HttpResponse::of)
+                                            .exceptionally(HttpResponse::ofFailure));
     }
 
     /**

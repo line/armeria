@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -126,7 +125,6 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
      * @param req the decoded HTTP request
      */
     private HttpResponse handleCorsPreflight(HttpRequest req) {
-        DefaultHttpResponse res = new DefaultHttpResponse();
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
         if (setCorsOrigin(req, headers)) {
             setCorsAllowMethods(headers);
@@ -136,9 +134,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
             setPreflightHeaders(headers);
         }
 
-        res.write(headers);
-        res.close();
-        return res;
+        return HttpResponse.of(headers);
     }
 
     /**

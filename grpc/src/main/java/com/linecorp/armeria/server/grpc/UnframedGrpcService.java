@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,13 +17,12 @@
 package com.linecorp.armeria.server.grpc;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpRequest;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -52,7 +51,7 @@ import io.netty.buffer.ByteBuf;
 
 /**
  * A {@link SimpleDecoratingService} which allows {@link GrpcService} to serve requests without the framing
- * specified by the GRPC wire protocol. This can be useful for serving both legacy systems and GRPC clients with
+ * specified by the gRPC wire protocol. This can be useful for serving both legacy systems and gRPC clients with
  * the same business logic.
  *
  * <p>Limitations:
@@ -89,16 +88,15 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final HttpHeaders clientHeaders = req.headers();
-        final String contentType = clientHeaders.get(HttpHeaderNames.CONTENT_TYPE);
+        final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
-            // All GRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
+            // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
             // the delegate return its usual error message.
             return delegate().serve(ctx, req);
         }
 
-        MediaType mediaType = MediaType.parse(contentType);
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
-            if (format.isAccepted(mediaType)) {
+            if (format.isAccepted(contentType)) {
                 // Framed request, so just delegate.
                 return delegate().serve(ctx, req);
             }
@@ -120,38 +118,38 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         HttpHeaders grpcHeaders = HttpHeaders.copyOf(clientHeaders);
 
         final MediaType framedContentType;
-        if (mediaType.is(MediaType.PROTOBUF)) {
+        if (contentType.is(MediaType.PROTOBUF)) {
             framedContentType = GrpcSerializationFormats.PROTO.mediaType();
-        } else if (mediaType.is(MediaType.JSON_UTF_8)) {
+        } else if (contentType.is(MediaType.JSON_UTF_8)) {
             framedContentType = GrpcSerializationFormats.JSON.mediaType();
         } else {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
                                    "Unsupported media type. Only application/protobuf is supported.");
         }
-        grpcHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, framedContentType);
+        grpcHeaders.contentType(framedContentType);
 
         if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
-                                   "GRPC encoding is not supported for non-framed requests.");
+                                   "gRPC encoding is not supported for non-framed requests.");
         }
 
-        // All clients support no encoding, and we don't support GRPC encoding for non-framed requests, so just
+        // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
 
-        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final HttpResponse res = HttpResponse.from(responseFuture);
         req.aggregate().whenCompleteAsync(
                 (clientRequest, t) -> {
                     if (t != null) {
-                        res.close(t);
+                        responseFuture.completeExceptionally(t);
                     } else {
-                        frameAndServe(ctx, grpcHeaders, clientRequest, res);
+                        frameAndServe(ctx, grpcHeaders, clientRequest, responseFuture);
                     }
                 },
                 ctx.eventLoop());
-
         return res;
     }
 
@@ -159,8 +157,8 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             ServiceRequestContext ctx,
             HttpHeaders grpcHeaders,
             AggregatedHttpMessage clientRequest,
-            DefaultHttpResponse res) {
-        final DefaultHttpRequest grpcRequest = new DefaultHttpRequest(grpcHeaders);
+            CompletableFuture<HttpResponse> res) {
+        final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
             HttpData content = clientRequest.content();
@@ -176,22 +174,21 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                     message.release();
                 }
             }
-            grpcRequest.write(frame);
-            grpcRequest.close();
+            grpcRequest = HttpRequest.of(grpcHeaders, frame);
         }
 
         final HttpResponse grpcResponse;
         try {
             grpcResponse = delegate().serve(ctx, grpcRequest);
         } catch (Exception e) {
-            res.close(e);
+            res.completeExceptionally(e);
             return;
         }
 
         grpcResponse.aggregate().whenCompleteAsync(
                 (framedResponse, t) -> {
                     if (t != null) {
-                        res.close(t);
+                        res.completeExceptionally(t);
                     } else {
                         deframeAndRespond(ctx, framedResponse, res);
                     }
@@ -200,31 +197,33 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
     }
 
     private void deframeAndRespond(
-            ServiceRequestContext ctx, AggregatedHttpMessage grpcResponse, DefaultHttpResponse res) {
+            ServiceRequestContext ctx,
+            AggregatedHttpMessage grpcResponse,
+            CompletableFuture<HttpResponse> res) {
         HttpHeaders trailers = !grpcResponse.trailingHeaders().isEmpty() ?
                                grpcResponse.trailingHeaders() : grpcResponse.headers();
         String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
-        if (!grpcStatus.getCode().equals(Status.OK.getCode())) {
+        if (grpcStatus.getCode() != Status.OK.getCode()) {
             StringBuilder message = new StringBuilder("grpc-status: " + grpcStatusCode);
             String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
             }
-            res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        message.toString());
+            res.complete(HttpResponse.of(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    MediaType.PLAIN_TEXT_UTF_8,
+                    message.toString()));
             return;
         }
 
-        MediaType grpcMediaType = MediaType.parse(
-                grpcResponse.headers().get(HttpHeaderNames.CONTENT_TYPE));
+        MediaType grpcMediaType = grpcResponse.headers().contentType();
         HttpHeaders unframedHeaders = HttpHeaders.copyOf(grpcResponse.headers());
         if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
-            unframedHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF);
+            unframedHeaders.contentType(MediaType.PROTOBUF);
         } else if (grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
-            unframedHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8);
+            unframedHeaders.contentType(MediaType.JSON_UTF_8);
         }
 
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
@@ -235,9 +234,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                         // We also know that we don't support compression, so this is always a ByteBuffer.
                         HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
-                        res.write(unframedHeaders);
-                        res.write(unframedContent);
-                        res.close();
+                        res.complete(HttpResponse.of(unframedHeaders, unframedContent));
                     }
 
                     @Override

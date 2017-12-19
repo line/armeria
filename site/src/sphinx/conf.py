@@ -34,14 +34,14 @@ copyright = properties['inceptionYear'] + '-' + str(date.today().year) + ', LINE
 # Set the project version and release.
 # Use the last known stable release if the current version ends with '-SNAPSHOT'.
 if re.match(r'^.*-SNAPSHOT$', properties['version']):
-    release = '0.52.0'
+    release = '0.55.1'
 else:
     release = properties['version']
 version = re.match(r'^[0-9]+\.[0-9]+', release).group(0)
 
 # Export the loaded properties and some useful values into epilogs
 rst_epilog = '\n'
-rst_epilog += '.. |baseurl| replace:: http://line.github.io/armeria/\n'
+rst_epilog += '.. |baseurl| replace:: https://line.github.io/armeria/\n'
 for k in properties.keys():
     v = properties[k]
     if k in [ 'release', 'version' ]:
@@ -70,7 +70,6 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_path = ['_themes']
 html_short_title = project_short
 html_static_path = ['_static']
-html_use_smartypants = True
 html_use_index = True
 html_show_sourcelink = False
 htmlhelp_basename = project_short

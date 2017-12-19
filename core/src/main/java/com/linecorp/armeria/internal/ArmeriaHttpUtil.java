@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -136,88 +136,6 @@ public final class ArmeriaHttpUtil {
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
-    }
-
-    /**
-     * Validates the {@link String} that contains an absolute path and a query, and splits them into
-     * the path part and the query part.
-     *
-     * @return a two-element array whose first element is an absolute path and the second element is a query.
-     *         {@code null} if the specified {@link String} is not an absolute path or invalid.
-     */
-    public static String[] splitPathAndQuery(final String pathAndQuery) {
-        final String path;
-        final String query;
-
-        if (isNullOrEmpty(pathAndQuery)) {
-            // e.g. http://example.com
-            path = "/";
-            query = null;
-        } else if (pathAndQuery.charAt(0) != '/') {
-            // Do not accept a relative path.
-            return null;
-        } else {
-            // Split by the first '?'.
-            final int queryPos = pathAndQuery.indexOf('?');
-            if (queryPos >= 0) {
-                path = pathAndQuery.substring(0, queryPos);
-                query = pathAndQuery.substring(queryPos + 1);
-            } else {
-                path = pathAndQuery;
-                query = null;
-            }
-        }
-
-        // Make sure the path and the query are encoded correctly. i.e. Do not pass poorly encoded paths
-        // and queries to services. However, do not pass the decoded paths and queries to the services,
-        // so that users have more control over the encoding.
-        if (!isValidEncoding(path) ||
-            !isValidEncoding(query)) {
-            return null;
-        }
-
-        // Reject the prohibited patterns.
-        if (PROHIBITED_PATH_PATTERN.matcher(path).find()) {
-            return null;
-        }
-
-        // Work around the case where a client sends a path such as '/path//with///consecutive////slashes'.
-        return new String[] { CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/"), query };
-    }
-
-    @SuppressWarnings({ "DuplicateCondition", "DuplicateBooleanBranch" })
-    private static boolean isValidEncoding(String value) {
-        if (value == null) {
-            return true;
-        }
-
-        final int length = value.length();
-        for (int i = 0; i < length; i++) {
-            final char ch = value.charAt(i);
-            if (ch != '%') {
-                continue;
-            }
-
-            final int end = i + 3;
-            if (end > length) {
-                // '%' or '%x' (must be followed by two hexadigits)
-                return false;
-            }
-
-            if (!isHexadigit(value.charAt(++i)) ||
-                !isHexadigit(value.charAt(++i))) {
-                // The first or second digit is not hexadecimal.
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static boolean isHexadigit(char ch) {
-        return ch >= '0' && ch <= '9' ||
-               ch >= 'a' && ch <= 'f' ||
-               ch >= 'A' && ch <= 'F';
     }
 
     /**

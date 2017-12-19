@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,6 +20,8 @@ import static com.linecorp.armeria.common.stream.DefaultStreamMessageVerificatio
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import io.netty.util.concurrent.EventExecutor;
 
 public class DeferredStreamMessageVerification extends StreamMessageVerification<Long> {
 
@@ -48,7 +50,8 @@ public class DeferredStreamMessageVerification extends StreamMessageVerification
 
         stream.delegate(new StreamMessageWrapper<Long>(createStreamMessage(elements + 1, false)) {
             @Override
-            public void subscribe(Subscriber<? super Long> subscriber, boolean withPooledObjects) {
+            public void subscribe(
+                    Subscriber<? super Long> subscriber, EventExecutor executor, boolean withPooledObjects) {
                 super.subscribe(new Subscriber<Long>() {
                     @Override
                     public void onSubscribe(Subscription s) {
@@ -72,7 +75,7 @@ public class DeferredStreamMessageVerification extends StreamMessageVerification
                     public void onComplete() {
                         subscriber.onComplete();
                     }
-                }, withPooledObjects);
+                }, executor, withPooledObjects);
             }
         });
 

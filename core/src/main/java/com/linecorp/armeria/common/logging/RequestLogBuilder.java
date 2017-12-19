@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,6 +35,19 @@ public interface RequestLogBuilder {
      * A dummy {@link RequestLogBuilder} that discards everything it collected.
      */
     RequestLogBuilder NOOP = new NoopRequestLogBuilder();
+
+    /**
+     * Adds the specified {@link RequestLog} so that the logs are propagated from the {@code child}.
+     * Note that only the request-side logs of the first added child will be propagated. To fill the
+     * response-side logs you need to call {@link #endResponseWithLastChild()}.
+     */
+    void addChild(RequestLog child);
+
+    /**
+     * Fills the response-side logs from the last added child. Note that already fulfilled
+     * {@link RequestLogAvailability}s in the child log will be propagated immediately.
+     */
+    void endResponseWithLastChild();
 
     // Methods related with a request:
 
@@ -141,7 +154,9 @@ public interface RequestLogBuilder {
     boolean isResponseContentDeferred();
 
     /**
-     * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information.
+     * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information. If a
+     * {@link Throwable} cause has been set with {@link #responseContent(Object, Object)}, it will be treated
+     * as the {@code responseCause} for this log.
      */
     void endResponse();
 

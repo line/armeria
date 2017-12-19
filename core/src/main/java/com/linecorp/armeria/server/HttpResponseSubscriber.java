@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.HttpResponseSubscriber.State.DONE;
 import static com.linecorp.armeria.server.HttpResponseSubscriber.State.NEEDS_DATA_OR_TRAILING_HEADERS;
 
 import java.util.concurrent.ScheduledFuture;
@@ -26,15 +27,13 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 
@@ -49,6 +48,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                                               ChannelFutureListener {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
+
+    private static final AggregatedHttpMessage INTERNAL_SERVER_ERROR_MESSAGE =
+            AggregatedHttpMessage.of(HttpStatus.INTERNAL_SERVER_ERROR);
+    private static final AggregatedHttpMessage SERVICE_UNAVAILABLE_MESSAGE =
+            AggregatedHttpMessage.of(HttpStatus.SERVICE_UNAVAILABLE);
 
     enum State {
         NEEDS_HEADERS,
@@ -124,7 +128,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 requestTimeoutHandler.run();
             } else {
                 failAndRespond(RequestTimeoutException.get(),
-                               HttpStatus.SERVICE_UNAVAILABLE, Http2Error.INTERNAL_ERROR);
+                               SERVICE_UNAVAILABLE_MESSAGE, Http2Error.INTERNAL_ERROR);
             }
         }
     }
@@ -182,7 +186,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 switch (statusCode) {
-                    case 204: case 205: case 304:
+                    case 204:
+                    case 205:
+                    case 304:
                         // These responses are not allowed to have content so we always close the stream even if
                         // not explicitly set.
                         endOfStream = true;
@@ -217,12 +223,28 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     @Override
     public void onError(Throwable cause) {
         if (cause instanceof HttpResponseException) {
-            failAndRespond(cause, ((HttpResponseException) cause).httpStatus(), Http2Error.CANCEL);
+            // Timeout may occur when the aggregation of the error response takes long.
+            // If timeout occurs, respond with 503 Service Unavailable.
+            ((HttpResponseException) cause).httpResponse()
+                                           .aggregate(ctx.executor())
+                                           .whenCompleteAsync((message, throwable) -> {
+                                               if (throwable != null) {
+                                                   failAndRespond(throwable,
+                                                                  INTERNAL_SERVER_ERROR_MESSAGE,
+                                                                  Http2Error.CANCEL);
+                                               } else {
+                                                   failAndRespond(cause, message, Http2Error.CANCEL);
+                                               }
+                                           }, ctx.executor());
+        } else if (cause instanceof HttpStatusException) {
+            failAndRespond(cause,
+                           AggregatedHttpMessage.of(((HttpStatusException) cause).httpStatus()),
+                           Http2Error.CANCEL);
         } else {
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",
                         ctx.channel(), service(), cause);
 
-            failAndRespond(cause, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR);
+            failAndRespond(cause, INTERNAL_SERVER_ERROR_MESSAGE, Http2Error.INTERNAL_ERROR);
         }
     }
 
@@ -251,11 +273,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         final Channel ch = ctx.channel();
-        if (!ch.isActive()) {
-            fail(ClosedSessionException.get());
-            return;
-        }
-
         if (endOfStream) {
             setDone();
         }
@@ -284,25 +301,26 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         if (flush) {
             ctx.flush();
         }
+
+        if (state == DONE) {
+            subscription.cancel();
+        }
     }
 
     private void fail(Throwable cause) {
         setDone();
         logBuilder().endResponse(cause);
+        subscription.cancel();
     }
 
     private void setDone() {
         cancelTimeout();
         state = State.DONE;
-        subscription.cancel();
     }
 
-    private void failAndRespond(Throwable cause, HttpStatus status, Http2Error error) {
-        final HttpData content = status.toHttpData();
-        final HttpHeaders headers =
-                HttpHeaders.of(status)
-                           .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+    private void failAndRespond(Throwable cause, AggregatedHttpMessage message, Http2Error error) {
+        final HttpHeaders headers = message.headers();
+        final HttpData content = message.content();
 
         logBuilder().responseHeaders(headers);
 
@@ -314,8 +332,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
         if (wroteNothing(state)) {
             // Did not write anything yet; we can send an error response instead of resetting the stream.
-            responseEncoder.writeHeaders(ctx, id, streamId, headers, false);
-            responseEncoder.writeData(ctx, id, streamId, content, true);
+            if (content.isEmpty()) {
+                responseEncoder.writeHeaders(ctx, id, streamId, headers, true);
+            } else {
+                responseEncoder.writeHeaders(ctx, id, streamId, headers, false);
+                responseEncoder.writeData(ctx, id, streamId, content, true);
+            }
         } else {
             // Wrote something already; we have to reset/cancel the stream.
             responseEncoder.writeReset(ctx, id, streamId, error);
@@ -339,7 +361,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private IllegalStateException newIllegalStateException(String msg) {
         final IllegalStateException cause = new IllegalStateException(msg);
-        failAndRespond(cause, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR);
+        failAndRespond(cause, INTERNAL_SERVER_ERROR_MESSAGE, Http2Error.INTERNAL_ERROR);
         return cause;
     }
 }

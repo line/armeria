@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -42,7 +42,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -62,9 +61,8 @@ public class HttpAuthServiceTest {
         protected void configure(ServerBuilder sb) throws Exception {
             final HttpService ok = new AbstractHttpService() {
                 @Override
-                protected void doGet(
-                        ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK);
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
                 }
             };
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,11 @@
 
 package com.linecorp.armeria.it.tracing;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.util.concurrent.Futures.allAsList;
+import static com.google.common.util.concurrent.Futures.transformAsync;
+import static com.linecorp.armeria.common.HttpStatus.OK;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,7 +29,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.After;
@@ -32,23 +41,33 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.HelloService.AsyncIface;
+import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.tracing.HttpTracingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import brave.Tracing;
+import brave.propagation.CurrentTraceContext;
 import brave.sampler.Sampler;
-import zipkin.Span;
-import zipkin.reporter.Reporter;
+import zipkin2.Span;
+import zipkin2.reporter.Reporter;
 
 public class HttpTracingIntegrationTest {
 
@@ -58,6 +77,7 @@ public class HttpTracingIntegrationTest {
     private HelloService.Iface fooClientWithoutTracing;
     private HelloService.AsyncIface barClient;
     private HelloService.AsyncIface quxClient;
+    private HttpClient poolHttpClient;
 
     @Rule
     public final ServerRule server = new ServerRule() {
@@ -77,6 +97,47 @@ public class HttpTracingIntegrationTest {
 
             sb.service("/qux", decorate("service/qux", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!'))));
+
+            sb.service("/pool", decorate("service/pool", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
+                            Executors.newFixedThreadPool(2));
+                    CountDownLatch countDownLatch = new CountDownLatch(2);
+
+                    ListenableFuture<List<Object>> spanAware = allAsList(IntStream.range(1, 3).mapToObj(
+                            i -> executorService.submit(
+                                    RequestContext.current().makeContextAware(() -> {
+                                        brave.Span span = Tracing.currentTracer().nextSpan().start();
+                                        countDownLatch.countDown();
+                                        countDownLatch.await();
+                                        try {
+                                            return null;
+                                        } finally {
+                                            span.finish();
+                                        }
+                                    }))).collect(toImmutableList()));
+
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    HttpResponse res = HttpResponse.from(responseFuture);
+                    transformAsync(spanAware,
+                                   result -> allAsList(IntStream.range(1, 3).mapToObj(
+                                           i -> executorService.submit(() -> {
+                                               brave.Span span = Tracing.currentTracer().nextSpan().start();
+                                               try {
+                                                   return null;
+                                               } finally {
+                                                   span.finish();
+                                               }
+                                           })).collect(toImmutableList())),
+                                   RequestContext.current().eventLoop())
+                            .addListener(() -> {
+                                responseFuture.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "Lee"));
+                            }, RequestContext.current().eventLoop());
+                    return res;
+                }
+            }));
         }
     };
 
@@ -89,6 +150,12 @@ public class HttpTracingIntegrationTest {
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
+        poolHttpClient = HttpClient.of(server.uri("/"));
+    }
+
+    @After
+    public void tearDown() {
+        Tracing.current().close();
     }
 
     @After
@@ -109,8 +176,9 @@ public class HttpTracingIntegrationTest {
 
     private static Tracing newTracing(String name) {
         return Tracing.newBuilder()
+                      .currentTraceContext(CurrentTraceContext.Default.create())
                       .localServiceName(name)
-                      .reporter(spanReporter)
+                      .spanReporter(spanReporter)
                       .sampler(Sampler.ALWAYS_SAMPLE)
                       .build();
     }
@@ -120,8 +188,8 @@ public class HttpTracingIntegrationTest {
         assertThat(fooClient.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
         final Span[] spans = spanReporter.take(6);
-        final long traceId = spans[0].traceId;
-        assertThat(spans).allMatch(s -> s.traceId == traceId);
+        final String traceId = spans[0].traceId();
+        assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
 
         // Find all spans.
         final Span clientFooSpan = findSpan(spans, "client/foo");
@@ -132,34 +200,34 @@ public class HttpTracingIntegrationTest {
         final Span serviceQuxSpan = findSpan(spans, "service/qux");
 
         // client/foo and service/foo should have no parents.
-        assertThat(clientFooSpan.parentId).isNull();
-        assertThat(serviceFooSpan.parentId).isNull();
+        assertThat(clientFooSpan.parentId()).isNull();
+        assertThat(serviceFooSpan.parentId()).isNull();
 
         // client/foo and service/foo should have the ID values identical with their traceIds.
-        assertThat(clientFooSpan.id).isEqualTo(traceId);
-        assertThat(serviceFooSpan.id).isEqualTo(traceId);
+        assertThat(clientFooSpan.id()).isEqualTo(traceId);
+        assertThat(serviceFooSpan.id()).isEqualTo(traceId);
 
         // The spans that do not cross the network boundary should have the same ID.
-        assertThat(clientFooSpan.id).isEqualTo(serviceFooSpan.id);
-        assertThat(clientBarSpan.id).isEqualTo(serviceBarSpan.id);
-        assertThat(clientQuxSpan.id).isEqualTo(serviceQuxSpan.id);
+        assertThat(clientFooSpan.id()).isEqualTo(serviceFooSpan.id());
+        assertThat(clientBarSpan.id()).isEqualTo(serviceBarSpan.id());
+        assertThat(clientQuxSpan.id()).isEqualTo(serviceQuxSpan.id());
 
         // Check the parentIds.
-        assertThat(clientBarSpan.parentId).isEqualTo(clientFooSpan.id);
-        assertThat(serviceBarSpan.parentId).isEqualTo(clientFooSpan.id);
-        assertThat(clientQuxSpan.parentId).isEqualTo(clientBarSpan.id);
-        assertThat(serviceQuxSpan.parentId).isEqualTo(clientBarSpan.id);
+        assertThat(clientBarSpan.parentId()).isEqualTo(clientFooSpan.id());
+        assertThat(serviceBarSpan.parentId()).isEqualTo(clientFooSpan.id());
+        assertThat(clientQuxSpan.parentId()).isEqualTo(clientBarSpan.id());
+        assertThat(serviceQuxSpan.parentId()).isEqualTo(clientBarSpan.id());
 
         // Check the service names.
-        assertThat(clientFooSpan.annotations).allMatch(a -> "client/foo".equals(a.endpoint.serviceName));
-        assertThat(serviceFooSpan.annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
-        assertThat(clientBarSpan.annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
-        assertThat(serviceBarSpan.annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
-        assertThat(clientQuxSpan.annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
-        assertThat(serviceQuxSpan.annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
+        assertThat(clientFooSpan.localServiceName()).isEqualTo("client/foo");
+        assertThat(serviceFooSpan.localServiceName()).isEqualTo("service/foo");
+        assertThat(clientBarSpan.localServiceName()).isEqualTo("client/bar");
+        assertThat(serviceBarSpan.localServiceName()).isEqualTo("service/bar");
+        assertThat(clientQuxSpan.localServiceName()).isEqualTo("client/qux");
+        assertThat(serviceQuxSpan.localServiceName()).isEqualTo("service/qux");
 
         // Check the span names.
-        assertThat(spans).allMatch(s -> "hello".equals(s.name));
+        assertThat(spans).allMatch(s -> "hello".equals(s.name()));
     }
 
     @Test(timeout = 10000)
@@ -167,8 +235,8 @@ public class HttpTracingIntegrationTest {
         assertThat(fooClientWithoutTracing.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
         final Span[] spans = spanReporter.take(5);
-        final long traceId = spans[0].traceId;
-        assertThat(spans).allMatch(s -> s.traceId == traceId);
+        final String traceId = spans[0].traceId();
+        assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
 
         // Find all spans.
         final Span serviceFooSpan = findSpan(spans, "service/foo");
@@ -178,35 +246,42 @@ public class HttpTracingIntegrationTest {
         final Span serviceQuxSpan = findSpan(spans, "service/qux");
 
         // service/foo should have no parent.
-        assertThat(serviceFooSpan.parentId).isNull();
+        assertThat(serviceFooSpan.parentId()).isNull();
 
         // service/foo should have the ID value identical with its traceId.
-        assertThat(serviceFooSpan.id).isEqualTo(traceId);
+        assertThat(serviceFooSpan.id()).isEqualTo(traceId);
 
         // The spans that do not cross the network boundary should have the same ID.
-        assertThat(clientBarSpan.id).isEqualTo(serviceBarSpan.id);
-        assertThat(clientQuxSpan.id).isEqualTo(serviceQuxSpan.id);
+        assertThat(clientBarSpan.id()).isEqualTo(serviceBarSpan.id());
+        assertThat(clientQuxSpan.id()).isEqualTo(serviceQuxSpan.id());
 
         // Check the parentIds
-        assertThat(clientBarSpan.parentId).isEqualTo(serviceFooSpan.id);
-        assertThat(serviceBarSpan.parentId).isEqualTo(serviceFooSpan.id);
-        assertThat(clientQuxSpan.parentId).isEqualTo(serviceBarSpan.id);
-        assertThat(serviceQuxSpan.parentId).isEqualTo(serviceBarSpan.id);
+        assertThat(clientBarSpan.parentId()).isEqualTo(serviceFooSpan.id());
+        assertThat(serviceBarSpan.parentId()).isEqualTo(serviceFooSpan.id());
+        assertThat(clientQuxSpan.parentId()).isEqualTo(serviceBarSpan.id());
+        assertThat(serviceQuxSpan.parentId()).isEqualTo(serviceBarSpan.id());
 
         // Check the service names.
-        assertThat(serviceFooSpan.annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
-        assertThat(clientBarSpan.annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
-        assertThat(serviceBarSpan.annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
-        assertThat(clientQuxSpan.annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
-        assertThat(serviceQuxSpan.annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
+        assertThat(serviceFooSpan.localServiceName()).isEqualTo("service/foo");
+        assertThat(clientBarSpan.localServiceName()).isEqualTo("client/bar");
+        assertThat(serviceBarSpan.localServiceName()).isEqualTo("service/bar");
+        assertThat(clientQuxSpan.localServiceName()).isEqualTo("client/qux");
+        assertThat(serviceQuxSpan.localServiceName()).isEqualTo("service/qux");
 
         // Check the span names.
-        assertThat(spans).allMatch(s -> "hello".equals(s.name));
+        assertThat(spans).allMatch(s -> "hello".equals(s.name()));
+    }
+
+    @Test(timeout = 10000)
+    public void testSpanInThreadPoolHasSameTraceId() throws Exception {
+        poolHttpClient.get("pool").aggregate().get();
+        Span[] spans = spanReporter.take(5);
+        assertThat(Arrays.stream(spans).map(span -> span.traceId()).collect(toImmutableSet())).hasSize(3);
     }
 
     private static Span findSpan(Span[] spans, String serviceName) {
         return Arrays.stream(spans)
-                     .filter(s -> s.serviceNames().contains(serviceName))
+                     .filter(s -> serviceName.equals(s.localServiceName()))
                      .findAny()
                      .orElseThrow(() -> new AssertionError(
                              "Can't find a Span with service name: " + serviceName));

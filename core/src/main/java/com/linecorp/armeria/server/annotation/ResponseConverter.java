@@ -1,11 +1,11 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,16 +16,27 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * Converts given object into {@link HttpResponse}.
+ * Specifies a {@link ResponseConverterFunction} class which converts the result to {@link HttpResponse}.
+ *
+ * @see ResponseConverterFunction
  */
-@FunctionalInterface
-public interface ResponseConverter {
+@Repeatable(ResponseConverters.class)
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.TYPE, ElementType.METHOD })
+public @interface ResponseConverter {
 
     /**
-     * Returns {@link HttpResponse} instance corresponds to the given {@code resObj}.
+     * {@link ResponseConverterFunction} implementation type. The specified class must have an accessible
+     * default constructor.
      */
-    HttpResponse convert(Object resObj) throws Exception;
+    Class<? extends ResponseConverterFunction> value();
 }

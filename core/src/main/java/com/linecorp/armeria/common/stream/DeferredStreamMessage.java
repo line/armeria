@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,14 +18,17 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.CompletionActions;
+
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * A {@link StreamMessage} whose stream is published later by another {@link StreamMessage}. It is useful when
@@ -33,7 +36,12 @@ import com.linecorp.armeria.common.util.CompletionActions;
  *
  * @param <T> the type of element signaled
  */
-public class DeferredStreamMessage<T> implements StreamMessage<T> {
+public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, SubscriptionImpl>
+            subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            DeferredStreamMessage.class, SubscriptionImpl.class, "subscription");
 
     @SuppressWarnings({ "AtomicFieldUpdaterIssues", "rawtypes" })
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, StreamMessage> delegateUpdater =
@@ -41,20 +49,33 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
                     DeferredStreamMessage.class, StreamMessage.class, "delegate");
 
     @SuppressWarnings({ "AtomicFieldUpdaterIssues", "rawtypes" })
-    private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, PendingSubscription>
-            pendingSubscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DeferredStreamMessage.class, PendingSubscription.class, "pendingSubscription");
-
-    private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+    private static final AtomicIntegerFieldUpdater<DeferredStreamMessage>
+            subscribedToDelegateUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(
+                    DeferredStreamMessage.class, "subscribedToDelegate");
 
     @SuppressWarnings("unused") // Updated only via delegateUpdater
     private volatile StreamMessage<T> delegate;
-    @SuppressWarnings("unused") // Updated only via pendingSubscriptionUpdater
-    private volatile PendingSubscription<? super T> pendingSubscription;
+
+    // Only accessed from subscription's executor.
+    private Subscription delegateSubscription;
+
+    @SuppressWarnings("unused") // Updated only via subscriptionUpdater
+    private volatile SubscriptionImpl subscription;
+
+    @SuppressWarnings("unused") // Updated only via subscribedToDelegateUpdater
+    private volatile int subscribedToDelegate;
+
+    // Only accessed from subscription's executor.
+    private long pendingDemand;
+
     private volatile boolean abortPending;
 
+    // Only accessed from subscription's executor.
+    private boolean cancelPending;
+
     /**
-     * Sets the delegate {@link HttpResponse} which will publish the stream actually.
+     * Sets the delegate {@link StreamMessage} which will actually publish the stream.
      *
      * @throws IllegalStateException if the delegate has been set already or
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
@@ -70,22 +91,18 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
             delegate.abort();
         }
 
-        if (!closeFuture.isDone()) {
-            delegate.closeFuture().handle((unused, cause) -> {
+        if (!completionFuture().isDone()) {
+            delegate.completionFuture().handle((unused, cause) -> {
                 if (cause == null) {
-                    closeFuture.complete(null);
+                    completionFuture().complete(null);
                 } else {
-                    closeFuture.completeExceptionally(cause);
+                    completionFuture().completeExceptionally(cause);
                 }
                 return null;
             }).exceptionally(CompletionActions::log);
         }
 
-        @SuppressWarnings("unchecked")
-        final PendingSubscription<? super T> ps = pendingSubscription;
-        if (ps != null) {
-            subscribeToDelegate(delegate, ps);
-        }
+        safeOnSubscribeToDelegate();
     }
 
     /**
@@ -120,7 +137,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
             return delegate.isOpen();
         }
 
-        return !closeFuture.isDone();
+        return !completionFuture().isDone();
     }
 
     @Override
@@ -134,110 +151,151 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<Void> closeFuture() {
-        return closeFuture;
+    long demand() {
+        return pendingDemand;
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        requireNonNull(subscriber, "subscriber");
-        subscribe0(subscriber, null, false);
-    }
+    void request(long n) {
+        // A user cannot access subscription without subscribing.
+        assert subscription != null;
 
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        requireNonNull(subscriber, "subscriber");
-        subscribe0(subscriber, null, withPooledObjects);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
-        requireNonNull(subscriber, "subscriber");
-        requireNonNull(executor, "executor");
-        subscribe0(subscriber, executor, false);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
-        requireNonNull(subscriber, "subscriber");
-        requireNonNull(executor, "executor");
-        subscribe0(subscriber, executor, withPooledObjects);
-    }
-
-    private void subscribe0(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
-        if (abortPending) {
-            failLateSubscriber(subscriber, executor, AbortedStreamException.get());
-            return;
+        if (subscription.needsDirectInvocation()) {
+            doRequest(n);
+        } else {
+            subscription.executor().execute(() -> doRequest(n));
         }
-
-        final PendingSubscription<? super T> newPendingSubscription =
-                new PendingSubscription<>(subscriber, executor, withPooledObjects);
-
-        final StreamMessage<T> delegate = this.delegate;
-        if (delegate == null) {
-            if (!pendingSubscriptionUpdater.compareAndSet(this, null, newPendingSubscription)) {
-                failLateSubscriber(subscriber, executor,
-                                   new IllegalStateException("subscribed by other subscriber already"));
-            }
-            return;
-        }
-
-        subscribeToDelegate(delegate, newPendingSubscription);
     }
 
-    private void failLateSubscriber(Subscriber<? super T> subscriber, Executor executor, Throwable cause) {
-        if (executor == null) {
+    private void doRequest(long n) {
+        final Subscription delegateSubscription = this.delegateSubscription;
+        if (delegateSubscription != null) {
+            delegateSubscription.request(n);
+        } else {
+            pendingDemand += n;
+        }
+    }
+
+    @Override
+    void cancel() {
+        // A user cannot access subscription without subscribing.
+        assert subscription != null;
+
+        if (subscription.needsDirectInvocation()) {
+            doCancel();
+        } else {
+            subscription.executor().execute(this::doCancel);
+        }
+    }
+
+    private void doCancel() {
+        final Subscription delegateSubscription = this.delegateSubscription;
+        if (delegateSubscription != null) {
             try {
-                subscriber.onSubscribe(NoopSubscription.INSTANCE);
+                delegateSubscription.cancel();
             } finally {
-                subscriber.onError(cause);
+                subscription.clearSubscriber();
             }
         } else {
+            cancelPending = true;
+        }
+    }
+
+    @Override
+    void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
+        // Delegate will notify, don't need to do anything special here.
+    }
+
+    @Override
+    void subscribe(SubscriptionImpl subscription) {
+        final Subscriber<Object> subscriber = subscription.subscriber();
+        final Executor executor = subscription.executor();
+
+        if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
+            failLateSubscriber(this.subscription, subscriber);
+            return;
+        }
+
+        if (subscription.needsDirectInvocation()) {
+            subscriber.onSubscribe(subscription);
+            safeOnSubscribeToDelegate();
+        } else {
             executor.execute(() -> {
-                try {
-                    subscriber.onSubscribe(NoopSubscription.INSTANCE);
-                } finally {
-                    subscriber.onError(cause);
-                }
+                subscriber.onSubscribe(subscription);
+                safeOnSubscribeToDelegate();
             });
         }
     }
 
-    private void subscribeToDelegate(
-            StreamMessage<T> delegate, PendingSubscription<? super T> pendingSubscription) {
+    private void safeOnSubscribeToDelegate() {
+        if (delegate == null || subscription == null) {
+            return;
+        }
 
-        final Subscriber<? super T> subscriber = pendingSubscription.subscriber;
-        final Executor executor = pendingSubscription.executor;
+        if (!subscribedToDelegateUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
+
+        final EventExecutor executor = subscription.executor();
+        final boolean withPooledObjects = subscription.withPooledObjects();
+
+        final Subscriber<T> delegateSubscriber = new ForwardingSubscriber();
+
         if (executor == null) {
-            delegate.subscribe(subscriber, pendingSubscription.withPooledObjects);
+            delegate.subscribe(delegateSubscriber, withPooledObjects);
         } else {
-            delegate.subscribe(subscriber, executor, pendingSubscription.withPooledObjects);
+            delegate.subscribe(delegateSubscriber, executor, withPooledObjects);
         }
     }
 
     @Override
     public void abort() {
         abortPending = true;
+
+        final SubscriptionImpl newSubscription = new SubscriptionImpl(
+                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false);
+        subscriptionUpdater.compareAndSet(this, null, newSubscription);
+
         final StreamMessage<T> delegate = this.delegate;
         if (delegate != null) {
             delegate.abort();
         } else {
-            closeFuture.completeExceptionally(AbortedStreamException.get());
+            if (subscription.needsDirectInvocation()) {
+                ABORTED_CLOSE.notifySubscriber(subscription, completionFuture());
+            } else {
+                subscription.executor().execute(
+                        () -> ABORTED_CLOSE.notifySubscriber(subscription, completionFuture()));
+            }
         }
     }
 
-    /**
-     * {@link Subscriber} and {@link Executor}.
-     */
-    private static final class PendingSubscription<T> {
-        final Subscriber<T> subscriber;
-        final Executor executor;
-        final boolean withPooledObjects;
+    private final class ForwardingSubscriber implements Subscriber<T> {
 
-        PendingSubscription(Subscriber<T> subscriber, Executor executor, boolean withPooledObjects) {
-            this.subscriber = subscriber;
-            this.executor = executor;
-            this.withPooledObjects = withPooledObjects;
+        @Override
+        public void onSubscribe(Subscription subscription) {
+            delegateSubscription = subscription;
+
+            if (cancelPending) {
+                delegateSubscription.cancel();
+            } else if (pendingDemand > 0) {
+                delegateSubscription.request(pendingDemand);
+                pendingDemand = 0;
+            }
+        }
+
+        @Override
+        public void onNext(T t) {
+            subscription.subscriber().onNext(t);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            subscription.subscriber().onError(t);
+        }
+
+        @Override
+        public void onComplete() {
+            subscription.subscriber().onComplete();
         }
     }
 }

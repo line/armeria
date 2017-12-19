@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,10 +30,12 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.Tag;
+
 /**
  * A virtual file system that provides the files requested by {@link HttpFileService}.
  */
-@FunctionalInterface
 public interface HttpVfs {
 
     /**
@@ -75,6 +77,11 @@ public interface HttpVfs {
      *         {@link Entry#NONE} if not found.
      */
     Entry get(String path, @Nullable String contentEncoding);
+
+    /**
+     * Returns the value of the {@code "vfs"} {@link Tag} in a {@link Meter}.
+     */
+    String meterTag();
 
     /**
      * A file entry in an {@link HttpVfs}.

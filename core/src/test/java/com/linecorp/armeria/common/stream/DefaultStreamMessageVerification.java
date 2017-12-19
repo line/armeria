@@ -5,7 +5,7 @@
  *  version 2.0 (the "License"); you may not use this file except in compliance
  *  with the License. You may obtain a copy of the License at:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,8 @@
 package com.linecorp.armeria.common.stream;
 
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.testng.annotations.Test;
 
 public class DefaultStreamMessageVerification extends StreamMessageVerification<Long> {
 
@@ -74,5 +76,16 @@ public class DefaultStreamMessageVerification extends StreamMessageVerification<
     @Override
     public StreamMessage<Long> createAbortedPublisher(long elements) {
         return createStreamMessage(elements, true);
+    }
+
+    // createStreamMessage creates a publisher that relies on onDemand for triggering writes - unfortunately
+    // means that it is not possible to have reads and writes to the stream happening synchronously in the same
+    // call tree, so this test passes regardless of whether DefaultStreamMessage actually correctly handles
+    // recursion. We disable it here to prevent a false sense of security and verify the behavior in
+    // DefaultStreamMessageTest.flowControlled_writeThenDemandThenProcess.
+    @Override
+    @Test(enabled = false)
+    public void required_spec303_mustNotAllowUnboundedRecursion() throws Throwable {
+        notVerified();
     }
 }

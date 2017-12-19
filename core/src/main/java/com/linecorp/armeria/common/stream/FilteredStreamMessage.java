@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,10 +19,18 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.internal.PooledObjects;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link StreamMessage} that filters objects as they are published. The filtering
@@ -31,15 +39,31 @@ import org.reactivestreams.Subscription;
  */
 public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
+    private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
+
     private final StreamMessage<T> delegate;
+    private final boolean withPooledObjects;
 
     /**
      * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
      * before passing to a subscriber.
      */
     protected FilteredStreamMessage(StreamMessage<T> delegate) {
+        this(delegate, false);
+    }
+
+    /**
+     * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
+     * before passing to a subscriber.
+     *
+     * @param withPooledObjects if {@code true}, {@link #filter(Object)} receives the pooled {@link ByteBuf}
+     *                          and {@link ByteBufHolder} as is, without making a copy. If you don't know what
+     *                          this means, use {@link #FilteredStreamMessage(StreamMessage)}.
+     */
+    protected FilteredStreamMessage(StreamMessage<T> delegate, boolean withPooledObjects) {
         requireNonNull(delegate, "delegate");
         this.delegate = delegate;
+        this.withPooledObjects = withPooledObjects;
     }
 
     /**
@@ -64,9 +88,12 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     /**
      * A callback executed just before calling {@link Subscriber#onError(Throwable)} on {@code subscriber}.
      * Override this method to execute any cleanup logic that may be needed before failing the
-     * subscription.
+     * subscription. This method may rewrite the {@code cause} and then return a new one so that the new
+     * {@link Throwable} would be passed to {@link Subscriber#onError(Throwable)}.
      */
-    protected void beforeError(Subscriber<? super U> subscriber, Throwable cause) {}
+    protected Throwable beforeError(Subscriber<? super U> subscriber, Throwable cause) {
+        return cause;
+    }
 
     @Override
     public boolean isOpen() {
@@ -79,8 +106,8 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
-    public CompletableFuture<Void> closeFuture() {
-        return delegate.closeFuture();
+    public CompletableFuture<Void> completionFuture() {
+        return delegate.completionFuture();
     }
 
     @Override
@@ -96,14 +123,15 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, Executor executor) {
+    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         delegate.subscribe(new FilteringSubscriber(subscriber), executor);
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, Executor executor, boolean withPooledObjects) {
+    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
+                          boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         delegate.subscribe(new FilteringSubscriber(subscriber), executor, withPooledObjects);
@@ -130,14 +158,24 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         @Override
-        public void onNext(T t) {
-            delegate.onNext(filter(t));
+        public void onNext(T o) {
+            ReferenceCountUtil.touch(o);
+            if (!withPooledObjects) {
+                o = PooledObjects.toUnpooled(o);
+            }
+            delegate.onNext(filter(o));
         }
 
         @Override
         public void onError(Throwable t) {
-            beforeError(delegate, t);
-            delegate.onError(t);
+            final Throwable filteredCause = beforeError(delegate, t);
+            if (filteredCause != null) {
+                delegate.onError(filteredCause);
+            } else {
+                logger.warn("{}#beforeError() returned null. Using the original exception:",
+                            FilteredStreamMessage.this.getClass().getName(), t.toString());
+                delegate.onError(t);
+            }
         }
 
         @Override

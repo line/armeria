@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -38,9 +39,11 @@ import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.util.Attribute;
 
 /**
  * Default {@link ServiceRequestContext} implementation.
@@ -70,16 +73,17 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * Creates a new instance.
      *
      * @param ch the {@link Channel} that handles the invocation
+     * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      */
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Object request,
             @Nullable SSLSession sslSession) {
 
-        super(sessionProtocol,
+        super(meterRegistry, sessionProtocol,
               requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
               requireNonNull(pathMappingResult, "pathMappingResult").query(),
               request);
@@ -107,6 +111,24 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
         return new RequestContextAwareLogger(this, LoggerFactory.getLogger(
                 cfg.server().config().serviceLoggerPrefix() + '.' + loggerName));
+    }
+
+    @Override
+    public ServiceRequestContext newDerivedContext() {
+        final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
+                this.cfg, this.ch, this.meterRegistry(), this.sessionProtocol(),
+                this.pathMappingContext, this.pathMappingResult, this.request(),
+                this.sslSession());
+        for (Iterator<Attribute<?>> i = attrs(); i.hasNext();) {
+            ctx.addAttr(i.next());
+        }
+        return ctx;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void addAttr(Attribute<?> attribute) {
+        final Attribute<T> a = (Attribute<T>) attribute;
+        attr(a.key()).set(a.get());
     }
 
     @Override

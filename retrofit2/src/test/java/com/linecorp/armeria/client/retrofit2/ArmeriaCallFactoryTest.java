@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.retrofit2;
 
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.ROUND_ROBIN;
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -41,10 +40,9 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -163,120 +161,108 @@ public class ArmeriaCallFactoryTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/pojo", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx,
-                                     HttpRequest req, HttpResponseWriter res) throws Exception {
-                    res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                 "{\"name\":\"Cony\", \"age\":26}");
                 }
             })
               .serviceUnder("/pathWithName", new AbstractHttpService() {
 
                   @Override
-                  protected void doGet(ServiceRequestContext ctx,
-                                       HttpRequest req, HttpResponseWriter res) throws Exception {
-                      req.aggregate().handle(voidFunction((aReq, cause) -> {
+                  protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      return HttpResponse.from(req.aggregate().handle(((aReq, cause) -> {
                           Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
                                   .parameters();
-                          String fullPath = ArmeriaHttpUtil.splitPathAndQuery(req.path())[0];
-                          res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                          String fullPath = PathAndQuery.parse(req.path()).path();
+                          return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                       "{\"name\":\"" + fullPath.replace("/pathWithName/", "") + "\", " +
                                       "\"age\":" + params.get("age").get(0) + '}');
-                      }));
+                      })));
                   }
               })
               .service("/nest/pojo", new AbstractHttpService() {
                   @Override
-                  protected void doGet(ServiceRequestContext ctx,
-                                       HttpRequest req, HttpResponseWriter res) throws Exception {
-                      res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                  protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                   "{\"name\":\"Leonard\", \"age\":21}");
                   }
               })
               .service("/pojos", new AbstractHttpService() {
                   @Override
-                  protected void doGet(ServiceRequestContext ctx,
-                                       HttpRequest req, HttpResponseWriter res) throws Exception {
-                      res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                  protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                   "[{\"name\":\"Cony\", \"age\":26}," +
                                   "{\"name\":\"Leonard\", \"age\":21}]");
                   }
               })
               .service("/queryString", new AbstractHttpService() {
                   @Override
-                  protected void doGet(ServiceRequestContext ctx,
-                                       HttpRequest req, HttpResponseWriter res) throws Exception {
-                      req.aggregate().handle(voidFunction((aReq, cause) -> {
+                  protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      return HttpResponse.from(req.aggregate().handle(((aReq, cause) -> {
                           Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
                                   .parameters();
-                          res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                          return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                       "{\"name\":\"" + params.get("name").get(0) + "\", " +
                                       "\"age\":" + params.get("age").get(0) + '}');
-                      }));
+                      })));
                   }
               })
               .service("/post", new AbstractHttpService() {
                   @Override
-                  protected void doPost(ServiceRequestContext ctx,
-                                        HttpRequest req, HttpResponseWriter res) throws Exception {
-                      req.aggregate().handle(voidFunction((aReq, cause) -> {
+                  protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      return HttpResponse.from(req.aggregate().handle(((aReq, cause) -> {
                           if (cause != null) {
-                              res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                              return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                           MediaType.PLAIN_TEXT_UTF_8,
                                           Throwables.getStackTraceAsString(cause));
-                              return;
                           }
                           String text = aReq.content().toStringUtf8();
                           final Pojo request;
                           try {
                               request = OBJECT_MAPPER.readValue(text, Pojo.class);
                           } catch (IOException e) {
-                              res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                              return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                           MediaType.PLAIN_TEXT_UTF_8,
                                           Throwables.getStackTraceAsString(e));
-                              return;
                           }
                           assertThat(request).isEqualTo(new Pojo("Cony", 26));
-                          res.respond(HttpStatus.OK);
-                      }));
+                          return HttpResponse.of(HttpStatus.OK);
+                      })));
                   }
               })
               .service("/postForm", new AbstractHttpService() {
                   @Override
-                  protected void doPost(ServiceRequestContext ctx,
-                                        HttpRequest req, HttpResponseWriter res) throws Exception {
-                      req.aggregate().handle(voidFunction((aReq, cause) -> {
+                  protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      return HttpResponse.from(req.aggregate().handle(((aReq, cause) -> {
                           if (cause != null) {
-                              res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                              return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                           MediaType.PLAIN_TEXT_UTF_8,
                                           Throwables.getStackTraceAsString(cause));
-                              return;
                           }
                           Map<String, List<String>> params = new QueryStringDecoder(
                                   aReq.content().toStringUtf8(), false)
                                   .parameters();
-                          res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                          return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                       "{\"name\":\"" + params.get("name").get(0) + "\", " +
                                       "\"age\":" + params.get("age").get(0) + '}');
-                      }));
+                      })));
                   }
               })
               .service("/postCustomContentType", new AbstractHttpService() {
                   @Override
-                  protected void doPost(ServiceRequestContext ctx,
-                                        HttpRequest req, HttpResponseWriter res) throws Exception {
-                      req.aggregate().handle(voidFunction((aReq, cause) -> {
+                  protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      return HttpResponse.from(req.aggregate().handle(((aReq, cause) -> {
                           if (cause != null) {
-                              res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                              return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                           MediaType.PLAIN_TEXT_UTF_8,
                                           Throwables.getStackTraceAsString(cause));
-                              return;
                           }
                           Map<String, List<String>> params = new QueryStringDecoder(
                                   aReq.content().toStringUtf8(), false)
                                   .parameters();
                           assertThat(params).isEmpty();
-                          res.respond(HttpStatus.OK);
-                      }));
+                          return HttpResponse.of(HttpStatus.OK);
+                      })));
                   }
               });
         }

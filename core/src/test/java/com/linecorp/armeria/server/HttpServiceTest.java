@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,7 +32,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -48,11 +48,10 @@ public class HttpServiceTest {
                     "/hello/{name}",
                     new AbstractHttpService() {
                         @Override
-                        protected void doGet(
-                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-
+                        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                             final String name = ctx.pathParam("name");
-                            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+                            return HttpResponse.of(
+                                    HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
                         }
                     }.decorate(LoggingService.newDecorator()));
 
@@ -60,17 +59,13 @@ public class HttpServiceTest {
                     "/200",
                     new AbstractHttpService() {
                         @Override
-                        protected void doHead(
-                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-
-                            res.respond(HttpStatus.OK);
+                        protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
+                            return HttpResponse.of(HttpStatus.OK);
                         }
 
                         @Override
-                        protected void doGet(
-                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-
-                            res.respond(HttpStatus.OK);
+                        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                            return HttpResponse.of(HttpStatus.OK);
                         }
                     }.decorate(LoggingService.newDecorator()));
 
@@ -78,10 +73,8 @@ public class HttpServiceTest {
                     "/204",
                     new AbstractHttpService() {
                         @Override
-                        protected void doGet(
-                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-
-                            res.respond(HttpStatus.NO_CONTENT);
+                        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                            return HttpResponse.of(HttpStatus.NO_CONTENT);
                         }
                     }.decorate(LoggingService.newDecorator()));
         }

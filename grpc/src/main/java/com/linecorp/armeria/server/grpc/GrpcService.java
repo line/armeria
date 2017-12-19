@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,9 +29,9 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -43,8 +43,10 @@ import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceWithPathMappings;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
@@ -56,8 +58,8 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 
 /**
- * A {@link AbstractHttpService} that implements the GRPC wire protocol. Interfaces and binding logic of GRPC
- * generated stubs are supported, however compatibility with GRPC's core java API is best effort.
+ * A {@link AbstractHttpService} that implements the gRPC wire protocol. Interfaces and binding logic of gRPC
+ * generated stubs are supported, however compatibility with gRPC's core java API is best effort.
  *
  * <p>Unsupported features:
  * <ul>
@@ -66,13 +68,14 @@ import io.grpc.Status;
  *         the client. Any usages of {@link Metadata} in the server will be silently ignored.
  *     </li>
  *     <li>
- *         There are some differences in the HTTP/2 error code returned from an Armeria server vs GRPC server
+ *         There are some differences in the HTTP/2 error code returned from an Armeria server vs gRPC server
  *         when dealing with transport errors and deadlines. Generally, the client will see an UNKNOWN status
  *         when the official server may have returned CANCELED.
  *     </li>
  * </ul>
  */
-public final class GrpcService extends AbstractHttpService {
+public final class GrpcService extends AbstractHttpService
+        implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcService.class);
 
@@ -81,6 +84,7 @@ public final class GrpcService extends AbstractHttpService {
     private static final Metadata EMPTY_METADATA = new Metadata();
 
     private final HandlerRegistry registry;
+    private final Set<PathMapping> pathMappings;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -90,12 +94,14 @@ public final class GrpcService extends AbstractHttpService {
     private int maxInboundMessageSizeBytes;
 
     GrpcService(HandlerRegistry registry,
+                Set<PathMapping> pathMappings,
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
                 int maxOutboundMessageSizeBytes,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
+        this.pathMappings = requireNonNull(pathMappings, "pathMappings");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
@@ -105,34 +111,30 @@ public final class GrpcService extends AbstractHttpService {
     }
 
     @Override
-    protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) throws Exception {
-        String contentType = req.headers().get(HttpHeaderNames.CONTENT_TYPE);
+    protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        MediaType contentType = req.headers().contentType();
         SerializationFormat serializationFormat = findSerializationFormat(contentType);
         if (serializationFormat == null) {
-            res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        "Missing or invalid Content-Type header.");
-            return;
+            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   MediaType.PLAIN_TEXT_UTF_8,
+                                   "Missing or invalid Content-Type header.");
         }
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
         String methodName = GrpcRequestUtil.determineMethod(ctx);
         if (methodName == null) {
-            res.respond(HttpStatus.BAD_REQUEST,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        "Invalid path.");
-            return;
+            return HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                   MediaType.PLAIN_TEXT_UTF_8,
+                                   "Invalid path.");
         }
 
         ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
         if (method == null) {
-            res.write(
+            return HttpResponse.of(
                     ArmeriaServerCall.statusToTrailers(
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
                             false));
-            res.close();
-            return;
         }
 
         ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method.getMethodDescriptor()), null);
@@ -143,19 +145,20 @@ public final class GrpcService extends AbstractHttpService {
                 long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
                 ctx.setRequestTimeout(Duration.ofNanos(timeout));
             } catch (IllegalArgumentException e) {
-                res.write(ArmeriaServerCall.statusToTrailers(Status.fromThrowable(e), false));
-                res.close();
+                return HttpResponse.of(ArmeriaServerCall.statusToTrailers(Status.fromThrowable(e), false));
             }
         }
 
+        HttpResponseWriter res = HttpResponse.streaming();
         ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
             ctx.setRequestTimeoutHandler(() -> {
                 call.close(Status.DEADLINE_EXCEEDED, EMPTY_METADATA);
             });
-            req.subscribe(call.messageReader());
+            req.subscribe(call.messageReader(), ctx.eventLoop(), true);
         }
+        return res;
     }
 
     @Nullable
@@ -214,21 +217,13 @@ public final class GrpcService extends AbstractHttpService {
     }
 
     @Nullable
-    private SerializationFormat findSerializationFormat(@Nullable String contentType) {
+    private SerializationFormat findSerializationFormat(@Nullable MediaType contentType) {
         if (contentType == null) {
             return null;
         }
 
-        final MediaType mediaType;
-        try {
-            mediaType = MediaType.parse(contentType);
-        } catch (IllegalArgumentException e) {
-            logger.debug("Failed to parse the 'content-type' header: {}", contentType, e);
-            return null;
-        }
-
         for (SerializationFormat format : supportedSerializationFormats) {
-            if (format.isAccepted(mediaType)) {
+            if (format.isAccepted(contentType)) {
                 return format;
             }
         }
@@ -243,6 +238,11 @@ public final class GrpcService extends AbstractHttpService {
                         .map(ServerMethodDefinition::getMethodDescriptor)
                         .collect(toImmutableList());
         return GrpcJsonUtil.jsonMarshaller(methods);
+    }
+
+    @Override
+    public Set<PathMapping> pathMappings() {
+        return pathMappings;
     }
 
     private static class EmptyListener<T> extends ServerCall.Listener<T> {}

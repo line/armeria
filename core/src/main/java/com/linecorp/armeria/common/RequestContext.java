@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFutureListener;
@@ -61,6 +63,13 @@ import io.netty.util.concurrent.Promise;
  * a client-side {@link Request} has a {@link ClientRequestContext}.
  */
 public interface RequestContext extends AttributeMap {
+
+    /**
+     * Creates a new derived {@link RequestContext} which only the {@link RequestLog}
+     * is different from the deriving context. Note that the references of {@link Attribute}s
+     * in the {@link #attrs()} are copied as well.
+     */
+    RequestContext newDerivedContext();
 
     /**
      * Returns the context of the {@link Request} that is being handled in the current thread.
@@ -223,6 +232,11 @@ public interface RequestContext extends AttributeMap {
     RequestLogBuilder logBuilder();
 
     /**
+     * Returns the {@link MeterRegistry} that collects various stats.
+     */
+    MeterRegistry meterRegistry();
+
+    /**
      * Returns all {@link Attribute}s set in this context.
      */
     Iterator<Attribute<?>> attrs();
@@ -235,8 +249,8 @@ public interface RequestContext extends AttributeMap {
     /**
      * Returns the {@link ByteBufAllocator} for this {@link RequestContext}. Any buffers created by this
      * {@link ByteBufAllocator} must be
-     * <a href="http://netty.io/wiki/reference-counted-objects.html">reference-counted</a>. If you don't know
-     * what this means, you should probably use {@code byte[]} or {@link java.nio.ByteBuffer} directly instead
+     * <a href="https://netty.io/wiki/reference-counted-objects.html">reference-counted</a>. If you don't know
+     * what this means, you should probably use {@code byte[]} or {@link ByteBuffer} directly instead
      * of calling this method.
      */
     default ByteBufAllocator alloc() {
@@ -364,6 +378,10 @@ public interface RequestContext extends AttributeMap {
     void onEnter(Consumer<? super RequestContext> callback);
 
     /**
+     * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
+     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
+     * should be restored by this callback.
+     *
      * @deprecated Use {@link #onEnter(Consumer)} instead.
      */
     @Deprecated
@@ -381,6 +399,10 @@ public interface RequestContext extends AttributeMap {
     void onExit(Consumer<? super RequestContext> callback);
 
     /**
+     * Registers {@code callback} to be run when re-exiting this {@link RequestContext}, usually when using
+     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
+     * should be reset by this callback.
+     *
      * @deprecated Use {@link #onExit(Consumer)} instead.
      */
     @Deprecated

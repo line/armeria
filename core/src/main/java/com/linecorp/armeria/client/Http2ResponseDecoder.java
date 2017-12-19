@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -66,10 +66,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         final HttpResponseWrapper resWrapper =
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
-        resWrapper.closeFuture().whenCompleteAsync((unused, cause) -> {
-            // Ensure that the scheduled timeout is not executed.
-            resWrapper.cancelTimeout();
+        resWrapper.completionFuture().whenCompleteAsync((unused, cause) -> {
             if (cause != null) {
+                // Ensure that the resWrapper is closed.
+                // This is needed in case the response is aborted by the client.
+                resWrapper.close(cause);
+
                 // We are not closing the connection but just send a RST_STREAM,
                 // so we have to remove the response manually.
                 removeResponse(id);
@@ -81,6 +83,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                     encoder.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.newPromise());
                     ctx.flush();
                 }
+            } else {
+                // Ensure that the resWrapper is closed.
+                // This is needed in case the response is aborted by the client.
+                resWrapper.close();
             }
         }, channel().eventLoop());
         return resWrapper;

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -51,28 +51,28 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceUnavailableException;
 
 import io.netty.util.AsciiString;
 
 /**
  * An {@link HttpService} that dispatches its requests to a web application running in an embedded
- * <a href="http://tomcat.apache.org/">Tomcat</a>.
+ * <a href="https://tomcat.apache.org/">Tomcat</a>.
  *
  * @see TomcatServiceBuilder
  */
@@ -353,21 +353,21 @@ public final class TomcatService implements HttpService {
         final Adapter coyoteAdapter = connector().getProtocolHandler().getAdapter();
         if (coyoteAdapter == null) {
             // Tomcat is not configured / stopped.
-            throw ServiceUnavailableException.get();
+            throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
 
-        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final HttpResponseWriter res = HttpResponse.streaming();
         req.aggregate().handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
+                res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
                 return;
             }
 
             try {
                 final Request coyoteReq = convertRequest(ctx, aReq);
                 if (coyoteReq == null) {
-                    res.respond(HttpStatus.BAD_REQUEST);
+                    res.close(HttpHeaders.of(HttpStatus.BAD_REQUEST));
                     return;
                 }
                 final Response coyoteRes = new Response();
@@ -388,11 +388,9 @@ public final class TomcatService implements HttpService {
                         res.write(headers);
                         for (;;) {
                             final HttpData d = data.poll();
-                            if (d == null) {
+                            if (d == null || !res.write(d)) {
                                 break;
                             }
-
-                            res.write(d);
                         }
                         res.close();
                     } catch (Throwable t) {
@@ -493,6 +491,12 @@ public final class TomcatService implements HttpService {
         final String contentType = coyoteRes.getContentType();
         if (contentType != null && !contentType.isEmpty()) {
             headers.set(HttpHeaderNames.CONTENT_TYPE, contentType);
+        }
+
+        final long contentLength = coyoteRes.getBytesWritten(true); // 'true' will trigger flush.
+        final String method = coyoteRes.getRequest().method().toString();
+        if (!"HEAD".equals(method)) {
+            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, contentLength);
         }
 
         final MimeHeaders cHeaders = coyoteRes.getMimeHeaders();

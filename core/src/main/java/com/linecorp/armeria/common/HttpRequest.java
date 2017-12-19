@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,19 +17,24 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
-import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
+import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
+import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
+import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A streamed HTTP/2 {@link Request}.
@@ -41,6 +46,57 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
     //       AggregatedHttpMessage for consistency.
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with empty headers and keep-alive enabled.
+     */
+    static HttpRequestWriter streaming() {
+        return streaming(true);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with empty headers and specified {@code keepAlive}.
+     */
+    static HttpRequestWriter streaming(boolean keepAlive) {
+        return streaming(HttpHeaders.EMPTY_HEADERS, keepAlive);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with the specified {@link HttpMethod} and {@code path} with keep-alive enabled.
+     */
+    static HttpRequestWriter streaming(HttpMethod method, String path) {
+        return streaming(method, path, true);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with the specified {@link HttpMethod}, {@code path}, and {@code keepAlive}.
+     */
+    static HttpRequestWriter streaming(HttpMethod method, String path, boolean keepAlive) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        return streaming(HttpHeaders.of(method, path), keepAlive);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with the specified headers and keep-alive enabled.
+     */
+    static HttpRequestWriter streaming(HttpHeaders headers) {
+        return streaming(headers, true);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with the specified headers and {@code keepAlive}.
+     */
+    static HttpRequestWriter streaming(HttpHeaders headers, boolean keepAlive) {
+        requireNonNull(headers, "headers");
+        return new DefaultHttpRequest(headers, keepAlive);
+    }
 
     /**
      * Creates a new HTTP request with empty content and closes the stream.
@@ -63,8 +119,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
         return of(method, path,
@@ -84,9 +138,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String format, Object... args) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(format, "format");
-        requireNonNull(args, "args");
         return of(method,
                   path,
                   mediaType,
@@ -103,9 +154,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, byte[] content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(method, path, mediaType, HttpData.of(content));
     }
@@ -122,9 +170,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     static HttpRequest of(
             HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(method, path, mediaType, HttpData.of(content, offset, length));
     }
@@ -138,10 +183,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
         return of(method, path, mediaType, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -159,17 +200,13 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
-
-        return of(HttpHeaders.of(method, path).setObject(CONTENT_TYPE, mediaType), content, trailingHeaders);
+        return of(HttpHeaders.of(method, path).contentType(mediaType), content, trailingHeaders);
     }
 
     /**
      * Creates a new {@link HttpRequest} with empty content and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers) {
-        requireNonNull(headers, "headers");
         return of(headers, HttpData.EMPTY_DATA);
     }
 
@@ -177,8 +214,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers, HttpData content) {
-        requireNonNull(headers, "headers");
-        requireNonNull(content, "content");
         return of(headers, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -186,9 +221,30 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+        return of(headers, content, trailingHeaders, true);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} with the provided {@code keepAlive} and closes the stream.
+     *
+     * @throws IllegalStateException if the headers are malformed.
+     */
+    static HttpRequest of(
+            HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders, boolean keepAlive) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
+
+        // From the section 8.1.2.3 of RFC 7540:
+        //// All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme, and :path
+        //// pseudo-header fields, unless it is a CONNECT request (Section 8.3)
+        // NB: ':scheme' will be filled when a request is written.
+        if (headers.method() == null) {
+            throw new IllegalStateException("not a request (missing :method)");
+        }
+        if (headers.path() == null) {
+            throw new IllegalStateException("not a request (missing :path)");
+        }
 
         if (content.isEmpty()) {
             headers.remove(CONTENT_LENGTH);
@@ -196,15 +252,57 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
             headers.setInt(CONTENT_LENGTH, content.length());
         }
 
-        final DefaultHttpRequest req = new DefaultHttpRequest(headers);
         if (!content.isEmpty()) {
-            req.write(content);
+            if (trailingHeaders.isEmpty()) {
+                return new OneElementFixedHttpRequest(headers, keepAlive, content);
+            } else {
+                return new TwoElementFixedHttpRequest(headers, keepAlive, content, trailingHeaders);
+            }
+        } else if (!trailingHeaders.isEmpty()) {
+            return new OneElementFixedHttpRequest(headers, keepAlive, trailingHeaders);
+        } else {
+            return new EmptyFixedHttpRequest(headers, keepAlive);
         }
-        if (!trailingHeaders.isEmpty()) {
-            req.write(trailingHeaders);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} that publishes the given {@link HttpObject}s and closes the stream.
+     * {@code objs} must not contain {@link HttpHeaders}.
+     */
+    static HttpRequest of(HttpHeaders headers, HttpObject... objs) {
+        return of(headers, true, objs);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} with the provided {@code keepAlive} that publishes the given
+     * {@link HttpObject}s and closes the stream. {@code objs} must not contain {@link HttpHeaders}.
+     */
+    static HttpRequest of(HttpHeaders headers, boolean keepAlive, HttpObject... objs) {
+        if (Arrays.stream(objs).anyMatch(obj -> obj instanceof HttpHeaders)) {
+            throw new IllegalArgumentException("objs contains HttpHeaders, which is not allowed.");
         }
-        req.close();
-        return req;
+        switch (objs.length) {
+            case 0:
+                return new EmptyFixedHttpRequest(headers, keepAlive);
+            case 1:
+                return new OneElementFixedHttpRequest(headers, keepAlive, objs[0]);
+            case 2:
+                return new TwoElementFixedHttpRequest(headers, keepAlive, objs[0], objs[1]);
+            default:
+                for (int i = 0; i < objs.length; i++) {
+                    if (objs[i] == null) {
+                        throw new NullPointerException("objs[" + i + "] is null");
+                    }
+                }
+                return new RegularFixedHttpRequest(headers, keepAlive, objs);
+        }
+    }
+
+    /**
+     * Converts the {@link AggregatedHttpMessage} into a new {@link HttpRequest} and closes the stream.
+     */
+    static HttpRequest of(AggregatedHttpMessage message) {
+        return of(message.headers(), message.content(), message.trailingHeaders());
     }
 
     /**
@@ -300,7 +398,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future);
-        closeFuture().whenComplete(aggregator);
+        completionFuture().whenComplete(aggregator);
         subscribe(aggregator);
         return future;
     }
@@ -309,10 +407,10 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the request is received fully.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregate(Executor executor) {
+    default CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future);
-        closeFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().whenCompleteAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
     }

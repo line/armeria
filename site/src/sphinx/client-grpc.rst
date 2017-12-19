@@ -4,7 +4,7 @@
 .. _Futures: https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/Futures.html
 .. _ListenableFuture: https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/ListenableFuture.html
 .. _LoggingClient: apidocs/index.html?com/linecorp/armeria/client/logging/LoggingClient.html
-.. _gRPC: http://www.grpc.io/
+.. _gRPC: https://grpc.io/
 .. _futures-extra: https://github.com/spotify/futures-extra
 
 .. _client-grpc:

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
-import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
 import static java.util.Objects.requireNonNull;
@@ -160,7 +159,7 @@ public interface AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
-        return of(HttpHeaders.of(method, path).setObject(CONTENT_TYPE, mediaType), content, trailingHeaders);
+        return of(HttpHeaders.of(method, path).contentType(mediaType), content, trailingHeaders);
     }
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` and `respond()` methods of
@@ -281,7 +280,7 @@ public interface AggregatedHttpMessage {
 
         final HttpHeaders headers =
                 HttpHeaders.of(status)
-                           .setObject(CONTENT_TYPE, mediaType)
+                           .contentType(mediaType)
                            .setInt(CONTENT_LENGTH, content.length());
 
         return of(headers, content, trailingHeaders);
@@ -429,73 +428,20 @@ public interface AggregatedHttpMessage {
     /**
      * Converts this message into a new complete {@link HttpRequest}.
      *
-     * @return the converted {@link HttpRequest} whose stream is complete
-     * @throws IllegalStateException if this message is not a request
+     * @deprecated Use {@link HttpRequest#of(AggregatedHttpMessage)}.
      */
+    @Deprecated
     default HttpRequest toHttpRequest() {
-        final HttpHeaders headers = headers();
-
-        // From the section 8.1.2.3 of RFC 7540:
-        //// All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme, and :path
-        //// pseudo-header fields, unless it is a CONNECT request (Section 8.3)
-        // NB: ':scheme' will be filled when a request is written.
-        if (headers.method() == null) {
-            throw new IllegalStateException("not a request (missing :method)");
-        }
-        if (headers.path() == null) {
-            throw new IllegalStateException("not a request (missing :path)");
-        }
-
-        final DefaultHttpRequest req = new DefaultHttpRequest(headers);
-        final HttpData content = content();
-        if (!content.isEmpty()) {
-            req.write(content);
-        }
-
-        final HttpHeaders trailingHeaders = trailingHeaders();
-        if (!trailingHeaders.isEmpty()) {
-            req.write(trailingHeaders);
-        }
-
-        req.close();
-        return req;
+        return HttpRequest.of(this);
     }
 
     /**
      * Converts this message into a new complete {@link HttpResponse}.
      *
-     * @return the converted {@link HttpResponse} whose stream is complete
-     * @throws IllegalStateException if this message is not a response.
+     * @deprecated Use {@link HttpResponse#of(AggregatedHttpMessage)}.
      */
+    @Deprecated
     default HttpResponse toHttpResponse() {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        final List<HttpHeaders> informationals = informationals();
-        final HttpHeaders headers = headers();
-
-        // From the section 8.1.2.4 of RFC 7540:
-        //// For HTTP/2 responses, a single :status pseudo-header field is defined that carries the HTTP status
-        //// code field (see [RFC7231], Section 6). This pseudo-header field MUST be included in all responses;
-        //// otherwise, the response is malformed (Section 8.1.2.6).
-        if (headers.status() == null) {
-            throw new IllegalStateException("not a response (missing :status)");
-        }
-
-        if (!informationals.isEmpty()) {
-            informationals.forEach(res::write);
-        }
-
-        res.write(headers);
-
-        final HttpData content = content();
-        if (!content.isEmpty()) {
-            res.write(content);
-        }
-
-        final HttpHeaders trailingHeaders = trailingHeaders();
-        if (!trailingHeaders.isEmpty()) {
-            res.write(trailingHeaders);
-        }
-        res.close();
-        return res;
+        return HttpResponse.of(this);
     }
 }

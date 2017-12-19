@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -34,7 +34,9 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaTypeSet;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -44,7 +46,7 @@ import io.netty.util.DomainNameMappingBuilder;
  * A {@link VirtualHost} contains the following information:
  * <ul>
  *   <li>the hostname pattern, as defined in
- *       <a href="http://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
+ *       <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
  *   <li>{@link SslContext} if TLS is enabled</li>
  *   <li>the list of available {@link Service}s and their {@link PathMapping}s</li>
  * </ul>
@@ -93,7 +95,7 @@ public final class VirtualHost {
         }
 
         services = Collections.unmodifiableList(servicesCopy);
-        router = Routers.ofServiceConfig(services);
+        router = Routers.ofVirtualHost(services);
     }
 
     /**
@@ -184,6 +186,11 @@ public final class VirtualHost {
         }
 
         this.serverConfig = requireNonNull(serverConfig, "serverConfig");
+
+        final MeterRegistry registry = serverConfig.meterRegistry();
+        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.router.virtualHostCache",
+                                                         "hostnamePattern", hostnamePattern);
+        router.registerMetrics(registry, idPrefix);
     }
 
     /**
@@ -195,7 +202,7 @@ public final class VirtualHost {
 
     /**
      * Returns the hostname pattern of this virtual host, as defined in
-     * <a href="http://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>
+     * <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
      */
     public String hostnamePattern() {
         return hostnamePattern;

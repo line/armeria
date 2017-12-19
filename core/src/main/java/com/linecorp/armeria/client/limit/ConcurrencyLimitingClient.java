@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -138,7 +138,7 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
         boolean success = false;
         try {
             final O res = delegate().execute(ctx, req);
-            res.closeFuture().whenComplete((unused, cause) -> numActiveRequests.decrementAndGet());
+            res.completionFuture().whenComplete((unused, cause) -> numActiveRequests.decrementAndGet());
             success = true;
             return res;
         } finally {
@@ -240,7 +240,7 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
             try (SafeCloseable ignored = RequestContext.push(ctx)) {
                 try {
                     final O actualRes = delegate().execute(ctx, req);
-                    actualRes.closeFuture().whenCompleteAsync((unused, cause) -> {
+                    actualRes.completionFuture().whenCompleteAsync((unused, cause) -> {
                         numActiveRequests.decrementAndGet();
                         drain();
                     }, ctx.eventLoop());

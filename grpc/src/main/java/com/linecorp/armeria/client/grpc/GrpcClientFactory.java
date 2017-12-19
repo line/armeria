@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -49,7 +49,7 @@ import io.grpc.MethodDescriptor;
 import io.grpc.stub.AbstractStub;
 
 /**
- * A {@link DecoratingClientFactory} that creates a GRPC client.
+ * A {@link DecoratingClientFactory} that creates a gRPC client.
  */
 final class GrpcClientFactory extends DecoratingClientFactory {
 
@@ -80,7 +80,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
         final Class<?> stubClass = clientType.getEnclosingClass();
         if (stubClass == null) {
-            throw new IllegalArgumentException("Client type not a GRPC client stub class, " +
+            throw new IllegalArgumentException("Client type not a gRPC client stub class, " +
                                                "should be something like ServiceNameGrpc.ServiceNameXXStub: " +
                                                clientType);
         }
@@ -92,7 +92,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             newBlockingStubMethod = stubClass.getDeclaredMethod("newBlockingStub", Channel.class);
             newFutureStubMethod = stubClass.getDeclaredMethod("newFutureStub", Channel.class);
         } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Client type not a GRPC client stub class, " +
+            throw new IllegalArgumentException("Client type not a gRPC client stub class, " +
                                                "should be something like ServiceNameGrpc.ServiceNameXXStub: " +
                                                clientType, e);
         }
@@ -104,7 +104,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         } else if (newFutureStubMethod.getReturnType() == clientType) {
             createClientMethod = newFutureStubMethod;
         } else {
-            throw new IllegalArgumentException("Client type not a GRPC client stub class, " +
+            throw new IllegalArgumentException("Client type not a gRPC client stub class, " +
                                                "should be something like ServiceNameGrpc.ServiceNameXXStub: " +
                                                clientType);
         }
@@ -116,6 +116,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         ArmeriaChannel channel = new ArmeriaChannel(
                 new DefaultClientBuilderParams(this, uri, clientType, options),
                 httpClient,
+                meterRegistry(),
                 scheme.sessionProtocol(),
                 newEndpoint(uri),
                 serializationFormat,

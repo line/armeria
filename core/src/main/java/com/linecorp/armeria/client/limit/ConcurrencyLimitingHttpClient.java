@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.client.limit;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.DeferredHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
@@ -68,7 +68,8 @@ public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClie
     @Override
     protected Deferred<HttpResponse> defer(ClientRequestContext ctx, HttpRequest req) throws Exception {
         return new Deferred<HttpResponse>() {
-            private final DeferredHttpResponse res = new DeferredHttpResponse();
+            private final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+            private final HttpResponse res = HttpResponse.from(responseFuture);
 
             @Override
             public HttpResponse response() {
@@ -77,12 +78,12 @@ public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClie
 
             @Override
             public void delegate(HttpResponse response) {
-                res.delegate(response);
+                responseFuture.complete(response);
             }
 
             @Override
             public void close(Throwable cause) {
-                res.close(cause);
+                responseFuture.completeExceptionally(cause);
             }
         };
     }

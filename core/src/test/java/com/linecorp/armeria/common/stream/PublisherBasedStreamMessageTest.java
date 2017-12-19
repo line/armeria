@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,11 +43,11 @@ public class PublisherBasedStreamMessageTest {
         final AbortTest test = new AbortTest();
         test.prepare();
         test.invokeOnSubscribe();
-        test.abort();
+        test.abortAndAwait();
         test.verify();
 
         // Try to abort again, which should do nothing.
-        test.abort();
+        test.abortAndAwait();
         test.verify();
     }
 
@@ -62,6 +62,7 @@ public class PublisherBasedStreamMessageTest {
         test.prepare();
         test.abort();
         test.invokeOnSubscribe();
+        test.awaitAbort();
         test.verify();
     }
 
@@ -117,13 +118,23 @@ public class PublisherBasedStreamMessageTest {
             publisher.abort();
         }
 
+        void abortAndAwait() {
+            abort();
+            awaitAbort();
+        }
+
+        void awaitAbort() {
+            assertThatThrownBy(() -> publisher.completionFuture().join())
+                    .hasCauseInstanceOf(AbortedStreamException.class);
+        }
+
         void verify() {
             // Ensure subscription.cancel() has been invoked.
             Mockito.verify(subscription).cancel();
 
-            // Ensure closeFuture is complete exceptionally.
-            assertThat(publisher.closeFuture()).isCompletedExceptionally();
-            assertThatThrownBy(() -> publisher.closeFuture().get())
+            // Ensure completionFuture is complete exceptionally.
+            assertThat(publisher.completionFuture()).isCompletedExceptionally();
+            assertThatThrownBy(() -> publisher.completionFuture().get())
                     .hasCauseExactlyInstanceOf(AbortedStreamException.class);
         }
     }

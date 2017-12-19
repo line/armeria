@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -54,6 +54,10 @@ public final class Exceptions {
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
     /**
+     * Returns whether the verbose exception mode is enabled. When enabled, the exceptions frequently thrown by
+     * Armeria will have full stack trace. When disabled, such exceptions will have empty stack trace to
+     * eliminate the cost of capturing the stack trace.
+     *
      * @deprecated Use {@link Flags#verboseExceptions()} instead.
      */
     @Deprecated
@@ -62,7 +66,7 @@ public final class Exceptions {
     }
 
     /**
-     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, Throwable cause) {
         if (!logger.isWarnEnabled() || isExpected(cause)) {
@@ -73,7 +77,7 @@ public final class Exceptions {
     }
 
     /**
-     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, String debugData, Throwable cause) {
 
@@ -85,7 +89,7 @@ public final class Exceptions {
     }
 
     /**
-     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, SessionProtocol protocol, Throwable cause) {
         if (!logger.isWarnEnabled() || isExpected(cause)) {
@@ -97,7 +101,7 @@ public final class Exceptions {
     }
 
     /**
-     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, SessionProtocol protocol,
                                        String debugData, Throwable cause) {

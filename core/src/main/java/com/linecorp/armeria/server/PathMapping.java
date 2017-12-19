@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,6 +22,9 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.server.docs.DocService;
+
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.Tag;
 
 /**
  * Matches the absolute path part of a URI and extracts path parameters from it.
@@ -176,11 +179,9 @@ public interface PathMapping {
     String loggerName();
 
     /**
-     * Returns the metric name.
-     *
-     * @return the metric name whose components are separated by a slash (/)
+     * Returns the value of the {@code "pathMapping"} {@link Tag} in a {@link Meter}.
      */
-    String metricName();
+    String meterTag();
 
     /**
      * Returns the exact path of this path mapping if it is an exact path mapping, or {@link Optional#empty}

@@ -5,7 +5,7 @@
  *  version 2.0 (the "License"); you may not use this file except in compliance
  *  with the License. You may obtain a copy of the License at:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,8 +18,8 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
@@ -37,17 +37,26 @@ final class AnnotatedHttpService implements HttpService {
     private final HttpHeaderPathMapping pathMapping;
 
     /**
-     * The {@link BiFunction} that will handle the request actually.
+     * The {@link AnnotatedHttpServiceMethod} that will handle the request actually.
      */
-    private final BiFunction<ServiceRequestContext, HttpRequest, Object> function;
+    private final AnnotatedHttpServiceMethod delegate;
+
+    /**
+     * A decorator of this service.
+     */
+    private final Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> decorator;
 
     /**
      * Creates a new instance.
      */
     AnnotatedHttpService(HttpHeaderPathMapping pathMapping,
-                         BiFunction<ServiceRequestContext, HttpRequest, Object> function) {
+                         AnnotatedHttpServiceMethod delegate,
+                         Function<Service<HttpRequest, HttpResponse>,
+                                 ? extends Service<HttpRequest, HttpResponse>> decorator) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
-        this.function = requireNonNull(function, "function");
+        this.delegate = requireNonNull(delegate, "delegate");
+        this.decorator = requireNonNull(decorator, "decorator");
     }
 
     /**
@@ -55,6 +64,14 @@ final class AnnotatedHttpService implements HttpService {
      */
     HttpHeaderPathMapping pathMapping() {
         return pathMapping;
+    }
+
+    /**
+     * Returns the decorator of this service.
+     */
+    Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> decorator() {
+        return decorator;
     }
 
     /**
@@ -69,21 +86,15 @@ final class AnnotatedHttpService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Object ret = function.apply(ctx, req);
-        if (!(ret instanceof CompletionStage)) {
-            return HttpResponse.ofFailure(new IllegalStateException(
-                    "illegal return type: " + ret.getClass().getSimpleName()));
-        }
-
-        @SuppressWarnings("unchecked")
-        CompletionStage<HttpResponse> castStage = (CompletionStage<HttpResponse>) ret;
-        return HttpResponse.from(castStage);
+        return HttpResponse.from(delegate.serve(ctx, req));
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("pathMapping", pathMapping)
-                          .add("function", function).toString();
+                          .add("delegate", delegate)
+                          .add("decorator", decorator)
+                          .toString();
     }
 }

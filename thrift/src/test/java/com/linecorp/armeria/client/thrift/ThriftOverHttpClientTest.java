@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -110,11 +110,16 @@ public class ThriftOverHttpClientTest {
     private static final HelloService.AsyncIface exceptionThrowingHandler = (name, resultHandler)
             -> resultHandler.onError(new Exception(name));
 
+    private static final OnewayHelloService.AsyncIface exceptionThrowingOnewayHandler =
+            (name, resultHandler) -> {
+                assertThat(serverReceivedNames.add(name)).isTrue();
+                resultHandler.onError(new Exception(name));
+            };
+
     private static final OnewayHelloService.AsyncIface onewayHelloHandler = (name, resultHandler) -> {
         resultHandler.onComplete(null);
         assertThat(serverReceivedNames.add(name)).isTrue();
     };
-
     private static final DevNullService.AsyncIface devNullHandler = (value, resultHandler) -> {
         resultHandler.onComplete(null);
         assertThat(serverReceivedNames.add(value)).isTrue();
@@ -144,6 +149,8 @@ public class ThriftOverHttpClientTest {
         HELLO(helloHandler, HelloService.Iface.class, HelloService.AsyncIface.class),
         EXCEPTION(exceptionThrowingHandler, HelloService.Iface.class, HelloService.AsyncIface.class),
         ONEWAYHELLO(onewayHelloHandler, OnewayHelloService.Iface.class, OnewayHelloService.AsyncIface.class),
+        EXCEPTION_ONEWAY(exceptionThrowingOnewayHandler, OnewayHelloService.Iface.class,
+                         OnewayHelloService.AsyncIface.class),
         DEVNULL(devNullHandler, DevNullService.Iface.class, DevNullService.AsyncIface.class),
         BINARY(binaryHandler, BinaryService.Iface.class, BinaryService.AsyncIface.class),
         TIME(timeServiceHandler, TimeService.Iface.class, TimeService.AsyncIface.class),
@@ -362,6 +369,38 @@ public class ThriftOverHttpClientTest {
         OnewayHelloService.AsyncIface client =
                 Clients.newClient(clientFactory(), getURI(Handlers.ONEWAYHELLO),
                                   Handlers.ONEWAYHELLO.asyncIface(), clientOptions);
+        BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
+
+        String[] names = { "kukuman", "kukuman2" };
+        for (String name : names) {
+            client.hello(name, new RequestQueuingCallback(resQueue));
+        }
+
+        for (String ignored : names) {
+            assertThat(resQueue.take()).isEqualTo("null");
+        }
+
+        for (String ignored : names) {
+            assertThat(serverReceivedNames.take()).isIn(names);
+        }
+    }
+
+    @Test(timeout = 10000)
+    public void testExceptionThrowingOnewayServiceSync() throws Exception {
+        OnewayHelloService.Iface client =
+                Clients.newClient(clientFactory(), getURI(Handlers.EXCEPTION_ONEWAY),
+                                  Handlers.EXCEPTION_ONEWAY.iface(), clientOptions);
+        client.hello("kukuman");
+        client.hello("kukuman2");
+        assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
+        assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
+    }
+
+    @Test(timeout = 10000)
+    public void testExceptionThrowingOnewayServiceAsync() throws Exception {
+        OnewayHelloService.AsyncIface client =
+                Clients.newClient(clientFactory(), getURI(Handlers.EXCEPTION_ONEWAY),
+                                  Handlers.EXCEPTION_ONEWAY.asyncIface(), clientOptions);
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
         String[] names = { "kukuman", "kukuman2" };

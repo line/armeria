@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,11 +18,15 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageWrapper;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Allows subscribing to a {@link HttpResponse} multiple times by duplicating the stream.
@@ -68,12 +72,22 @@ public class HttpResponseDuplicator
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
     public HttpResponseDuplicator(HttpResponse res, long maxSignalLength) {
+        this(res, maxSignalLength, null);
+    }
+
+    /**
+     * Creates a new instance wrapping a {@link HttpResponse} and publishing to multiple subscribers.
+     * @param res the response that will publish data to subscribers
+     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
+     * @param executor the executor to use for upstream signals.
+     */
+    public HttpResponseDuplicator(HttpResponse res, long maxSignalLength, @Nullable EventExecutor executor) {
         super(requireNonNull(res, "res"), obj -> {
             if (obj instanceof HttpData) {
                 return ((HttpData) obj).length();
             }
             return 0;
-        }, maxSignalLength);
+        }, executor, maxSignalLength);
     }
 
     @Override

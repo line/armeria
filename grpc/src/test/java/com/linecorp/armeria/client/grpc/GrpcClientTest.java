@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -44,12 +44,14 @@ import org.mockito.ArgumentCaptor;
 import com.google.common.base.Throwables;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.logging.LoggingClientBuilder;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
@@ -101,6 +103,7 @@ public class GrpcClientTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.port(0, HTTP);
             sb.defaultMaxRequestLength(MAX_MESSAGE_SIZE);
+            sb.idleTimeoutMillis(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
@@ -136,12 +139,13 @@ public class GrpcClientTest {
 
     @Before
     public void setUp() {
-        blockingStub = ClientFactory.DEFAULT
-                .newClient("gproto+" + server.httpUri("/"), TestServiceBlockingStub.class,
-                           ClientOption.DEFAULT_MAX_RESPONSE_LENGTH.newValue((long) MAX_MESSAGE_SIZE));
-        asyncStub = ClientFactory.DEFAULT
-                .newClient("gproto+" + server.httpUri("/"),
-                           TestServiceStub.class);
+        blockingStub = new ClientBuilder("gproto+" + server.httpUri("/"))
+                .defaultMaxResponseLength((long) MAX_MESSAGE_SIZE)
+                .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
+                .build(TestServiceBlockingStub.class);
+        asyncStub = new ClientBuilder("gproto+" + server.httpUri("/"))
+                .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
+                .build(TestServiceStub.class);
     }
 
     @After
@@ -513,6 +517,7 @@ public class GrpcClientTest {
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(
                 goldenResponses.get(1));
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(Status.OK);
+        call.cancel("Cancelled after all of the requests are done", null);
     }
 
     @Test(timeout = 30000)
@@ -689,7 +694,7 @@ public class GrpcClientTest {
 
     // NB: It's unclear when anyone would set a negative timeout, and trying to set the negative timeout
     // into a header correctly raises an exception. The test has been copied over from upstream to make it
-    // easier to understand the compatibility test coverage - not sure why the GRPC test doesn't fail but it
+    // easier to understand the compatibility test coverage - not sure why the gRPC test doesn't fail but it
     // doesn't seem worth investigating too hard on this one.
     @Ignore
     @Test(timeout = 10000)
@@ -869,7 +874,7 @@ public class GrpcClientTest {
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).isEmpty();
         assertThat(responseObserver.getError()).isNotNull();
-        // TODO(anuraag): As GRPC supports handling timeouts in the server or client due to the grpc-timeout
+        // TODO(anuraag): As gRPC supports handling timeouts in the server or client due to the grpc-timeout
         // header, it's not guaranteed which is the source of this error.
         // Until https://github.com/line/armeria/issues/521 a server side timeout will not have the correct
         // status so we don't verify it for now.

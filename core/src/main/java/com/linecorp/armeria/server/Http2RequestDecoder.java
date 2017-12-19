@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,12 +24,12 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import java.nio.charset.StandardCharsets;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.DefaultHttpRequest;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.buffer.ByteBuf;
@@ -70,26 +70,47 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
-        final HttpHeaders convertedHeaders = ArmeriaHttpUtil.toArmeria(headers);
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
+            // Validate the method.
+            final CharSequence method = headers.method();
+            if (method == null) {
+                writeErrorResponse(ctx, streamId, HttpResponseStatus.BAD_REQUEST);
+                return;
+            }
+            if (!HttpMethod.isSupported(method.toString())) {
+                writeErrorResponse(ctx, streamId, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                return;
+            }
+
             // Validate the 'content-length' header if exists.
+            final boolean contentEmpty;
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1L);
                 if (contentLength < 0) {
                     writeErrorResponse(ctx, streamId, HttpResponseStatus.BAD_REQUEST);
                     return;
                 }
+                contentEmpty = contentLength == 0;
+            } else {
+                contentEmpty = true;
             }
 
-            req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId, convertedHeaders,
-                                         true, inboundTrafficController, cfg.defaultMaxRequestLength());
+            req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId,
+                                         ArmeriaHttpUtil.toArmeria(headers), true,
+                                         inboundTrafficController, cfg.defaultMaxRequestLength());
+
+            // Close the request early when it is sure that there will be
+            // neither content nor trailing headers.
+            if (contentEmpty && endOfStream) {
+                req.close();
+            }
 
             requests.put(streamId, req);
             ctx.fireChannelRead(req);
         } else {
             try {
-                req.write(convertedHeaders);
+                req.write(ArmeriaHttpUtil.toArmeria(headers));
             } catch (Throwable t) {
                 req.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
@@ -152,7 +173,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
         } else if (req.isOpen()) {
             try {
-                req.write(HttpData.of(data));
+                req.write(new ByteBufHttpData(data.retain(), endOfStream));
             } catch (Throwable t) {
                 req.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");
@@ -194,7 +215,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-        final DefaultHttpRequest req = requests.get(streamId);
+        final HttpRequestWriter req = requests.get(streamId);
         if (req == null) {
             throw connectionError(PROTOCOL_ERROR,
                                   "received a RST_STREAM frame for an unknown stream: %d", streamId);

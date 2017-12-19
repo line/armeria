@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -180,6 +180,22 @@ public interface RequestLog {
     long requestStartTimeMillis();
 
     /**
+     * Returns the time when the processing of the request started, in nanoseconds. This value can only be
+     * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long requestStartTimeNanos();
+
+    /**
+     * Returns the time when the processing of the request finished, in nanoseconds. This value can only be
+     * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long requestEndTimeNanos();
+
+    /**
      * Returns the duration that was taken to consume or produce the request completely, in nanoseconds.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
@@ -208,6 +224,22 @@ public interface RequestLog {
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     long responseStartTimeMillis();
+
+    /**
+     * Returns the time when the processing of the response started, in nanoseconds. This value can only be
+     * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long responseStartTimeNanos();
+
+    /**
+     * Returns the time when the processing of the response finished, in nanoseconds. This value can only be
+     * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long responseEndTimeNanos();
 
     /**
      * Returns the duration that was taken to consume or produce the response completely, in nanoseconds.

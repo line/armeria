@@ -5,7 +5,7 @@
  *  version 2.0 (the "License"); you may not use this file except in compliance
  *  with the License. You may obtain a copy of the License at:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,13 +16,15 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
+import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -38,19 +43,27 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
-import com.linecorp.armeria.server.annotation.Converter;
-import com.linecorp.armeria.server.annotation.Converter.Unspecified;
+import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.ExceptionHandler;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
+import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
@@ -59,7 +72,11 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.annotation.ProduceTypes;
 import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.RequestConverter;
+import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Trace;
 
 /**
@@ -67,6 +84,25 @@ import com.linecorp.armeria.server.annotation.Trace;
  */
 final class AnnotatedHttpServices {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServices.class);
+
+    /**
+     * An instance map for reusing converters, exception handlers and decorators.
+     */
+    private static final ConcurrentMap<Class<?>, Object> instanceCache = new ConcurrentHashMap<>();
+
+    /**
+     * A default {@link ExceptionHandlerFunction} list.
+     */
+    private static final List<ExceptionHandlerFunction> defaultExceptionHandlers =
+            ImmutableList.of(new DefaultExceptionHandler());
+
+    /**
+     * A default {@link RequestConverterFunction} list.
+     */
+    private static final List<RequestConverterFunction> defaultRequestConverters =
+            ImmutableList.of(new JacksonRequestConverterFunction(),
+                             new StringRequestConverterFunction(),
+                             new ByteArrayRequestConverterFunction());
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -249,24 +285,18 @@ final class AnnotatedHttpServices {
     private static String findPattern(Method method, Set<Annotation> methodAnnotations) {
         String pattern = null;
 
-        Path path = method.getAnnotation(Path.class);
+        final Path path = method.getAnnotation(Path.class);
         if (path != null) {
             pattern = method.getAnnotation(Path.class).value();
         }
         for (Annotation a : methodAnnotations) {
-            try {
-                final String p = (String) a.getClass().getMethod("value").invoke(a);
-                if (DefaultValues.isUnspecified(p)) {
-                    continue;
-                }
-                if (pattern != null) {
-                    throw new IllegalArgumentException(
-                            "Only one path can be specified. (" + pattern + ", " + p + ")");
-                }
-                pattern = p;
-            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                logger.debug("Invoking annotation 'value' method failed: {}", e);
+            final String p = (String) invokeValueMethod(a);
+            if (DefaultValues.isUnspecified(p)) {
+                continue;
             }
+            checkArgument(pattern == null,
+                          "Only one path can be specified. (" + pattern + ", " + p + ')');
+            pattern = p;
         }
         if (pattern == null || pattern.isEmpty()) {
             throw new IllegalArgumentException(
@@ -276,53 +306,121 @@ final class AnnotatedHttpServices {
     }
 
     /**
-     * Returns the {@link ResponseConverter} instance from {@link Converter} annotation of the given
-     * {@code method}. The {@link Converter} annotation marked on a method can't be repeated and should not
-     * specify the target class.
+     * Returns a decorator chain which is specified by {@link Decorator} annotations.
      */
-    private static ResponseConverter converter(Method method) {
-        Converter[] converters = method.getAnnotationsByType(Converter.class);
-        if (converters.length == 0) {
-            return null;
-        }
-        if (converters.length == 1) {
-            Converter converter = converters[0];
-            if (converter.target() != Unspecified.class) {
-                throw new IllegalArgumentException(
-                        "@Converter annotation can't be marked on a method with a target specified.");
-            }
-            try {
-                return converter.value().newInstance();
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            }
+    private static Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> decorator(Method method) {
+
+        final Decorator[] decorators = method.getAnnotationsByType(Decorator.class);
+        if (decorators.length == 0) {
+            return Function.identity();
         }
 
-        throw new IllegalArgumentException("@Converter annotation can't be repeated on a method.");
+        // Respect the order of decorators which is specified by a user. The first one is first applied.
+        Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>>
+                decorator = newDecorator(decorators[decorators.length - 1]);
+        for (int i = decorators.length - 2; i >= 0; i--) {
+            decorator = decorator.andThen(newDecorator(decorators[i]));
+        }
+        return decorator;
     }
 
     /**
-     * Returns a mapping from {@link Class} to {@link ResponseConverter} instances from {@link Converter}
-     * annotations of the given {@code clazz}. The {@link Converter} annotation marked on {@code clazz} must
-     * specify the target class, except {@link Object}.class.
+     * Returns a new decorator which decorates a {@link Service} by {@link FunctionalDecoratingService}
+     * and the specified {@link DecoratingServiceFunction}.
      */
-    private static Map<Class<?>, ResponseConverter> converters(Class<?> clazz) {
-        Converter[] converters = clazz.getAnnotationsByType(Converter.class);
-        ImmutableMap.Builder<Class<?>, ResponseConverter> builder = ImmutableMap.builder();
-        for (Converter converter : converters) {
-            Class<?> target = converter.target();
-            if (target == Unspecified.class) {
-                throw new IllegalArgumentException(
-                        "@Converter annotation must have a target type specified.");
-            }
-            try {
-                ResponseConverter instance = converter.value().newInstance();
-                builder.put(target, instance);
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            }
+    @SuppressWarnings("unchecked")
+    private static Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> newDecorator(Decorator decorator) {
+        return service -> new FunctionalDecoratingService<>(
+                service, getInstance(decorator, DecoratingServiceFunction.class));
+    }
+
+    /**
+     * Returns an exception handler list which is specified by {@link ExceptionHandler} annotations.
+     */
+    private static ImmutableList.Builder<ExceptionHandlerFunction> exceptionHandlers(Method targetMethod,
+                                                                                     Class<?> targetClass) {
+        return annotationValues(targetMethod, targetClass, ExceptionHandler.class,
+                                ExceptionHandlerFunction.class);
+    }
+
+    /**
+     * Returns a request converter list which is specified by {@link RequestConverter} annotations.
+     */
+    private static ImmutableList.Builder<RequestConverterFunction> requestConverters(Method targetMethod,
+                                                                                     Class<?> targetClass) {
+        return annotationValues(targetMethod, targetClass, RequestConverter.class,
+                                RequestConverterFunction.class);
+    }
+
+    /**
+     * Returns a response converter list which is specified by {@link ResponseConverter} annotations.
+     */
+    private static ImmutableList.Builder<ResponseConverterFunction> responseConverters(Method targetMethod,
+                                                                                       Class<?> targetClass) {
+        return annotationValues(targetMethod, targetClass, ResponseConverter.class,
+                                ResponseConverterFunction.class);
+    }
+
+    /**
+     * Returns an immutable list builder of objects which are specified as the {@code value} of annotation
+     * {@code T}.
+     */
+    private static <T extends Annotation, R> ImmutableList.Builder<R> annotationValues(
+            Method targetMethod, Class<?> targetClass, Class<T> annotationClass, Class<R> expectedType) {
+
+        requireNonNull(annotationClass, "annotationClass");
+        requireNonNull(targetMethod, "targetMethod");
+        requireNonNull(targetClass, "targetClass");
+
+        final ImmutableList.Builder<R> builder = new Builder<>();
+        T[] annotations = targetMethod.getAnnotationsByType(annotationClass);
+        if (annotations.length == 0) {
+            annotations = targetClass.getAnnotationsByType(annotationClass);
         }
-        return builder.build();
+        for (final T annotation : annotations) {
+            builder.add(getInstance(annotation, expectedType));
+        }
+        return builder;
+    }
+
+    /**
+     * Returns a cached instance of the specified {@link Class}.
+     */
+    @SuppressWarnings("unchecked")
+    static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
+        try {
+            final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
+            return expectedType.cast(instanceCache.computeIfAbsent(clazz, type -> {
+                try {
+                    final Constructor<? extends T> constructor = clazz.getDeclaredConstructor();
+                    constructor.setAccessible(true);
+                    return constructor.newInstance();
+                } catch (Exception e) {
+                    throw new IllegalStateException(
+                            "A class specified in @" + annotation.getClass().getSimpleName() +
+                            " annotation must have an accessible default constructor: " + clazz.getName(), e);
+                }
+            }));
+        } catch (ClassCastException e) {
+            throw new IllegalArgumentException(
+                    "A class specified in @" + annotation.getClass().getSimpleName() +
+                    " annotation cannot be cast to " + expectedType, e);
+        }
+    }
+
+    /**
+     * Returns an object which is returned by {@code value()} method of the specified annotation {@code a}.
+     */
+    private static Object invokeValueMethod(Annotation a) {
+        try {
+            return a.getClass().getMethod("value").invoke(a);
+        } catch (Exception e) {
+            throw new IllegalStateException("An annotation @" + a.getClass().getSimpleName() +
+                                            " must have a 'value' method", e);
+        }
     }
 
     /**
@@ -330,7 +428,9 @@ final class AnnotatedHttpServices {
      * {@link Path} annotation.
      */
     private static AnnotatedHttpService build(String pathPrefix, Object object, Method method,
-                                              Map<Class<?>, ResponseConverter> converters) {
+                                              List<ExceptionHandlerFunction> baseExceptionHandlers,
+                                              List<RequestConverterFunction> baseRequestConverters,
+                                              List<ResponseConverterFunction> baseResponseConverters) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
@@ -345,29 +445,35 @@ final class AnnotatedHttpServices {
         final Class<?> clazz = object.getClass();
         final HttpHeaderPathMapping pathMapping =
                 new HttpHeaderPathMapping(pathStringMapping(pathPrefix, method, methodAnnotations),
-                                          methods, consumeTypes(method, clazz), produceTypes(method, clazz));
+                                          methods, consumeTypes(method, clazz),
+                                          produceTypes(method, clazz));
 
-        final AnnotatedHttpServiceMethod function = new AnnotatedHttpServiceMethod(object, method, pathMapping);
+        final List<ExceptionHandlerFunction> eh =
+                exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
+                                                .addAll(defaultExceptionHandlers).build();
+        final List<RequestConverterFunction> req =
+                requestConverters(method, clazz).addAll(baseRequestConverters)
+                                                .addAll(defaultRequestConverters).build();
+        final List<ResponseConverterFunction> res =
+                responseConverters(method, clazz).addAll(baseResponseConverters).build();
 
+        final AnnotatedHttpServiceMethod function =
+                new AnnotatedHttpServiceMethod(object, method, pathMapping, eh, req, res);
         final Set<String> parameterNames = function.pathParamNames();
         final Set<String> expectedParamNames = pathMapping.paramNames();
         if (!expectedParamNames.containsAll(parameterNames)) {
-            Set<String> missing = Sets.difference(parameterNames, expectedParamNames);
+            final Set<String> missing = Sets.difference(parameterNames, expectedParamNames);
             throw new IllegalArgumentException("Missing @Param exists: " + missing);
         }
-
-        final ResponseConverter converter = converter(method);
-        if (converter != null) {
-            return new AnnotatedHttpService(pathMapping, function.withConverter(converter));
+        if (!parameterNames.containsAll(expectedParamNames)) {
+            final Set<String> missing = Sets.difference(expectedParamNames, parameterNames);
+            logger.warn("Some path variables of the method '" + method.getName() +
+                        "' of the class '" + clazz.getName() +
+                        "' do not have their corresponding parameters annotated with @Param. " +
+                        "They would not be automatically injected: " + missing);
         }
 
-        final ImmutableMap<Class<?>, ResponseConverter> newConverters =
-                ImmutableMap.<Class<?>, ResponseConverter>builder()
-                        .putAll(converters) // Pre-defined converters
-                        .putAll(converters(method.getDeclaringClass())) // Converters given by @Converters
-                        .build();
-
-        return new AnnotatedHttpService(pathMapping, function.withConverters(newConverters));
+        return new AnnotatedHttpService(pathMapping, function, decorator(method));
     }
 
     /**
@@ -375,11 +481,52 @@ final class AnnotatedHttpServices {
      * annotation.
      */
     static List<AnnotatedHttpService> build(String pathPrefix, Object object,
-                                            Map<Class<?>, ResponseConverter> converters) {
+                                            Iterable<?> exceptionHandlersAndConverters) {
+
+        ImmutableList.Builder<ExceptionHandlerFunction> exceptionHandlers = null;
+        ImmutableList.Builder<RequestConverterFunction> requestConverters = null;
+        ImmutableList.Builder<ResponseConverterFunction> responseConverters = null;
+
+        for (final Object o : exceptionHandlersAndConverters) {
+            boolean added = false;
+            if (o instanceof ExceptionHandlerFunction) {
+                if (exceptionHandlers == null) {
+                    exceptionHandlers = ImmutableList.builder();
+                }
+                exceptionHandlers.add((ExceptionHandlerFunction) o);
+                added = true;
+            }
+            if (o instanceof RequestConverterFunction) {
+                if (requestConverters == null) {
+                    requestConverters = ImmutableList.builder();
+                }
+                requestConverters.add((RequestConverterFunction) o);
+                added = true;
+            }
+            if (o instanceof ResponseConverterFunction) {
+                if (responseConverters == null) {
+                    responseConverters = ImmutableList.builder();
+                }
+                responseConverters.add((ResponseConverterFunction) o);
+                added = true;
+            }
+            if (!added) {
+                throw new IllegalArgumentException(o.getClass().getName() +
+                                                   " is neither an exception handler nor a converter.");
+            }
+        }
+
+        final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
+                exceptionHandlers != null ? exceptionHandlers.build() : ImmutableList.of();
+        final List<RequestConverterFunction> requestConverterFunctions =
+                requestConverters != null ? requestConverters.build() : ImmutableList.of();
+        final List<ResponseConverterFunction> responseConverterFunctions =
+                responseConverters != null ? responseConverters.build() : ImmutableList.of();
 
         final List<Method> methods = requestMappingMethods(object);
         return methods.stream()
-                      .map((Method method) -> build(pathPrefix, object, method, converters))
+                      .map((Method method) -> build(pathPrefix, object, method, exceptionHandlerFunctions,
+                                                    requestConverterFunctions, responseConverterFunctions))
                       .collect(toImmutableList());
     }
 
@@ -394,7 +541,7 @@ final class AnnotatedHttpServices {
         private final String pathPrefix;
         private final PathMapping mapping;
         private final String loggerName;
-        private final String metricName;
+        private final String meterTag;
 
         PrefixAddingPathMapping(String pathPrefix, PathMapping mapping) {
             assert mapping instanceof GlobPathMapping || mapping instanceof RegexPathMapping
@@ -403,7 +550,7 @@ final class AnnotatedHttpServices {
             this.pathPrefix = pathPrefix;
             this.mapping = mapping;
             loggerName = loggerName(pathPrefix) + '.' + mapping.loggerName();
-            metricName = pathPrefix + mapping.metricName();
+            meterTag = PrefixPathMapping.PREFIX + pathPrefix + ',' + mapping.meterTag();
         }
 
         @Override
@@ -433,8 +580,8 @@ final class AnnotatedHttpServices {
         }
 
         @Override
-        public String metricName() {
-            return metricName;
+        public String meterTag() {
+            return meterTag;
         }
 
         @Override
@@ -458,6 +605,29 @@ final class AnnotatedHttpServices {
         @Override
         public String toString() {
             return '[' + PrefixPathMapping.PREFIX + pathPrefix + ", " + mapping + ']';
+        }
+    }
+
+    /**
+     * A default exception handler is used when a user does not specify exception handlers
+     * by {@link ExceptionHandler} annotation.
+     */
+    private static class DefaultExceptionHandler implements ExceptionHandlerFunction {
+        @Override
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+            if (cause instanceof IllegalArgumentException) {
+                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+            }
+
+            if (cause instanceof HttpStatusException) {
+                return HttpResponse.of(((HttpStatusException) cause).httpStatus());
+            }
+
+            if (cause instanceof HttpResponseException) {
+                return ((HttpResponseException) cause).httpResponse();
+            }
+
+            return ExceptionHandlerFunction.DEFAULT.handleException(ctx, req, cause);
         }
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -45,7 +45,7 @@ import io.netty.util.AsciiString;
  * Standard HTTP header names.
  *
  * <p>These are all defined as lowercase to support HTTP/2 requirements while also not
- * violating HTTP/1.x requirements.  New header names should always be lowercase.
+ * violating HTTP/1.x requirements. New header names should always be lowercase.
  */
 public final class HttpHeaderNames {
 
@@ -250,7 +250,7 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString IF_UNMODIFIED_SINCE = new AsciiString("if-unmodified-since");
     /**
-     * {@code "keep-alive"}
+     * {@code "keep-alive"}.
      *
      * @deprecated Use {@link #CONNECTION} instead.
      */
@@ -260,6 +260,10 @@ public final class HttpHeaderNames {
      * {@code "last-modified"}.
      */
     public static final AsciiString LAST_MODIFIED = new AsciiString("last-modified");
+    /**
+     * {@code "link"}.
+     */
+    public static final AsciiString LINK = new AsciiString("link");
     /**
      * {@code "location"}.
      */
@@ -277,6 +281,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString PRAGMA = new AsciiString("pragma");
     /**
+     * {@code "prefer"}.
+     */
+    public static final AsciiString PREFER = new AsciiString("prefer");
+    /**
      * {@code "proxy-authenticate"}.
      */
     public static final AsciiString PROXY_AUTHENTICATE = new AsciiString("proxy-authenticate");
@@ -285,7 +293,7 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString PROXY_AUTHORIZATION = new AsciiString("proxy-authorization");
     /**
-     * {@code "proxy-connection"}
+     * {@code "proxy-connection"}.
      *
      * @deprecated Use {@link #CONNECTION} instead.
      */

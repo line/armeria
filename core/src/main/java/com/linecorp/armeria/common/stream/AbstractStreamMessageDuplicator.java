@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -38,12 +37,15 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Allows subscribing to a {@link StreamMessage} multiple times by duplicating the stream.
@@ -71,19 +73,31 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
     private final StreamMessageProcessor<T> processor;
 
+    private final EventExecutor duplicatorExecutor;
+
     /**
      * Creates a new instance wrapping a {@code publisher} and publishing to multiple subscribers.
      * @param publisher the publisher who will publish data to subscribers
      * @param signalLengthGetter the signal length getter that produces the length of signals
+     * @param executor the executor to use for upstream signals
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
     protected AbstractStreamMessageDuplicator(
-            U publisher, SignalLengthGetter<? super T> signalLengthGetter, long maxSignalLength) {
+            U publisher, SignalLengthGetter<? super T> signalLengthGetter,
+            @Nullable EventExecutor executor, long maxSignalLength) {
         requireNonNull(publisher, "publisher");
         requireNonNull(signalLengthGetter, "signalLengthGetter");
         checkArgument(maxSignalLength >= 0,
                       "maxSignalLength: %s (expected: >= 0)", maxSignalLength);
-        processor = new StreamMessageProcessor<>(publisher, signalLengthGetter, maxSignalLength);
+        if (executor != null) {
+            duplicatorExecutor = executor;
+        } else {
+            duplicatorExecutor = RequestContext.mapCurrent(
+                    RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
+        }
+
+        processor = new StreamMessageProcessor<>(publisher, signalLengthGetter,
+                                                 duplicatorExecutor, maxSignalLength);
     }
 
     /**
@@ -103,7 +117,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         if (!processor.isDuplicable()) {
             throw new IllegalStateException("duplicator is closed or last downstream is added.");
         }
-        return doDuplicateStream(new ChildStreamMessage<>(processor, lastStream));
+        return doDuplicateStream(new ChildStreamMessage<>(this, processor, lastStream));
     }
 
     /**
@@ -112,6 +126,15 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * @param delegate {@link ChildStreamMessage}
      */
     protected abstract U doDuplicateStream(StreamMessage<T> delegate);
+
+    /**
+     * Returns the default {@link EventExecutor} which will be used when a user subscribes to a child
+     * stream using {@link StreamMessage#subscribe(Subscriber)} or
+     * {@link StreamMessage#subscribe(Subscriber, boolean)}.
+     */
+    protected EventExecutor duplicatorExecutor() {
+        return duplicatorExecutor;
+    }
 
     /**
      * Closes this factory and stream messages who are invoked by
@@ -145,16 +168,13 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         @SuppressWarnings("rawtypes")
-        private static final AtomicReferenceFieldUpdater<StreamMessageProcessor, State> stateUpdater =
-                AtomicReferenceFieldUpdater.newUpdater(StreamMessageProcessor.class, State.class, "state");
-
-        @SuppressWarnings("rawtypes")
         private static final AtomicLongFieldUpdater<StreamMessageProcessor> requestedDemandUpdater =
                 AtomicLongFieldUpdater.newUpdater(StreamMessageProcessor.class, "requestedDemand");
 
         private final StreamMessage<T> upstream;
         private final SignalQueue signals;
         private final SignalLengthGetter<Object> signalLengthGetter;
+        private final EventExecutor processorExecutor;
         private final int maxSignalLength;
         private int signalLength;
 
@@ -167,21 +187,22 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @SuppressWarnings("unused")
         private volatile long requestedDemand;
         private volatile Subscription upstreamSubscription;
-        @SuppressWarnings("FieldMayBeFinal")
+
         private volatile State state = State.DUPLICABLE;
 
         @SuppressWarnings("unchecked")
         StreamMessageProcessor(StreamMessage<T> upstream, SignalLengthGetter<?> signalLengthGetter,
-                               long maxSignalLength) {
+                               EventExecutor executor, long maxSignalLength) {
             this.upstream = upstream;
             this.signalLengthGetter = (SignalLengthGetter<Object>) signalLengthGetter;
+            this.processorExecutor = executor;
             if (maxSignalLength == 0 || maxSignalLength > Integer.MAX_VALUE) {
                 this.maxSignalLength = Integer.MAX_VALUE;
             } else {
                 this.maxSignalLength = (int) maxSignalLength;
             }
             signals = new SignalQueue(this.signalLengthGetter);
-            upstream.subscribe(this, true);
+            upstream.subscribe(this, processorExecutor, true);
         }
 
         StreamMessage<T> upstream() {
@@ -195,7 +216,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @Override
         public void onSubscribe(Subscription s) {
             upstreamSubscription = s;
-            downstreamSubscriptions.forEach(DownstreamSubscription::invokeOnSubscribe);
+            if (processorExecutor.inEventLoop()) {
+                downstreamSubscriptions.forEach(DownstreamSubscription::invokeOnSubscribe);
+            } else {
+                processorExecutor.execute(
+                        () -> downstreamSubscriptions.forEach(DownstreamSubscription::invokeOnSubscribe));
+            }
         }
 
         @Override
@@ -217,6 +243,18 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private void pushSignal(Object obj) {
+            if (processorExecutor.inEventLoop()) {
+                doPushSignal(obj);
+            } else {
+                processorExecutor.execute(() -> doPushSignal(obj));
+            }
+        }
+
+        private void doPushSignal(Object obj) {
+            if (state == State.CLOSED) {
+                ReferenceCountUtil.safeRelease(obj);
+                return;
+            }
             if (!(obj instanceof CloseEvent)) {
                 final int dataLength = signalLengthGetter.length(obj);
                 if (dataLength > 0) {
@@ -246,31 +284,41 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         void subscribe(DownstreamSubscription<T> subscription) {
-            boolean reject = false;
-            if (state == State.DUPLICABLE) {
-                downstreamSubscriptions.add(subscription);
-                if (subscription.lastSubscription) {
-                    if (!setState(State.DUPLICABLE, State.LAST_DOWNSTREAM_ADDED)) {
-                        reject = true; // duplicator is closed or another last downstream is added already
-                    }
-                } else if (state != State.DUPLICABLE) {
-                    reject = true;
-                }
+            if (processorExecutor.inEventLoop()) {
+                doSubscribe(subscription);
             } else {
-                reject = true;
+                processorExecutor.execute(() -> doSubscribe(subscription));
             }
+        }
 
-            if (reject) {
-                downstreamSubscriptions.remove(subscription);
+        private void doSubscribe(DownstreamSubscription<T> subscription) {
+            if (state != State.DUPLICABLE) {
                 throw new IllegalStateException("duplicator is closed or last downstream is added.");
             }
 
+            downstreamSubscriptions.add(subscription);
+            if (subscription.lastSubscription) {
+                state = State.LAST_DOWNSTREAM_ADDED;
+            }
+
             if (upstreamSubscription != null) {
-                subscription.invokeOnSubscribe();
+                if (processorExecutor.inEventLoop()) {
+                    subscription.invokeOnSubscribe();
+                } else {
+                    processorExecutor.execute(subscription::invokeOnSubscribe);
+                }
             }
         }
 
         void unsubscribe(DownstreamSubscription<T> subscription, Throwable cause) {
+            if (processorExecutor.inEventLoop()) {
+                doUnsubscribe(subscription, cause);
+            } else {
+                processorExecutor.execute(() -> doUnsubscribe(subscription, cause));
+            }
+        }
+
+        private void doUnsubscribe(DownstreamSubscription<T> subscription, Throwable cause) {
             if (!downstreamSubscriptions.remove(subscription)) {
                 return;
             }
@@ -278,13 +326,13 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final Subscriber<? super T> subscriber = subscription.subscriber();
             subscription.clearSubscriber();
 
-            final CompletableFuture<Void> closeFuture = subscription.closeFuture();
+            final CompletableFuture<Void> completionFuture = subscription.completionFuture();
             if (cause == null) {
                 try {
                     subscriber.onComplete();
                 } finally {
-                    closeFuture.complete(null);
-                    cleanupIfLastSubscription();
+                    completionFuture.complete(null);
+                    doCleanupIfLastSubscription();
                 }
                 return;
             }
@@ -294,26 +342,28 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                     subscriber.onError(cause);
                 }
             } finally {
-                closeFuture.completeExceptionally(cause);
-                cleanupIfLastSubscription();
+                completionFuture.completeExceptionally(cause);
+                doCleanupIfLastSubscription();
             }
         }
 
-        private void cleanupIfLastSubscription() {
-            if (isLastDownstreamAdded() && downstreamSubscriptions.size() == 0) {
-                if (setState(State.LAST_DOWNSTREAM_ADDED, State.CLOSED)) {
+        private void doCleanupIfLastSubscription() {
+            if (isLastDownstreamAdded() && downstreamSubscriptions.isEmpty()) {
+                if (state == State.LAST_DOWNSTREAM_ADDED) {
+                    state = State.CLOSED;
                     upstream.abort();
-                    signals().clear();
+                    signals.clear();
                 }
             }
         }
 
         void requestDemand(long cumulativeDemand) {
             for (;;) {
-                if (cumulativeDemand <= requestedDemand) {
+                final long currentRequested = requestedDemand;
+                if (cumulativeDemand <= currentRequested) {
                     break;
                 }
-                final long currentRequested = requestedDemand;
+
                 if (requestedDemandUpdater.compareAndSet(this, currentRequested, cumulativeDemand)) {
                     upstreamSubscription.request(cumulativeDemand - currentRequested);
                     break;
@@ -330,25 +380,31 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         void close() {
-            if (setState(State.DUPLICABLE, State.CLOSED)) {
-                upstream.abort();
-                cleanup();
+            if (processorExecutor.inEventLoop()) {
+                doClose();
+            } else {
+                processorExecutor.execute(this::doClose);
             }
         }
 
-        private boolean setState(State oldState, State newState) {
-            assert newState != State.DUPLICABLE : "oldState: " + oldState + ", newState: " + newState;
-            return stateUpdater.compareAndSet(this, oldState, newState);
+        void doClose() {
+            if (state == State.DUPLICABLE) {
+                state = State.CLOSED;
+                upstream.abort();
+                doCleanup();
+            }
         }
 
-        private void cleanup() {
-            final List<CompletableFuture<Void>> closeFutures = new ArrayList<>(downstreamSubscriptions.size());
+        private void doCleanup() {
+            final List<CompletableFuture<Void>> completionFutures =
+                    new ArrayList<>(downstreamSubscriptions.size());
             downstreamSubscriptions.forEach(s -> {
-                final CompletableFuture<Void> future = s.closeFuture();
-                closeFutures.add(future);
+                final CompletableFuture<Void> future = s.completionFuture();
+                completionFutures.add(future);
             });
-            final CompletableFuture<Void> allDoneFuture =
-                    CompletableFuture.allOf(closeFutures.toArray(new CompletableFuture[closeFutures.size()]));
+            downstreamSubscriptions.clear();
+            final CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(
+                    completionFutures.toArray(new CompletableFuture[completionFutures.size()]));
             allDoneFuture.whenComplete((unused1, unused2) -> signals.clear());
         }
     }
@@ -360,23 +416,25 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
                 ChildStreamMessage.class, DownstreamSubscription.class, "subscription");
 
+        private final AbstractStreamMessageDuplicator<T, ?> parent;
         private final StreamMessageProcessor<T> processor;
-
         private final boolean lastStream;
 
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
 
-        private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+        private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
-        ChildStreamMessage(StreamMessageProcessor<T> processor, boolean lastStream) {
+        ChildStreamMessage(AbstractStreamMessageDuplicator<T, ?> parent,
+                           StreamMessageProcessor<T> processor, boolean lastStream) {
+            this.parent = parent;
             this.processor = processor;
             this.lastStream = lastStream;
         }
 
         @Override
         public boolean isOpen() {
-            return processor.upstream().isOpen() && !closeFuture.isDone();
+            return processor.upstream().isOpen() && !completionFuture.isDone();
         }
 
         @Override
@@ -385,43 +443,40 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 return false;
             }
 
-            final DownstreamSubscription<T> subscription = this.subscription;
-            return subscription != null && !subscription.publishedAny;
+            return processor.upstream().isEmpty();
         }
 
         @Override
-        public CompletableFuture<Void> closeFuture() {
-            return closeFuture;
+        public CompletableFuture<Void> completionFuture() {
+            return completionFuture;
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber) {
             requireNonNull(subscriber, "subscriber");
-            subscribe(subscriber, false);
+            subscribe(subscriber, parent.duplicatorExecutor(), false);
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
             requireNonNull(subscriber, "subscriber");
-            subscribe0(subscriber, null, withPooledObjects);
+            subscribe0(subscriber, parent.duplicatorExecutor(), withPooledObjects);
         }
 
         @Override
-        public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
-            requireNonNull(subscriber, "subscriber");
-            requireNonNull(executor, "executor");
+        public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
             subscribe(subscriber, executor, false);
         }
 
         @Override
-        public void subscribe(Subscriber<? super T> subscriber, Executor executor,
+        public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                               boolean withPooledObjects) {
             requireNonNull(subscriber, "subscriber");
             requireNonNull(executor, "executor");
             subscribe0(subscriber, executor, withPooledObjects);
         }
 
-        private void subscribe0(Subscriber<? super T> subscriber, Executor executor,
+        private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
                                 boolean withPooledObjects) {
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
                     this, subscriber, processor, executor, withPooledObjects, lastStream);
@@ -434,7 +489,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             processor.subscribe(subscription);
         }
 
-        private static void failLateSubscriber(@Nullable Executor executor,
+        private static void failLateSubscriber(EventExecutor executor,
                                                Subscriber<?> lateSubscriber, Subscriber<?> oldSubscriber) {
             final Throwable cause;
             if (oldSubscriber instanceof AbortingSubscriber) {
@@ -443,15 +498,10 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 cause = new IllegalStateException("subscribed by other subscriber already");
             }
 
-            if (executor != null) {
-                executor.execute(() -> {
-                    lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-                    lateSubscriber.onError(cause);
-                });
-            } else {
+            executor.execute(() -> {
                 lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
                 lateSubscriber.onError(cause);
-            }
+            });
         }
 
         @Override
@@ -465,7 +515,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
                     this, AbortingSubscriber.get(), processor, null, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
-                newSubscription.closeFuture().completeExceptionally(AbortedStreamException.get());
+                newSubscription.completionFuture().completeExceptionally(AbortedStreamException.get());
             } else {
                 subscription.abort();
             }
@@ -478,16 +528,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private static final int REQUEST_REMOVAL_THRESHOLD = 50;
 
         @SuppressWarnings("rawtypes")
-        private static final AtomicIntegerFieldUpdater<DownstreamSubscription> invokedOnSubscribeUpdater =
-                AtomicIntegerFieldUpdater.newUpdater(DownstreamSubscription.class, "invokedOnSubscribe");
-
-        @SuppressWarnings("rawtypes")
         static final AtomicLongFieldUpdater<DownstreamSubscription> demandUpdater =
                 AtomicLongFieldUpdater.newUpdater(DownstreamSubscription.class, "demand");
-
-        @SuppressWarnings("rawtypes")
-        private static final AtomicIntegerFieldUpdater<DownstreamSubscription> signalingUpdater =
-                AtomicIntegerFieldUpdater.newUpdater(DownstreamSubscription.class, "signaling");
 
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<DownstreamSubscription, Throwable>
@@ -497,18 +539,15 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private final StreamMessage<T> streamMessage;
         private Subscriber<? super T> subscriber;
         private final StreamMessageProcessor<T> processor;
-        private final Executor executor;
+        private final EventExecutor executor;
         private final boolean withPooledObjects;
         final boolean lastSubscription;
 
         @SuppressWarnings("unused")
-        private volatile int invokedOnSubscribe; // 0: not invoked onSubscribe, 1: invoked onSubscribe
+        private boolean invokedOnSubscribe;
 
         @SuppressWarnings("unused")
         private volatile long demand;
-
-        @SuppressWarnings("unused")
-        private volatile int signaling; // 0: not signaling, 1: signaling
 
         /**
          * {@link CancelledSubscriptionException} if cancelled. {@link AbortedStreamException} if aborted.
@@ -518,11 +557,11 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         private volatile int offset;
         private long cumulativeDemand;
-        private boolean publishedAny;
+        private boolean inOnNext;
 
         DownstreamSubscription(ChildStreamMessage<T> streamMessage,
                                Subscriber<? super T> subscriber, StreamMessageProcessor<T> processor,
-                               Executor executor, boolean withPooledObjects, boolean lastSubscription) {
+                               EventExecutor executor, boolean withPooledObjects, boolean lastSubscription) {
             this.streamMessage = streamMessage;
             this.subscriber = subscriber;
             this.processor = processor;
@@ -531,8 +570,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             this.lastSubscription = lastSubscription;
         }
 
-        CompletableFuture<Void> closeFuture() {
-            return streamMessage.closeFuture();
+        CompletableFuture<Void> completionFuture() {
+            return streamMessage.completionFuture();
         }
 
         Subscriber<? super T> subscriber() {
@@ -545,15 +584,17 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             subscriber = NeverInvokedSubscriber.get();
         }
 
+        // only called from processor.processorExecutor
         void invokeOnSubscribe() {
-            if (!invokedOnSubscribeUpdater.compareAndSet(this, 0, 1)) {
+            if (invokedOnSubscribe) {
                 return;
             }
+            invokedOnSubscribe = true;
 
-            if (executor != null) {
-                executor.execute(() -> subscriber.onSubscribe(this));
-            } else {
+            if (executor.inEventLoop()) {
                 subscriber.onSubscribe(this);
+            } else {
+                executor.execute(() -> subscriber.onSubscribe(this));
             }
         }
 
@@ -562,11 +603,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             if (n <= 0) {
                 final Throwable cause = new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)");
-                if (executor != null) {
-                    executor.execute(() -> subscriber.onError(cause));
-                } else {
-                    subscriber.onError(cause);
-                }
+                executor.execute(() -> subscriber.onError(cause));
                 return;
             }
 
@@ -600,7 +637,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         void signal() {
-            if (executor == null) {
+            if (executor.inEventLoop()) {
                 doSignal();
             } else {
                 executor.execute(this::doSignal);
@@ -615,88 +652,90 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private boolean doSignalSingle(SignalQueue signals) {
-            if (!beginSignal()) {
+            if (inOnNext) {
+                // Do not let Subscriber.onNext() reenter, because it can lead to weird-looking event ordering
+                // for a Subscriber implemented like the following:
+                //
+                //   public void onNext(Object e) {
+                //       subscription.request(1);
+                //       ... Handle 'e' ...
+                //   }
+                //
+                // We do not need to worry about synchronizing the access to 'inOnNext' because the subscriber
+                // methods must be on the same thread, or synchronized, according to Reactive Streams spec.
                 return false;
             }
 
-            try {
-                if (cancelledOrAborted != null) {
-                    // Stream ended due to cancellation or abortion.
-                    processor.unsubscribe(this, cancelledOrAborted);
-                    return false;
+            if (cancelledOrAborted != null) {
+                // Stream ended due to cancellation or abortion.
+                processor.unsubscribe(this, cancelledOrAborted);
+                return false;
+            }
+
+            if (offset == processor.upstreamOffset) {
+                // The subscriber read all signals published so far.
+                return false;
+            }
+
+            final Object signal = signals.get(offset);
+            if (signal instanceof CloseEvent) {
+                // The stream has reached at its end.
+                offset++;
+                processor.unsubscribe(this, ((CloseEvent) signal).cause);
+                return false;
+            }
+
+            for (;;) {
+                final long demand = this.demand;
+                if (demand == 0) {
+                    break;
                 }
 
-                if (offset == processor.upstreamOffset) {
-                    // The subscriber read all signals published so far.
-                    return false;
+                if (demand != Long.MAX_VALUE && !demandUpdater.compareAndSet(this, demand, demand - 1)) {
+                    // Failed to decrement the demand due to contention.
+                    continue;
                 }
 
-                final Object signal = signals.get(offset);
-                if (signal instanceof CloseEvent) {
-                    // The stream has reached at its end.
-                    offset++;
-                    processor.unsubscribe(this, ((CloseEvent) signal).cause);
-                    return false;
+                offset++;
+                @SuppressWarnings("unchecked")
+                T obj = (T) signal;
+                ReferenceCountUtil.touch(obj);
+                if (withPooledObjects) {
+                    if (obj instanceof ByteBufHolder) {
+                        obj = retainedDuplicate((ByteBufHolder) obj);
+                    } else if (obj instanceof ByteBuf) {
+                        obj = retainedDuplicate((ByteBuf) obj);
+                    }
+                } else {
+                    if (obj instanceof ByteBufHolder) {
+                        obj = copy((ByteBufHolder) obj);
+                    } else if (obj instanceof ByteBuf) {
+                        obj = copy((ByteBuf) obj);
+                    }
                 }
 
-                for (;;) {
-                    final long demand = this.demand;
-                    if (demand == 0) {
-                        break;
-                    }
-
-                    if (demand != Long.MAX_VALUE && !demandUpdater.compareAndSet(this, demand, demand - 1)) {
-                        // Failed to decrement the demand due to contention.
-                        continue;
-                    }
-
-                    offset++;
-                    @SuppressWarnings("unchecked")
-                    T obj = (T) signal;
-                    ReferenceCountUtil.touch(obj);
-                    if (withPooledObjects) {
-                        if (obj instanceof ByteBufHolder) {
-                            obj = retainedDuplicate((ByteBufHolder) obj);
-                        } else if (obj instanceof ByteBuf) {
-                            obj = retainedDuplicate((ByteBuf) obj);
+                if (processor.isLastDownstreamAdded()) {
+                    if (++processor.downstreamSignaledCounter >= REQUEST_REMOVAL_THRESHOLD) {
+                        // don't need to use AtomicBoolean cause it's used for rough counting
+                        processor.downstreamSignaledCounter = 0;
+                        int minOffset = Integer.MAX_VALUE;
+                        for (DownstreamSubscription s : processor.downstreamSubscriptions) {
+                            minOffset = Math.min(minOffset, s.offset);
                         }
-                    } else {
-                        if (obj instanceof ByteBufHolder) {
-                            obj = copy((ByteBufHolder) obj);
-                        } else if (obj instanceof ByteBuf) {
-                            obj = copy((ByteBuf) obj);
-                        }
+                        processor.signals().requestRemovalAheadOf(minOffset);
                     }
+                }
 
-                    if (processor.isLastDownstreamAdded()) {
-                        if (++processor.downstreamSignaledCounter >= REQUEST_REMOVAL_THRESHOLD) {
-                            // don't need to use AtomicBoolean cause it's used for rough counting
-                            processor.downstreamSignaledCounter = 0;
-                            int minOffset = Integer.MAX_VALUE;
-                            for (DownstreamSubscription s : processor.downstreamSubscriptions) {
-                                minOffset = Math.min(minOffset, s.offset);
-                            }
-                            processor.signals().requestRemovalAheadOf(minOffset);
-                        }
-                    }
-
-                    publishedAny = true;
+                inOnNext = true;
+                try {
                     subscriber.onNext(obj);
-                    return true;
+                } finally {
+                    inOnNext = false;
                 }
-            } finally {
-                endSignal();
+                return true;
             }
 
             return false;
-        }
-
-        private boolean beginSignal() {
-            return signalingUpdater.compareAndSet(this, 0, 1);
-        }
-
-        private void endSignal() {
-            signaling = 0;
         }
 
         @Override

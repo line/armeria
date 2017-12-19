@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -104,9 +103,8 @@ public class ArmeriaAutoConfigurationTest {
 
     public static class OkService extends AbstractHttpService {
         @Override
-        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
-                throws Exception {
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
         }
     }
 
@@ -170,5 +168,14 @@ public class ArmeriaAutoConfigurationTest {
         assertThat(ports.stream().filter(p -> p.protocol() == SessionProtocol.HTTP)).hasSize(3);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isLoopbackAddress())).hasSize(1);
+    }
+
+    @Test
+    public void testMetrics() throws Exception {
+        final String metricReport = HttpClient.of(newUrl("http"))
+                                              .get("/internal/metrics")
+                                              .aggregate().join()
+                                              .content().toStringUtf8();
+        assertThat(metricReport).contains("# TYPE jvm_gc_live_data_size_bytes gauge");
     }
 }

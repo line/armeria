@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.codahale.metrics.MetricSet;
 import com.google.common.collect.ImmutableList;
 import com.spotify.futures.CompletableFutures;
 
@@ -35,6 +34,9 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
+import io.micrometer.core.instrument.binder.MeterBinder;
 
 /**
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
@@ -128,10 +130,19 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     protected abstract EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint);
 
     /**
-     * Creates healthcheck {@link MetricSet} for this {@link HealthCheckedEndpointGroup}.
+     * Returns a newly-created {@link MeterBinder} which binds the stats about this
+     * {@link HealthCheckedEndpointGroup} with the default meter names.
      */
-    public MetricSet newMetricSet(String metricName) {
-        return new EndpointHealthStateGaugeSet(this, metricName);
+    public MeterBinder newMeterBinder(String groupName) {
+        return newMeterBinder(new MeterIdPrefix("armeria.client.endpointGroup", "name", groupName));
+    }
+
+    /**
+     * Returns a newly-created {@link MeterBinder} which binds the stats about this
+     * {@link HealthCheckedEndpointGroup}.
+     */
+    public MeterBinder newMeterBinder(MeterIdPrefix idPrefix) {
+        return new HealthCheckedEndpointGroupMetrics(this, idPrefix);
     }
 
     @Override

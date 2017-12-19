@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -58,11 +59,16 @@ public final class ServerConfig {
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
     private final long defaultMaxRequestLength;
+    private final int defaultMaxHttp1InitialLineLength;
+    private final int defaultMaxHttp1HeaderSize;
+    private final int defaultMaxHttp1ChunkSize;
 
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
 
     private final ExecutorService blockingTaskExecutor;
+
+    private final MeterRegistry meterRegistry;
 
     private final String serviceLoggerPrefix;
 
@@ -74,12 +80,13 @@ public final class ServerConfig {
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
+            int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, String serviceLoggerPrefix) {
+            Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
 
         requireNonNull(ports, "ports");
-        requireNonNull(virtualHosts, "virtualHosts");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
+        requireNonNull(virtualHosts, "virtualHosts");
 
         // Set the primitive properties.
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
@@ -88,6 +95,12 @@ public final class ServerConfig {
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
+        this.defaultMaxHttp1InitialLineLength = validateNonNegative(
+                defaultMaxHttp1InitialLineLength, "defaultMaxHttp1InitialLineLength");
+        this.defaultMaxHttp1HeaderSize = validateNonNegative(
+                defaultMaxHttp1HeaderSize, "defaultMaxHttp1HeaderSize");
+        this.defaultMaxHttp1ChunkSize = validateNonNegative(
+                defaultMaxHttp1ChunkSize, "defaultMaxHttp1ChunkSize");
         this.gracefulShutdownQuietPeriod = validateNonNegative(requireNonNull(
                 gracefulShutdownQuietPeriod), "gracefulShutdownQuietPeriod");
         this.gracefulShutdownTimeout = validateNonNegative(requireNonNull(
@@ -102,6 +115,7 @@ public final class ServerConfig {
             this.blockingTaskExecutor = new ExecutorBasedExecutorService(blockingTaskExecutor);
         }
 
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
 
         // Set localAddresses.
@@ -178,6 +192,13 @@ public final class ServerConfig {
                     "defaultMaxRequestLength: " + defaultMaxRequestLength + " (expected: >= 0)");
         }
         return defaultMaxRequestLength;
+    }
+
+    static int validateNonNegative(int value, String fieldName) {
+        if (value < 0) {
+            throw new IllegalArgumentException(fieldName + ": " + value + " (expected: >= 0)");
+        }
+        return value;
     }
 
     static Duration validateNonNegative(Duration duration, String fieldName) {
@@ -348,6 +369,29 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns the default maximum length of an HTTP/1 response initial line.
+     */
+    public int defaultMaxHttp1InitialLineLength() {
+        return defaultMaxHttp1InitialLineLength;
+    }
+
+    /**
+     * Returns the default maximum length of all headers in an HTTP/1 response.
+     */
+    public int defaultMaxHttp1HeaderSize() {
+        return defaultMaxHttp1HeaderSize;
+    }
+
+    /**
+     * Returns the default maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceed it.
+     */
+    public int defaultMaxHttp1ChunkSize() {
+        return defaultMaxHttp1ChunkSize;
+    }
+
+    /**
      * Returns the number of milliseconds to wait for active requests to go end before shutting down.
      * {@code 0} means the server will stop right away without waiting.
      */
@@ -374,6 +418,13 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns the {@link MeterRegistry} that collects various stats.
+     */
+    public MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
+
+    /**
      * Returns the prefix of {@linkplain ServiceRequestContext#logger() service logger}'s names.
      */
     public String serviceLoggerPrefix() {
@@ -389,8 +440,9 @@ public final class ServerConfig {
                     workerGroup(), shutdownWorkerGroupOnStop(),
                     maxNumConnections(), idleTimeoutMillis(),
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
+                    defaultMaxHttp1InitialLineLength(), defaultMaxHttp1HeaderSize(), defaultMaxHttp1ChunkSize(),
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), serviceLoggerPrefix());
+                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix());
         }
 
         return strVal;
@@ -400,10 +452,11 @@ public final class ServerConfig {
             Class<?> type,
             Iterable<ServerPort> ports, VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
-            int maxNumConnections, long idleTimeoutMillis,
-            long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
+            int maxNumConnections, long idleTimeoutMillis, long defaultRequestTimeoutMillis,
+            long defaultMaxRequestLength, long defaultMaxHttp1InitialLineLength,
+            long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, String serviceLoggerPrefix) {
+            Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
 
         StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -459,12 +512,22 @@ public final class ServerConfig {
         buf.append(defaultRequestTimeoutMillis);
         buf.append("ms, defaultMaxRequestLength: ");
         buf.append(defaultMaxRequestLength);
+        buf.append("B, defaultMaxHttp1InitialLineLength: ");
+        buf.append(defaultMaxHttp1InitialLineLength);
+        buf.append("B, defaultMaxHttp1HeaderSize: ");
+        buf.append(defaultMaxHttp1HeaderSize);
+        buf.append("B, defaultMaxHttp1ChunkSize: ");
+        buf.append(defaultMaxHttp1ChunkSize);
         buf.append("B, gracefulShutdownQuietPeriod: ");
         buf.append(gracefulShutdownQuietPeriod);
         buf.append(", gracefulShutdownTimeout: ");
         buf.append(gracefulShutdownTimeout);
         buf.append(", blockingTaskExecutor: ");
         buf.append(blockingTaskExecutor);
+        if (meterRegistry != null) {
+            buf.append(", meterRegistry: ");
+            buf.append(meterRegistry);
+        }
         buf.append(", serviceLoggerPrefix: ");
         buf.append(serviceLoggerPrefix);
         buf.append(')');

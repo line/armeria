@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -32,7 +32,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.MoreExecutors;
+
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 public class DeferredStreamMessageTest {
 
@@ -41,7 +42,7 @@ public class DeferredStreamMessageTest {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         assertThat(m.isOpen()).isTrue();
         assertThat(m.isEmpty()).isFalse();
-        assertThat(m.closeFuture()).isNotDone();
+        assertThat(m.completionFuture()).isNotDone();
     }
 
     @Test
@@ -64,7 +65,7 @@ public class DeferredStreamMessageTest {
     @Test
     public void testEarlyAbortWithSubscriber() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        m.subscribe(mock(Subscriber.class));
+        m.subscribe(mock(Subscriber.class), ImmediateEventExecutor.INSTANCE);
         m.abort();
         assertAborted(m);
 
@@ -92,7 +93,7 @@ public class DeferredStreamMessageTest {
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
-        m.subscribe(subscriber);
+        m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         m.delegate(d);
         verify(subscriber).onSubscribe(any());
 
@@ -110,7 +111,7 @@ public class DeferredStreamMessageTest {
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
-        m.subscribe(subscriber);
+        m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         assertFailedSubscription(m, IllegalStateException.class);
 
         m.delegate(d);
@@ -127,7 +128,7 @@ public class DeferredStreamMessageTest {
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
-        m.subscribe(subscriber);
+        m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         verify(subscriber).onSubscribe(any());
 
         assertFailedSubscription(m, IllegalStateException.class);
@@ -136,8 +137,8 @@ public class DeferredStreamMessageTest {
     private static void assertAborted(StreamMessage<?> m) {
         assertThat(m.isOpen()).isFalse();
         assertThat(m.isEmpty()).isTrue();
-        assertThat(m.closeFuture()).isCompletedExceptionally();
-        assertThatThrownBy(() -> m.closeFuture().get())
+        assertThat(m.completionFuture()).isCompletedExceptionally();
+        assertThatThrownBy(() -> m.completionFuture().get())
                 .hasCauseInstanceOf(AbortedStreamException.class);
     }
 
@@ -149,16 +150,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testStreamingWithoutExecutor() throws Exception {
-        testStreaming(false);
-    }
-
-    @Test
-    public void testStreamingWithExecutor() throws Exception {
-        testStreaming(true);
-    }
-
-    private void testStreaming(boolean useExecutor) {
+    public void testStreaming() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
         m.delegate(d);
@@ -186,11 +178,8 @@ public class DeferredStreamMessageTest {
                 streamed.add("onComplete");
             }
         };
-        if (useExecutor) {
-            m.subscribe(subscriber, MoreExecutors.directExecutor());
-        } else {
-            m.subscribe(subscriber);
-        }
+
+        m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
 
         assertThat(streamed).containsExactly("onSubscribe");
         d.write("A");
@@ -200,10 +189,10 @@ public class DeferredStreamMessageTest {
 
         assertThat(m.isOpen()).isFalse();
         assertThat(m.isEmpty()).isFalse();
-        assertThat(m.closeFuture()).isCompletedWithValue(null);
+        assertThat(m.completionFuture()).isCompletedWithValue(null);
 
         assertThat(d.isOpen()).isFalse();
         assertThat(d.isEmpty()).isFalse();
-        assertThat(d.closeFuture()).isCompletedWithValue(null);
+        assertThat(d.completionFuture()).isCompletedWithValue(null);
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -34,7 +34,7 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -176,11 +176,10 @@ public class HttpClientSniTest {
         }
 
         @Override
-        protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                             HttpResponseWriter res) {
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
             final X509Certificate c = (X509Certificate) ctx.sslSession().getLocalCertificates()[0];
             final String name = c.getSubjectX500Principal().getName();
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, domainName + ": " + name);
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, domainName + ": " + name);
         }
     }
 }

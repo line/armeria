@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 
 package com.linecorp.armeria.common.stream;
+
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -26,6 +28,7 @@ import org.reactivestreams.Subscription;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A variant of <a href="http://www.reactive-streams.org/">Reactive Streams</a> {@link Publisher}, which allows
@@ -34,13 +37,13 @@ import io.netty.util.ReferenceCounted;
  * <ul>
  *   <li>{@link #isOpen()}</li>
  *   <li>{@link #isEmpty()}</li>
- *   <li>{@link #closeFuture()}</li>
+ *   <li>{@link #completionFuture()}</li>
  *   <li>{@link #abort()}</li>
  * </ul>
  *
- * <h3>When is a {@link StreamMessage} open?</h3>
+ * <h3>When is a {@link StreamMessage} fully consumed?</h3>
  *
- * <p>A {@link StreamMessage} is open since its instantiation until:
+ * <p>A {@link StreamMessage} is <em>complete</em> (or 'fully consumed') when:
  * <ul>
  *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
  *   <li>an error occurred and {@link Subscriber#onError(Throwable)} is invoked,</li>
@@ -48,12 +51,9 @@ import io.netty.util.ReferenceCounted;
  *   <li>{@link #abort()} has been requested.</li>
  * </ul>
  *
- * <h3>Getting notified when a {@link StreamMessage} is closed</h3>
- *
- * <p>{@link Subscriber#onComplete()} and {@link Subscriber#onError(Throwable)} will not be invoked when its
- * {@link Subscription} has been {@linkplain Subscription#cancel() cancelled} or {@linkplain #abort() aborted}.
- * Use {@link #closeFuture()} if you need to get notified when a {@link StreamMessage} is closed regardless of
- * whether it's been cancelled, aborted or closed.
+ * <p>When fully consumed, the {@link CompletableFuture} returned by {@link StreamMessage#completionFuture()}
+ * will complete, which you may find useful because {@link Subscriber} does not notify you when a stream is
+ * {@linkplain Subscription#cancel() cancelled}.
  *
  * <h3>Publication and Consumption of {@link ReferenceCounted} objects</h3>
  *
@@ -68,7 +68,7 @@ import io.netty.util.ReferenceCounted;
  * leaks.
  *
  * <p>If a {@link Subscriber} does not want a {@link StreamMessage} to make a copy of a {@link ByteBufHolder},
- * use {@link #subscribe(Subscriber, boolean)} or {@link #subscribe(Subscriber, Executor, boolean)} and
+ * use {@link #subscribe(Subscriber, boolean)} or {@link #subscribe(Subscriber, EventExecutor, boolean)} and
  * specify {@code true} for {@code withPooledObjects}. Note that the {@link Subscriber} is responsible for
  * releasing the objects given with {@link Subscriber#onNext(Object)}.
  *
@@ -76,7 +76,56 @@ import io.netty.util.ReferenceCounted;
  */
 public interface StreamMessage<T> extends Publisher<T> {
     /**
-     * Returns {@code true} if this publisher is not closed yet.
+     * Creates a new {@link StreamMessage} that will publish no objects, just a close event.
+     */
+    static <T> StreamMessage<T> of() {
+        return new EmptyFixedStreamMessage<>();
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that will publish the single {@code obj}.
+     */
+    static <T> StreamMessage<T> of(T obj) {
+        requireNonNull(obj, "obj");
+        return new OneElementFixedStreamMessage<>(obj);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that will publish the two {@code obj1} and {@code obj2}.
+     */
+    static <T> StreamMessage<T> of(T obj1, T obj2) {
+        requireNonNull(obj1, "obj1");
+        requireNonNull(obj2, "obj2");
+        return new TwoElementFixedStreamMessage<>(obj1, obj2);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that will publish the given {@code objs}.
+     */
+    @SafeVarargs
+    static <T> StreamMessage<T> of(T... objs) {
+        requireNonNull(objs, "objs");
+        switch (objs.length) {
+            case 0:
+                return of();
+            case 1:
+                return of(objs[0]);
+            case 2:
+                return of(objs[0], objs[1]);
+            default:
+                for (int i = 0; i < objs.length; i++) {
+                    if (objs[i] == null) {
+                        throw new NullPointerException("objs[" + i + "] is null");
+                    }
+                }
+                return new RegularFixedStreamMessage<>(objs);
+        }
+    }
+
+    /**
+     * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
+     * {@linkplain #completionFuture() complete} even if it's closed; a stream is complete when it's fully
+     * consumed by a {@link Subscriber}.
      */
     boolean isOpen();
 
@@ -88,10 +137,46 @@ public interface StreamMessage<T> extends Publisher<T> {
     boolean isEmpty();
 
     /**
-     * Returns a {@link CompletableFuture} that completes when this publisher is complete,
-     * either successfully or exceptionally, including cancellation and abortion.
+     * Returns {@code true} if this stream is complete, either successfully or exceptionally,
+     * including cancellation and abortion.
+     *
+     * <p>A {@link StreamMessage} is <em>complete</em> (or 'fully consumed') when:
+     * <ul>
+     *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
+     *   <li>an error occurred and {@link Subscriber#onError(Throwable)} is invoked,</li>
+     *   <li>the {@link Subscription} has been cancelled or</li>
+     *   <li>{@link #abort()} has been requested.</li>
+     * </ul>
      */
-    CompletableFuture<Void> closeFuture();
+    default boolean isComplete() {
+        return completionFuture().isDone();
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} that completes when this stream is complete,
+     * either successfully or exceptionally, including cancellation and abortion.
+     *
+     * <p>A {@link StreamMessage} is <em>complete</em>
+     * (or 'fully consumed') when:
+     * <ul>
+     *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
+     *   <li>an error occurred and {@link Subscriber#onError(Throwable)} is invoked,</li>
+     *   <li>the {@link Subscription} has been cancelled or</li>
+     *   <li>{@link #abort()} has been requested.</li>
+     * </ul>
+     */
+    CompletableFuture<Void> completionFuture();
+
+    /**
+     * Returns a {@link CompletableFuture} that completes when this stream is complete,
+     * either successfully or exceptionally, including cancellation and abortion.
+     *
+     * @deprecated Use {@link #completionFuture()} instead.
+     */
+    @Deprecated
+    default CompletableFuture<Void> closeFuture() {
+        return completionFuture();
+    }
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -102,7 +187,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * </ul>
      */
     @Override
-    void subscribe(Subscriber<? super T> s);
+    void subscribe(Subscriber<? super T> subscriber);
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -117,7 +202,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *                          {@link StreamMessage#subscribe(Subscriber)}.
      * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
      */
-    void subscribe(Subscriber<? super T> s, boolean withPooledObjects);
+    void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects);
 
     /**
      * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
@@ -128,7 +213,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
      * </ul>
      */
-    void subscribe(Subscriber<? super T> s, Executor executor);
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
 
     /**
      * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
@@ -143,10 +228,10 @@ public interface StreamMessage<T> extends Publisher<T> {
      *                          as is, without making a copy. If you don't know what this means, use
      *                          {@link StreamMessage#subscribe(Subscriber)}.
      */
-    void subscribe(Subscriber<? super T> s, Executor executor, boolean withPooledObjects);
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects);
 
     /**
-     * Closes this publisher with {@link AbortedStreamException} and prevents further subscription.
+     * Closes this stream with {@link AbortedStreamException} and prevents further subscription.
      * A {@link Subscriber} that attempts to subscribe to an aborted stream will be notified with
      * an {@link AbortedStreamException} via {@link Subscriber#onError(Throwable)}. Calling this method
      * on a closed or aborted stream has no effect.

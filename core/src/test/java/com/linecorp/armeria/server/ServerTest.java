@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,6 +26,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -35,6 +36,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -43,18 +45,22 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
 
 public class ServerTest {
 
@@ -69,34 +75,39 @@ public class ServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
 
+            sb.meterRegistry(PrometheusMeterRegistries.newRegistry());
+
             final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
                     new EchoService().decorate(LoggingService.newDecorator());
 
             final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
                 @Override
-                protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+                protected HttpResponse echo(AggregatedHttpMessage aReq) {
                     try {
                         Thread.sleep(processDelayMillis);
-                        super.echo(aReq, res);
+                        return super.echo(aReq);
                     } catch (InterruptedException e) {
-                        res.close(e);
+                        return HttpResponse.ofFailure(e);
                     }
                 }
             }.decorate(LoggingService.newDecorator());
 
             final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
                 @Override
-                protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+                protected HttpResponse echo(AggregatedHttpMessage aReq) {
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    HttpResponse res = HttpResponse.from(responseFuture);
                     asyncExecutorGroup.schedule(
-                            () -> super.echo(aReq, res), processDelayMillis, TimeUnit.MILLISECONDS);
+                            () -> super.echo(aReq), processDelayMillis, TimeUnit.MILLISECONDS)
+                                      .addListener((Future<HttpResponse> future) ->
+                                                           responseFuture.complete(future.getNow()));
+                    return res;
                 }
             }.decorate(LoggingService.newDecorator());
 
             final Service<HttpRequest, HttpResponse> buggy = new AbstractHttpService() {
                 @Override
-                protected void doPost(ServiceRequestContext ctx,
-                                      HttpRequest req, HttpResponseWriter res) throws Exception {
-
+                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
                     throw Exceptions.clearTrace(new AnticipatedException("bug!"));
                 }
             }.decorate(LoggingService.newDecorator());
@@ -123,6 +134,15 @@ public class ServerTest {
             sb.idleTimeoutMillis(idleTimeoutMillis);
         }
     };
+
+    @AfterClass
+    public static void checkMetrics() {
+        final MeterRegistry registry = server.server().meterRegistry();
+        assertThat(MicrometerUtil.register(registry,
+                                           new MeterIdPrefix("armeria.server.router.virtualHostCache",
+                                                             "hostnamePattern", "*"),
+                                           Object.class, (r, i) -> null)).isNotNull();
+    }
 
     /**
      * Ensures that the {@link Server} is always started when a test begins. This is necessary even if we
@@ -275,6 +295,11 @@ public class ServerTest {
         testSimple("GET * HTTP/1.1", "HTTP/1.1 400 Bad Request");
     }
 
+    @Test
+    public void testUnsupportedMethod() throws Exception {
+        testSimple("WHOA / HTTP/1.1", "HTTP/1.1 405 Method Not Allowed");
+    }
+
     private static void testSimple(
             String reqLine, String expectedStatusLine, String... expectedHeaders) throws Exception {
 
@@ -316,16 +341,16 @@ public class ServerTest {
 
     private static class EchoService extends AbstractHttpService {
         @Override
-        protected final void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-            req.aggregate()
-               .thenAccept(aReq -> echo(aReq, res))
-               .exceptionally(CompletionActions::log);
+        protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.from(req.aggregate()
+                                        .thenApply(this::echo)
+                                        .exceptionally(CompletionActions::log));
         }
 
-        protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
-            res.write(HttpHeaders.of(HttpStatus.OK));
-            res.write(aReq.content());
-            res.close();
+        protected HttpResponse echo(AggregatedHttpMessage aReq) {
+            return HttpResponse.of(
+                    HttpHeaders.of(HttpStatus.OK),
+                    aReq.content());
         }
     }
 }

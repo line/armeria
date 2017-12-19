@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,7 +19,7 @@
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -64,15 +64,15 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
 /**
- * Represents an <a href="http://en.wikipedia.org/wiki/Internet_media_type">Internet Media Type</a>
+ * Represents an <a href="https://en.wikipedia.org/wiki/Internet_media_type">Internet Media Type</a>
  * (also known as a MIME Type or Content Type). This class also supports the concept of media ranges
- * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.1">defined by HTTP/1.1</a>.
+ * <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.1">defined by HTTP/1.1</a>.
  * As such, the {@code *} character is treated as a wildcard and is used to represent any acceptable
  * type or subtype value. A media type may not have wildcard type with a declared subtype. The
  * {@code *} character has no special meaning as part of a parameter. All values for type, subtype,
  * parameter attributes or parameter values must be valid according to RFCs
- * <a href="http://www.ietf.org/rfc/rfc2045.txt">2045</a> and
- * <a href="http://www.ietf.org/rfc/rfc2046.txt">2046</a>.
+ * <a href="https://www.ietf.org/rfc/rfc2045.txt">2045</a> and
+ * <a href="https://www.ietf.org/rfc/rfc2046.txt">2046</a>.
  *
  * <p>All portions of the media type that are case-insensitive (type, subtype, parameter attributes)
  * are normalized to lowercase. The value of the {@code charset} parameter is normalized to
@@ -158,20 +158,20 @@ public final class MediaType {
     public static final MediaType I_CALENDAR_UTF_8 = createConstantUtf8(TEXT_TYPE, "calendar");
     public static final MediaType PLAIN_TEXT_UTF_8 = createConstantUtf8(TEXT_TYPE, "plain");
     /**
-     * <a href="http://www.rfc-editor.org/rfc/rfc4329.txt">RFC 4329</a> declares
+     * <a href="https://www.rfc-editor.org/rfc/rfc4329.txt">RFC 4329</a> declares
      * {@link #JAVASCRIPT_UTF_8 application/javascript} to be the correct media type for JavaScript,
      * but this may be necessary in certain situations for compatibility.
      */
     public static final MediaType TEXT_JAVASCRIPT_UTF_8 = createConstantUtf8(TEXT_TYPE, "javascript");
     /**
-     * <a href="http://www.iana.org/assignments/media-types/text/tab-separated-values">Tab separated
+     * <a href="https://www.iana.org/assignments/media-types/text/tab-separated-values">Tab separated
      * values</a>.
      */
     public static final MediaType TSV_UTF_8 = createConstantUtf8(TEXT_TYPE, "tab-separated-values");
     public static final MediaType VCARD_UTF_8 = createConstantUtf8(TEXT_TYPE, "vcard");
     public static final MediaType WML_UTF_8 = createConstantUtf8(TEXT_TYPE, "vnd.wap.wml");
     /**
-     * As described in <a href="http://www.ietf.org/rfc/rfc3023.txt">RFC 3023</a>, this constant
+     * As described in <a href="https://www.ietf.org/rfc/rfc3023.txt">RFC 3023</a>, this constant
      * ({@code text/xml}) is used for XML documents that are "readable by casual users."
      * {@link #APPLICATION_XML_UTF_8} is provided for documents that are intended for applications.
      */
@@ -185,10 +185,10 @@ public final class MediaType {
     /* image types */
     public static final MediaType BMP = createConstant(IMAGE_TYPE, "bmp");
     /**
-     * The media type for the <a href="http://en.wikipedia.org/wiki/Camera_Image_File_Format">Canon
+     * The media type for the <a href="https://en.wikipedia.org/wiki/Camera_Image_File_Format">Canon
      * Image File Format</a> ({@code crw} files), a widely-used "raw image" format for cameras. It is
      * found in {@code /etc/mime.types}, e.g. in <a href=
-     * "http://anonscm.debian.org/gitweb/?p=collab-maint/mime-support.git;a=blob;f=mime.types;hb=HEAD"
+     * "https://anonscm.debian.org/gitweb/?p=collab-maint/mime-support.git;a=blob;f=mime.types;hb=HEAD"
      * >Debian 3.48-1</a>.
      */
     public static final MediaType CRW = createConstant(IMAGE_TYPE, "x-canon-crw");
@@ -198,18 +198,18 @@ public final class MediaType {
     public static final MediaType PNG = createConstant(IMAGE_TYPE, "png");
     /**
      * The media type for the Photoshop File Format ({@code psd} files) as defined by
-     * <a href="http://www.iana.org/assignments/media-types/image/vnd.adobe.photoshop">IANA</a>, and
+     * <a href="https://www.iana.org/assignments/media-types/image/vnd.adobe.photoshop">IANA</a>, and
      * found in {@code /etc/mime.types}, e.g.
-     * <a href="http://svn.apache.org/repos/asf/httpd/httpd/branches/1.3.x/conf/mime.types"></a> of
-     * the Apache <a href="http://httpd.apache.org/">HTTPD project</a>; for the specification, see
+     * <a href="https://svn.apache.org/repos/asf/httpd/httpd/branches/1.3.x/conf/mime.types"></a> of
+     * the Apache <a href="https://httpd.apache.org/">HTTPD project</a>; for the specification, see
      * <a href="http://www.adobe.com/devnet-apps/photoshop/fileformatashtml/PhotoshopFileFormats.htm">
      * Adobe Photoshop Document Format</a> and
-     * <a href="http://en.wikipedia.org/wiki/Adobe_Photoshop#File_format">Wikipedia</a>; this is the
+     * <a href="https://en.wikipedia.org/wiki/Adobe_Photoshop#File_format">Wikipedia</a>; this is the
      * regular output/input of Photoshop (which can also export to various image formats; note that
      * files with extension "PSB" are in a distinct but related format).
      *
      * <p>This is a more recent replacement for the older, experimental type {@code x-photoshop}:
-     * <a href="http://tools.ietf.org/html/rfc2046#section-6">RFC-2046.6</a>.
+     * <a href="https://tools.ietf.org/html/rfc2046#section-6">RFC-2046.6</a>.
      */
     public static final MediaType PSD = createConstant(IMAGE_TYPE, "vnd.adobe.photoshop");
     public static final MediaType SVG_UTF_8 = createConstantUtf8(IMAGE_TYPE, "svg+xml");
@@ -230,7 +230,7 @@ public final class MediaType {
 
     /**
      * Media type for Basic Audio, as defined by
-     * <a href="http://tools.ietf.org/html/rfc2046#section-4.3">RFC 2046</a>.
+     * <a href="https://tools.ietf.org/html/rfc2046#section-4.3">RFC 2046</a>.
      */
     public static final MediaType BASIC_AUDIO = createConstant(AUDIO_TYPE, "basic");
 
@@ -241,7 +241,7 @@ public final class MediaType {
     public static final MediaType AAC_AUDIO = createConstant(AUDIO_TYPE, "aac");
 
     /**
-     * Media type for Vorbis Audio, as defined by <a href="http://tools.ietf.org/html/rfc5215">RFC
+     * Media type for Vorbis Audio, as defined by <a href="https://tools.ietf.org/html/rfc5215">RFC
      * 5215</a>.
      */
     public static final MediaType VORBIS_AUDIO = createConstant(AUDIO_TYPE, "vorbis");
@@ -303,7 +303,7 @@ public final class MediaType {
 
     /* application types */
     /**
-     * As described in <a href="http://www.ietf.org/rfc/rfc3023.txt">RFC 3023</a>, this constant
+     * As described in <a href="https://www.ietf.org/rfc/rfc3023.txt">RFC 3023</a>, this constant
      * ({@code application/xml}) is used for XML documents that are "unreadable by casual users."
      * {@link #XML_UTF_8} is provided for documents that may be read by users.
      */
@@ -323,9 +323,9 @@ public final class MediaType {
             createConstant(APPLICATION_TYPE, "vnd.apple.pkpass");
 
     /**
-     * Media type for <a href="http://en.wikipedia.org/wiki/Embedded_OpenType">Embedded OpenType</a>
+     * Media type for <a href="https://en.wikipedia.org/wiki/Embedded_OpenType">Embedded OpenType</a>
      * fonts. This is
-     * <a href="http://www.iana.org/assignments/media-types/application/vnd.ms-fontobject">registered
+     * <a href="https://www.iana.org/assignments/media-types/application/vnd.ms-fontobject">registered
      * </a> with the IANA.
      */
     public static final MediaType EOT = createConstant(APPLICATION_TYPE, "vnd.ms-fontobject");
@@ -350,7 +350,7 @@ public final class MediaType {
      * <a href="http://code.google.com/p/browsersec/wiki/Part2#Survey_of_content_sniffing_behaviors">
      * known not to trigger content sniffing in current browsers</a>. It <i>should not</i> be used in
      * other situations as it is not specified by any RFC and does not appear in the
-     * <a href="http://www.iana.org/assignments/media-types">/IANA MIME Media Types</a> list. Consider
+     * <a href="https://www.iana.org/assignments/media-types">/IANA MIME Media Types</a> list. Consider
      * {@link #OCTET_STREAM} for binary data that is not being served to a browser.
      */
     public static final MediaType APPLICATION_BINARY = createConstant(APPLICATION_TYPE, "binary");
@@ -364,8 +364,15 @@ public final class MediaType {
     public static final MediaType JAVASCRIPT_UTF_8 =
             createConstantUtf8(APPLICATION_TYPE, "javascript");
     public static final MediaType JSON_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "json");
+    public static final MediaType JSON = createConstant(APPLICATION_TYPE, "json");
     /**
-     * Media type for the <a href="http://www.w3.org/TR/appmanifest/">Manifest for a web
+     * As described in <a href="https://www.ietf.org/rfc/rfc6902.txt">RFC 6902</a>, this constant
+     * ({@code application/json-patch+json}) is used for expressing a sequence of operations to apply
+     * to a JavaScript Object Notation(JSON) document.
+     */
+    public static final MediaType JSON_PATCH = createConstant(APPLICATION_TYPE, "json-patch+json");
+    /**
+     * Media type for the <a href="https://www.w3.org/TR/appmanifest/">Manifest for a web
      * application</a>.
      */
     public static final MediaType MANIFEST_JSON_UTF_8 =
@@ -375,7 +382,7 @@ public final class MediaType {
     public static final MediaType MBOX = createConstant(APPLICATION_TYPE, "mbox");
 
     /**
-     * Media type for <a href="http://goo.gl/1pGBFm">Apple over-the-air mobile configuration
+     * Media type for <a href="https://goo.gl/1pGBFm">Apple over-the-air mobile configuration
      * profiles</a>.
      */
     public static final MediaType APPLE_MOBILE_CONFIG =
@@ -422,7 +429,7 @@ public final class MediaType {
     public static final MediaType PDF = createConstant(APPLICATION_TYPE, "pdf");
     public static final MediaType POSTSCRIPT = createConstant(APPLICATION_TYPE, "postscript");
     /**
-     * <a href="http://tools.ietf.org/html/draft-rfernando-protocol-buffers-00">Protocol buffers</a>
+     * <a href="http://tools.ietf.org/html/draft-rfernando-protocol-buffers-00">Protocol buffers</a>.
      */
     public static final MediaType PROTOBUF = createConstant(APPLICATION_TYPE, "protobuf");
 
@@ -430,9 +437,9 @@ public final class MediaType {
     public static final MediaType RTF_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "rtf");
     /**
      * Media type for SFNT fonts (which includes
-     * <a href="http://en.wikipedia.org/wiki/TrueType/">TrueType</a> and
-     * <a href="http://en.wikipedia.org/wiki/OpenType/">OpenType</a> fonts). This is
-     * <a href="http://www.iana.org/assignments/media-types/application/font-sfnt">registered</a> with
+     * <a href="https://en.wikipedia.org/wiki/TrueType/">TrueType</a> and
+     * <a href="https://en.wikipedia.org/wiki/OpenType/">OpenType</a> fonts). This is
+     * <a href="https://www.iana.org/assignments/media-types/application/font-sfnt">registered</a> with
      * the IANA.
      */
     public static final MediaType SFNT = createConstant(APPLICATION_TYPE, "font-sfnt");
@@ -445,20 +452,20 @@ public final class MediaType {
      * serialized with XML 1.0.
      *
      * <p>For SOAP 1.1 messages, see {@code XML_UTF_8} per <a
-     * href="http://www.w3.org/TR/2000/NOTE-SOAP-20000508/">W3C Note on Simple Object Access Protocol
+     * href="https://www.w3.org/TR/2000/NOTE-SOAP-20000508/">W3C Note on Simple Object Access Protocol
      * (SOAP) 1.1</a>
      */
     public static final MediaType SOAP_XML_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "soap+xml");
     public static final MediaType TAR = createConstant(APPLICATION_TYPE, "x-tar");
     /**
-     * Media type for the <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font
-     * Format</a> (WOFF) <a href="http://www.w3.org/TR/WOFF/">defined</a> by the W3C. This is
-     * <a href="http://www.iana.org/assignments/media-types/application/font-woff">registered</a> with
+     * Media type for the <a href="https://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font
+     * Format</a> (WOFF) <a href="https://www.w3.org/TR/WOFF/">defined</a> by the W3C. This is
+     * <a href="https://www.iana.org/assignments/media-types/application/font-woff">registered</a> with
      * the IANA.
      */
     public static final MediaType WOFF = createConstant(APPLICATION_TYPE, "font-woff");
     /**
-     * Media type for the <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font
+     * Media type for the <a href="https://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font
      * Format</a> (WOFF) version 2 <a href="https://www.w3.org/TR/WOFF2/">defined</a> by the W3C.
      */
     public static final MediaType WOFF2 = createConstant(APPLICATION_TYPE, "font-woff2");
@@ -466,8 +473,8 @@ public final class MediaType {
     /**
      * Media type for Extensible Resource Descriptors. This is not yet registered with the IANA, but
      * it is specified by OASIS in the
-     * <a href="http://docs.oasis-open.org/xri/xrd/v1.0/cd02/xrd-1.0-cd02.html">XRD definition</a> and
-     * implemented in projects such as <a href="http://code.google.com/p/webfinger/">WebFinger</a>.
+     * <a href="https://docs.oasis-open.org/xri/xrd/v1.0/cd02/xrd-1.0-cd02.html">XRD definition</a> and
+     * implemented in projects such as <a href="https://github.com/webfinger/">WebFinger</a>.
      */
     public static final MediaType XRD_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "xrd+xml");
     public static final MediaType ZIP = createConstant(APPLICATION_TYPE, "zip");
@@ -618,7 +625,7 @@ public final class MediaType {
 
     /**
      * Returns {@code true} if this instance falls within the range (as defined by
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">the HTTP Accept header</a>)
+     * <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">the HTTP Accept header</a>)
      * given by the argument according to three criteria:
      *
      * <ol>
@@ -898,7 +905,7 @@ public final class MediaType {
 
     /**
      * Returns the string representation of this media type in the format described in
-     * <a href="http://www.ietf.org/rfc/rfc2045.txt">RFC 2045</a>.
+     * <a href="https://www.ietf.org/rfc/rfc2045.txt">RFC 2045</a>.
      */
     @Override
     public String toString() {

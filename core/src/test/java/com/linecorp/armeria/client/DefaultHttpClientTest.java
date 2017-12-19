@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 public class DefaultHttpClientTest {
 
@@ -46,6 +47,7 @@ public class DefaultHttpClientTest {
                                                                                  ClientOptions.DEFAULT);
         DefaultHttpClient defaultHttpClient = new DefaultHttpClient(clientBuilderParams,
                                                                     mockClientDelegate,
+                                                                    NoopMeterRegistry.get(),
                                                                     SessionProtocol.of("http"),
                                                                     Endpoint.of("127.0.0.1"));
 

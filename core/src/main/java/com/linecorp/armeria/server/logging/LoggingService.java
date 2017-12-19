@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,20 +16,18 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest;
+import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
-
-import org.slf4j.Logger;
-
-import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.internal.logging.Sampler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -41,12 +39,6 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  * @param <O> the {@link Response} type
  */
 public final class LoggingService<I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
-
-    @VisibleForTesting
-    static final String REQUEST_FORMAT = "Request: {}";
-    @VisibleForTesting
-    static final String RESPONSE_FORMAT = "Response: {}";
-
     /**
      * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s at
      * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
@@ -63,6 +55,9 @@ public final class LoggingService<I extends Request, O extends Response> extends
     }
 
     /**
+     * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s at the given
+     * {@link LogLevel}.
+     *
      * @deprecated Use {@link LoggingServiceBuilder}.
      */
     @Deprecated
@@ -81,6 +76,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final Sampler sampler;
 
     /**
+     * Creates a new instance.
+     *
      * @deprecated Use {@link LoggingService#newDecorator()}.
      */
     @Deprecated
@@ -89,6 +86,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
     }
 
     /**
+     * Creates a new instance.
+     *
      * @deprecated Use {@link LoggingServiceBuilder}.
      */
     @Deprecated
@@ -101,7 +100,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
              Function.identity(),
              Function.identity(),
              Function.identity(),
-             Sampler.ALWAYS_SAMPLE);
+             Sampler.always());
     }
 
     /**
@@ -133,33 +132,15 @@ public final class LoggingService<I extends Request, O extends Response> extends
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled()) {
-            ctx.log().addListener(this::logRequest, RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(this::logResponse, RequestLogAvailability.COMPLETE);
+            ctx.log().addListener(log -> logRequest(((ServiceRequestContext) log.context()).logger(),
+                                                    log, requestLogLevel, requestHeadersSanitizer,
+                                                    requestContentSanitizer),
+                                  RequestLogAvailability.REQUEST_END);
+            ctx.log().addListener(log -> logResponse(((ServiceRequestContext) log.context()).logger(), log,
+                                                     successfulResponseLogLevel, failedResponseLogLevel,
+                                                     responseHeadersSanitizer, responseContentSanitizer),
+                                  RequestLogAvailability.COMPLETE);
         }
         return delegate().serve(ctx, req);
-    }
-
-    /**
-     * Logs a stringified request of {@link RequestLog}.
-     */
-    private void logRequest(RequestLog log) {
-        final Logger logger = ((ServiceRequestContext) log.context()).logger();
-        if (requestLogLevel.isEnabled(logger)) {
-            requestLogLevel.log(logger, REQUEST_FORMAT,
-                                log.toStringRequestOnly(requestHeadersSanitizer, requestContentSanitizer));
-        }
-    }
-
-    /**
-     * Logs a stringified response of {@link RequestLog}.
-     */
-    private void logResponse(RequestLog log) {
-        final Logger logger = ((ServiceRequestContext) log.context()).logger();
-        final LogLevel level =
-                log.responseCause() == null ? successfulResponseLogLevel : failedResponseLogLevel;
-        if (level.isEnabled(logger)) {
-            level.log(logger, RESPONSE_FORMAT,
-                      log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer));
-        }
     }
 }

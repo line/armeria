@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,11 +19,12 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 import org.reactivestreams.Subscriber;
 
 import com.google.common.base.MoreObjects;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Wraps a {@link StreamMessage} and forwards its method invocations to {@code delegate}.
@@ -59,8 +60,8 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<Void> closeFuture() {
-        return delegate().closeFuture();
+    public CompletableFuture<Void> completionFuture() {
+        return delegate().completionFuture();
     }
 
     @Override
@@ -74,12 +75,12 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> s, Executor executor) {
+    public void subscribe(Subscriber<? super T> s, EventExecutor executor) {
         delegate().subscribe(s, executor);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> s, Executor executor, boolean withPooledObjects) {
+    public void subscribe(Subscriber<? super T> s, EventExecutor executor, boolean withPooledObjects) {
         delegate().subscribe(s, executor, withPooledObjects);
     }
 

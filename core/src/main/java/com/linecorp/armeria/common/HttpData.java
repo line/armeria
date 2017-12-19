@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -79,7 +79,7 @@ public interface HttpData extends HttpObject {
     /**
      * Converts the specified {@code text} into an {@link HttpData}.
      *
-     * @param charset the {@link Charset} of the encoded {@code text}
+     * @param charset the {@link Charset} to use for encoding {@code text}
      * @param text the {@link String} to convert
      *
      * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
@@ -112,7 +112,7 @@ public interface HttpData extends HttpObject {
      * Converts the specified formatted string into an {@link HttpData}. The string is formatted by
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      *
-     * @param charset the {@link Charset} of the encoded string
+     * @param charset the {@link Charset} to use for encoding string
      * @param format {@linkplain Formatter the format string} of the response content
      * @param args the arguments referenced by the format specifiers in the format string
      *
@@ -203,7 +203,7 @@ public interface HttpData extends HttpObject {
     /**
      * Decodes this data into a {@link String}.
      *
-     * @param charset the {@link Charset} of this data
+     * @param charset the {@link Charset} to use for decoding this data
      *
      * @return the decoded {@link String}
      */

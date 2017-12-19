@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
+import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -27,14 +28,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLException;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -42,8 +42,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.RequestConverterFunction;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 
@@ -102,9 +106,13 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
     private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
+    private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
+    private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
+    private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+    private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -239,6 +247,33 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the maximum length of an HTTP/1 response initial line.
+     */
+    public ServerBuilder maxHttp1InitialLineLength(int maxHttp1InitialLineLength) {
+        this.maxHttp1InitialLineLength = validateNonNegative(
+                maxHttp1InitialLineLength, "maxHttp1InitialLineLength");
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of all headers in an HTTP/1 response.
+     */
+    public ServerBuilder maxHttp1HeaderSize(int maxHttp1HeaderSize) {
+        this.maxHttp1HeaderSize = validateNonNegative(maxHttp1HeaderSize, "maxHttp1HeaderSize");
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceed it.
+     */
+    public ServerBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
+        this.maxHttp1ChunkSize = validateNonNegative(maxHttp1ChunkSize, "maxHttp1ChunkSize");
+        return this;
+    }
+
+    /**
      * Sets the amount of time to wait after calling {@link Server#stop()} for
      * requests to go away before actually shutting down.
      *
@@ -270,8 +305,8 @@ public final class ServerBuilder {
     public ServerBuilder gracefulShutdownTimeout(Duration quietPeriod, Duration timeout) {
         requireNonNull(quietPeriod, "quietPeriod");
         requireNonNull(timeout, "timeout");
-        gracefulShutdownQuietPeriod = ServerConfig.validateNonNegative(quietPeriod, "quietPeriod");
-        gracefulShutdownTimeout = ServerConfig.validateNonNegative(timeout, "timeout");
+        gracefulShutdownQuietPeriod = validateNonNegative(quietPeriod, "quietPeriod");
+        gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
         ServerConfig.validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
                                                 gracefulShutdownQuietPeriod, "timeout");
         return this;
@@ -283,6 +318,14 @@ public final class ServerBuilder {
      */
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return this;
+    }
+
+    /**
+     * Sets the {@link MeterRegistry} that collects various stats.
+     */
+    public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         return this;
     }
 
@@ -339,6 +382,8 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified {@link Service} at the specified path pattern of the default {@link VirtualHost}.
+     *
      * @deprecated Use {@link #service(String, Service)} instead.
      */
     @Deprecated
@@ -395,6 +440,9 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
+     * {@link VirtualHost}.
+     *
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
      *             {@code armeria-logback}.
      */
@@ -407,74 +455,118 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * of the default {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>>
+    ServerBuilder service(T serviceWithPathMappings) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(serviceWithPathMappings);
+        return this;
+    }
+
+    /**
+     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * of the default {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
+            R extends Service<HttpRequest, HttpResponse>>
+    ServerBuilder service(T serviceWithPathMappings, Function<T, R> decorator) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(serviceWithPathMappings, decorator);
+        return this;
+    }
+
+    /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
     public ServerBuilder annotatedService(Object service) {
-        return annotatedService("/", service);
-    }
-
-    /**
-     * Binds the specified annotated service object.
-     */
-    public ServerBuilder annotatedService(
-            Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        return annotatedService("/", service, decorator);
+        return annotatedService("/", service, Function.identity(), ImmutableList.of());
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
+     *
+     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
-    public ServerBuilder annotatedService(Object service, Map<Class<?>, ResponseConverter> converters) {
-        return annotatedService("/", service, converters);
+    public ServerBuilder annotatedService(Object service,
+                                          Object... exceptionHandlersAndConverters) {
+        return annotatedService("/", service, Function.identity(), exceptionHandlersAndConverters);
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
+     *
+     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
-    public ServerBuilder annotatedService(
-            Object service, Map<Class<?>, ResponseConverter> converters,
-            Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        return annotatedService("/", service, converters, decorator);
+    public ServerBuilder annotatedService(Object service,
+                                          Function<Service<HttpRequest, HttpResponse>,
+                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          Object... exceptionHandlersAndConverters) {
+        return annotatedService("/", service, decorator, exceptionHandlersAndConverters);
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service) {
-        return annotatedService(pathPrefix, service, ImmutableMap.of(), Function.identity());
+        return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
-     */
-    public ServerBuilder annotatedService(
-            String pathPrefix, Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        return annotatedService(pathPrefix, service, ImmutableMap.of(), decorator);
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Map<Class<?>, ResponseConverter> converters) {
-        return annotatedService(pathPrefix, service, converters, Function.identity());
+                                          Object... exceptionHandlersAndConverters) {
+        return annotatedService(pathPrefix, service, Function.identity(),
+                                exceptionHandlersAndConverters);
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
-    public ServerBuilder annotatedService(
-            String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
-            Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Function<Service<HttpRequest, HttpResponse>,
+                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          Object... exceptionHandlersAndConverters) {
+
+        return annotatedService(pathPrefix, service, decorator,
+                                ImmutableList.copyOf(exceptionHandlersAndConverters));
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlersAndConverters an iterable object of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
+     */
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Function<Service<HttpRequest, HttpResponse>,
+                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          Iterable<?> exceptionHandlersAndConverters) {
 
         defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.annotatedService(pathPrefix, service, converters, decorator);
+        defaultVirtualHostBuilder.annotatedService(pathPrefix, service, decorator,
+                                                   exceptionHandlersAndConverters);
         return this;
     }
 
@@ -612,8 +704,9 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
-                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix));
+                maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
+                gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
+                meterRegistry, serviceLoggerPrefix));
         serverListeners.forEach(server::addListener);
         return server;
     }
@@ -623,7 +716,8 @@ public final class ServerBuilder {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix);
+                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix);
     }
 }

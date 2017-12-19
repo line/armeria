@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.pool;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,6 +56,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     private final boolean healthCheckOnRelease;
 
     private final Map<K, Deque<Channel>> pool;
+    private final Map<K, Future<Channel>> pendingConnections;
 
     /**
      * Creates a new instance.
@@ -71,6 +73,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         this.healthCheckOnRelease = healthCheckOnRelease;
 
         pool = new ConcurrentHashMap<>();
+        pendingConnections = new HashMap<>();
     }
 
     @Override
@@ -97,11 +100,18 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
         final Channel ch = pollHealthy(key);
         if (ch == null) {
-            Future<Channel> f = channelFactory.apply(key);
-            if (f.isDone()) {
-                notifyConnect(key, f, promise);
+            final Future<Channel> pendingChannel = pendingConnections.get(key);
+            if (pendingChannel != null) {
+                // Try acquiring again after the pending connection is completed.
+                pendingChannel.addListener((unused) -> acquireHealthyFromPoolOrNew(key, promise));
             } else {
-                f.addListener((Future<Channel> future) -> notifyConnect(key, future, promise));
+                Future<Channel> f = channelFactory.apply(key);
+                pendingConnections.put(key, f);
+                if (f.isDone()) {
+                    notifyConnect(key, f, promise);
+                } else {
+                    f.addListener((Future<Channel> future) -> notifyConnect(key, future, promise));
+                }
             }
         } else {
             try {
@@ -155,6 +165,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     private void notifyConnect(K key, Future<Channel> future, Promise<Channel> promise) {
         assert future.isDone();
+        pendingConnections.remove(key);
 
         try {
             if (future.isSuccess()) {

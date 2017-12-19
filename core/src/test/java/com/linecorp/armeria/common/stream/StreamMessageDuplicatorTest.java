@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -48,6 +48,7 @@ import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 public class StreamMessageDuplicatorTest {
 
@@ -60,7 +61,7 @@ public class StreamMessageDuplicatorTest {
     public void subscribeTwice() {
         @SuppressWarnings("unchecked")
         final StreamMessage<String> publisher = mock(StreamMessage.class);
-        when(publisher.closeFuture()).thenReturn(new CompletableFuture<>());
+        when(publisher.completionFuture()).thenReturn(new CompletableFuture<>());
 
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
@@ -68,13 +69,13 @@ public class StreamMessageDuplicatorTest {
         final ArgumentCaptor<StreamMessageProcessor<String>> processorCaptor =
                 ArgumentCaptor.forClass(StreamMessageProcessor.class);
 
-        verify(publisher).subscribe(processorCaptor.capture(), eq(true));
+        verify(publisher).subscribe(processorCaptor.capture(), eq(ImmediateEventExecutor.INSTANCE), eq(true));
 
-        verify(publisher).subscribe(any(), eq(true));
+        verify(publisher).subscribe(any(), eq(ImmediateEventExecutor.INSTANCE), eq(true));
         final Subscriber<String> subscriber1 = subscribeWithMock(duplicator.duplicateStream());
         final Subscriber<String> subscriber2 = subscribeWithMock(duplicator.duplicateStream());
         // Publisher's subscribe() is not invoked when a new subscriber subscribes.
-        verify(publisher).subscribe(any(), eq(true));
+        verify(publisher).subscribe(any(), eq(ImmediateEventExecutor.INSTANCE), eq(true));
 
         final StreamMessageProcessor<String> processor = processorCaptor.getValue();
 
@@ -90,7 +91,7 @@ public class StreamMessageDuplicatorTest {
     private static Subscriber<String> subscribeWithMock(StreamMessage<String> streamMessage) {
         @SuppressWarnings("unchecked")
         final Subscriber<String> subscriber = mock(Subscriber.class);
-        streamMessage.subscribe(subscriber);
+        streamMessage.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         return subscriber;
     }
 
@@ -123,7 +124,7 @@ public class StreamMessageDuplicatorTest {
     private static CompletableFuture<String> subscribe(StreamMessage<String> streamMessage, long demand) {
         final CompletableFuture<String> future = new CompletableFuture<>();
         final StringSubscriber subscriber = new StringSubscriber(future, demand);
-        streamMessage.closeFuture().whenComplete(subscriber);
+        streamMessage.completionFuture().whenComplete(subscriber);
         streamMessage.subscribe(subscriber);
         return future;
     }
@@ -139,10 +140,8 @@ public class StreamMessageDuplicatorTest {
         writeData(publisher);
         publisher.close(clearTrace(new AnticipatedException()));
 
-        assertThat(future1).isCompletedExceptionally();
-        assertThat(future2).isCompletedExceptionally();
-        assertThatThrownBy(future1::get).hasCauseExactlyInstanceOf(AnticipatedException.class);
-        assertThatThrownBy(future2::get).hasCauseExactlyInstanceOf(AnticipatedException.class);
+        assertThatThrownBy(future1::join).hasCauseInstanceOf(AnticipatedException.class);
+        assertThatThrownBy(future2::join).hasCauseInstanceOf(AnticipatedException.class);
         duplicator.close();
     }
 
@@ -171,7 +170,7 @@ public class StreamMessageDuplicatorTest {
         final CompletableFuture<String> future1 = new CompletableFuture<>();
         final StringSubscriber subscriber = new StringSubscriber(future1, 2);
         final StreamMessage<String> sm = duplicator.duplicateStream();
-        sm.closeFuture().whenComplete(subscriber);
+        sm.completionFuture().whenComplete(subscriber);
         sm.subscribe(subscriber);
 
         final CompletableFuture<String> future2 = subscribe(duplicator.duplicateStream(), 3);
@@ -195,8 +194,7 @@ public class StreamMessageDuplicatorTest {
         final CompletableFuture<String> future = subscribe(duplicator.duplicateStream());
         publisher.abort();
 
-        assertThat(future).isCompletedExceptionally();
-        assertThatThrownBy(future::get).hasCauseExactlyInstanceOf(AbortedStreamException.class);
+        assertThatThrownBy(future::join).hasCauseInstanceOf(AbortedStreamException.class);
         duplicator.close();
     }
 
@@ -206,10 +204,9 @@ public class StreamMessageDuplicatorTest {
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
         publisher.abort();
 
-        // Completed exceptionally as soon as a subscriber subscribes.
+        // Completed exceptionally once a subscriber subscribes.
         final CompletableFuture<String> future = subscribe(duplicator.duplicateStream());
-        assertThat(future).isCompletedExceptionally();
-        assertThatThrownBy(future::get).hasCauseExactlyInstanceOf(AbortedStreamException.class);
+        assertThatThrownBy(future::join).hasCauseInstanceOf(AbortedStreamException.class);
         duplicator.close();
     }
 
@@ -225,14 +222,12 @@ public class StreamMessageDuplicatorTest {
         final CompletableFuture<String> future2 = subscribe(sm2);
 
         sm1.abort();
-        assertThat(future1).isCompletedExceptionally();
-        assertThatThrownBy(future1::get).hasCauseExactlyInstanceOf(AbortedStreamException.class);
+        assertThatThrownBy(future1::join).hasCauseInstanceOf(AbortedStreamException.class);
 
         // Aborting from another subscriber does not affect other subscribers.
         assertThat(sm2.isOpen()).isTrue();
         sm2.abort();
-        assertThat(future2).isCompletedExceptionally();
-        assertThatThrownBy(future2::get).hasCauseExactlyInstanceOf(AbortedStreamException.class);
+        assertThatThrownBy(future2::join).hasCauseInstanceOf(AbortedStreamException.class);
         duplicator.close();
     }
 
@@ -308,8 +303,8 @@ public class StreamMessageDuplicatorTest {
         final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
         final ByteBufDuplicator duplicator = new ByteBufDuplicator(publisher);
 
-        duplicator.duplicateStream().subscribe(new ByteBufSubscriber());
-        duplicator.duplicateStream(true).subscribe(new ByteBufSubscriber());
+        duplicator.duplicateStream().subscribe(new ByteBufSubscriber(), ImmediateEventExecutor.INSTANCE);
+        duplicator.duplicateStream(true).subscribe(new ByteBufSubscriber(), ImmediateEventExecutor.INSTANCE);
 
         // duplicateStream() is not allowed anymore.
         assertThatThrownBy(duplicator::duplicateStream).isInstanceOf(IllegalStateException.class);
@@ -327,6 +322,7 @@ public class StreamMessageDuplicatorTest {
         }
         for (int i = 25; i < 30; i++) {  // rest of them are still in the queue.
             assertThat(bufs[i].refCnt()).isOne();
+            bufs[i].release();
         }
     }
 
@@ -337,7 +333,7 @@ public class StreamMessageDuplicatorTest {
     private static class StreamMessageDuplicator
             extends AbstractStreamMessageDuplicator<String, StreamMessage<String>> {
         StreamMessageDuplicator(StreamMessage<String> publisher) {
-            super(publisher, String::length, 0);
+            super(publisher, String::length, ImmediateEventExecutor.INSTANCE, 0);
         }
 
         @Override
@@ -383,7 +379,7 @@ public class StreamMessageDuplicatorTest {
 
         @Override
         public void accept(Void aVoid, Throwable cause) {
-            logger.debug("{}: closeFuture({})", this, String.valueOf(cause), cause);
+            logger.debug("{}: completionFuture({})", this, String.valueOf(cause), cause);
             if (cause != null) {
                 future.completeExceptionally(cause);
             } else {
@@ -404,7 +400,7 @@ public class StreamMessageDuplicatorTest {
     private static class ByteBufDuplicator
             extends AbstractStreamMessageDuplicator<ByteBuf, StreamMessage<ByteBuf>> {
         ByteBufDuplicator(StreamMessage<ByteBuf> publisher) {
-            super(publisher, ByteBuf::capacity, 0);
+            super(publisher, ByteBuf::capacity, ImmediateEventExecutor.INSTANCE, 0);
         }
 
         @Override

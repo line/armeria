@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -38,6 +38,9 @@ import com.linecorp.armeria.common.RequestContext;
  * {@link ServiceRequestContext} instance.
  */
 public interface ServiceRequestContext extends RequestContext {
+
+    @Override
+    ServiceRequestContext newDerivedContext();
 
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.
@@ -102,6 +105,8 @@ public interface ServiceRequestContext extends RequestContext {
     MediaType negotiatedProduceType();
 
     /**
+     * Returns the {@link Logger} of the {@link Service}.
+     *
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
      *             {@code armeria-logback}.
      */
@@ -128,14 +133,15 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
-     * e.g., by calling {@link HttpResponseWriter#respond(int)}. If not set, the response will be closed with
+     * e.g., by calling {@link HttpResponseWriter#close()}. If not set, the response will be closed with
      * {@link HttpStatus#SERVICE_UNAVAILABLE}.
      *
      * <p>For example,
      * <pre>{@code
-     *   DefaultHttpResponse res = new DefaultHttpResponse();
+     *   HttpResponseWriter res = HttpResponse.streaming();
      *   ctx.setRequestTimeoutHandler(() -> {
-     *      res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Request timed out.");
+     *      res.write(HttpHeaders.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Request timed out."));
+     *      res.close();
      *   });
      *   ...
      * }</pre>
@@ -145,6 +151,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the maximum length of the current {@link Request}.
      * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     * If 0, there is no limit on the request size.
      *
      * @see ContentTooLargeException
      */
@@ -153,6 +160,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Sets the maximum length of the current {@link Request}.
      * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     * If 0, there is no limit on the request size.
      *
      * @see ContentTooLargeException
      */

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -50,14 +50,14 @@ public class HttpHeaderPathMappingTest {
                                             ImmutableList.of(),
                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8));
         assertThat(mapping.loggerName())
-                .isEqualTo("test.GET.consumes._.produces.text_plain.application_json");
+                .isEqualTo("test.GET.produces.text_plain.application_json");
 
         mapping = new HttpHeaderPathMapping(PathMapping.of(PATH),
                                             ImmutableSet.of(HttpMethod.GET, HttpMethod.POST),
                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8),
                                             ImmutableList.of());
         assertThat(mapping.loggerName())
-                .isEqualTo("test.GET_POST.consumes.text_plain.application_json.produces._");
+                .isEqualTo("test.GET_POST.consumes.text_plain.application_json");
     }
 
     @Test
@@ -66,21 +66,21 @@ public class HttpHeaderPathMappingTest {
         mapping = new HttpHeaderPathMapping(PathMapping.of(PATH), ImmutableSet.of(HttpMethod.GET),
                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
                                             ImmutableList.of(MediaType.JSON_UTF_8));
-        assertThat(mapping.metricName())
-                .isEqualTo("/test/GET/consumes/text_plain/produces/application_json");
+        assertThat(mapping.meterTag())
+                .isEqualTo("exact:/test,methods:GET,consumes:text/plain,produces:application/json");
 
         mapping = new HttpHeaderPathMapping(PathMapping.of(PATH), ImmutableSet.of(HttpMethod.GET),
                                             ImmutableList.of(),
                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8));
-        assertThat(mapping.metricName())
-                .isEqualTo("/test/GET/consumes/_/produces/text_plain/application_json");
+        assertThat(mapping.meterTag())
+                .isEqualTo("exact:/test,methods:GET,produces:text/plain,application/json");
 
         mapping = new HttpHeaderPathMapping(PathMapping.of(PATH),
                                             ImmutableSet.of(HttpMethod.GET, HttpMethod.POST),
                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8),
                                             ImmutableList.of());
-        assertThat(mapping.metricName())
-                .isEqualTo("/test/GET_POST/consumes/text_plain/application_json/produces/_");
+        assertThat(mapping.meterTag())
+                .isEqualTo("exact:/test,methods:GET,POST,consumes:text/plain,application/json");
     }
 
     @Test
@@ -141,13 +141,13 @@ public class HttpHeaderPathMappingTest {
     }
 
     private static PathMappingContext method(HttpMethod method) {
-        return DefaultPathMappingContext.of(virtualHost(),"example.com",
+        return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, HttpHeaders.of(method, PATH), null);
     }
 
     private static PathMappingContext consumeType(HttpMethod method, MediaType contentType) {
         HttpHeaders headers = HttpHeaders.of(method, PATH);
-        headers.add(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+        headers.contentType(contentType);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, headers, null);
     }

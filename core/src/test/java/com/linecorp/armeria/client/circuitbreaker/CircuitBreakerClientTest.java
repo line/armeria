@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -48,6 +48,7 @@ import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.Key
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
@@ -59,13 +60,13 @@ public class CircuitBreakerClientTest {
 
     // Remote invocation parameters
     private static final ClientRequestContext ctx = new DefaultClientRequestContext(
-            new DefaultEventLoop(), H2C,
+            new DefaultEventLoop(), NoopMeterRegistry.get(), H2C,
             Endpoint.of("dummyhost", 8080),
             HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT,
             RpcRequest.of(Object.class, "methodA", "a", "b"));
 
     private static final ClientRequestContext ctxB = new DefaultClientRequestContext(
-            new DefaultEventLoop(), H2C,
+            new DefaultEventLoop(), NoopMeterRegistry.get(), H2C,
             Endpoint.of("dummyhost", 8080),
             HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT,
             RpcRequest.of(Object.class, "methodB", "c", "d"));

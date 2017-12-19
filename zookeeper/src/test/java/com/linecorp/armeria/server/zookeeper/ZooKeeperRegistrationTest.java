@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,6 +26,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -33,7 +34,7 @@ import com.linecorp.armeria.client.zookeeper.TestBase;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -115,6 +116,8 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         }
     }
 
+    // FIXME(trustin): https://github.com/line/armeria/issues/882
+    @Ignore
     @Test(timeout = 10000)
     public void testConnectionRecovery() throws Exception {
         ZooKeeperRegistration zkConnector = zkConnectors.get(0);
@@ -176,16 +179,16 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
 
     private static class EchoService extends AbstractHttpService {
         @Override
-        protected final void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-            req.aggregate()
-               .thenAccept(aReq -> echo(aReq, res))
-               .exceptionally(CompletionActions::log);
+        protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.from(req.aggregate()
+               .thenApply(this::echo)
+               .exceptionally(CompletionActions::log));
         }
 
-        protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
-            res.write(HttpHeaders.of(HttpStatus.OK));
-            res.write(aReq.content());
-            res.close();
+        protected HttpResponse echo(AggregatedHttpMessage aReq) {
+            return HttpResponse.of(
+                    HttpHeaders.of(HttpStatus.OK),
+                    aReq.content());
         }
     }
 }
