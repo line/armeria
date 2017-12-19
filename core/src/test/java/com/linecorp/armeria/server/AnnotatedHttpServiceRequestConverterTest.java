@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -78,13 +79,11 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/convert3")
-        @RequestConverter(TestRequestConverter1.class)
-        @RequestConverter(TestRequestConverter2.class)
-        public String convert3(@RequestObject RequestObj1 obj1,
-                               @RequestObject RequestObj2 obj2) {
-            assertThat(obj1).isNotNull();
-            assertThat(obj2).isNotNull();
-            return obj2.strVal();
+        public String convert3(@RequestObject(TestRequestConverterOptional1.class) Optional<RequestObj1> obj1,
+                               @RequestObject(TestRequestConverterOptional2.class) Optional<RequestObj2> obj2) {
+            assertThat(obj1.isPresent()).isTrue();
+            assertThat(obj2.isPresent()).isTrue();
+            return obj2.get().strVal();
         }
     }
 
@@ -159,49 +158,59 @@ public class AnnotatedHttpServiceRequestConverterTest {
     }
 
     public static class TestRequestConverter1 implements RequestConverterFunction {
-
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
-            return expectedResultType.isAssignableFrom(RequestObj1.class);
-        }
-
-        @Override
-        public RequestObj1 convertRequest(AggregatedHttpMessage request,
+        public RequestObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                           Class<?> expectedResultType) throws Exception {
-            return mapper.readValue(request.content().toStringUtf8(), RequestObj1.class);
+            if (expectedResultType.isAssignableFrom(RequestObj1.class)) {
+                return mapper.readValue(request.content().toStringUtf8(), RequestObj1.class);
+            }
+            return RequestConverterFunction.fallthrough();
         }
     }
 
     public static class TestRequestConverter1A implements RequestConverterFunction {
-
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
-            return expectedResultType.isAssignableFrom(RequestObj1.class);
-        }
-
-        @Override
-        public RequestObj1 convertRequest(AggregatedHttpMessage request,
+        public RequestObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                           Class<?> expectedResultType) throws Exception {
-            final RequestObj1 obj1 = mapper.readValue(request.content().toStringUtf8(),
-                                                      RequestObj1.class);
-            return new RequestObj1(obj1.intVal() + 1, obj1.strVal() + 'a');
+            if (expectedResultType.isAssignableFrom(RequestObj1.class)) {
+                final RequestObj1 obj1 = mapper.readValue(request.content().toStringUtf8(),
+                                                          RequestObj1.class);
+                return new RequestObj1(obj1.intVal() + 1, obj1.strVal() + 'a');
+            }
+            return RequestConverterFunction.fallthrough();
         }
     }
 
     public static class TestRequestConverter2 implements RequestConverterFunction {
         @Override
-        public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
-            return expectedResultType.isAssignableFrom(RequestObj2.class);
+        public RequestObj2 convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+                                          Class<?> expectedResultType) throws Exception {
+            if (expectedResultType.isAssignableFrom(RequestObj2.class)) {
+                return new RequestObj2(request.headers().method().name());
+            }
+            return RequestConverterFunction.fallthrough();
         }
+    }
+
+    public static class TestRequestConverterOptional1 implements RequestConverterFunction {
+        private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public RequestObj2 convertRequest(AggregatedHttpMessage request,
-                                          Class<?> expectedResultType) throws Exception {
-            return new RequestObj2(request.headers().method().name());
+        public Optional<RequestObj1> convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+                                                    Class<?> expectedResultType) throws Exception {
+            return Optional.of(mapper.readValue(request.content().toStringUtf8(), RequestObj1.class));
+        }
+    }
+
+    public static class TestRequestConverterOptional2 implements RequestConverterFunction {
+        @Override
+        public Optional<RequestObj2> convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+                                                    Class<?> expectedResultType) throws Exception {
+            return Optional.of(new RequestObj2(request.headers().method().name()));
         }
     }
 

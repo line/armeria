@@ -162,15 +162,10 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         static final AtomicInteger counter = new AtomicInteger();
 
         @Override
-        public boolean canHandleException(Throwable cause) {
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             // Not accept any exception. But should be called this method.
             counter.incrementAndGet();
-            return false;
-        }
-
-        @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
-            return null;
+            return ExceptionHandlerFunction.fallthrough();
         }
     }
 

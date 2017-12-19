@@ -390,7 +390,7 @@ final class AnnotatedHttpServices {
      * Returns a cached instance of the specified {@link Class}.
      */
     @SuppressWarnings("unchecked")
-    private static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
+    static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
         try {
             final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
             return expectedType.cast(instanceCache.computeIfAbsent(clazz, type -> {

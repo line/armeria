@@ -18,20 +18,16 @@ package com.linecorp.armeria.server.annotation;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A default implementation of a {@link RequestConverterFunction} which converts a JSON body of
@@ -39,9 +35,7 @@ import com.linecorp.armeria.common.MediaType;
  */
 public class JacksonRequestConverterFunction implements RequestConverterFunction {
 
-    private static final Logger logger = LoggerFactory.getLogger(JacksonRequestConverterFunction.class);
-
-    private static final ObjectMapper DEFAULT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
 
     private final ObjectMapper mapper;
     private final ConcurrentMap<Class<?>, ObjectReader> readers = new ConcurrentHashMap<>();
@@ -50,7 +44,7 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
      * Creates an instance with the default {@link ObjectMapper}.
      */
     public JacksonRequestConverterFunction() {
-        this(DEFAULT_MAPPER);
+        this(defaultObjectMapper);
     }
 
     /**
@@ -61,36 +55,21 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
     }
 
     /**
-     * Returns whether the specified {@link AggregatedHttpMessage} is able to be consumed.
-     */
-    @Override
-    public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
-        final MediaType contentType = request.headers().contentType();
-        if (contentType != null && (contentType.is(MediaType.JSON) ||
-                                    contentType.subtype().endsWith("+json"))) {
-            try {
-                return readers.computeIfAbsent(expectedResultType, mapper::readerFor) != null;
-            } catch (Throwable cause) {
-                logger.warn(JacksonRequestConverterFunction.class.getName() +
-                            " cannot read a JSON of '" + request.content().toStringUtf8() +
-                            "' as a type '" + expectedResultType.getName() + '\'', cause);
-            }
-        }
-        return false;
-    }
-
-    /**
      * Converts the specified {@link AggregatedHttpMessage} to an object of {@code expectedResultType}.
      */
     @Override
-    public Object convertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception {
-        final ObjectReader reader = readers.get(expectedResultType);
-        assert reader != null;
-        final String contentType = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        assert contentType != null;
+    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+                                 Class<?> expectedResultType) throws Exception {
 
-        final Charset charset = MediaType.parse(contentType).charset()
-                                         .orElse(StandardCharsets.UTF_8);
-        return reader.readValue(request.content().toString(charset));
+        final MediaType contentType = request.headers().contentType();
+        if (contentType != null && (contentType.is(MediaType.JSON) ||
+                                    contentType.subtype().endsWith("+json"))) {
+            final ObjectReader reader = readers.computeIfAbsent(expectedResultType, mapper::readerFor);
+            if (reader != null) {
+                return reader.readValue(request.content().toString(
+                        contentType.charset().orElse(StandardCharsets.UTF_8)));
+            }
+        }
+        return RequestConverterFunction.fallthrough();
     }
 }
