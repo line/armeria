@@ -9,6 +9,8 @@ build:
 build_script:
   - gradlew.bat --no-daemon --stacktrace checkstyle test build
 
+test: off
+
 cache:
   - "%USERPROFILE%\\.gradle\\wrapper\\dists"
   - "%USERPROFILE%\\.gradle\\caches\\jars-3"
