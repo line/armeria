@@ -173,7 +173,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
 }
 
-/* Use justify-align with hypenation */
+/* Use justify-align with hyphenation */
 p, .rst-content li {
   text-align: justify;
   word-wrap: break-word;
@@ -198,8 +198,25 @@ p, .rst-content li {
 }
 
 /* Adjust table padding */
-.rst-content table.docutils th, .rst-content table.docutils td {
+.rst-content table.docutils thead th, .rst-content table.docutils td,
+.rst-content table.field-list thead th, .rst-content table.field-list td {
   padding: 6px 10px;
+}
+
+/* Adjust table header borders */
+.wy-table thead th, .rst-content table.docutils thead th, .rst-content table.field-list thead th {
+  border-left: solid 1px #e1e4e5;
+  border-right: solid 1px #e1e4e5;
+  border-bottom-width: 1px;
+}
+
+/* Allow wrapping table content */
+.wy-table-responsive table td {
+  white-space: inherit;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  text-align: justify;
 }
 
 /* Do not add left-margin for line-blocks */
@@ -210,4 +227,9 @@ p, .rst-content li {
 /* Adjust the height of the top navbar */
 .wy-nav-top {
   line-height: 43px;
+}
+
+/* Center the PlantUML diagrams */
+.plantuml {
+  text-align: center;
 }
