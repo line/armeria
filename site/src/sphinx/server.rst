@@ -14,3 +14,4 @@ Writing a server
     server-rest
     server-http-file
     server-servlet
+    server-access-log

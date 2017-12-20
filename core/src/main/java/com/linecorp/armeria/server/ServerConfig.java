@@ -26,9 +26,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -72,6 +74,8 @@ public final class ServerConfig {
 
     private final String serviceLoggerPrefix;
 
+    private final Consumer<RequestLog> accessLogWriter;
+
     private String strVal;
 
     ServerConfig(
@@ -82,7 +86,8 @@ public final class ServerConfig {
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
+            Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
+            Consumer<RequestLog> accessLogWriter) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -117,6 +122,7 @@ public final class ServerConfig {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
+        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
 
         // Set localAddresses.
         final List<ServerPort> portsCopy = new ArrayList<>();
@@ -431,6 +437,13 @@ public final class ServerConfig {
         return serviceLoggerPrefix;
     }
 
+    /**
+     * Returns an access log writer.
+     */
+    public Consumer<RequestLog> accessLogWriter() {
+        return accessLogWriter;
+    }
+
     @Override
     public String toString() {
         String strVal = this.strVal;
@@ -442,7 +455,7 @@ public final class ServerConfig {
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
                     defaultMaxHttp1InitialLineLength(), defaultMaxHttp1HeaderSize(), defaultMaxHttp1ChunkSize(),
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix());
+                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(), accessLogWriter());
         }
 
         return strVal;
@@ -456,7 +469,8 @@ public final class ServerConfig {
             long defaultMaxRequestLength, long defaultMaxHttp1InitialLineLength,
             long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
+            Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
+            Consumer<RequestLog> accessLogWriter) {
 
         StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -530,6 +544,8 @@ public final class ServerConfig {
         }
         buf.append(", serviceLoggerPrefix: ");
         buf.append(serviceLoggerPrefix);
+        buf.append(", accessLogWriter: ");
+        buf.append(accessLogWriter);
         buf.append(')');
 
         return buf.toString();
