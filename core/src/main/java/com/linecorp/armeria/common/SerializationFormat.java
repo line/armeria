@@ -188,7 +188,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     }
 
     /**
-     * Returns all available {@link SessionProtocol}s.
+     * Returns all available {@link SerializationFormat}s.
      */
     public static Set<SerializationFormat> values() {
         return values;
