@@ -35,6 +35,7 @@ import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
@@ -43,7 +44,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -480,10 +482,6 @@ public final class MediaType {
     public static final MediaType XRD_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "xrd+xml");
     public static final MediaType ZIP = createConstant(APPLICATION_TYPE, "zip");
 
-    public static Set<MediaType> knownTypes() {
-        return KNOWN_TYPES.keySet();
-    }
-
     private final String type;
     private final String subtype;
     private final ImmutableListMultimap<String, String> parameters;
@@ -797,6 +795,10 @@ public final class MediaType {
      */
     public static MediaType parse(String input) {
         checkNotNull(input);
+        final MediaType wellKnown = KNOWN_TYPES_BY_STRING.get(input);
+        if (wellKnown != null) {
+            return wellKnown;
+        }
         Tokenizer tokenizer = new Tokenizer(input);
         try {
             String type = tokenizer.consumeToken(TOKEN_MATCHER);
@@ -1002,4 +1004,15 @@ public final class MediaType {
         }
         return false;
     }
+
+    // Contains the well known media types as well as those registered in the server by SerializationFormats
+    // to optimize parsing of these standard types.
+    private static final Map<String, MediaType> KNOWN_TYPES_BY_STRING =
+            Stream.concat(
+                    SerializationFormat.values()
+                                       .stream()
+                                       .flatMap(f -> f.mediaTypes().stream()),
+                    KNOWN_TYPES.keySet().stream())
+                  .distinct()
+                  .collect(toImmutableMap(MediaType::toString, Function.identity(), (a, b) -> a));
 }
