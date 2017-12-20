@@ -37,9 +37,6 @@ What properties can be retrieved?
 +-----------------------------+----------------------------------------------------------------------+
 | ``query``                   | the query of the request (e.g. ``foo=bar&bar=baz``)                  |
 +-----------------------------+----------------------------------------------------------------------+
-| ``requestEnvelope``         | the protocol-dependent envelope object of the request.               |
-|                             | ``HttpHeaders`` for HTTP.                                            |
-+-----------------------------+----------------------------------------------------------------------+
 | ``requestContent``          | the serialization-dependent content object of the request.           |
 |                             | ``ThriftCall`` for Thrift. ``null`` otherwise.                       |
 +-----------------------------+----------------------------------------------------------------------+
@@ -59,9 +56,6 @@ What properties can be retrieved?
 |                             | (i.e. response time)                                                 |
 +-----------------------------+----------------------------------------------------------------------+
 | ``statusCode``              | the integer status code (e.g. 404)                                   |
-+-----------------------------+----------------------------------------------------------------------+
-| ``responseEnvelope``        | the protocol-dependent envelope object of the response.              |
-|                             | ``HttpHeaders`` for HTTP.                                            |
 +-----------------------------+----------------------------------------------------------------------+
 | ``responseContent``         | the serialization-dependent content object of the response.          |
 |                             | ``ThriftReply`` for Thrift. ``null`` otherwise.                      |
