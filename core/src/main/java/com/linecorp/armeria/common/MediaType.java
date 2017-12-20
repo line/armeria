@@ -795,7 +795,7 @@ public final class MediaType {
      */
     public static MediaType parse(String input) {
         checkNotNull(input);
-        final MediaType wellKnown = KNOWN_TYPES_BY_STRING.get(input);
+        final MediaType wellKnown = KnownTypesByString.get(input);
         if (wellKnown != null) {
             return wellKnown;
         }
@@ -1005,14 +1005,22 @@ public final class MediaType {
         return false;
     }
 
-    // Contains the well known media types as well as those registered in the server by SerializationFormats
-    // to optimize parsing of these standard types.
-    private static final Map<String, MediaType> KNOWN_TYPES_BY_STRING =
-            Stream.concat(
-                    SerializationFormat.values()
-                                       .stream()
-                                       .flatMap(f -> f.mediaTypes().stream()),
-                    KNOWN_TYPES.keySet().stream())
-                  .distinct()
-                  .collect(toImmutableMap(MediaType::toString, Function.identity(), (a, b) -> a));
+    private static final class KnownTypesByString {
+        // Contains the well known media types as well as those registered in the server by SerializationFormats
+        // to optimize parsing of these standard types.
+        private static final Map<String, MediaType> KNOWN_TYPES_BY_STRING =
+                Stream.concat(
+                        SerializationFormat.values()
+                                           .stream()
+                                           .flatMap(f -> f.mediaTypes().stream()),
+                        KNOWN_TYPES.keySet().stream())
+                      .distinct()
+                      .collect(toImmutableMap(MediaType::toString, Function.identity(), (a, b) -> a));
+
+        static MediaType get(String input) {
+            return KNOWN_TYPES_BY_STRING.get(input);
+        }
+
+        private KnownTypesByString() {}
+    }
 }
