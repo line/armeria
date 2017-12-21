@@ -30,6 +30,7 @@ import static com.linecorp.armeria.common.logging.RequestLogAvailability.SCHEME;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -37,6 +38,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
@@ -184,6 +187,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             endResponse0(log.responseEndTimeNanos(), null);
         }
+    }
+
+    @Override
+    public List<RequestLog> getChildren() {
+        return children != null ? ImmutableList.copyOf(children) : Collections.emptyList();
     }
 
     @Override

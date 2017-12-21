@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.logging;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -51,6 +52,11 @@ import io.netty.channel.Channel;
  * @see RequestLogListener
  */
 public interface RequestLog {
+
+    /**
+     * Returns the list of children {@link RequestLog}s. The lower the index is, the earlier it is added.
+     */
+    List<RequestLog> getChildren();
 
     /**
      * Returns the set of satisfied {@link RequestLogAvailability}s.
