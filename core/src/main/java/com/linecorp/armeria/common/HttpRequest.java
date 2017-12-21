@@ -48,54 +48,22 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     //       AggregatedHttpMessage for consistency.
 
     /**
-     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
-     * server with empty headers and keep-alive enabled.
-     */
-    static HttpRequestWriter streaming() {
-        return streaming(true);
-    }
-
-    /**
-     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
-     * server with empty headers and specified {@code keepAlive}.
-     */
-    static HttpRequestWriter streaming(boolean keepAlive) {
-        return streaming(HttpHeaders.EMPTY_HEADERS, keepAlive);
-    }
-
-    /**
-     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
-     * server with the specified {@link HttpMethod} and {@code path} with keep-alive enabled.
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject}
+     * with the initial {@link HttpHeaders} of the specified {@link HttpMethod} and {@code path}.
      */
     static HttpRequestWriter streaming(HttpMethod method, String path) {
-        return streaming(method, path, true);
-    }
-
-    /**
-     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
-     * server with the specified {@link HttpMethod}, {@code path}, and {@code keepAlive}.
-     */
-    static HttpRequestWriter streaming(HttpMethod method, String path, boolean keepAlive) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        return streaming(HttpHeaders.of(method, path), keepAlive);
+        return streaming(HttpHeaders.of(method, path));
     }
 
     /**
-     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
-     * server with the specified headers and keep-alive enabled.
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject}
+     * with the specified initial {@link HttpHeaders}.
      */
     static HttpRequestWriter streaming(HttpHeaders headers) {
-        return streaming(headers, true);
-    }
-
-    /**
-     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
-     * server with the specified headers and {@code keepAlive}.
-     */
-    static HttpRequestWriter streaming(HttpHeaders headers, boolean keepAlive) {
         requireNonNull(headers, "headers");
-        return new DefaultHttpRequest(headers, keepAlive);
+        return new DefaultHttpRequest(headers);
     }
 
     /**
@@ -219,18 +187,10 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Creates a new {@link HttpRequest} and closes the stream.
-     */
-    static HttpRequest of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
-        return of(headers, content, trailingHeaders, true);
-    }
-
-    /**
-     * Creates a new {@link HttpRequest} with the provided {@code keepAlive} and closes the stream.
      *
      * @throws IllegalStateException if the headers are malformed.
      */
-    static HttpRequest of(
-            HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders, boolean keepAlive) {
+    static HttpRequest of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
@@ -254,14 +214,14 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
         if (!content.isEmpty()) {
             if (trailingHeaders.isEmpty()) {
-                return new OneElementFixedHttpRequest(headers, keepAlive, content);
+                return new OneElementFixedHttpRequest(headers, content);
             } else {
-                return new TwoElementFixedHttpRequest(headers, keepAlive, content, trailingHeaders);
+                return new TwoElementFixedHttpRequest(headers, content, trailingHeaders);
             }
         } else if (!trailingHeaders.isEmpty()) {
-            return new OneElementFixedHttpRequest(headers, keepAlive, trailingHeaders);
+            return new OneElementFixedHttpRequest(headers, trailingHeaders);
         } else {
-            return new EmptyFixedHttpRequest(headers, keepAlive);
+            return new EmptyFixedHttpRequest(headers);
         }
     }
 
@@ -270,31 +230,23 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * {@code objs} must not contain {@link HttpHeaders}.
      */
     static HttpRequest of(HttpHeaders headers, HttpObject... objs) {
-        return of(headers, true, objs);
-    }
-
-    /**
-     * Creates a new {@link HttpRequest} with the provided {@code keepAlive} that publishes the given
-     * {@link HttpObject}s and closes the stream. {@code objs} must not contain {@link HttpHeaders}.
-     */
-    static HttpRequest of(HttpHeaders headers, boolean keepAlive, HttpObject... objs) {
         if (Arrays.stream(objs).anyMatch(obj -> obj instanceof HttpHeaders)) {
             throw new IllegalArgumentException("objs contains HttpHeaders, which is not allowed.");
         }
         switch (objs.length) {
             case 0:
-                return new EmptyFixedHttpRequest(headers, keepAlive);
+                return new EmptyFixedHttpRequest(headers);
             case 1:
-                return new OneElementFixedHttpRequest(headers, keepAlive, objs[0]);
+                return new OneElementFixedHttpRequest(headers, objs[0]);
             case 2:
-                return new TwoElementFixedHttpRequest(headers, keepAlive, objs[0], objs[1]);
+                return new TwoElementFixedHttpRequest(headers, objs[0], objs[1]);
             default:
                 for (int i = 0; i < objs.length; i++) {
                     if (objs[i] == null) {
                         throw new NullPointerException("objs[" + i + "] is null");
                     }
                 }
-                return new RegularFixedHttpRequest(headers, keepAlive, objs);
+                return new RegularFixedHttpRequest(headers, objs);
         }
     }
 
@@ -310,18 +262,13 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     static HttpRequest of(HttpHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(publisher, "publisher");
-        return new PublisherBasedHttpRequest(headers, true, publisher);
+        return new PublisherBasedHttpRequest(headers, publisher);
     }
 
     /**
      * Returns the initial HTTP/2 headers of this request.
      */
     HttpHeaders headers();
-
-    /**
-     * Returns whether to keep the connection alive after this request is handled.
-     */
-    boolean isKeepAlive();
 
     /**
      * Returns the scheme of this request. This method is a shortcut of {@code headers().scheme()}.

@@ -53,8 +53,6 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
 
     private final HttpHeaders headers;
 
-    private final boolean keepAlive;
-
     /**
      * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
      * The length of request is limited by default with the server-side parameter which is
@@ -90,7 +88,6 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
             return 0;
         }, executor, maxSignalLength);
         headers = req.headers();
-        keepAlive = req.isKeepAlive();
     }
 
     @Override
@@ -111,15 +108,9 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
         }
 
         @Override
-        public boolean isKeepAlive() {
-            return keepAlive;
-        }
-
-        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                              .add("keepAlive", isKeepAlive())
-                              .add("headers", headers()).toString();
+                              .addValue(headers()).toString();
         }
     }
 }

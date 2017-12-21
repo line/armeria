@@ -19,8 +19,8 @@ package com.linecorp.armeria.common;
 import com.linecorp.armeria.common.stream.StreamWriter;
 
 /**
- * An {@link HttpRequest} that can have {@link HttpObject}s written to it. Use {@link HttpRequest#streaming()}
- * to construct.
+ * An {@link HttpRequest} that can have {@link HttpObject}s written to it.
+ * Use {@link HttpRequest#streaming(HttpHeaders)} to construct.
  */
 public interface HttpRequestWriter extends HttpRequest, StreamWriter<HttpObject> {
 }

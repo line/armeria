@@ -31,21 +31,14 @@ final class FixedHttpRequest {
             extends EmptyFixedStreamMessage<HttpObject> implements HttpRequest {
 
         private final HttpHeaders headers;
-        private final boolean keepAlive;
 
-        EmptyFixedHttpRequest(HttpHeaders headers, boolean keepAlive) {
+        EmptyFixedHttpRequest(HttpHeaders headers) {
             this.headers = headers;
-            this.keepAlive = keepAlive;
         }
 
         @Override
         public HttpHeaders headers() {
             return headers;
-        }
-
-        @Override
-        public boolean isKeepAlive() {
-            return keepAlive;
         }
     }
 
@@ -53,22 +46,15 @@ final class FixedHttpRequest {
             extends OneElementFixedStreamMessage<HttpObject> implements HttpRequest {
 
         private final HttpHeaders headers;
-        private final boolean keepAlive;
 
-        OneElementFixedHttpRequest(HttpHeaders headers, boolean keepAlive, HttpObject obj) {
+        OneElementFixedHttpRequest(HttpHeaders headers, HttpObject obj) {
             super(obj);
             this.headers = headers;
-            this.keepAlive = keepAlive;
         }
 
         @Override
         public HttpHeaders headers() {
             return headers;
-        }
-
-        @Override
-        public boolean isKeepAlive() {
-            return keepAlive;
         }
     }
 
@@ -76,23 +62,16 @@ final class FixedHttpRequest {
             extends TwoElementFixedStreamMessage<HttpObject> implements HttpRequest {
 
         private final HttpHeaders headers;
-        private final boolean keepAlive;
 
         TwoElementFixedHttpRequest(
-                HttpHeaders headers, boolean keepAlive, HttpObject obj1, HttpObject obj2) {
+                HttpHeaders headers, HttpObject obj1, HttpObject obj2) {
             super(obj1, obj2);
             this.headers = headers;
-            this.keepAlive = keepAlive;
         }
 
         @Override
         public HttpHeaders headers() {
             return headers;
-        }
-
-        @Override
-        public boolean isKeepAlive() {
-            return keepAlive;
         }
     }
 
@@ -100,22 +79,15 @@ final class FixedHttpRequest {
             extends RegularFixedStreamMessage<HttpObject> implements HttpRequest {
 
         private final HttpHeaders headers;
-        private final boolean keepAlive;
 
-        RegularFixedHttpRequest(HttpHeaders headers, boolean keepAlive, HttpObject... objs) {
+        RegularFixedHttpRequest(HttpHeaders headers, HttpObject... objs) {
             super(objs);
             this.headers = headers;
-            this.keepAlive = keepAlive;
         }
 
         @Override
         public HttpHeaders headers() {
             return headers;
-        }
-
-        @Override
-        public boolean isKeepAlive() {
-            return keepAlive;
         }
     }
 
