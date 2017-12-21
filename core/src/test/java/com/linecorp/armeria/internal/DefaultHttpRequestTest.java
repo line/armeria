@@ -65,7 +65,7 @@ public class DefaultHttpRequestTest {
     @Test
     public void abortedAggregation() {
         final Thread mainThread = Thread.currentThread();
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/foo"), true);
+        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/foo"));
         final CompletableFuture<AggregatedHttpMessage> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.

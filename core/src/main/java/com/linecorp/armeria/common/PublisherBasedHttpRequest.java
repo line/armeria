@@ -23,22 +23,14 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 final class PublisherBasedHttpRequest extends PublisherBasedStreamMessage<HttpObject> implements HttpRequest {
 
     private final HttpHeaders headers;
-    private final boolean keepAlive;
 
-    PublisherBasedHttpRequest(HttpHeaders headers, boolean keepAlive,
-                              Publisher<? extends HttpObject> publisher) {
+    PublisherBasedHttpRequest(HttpHeaders headers, Publisher<? extends HttpObject> publisher) {
         super(publisher);
         this.headers = headers;
-        this.keepAlive = keepAlive;
     }
 
     @Override
     public HttpHeaders headers() {
         return headers;
-    }
-
-    @Override
-    public boolean isKeepAlive() {
-        return keepAlive;
     }
 }

@@ -29,6 +29,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     private final EventLoop eventLoop;
     private final int id;
     private final int streamId;
+    private final boolean keepAlive;
     private final InboundTrafficController inboundTrafficController;
     private final long defaultMaxRequestLength;
     private ServiceRequestContext ctx;
@@ -37,11 +38,12 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, HttpHeaders headers, boolean keepAlive,
                        InboundTrafficController inboundTrafficController, long defaultMaxRequestLength) {
 
-        super(headers, keepAlive);
+        super(headers);
 
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
+        this.keepAlive = keepAlive;
         this.inboundTrafficController = inboundTrafficController;
         this.defaultMaxRequestLength = defaultMaxRequestLength;
     }
@@ -57,6 +59,13 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     int streamId() {
         return streamId;
+    }
+
+    /**
+     * Returns whether to keep the connection alive after this request is handled.
+     */
+    boolean isKeepAlive() {
+        return keepAlive;
     }
 
     long maxRequestLength() {
