@@ -408,7 +408,7 @@ public class RequestContextTest {
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming());
+                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"));
         }
 
         @Override

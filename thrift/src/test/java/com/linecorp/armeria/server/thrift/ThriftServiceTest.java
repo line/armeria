@@ -639,7 +639,7 @@ public class ThriftServiceTest {
         doNothing().when(ctx).invokeOnEnterCallbacks();
         doNothing().when(ctx).invokeOnExitCallbacks();
 
-        final HttpRequestWriter req = HttpRequest.streaming(HttpHeaders.of(HttpMethod.POST, "/"), false);
+        final HttpRequestWriter req = HttpRequest.streaming(HttpHeaders.of(HttpMethod.POST, "/"));
 
         req.write(content);
         req.close();
