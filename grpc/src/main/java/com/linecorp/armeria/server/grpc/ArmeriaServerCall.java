@@ -280,21 +280,20 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         final I request;
 
-        boolean success = true;
+        boolean success = false;
         try {
             // Special case for unary calls.
             if (messageReceived && method.getType() == MethodType.UNARY) {
                 closeListener(Status.INTERNAL.withDescription(
                         "More than one request messages for unary call or server streaming call"));
-                success = false;
                 return;
             }
             messageReceived = true;
 
             if (isCancelled()) {
-                success = false;
                 return;
             }
+            success = true;
         } finally {
             if (message.buf() != null && !success) {
                 message.buf().release();
