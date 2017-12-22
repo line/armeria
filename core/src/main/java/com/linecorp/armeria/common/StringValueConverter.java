@@ -30,12 +30,20 @@
  */
 package com.linecorp.armeria.common;
 
+import java.time.Instant;
+import java.util.Calendar;
+import java.util.Date;
+
+import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.ValueConverter;
 
 /**
  * Converts to/from native types, general {@link Object}, and {@link CharSequence}s.
  */
 final class StringValueConverter implements ValueConverter<String> {
+
+    // Forked from Netty at f755e584638e20a4ae62466dd4b7a14954650348 (CharSequenceConverter) and
+    // 942b993f2b9781ff2126ff92a6be5b975dfc72ed (DefaultHttpHeaders.HeaderValueConverter)
 
     static final StringValueConverter INSTANCE = new StringValueConverter();
 
@@ -45,6 +53,18 @@ final class StringValueConverter implements ValueConverter<String> {
     public String convertObject(Object value) {
         if (value == null) {
             return null;
+        }
+
+        if (value instanceof Date) {
+            return DateFormatter.format((Date) value);
+        }
+
+        if (value instanceof Calendar) {
+            return DateFormatter.format(((Calendar) value).getTime());
+        }
+
+        if (value instanceof Instant) {
+            return DateFormatter.format(new Date(((Instant) value).toEpochMilli()));
         }
 
         return value.toString();
@@ -122,12 +142,16 @@ final class StringValueConverter implements ValueConverter<String> {
 
     @Override
     public String convertTimeMillis(long value) {
-        return HeaderDateTimeFormat.format(value);
+        return DateFormatter.format(new Date(value));
     }
 
     @Override
     public long convertToTimeMillis(String value) {
-        return HeaderDateTimeFormat.parse(value).toEpochMilli();
+        final Date date = DateFormatter.parseHttpDate(value);
+        if (date == null) {
+            throw new IllegalArgumentException("not a date: " + value);
+        }
+        return date.getTime();
     }
 
     @Override

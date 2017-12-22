@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.FlushConsolidationHandler;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
@@ -49,6 +48,7 @@ import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SniHandler;

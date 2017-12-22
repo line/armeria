@@ -529,7 +529,7 @@ public final class TomcatService implements HttpService {
                 return new AsciiString(chunk.getBuffer(), chunk.getOffset(), chunk.getLength());
             }
             case MessageBytes.T_STR: {
-                return new AsciiString(value.getString());
+                return HttpHeaderNames.of(value.getString());
             }
         }
         return null;
