@@ -277,9 +277,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void messageRead(ByteBufOrStream message) {
-        boolean success = false;
+
         final I request;
 
+        boolean success = false;
         try {
             // Special case for unary calls.
             if (messageReceived && method.getType() == MethodType.UNARY) {
@@ -292,19 +293,18 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             if (isCancelled()) {
                 return;
             }
-
-            try {
-                request = marshaller.deserializeRequest(message);
-                success = true;
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+            success = true;
         } finally {
             if (message.buf() != null && !success) {
                 message.buf().release();
             }
         }
 
+        try {
+            request = marshaller.deserializeRequest(message);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             listener.onMessage(request);
         } catch (Throwable t) {
