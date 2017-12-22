@@ -79,7 +79,7 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.17.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.19.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
@@ -106,7 +106,7 @@ junit:
   junit: { version: '4.12' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '1.25.1' }
+  json-unit: { version: &JSON_UNIT_VERSION '1.27.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 org.apache.hbase:
@@ -135,7 +135,7 @@ org.apache.thrift:
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.23' }
+  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.24' }
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
@@ -176,7 +176,7 @@ org.hamcrest:
   hamcrest-library: { version: '1.3' }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.5.Final' }
+  hibernate-validator: { version: '6.0.7.Final' }
 
 org.javassist:
   javassist: { version: '3.22.0-GA' }
@@ -185,7 +185,7 @@ org.jctools:
   jctools-core: { version: '2.1.1' }
 
 org.mockito:
-  mockito-core: { version: '2.12.0' }
+  mockito-core: { version: '2.13.0' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.6' }
@@ -195,7 +195,7 @@ org.openjdk.jmh:
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.reactivestreams:
-  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.1' }
+  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.2' }
   reactive-streams-tck: { version: *REACTIVE_STREAMS_VERSION }
 
 org.reflections:
@@ -209,5 +209,5 @@ org.slf4j:
   slf4j-api: { version: *SLF4J_VERSION }
 
 org.springframework.boot:
-  spring-boot-starter: { version: &SPRING_BOOT_VERSION '1.5.8.RELEASE' }
+  spring-boot-starter: { version: &SPRING_BOOT_VERSION '1.5.9.RELEASE' }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
