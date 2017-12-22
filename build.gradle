@@ -13,11 +13,11 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.2'
         classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
         classpath 'gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.3'
         classpath 'me.champeau.gradle:jmh-gradle-plugin:0.4.5'
-        classpath 'org.yaml:snakeyaml:1.18'
+        classpath 'org.yaml:snakeyaml:1.19'
     }
 }
 
@@ -456,7 +456,7 @@ configure(javaProjects) {
             protobuf {
                 generatedFilesBaseDir = generatedFilesDir
                 protoc {
-                    artifact = 'com.google.protobuf:protoc:3.4.0'
+                    artifact = 'com.google.protobuf:protoc:3.5.1'
                 }
                 plugins {
                     grpc {
