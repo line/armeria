@@ -172,7 +172,8 @@ public final class DefaultHttpHeaders
     @Override
     public HttpHeaders status(HttpStatus status) {
         requireNonNull(status, "status");
-        return status(status.code());
+        set(HttpHeaderNames.STATUS, status.codeAsText());
+        return this;
     }
 
     @Override

@@ -35,14 +35,17 @@ import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.AsciiString.EMPTY_STRING;
+import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.length;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
@@ -66,6 +69,7 @@ import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
 import io.netty.util.HashingStrategy;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Provides various utility functions for internal use related with HTTP.
@@ -74,16 +78,7 @@ import io.netty.util.HashingStrategy;
  */
 public final class ArmeriaHttpUtil {
 
-    /**
-     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
-     *
-     * <p>Should allow the asterisk character in the path, query, or fragment components of a URL(RFC2396).
-     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
-     */
-    private static final Pattern PROHIBITED_PATH_PATTERN =
-            Pattern.compile("^/[^/]*:[^/]*/|[|<>\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
-
-    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
+    // Forked from Netty at 7d213240ca768d6dd35ef2336b1fda757bd4df3c
 
     /**
      * The default case-insensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
@@ -139,14 +134,20 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
+     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a> states the path must not
+     * be empty, and instead should be {@code /}.
+     */
+    private static final String EMPTY_REQUEST_PATH = "/";
+
+    /**
      * Concatenates two path strings.
      */
     public static String concatPaths(String path1, String path2) {
         path2 = path2 == null ? "" : path2;
 
-        if (path1 == null || path1.isEmpty() || "/".equals(path1)) {
+        if (path1 == null || path1.isEmpty() || EMPTY_REQUEST_PATH.equals(path1)) {
             if (path2.isEmpty()) {
-                return "/";
+                return EMPTY_REQUEST_PATH;
             }
 
             if (path2.charAt(0) == '/') {
@@ -302,18 +303,102 @@ public final class ArmeriaHttpUtil {
      * Converts the specified Netty HTTP/1 headers into Armeria HTTP/2 headers.
      */
     public static void toArmeria(io.netty.handler.codec.http.HttpHeaders inHeaders, HttpHeaders out) {
-        final Iterator<Entry<CharSequence, CharSequence>> i = inHeaders.iteratorCharSequence();
-        while (i.hasNext()) {
-            final Entry<CharSequence, CharSequence> entry = i.next();
+        final Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
+        // Choose 8 as a default size because it is unlikely we will see more than 4 Connection headers values,
+        // but still allowing for "enough" space in the map to reduce the chance of hash code collision.
+        final CharSequenceMap connectionBlacklist =
+                toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
+        while (iter.hasNext()) {
+            final Entry<CharSequence, CharSequence> entry = iter.next();
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
-            if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName)) {
+            if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName) && !connectionBlacklist.contains(aName)) {
                 // https://tools.ietf.org/html/rfc7540#section-8.1.2.2 makes a special exception for TE
-                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.TE) &&
-                    !AsciiString.contentEqualsIgnoreCase(entry.getValue(), HttpHeaderValues.TRAILERS)) {
+                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.TE)) {
+                    toHttp2HeadersFilterTE(entry, out);
                     continue;
                 }
 
-                out.add(aName, entry.getValue().toString());
+                final String value = entry.getValue().toString();
+                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.COOKIE)) {
+                    // split up cookies to allow for better compression
+                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                    int index = value.indexOf(';');
+                    if (index >= 0) {
+                        int start = 0;
+                        do {
+                            out.add(HttpHeaderNames.COOKIE, value.substring(start, index));
+                            // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+                            index++;
+                            if (index != value.length() && value.charAt(index) == ' ') {
+                                index++;
+                            }
+                            start = index;
+                        } while (start < value.length() &&
+                                 (index = value.indexOf(';', start)) != -1);
+
+                        if (start < value.length()) {
+                            out.add(HttpHeaderNames.COOKIE, value.substring(start));
+                        }
+                    } else {
+                        out.add(HttpHeaderNames.COOKIE, value);
+                    }
+                } else {
+                    out.add(aName, value);
+                }
+            }
+        }
+    }
+
+    private static CharSequenceMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
+                                                  int arraySizeHint) {
+        CharSequenceMap result = new CharSequenceMap(arraySizeHint);
+
+        while (valuesIter.hasNext()) {
+            AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
+            try {
+                int index = lowerCased.forEachByte(FIND_COMMA);
+                if (index != -1) {
+                    int start = 0;
+                    do {
+                        result.add(lowerCased.subSequence(start, index, false).trim(), EMPTY_STRING);
+                        start = index + 1;
+                    } while (start < lowerCased.length() &&
+                             (index = lowerCased.forEachByte(start,
+                                                             lowerCased.length() - start, FIND_COMMA)) != -1);
+                    result.add(lowerCased.subSequence(start, lowerCased.length(), false).trim(), EMPTY_STRING);
+                } else {
+                    result.add(lowerCased.trim(), EMPTY_STRING);
+                }
+            } catch (Exception e) {
+                // This is not expect to happen because FIND_COMMA never throws but must be caught
+                // because of the ByteProcessor interface.
+                throw new IllegalStateException(e);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Filter the {@link HttpHeaderNames#TE} header according to the
+     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.2">special rules in the HTTP/2 RFC</a>.
+     * @param entry An entry whose name is {@link HttpHeaderNames#TE}.
+     * @param out the resulting HTTP/2 headers.
+     */
+    private static void toHttp2HeadersFilterTE(Entry<CharSequence, CharSequence> entry,
+                                               HttpHeaders out) {
+        if (AsciiString.indexOf(entry.getValue(), ',', 0) == -1) {
+            if (AsciiString.contentEqualsIgnoreCase(AsciiString.trim(entry.getValue()),
+                                                    HttpHeaderValues.TRAILERS)) {
+                out.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString());
+            }
+        } else {
+            List<CharSequence> teValues = StringUtil.unescapeCsvFields(entry.getValue());
+            for (CharSequence teValue : teValues) {
+                if (AsciiString.contentEqualsIgnoreCase(AsciiString.trim(teValue),
+                                                        HttpHeaderValues.TRAILERS)) {
+                    out.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString());
+                    break;
+                }
             }
         }
     }
@@ -354,20 +439,27 @@ public final class ArmeriaHttpUtil {
             pathBuilder.append(uri.getRawFragment());
         }
 
-        return pathBuilder.toString();
+        return pathBuilder.length() != 0 ? pathBuilder.toString() : EMPTY_REQUEST_PATH;
     }
 
-    private static void setHttp2Authority(String authority, HttpHeaders out) {
+    @VisibleForTesting
+    static void setHttp2Authority(String authority, HttpHeaders out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {
-            int endOfUserInfo = authority.indexOf('@');
-            if (endOfUserInfo < 0) {
-                out.authority(authority);
-            } else if (endOfUserInfo + 1 < authority.length()) {
-                out.authority(authority.substring(endOfUserInfo + 1));
+            final String actualAuthority;
+            if (authority.isEmpty()) {
+                actualAuthority = "";
             } else {
-                throw new IllegalArgumentException("authority: " + authority);
+                final int start = authority.indexOf('@') + 1;
+                if (start == 0) {
+                    actualAuthority = authority;
+                } else if (authority.length() == start) {
+                    throw new IllegalArgumentException("authority: " + authority);
+                } else {
+                    actualAuthority = authority.substring(start);
+                }
             }
+            out.authority(actualAuthority);
         }
     }
 
@@ -515,6 +607,11 @@ public final class ArmeriaHttpUtil {
 
         CharSequenceMap() {
             super(HTTP2_HEADER_NAME_HASHER, UnsupportedValueConverter.instance());
+        }
+
+        @SuppressWarnings("unchecked")
+        CharSequenceMap(int size) {
+            super(HTTP2_HEADER_NAME_HASHER, UnsupportedValueConverter.instance(), NameValidator.NOT_NULL, size);
         }
     }
 

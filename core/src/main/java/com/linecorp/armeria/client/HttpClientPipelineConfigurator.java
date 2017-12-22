@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.FlushConsolidationHandler;
 import com.linecorp.armeria.internal.Http1ClientCodec;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
@@ -86,6 +85,7 @@ import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
@@ -638,7 +638,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      */
     private static final class WorkaroundHandler extends ChannelDuplexHandler {
 
-        private static final AsciiString CONNECTION_VALUE = new AsciiString("HTTP2-Settings,Upgrade");
+        private static final AsciiString CONNECTION_VALUE = AsciiString.cached("HTTP2-Settings,Upgrade");
 
         private boolean needsToFilterUpgradeResponse = true;
         private boolean needsToFilterUpgradeRequest = true;
