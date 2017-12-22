@@ -36,6 +36,9 @@ import io.netty.util.AsciiString;
  * The class of HTTP status.
  */
 public enum HttpStatusClass {
+
+    // Forked from Netty at 4875a2aad4c82204caedb2d121fb5ef03c09fe44
+
     /**
      * The informational class (1xx).
      */
@@ -95,7 +98,7 @@ public enum HttpStatusClass {
     HttpStatusClass(int min, int max, String defaultReasonPhrase) {
         this.min = min;
         this.max = max;
-        this.defaultReasonPhrase = new AsciiString(defaultReasonPhrase);
+        this.defaultReasonPhrase = AsciiString.cached(defaultReasonPhrase);
     }
 
     /**

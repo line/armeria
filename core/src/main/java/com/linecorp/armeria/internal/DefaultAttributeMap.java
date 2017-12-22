@@ -49,16 +49,25 @@ import io.netty.util.AttributeMap;
  * Default {@link AttributeMap} implementation which use simple synchronization per bucket to keep the memory
  * overhead as low as possible.
  *
- * <p>Note: This class has been forked from {@link io.netty.util.DefaultAttributeMap}.
+ * <p>Note: This class has been forked from {@link io.netty.util.DefaultAttributeMap}, with the following
+ * changes:
+ *
+ * <ul>
+ *   <li>Add {@link #attrs()}</li>
+ *   <li>Increase the default bucket size from 4 to 8</li>
+ * </ul>
  */
 public class DefaultAttributeMap implements AttributeMap {
 
-    @SuppressWarnings({ "rawtypes", "AtomicFieldUpdaterIssues" })
+    // Forked from Netty at d0912f27091e4548466df81f545c017a25c9d256
+
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray> updater =
             AtomicReferenceFieldUpdater.newUpdater(DefaultAttributeMap.class,
-                                                   AtomicReferenceArray.class, "attributes");
+                                                   AtomicReferenceArray.class,
+                                                   "attributes");
 
-    private static final int BUCKET_SIZE = 4;
+    private static final int BUCKET_SIZE = 8;
     private static final int MASK = BUCKET_SIZE  - 1;
 
     // Initialize lazily to reduce memory consumption; updated by AtomicReferenceFieldUpdater above.
@@ -86,11 +95,15 @@ public class DefaultAttributeMap implements AttributeMap {
         DefaultAttribute<?> head = attributes.get(i);
         if (head == null) {
             // No head exists yet which means we may be able to add the attribute without synchronization and
-            // just use compare and set. At worst we need to fallback to synchronization
-            head = new DefaultAttribute(key);
+            // just use compare and set. At worst we need to fallback to synchronization and waste two
+            // allocations.
+            head = new DefaultAttribute();
+            DefaultAttribute<T> attr = new DefaultAttribute<>(head, key);
+            head.next = attr;
+            attr.prev = head;
             if (attributes.compareAndSet(i, null, head)) {
-                // we were able to add it so return the head right away
-                return (Attribute<T>) head;
+                // we were able to add it so return the attr right away
+                return attr;
             } else {
                 head = attributes.get(i);
             }
@@ -99,19 +112,18 @@ public class DefaultAttributeMap implements AttributeMap {
         synchronized (head) {
             DefaultAttribute<?> curr = head;
             for (;;) {
-                if (!curr.removed && curr.key == key) {
-                    return (Attribute<T>) curr;
-                }
-
                 DefaultAttribute<?> next = curr.next;
                 if (next == null) {
                     DefaultAttribute<T> attr = new DefaultAttribute<>(head, key);
-                    curr.next =  attr;
+                    curr.next = attr;
                     attr.prev = curr;
                     return attr;
-                } else {
-                    curr = next;
                 }
+
+                if (next.key == key && !next.removed) {
+                    return (Attribute<T>) next;
+                }
+                curr = next;
             }
         }
     }
@@ -134,16 +146,12 @@ public class DefaultAttributeMap implements AttributeMap {
             return false;
         }
 
-        // check on the head can be done without synchronization
-        if (head.key == key && !head.removed) {
-            return true;
-        }
-
+        // We need to synchronize on the head.
         synchronized (head) {
-            // we need to synchronize on the head
+            // Start with head.next as the head itself does not store an attribute.
             DefaultAttribute<?> curr = head.next;
             while (curr != null) {
-                if (!curr.removed && curr.key == key) {
+                if (curr.key == key && !curr.removed) {
                     return true;
                 }
                 curr = curr.next;
@@ -178,12 +186,11 @@ public class DefaultAttributeMap implements AttributeMap {
         return helper.toString();
     }
 
-    @SuppressWarnings("serial")
     private static final class DefaultAttribute<T> extends AtomicReference<T> implements Attribute<T> {
 
         private static final long serialVersionUID = -2661411462200283011L;
 
-        // The head of the linked-list this attribute belongs to, which may be itself
+        // The head of the linked-list this attribute belongs to
         private final DefaultAttribute<?> head;
         private final AttributeKey<T> key;
 
@@ -199,9 +206,10 @@ public class DefaultAttributeMap implements AttributeMap {
             this.key = key;
         }
 
-        DefaultAttribute(AttributeKey<T> key) {
+        // Special constructor for the head of the linked-list.
+        DefaultAttribute() {
             head = this;
-            this.key = key;
+            key = null;
         }
 
         @Override
@@ -237,23 +245,21 @@ public class DefaultAttributeMap implements AttributeMap {
 
         private void remove0() {
             synchronized (head) {
-                // We only update the linked-list structure if prev != null because if it is null this
-                // DefaultAttribute acts also as head. The head must never be removed completely and just be
-                // marked as removed as all synchronization is done on the head itself for each bucket.
-                // The head itself will be GC'ed once the DefaultAttributeMap is GC'ed. So at most 4 heads will
-                // be removed lazy as the array size is 4.
-                if (prev != null) {
-                    prev.next = next;
-
-                    if (next != null) {
-                        next.prev = prev;
-                    }
-
-                    // Null out prev and next - this will guard against multiple remove0() calls which may
-                    // corrupt the linked list for the bucket.
-                    prev = null;
-                    next = null;
+                if (prev == null) {
+                    // Removed before.
+                    return;
                 }
+
+                prev.next = next;
+
+                if (next != null) {
+                    next.prev = prev;
+                }
+
+                // Null out prev and next - this will guard against multiple remove0() calls which may corrupt
+                // the linked list for the bucket.
+                prev = null;
+                next = null;
             }
         }
     }
@@ -277,11 +283,10 @@ public class DefaultAttributeMap implements AttributeMap {
 
         @Override
         public Attribute<?> next() {
+            final DefaultAttribute<?> next = this.next;
             if (next == null) {
                 throw new NoSuchElementException();
             }
-
-            final DefaultAttribute<?> next = this.next;
             this.next = findNext(next.next);
             return next;
         }
@@ -290,14 +295,14 @@ public class DefaultAttributeMap implements AttributeMap {
             loop: for (;;) {
                 if (next == null) {
                     for (idx++; idx < attributes.length(); idx++) {
-                        final DefaultAttribute<?> attr = attributes.get(idx);
-                        if (attr != null) {
-                            next = attr;
+                        final DefaultAttribute<?> head = attributes.get(idx);
+                        if (head != null && head.next != null) {
+                            next = head.next;
                             break;
                         }
                     }
 
-                    if (idx == attributes.length()) {
+                    if (next == null) {
                         return null;
                     }
                 }
