@@ -159,8 +159,8 @@ Nested log
 ----------
 
 When you retry a failed attempt, you might want to record the result of each attempt and to group them under
-a single RequestLog_. A RequestLog_ can contain more than one child RequestLog_ in Armeria to support this sort
-of use cases.
+a single RequestLog_. A RequestLog_ can contain more than one child RequestLog_ to support this sort of
+use cases.
 
 .. code-block:: java
 
@@ -169,14 +169,15 @@ of use cases.
     RequestLogBuilder.addChild(RequestLog);
 
 If the added RequestLog_ is the first child, the request-side log of the `RequestLog`_ will be propagated to the
-parent log. You can add as many children logs as you want, but the rest of logs would not effect.
+parent log. You can add as many child logs as you want, but the rest of logs would not effect.
 If you want to fill the response-side log of the parent log, please invoke:
 
 .. code-block:: java
 
     RequestLogBuilder.endResponseWithLastChild();
 
-This will propagate the response-side log of the last added child to the parent log. So the parent log will be:
+This will propagate the response-side log of the last added child to the parent log. The following diagram
+illustrates how a RequestLog_ with child logs looks like:
 
 .. uml::
 
@@ -216,5 +217,5 @@ This will propagate the response-side log of the last added child to the parent 
     \--------------------------------------------------------------/
     @endditaa
 
-You can check out all of the children logs by calling ``RequestLog.getChildren()``. `RetryingClient`_ is a good
+You can retrieve the child logs using ``RequestLog.children()``. `RetryingClient`_ is a good
 example that leverages this feature. See :ref:`retry-with-logging` for more information.

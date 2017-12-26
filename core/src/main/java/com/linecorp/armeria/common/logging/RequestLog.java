@@ -54,9 +54,9 @@ import io.netty.channel.Channel;
 public interface RequestLog {
 
     /**
-     * Returns the list of children {@link RequestLog}s. The lower the index is, the earlier it is added.
+     * Returns the list of child {@link RequestLog}s. The lower the index is, the earlier it is added.
      */
-    List<RequestLog> getChildren();
+    List<RequestLog> children();
 
     /**
      * Returns the set of satisfied {@link RequestLogAvailability}s.

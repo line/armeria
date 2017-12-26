@@ -33,7 +33,6 @@ public class BackoffSpecTest {
         assertThat(backoffSpec.multiplier).isEqualTo(2.0);
         assertThat(backoffSpec.minJitterRate).isEqualTo(-0.2);
         assertThat(backoffSpec.maxJitterRate).isEqualTo(0.2);
-        assertThat(backoffSpec.maxAttempts).isEqualTo(10);
     }
 
     @Test
@@ -79,7 +78,6 @@ public class BackoffSpecTest {
         assertThat(backoffSpec1.multiplier).isEqualTo(2.0);
         assertThat(backoffSpec1.minJitterRate).isEqualTo(-0.2);
         assertThat(backoffSpec1.maxJitterRate).isEqualTo(0.2);
-        assertThat(backoffSpec1.maxAttempts).isEqualTo(10);
 
         assertThat(Backoff.of(spec1).as(RandomBackoff.class).isPresent()).isTrue();
 
@@ -92,7 +90,6 @@ public class BackoffSpecTest {
         assertThat(backoffSpec2.multiplier).isEqualTo(2.0);
         assertThat(backoffSpec2.minJitterRate).isEqualTo(-0.2);
         assertThat(backoffSpec2.maxJitterRate).isEqualTo(0.2);
-        assertThat(backoffSpec2.maxAttempts).isEqualTo(10);
 
         assertThat(Backoff.of(spec2).as(FixedBackoff.class).isPresent()).isTrue();
     }

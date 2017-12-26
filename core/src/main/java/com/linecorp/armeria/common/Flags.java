@@ -135,7 +135,7 @@ public final class Flags {
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
-            "exponential=200:10000,jitter=0.2,maxAttempts=10";
+            "exponential=200:10000,jitter=0.2";
     private static final String DEFAULT_BACKOFF_SPEC =
             getNormalized("defaultBackoffSpec", DEFAULT_DEFAULT_BACKOFF_SPEC, value -> {
                 try {
@@ -146,6 +146,12 @@ public final class Flags {
                     return false;
                 }
             });
+
+    private static final int DEFAULT_TOTAL_MAX_ATTEMPTS = 10;
+    private static final int TOTAL_MAX_ATTEMPTS =
+            getInt("totalMaxAttempts",
+                   DEFAULT_TOTAL_MAX_ATTEMPTS,
+                   value -> value > 0);
 
     private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
     private static final Optional<String> ROUTE_CACHE_SPEC =
@@ -390,6 +396,17 @@ public final class Flags {
      */
     public static String defaultBackoffSpec() {
         return DEFAULT_BACKOFF_SPEC;
+    }
+
+    /**
+     * Returns the total number of max attempts for retry. Note that this value has effect only if a user
+     * did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_TOTAL_MAX_ATTEMPTS}. Specify the
+     * {@code -Dcom.linecorp.armeria.totalMaxAttempts=<integer>} JVM option to override the default value.
+     */
+    public static int totalMaxAttempts() {
+        return TOTAL_MAX_ATTEMPTS;
     }
 
     /**

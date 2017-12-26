@@ -190,7 +190,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public List<RequestLog> getChildren() {
+    public List<RequestLog> children() {
         return children != null ? ImmutableList.copyOf(children) : Collections.emptyList();
     }
 

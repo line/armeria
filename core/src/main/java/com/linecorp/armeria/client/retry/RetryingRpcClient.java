@@ -48,11 +48,11 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      *
      * @param retryStrategy the retry strategy
-     * @param defaultMaxAttempts the default number of max attempts for retry
+     * @param totalMaxAttempts the total number of max attempts for retry
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
-    newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy, int defaultMaxAttempts) {
-        return new RetryingRpcClientBuilder(retryStrategy).defaultMaxAttempts(defaultMaxAttempts)
+    newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy, int totalMaxAttempts) {
+        return new RetryingRpcClientBuilder(retryStrategy).totalMaxAttempts(totalMaxAttempts)
                                                           .newDecorator();
     }
 
@@ -60,15 +60,15 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      *
      * @param retryStrategy the retry strategy
-     * @param defaultMaxAttempts the default number of max attempts for retry
+     * @param totalMaxAttempts the total number of max attempts for retry
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
-                 int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+                 int totalMaxAttempts, long responseTimeoutMillisForEachAttempt) {
         return new RetryingRpcClientBuilder(retryStrategy)
-                .defaultMaxAttempts(defaultMaxAttempts)
+                .totalMaxAttempts(totalMaxAttempts)
                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt).newDecorator();
     }
 
@@ -77,8 +77,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      */
     RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
                       RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
-                      int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt) {
-        super(delegate, retryStrategy, defaultMaxAttempts, responseTimeoutMillisForEachAttempt);
+                      int totalMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+        super(delegate, retryStrategy, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     @Override

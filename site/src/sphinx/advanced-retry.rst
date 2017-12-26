@@ -1,3 +1,4 @@
+.. _decorator: client-decorator.html
 .. _RetryingClient: apidocs/index.html?com/linecorp/armeria/client/retry/RetryingClient.html
 .. _RetryingHttpClient: apidocs/index.html?com/linecorp/armeria/client/retry/RetryingHttpClient.html
 .. _RetryingRpcClient: apidocs/index.html?com/linecorp/armeria/client/retry/RetryingRpcClient.html
@@ -8,17 +9,14 @@
 .. _LoggingClient: apidocs/index.html?com/linecorp/armeria/client/logging/LoggingClient.html
 .. _ResponseTimeoutException: apidocs/index.html?com/linecorp/armeria/client/ResponseTimeoutException.html
 
-
 .. _advanced-retry:
 
 Automatic retry
 ===============
 
-When a client gets error response, the client might want to retry the request depending on the response.
-You can do this using :ref:`client-decorator` or use RetryingClient_ which already provides the
-retrying functionality in Armeria.
-
-There are two retrying clients:
+When a client gets an error response, the client might want to retry the request depending on the response.
+You can do this by writing your own decorator_ or use one of the following out-of-the-box decorator
+implementations:
 
 - RetryingHttpClient_
 - RetryingRpcClient_
@@ -26,8 +24,8 @@ There are two retrying clients:
 They are same except that they have the different request and response types.
 So, let's find out what we can do with RetryingClient_.
 
-RetryingClient_
----------------
+``RetryingClient``
+------------------
 
 You can just use ``decorator`` method in ClientBuilder_ to build a RetryingHttpClient_:
 
@@ -61,13 +59,15 @@ or even simply,
 
     client.execute(...).aggregate().join();
 
-That is it. The client will keep attempting until it succeeds or the number of attempts exceeds the default
-number of max attempts. You can configure the ``defaultMaxAttempts`` when making the decorator using
-``RetryingHttpClient.newDecorator(strategy, defaultMaxAttempts)``. Meanwhile, the ``strategy`` will decide to
+That is it. The client will keep attempting until it succeeds or the number of attempts exceeds the total
+number of max attempts. You can configure the ``totalMaxAttempts`` when making the decorator using
+``RetryingHttpClient.newDecorator(strategy, totalMaxAttempts)``. Meanwhile, the ``strategy`` will decide to
 retry depending on the response. In this case, the client retries when it receives ``5xx`` response error.
 
-RetryStrategy
--------------
+.. _retry-strategy:
+
+``RetryStrategy``
+-----------------
 
 You can customize the ``strategy`` by implementing RetryStrategy_.
 
@@ -103,11 +103,12 @@ This will retry when the response's status is ``409`` or ResponseTimeoutExceptio
     a different Backoff_ instance for each ``shouldRetry()``. RetryingClient_ internally tracks the
     reference of the returned Backoff_ and increases the counter that keeps the number of attempts made so far,
     and resets it to 0 when the Backoff_ returned by the strategy is not same as before. Therefore, it is
-    important to return the same Backoff_ instance unless you decided to change your Backoff_ strategy, which
-    yields a different delay based on the number of retried, will not work as expected. We will take
-    a close look what the Backoff_ is at the bottom of this page.
+    important to return the same Backoff_ instance unless you decided to change your Backoff_ strategy. If you
+    do not return the same one, when tha Backoff_ yields a different delay based on the number of retries,
+    such as an exponential backoff, will not work as expected. We will take a close look into a Backoff_
+    at the next section.
 
-You can return different Backoff_ according to the response.
+You can return a different Backoff_ according to the response.
 
 .. code-block:: java
 
@@ -136,29 +137,8 @@ You can return different Backoff_ according to the response.
         }
     };
 
-
-Retry on ResponseTimeoutException_
-----------------------------------
-
-ResponseTimeoutException_ can occur in two different situations while retrying. First, it can occur when the
-time of whole retry session has passed the time previously configured using:
-
-.. code-block:: java
-
-    ClientBuilder.defaultResponseTimeoutMillis(millis);
-
-You cannot retry on this ResponseTimeoutException_.
-Second, it can occur when the time of individual attempt in retry has passed the time configured when
-creaing the decorator with:
-
-.. code-block:: java
-
-    RetryingHttpClient.newDecorator(strategy, defaultMaxAttempts, responseTimeoutMillisForEachAttempt);
-
-You can retry on this ResponseTimeoutException_.
-
-Backoff_
---------
+``Backoff``
+-----------
 
 You can use a Backoff_ to determine the delay between attempts. Armeria provides Backoff_ implementations which
 produce the following delays out of the box:
@@ -171,11 +151,74 @@ Armeria provides ``RetryStrategy.defaultBackoff`` that you might use as default.
 
 .. code-block:: java
 
-    Backoff.exponential(minDelayMillis, maxDelayMillis, multiplier).withJitter(jitterRate);
+    Backoff.exponential(minDelayMillis /* 200 */, maxDelayMillis /* 10000 */, multiplier /* 2.0 */)
+           .withJitter(jitterRate /* 0.2 */)
+           .withMaxAttempts(maxAttempts /* 10 */);
 
 The delay starts from ``minDelayMillis`` until it reaches ``maxDelayMillis`` multiplying with multiplier.
-Please note that the ``.withJitter()`` will add jitter value to the calculated delay.
+Please note that the ``.withJitter()`` will add jitter value to the calculated delay. This will attempts
+no more than ``maxAttempts``.
+
 For more information, please refer to the API documentation of the `com.linecorp.armeria.client.retry`_ package.
+
+``totalMaxAttempts`` vs per-Backoff ``maxAttempts``
+---------------------------------------------------
+
+If you create a Backoff_ using ``.withMaxAttempts(maxAttempts)`` in a RetryStrategy_, the RetryingClient_
+which uses the RetryStrategy_ will stop retrying when the number of attempts passed ``maxAttempts``.
+However, if you have more than one Backoff_ and return one after the other continuously, it will keep retrying
+over and over again because the counter that RetryingClient_ internally tracks is initialized every time the
+different Backoff_ is returned. To limit the number of attempts in a whole retry session, RetryingClient_ limits
+the maximum number of total attempts to 10 by default. You can change this value by specifying
+``maxTotalAttempts`` when you build a RetryingClient_:
+
+.. code-block:: java
+
+    RetryingHttpClient.newDecorator(strategy, totalMaxAttempts);
+
+Or, you can override the default value of 10 using the JVM system property
+``-Dcom.linecorp.armeria.totalMaxAttempts=<integer>``.
+
+Per-attempt timeout
+-------------------
+
+ResponseTimeoutException_ can occur in two different situations while retrying. First, it occurs when the
+time of whole retry session has passed the time previously configured using:
+
+.. code-block:: java
+
+    ClientBuilder.defaultResponseTimeoutMillis(millis);
+
+    // or..
+    ClientRequestContext.setResponseTimeoutMillis(millis);
+
+You cannot retry on this ResponseTimeoutException_.
+Second, it occurs when the time of individual attempt in retry has passed the time which is per-attempt timeout.
+You can configure it when you create the decorator:
+
+.. code-block:: java
+
+    RetryingHttpClient.newDecorator(strategy, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
+
+You can retry on this ResponseTimeoutException_.
+
+For example, when making a retrying request to an unresponsive service
+with responseTimeoutMillis = 10,000, responseTimeoutMillisForEachAttempt = 3,000 and disabled backoff:
+
+.. uml::
+
+    @startditaa(--no-separation, scale=0.95)
+
+    0ms         3,000ms     6,000ms     9,000ms
+    +-----------+-----------+-----------+---+
+    | Attempt 1 | Attempt 2 | Attempt 3 | A |
+    +-----------+-----------+-----------+---+
+                                            10,000ms
+                      The 4th attempt is aborted and
+                  you get a ResponseTimeoutException.
+    @endditaa
+
+
 
 .. _retry-with-logging:
 
@@ -224,5 +267,11 @@ This will produce only single request and response log pair regardless how many 
     LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
     LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=200, ...]
 
-This is achieved using the feature of :ref:`nested-log`. For more information, please refer to
-:ref:`nested-log`.
+.. note::
+
+    Please refer to :ref:`nested-log`, if you are curious about how this works internally.
+
+See also
+--------
+
+- :ref:`advanced-structured-logging`

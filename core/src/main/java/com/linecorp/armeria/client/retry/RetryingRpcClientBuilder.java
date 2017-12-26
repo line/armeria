@@ -42,7 +42,7 @@ public class RetryingRpcClientBuilder
     @Override
     public RetryingRpcClient build(Client<RpcRequest, RpcResponse> delegate) {
         return new RetryingRpcClient(
-                delegate, retryStrategy, defaultMaxAttempts, responseTimeoutMillisForEachAttempt);
+                delegate, retryStrategy, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     /**
@@ -53,6 +53,6 @@ public class RetryingRpcClientBuilder
     public Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient> newDecorator() {
         return delegate ->
                 new RetryingRpcClient(
-                        delegate, retryStrategy, defaultMaxAttempts, responseTimeoutMillisForEachAttempt);
+                        delegate, retryStrategy, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
     }
 }

@@ -42,10 +42,8 @@ public abstract class RetryingClientBuilder<
         T extends RetryingClientBuilder<T, U, I, O>, U extends RetryingClient<I, O>,
         I extends Request, O extends Response> {
 
-    private static final BackoffSpec DEFAULT_BACKOFF_SPEC = BackoffSpec.parse(Flags.defaultBackoffSpec());
-
     final RetryStrategy<I, O> retryStrategy;
-    int defaultMaxAttempts = DEFAULT_BACKOFF_SPEC.maxAttempts;
+    int totalMaxAttempts = Flags.totalMaxAttempts();
     long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
 
     /**
@@ -61,15 +59,15 @@ public abstract class RetryingClientBuilder<
     }
 
     /**
-     * Sets the {@code defaultMaxAttempts}. The value will be set by the default value in
-     * {@link Flags#DEFAULT_BACKOFF_SPEC}, if the client dose not specify.
+     * Sets the maximum number of total attempts. If unspecified, the value from
+     * {@link Flags#totalMaxAttempts()} will be used.
      *
      * @return {@link T} to support method chaining.
      */
-    public T defaultMaxAttempts(int defaultMaxAttempts) {
-        checkArgument(defaultMaxAttempts > 0,
-                      "defaultMaxAttempts: %s (expected: > 0)", defaultMaxAttempts);
-        this.defaultMaxAttempts = defaultMaxAttempts;
+    public T totalMaxAttempts(int totalMaxAttempts) {
+        checkArgument(totalMaxAttempts > 0,
+                      "totalMaxAttempts: %s (expected: > 0)", totalMaxAttempts);
+        this.totalMaxAttempts = totalMaxAttempts;
         return self();
     }
 
@@ -121,7 +119,7 @@ public abstract class RetryingClientBuilder<
     ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
                           .add("retryStrategy", retryStrategy)
-                          .add("defaultMaxAttempts", defaultMaxAttempts)
+                          .add("totalMaxAttempts", totalMaxAttempts)
                           .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt);
     }
 }

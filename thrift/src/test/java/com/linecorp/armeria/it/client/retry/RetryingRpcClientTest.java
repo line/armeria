@@ -115,7 +115,7 @@ public class RetryingRpcClientTest {
     public void execute_reachedMaxAttempts() throws Exception {
         HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .decorator(RpcRequest.class, RpcResponse.class,
-                           new RetryingRpcClientBuilder(ALWAYS).defaultMaxAttempts(1).newDecorator())
+                           new RetryingRpcClientBuilder(ALWAYS).totalMaxAttempts(1).newDecorator())
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString()))
                 .thenThrow(new IllegalArgumentException());
