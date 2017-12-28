@@ -33,6 +33,8 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.retry.RetryingHttpClient;
+import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 
@@ -147,10 +149,10 @@ public final class Flags {
                 }
             });
 
-    private static final int DEFAULT_TOTAL_MAX_ATTEMPTS = 10;
-    private static final int TOTAL_MAX_ATTEMPTS =
-            getInt("totalMaxAttempts",
-                   DEFAULT_TOTAL_MAX_ATTEMPTS,
+    private static final int DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
+    private static final int DEFAULT_MAX_TOTAL_ATTEMPTS =
+            getInt("defaultMaxTotalAttempts",
+                   DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS,
                    value -> value > 0);
 
     private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
@@ -399,14 +401,15 @@ public final class Flags {
     }
 
     /**
-     * Returns the total number of max attempts for retry. Note that this value has effect only if a user
-     * did not specify it.
+     * Returns the default maximum number of total attempts. Note that this value has effect only if a user
+     * did not specify it when creating a {@link RetryingHttpClient} or a {@link RetryingRpcClient}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_TOTAL_MAX_ATTEMPTS}. Specify the
-     * {@code -Dcom.linecorp.armeria.totalMaxAttempts=<integer>} JVM option to override the default value.
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>} JVM option to
+     * override the default value.
      */
-    public static int totalMaxAttempts() {
-        return TOTAL_MAX_ATTEMPTS;
+    public static int defaultMaxTotalAttempts() {
+        return DEFAULT_MAX_TOTAL_ATTEMPTS;
     }
 
     /**

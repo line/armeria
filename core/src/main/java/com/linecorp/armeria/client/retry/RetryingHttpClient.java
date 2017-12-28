@@ -70,11 +70,11 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
      *
      * @param retryStrategy the retry strategy
-     * @param totalMaxAttempts the maximum number of total attempts
+     * @param maxTotalAttempts the maximum number of total attempts
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
-    newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy, int totalMaxAttempts) {
-        return new RetryingHttpClientBuilder(retryStrategy).totalMaxAttempts(totalMaxAttempts)
+    newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy, int maxTotalAttempts) {
+        return new RetryingHttpClientBuilder(retryStrategy).maxTotalAttempts(maxTotalAttempts)
                                                            .newDecorator();
     }
 
@@ -82,15 +82,15 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
      *
      * @param retryStrategy the retry strategy
-     * @param totalMaxAttempts the maximum number of total attempts
+     * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy,
-                 int totalMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+                 int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         return new RetryingHttpClientBuilder(retryStrategy)
-                .totalMaxAttempts(totalMaxAttempts)
+                .maxTotalAttempts(maxTotalAttempts)
                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt).newDecorator();
     }
 

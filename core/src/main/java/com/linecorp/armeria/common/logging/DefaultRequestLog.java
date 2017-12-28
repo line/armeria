@@ -30,7 +30,6 @@ import static com.linecorp.armeria.common.logging.RequestLogAvailability.SCHEME;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -191,7 +190,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public List<RequestLog> children() {
-        return children != null ? ImmutableList.copyOf(children) : Collections.emptyList();
+        return children != null ? ImmutableList.copyOf(children) : ImmutableList.of();
     }
 
     @Override

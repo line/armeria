@@ -43,7 +43,7 @@ public abstract class RetryingClientBuilder<
         I extends Request, O extends Response> {
 
     final RetryStrategy<I, O> retryStrategy;
-    int totalMaxAttempts = Flags.totalMaxAttempts();
+    int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
     long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
 
     /**
@@ -60,14 +60,14 @@ public abstract class RetryingClientBuilder<
 
     /**
      * Sets the maximum number of total attempts. If unspecified, the value from
-     * {@link Flags#totalMaxAttempts()} will be used.
+     * {@link Flags#defaultMaxTotalAttempts()} will be used.
      *
      * @return {@link T} to support method chaining.
      */
-    public T totalMaxAttempts(int totalMaxAttempts) {
-        checkArgument(totalMaxAttempts > 0,
-                      "totalMaxAttempts: %s (expected: > 0)", totalMaxAttempts);
-        this.totalMaxAttempts = totalMaxAttempts;
+    public T maxTotalAttempts(int maxTotalAttempts) {
+        checkArgument(maxTotalAttempts > 0,
+                      "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
+        this.maxTotalAttempts = maxTotalAttempts;
         return self();
     }
 
@@ -119,7 +119,7 @@ public abstract class RetryingClientBuilder<
     ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
                           .add("retryStrategy", retryStrategy)
-                          .add("totalMaxAttempts", totalMaxAttempts)
+                          .add("maxTotalAttempts", maxTotalAttempts)
                           .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt);
     }
 }

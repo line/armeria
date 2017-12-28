@@ -14,20 +14,19 @@
 Automatic retry
 ===============
 
-When a client gets an error response, the client might want to retry the request depending on the response.
-You can do this by writing your own decorator_ or use one of the following out-of-the-box decorator
-implementations:
+When a client gets an error response, it might want to retry the request depending on the response.
+This can be accomplished using a decorator_, and Armeria provides the following implementations out-of-the box.
 
 - RetryingHttpClient_
 - RetryingRpcClient_
 
-They are same except that they have the different request and response types.
+Both behave the same except for the different request and response types.
 So, let's find out what we can do with RetryingClient_.
 
 ``RetryingClient``
 ------------------
 
-You can just use ``decorator`` method in ClientBuilder_ to build a RetryingHttpClient_:
+You can just use the ``decorator()`` method in ClientBuilder_ to build a RetryingHttpClient_:
 
 .. code-block:: java
 
@@ -59,9 +58,9 @@ or even simply,
 
     client.execute(...).aggregate().join();
 
-That is it. The client will keep attempting until it succeeds or the number of attempts exceeds the total
-number of max attempts. You can configure the ``totalMaxAttempts`` when making the decorator using
-``RetryingHttpClient.newDecorator(strategy, totalMaxAttempts)``. Meanwhile, the ``strategy`` will decide to
+That's it. The client will keep attempting until it succeeds or the number of attempts exceeds the maximum
+number of total attempts. You can configure the ``maxTotalAttempts`` when making the decorator using
+``RetryingHttpClient.newDecorator(strategy, maxTotalAttempts)``. Meanwhile, the ``strategy`` will decide to
 retry depending on the response. In this case, the client retries when it receives ``5xx`` response error.
 
 .. _retry-strategy:
@@ -90,7 +89,7 @@ You can customize the ``strategy`` by implementing RetryStrategy_.
                 } else if (result.headers().status() == HttpStatus.CONFLICT) {
                     return Optional.of(backoff);
                 }
-                return Optional.empty(); // Return no backoff not to retry anymore
+                return Optional.empty(); // Return no backoff to stop retrying.
             });
         }
     };
@@ -102,10 +101,10 @@ This will retry when the response's status is ``409`` or ResponseTimeoutExceptio
     We declare a Backoff_ as a member and reuse it when a ``strategy`` returns it, so that we do not return
     a different Backoff_ instance for each ``shouldRetry()``. RetryingClient_ internally tracks the
     reference of the returned Backoff_ and increases the counter that keeps the number of attempts made so far,
-    and resets it to 0 when the Backoff_ returned by the strategy is not same as before. Therefore, it is
+    and resets it to 0 when the Backoff_ returned by the strategy is not the same as before. Therefore, it is
     important to return the same Backoff_ instance unless you decided to change your Backoff_ strategy. If you
-    do not return the same one, when tha Backoff_ yields a different delay based on the number of retries,
-    such as an exponential backoff, will not work as expected. We will take a close look into a Backoff_
+    do not return the same one, when the Backoff_ yields a different delay based on the number of retries,
+    such as an exponential backoff, it will not work as expected. We will take a close look into a Backoff_
     at the next section.
 
 You can return a different Backoff_ according to the response.
@@ -147,21 +146,19 @@ produce the following delays out of the box:
 - Random delay, created with ``Backoff.random()``
 - Exponential delay which is multiplied on each attempt, created with ``Backoff.exponential()``
 
-Armeria provides ``RetryStrategy.defaultBackoff`` that you might use as default. It is exactly same with:
+Armeria provides ``RetryStrategy.defaultBackoff`` that you might use by default. It is exactly the same as:
 
 .. code-block:: java
 
     Backoff.exponential(minDelayMillis /* 200 */, maxDelayMillis /* 10000 */, multiplier /* 2.0 */)
-           .withJitter(jitterRate /* 0.2 */)
-           .withMaxAttempts(maxAttempts /* 10 */);
+           .withJitter(jitterRate /* 0.2 */);
 
-The delay starts from ``minDelayMillis`` until it reaches ``maxDelayMillis`` multiplying with multiplier.
-Please note that the ``.withJitter()`` will add jitter value to the calculated delay. This will attempts
-no more than ``maxAttempts``.
+The delay starts from ``minDelayMillis`` until it reaches ``maxDelayMillis`` multiplying by multiplier every
+retry. Please note that the ``.withJitter()`` will add jitter value to the calculated delay.
 
 For more information, please refer to the API documentation of the `com.linecorp.armeria.client.retry`_ package.
 
-``totalMaxAttempts`` vs per-Backoff ``maxAttempts``
+``maxTotalAttempts`` vs per-Backoff ``maxAttempts``
 ---------------------------------------------------
 
 If you create a Backoff_ using ``.withMaxAttempts(maxAttempts)`` in a RetryStrategy_, the RetryingClient_
@@ -174,10 +171,10 @@ the maximum number of total attempts to 10 by default. You can change this value
 
 .. code-block:: java
 
-    RetryingHttpClient.newDecorator(strategy, totalMaxAttempts);
+    RetryingHttpClient.newDecorator(strategy, maxTotalAttempts);
 
 Or, you can override the default value of 10 using the JVM system property
-``-Dcom.linecorp.armeria.totalMaxAttempts=<integer>``.
+``-Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>``.
 
 Per-attempt timeout
 -------------------
@@ -198,24 +195,26 @@ You can configure it when you create the decorator:
 
 .. code-block:: java
 
-    RetryingHttpClient.newDecorator(strategy, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
+    RetryingHttpClient.newDecorator(strategy, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
 
 You can retry on this ResponseTimeoutException_.
 
 For example, when making a retrying request to an unresponsive service
-with responseTimeoutMillis = 10,000, responseTimeoutMillisForEachAttempt = 3,000 and disabled backoff:
+with responseTimeoutMillis = 10,000, responseTimeoutMillisForEachAttempt = 3,000 and disabled Backoff_, the
+first three attempts will be timed out by the per-attempt timeout (3,000ms). The 4th one will be aborted
+after 1,000ms since the request session has reached at 10,000ms before it is timed out by the per-attempt
+timeout.
 
 .. uml::
 
-    @startditaa(--no-separation, scale=0.95)
-
+    @startditaa(--no-separation, --no-shadows, scale=0.95)
     0ms         3,000ms     6,000ms     9,000ms
-    +-----------+-----------+-----------+---+
-    | Attempt 1 | Attempt 2 | Attempt 3 | A |
-    +-----------+-----------+-----------+---+
-                                            10,000ms
-                      The 4th attempt is aborted and
-                  you get a ResponseTimeoutException.
+    |           |           |           |
+    +-----------+-----------+-----------+----+
+    | Attempt 1 | Attempt 2 | Attempt 3 | A4 |
+    +-----------+-----------+-----------+----+
+                                             |
+                                           10,000ms (ResponseTimeoutException)
     @endditaa
 
 
@@ -236,7 +235,7 @@ decorate LoggingClient_ with RetryingClient_. That is:
                               .decorator(RetryingHttpClient.newDecorator(strategy))
                               .build();
 
-This will produce following logs when there's three attempts:
+This will produce following logs when there are three attempts:
 
 .. code-block:: java
 

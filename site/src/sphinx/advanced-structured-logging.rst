@@ -217,5 +217,18 @@ illustrates how a RequestLog_ with child logs looks like:
     \--------------------------------------------------------------/
     @endditaa
 
-You can retrieve the child logs using ``RequestLog.children()``. `RetryingClient`_ is a good
-example that leverages this feature. See :ref:`retry-with-logging` for more information.
+You can retrieve the child logs using ``RequestLog.children()``.
+
+.. code-block:: java
+
+    final RequestContext ctx = ...;
+    ctx.log().addListner(log -> {
+        if (!log.children().isEmpty()) {
+            System.err.println("A request finished after " + log.children().size() + " attempt(s): " + log);
+        } else {
+            System.err.println("A request is done: " + log);
+        }
+    }, RequestLogAvailability.COMPLETE);
+
+`RetryingClient`_ is a good example that leverages this feature.
+See :ref:`retry-with-logging` for more information.

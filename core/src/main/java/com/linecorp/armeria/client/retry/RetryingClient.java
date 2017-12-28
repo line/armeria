@@ -44,18 +44,18 @@ public abstract class RetryingClient<I extends Request, O extends Response>
             AttributeKey.valueOf(RetryingClient.class, "STATE");
 
     private final RetryStrategy<I, O> retryStrategy;
-    private final int totalMaxAttempts;
+    private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     protected RetryingClient(Client<I, O> delegate, RetryStrategy<I, O> retryStrategy,
-                             int totalMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+                             int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         super(delegate);
         this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
-        checkArgument(totalMaxAttempts > 0, "totalMaxAttempts: %s (expected: > 0)", totalMaxAttempts);
-        this.totalMaxAttempts = totalMaxAttempts;
+        checkArgument(maxTotalAttempts > 0, "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
+        this.maxTotalAttempts = maxTotalAttempts;
 
         checkArgument(responseTimeoutMillisForEachAttempt >= 0,
                       "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
@@ -66,7 +66,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         final State state =
-                new State(totalMaxAttempts, responseTimeoutMillisForEachAttempt, ctx.responseTimeoutMillis());
+                new State(maxTotalAttempts, responseTimeoutMillisForEachAttempt, ctx.responseTimeoutMillis());
         ctx.attr(STATE).set(state);
         return doExecute(ctx, req);
     }
@@ -120,7 +120,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * <p>{@code Math.min(responseTimeoutMillis, Backoff.nextDelayMillis(int))}
      *
      * @return the number of milliseconds to wait for before attempting a retry
-     * @throws RetryGiveUpException if the current attempt number is greater than {@code totalMaxAttempts} or
+     * @throws RetryGiveUpException if the current attempt number is greater than {@code maxTotalAttempts} or
      *                              {@link Backoff#nextDelayMillis(int)} returns -1
      * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
      */
@@ -135,7 +135,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * millisAfterFromServer))}
      *
      * @return the number of milliseconds to wait for before attempting a retry
-     * @throws RetryGiveUpException if the current attempt number is greater than {@code totalMaxAttempts} or
+     * @throws RetryGiveUpException if the current attempt number is greater than {@code maxTotalAttempts} or
      *                              {@link Backoff#nextDelayMillis(int)} returns -1
      * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
      */
@@ -168,7 +168,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
 
     private static class State {
 
-        private final int totalMaxAttempts;
+        private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;
         private final long responseTimeoutMillis;
         private final long deadlineNanos;
@@ -177,8 +177,8 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         private int currentAttemptNoWithLastBackoff;
         private int totalAttemptNo;
 
-        State(int totalMaxAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis) {
-            this.totalMaxAttempts = totalMaxAttempts;
+        State(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis) {
+            this.maxTotalAttempts = maxTotalAttempts;
             this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
             this.responseTimeoutMillis = responseTimeoutMillis;
             if (responseTimeoutMillis > 0) {
@@ -225,7 +225,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         }
 
         int currentAttemptNoWith(Backoff backoff) {
-            if (totalAttemptNo++ >= totalMaxAttempts) {
+            if (totalAttemptNo++ >= maxTotalAttempts) {
                 return -1;
             }
             if (lastBackoff != backoff) {
