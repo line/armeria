@@ -70,11 +70,11 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
      *
      * @param retryStrategy the retry strategy
-     * @param defaultMaxAttempts the default number of max attempts for retry
+     * @param maxTotalAttempts the maximum number of total attempts
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
-    newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy, int defaultMaxAttempts) {
-        return new RetryingHttpClientBuilder(retryStrategy).defaultMaxAttempts(defaultMaxAttempts)
+    newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy, int maxTotalAttempts) {
+        return new RetryingHttpClientBuilder(retryStrategy).maxTotalAttempts(maxTotalAttempts)
                                                            .newDecorator();
     }
 
@@ -82,15 +82,15 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
      *
      * @param retryStrategy the retry strategy
-     * @param defaultMaxAttempts the default number of max attempts for retry
+     * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy,
-                 int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+                 int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         return new RetryingHttpClientBuilder(retryStrategy)
-                .defaultMaxAttempts(defaultMaxAttempts)
+                .maxTotalAttempts(maxTotalAttempts)
                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt).newDecorator();
     }
 
@@ -98,10 +98,10 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      * Creates a new instance that decorates the specified {@link Client}.
      */
     RetryingHttpClient(Client<HttpRequest, HttpResponse> delegate,
-                       RetryStrategy<HttpRequest, HttpResponse> strategy, int defaultMaxAttempts,
+                       RetryStrategy<HttpRequest, HttpResponse> strategy, int totalMaxAttempts,
                        long responseTimeoutMillisForEachAttempt, boolean useRetryAfter,
                        int contentPreviewLength) {
-        super(delegate, strategy, defaultMaxAttempts, responseTimeoutMillisForEachAttempt);
+        super(delegate, strategy, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
         this.useRetryAfter = useRetryAfter;
         checkArgument(contentPreviewLength >= 0,
                       "contentPreviewLength: %s (expected: >= 0)", contentPreviewLength);

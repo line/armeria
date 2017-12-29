@@ -326,7 +326,7 @@ public class RetryingHttpClientTest {
         return new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory).defaultResponseTimeoutMillis(responseTimeoutMillis)
                 .decorator(new RetryingHttpClientBuilder(strategy).useRetryAfter(true)
-                                                                  .defaultMaxAttempts(100).newDecorator())
+                                                                  .maxTotalAttempts(100).newDecorator())
                 .build();
     }
 

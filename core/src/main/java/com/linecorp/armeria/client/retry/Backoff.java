@@ -92,7 +92,7 @@ public interface Backoff {
      * a base option, jitter and maxAttempts will be set by default values.
      * These are a few examples:
      * <ul>
-     *   <li>{@code exponential=200:10000:2.0,jitter=0.2,maxAttempts=10} (default)</li>
+     *   <li>{@code exponential=200:10000:2.0,jitter=0.2} (default)</li>
      *   <li>{@code exponential=200:10000,jitter=0.2,maxAttempts=50} (multiplier omitted)</li>
      *   <li>{@code fixed=100,jitter=-0.5:0.2,maxAttempts=10} (fixed backoff with jitter variation)</li>
      *   <li>{@code random=200:1000} (jitter and maxAttempts will be set by default values)</li>

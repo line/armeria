@@ -33,6 +33,8 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.retry.RetryingHttpClient;
+import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 
@@ -135,7 +137,7 @@ public final class Flags {
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
-            "exponential=200:10000,jitter=0.2,maxAttempts=10";
+            "exponential=200:10000,jitter=0.2";
     private static final String DEFAULT_BACKOFF_SPEC =
             getNormalized("defaultBackoffSpec", DEFAULT_DEFAULT_BACKOFF_SPEC, value -> {
                 try {
@@ -146,6 +148,12 @@ public final class Flags {
                     return false;
                 }
             });
+
+    private static final int DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
+    private static final int DEFAULT_MAX_TOTAL_ATTEMPTS =
+            getInt("defaultMaxTotalAttempts",
+                   DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS,
+                   value -> value > 0);
 
     private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
     private static final Optional<String> ROUTE_CACHE_SPEC =
@@ -390,6 +398,18 @@ public final class Flags {
      */
     public static String defaultBackoffSpec() {
         return DEFAULT_BACKOFF_SPEC;
+    }
+
+    /**
+     * Returns the default maximum number of total attempts. Note that this value has effect only if a user
+     * did not specify it when creating a {@link RetryingHttpClient} or a {@link RetryingRpcClient}.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>} JVM option to
+     * override the default value.
+     */
+    public static int defaultMaxTotalAttempts() {
+        return DEFAULT_MAX_TOTAL_ATTEMPTS;
     }
 
     /**
