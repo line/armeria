@@ -55,7 +55,7 @@ for groupId in dependencies.keys():
 rst_epilog += '\n'
 
 needs_sphinx = '1.0'
-extensions = ['sphinx.ext.autodoc']
+extensions = ['sphinx.ext.autodoc', 'sphinxcontrib.plantuml']
 templates_path = ['_templates']
 source_suffix = '.rst'
 source_encoding = 'utf-8-sig'
@@ -73,3 +73,6 @@ html_static_path = ['_static']
 html_use_index = True
 html_show_sourcelink = False
 htmlhelp_basename = project_short
+
+# PlantUML options
+plantuml = os.getenv('plantuml')

@@ -1,6 +1,7 @@
 .. _`RequestLog`: apidocs/index.html?com/linecorp/armeria/common/logging/RequestLog.html
 .. _`RequestLogAvailability`: apidocs/index.html?com/linecorp/armeria/common/logging/RequestLogAvailability.html
 .. _`RequestContext`: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
+.. _`RetryingClient`: apidocs/index.html?com/linecorp/armeria/client/retry/RetryingClient.html
 
 .. _advanced-structured-logging:
 
@@ -31,14 +32,10 @@ What properties can be retrieved?
 +-----------------------------+----------------------------------------------------------------------+
 | ``host``                    | the name of the virtual host that serves the request                 |
 +-----------------------------+----------------------------------------------------------------------+
-| ``method``                  | the method of the request (e.g. ``GET``, ``POST``)                   |
-+-----------------------------+----------------------------------------------------------------------+
-| ``path``                    | the path of the request (e.g. ``/thrift/foo``)                       |
-+-----------------------------+----------------------------------------------------------------------+
-| ``query``                   | the query of the request (e.g. ``foo=bar&bar=baz``)                  |
-+-----------------------------+----------------------------------------------------------------------+
-| ``requestEnvelope``         | the protocol-dependent envelope object of the request.               |
-|                             | ``HttpHeaders`` for HTTP.                                            |
+| ``requestHeaders``          | the HTTP headers of the request.                                     |
+|                             | the header contains the method (e.g. ``GET``, ``POST``),             |
+|                             | the path (e.g. ``/thrift/foo``),                                     |
+|                             | the query (e.g. ``foo=bar&bar=baz``), the content type, etc.         |
 +-----------------------------+----------------------------------------------------------------------+
 | ``requestContent``          | the serialization-dependent content object of the request.           |
 |                             | ``ThriftCall`` for Thrift. ``null`` otherwise.                       |
@@ -58,10 +55,8 @@ What properties can be retrieved?
 | ``totalDurationNanos``      | the duration between the request start and the response end          |
 |                             | (i.e. response time)                                                 |
 +-----------------------------+----------------------------------------------------------------------+
-| ``statusCode``              | the integer status code (e.g. 404)                                   |
-+-----------------------------+----------------------------------------------------------------------+
-| ``responseEnvelope``        | the protocol-dependent envelope object of the response.              |
-|                             | ``HttpHeaders`` for HTTP.                                            |
+| ``responseHeaders``         | the HTTP headers of the response.                                    |
+|                             | the header contains the statusCode (e.g. 404), the content type, etc.|
 +-----------------------------+----------------------------------------------------------------------+
 | ``responseContent``         | the serialization-dependent content object of the response.          |
 |                             | ``ThriftReply`` for Thrift. ``null`` otherwise.                      |
@@ -157,3 +152,83 @@ automatically for you:
             ...
         }
     }
+
+.. _nested-log:
+
+Nested log
+----------
+
+When you retry a failed attempt, you might want to record the result of each attempt and to group them under
+a single RequestLog_. A RequestLog_ can contain more than one child RequestLog_ to support this sort of
+use cases.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.common.logging.RequestLogBuilder;
+
+    RequestLogBuilder.addChild(RequestLog);
+
+If the added RequestLog_ is the first child, the request-side log of the `RequestLog`_ will be propagated to the
+parent log. You can add as many child logs as you want, but the rest of logs would not effect.
+If you want to fill the response-side log of the parent log, please invoke:
+
+.. code-block:: java
+
+    RequestLogBuilder.endResponseWithLastChild();
+
+This will propagate the response-side log of the last added child to the parent log. The following diagram
+illustrates how a RequestLog_ with child logs looks like:
+
+.. uml::
+
+    @startditaa(--no-separation, scale=0.85)
+    /--------------------------------------------------------------\
+    |                                                              |
+    |  RequestLog                                                  |
+    |                                                              |
+    |                             /-----------------------------\  |
+    |                             :                             |  |
+    |  +----------------------+   |      Child RequestLogs      |  |
+    |  |                      |   |        e.g. retries         |  |
+    |  |                      |   |                             |  |
+    |  |   Request side log   |   |  +-----------------------+  |  |
+    |  |                      |   |  | Child #1              |  |  |
+    |  |                      |   |  | +-------------------+ |  |  |
+    |  |     Copied from      |<-------+ Request side log  | |  |  |
+    |  |     the first child  |   :  | +-------------------+ |  |  |
+    |  |                      |   |  | : Response side log | |  |  |
+    |  |                      |   |  | +-------------------+ |  |  |
+    |  +----------------------+   |  +-----------------------+  |  |
+    |                             |  | ...                   |  |  |
+    |  +----------------------+   |  +-----------------------+  |  |
+    |  |                      |   |              .              |  |
+    |  |                      |   |              .              |  |
+    |  |  Response side log   |   |  +-----------------------+  |  |
+    |  |                      |   |  | Child #N              |  |  |
+    |  |                      |   |  | +-------------------+ |  |  |
+    |  |     Copied from      |   |  | : Request side log  | |  |  |
+    |  |     the last child   |   |  | +-------------------+ |  |  |
+    |  |                      |<-------+ Response side log | |  |  |
+    |  |                      |   :  | +-------------------+ |  |  |
+    |  +----------------------+   |  +-----------------------+  |  |
+    |                             |                             |  |
+    |                             \-----------------------------/  |
+    |                                                              |
+    \--------------------------------------------------------------/
+    @endditaa
+
+You can retrieve the child logs using ``RequestLog.children()``.
+
+.. code-block:: java
+
+    final RequestContext ctx = ...;
+    ctx.log().addListner(log -> {
+        if (!log.children().isEmpty()) {
+            System.err.println("A request finished after " + log.children().size() + " attempt(s): " + log);
+        } else {
+            System.err.println("A request is done: " + log);
+        }
+    }, RequestLogAvailability.COMPLETE);
+
+`RetryingClient`_ is a good example that leverages this feature.
+See :ref:`retry-with-logging` for more information.

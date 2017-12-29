@@ -38,6 +38,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
@@ -184,6 +186,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             endResponse0(log.responseEndTimeNanos(), null);
         }
+    }
+
+    @Override
+    public List<RequestLog> children() {
+        return children != null ? ImmutableList.copyOf(children) : ImmutableList.of();
     }
 
     @Override
