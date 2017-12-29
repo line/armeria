@@ -12,7 +12,7 @@ com.fasterxml.jackson.core:
   jackson-databind: { version: *JACKSON_VERSION }
 
 com.github.ben-manes.caffeine:
-  caffeine: { version: '2.6.0' }
+  caffeine: { version: '2.6.1' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
