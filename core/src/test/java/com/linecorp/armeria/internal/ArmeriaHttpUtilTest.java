@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setHttp2Authority;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toArmeria;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp1;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp2;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
@@ -26,8 +28,13 @@ import org.junit.Test;
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.util.AsciiString;
 
 public class ArmeriaHttpUtilTest {
@@ -48,19 +55,69 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void testCookieSplit() {
+    public void outboundCookiesMustBeMergedForHttp1() throws Http2Exception {
+        final HttpHeaders in = new DefaultHttpHeaders();
+
+        in.add(HttpHeaderNames.COOKIE, "a=b; c=d");
+        in.add(HttpHeaderNames.COOKIE, "e=f;g=h");
+        in.addObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        in.add(HttpHeaderNames.COOKIE, "i=j");
+        in.add(HttpHeaderNames.COOKIE, "k=l;");
+
+        final io.netty.handler.codec.http.HttpHeaders out =
+                new io.netty.handler.codec.http.DefaultHttpHeaders();
+
+        toNettyHttp1(0, in, out, HttpVersion.HTTP_1_1, false, true);
+        assertThat(out.getAll(HttpHeaderNames.COOKIE))
+                .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
+    }
+
+    @Test
+    public void outboundCookiesMustBeSplitForHttp2() {
+        final HttpHeaders in = new DefaultHttpHeaders();
+
+        in.add(HttpHeaderNames.COOKIE, "a=b; c=d");
+        in.add(HttpHeaderNames.COOKIE, "e=f;g=h");
+        in.addObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        in.add(HttpHeaderNames.COOKIE, "i=j");
+        in.add(HttpHeaderNames.COOKIE, "k=l;");
+
+        final Http2Headers out = toNettyHttp2(in);
+        assertThat(out.getAll(HttpHeaderNames.COOKIE))
+                .containsExactly("a=b", "c=d", "e=f", "g=h", "i=j", "k=l");
+    }
+
+    @Test
+    public void inboundCookiesMustBeMergedForHttp1() {
         final io.netty.handler.codec.http.HttpHeaders in = new io.netty.handler.codec.http.DefaultHttpHeaders();
         final HttpHeaders out = new DefaultHttpHeaders();
 
         in.add(HttpHeaderNames.COOKIE, "a=b; c=d");
         in.add(HttpHeaderNames.COOKIE, "e=f;g=h");
+        in.add(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
         toArmeria(in, out);
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
-                .containsExactly("a=b", "c=d", "e=f", "g=h", "i=j", "k=l");
+                .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
+    }
+
+    @Test
+    public void inboundCookiesMustBeMergedForHttp2() {
+        final Http2Headers in = new DefaultHttp2Headers();
+
+        in.add(HttpHeaderNames.COOKIE, "a=b; c=d");
+        in.add(HttpHeaderNames.COOKIE, "e=f;g=h");
+        in.addObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        in.add(HttpHeaderNames.COOKIE, "i=j");
+        in.add(HttpHeaderNames.COOKIE, "k=l;");
+
+        final HttpHeaders out = toArmeria(in);
+
+        assertThat(out.getAll(HttpHeaderNames.COOKIE))
+                .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
     }
 
     @Test
