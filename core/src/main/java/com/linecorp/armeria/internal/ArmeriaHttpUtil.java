@@ -44,8 +44,10 @@ import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.StringJoiner;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
@@ -128,9 +130,23 @@ public final class ArmeriaHttpUtil {
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.PATH, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.SCHEME, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.STATUS, EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.TRAILER, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
+    }
+
+    /**
+     * Translations from HTTP/2 header name to the HTTP/1.x equivalent.
+     */
+    private static final CharSequenceMap REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap();
+    private static final CharSequenceMap RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap();
+
+    static {
+        RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
+                                         HttpHeaderNames.HOST);
+        REQUEST_HEADER_TRANSLATIONS.add(RESPONSE_HEADER_TRANSLATIONS);
     }
 
     /**
@@ -138,6 +154,9 @@ public final class ArmeriaHttpUtil {
      * be empty, and instead should be {@code /}.
      */
     private static final String EMPTY_REQUEST_PATH = "/";
+
+    private static final Splitter COOKIE_SPLITTER = Splitter.on(';').trimResults().omitEmptyStrings();
+    private static final String COOKIE_SEPARATOR = "; ";
 
     /**
      * Concatenates two path strings.
@@ -237,9 +256,27 @@ public final class ArmeriaHttpUtil {
      */
     public static HttpHeaders toArmeria(Http2Headers headers) {
         final HttpHeaders converted = new DefaultHttpHeaders(false, headers.size());
+        StringJoiner cookieJoiner = null;
         for (Entry<CharSequence, CharSequence> e : headers) {
-            converted.add(AsciiString.of(e.getKey()), e.getValue().toString());
+            final AsciiString name = AsciiString.of(e.getKey());
+            final CharSequence value = e.getValue();
+
+            // Cookies must be concatenated into a single octet string.
+            // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+            if (name.equals(HttpHeaderNames.COOKIE)) {
+                if (cookieJoiner == null) {
+                    cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
+                }
+                COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
+            } else {
+                converted.add(name, value.toString());
+            }
         }
+
+        if (cookieJoiner != null && cookieJoiner.length() != 0) {
+            converted.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
+        }
+
         return converted;
     }
 
@@ -308,44 +345,35 @@ public final class ArmeriaHttpUtil {
         // but still allowing for "enough" space in the map to reduce the chance of hash code collision.
         final CharSequenceMap connectionBlacklist =
                 toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
+        StringJoiner cookieJoiner = null;
         while (iter.hasNext()) {
             final Entry<CharSequence, CharSequence> entry = iter.next();
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
-            if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName) && !connectionBlacklist.contains(aName)) {
-                // https://tools.ietf.org/html/rfc7540#section-8.1.2.2 makes a special exception for TE
-                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.TE)) {
-                    toHttp2HeadersFilterTE(entry, out);
-                    continue;
-                }
-
-                final String value = entry.getValue().toString();
-                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.COOKIE)) {
-                    // split up cookies to allow for better compression
-                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-                    int index = value.indexOf(';');
-                    if (index >= 0) {
-                        int start = 0;
-                        do {
-                            out.add(HttpHeaderNames.COOKIE, value.substring(start, index));
-                            // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
-                            index++;
-                            if (index != value.length() && value.charAt(index) == ' ') {
-                                index++;
-                            }
-                            start = index;
-                        } while (start < value.length() &&
-                                 (index = value.indexOf(';', start)) != -1);
-
-                        if (start < value.length()) {
-                            out.add(HttpHeaderNames.COOKIE, value.substring(start));
-                        }
-                    } else {
-                        out.add(HttpHeaderNames.COOKIE, value);
-                    }
-                } else {
-                    out.add(aName, value);
-                }
+            if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName) || connectionBlacklist.contains(aName)) {
+                continue;
             }
+
+            // https://tools.ietf.org/html/rfc7540#section-8.1.2.2 makes a special exception for TE
+            if (aName.equals(HttpHeaderNames.TE)) {
+                toHttp2HeadersFilterTE(entry, out);
+                continue;
+            }
+
+            // Cookies must be concatenated into a single octet string.
+            // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+            final CharSequence value = entry.getValue();
+            if (aName.equals(HttpHeaderNames.COOKIE)) {
+                if (cookieJoiner == null) {
+                    cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
+                }
+                COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
+            } else {
+                out.add(aName, value.toString());
+            }
+        }
+
+        if (cookieJoiner != null && cookieJoiner.length() != 0) {
+            out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
     }
 
@@ -482,29 +510,25 @@ public final class ArmeriaHttpUtil {
     /**
      * Converts the specified Armeria HTTP/2 headers into Netty HTTP/2 headers.
      */
-    public static Http2Headers toNettyHttp2(HttpHeaders inputHeaders) {
-        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, inputHeaders.size());
-        outputHeaders.set(inputHeaders);
-        outputHeaders.remove(HttpHeaderNames.CONNECTION);
-        outputHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
-        outputHeaders.remove(HttpHeaderNames.TRAILER);
-        return outputHeaders;
-    }
+    public static Http2Headers toNettyHttp2(HttpHeaders in) {
+        final Http2Headers out = new DefaultHttp2Headers(false, in.size());
+        out.set(in);
+        out.remove(HttpHeaderNames.CONNECTION);
+        out.remove(HttpHeaderNames.TRANSFER_ENCODING);
+        out.remove(HttpHeaderNames.TRAILER);
 
-    /**
-     * Converts the specified Armeria HTTP/2 headers into Netty HTTP/1 headers.
-     */
-    public static io.netty.handler.codec.http.HttpHeaders toNettyHttp1(HttpHeaders inputHeaders) {
-        final io.netty.handler.codec.http.DefaultHttpHeaders outputHeaders =
-                new io.netty.handler.codec.http.DefaultHttpHeaders();
-        for (Entry<AsciiString, String> e : inputHeaders) {
-            final AsciiString name = e.getKey();
-            if (name.isEmpty() || HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
-                continue;
-            }
-            outputHeaders.add(name, e.getValue());
+        if (!out.contains(HttpHeaderNames.COOKIE)) {
+            return out;
         }
-        return outputHeaders;
+
+        // Split up cookies to allow for better compression.
+        // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+        final List<CharSequence> cookies = out.getAllAndRemove(HttpHeaderNames.COOKIE);
+        for (CharSequence c : cookies) {
+            out.add(HttpHeaderNames.COOKIE, COOKIE_SPLITTER.split(c));
+        }
+
+        return out;
     }
 
     /**
@@ -526,79 +550,45 @@ public final class ArmeriaHttpUtil {
             int streamId, HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
 
-        final Http2ToHttpHeaderTranslator translator =
-                new Http2ToHttpHeaderTranslator(outputHeaders, isRequest);
+        final CharSequenceMap translations = isRequest ? REQUEST_HEADER_TRANSLATIONS
+                                                       : RESPONSE_HEADER_TRANSLATIONS;
+        StringJoiner cookieJoiner = null;
         try {
             for (Entry<AsciiString, String> entry : inputHeaders) {
-                translator.translate(entry);
+                final AsciiString name = entry.getKey();
+                final String value = entry.getValue();
+                AsciiString translatedName = translations.get(name);
+                if (translatedName != null) {
+                    outputHeaders.add(translatedName, value);
+                    continue;
+                }
+
+                // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+                if (name.isEmpty() || HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
+                    continue;
+                }
+
+                if (HttpHeaderNames.COOKIE.equals(name)) {
+                    // combine the cookie values into 1 header entry.
+                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                    if (cookieJoiner == null) {
+                        cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
+                    }
+                    COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
+                } else {
+                    outputHeaders.add(name, value);
+                }
+            }
+
+            if (cookieJoiner != null && cookieJoiner.length() != 0) {
+                outputHeaders.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
             }
         } catch (Throwable t) {
             throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
 
-        outputHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
-        outputHeaders.remove(HttpHeaderNames.TRAILER);
         if (!isTrailer) {
             HttpUtil.setKeepAlive(outputHeaders, httpVersion, true);
-        }
-    }
-
-    /**
-     * Utility which translates HTTP/2 headers to HTTP/1 headers.
-     */
-    private static final class Http2ToHttpHeaderTranslator {
-        /**
-         * Translations from HTTP/2 header name to the HTTP/1.x equivalent.
-         */
-        private static final CharSequenceMap REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap();
-        private static final CharSequenceMap RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap();
-
-        static {
-            RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
-                                             HttpHeaderNames.HOST);
-            REQUEST_HEADER_TRANSLATIONS.add(RESPONSE_HEADER_TRANSLATIONS);
-        }
-
-        private final io.netty.handler.codec.http.HttpHeaders output;
-        private final CharSequenceMap translations;
-
-        /**
-         * Create a new instance.
-         *
-         * @param output The HTTP/1.x headers object to store the results of the translation
-         * @param request if {@code true}, translates headers using the request translation map.
-         *                Otherwise uses the response translation map.
-         */
-        Http2ToHttpHeaderTranslator(io.netty.handler.codec.http.HttpHeaders output,
-                                    boolean request) {
-
-            this.output = output;
-            translations = request ? REQUEST_HEADER_TRANSLATIONS : RESPONSE_HEADER_TRANSLATIONS;
-        }
-
-        public void translate(Entry<AsciiString, String> entry) {
-            final AsciiString name = entry.getKey();
-            final String value = entry.getValue();
-            AsciiString translatedName = translations.get(name);
-            if (translatedName != null) {
-                output.add(translatedName, value);
-                return;
-            }
-
-            // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
-            if (name.isEmpty() || HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
-                return;
-            }
-
-            if (HttpHeaderNames.COOKIE.equals(name)) {
-                // combine the cookie values into 1 header entry.
-                // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-                String existingCookie = output.get(HttpHeaderNames.COOKIE);
-                output.set(HttpHeaderNames.COOKIE,
-                           existingCookie != null ? existingCookie + "; " + value : value);
-            } else {
-                output.add(name, value);
-            }
         }
     }
 
