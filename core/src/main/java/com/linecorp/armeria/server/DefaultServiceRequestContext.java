@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -80,7 +81,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Object request,
+            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Request request,
             @Nullable SSLSession sslSession) {
 
         super(meterRegistry, sessionProtocol,
@@ -115,10 +116,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public ServiceRequestContext newDerivedContext() {
+        return newDerivedContext(request());
+    }
+
+    @Override
+    public ServiceRequestContext newDerivedContext(Request request) {
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
-                this.cfg, this.ch, this.meterRegistry(), this.sessionProtocol(),
-                this.pathMappingContext, this.pathMappingResult, this.request(),
-                this.sslSession());
+                cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
+                pathMappingResult, request, sslSession());
         for (Iterator<Attribute<?>> i = attrs(); i.hasNext();) {
             ctx.addAttr(i.next());
         }

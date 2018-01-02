@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
@@ -598,7 +599,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
                                       SessionProtocol sessionProtocol, HttpMethod method, String path,
-                                      @Nullable String query, Object request) {
+                                      @Nullable String query, Request request) {
             super(meterRegistry, sessionProtocol, method, path, query, request);
             this.channel = requireNonNull(channel, "channel");
             requestLog = new DefaultRequestLog(this);
@@ -606,9 +607,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         @Override
         public RequestContext newDerivedContext() {
+            return newDerivedContext(request());
+        }
+
+        @Override
+        public RequestContext newDerivedContext(Request request) {
             // There are no attributes which should be copied to a new instance.
             return new EarlyRespondingRequestContext(channel(), meterRegistry(), sessionProtocol(),
-                                                     method(), path(), query(), request());
+                                                     method(), path(), query(), request);
         }
 
         @Nullable

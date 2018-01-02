@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
@@ -46,18 +47,18 @@ public class DefaultServiceRequestContextTest {
         final ServiceRequestContext originalCtx = new DefaultServiceRequestContext(
                 virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),
                 SessionProtocol.H2,
-                mappingCtx, PathMappingResult.of("/foo", null, ImmutableMap.of()),
-                HttpRequest.of(HttpMethod.POST, "/foo"), null);
+                mappingCtx, PathMappingResult.of("/foo", null, ImmutableMap.of()), mock(Request.class), null);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
 
-        final ServiceRequestContext derivedCtx = originalCtx.newDerivedContext();
+        Request newRequest = mock(Request.class);
+        final ServiceRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest);
         assertThat(derivedCtx.server()).isSameAs(originalCtx.server());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
         assertThat(derivedCtx.<Service<HttpRequest, HttpResponse>>service()).isSameAs(originalCtx.service());
         assertThat(derivedCtx.pathMapping()).isSameAs(originalCtx.pathMapping());
-        assertThat(derivedCtx.<Object>request()).isSameAs(originalCtx.request());
+        assertThat(derivedCtx.<Request>request()).isSameAs(newRequest);
 
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
         assertThat(derivedCtx.maxRequestLength()).isEqualTo(originalCtx.maxRequestLength());

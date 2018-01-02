@@ -81,7 +81,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * Executes the delegate with a new derived {@link ClientRequestContext}.
      */
     protected final O executeDelegate(ClientRequestContext ctx, I req) throws Exception {
-        final ClientRequestContext derivedContext = ctx.newDerivedContext();
+        final ClientRequestContext derivedContext = ctx.newDerivedContext(req);
         ctx.logBuilder().addChild(derivedContext.log());
         try (SafeCloseable ignore = RequestContext.push(derivedContext, false)) {
             return delegate().execute(derivedContext, req);
