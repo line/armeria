@@ -37,7 +37,6 @@ import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -222,10 +221,10 @@ final class AnnotatedHttpServiceMethod {
      */
     private HttpResponse convertException(ServiceRequestContext ctx, HttpRequest req,
                                           Throwable cause) {
-        final Throwable rootCause = Throwables.getRootCause(cause);
+        final Throwable peeledCause = Exceptions.peel(cause);
         for (final ExceptionHandlerFunction func : exceptionHandlers) {
             try {
-                return func.handleException(ctx, req, rootCause);
+                return func.handleException(ctx, req, peeledCause);
             } catch (FallthroughException ignore) {
                 // Do nothing.
             } catch (Exception e) {
@@ -233,7 +232,7 @@ final class AnnotatedHttpServiceMethod {
                             func.getClass().getName(), e);
             }
         }
-        return ExceptionHandlerFunction.DEFAULT.handleException(ctx, req, rootCause);
+        return ExceptionHandlerFunction.DEFAULT.handleException(ctx, req, peeledCause);
     }
 
     /**

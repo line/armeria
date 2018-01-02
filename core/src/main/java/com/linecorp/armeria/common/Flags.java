@@ -35,6 +35,7 @@ import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 
@@ -169,14 +170,14 @@ public final class Flags {
 
     static {
         if (!Epoll.isAvailable()) {
-            final Throwable cause = filterCause(Epoll.unavailabilityCause());
+            final Throwable cause = Exceptions.peel(Epoll.unavailabilityCause());
             logger.info("/dev/epoll not available: {}", cause.toString());
         } else if (USE_EPOLL) {
             logger.info("Using /dev/epoll");
         }
 
         if (!OpenSsl.isAvailable()) {
-            final Throwable cause = filterCause(OpenSsl.unavailabilityCause());
+            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
             logger.info("OpenSSL not available: {}", cause.toString());
         } else if (USE_OPENSSL) {
             logger.info("Using OpenSSL: {}, 0x{}",
@@ -548,14 +549,6 @@ public final class Flags {
             value = Ascii.toLowerCase(value);
         }
         return value;
-    }
-
-    private static Throwable filterCause(Throwable cause) {
-        if (cause instanceof ExceptionInInitializerError) {
-            return cause.getCause();
-        }
-
-        return cause;
     }
 
     private Flags() {}

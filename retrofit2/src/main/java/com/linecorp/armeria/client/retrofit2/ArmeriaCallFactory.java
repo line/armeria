@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import okhttp3.Call;
 import okhttp3.Call.Factory;
@@ -190,7 +191,7 @@ final class ArmeriaCallFactory implements Factory {
             } catch (CancellationException e) {
                 throw new IOException(e);
             } catch (CompletionException e) {
-                throw new IOException(e.getCause());
+                throw new IOException(Exceptions.peel(e));
             }
         }
 
