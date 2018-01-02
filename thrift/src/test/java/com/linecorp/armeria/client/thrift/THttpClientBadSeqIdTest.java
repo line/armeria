@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
 public class THttpClientBadSeqIdTest {
@@ -81,7 +82,7 @@ public class THttpClientBadSeqIdTest {
             assertThatThrownBy(res::get)
                     .isInstanceOf(ExecutionException.class)
                     .hasCauseInstanceOf(TApplicationException.class)
-                    .satisfies(cause -> assertThat(((TApplicationException) cause.getCause()).getType())
+                    .satisfies(cause -> assertThat(((TApplicationException) Exceptions.peel(cause)).getType())
                             .isEqualTo(TApplicationException.BAD_SEQUENCE_ID));
         }
     }

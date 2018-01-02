@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.thrift.TApplicationException;
@@ -59,6 +58,7 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
@@ -127,8 +127,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
             future.handle(voidFunction((res, cause) -> {
                 if (cause != null) {
-                    handlePreDecodeException(ctx, reply, func,
-                                             cause instanceof ExecutionException ? cause.getCause() : cause);
+                    handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));
                     return;
                 }
 

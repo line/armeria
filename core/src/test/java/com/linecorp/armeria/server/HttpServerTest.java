@@ -96,6 +96,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
@@ -561,7 +562,7 @@ public class HttpServerTest {
             f.get();
             fail();
         } catch (ExecutionException e) {
-            assertThat(e.getCause(), is(instanceOf(ClosedSessionException.class)));
+            assertThat(Exceptions.peel(e), is(instanceOf(ClosedSessionException.class)));
         }
     }
 
@@ -580,7 +581,7 @@ public class HttpServerTest {
             f.get();
             fail();
         } catch (ExecutionException e) {
-            assertThat(e.getCause(), is(instanceOf(ClosedSessionException.class)));
+            assertThat(Exceptions.peel(e), is(instanceOf(ClosedSessionException.class)));
         }
     }
 

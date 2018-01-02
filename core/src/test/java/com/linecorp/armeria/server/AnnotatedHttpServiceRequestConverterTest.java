@@ -28,6 +28,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.HttpClient;
@@ -112,6 +113,12 @@ public class AnnotatedHttpServiceRequestConverterTest {
         public String defaultText(@RequestObject String obj1) {
             assertThat(obj1).isNotNull();
             return obj1;
+        }
+
+        @Post("/default/invalid")
+        public String invalidJson(@RequestObject JsonNode node) {
+            // Should never reach here because we are sending invalid JSON.
+            throw new Error();
         }
     }
 
@@ -296,5 +303,11 @@ public class AnnotatedHttpServiceRequestConverterTest {
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         // Response is encoded as UTF-8.
         assertThat(response.content().array()).isEqualTo(utf8);
+
+        String invalidJson = "{\"foo:\"bar\"}"; // should be \"foo\"
+        response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/invalid",
+                                                           MediaType.JSON_UTF_8, invalidJson))
+                         .aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }
