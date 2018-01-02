@@ -19,7 +19,10 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -197,6 +200,25 @@ public final class Exceptions {
     @SuppressWarnings("unchecked")
     private static <E extends Throwable> void doThrowUnsafely(Throwable cause) throws E {
         throw (E) cause;
+    }
+
+    /**
+     * Returns the cause of the specified {@code throwable} peeling it recursively, if it is one of the
+     * {@link CompletionException}, {@link ExecutionException}, {@link InvocationTargetException}
+     * or {@link ExceptionInInitializerError}.
+     * Otherwise returns the {@code throwable}.
+     */
+    public static Throwable peel(Throwable throwable) {
+        requireNonNull(throwable, "throwable");
+        Throwable cause = throwable.getCause();
+        while (cause != null && cause != throwable &&
+               (throwable instanceof CompletionException || throwable instanceof ExecutionException ||
+                throwable instanceof InvocationTargetException ||
+                throwable instanceof ExceptionInInitializerError)) {
+            throwable = cause;
+            cause = throwable.getCause();
+        }
+        return throwable;
     }
 
     /**
