@@ -62,7 +62,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     @Override
-    public void serverStarting(Server server) throws Exception {
+    public void serverStarted(Server server) throws Exception {
         if (endpoint == null) {
             assert server.activePort().isPresent();
             endpoint = Endpoint.of(server.defaultHostname(),
