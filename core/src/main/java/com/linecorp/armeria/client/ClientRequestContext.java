@@ -37,6 +37,9 @@ public interface ClientRequestContext extends RequestContext {
     @Override
     ClientRequestContext newDerivedContext();
 
+    @Override
+    ClientRequestContext newDerivedContext(Request request);
+
     /**
      * The {@link AttributeKey} of the {@link HttpHeaders} to include when a {@link Client} sends an
      * {@link HttpRequest}. This {@link Attribute} is initially populated from
