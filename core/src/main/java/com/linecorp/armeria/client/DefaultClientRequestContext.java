@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -71,7 +72,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             EventLoop eventLoop, MeterRegistry meterRegistry,
             SessionProtocol sessionProtocol, Endpoint endpoint,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-            ClientOptions options, Object request) {
+            ClientOptions options, Request request) {
 
         super(meterRegistry, sessionProtocol, method, path, query, request);
 
@@ -103,8 +104,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     private DefaultClientRequestContext(DefaultClientRequestContext ctx) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(),
-              ctx.method(), ctx.path(), ctx.query(), ctx.request());
+        this(ctx, ctx.request());
+    }
+
+    private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request) {
+        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), request);
 
         this.eventLoop = ctx.eventLoop();
         this.options = ctx.options();
@@ -132,6 +136,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public ClientRequestContext newDerivedContext() {
         return new DefaultClientRequestContext(this);
+    }
+
+    @Override
+    public ClientRequestContext newDerivedContext(Request request) {
+        return new DefaultClientRequestContext(this, request);
     }
 
     @Override

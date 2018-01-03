@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -37,6 +38,11 @@ public class ClientRequestContextWrapper
     @Override
     public ClientRequestContext newDerivedContext() {
         return delegate().newDerivedContext();
+    }
+
+    @Override
+    public ClientRequestContext newDerivedContext(Request request) {
+        return delegate().newDerivedContext(request);
     }
 
     @Override

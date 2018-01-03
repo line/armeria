@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 
 /**
@@ -45,6 +46,11 @@ public class ServiceRequestContextWrapper
     @Override
     public ServiceRequestContext newDerivedContext() {
         return delegate().newDerivedContext();
+    }
+
+    @Override
+    public ServiceRequestContext newDerivedContext(Request request) {
+        return delegate().newDerivedContext(request);
     }
 
     @Override

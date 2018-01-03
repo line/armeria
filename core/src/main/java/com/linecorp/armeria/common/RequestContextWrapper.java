@@ -97,7 +97,7 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public <T> T request() {
+    public <E extends Request> E request() {
         return delegate().request();
     }
 

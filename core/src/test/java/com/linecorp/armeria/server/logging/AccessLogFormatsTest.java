@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
@@ -227,6 +228,11 @@ public class AccessLogFormatsTest {
 
         @Override
         public RequestContext newDerivedContext() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public RequestContext newDerivedContext(Request request) {
             throw new UnsupportedOperationException();
         }
 

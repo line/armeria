@@ -417,6 +417,11 @@ public class RequestContextTest {
         }
 
         @Override
+        public RequestContext newDerivedContext(Request request) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public EventLoop eventLoop() {
             return channel.eventLoop();
         }

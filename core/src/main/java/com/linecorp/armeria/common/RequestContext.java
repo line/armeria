@@ -72,6 +72,13 @@ public interface RequestContext extends AttributeMap {
     RequestContext newDerivedContext();
 
     /**
+     * Creates a new derived {@link RequestContext} with the specified {@link Request} which the
+     * {@link RequestLog} is different from the deriving context.
+     * Note that the references of {@link Attribute}s in the {@link #attrs()} are copied as well.
+     */
+    RequestContext newDerivedContext(Request request);
+
+    /**
      * Returns the context of the {@link Request} that is being handled in the current thread.
      *
      * @throws IllegalStateException if the context is unavailable in the current thread
@@ -219,7 +226,7 @@ public interface RequestContext extends AttributeMap {
     /**
      * Returns the {@link Request} associated with this context.
      */
-    <T> T request();
+    <T extends Request> T request();
 
     /**
      * Returns the {@link RequestLog} that contains the information about the current {@link Request}.

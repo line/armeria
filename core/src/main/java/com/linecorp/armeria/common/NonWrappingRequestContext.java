@@ -47,7 +47,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final HttpMethod method;
     private final String path;
     private final String query;
-    private final Object request;
+    private final Request request;
 
     // Callbacks
     private List<Consumer<? super RequestContext>> onEnterCallbacks;
@@ -62,7 +62,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, @Nullable String query, Object request) {
+            HttpMethod method, String path, @Nullable String query, Request request) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
@@ -129,7 +129,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
     @Override
     @SuppressWarnings("unchecked")
-    public final <T> T request() {
+    public final <T extends Request> T request() {
         return (T) request;
     }
 

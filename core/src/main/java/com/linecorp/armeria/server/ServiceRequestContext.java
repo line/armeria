@@ -42,6 +42,9 @@ public interface ServiceRequestContext extends RequestContext {
     @Override
     ServiceRequestContext newDerivedContext();
 
+    @Override
+    ServiceRequestContext newDerivedContext(Request request);
+
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.
      */
