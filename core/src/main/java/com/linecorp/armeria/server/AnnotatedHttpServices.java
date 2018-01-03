@@ -376,11 +376,10 @@ final class AnnotatedHttpServices {
         requireNonNull(targetClass, "targetClass");
 
         final ImmutableList.Builder<R> builder = new Builder<>();
-        T[] annotations = targetMethod.getAnnotationsByType(annotationClass);
-        if (annotations.length == 0) {
-            annotations = targetClass.getAnnotationsByType(annotationClass);
+        for (final T annotation : targetMethod.getAnnotationsByType(annotationClass)) {
+            builder.add(getInstance(annotation, expectedType));
         }
-        for (final T annotation : annotations) {
+        for (final T annotation : targetClass.getAnnotationsByType(annotationClass)) {
             builder.add(getInstance(annotation, expectedType));
         }
         return builder;
