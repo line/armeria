@@ -17,8 +17,6 @@ Armeria provides a class called `ArmeriaRetrofit`_ that replaces the networking 
 `OkHttp`_ to Armeria. By doing so, you get the following benefits:
 
 - Better performance, thanks to `Netty`_ and its JNI-based I/O and TLS implementation
-- Less context switches when building `an API gateway`_, because Armeria will assign the same event loop thread
-  for the incoming request and the outgoing request
 - Leverage other advanced features of Armeria, such as client-side load-balancing and service discovery
 - Cleartext HTTP/2 support, as known as ``h2c``
 

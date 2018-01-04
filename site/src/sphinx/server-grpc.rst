@@ -4,8 +4,10 @@
 .. _GrpcSerializationFormats: https://github.com/line/armeria/blob/master/grpc/src/main/java/com/linecorp/armeria/common/grpc/GrpcSerializationFormats.java
 .. _GrpcService: apidocs/index.html?com/linecorp/armeria/server/grpc/GrpcService.html
 .. _GrpcServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/grpc/GrpcServiceBuilder.html
+.. _protobuf-gradle-plugin: https://github.com/google/protobuf-gradle-plugin
 .. _Protobuf-JSON: https://developers.google.com/protocol-buffers/docs/proto3#json
 .. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
+.. _the gRPC-Java README: https://github.com/grpc/grpc-java/blob/master/README.md#download
 
 .. _server-grpc:
 
@@ -64,6 +66,11 @@ Our implementation would look like the following:
             responseObserver.onCompleted();
         }
     }
+
+.. note::
+
+    It is recommended to use the build plugin as explained in `the gRPC-Java README`_ rather than
+    running ``protoc`` manually.
 
 ``GrpcService``
 ---------------
