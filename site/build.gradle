@@ -10,7 +10,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'kr.motd.gradle:sphinx-gradle-plugin:1.0.6'
+        classpath 'kr.motd.gradle:sphinx-gradle-plugin:1.1.0'
         classpath 'gradle.plugin.net.davidecavestro:gradle-jxr-plugin:0.2.1'
     }
 }
