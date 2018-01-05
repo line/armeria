@@ -111,7 +111,7 @@ you can use the streaming stub to send and receive multiple responses, in a full
 
     // Prepare the observer that will receive the request stream.
     CountDownLatch latch = new CountDownLatch(1);
-    StreamObserver<HelloReply> replyStream = new StreamObserver<>() {
+    StreamObserver<HelloReply> replyStream = new StreamObserver<HelloReply>() {
         @Override
         public void onNext(HelloReply reply) {
             assert reply.getMessage().equals("Hello, Armerian World!");
