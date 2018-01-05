@@ -9,6 +9,7 @@ html, body, .wy-grid-for-nav {
   line-height: 1.42857143;
   background: #f0f0f0;
   margin: 0;
+  word-break: break-word;
 }
 
 .wy-nav-side {
@@ -105,7 +106,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Code blocks and literals */
 pre, code, kbd, var, samp, tt,
-.rst-content div[class^='highlight'] pre,
+.rst-content div[class*='highlight'] pre,
 .rst-content pre.literal-block,
 .rst-content code.literal,
 .rst-content tt.literal,
@@ -119,12 +120,21 @@ pre, code, kbd, var, samp, tt,
 
 /* Code blocks */
 pre,
-.rst-content div[class^='highlight'] pre,
+.rst-content div[class*='highlight'] pre,
 .rst-content pre.literal-block {
   padding: 8px 12px 12px 12px;
   font-size: 90%;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   color: inherit;
+
+  /* Not sure why, but horizontal scrollbar does not go away without this on Chrome Linux */
+  width: 99.9%;
+}
+
+/* Code block wrappers */
+.rst-content div[class*='highlight'] {
+  overflow: inherit;
 }
 
 /* Literals */
@@ -195,6 +205,11 @@ p, .rst-content li {
 /* Do not use monospace font for download links */
 .rst-content tt.download {
   font-family: inherit;
+}
+
+/* Adjust table width */
+.rst-content table.docutils, .rst-content table.field-list {
+  width: 100%;
 }
 
 /* Adjust table padding */
