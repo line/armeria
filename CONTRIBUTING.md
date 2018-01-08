@@ -15,6 +15,10 @@ If you are sending a pull request and it's a non-trivial change beyond fixing ty
 [the ICLA (individual contributor license agreement)](https://feedback.line.me/enquete/public/799-Z6ygVz3U). Please
 contact us if you need the CCLA (corporate contributor license agreement).
 
+### Code of conduct
+
+We expect contributors to follow [our code of conduct](https://github.com/line/armeria/blob/master/CODE_OF_CONDUCT.md).
+
 ### Setting up your IDE
 
 You can import Armeria into your IDE ([IntelliJ IDEA](https://www.jetbrains.com/idea/) or [Eclipse](https://www.eclipse.org/)) as a Gradle project.
