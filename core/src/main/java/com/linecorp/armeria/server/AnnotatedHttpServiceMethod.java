@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -248,7 +249,7 @@ final class AnnotatedHttpServiceMethod {
             if (param != null) {
                 if (pathParams.contains(param.value())) {
                     if (parameterInfo.getAnnotation(Default.class) != null ||
-                        parameterInfo.getType().isAssignableFrom(Optional.class)) {
+                        parameterInfo.getType() == Optional.class) {
                         throw new IllegalArgumentException(
                                 "Path variable '" + param.value() + "' should not be an optional.");
                     }
@@ -282,14 +283,16 @@ final class AnnotatedHttpServiceMethod {
                 continue;
             }
 
-            if (parameterInfo.getType().isAssignableFrom(ServiceRequestContext.class) ||
-                parameterInfo.getType().isAssignableFrom(HttpParameters.class)) {
+            if (parameterInfo.getType() == RequestContext.class ||
+                parameterInfo.getType() == ServiceRequestContext.class ||
+                parameterInfo.getType() == HttpParameters.class) {
                 entries.add(Parameter.ofPredefinedType(parameterInfo.getType()));
                 continue;
             }
 
-            if (parameterInfo.getType().isAssignableFrom(HttpRequest.class) ||
-                parameterInfo.getType().isAssignableFrom(AggregatedHttpMessage.class)) {
+            if (parameterInfo.getType() == Request.class ||
+                parameterInfo.getType() == HttpRequest.class ||
+                parameterInfo.getType() == AggregatedHttpMessage.class) {
                 if (hasRequestMessage) {
                     throw new IllegalArgumentException("Only one request message variable is allowed.");
                 }
@@ -310,7 +313,7 @@ final class AnnotatedHttpServiceMethod {
     private static Parameter createOptionalSupportedParam(java.lang.reflect.Parameter parameterInfo,
                                                           ParameterType paramType, String paramValue) {
         final Default aDefault = parameterInfo.getAnnotation(Default.class);
-        final boolean isOptionalType = parameterInfo.getType().isAssignableFrom(Optional.class);
+        final boolean isOptionalType = parameterInfo.getType() == Optional.class;
 
         // Set the default value to null if it was not specified.
         final String defaultValue = aDefault != null ? getSpecifiedValue(aDefault.value()).get() : null;
@@ -360,13 +363,15 @@ final class AnnotatedHttpServiceMethod {
                     values[i] = convertParameter(value, entry);
                     break;
                 case PREDEFINED_TYPE:
-                    if (entry.type().isAssignableFrom(ServiceRequestContext.class)) {
+                    if (entry.type() == RequestContext.class ||
+                        entry.type() == ServiceRequestContext.class) {
                         values[i] = ctx;
-                    } else if (entry.type().isAssignableFrom(HttpRequest.class)) {
+                    } else if (entry.type() == Request.class ||
+                               entry.type() == HttpRequest.class) {
                         values[i] = req;
-                    } else if (entry.type().isAssignableFrom(AggregatedHttpMessage.class)) {
+                    } else if (entry.type() == AggregatedHttpMessage.class) {
                         values[i] = message;
-                    } else if (entry.type().isAssignableFrom(HttpParameters.class)) {
+                    } else if (entry.type() == HttpParameters.class) {
                         if (httpParameters == null) {
                             httpParameters = httpParametersOf(ctx, req, message);
                         }
@@ -714,11 +719,11 @@ final class AnnotatedHttpServiceMethod {
             AggregationStrategy strategy = NONE;
             for (Parameter p : parameters) {
                 if (p.parameterType() == ParameterType.REQUEST_OBJECT ||
-                    p.type().isAssignableFrom(AggregatedHttpMessage.class)) {
+                    p.type() == AggregatedHttpMessage.class) {
                     return ALWAYS;
                 }
                 if (p.parameterType() == ParameterType.PARAM ||
-                    p.type().isAssignableFrom(HttpParameters.class)) {
+                    p.type() == HttpParameters.class) {
                     strategy = FOR_FORM_DATA;
                 }
             }
