@@ -33,7 +33,8 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
     @Override
     public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                  Class<?> expectedResultType) throws Exception {
-        if (expectedResultType.isAssignableFrom(String.class)) {
+        if (expectedResultType == String.class ||
+            expectedResultType == CharSequence.class) {
             final MediaType contentType = request.headers().contentType();
             if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
                 // See https://tools.ietf.org/html/rfc2616#section-3.7.1

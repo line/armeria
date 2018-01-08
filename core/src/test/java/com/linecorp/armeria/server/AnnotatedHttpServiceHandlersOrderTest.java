@@ -70,8 +70,8 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
         @Post("/requestConverterOrder")
         @RequestConverter(MethodLevelRequestConverter.class)
-        public HttpResponse requestConverterOrder(@RequestObject(ParameterLevelRequestConverter.class)
-                                                    JsonNode node) {
+        public HttpResponse requestConverterOrder(
+                @RequestObject(ParameterLevelRequestConverter.class) JsonNode node) {
             assertThat(node).isNotNull();
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8(node.toString()));
         }
@@ -99,7 +99,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         @Override
         public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                      Class<?> expectedResultType) throws Exception {
-            if (expectedResultType.isAssignableFrom(JsonNode.class)) {
+            if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isZero();
             }
             return RequestConverterFunction.fallthrough();
@@ -110,7 +110,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         @Override
         public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                      Class<?> expectedResultType) throws Exception {
-            if (expectedResultType.isAssignableFrom(JsonNode.class)) {
+            if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isOne();
             }
             return RequestConverterFunction.fallthrough();
@@ -121,7 +121,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         @Override
         public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                      Class<?> expectedResultType) throws Exception {
-            if (expectedResultType.isAssignableFrom(JsonNode.class)) {
+            if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isEqualTo(2);
             }
             return RequestConverterFunction.fallthrough();
@@ -132,7 +132,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         @Override
         public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                      Class<?> expectedResultType) throws Exception {
-            if (expectedResultType.isAssignableFrom(JsonNode.class)) {
+            if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isEqualTo(3);
             }
             return RequestConverterFunction.fallthrough();
