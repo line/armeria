@@ -1,0 +1,122 @@
+// Enable checkstyle if the rule file exists.
+def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
+def checkstyleEnabled = new File(checkstyleConfigDir).isDirectory() &&
+                        new File("${checkstyleConfigDir}/checkstyle.xml").isFile()
+
+// Enable JaCoCo test coverage when '-Pcoverage' option is specified.
+def jacocoEnabled = project.hasProperty('coverage')
+
+configure(projectsWithFlags('java')) {
+
+    apply plugin: 'java'
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+
+    archivesBaseName = project.ext.artifactId
+
+    // Set the sensible compiler options.
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: '1.8'
+        targetCompatibility = project.findProperty('javaTargetCompatibility') ?: '1.8'
+        options.encoding = 'UTF-8'
+        options.warnings = false
+        options.debug = true
+        options.incremental = true
+        options.compilerArgs += '-parameters'
+    }
+
+    // Generate a source JAR.
+    task sourceJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    // Generate a javadoc JAR.
+    task javadocJar(type: Jar, dependsOn: tasks.javadoc) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+    }
+
+    // Generate source/javadoc JARs only when publishing.
+    def requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
+    tasks.sourceJar.onlyIf {
+        project.ext.isSigning() ||
+        project.ext.isPublishing() ||
+        requestedTaskNames.find { it =~ /(?:^|:)sourceJar$/ }
+    }
+    [tasks.javadoc, tasks.javadocJar].each {
+        it.onlyIf {
+            project.ext.isSigning() ||
+            project.ext.isPublishing() ||
+            requestedTaskNames.find { it =~ /(?:^|:)javadoc(?:Jar)?$/ }
+        }
+    }
+
+    artifacts {
+        archives jar
+        archives sourceJar
+        archives javadocJar
+    }
+
+    // Enable full exception logging for test failures.
+    tasks.withType(Test) {
+        it.testLogging.exceptionFormat = 'full'
+    }
+
+    // Enforce checkstyle rules.
+    if (checkstyleEnabled) {
+        apply plugin: 'checkstyle'
+
+        checkstyle {
+            configFile = new File("${checkstyleConfigDir}/checkstyle.xml")
+            configProperties = ['checkstyleConfigDir': "$checkstyleConfigDir"]
+            if (managedVersions.containsKey('com.puppycrawl.tools:checkstyle')) {
+                toolVersion = managedVersions['com.puppycrawl.tools:checkstyle']
+            }
+        }
+
+        task checkstyle(group: 'Verification',
+                description: 'Runs the checkstyle rules.',
+                dependsOn: [tasks.checkstyleMain, tasks.checkstyleTest])
+
+        test {
+            dependsOn tasks.checkstyle
+        }
+    }
+
+    // Generate JaCoCo reports.
+    if (jacocoEnabled && !project.hasFlags('no_aggregation')) {
+        apply plugin: 'jacoco'
+
+        project.addFlags('coverage')
+
+        tasks.withType(Test) {
+            jacoco {
+                enabled = true
+                append = false
+            }
+        }
+
+        jacocoTestReport {
+            reports {
+                csv.enabled = false
+                xml.enabled = true
+                html.enabled = true
+            }
+
+            afterEvaluate {
+                // Include all sources and classes directories so that the report includes other modules.
+                sourceDirectories = files(projectsWithFlags('java').inject([], { a, b ->
+                    a + b.sourceSets.main.java.srcDirs }
+                ))
+                classDirectories = files(projectsWithFlags('java').inject([], { a, b ->
+                    b.hasFlags('no_aggregation') ? a : a + b.sourceSets.main.output.classesDirs
+                }))
+            }
+        }
+
+        tasks.withType(Test) {
+            finalizedBy tasks.jacocoTestReport
+        }
+    }
+}

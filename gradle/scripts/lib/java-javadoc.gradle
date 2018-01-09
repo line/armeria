@@ -1,0 +1,154 @@
+import java.security.MessageDigest
+
+def javadocCacheDir = new File(gradle.gradleUserHomeDir, 'caches/package-lists')
+def defaultStylesheetFile = new File(buildscript.sourceFile.parentFile, 'java-javadoc.css')
+
+task cleanJavadocCache(type: Delete, group: 'Build', description: 'Deletes the javadoc cache directory.') {
+    delete javadocCacheDir
+}
+
+// Configure the Javadoc tasks of all projects.
+allprojects {
+    tasks.withType(Javadoc) {
+        options {
+            def title = "${project.ext.projectName} ${project.version} API reference"
+            docTitle = title
+            windowTitle = title
+            bottom = project.ext.copyrightFooter + '''
+            <script>
+            // Open an external link in a new tab/window.
+            for (var i in document.links) {
+              var l = document.links[i];
+              if (l.href && l.href.indexOf("?is-external=true") >= 0) {
+                l.target = "_blank";
+              }
+            }
+            </script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+            <script>
+            // Trim and syntax-highlight the code snippets.
+            function trimLines(lines) {
+              var leadingSpaces = 65536;
+              for (var j in lines) {
+                lines[j] = lines[j].trimRight();
+                if (lines[j].length == 0) {
+                  continue;
+                }
+
+                leadingSpaces = Math.min(leadingSpaces, Math.max(0, lines[j].search(/[^ ]/)));
+              }
+
+              for (var j in lines) {
+                lines[j] = lines[j].substring(leadingSpaces);
+              }
+
+              while (lines.length > 0 && lines[0].length == 0) {
+                lines.shift();
+              }
+
+              while (lines.length > 0 && lines[lines.length - 1].length == 0) {
+                lines.pop();
+              }
+            }
+
+            var hasHljs = typeof hljs !== "undefined";
+            if (hasHljs) {
+              hljs.configure({
+                languages: [ "java", "xml", "json", "yaml", "shell" ]
+              });
+            }
+
+            var allPres = document.getElementsByTagName("PRE");
+            for (var i in allPres) {
+              if (typeof allPres[i].children === "undefined") {
+                continue;
+              }
+
+              var children = allPres[i].children;
+              if (children.length !== 1) {
+                continue;
+              }
+
+              var child = children[0];
+              if (child.tagName.toUpperCase() !== "CODE") {
+                continue;
+              }
+
+              var lines = child.textContent.split("\\n");
+              trimLines(lines);
+              for (var j in lines) {
+                lines[j] = lines[j].replace(/^> ?/, "");
+              }
+              trimLines(lines);
+              child.textContent = lines.join("\\n");
+
+              if (hasHljs) {
+                hljs.highlightBlock(child);
+              }
+            }
+            </script>'''.readLines().stream()
+                    .map({ line -> line.trim() })
+                    .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
+                    .collect().join('')
+
+            encoding = 'UTF-8'
+            docEncoding = 'UTF-8'
+            breakIterator = true
+            version = false
+            author = false
+            keyWords = false
+            quiet()
+            stylesheetFile = defaultStylesheetFile
+
+            // Enable all lints except the missing tag warnings
+            addBooleanOption('Xdoclint:all').value = true
+            addBooleanOption('Xdoclint:-missing').value = true
+
+            // Add --allow-script-in-comments if available (since 1.8.0_121)
+            try {
+                if (Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl')
+                        .newInstance().optionLength('--allow-script-in-comments') > 0) {
+                    addBooleanOption('-allow-script-in-comments').value = true
+                }
+            } catch (ignored) {}
+
+            // External Javadoc links, cached under '~/.gradle/caches/package-lists'
+            def addOfflineLink = { name, url ->
+                def javadocUrl = "${url}"
+                if (!javadocUrl.endsWith('/')) {
+                    javadocUrl += '/'
+                }
+
+                def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
+                def packageListFile = new File(javadocCacheDir, "${name}/${javadocUrlSha1}/package-list")
+                if (!packageListFile.exists()) {
+                    packageListFile.parentFile.mkdirs()
+                    def packageListUrl = new URL("${javadocUrl}package-list")
+                    logger.lifecycle("Downloading: ${packageListUrl}")
+                    try {
+                        // Set some fake headers for the web sites who blocks a URLConnection.
+                        def conn = packageListUrl.openConnection() as HttpURLConnection
+                        conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                        conn.setRequestProperty('Accept-Encoding', 'identity')
+                        conn.setRequestProperty("Accept-Language", 'en-US,en;q=0.5')
+                        conn.setRequestProperty("Cache-Control", 'no-cache')
+                        conn.setRequestProperty('Pragma', 'no-cache')
+                        conn.setRequestProperty('User-Agent', "Gradle/${gradle.gradleVersion} (${project.group}:${project.ext.artifactId})")
+                        conn.setUseCaches(false);
+                        packageListFile.withOutputStream { it << conn.inputStream }
+                    } catch (e) {
+                        throw new GradleScriptException("${e}", e)
+                    }
+                }
+
+                linksOffline javadocUrl, "${packageListFile.parentFile}"
+            }
+
+            addOfflineLink('java9', 'https://docs.oracle.com/javase/9/docs/api/')
+
+            project.ext.javadocLinks.each {
+                addOfflineLink("${it['groupId']}/${it['artifactId']}/${it['version']}", it['url'])
+            }
+        }
+    }
+}

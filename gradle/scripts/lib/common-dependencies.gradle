@@ -1,0 +1,112 @@
+import org.yaml.snakeyaml.Yaml
+
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        // These should be the only dependencies that need hard-coded versions.
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
+        classpath 'io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE'
+        classpath 'org.yaml:snakeyaml:1.19'
+    }
+}
+
+apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
+
+rootProject.ext {
+    def dependenciesYamlFile = new File("${project.projectDir}/dependencies.yml")
+    if (dependenciesYamlFile.exists()) {
+        dependenciesYaml = Collections.unmodifiableMap(new Yaml().loadAs(dependenciesYamlFile.text, Map))
+    } else {
+        dependenciesYaml = Collections.emptyMap()
+    }
+
+    // Build the relocation table from dependencies.yml.
+    relocations = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
+        if (entry.key != 'boms') {
+            def groupId = entry.key
+            entry.value.forEach { String artifactId, Map props ->
+                if (props.containsKey('relocations')) {
+                    props.get('relocations').each {
+                        list.add([
+                                name: "${groupId}:${artifactId}",
+                                from: it['from'],
+                                to: it['to']])
+                    }
+                }
+            }
+        }
+        return list
+    }
+
+    javadocLinks = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
+        if (entry.key != 'boms') {
+            def groupId = entry.key
+            entry.value.forEach { String artifactId, Map props ->
+                def version = "${props['version']}"
+                if (props.containsKey('javadocs')) {
+                    props['javadocs'].each { url ->
+                        list.add([
+                                groupId: groupId,
+                                artifactId: artifactId,
+                                version: version,
+                                url: url
+                        ])
+                    }
+                }
+            }
+        }
+        return list
+    }
+}
+
+allprojects {
+    apply plugin: io.spring.gradle.dependencymanagement.DependencyManagementPlugin
+
+    dependencyManagement {
+        generatedPomCustomization {
+            enabled = false
+        }
+
+        imports {
+            if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
+                dependenciesYaml['boms'].each {
+                    mavenBom "${it}"
+                }
+            }
+        }
+
+        dependencies {
+            rootProject.ext.dependenciesYaml.forEach { String key, value ->
+                if (key != 'boms') {
+                    def groupId = key
+                    def artifact = value as Map
+                    artifact.forEach { String artifactId, Map props ->
+                        dependency("${groupId}:${artifactId}:${props['version']}") {
+                            if (props.containsKey('exclusions')) {
+                                props['exclusions'].each { String spec ->
+                                    exclude spec
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ext {
+        managedVersions = dependencyManagement.managedVersions
+    }
+}
+
+subprojects {
+    ext {
+        dependenciesYaml = rootProject.ext.dependenciesYaml
+        relocations = rootProject.ext.relocations
+        javadocLinks = rootProject.ext.javadocLinks
+    }
+}

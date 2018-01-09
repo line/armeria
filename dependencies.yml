@@ -1,18 +1,34 @@
-#
-# NB: Update NOTICE.txt and add/remove LICENSE.*.txt when adding/removing a dependency.
-#     If its classes are exposed in Javadoc, update offline links as well.
-#
-
 ch.qos.logback:
-  logback-classic: { version: '1.2.3' }
+  logback-classic:
+    version: '1.2.3'
+    javadocs:
+    - https://logback.qos.ch/apidocs/
 
 com.fasterxml.jackson.core:
-  jackson-annotations: { version: &JACKSON_VERSION '2.9.3' }
-  jackson-core: { version: *JACKSON_VERSION }
-  jackson-databind: { version: *JACKSON_VERSION }
+  jackson-annotations:
+    version: &JACKSON_VERSION '2.9.3'
+    javadocs:
+    - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
+  jackson-core:
+    version: *JACKSON_VERSION
+    javadocs:
+    - https://fasterxml.github.io/jackson-core/javadoc/2.9/
+  jackson-databind:
+    version: *JACKSON_VERSION
+    javadocs:
+    - https://fasterxml.github.io/jackson-databind/javadoc/2.9/
 
 com.github.ben-manes.caffeine:
-  caffeine: { version: '2.6.1' }
+  caffeine:
+    version: '2.6.1'
+    javadocs:
+    - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.6.1/
+    relocations:
+    - from: com.github.benmanes.caffeine
+      to: com.linecorp.armeria.internal.shaded.caffeine
+
+com.github.jengelman.gradle.plugins:
+  shadow: { version: '2.0.2' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -25,31 +41,59 @@ com.google.guava:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
     - org.codehaus.mojo:animal-sniffer-annotations
+    relocations:
+    - from: com.google.common
+      to: com.linecorp.armeria.internal.shaded.guava
+    - from: com.google.thirdparty.publicsuffix
+      to: com.linecorp.armeria.internal.shaded.publicsuffix
   guava-testlib:
     version: *GUAVA_VERSION
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
+    relocations:
+    - from: com.google.common
+      to: com.linecorp.armeria.internal.shaded.guava
+
+com.google.protobuf:
+  protoc: { version: '3.5.1-1' }
+  protobuf-gradle-plugin: { version: '0.8.3' }
 
 com.puppycrawl.tools:
   checkstyle: { version: '8.7' }
 
 com.spotify:
-  completable-futures: { version: '0.3.2' }
+  completable-futures:
+    version: '0.3.2'
+    relocations:
+    - from: com.spotify.futures
+      to: com.linecorp.armeria.internal.shaded.futures
 
 com.squareup.retrofit2:
-  retrofit: { version: &RETROFIT2_VERSION '2.3.0' }
+  retrofit:
+    version: &RETROFIT2_VERSION '2.3.0'
+    javadocs:
+    - https://square.github.io/retrofit/2.x/retrofit/
   adapter-java8: { version: *RETROFIT2_VERSION }
   converter-jackson: { version: *RETROFIT2_VERSION }
 
+gradle.plugin.net.davidecavestro:
+  gradle-jxr-plugin: { version: 0.2.1 }
+
 io.dropwizard.metrics:
-  metrics-core: { version: &DROPWIZARD_VERSION '3.2.6' }
+  metrics-core:
+    version: &DROPWIZARD_VERSION '3.2.6'
+    javadocs:
+    - http://metrics.dropwizard.io/3.2.3/apidocs/
   metrics-json: { version: *DROPWIZARD_VERSION }
 
 io.grpc:
   grpc-core:
     version: &GRPC_VERSION '1.8.0'
+    javadocs:
+    - https://grpc.io/grpc-java/javadoc/
+    - https://developers.google.com/protocol-buffers/docs/reference/java/
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
@@ -70,10 +114,18 @@ io.grpc:
   grpc-testing: { version: *GRPC_VERSION }
 
 io.micrometer:
-  micrometer-core: { version: &MICROMETER_VERSION '1.0.0-rc.7' }
-  micrometer-registry-prometheus: { version: *MICROMETER_VERSION }
+  micrometer-core:
+    version: &MICROMETER_VERSION '1.0.0-rc.7'
+    javadocs:
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.0-rc.7/
+  micrometer-registry-prometheus:
+    version: *MICROMETER_VERSION
+    javadocs:
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.0-rc.7/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
+    javadocs:
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.0-rc.7/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -82,13 +134,19 @@ io.netty:
   netty-codec-http2: { version: &NETTY_VERSION '4.1.20.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
-  netty-transport: { version: *NETTY_VERSION }
+  netty-transport:
+    version: *NETTY_VERSION
+    javadocs:
+    - https://netty.io/4.1/api/
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
   netty-tcnative-boringssl-static: { version: '2.0.7.Final' }
 
 io.prometheus:
-  simpleclient_common: { version: '0.1.0' }
+  simpleclient_common:
+    version: '0.1.0'
+    javadocs:
+    - http://prometheus.github.io/client_java/
 
 io.zipkin.brave:
   brave: { version: &BRAVE_VERSION '4.13.3' }
@@ -97,7 +155,11 @@ io.zipkin.java:
   zipkin: { version: &ZIPKIN_VERSION '2.4.3' }
 
 it.unimi.dsi:
-  fastutil: { version: '8.1.1' }
+  fastutil:
+    version: '8.1.1'
+    relocations:
+    - from: it.unimi.dsi.fastutil
+      to: com.linecorp.armeria.internal.shaded.fastutil
 
 javax.inject:
   javax.inject: { version: '1' }
@@ -108,9 +170,24 @@ javax.validation:
 junit:
   junit: { version: '4.12' }
 
+kr.motd.gradle:
+  sphinx-gradle-plugin: { version: '1.1.0' }
+
+# We do not depend on log4j. We just need this to stop dependency-management-plugin from
+# complaining about its bad POM.
+# See: https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/59
+log4j:
+  log4j: { version: '1.2.17' }
+
+me.champeau.gradle:
+  jmh-gradle-plugin: { version: '0.4.5' }
+
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '1.27.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
+
+net.sf.proguard:
+  proguard-gradle: { version: '5.3.3' }
 
 org.apache.hbase:
   hbase-shaded-client:
@@ -128,17 +205,25 @@ org.apache.httpcomponents:
     - commons-logging:commons-logging
 
 org.apache.kafka:
-  kafka-clients: { version: '1.0.0' }
+  kafka-clients:
+    version: '1.0.0'
+    javadocs:
+    - https://kafka.apache.org/0100/javadoc/
 
 org.apache.thrift:
   libthrift:
     version: '0.10.0'
+    javadocs:
+    - https://static.javadoc.io/org.apache.thrift/libthrift/0.10.0/
     exclusions:
     - org.apache.httpcomponents:httpcore
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.24' }
+  tomcat-embed-core:
+    version: &TOMCAT_VERSION '8.5.24'
+    javadocs:
+    - https://tomcat.apache.org/tomcat-8.5-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
@@ -156,6 +241,9 @@ org.assertj:
 org.awaitility:
   awaitility: { version: '3.0.0' }
 
+org.checkerframework:
+  checker-compat-qual: { version: '2.3.1' }
+
 org.curioswitch.curiostack:
   protobuf-jackson: { version: '0.1.1' }
 
@@ -165,8 +253,15 @@ org.dmonix.junit:
 org.eclipse.jetty:
   apache-jsp: { version: &JETTY_VERSION '9.4.8.v20171121' }
   apache-jstl: { version: *JETTY_VERSION }
-  jetty-annotations: { version: *JETTY_VERSION }
-  jetty-server: { version: *JETTY_VERSION  }
+  jetty-annotations:
+    version: *JETTY_VERSION
+    exclusions:
+    - org.ow2.asm:asm
+    - org.ow2.asm:asm-commons
+  jetty-server:
+    version: *JETTY_VERSION
+    javadocs:
+    - http://download.eclipse.org/jetty/stable-9/apidocs/
   jetty-webapp: { version: *JETTY_VERSION }
 
 org.eclipse.jetty.alpn:
@@ -185,7 +280,11 @@ org.javassist:
   javassist: { version: '3.22.0-GA' }
 
 org.jctools:
-  jctools-core: { version: '2.1.1' }
+  jctools-core:
+    version: '2.1.1'
+    relocations:
+    - from: org.jctools
+      to: com.linecorp.armeria.internal.shaded.jctools
 
 org.mockito:
   mockito-core: { version: '2.13.0' }
@@ -199,18 +298,30 @@ org.openjdk.jmh:
 
 org.reactivestreams:
   reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.2' }
-  reactive-streams-tck: { version: *REACTIVE_STREAMS_VERSION }
+  reactive-streams-tck:
+    version: *REACTIVE_STREAMS_VERSION
+    exclusions:
+    - org.yaml:snakeyaml
 
 org.reflections:
   reflections:
     version: '0.9.11'
+    relocations:
+    - from: org.reflections
+      to: com.linecorp.armeria.internal.shaded.reflections
 
 org.slf4j:
   jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.25' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
-  slf4j-api: { version: *SLF4J_VERSION }
+  slf4j-api:
+    version: *SLF4J_VERSION
+    javadocs:
+    - https://www.slf4j.org/api/
 
 org.springframework.boot:
-  spring-boot-starter: { version: &SPRING_BOOT_VERSION '1.5.9.RELEASE' }
+  spring-boot-starter:
+    version: &SPRING_BOOT_VERSION '1.5.9.RELEASE'
+    javadocs:
+    - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }

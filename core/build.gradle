@@ -1,13 +1,4 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'net.sf.proguard:proguard-gradle:5.3.3'
-    }
-}
-
-managedDependencies {
+dependencies {
     // Caffeine
     compile 'com.github.ben-manes.caffeine:caffeine'
 
@@ -24,8 +15,8 @@ managedDependencies {
     [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
         compile "io.netty:$it"
     }
-    compile 'io.netty:netty-transport-native-unix-common:linux-x86_64'
-    compile 'io.netty:netty-transport-native-epoll:linux-x86_64'
+    compile "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-transport-native-unix-common']}:linux-x86_64"
+    compile "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     compile 'io.netty:netty-tcnative-boringssl-static'
     runtime 'org.javassist:javassist'
 
@@ -49,85 +40,14 @@ task testNg(type: Test,
 tasks.test.finalizedBy tasks.testNg
 tasks.check.dependsOn tasks.testNg
 
-jacocoTestReport {
-    // Include the coverage data from the TestNG test cases.
-    executionData file("${project.buildDir}/jacoco/testNg.exec")
-}
-
-// Task 'shadedJar' produces a very large JAR. Rename it to '*-untrimmed-*.jar' and
-// let the task 'trimShadedJar' produce the trimmed JAR from it.
-tasks.shadedJar.baseName = "${tasks.jar.baseName}-untrimmed"
-
-task trimShadedJar(type: ProGuardTask,
-                   group: 'Build',
-                   description: 'Shrinks the shaded JAR by removing unused classes.') {
-
-    javaProjects.each {
-        dependsOn it.tasks.shadedJar
-        dependsOn it.tasks.shadedTestJar
-    }
-
-    def shadedFile = tasks.shadedJar.archivePath
-    def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-shaded-'))
-
-    injars shadedFile
-    // NB: By specifying 'outjar' *before* other 'injars' below, ProGuard will put only the classes
-    //     from 'shadedFile' into 'shadedAndTrimmedFile'. See 'restructuring the output archives'
-    //     for more information: https://www.guardsquare.com/en/proguard/manual/examples#restructuring
-    outjars shadedAndTrimmedFile
-
-    // Include the shaded JARs from other modules as well
-    // so that ProGuard does not trim the classes and methods that are used actually.
-    injars tasks.shadedTestJar.archivePath
-    javaProjects.each {
-        if (it != project) {
-            injars it.tasks.shadedJar.archivePath
-            injars it.tasks.shadedTestJar.archivePath,
-                   filter: '!META-INF/**,' +
-                           '!com/linecorp/armeria/internal/shaded/**,' +
-                           '!com/linecorp/armeria/service/test/**'
-        }
-    }
-
-    def dependencyJars = []
-    javaProjects.each {
-        // NB: ProGuardTask picks the dependencies added *after* evaluation correctly
-        //     because libraryjar() intentionally keeps the specified dependencies as-is.
-        //     See ProGuardTask.libraryjar() for more information.
-        it.afterEvaluate {
-            dependencyJars.addAll(it.configurations.runtime.collect())
-        }
-    }
-    libraryjars files(dependencyJars)
-    libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
-
-    dontoptimize
-    dontobfuscate
-    dontwarn // Ignore the harmless 'missing classes' warnings related with the optional dependencies.
-
-    keepattributes 'Signature, InnerClasses, Annotation'
-    keep "class !${shadedPackage}.**,com.linecorp.armeria.** { *; }"
-    keep "class ${shadedPackage}.caffeine.** { *; }" // To make the unsafe field access work.
-}
-
-tasks.assemble.dependsOn tasks.trimShadedJar
-
-// Add the trimmed JAR to archives so that the 'signArchives' task signs it.
-artifacts {
-    trimShadedJar.outJarFiles.each {
-        archives it
+if (project.hasFlags('coverage')) {
+    jacocoTestReport {
+        // Include the coverage data from the TestNG test cases.
+        executionData file("${project.buildDir}/jacoco/testNg.exec")
     }
 }
 
-// Make sure trimShadedJar task is executed before signing.
-model {
-    tasks.signArchives {
-        dependsOn tasks.trimShadedJar
-    }
-}
-
-class ProGuardTask extends proguard.gradle.ProGuardTask {
-    def keepclass(String className) {
-        keep "class ${className},${className}\$* { *; }"
-    }
+tasks.trimShadedJar.configure {
+    keep "class !com.linecorp.armeria.internal.shaded.**,com.linecorp.armeria.** { *; }"
+    keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }" // To make the unsafe field access work.
 }

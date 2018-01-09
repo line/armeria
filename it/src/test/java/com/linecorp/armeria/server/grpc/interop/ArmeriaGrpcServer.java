@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc.interop;
 
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -41,8 +40,8 @@ public class ArmeriaGrpcServer implements InternalServer {
 
     private final Server armeriaServer;
 
-    private ScheduledExecutorService scheduler;
-    private CompletableFuture<Void> shutdownFuture;
+    private volatile ScheduledExecutorService scheduler;
+    private volatile int port = -1;
 
     public ArmeriaGrpcServer(Server armeriaServer) {
         this.armeriaServer = armeriaServer;
@@ -52,6 +51,7 @@ public class ArmeriaGrpcServer implements InternalServer {
     public void start(ServerListener listener) throws IOException {
         try {
             armeriaServer.start().get();
+            port = armeriaServer.activePort().get().localAddress().getPort();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
@@ -86,11 +86,12 @@ public class ArmeriaGrpcServer implements InternalServer {
 
     @Override
     public int getPort() {
-        return armeriaServer.activePort().get().localAddress().getPort();
+        return port;
     }
 
     @Override
     public void shutdown() {
+        port = -1;
         armeriaServer.stop();
         scheduler.shutdown();
     }

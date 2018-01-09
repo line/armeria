@@ -13,8 +13,8 @@
   <suppress checks="JavadocMethod" files="[\\/](jmh|test|internal)[\\/]" />
   <!-- Suppress JavadocPackage for tomcat8.0 -->
   <suppress checks="JavadocPackage" files="tomcat[0-9]" />
-  <!-- Suppress all checks in generates sources -->
-  <suppress checks=".*" files="[\\/]gen-java[\\/]" />
+  <!-- Suppress all checks in generated sources -->
+  <suppress checks=".*" files="[\\/]gen-src[\\/]" />
   <!-- Suppress checks in large forks to make diffing against upstream easier -->
   <suppress checks=".*" files="[\\/]grpc[\\/]ServerCallImpl.java$" />
 </suppressions>
