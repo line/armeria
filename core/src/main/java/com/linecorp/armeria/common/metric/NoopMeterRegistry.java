@@ -18,22 +18,30 @@ package com.linecorp.armeria.common.metric;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToDoubleFunction;
+import java.util.function.ToLongFunction;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.FunctionCounter;
+import io.micrometer.core.instrument.FunctionTimer;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.LongTaskTimer;
 import io.micrometer.core.instrument.Measurement;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Meter.Id;
 import io.micrometer.core.instrument.Meter.Type;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.histogram.HistogramConfig;
+import io.micrometer.core.instrument.histogram.pause.PauseDetector;
 import io.micrometer.core.instrument.noop.NoopCounter;
 import io.micrometer.core.instrument.noop.NoopDistributionSummary;
+import io.micrometer.core.instrument.noop.NoopFunctionCounter;
+import io.micrometer.core.instrument.noop.NoopFunctionTimer;
 import io.micrometer.core.instrument.noop.NoopGauge;
 import io.micrometer.core.instrument.noop.NoopLongTaskTimer;
+import io.micrometer.core.instrument.noop.NoopMeter;
 import io.micrometer.core.instrument.noop.NoopTimer;
 
 /**
@@ -71,7 +79,7 @@ public final class NoopMeterRegistry extends MeterRegistry {
     }
 
     @Override
-    protected Timer newTimer(Id id, HistogramConfig histogramConfig) {
+    protected Timer newTimer(Id id, HistogramConfig histogramConfig, PauseDetector pauseDetector) {
         return new NoopTimer(id);
     }
 
@@ -81,10 +89,29 @@ public final class NoopMeterRegistry extends MeterRegistry {
     }
 
     @Override
-    protected void newMeter(Id id, Type type, Iterable<Measurement> measurements) {}
+    protected Meter newMeter(Id id, Type type, Iterable<Measurement> measurements) {
+        return new NoopMeter(id);
+    }
+
+    @Override
+    protected <T> FunctionTimer newFunctionTimer(Id id, T obj, ToLongFunction<T> countFunction,
+                                                 ToDoubleFunction<T> totalTimeFunction,
+                                                 TimeUnit totalTimeFunctionUnits) {
+        return new NoopFunctionTimer(id);
+    }
+
+    @Override
+    protected <T> FunctionCounter newFunctionCounter(Id id, T obj, ToDoubleFunction<T> f) {
+        return new NoopFunctionCounter(id);
+    }
 
     @Override
     protected TimeUnit getBaseTimeUnit() {
         return TimeUnit.NANOSECONDS;
+    }
+
+    @Override
+    protected HistogramConfig defaultHistogramConfig() {
+        return HistogramConfig.NONE;
     }
 }

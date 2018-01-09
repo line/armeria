@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.NamingConvention;
+import io.micrometer.core.instrument.dropwizard.DropwizardConfig;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 
@@ -51,6 +52,18 @@ public final class DropwizardMeterRegistries {
         return buf.toString();
     };
 
+    private static final DropwizardConfig DEFAULT_DROPWIZARD_CONFIG = new DropwizardConfig() {
+        @Override
+        public String prefix() {
+            return null;
+        }
+
+        @Override
+        public String get(String k) {
+            return null;
+        }
+    };
+
     /**
      * Returns a newly-created {@link DropwizardMeterRegistry} instance with the default
      * {@link HierarchicalNameMapper}.
@@ -72,7 +85,17 @@ public final class DropwizardMeterRegistries {
      * {@link HierarchicalNameMapper} and {@link Clock}.
      */
     public static DropwizardMeterRegistry newRegistry(HierarchicalNameMapper nameMapper, Clock clock) {
+        return newRegistry(DEFAULT_DROPWIZARD_CONFIG, nameMapper, clock);
+    }
+
+    /**
+     * Returns a newly-created {@link DropwizardMeterRegistry} instance with the specified
+     * {@link DropwizardConfig}, {@link HierarchicalNameMapper} and {@link Clock}.
+     */
+    public static DropwizardMeterRegistry newRegistry(DropwizardConfig dropwizardConfig,
+                                                      HierarchicalNameMapper nameMapper, Clock clock) {
         final DropwizardMeterRegistry meterRegistry = new DropwizardMeterRegistry(
+                requireNonNull(dropwizardConfig, "dropwizardConfig"),
                 requireNonNull(nameMapper, "nameMapper"), requireNonNull(clock, "clock"));
         meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
         return meterRegistry;
