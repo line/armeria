@@ -24,6 +24,7 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.micrometer.core.instrument.dropwizard.DropwizardConfig;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
+import io.micrometer.core.instrument.histogram.pause.NoPauseDetector;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 
 /**
@@ -98,6 +99,7 @@ public final class DropwizardMeterRegistries {
                 requireNonNull(dropwizardConfig, "dropwizardConfig"),
                 requireNonNull(nameMapper, "nameMapper"), requireNonNull(clock, "clock"));
         meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
+        meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;
     }
 
