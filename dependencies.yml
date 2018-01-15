@@ -70,7 +70,7 @@ io.grpc:
   grpc-testing: { version: *GRPC_VERSION }
 
 io.micrometer:
-  micrometer-core: { version: &MICROMETER_VERSION '1.0.0-rc.5' }
+  micrometer-core: { version: &MICROMETER_VERSION '1.0.0-rc.6' }
   micrometer-registry-prometheus: { version: *MICROMETER_VERSION }
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
