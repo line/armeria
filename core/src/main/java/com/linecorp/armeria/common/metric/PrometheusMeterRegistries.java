@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.config.NamingConvention;
+import io.micrometer.core.instrument.histogram.pause.NoPauseDetector;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.prometheus.client.CollectorRegistry;
@@ -53,6 +54,7 @@ public final class PrometheusMeterRegistries {
         final PrometheusMeterRegistry meterRegistry = new PrometheusMeterRegistry(
                 PrometheusConfig.DEFAULT, requireNonNull(registry, "registry"), requireNonNull(clock, "clock"));
         meterRegistry.config().namingConvention(MoreNamingConventions.prometheus());
+        meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;
     }
 
