@@ -96,7 +96,7 @@ public class GrpcMetricsIntegrationTest {
     }
 
     @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(20, TimeUnit.SECONDS));
+    public final TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
 
     @Test
     public void normal() throws Exception {
