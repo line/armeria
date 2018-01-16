@@ -160,7 +160,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         return compressed;
     }
 
-    private ByteBuf writeUncompressed(ByteBuf message) throws IOException {
+    private ByteBuf writeUncompressed(ByteBuf message) {
         int messageLength = message.readableBytes();
         if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
             throw Status.RESOURCE_EXHAUSTED
