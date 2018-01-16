@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -38,8 +39,10 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceWithPathMappings;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 
@@ -64,20 +67,22 @@ import io.netty.buffer.ByteBuf;
  *     </li>
  * </ul>
  */
-class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse>
+        implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
 
     private final Map<String, MethodDescriptor<?, ?>> methodsByName;
+    private final GrpcService delegateGrpcService;
 
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
     UnframedGrpcService(Service<HttpRequest, HttpResponse> delegate) {
         super(delegate);
-        GrpcService grpcService =
+        delegateGrpcService =
                 delegate.as(GrpcService.class)
                         .orElseThrow(
                                 () -> new IllegalArgumentException("Decorated service must be a GrpcService."));
-        methodsByName = grpcService.services()
+        methodsByName = delegateGrpcService.services()
                                    .stream()
                                    .flatMap(service -> service.getMethods().stream())
                                    .map(ServerMethodDefinition::getMethodDescriptor)
@@ -246,5 +251,10 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             deframer.request(1);
             deframer.deframe(grpcResponse.content(), true);
         }
+    }
+
+    @Override
+    public Set<PathMapping> pathMappings() {
+        return delegateGrpcService.pathMappings();
     }
 }
