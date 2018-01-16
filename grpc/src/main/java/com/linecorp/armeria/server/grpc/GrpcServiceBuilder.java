@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerConfig;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceWithPathMappings;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 
 import io.grpc.BindableService;
@@ -173,11 +173,11 @@ public final class GrpcServiceBuilder {
 
     /**
      * Constructs a new {@link GrpcService} that can be bound to
-     * {@link com.linecorp.armeria.server.ServerBuilder}. As gRPC services themselves are mounted at a path that
-     * corresponds to their protobuf package, you will almost always want to bind to a prefix, e.g. by using
-     * {@link com.linecorp.armeria.server.ServerBuilder#serviceUnder(String, Service)}.
+     * {@link com.linecorp.armeria.server.ServerBuilder}. It is recommended to bind the service to a server
+     * using {@link com.linecorp.armeria.server.ServerBuilder#service(ServiceWithPathMappings)} to mount all
+     * service paths without interfering with other services.
      */
-    public Service<HttpRequest, HttpResponse> build() {
+    public ServiceWithPathMappings<HttpRequest, HttpResponse> build() {
         HandlerRegistry handlerRegistry = registryBuilder.build();
         GrpcService grpcService = new GrpcService(
                 handlerRegistry,
