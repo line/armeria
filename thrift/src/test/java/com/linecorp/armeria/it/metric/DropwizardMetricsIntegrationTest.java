@@ -21,10 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 
 import com.codahale.metrics.Counting;
 import com.codahale.metrics.MetricRegistry;
@@ -81,7 +86,10 @@ public class DropwizardMetricsIntegrationTest {
         clientFactory.close();
     }
 
-    @Test(timeout = 10000L)
+    @Rule
+    public final TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
+
+    @Test
     public void normal() throws Exception {
         latch = new CountDownLatch(14);
 
