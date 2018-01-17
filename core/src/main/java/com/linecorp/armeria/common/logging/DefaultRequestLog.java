@@ -616,9 +616,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
-        if (responseContent instanceof RpcResponse &&
-            !((RpcResponse) responseContent).isDone()) {
-            throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
+        if (responseContent instanceof RpcResponse) {
+            RpcResponse rpcResponse = (RpcResponse) responseContent;
+            if (!rpcResponse.isDone()) {
+                throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
+            }
+            if (rpcResponse.cause() != null) {
+                this.responseCause = rpcResponse.cause();
+            }
         }
 
         this.responseContent = responseContent;
@@ -671,7 +676,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         startResponse0(responseEndTimeNanos, System.currentTimeMillis(), false);
 
         this.responseEndTimeNanos = responseEndTimeNanos;
-        this.responseCause = responseCause;
+        if (this.responseCause == null) {
+            this.responseCause = responseCause;
+        }
         updateAvailability(flags);
     }
 
