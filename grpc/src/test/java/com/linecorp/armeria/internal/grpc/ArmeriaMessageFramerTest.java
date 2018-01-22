@@ -28,9 +28,9 @@ import org.junit.Test;
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.internal.ByteBufHttpData;
 
 import io.grpc.Codec.Gzip;
 import io.grpc.StatusRuntimeException;
@@ -54,9 +54,10 @@ public class ArmeriaMessageFramerTest {
     @Test
     public void writeUncompressed() throws Exception {
         ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        HttpData framed = framer.writePayload(buf);
+        ByteBufHttpData framed = framer.writePayload(buf);
         assertThat(framed.array()).isEqualTo(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
         assertThat(buf.refCnt()).isEqualTo(0);
+        framed.release();
     }
 
     @Test
@@ -64,9 +65,10 @@ public class ArmeriaMessageFramerTest {
         framer.setCompressor(new Gzip());
         framer.setMessageCompression(true);
         ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        HttpData framed = framer.writePayload(buf);
+        ByteBufHttpData framed = framer.writePayload(buf);
         assertThat(framed.array()).isEqualTo(GrpcTestUtil.compressedFrame(GrpcTestUtil.requestByteBuf()));
         assertThat(buf.refCnt()).isEqualTo(0);
+        framed.release();
     }
 
     @Test
@@ -75,10 +77,11 @@ public class ArmeriaMessageFramerTest {
         framer.setMessageCompression(true);
         ByteBuf buf = GrpcTestUtil.protoByteBuf(SimpleRequest.getDefaultInstance());
         assertThat(buf.readableBytes()).isEqualTo(0);
-        HttpData framed = framer.writePayload(buf);
+        ByteBufHttpData framed = framer.writePayload(buf);
         assertThat(framed.array()).isEqualTo(GrpcTestUtil.uncompressedFrame(
                 GrpcTestUtil.protoByteBuf(SimpleRequest.getDefaultInstance())));
         assertThat(buf.refCnt()).isEqualTo(0);
+        framed.release();
     }
 
     @Test
@@ -103,8 +106,9 @@ public class ArmeriaMessageFramerTest {
                                                 .setBody(ByteString.copyFromUtf8(
                                                         Strings.repeat("a", 1024))))
                              .build();
-        HttpData framed = framer.writePayload(GrpcTestUtil.protoByteBuf(request));
+        ByteBufHttpData framed = framer.writePayload(GrpcTestUtil.protoByteBuf(request));
         assertThat(framed.array()).isEqualTo(GrpcTestUtil.compressedFrame(GrpcTestUtil.protoByteBuf(request)));
+        framed.release();
     }
 
     @Test
