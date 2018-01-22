@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcUnsafeBufferUtil;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
@@ -103,6 +104,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final ServiceRequestContext ctx;
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
+    private final boolean unsafeWrapRequestBuffers;
 
     // Only set once.
     private ServerCall.Listener<I> listener;
@@ -130,7 +132,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       int maxOutboundMessageSizeBytes,
                       ServiceRequestContext ctx,
                       SerializationFormat serializationFormat,
-                      MessageMarshaller jsonMarshaller) {
+                      MessageMarshaller jsonMarshaller,
+                      boolean unsafeWrapRequestBuffers) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -149,7 +152,9 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
-        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller);
+        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
+                                                 unsafeWrapRequestBuffers);
+        this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
     }
 
     @Override
@@ -305,6 +310,11 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+
+        if (unsafeWrapRequestBuffers && message.buf() != null) {
+            GrpcUnsafeBufferUtil.storeBuffer(message.buf(), request, ctx);
+        }
+
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             listener.onMessage(request);
         } catch (Throwable t) {
