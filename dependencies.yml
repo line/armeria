@@ -7,7 +7,7 @@ ch.qos.logback:
   logback-classic: { version: '1.2.3' }
 
 com.fasterxml.jackson.core:
-  jackson-annotations: { version: &JACKSON_VERSION '2.9.2' }
+  jackson-annotations: { version: &JACKSON_VERSION '2.9.3' }
   jackson-core: { version: *JACKSON_VERSION }
   jackson-databind: { version: *JACKSON_VERSION }
 
@@ -19,7 +19,7 @@ com.google.code.findbugs:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '23.5-jre'
+    version: &GUAVA_VERSION '23.6-jre'
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
@@ -33,7 +33,7 @@ com.google.guava:
     - com.google.j2objc:j2objc-annotations
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.5' }
+  checkstyle: { version: '8.7' }
 
 com.spotify:
   completable-futures: { version: '0.3.2' }
@@ -44,7 +44,7 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 io.dropwizard.metrics:
-  metrics-core: { version: &DROPWIZARD_VERSION '3.2.5' }
+  metrics-core: { version: &DROPWIZARD_VERSION '3.2.6' }
   metrics-json: { version: *DROPWIZARD_VERSION }
 
 io.grpc:
@@ -79,7 +79,7 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.19.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.20.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
@@ -91,10 +91,10 @@ io.prometheus:
   simpleclient_common: { version: '0.1.0' }
 
 io.zipkin.brave:
-  brave: { version: &BRAVE_VERSION '4.13.1' }
+  brave: { version: &BRAVE_VERSION '4.13.3' }
 
 io.zipkin.java:
-  zipkin: { version: &ZIPKIN_VERSION '2.4.2' }
+  zipkin: { version: &ZIPKIN_VERSION '2.4.3' }
 
 it.unimi.dsi:
   fastutil: { version: '8.1.1' }
@@ -163,7 +163,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.7.v20170914' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.8.v20171121' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations: { version: *JETTY_VERSION }
   jetty-server: { version: *JETTY_VERSION  }
