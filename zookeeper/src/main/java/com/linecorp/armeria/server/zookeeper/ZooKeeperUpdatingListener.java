@@ -24,7 +24,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 
 /**
- * A ZooKeeper Server Listener.When you add this listener, server will be automatically registered
+ * A ZooKeeper Server Listener. When you add this listener, server will be automatically registered
  * into the ZooKeeper.
  */
 public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
