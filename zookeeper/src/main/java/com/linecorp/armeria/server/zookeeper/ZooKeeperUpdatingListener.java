@@ -62,7 +62,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     @Override
-    public void serverStarted(Server server) throws Exception {
+    public void serverStarted(Server server) {
         if (endpoint == null) {
             assert server.activePort().isPresent();
             endpoint = Endpoint.of(server.defaultHostname(),
@@ -73,7 +73,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     @Override
-    public void serverStopping(Server server) throws Exception {
+    public void serverStopping(Server server) {
         if (connector != null) {
             connector.close(true);
         }
