@@ -55,7 +55,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
     private List<ZooKeeperUpdatingListener> listeners;
 
     @Before
-    public void startServers() throws Exception {
+    public void startServers() {
         servers = new ArrayList<>();
         zkConnectors = new ArrayList<>();
         listeners = new ArrayList<>();
@@ -76,7 +76,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
     }
 
     @After
-    public void stopServers() throws Exception {
+    public void stopServers() {
         if (servers != null) {
             servers.forEach(s -> s.stop().join());
         }
