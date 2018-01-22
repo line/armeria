@@ -131,7 +131,7 @@ automatically for you:
     import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
     import com.linecorp.armeria.server.AbstractHttpService;
 
-    public class MyService extenda AbstractHttpService {
+    public class MyService extends AbstractHttpService {
         @Override
         public void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
             // serializationFormat and requestContent will be set to NONE and null
