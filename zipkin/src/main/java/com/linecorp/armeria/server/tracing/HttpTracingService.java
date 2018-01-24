@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
+import com.linecorp.armeria.internal.tracing.SpanContextUtil;
 import com.linecorp.armeria.internal.tracing.SpanTags;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -83,14 +84,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
         final String method = ctx.method().name();
         span.kind(Kind.SERVER).name(method).start();
 
-        ctx.onEnter(unused -> SPAN_IN_THREAD.set(tracer.withSpanInScope(span)));
-        ctx.onExit(unused -> {
-            SpanInScope spanInScope = SPAN_IN_THREAD.get();
-            if (spanInScope != null) {
-                spanInScope.close();
-                SPAN_IN_THREAD.remove();
-            }
-        });
+        SpanContextUtil.setupContext(SPAN_IN_THREAD, ctx, span, tracer);
 
         ctx.log().addListener(log -> closeSpan(span, log), RequestLogAvailability.COMPLETE);
 
