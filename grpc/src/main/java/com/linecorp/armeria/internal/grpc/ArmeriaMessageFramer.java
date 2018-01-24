@@ -52,7 +52,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.internal.ByteBufHttpData;
 
 import io.grpc.Codec;
 import io.grpc.Compressor;
@@ -95,8 +95,10 @@ public class ArmeriaMessageFramer implements AutoCloseable {
      * Writes out a payload message.
      *
      * @param message the message to be written out. Ownership is taken by {@link ArmeriaMessageFramer}.
+     *
+     * @returns a {@link ByteBufHttpData} with the framed payload. Ownership is passed to caller.
      */
-    public HttpData writePayload(ByteBuf message) {
+    public ByteBufHttpData writePayload(ByteBuf message) {
         verifyNotClosed();
         boolean compressed = messageCompression && compressor != Codec.Identity.NONE;
         int messageLength = message.readableBytes();
@@ -107,11 +109,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             } else {
                 buf = writeUncompressed(message);
             }
-            try {
-                return HttpData.of(buf);
-            } finally {
-                buf.release();
-            }
+            return new ByteBufHttpData(buf, false);
         } catch (IOException e) {
             // This should not be possible, since sink#deliverFrame doesn't throw.
             throw Status.INTERNAL
@@ -142,40 +140,31 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             message.release();
         }
 
-        int numCompressedBytes = compressed.readableBytes();
-        if (maxOutboundMessageSize >= 0 && numCompressedBytes > maxOutboundMessageSize) {
-            compressed.release();
-            throw Status.RESOURCE_EXHAUSTED
-                    .withDescription(
-                            String.format(
-                                    "message too large %d > %d", numCompressedBytes, maxOutboundMessageSize))
-                    .asRuntimeException();
-        }
-
-        ByteBuf header = alloc.buffer(HEADER_LENGTH);
-        header.writeByte(COMPRESSED);
-        header.writeInt(numCompressedBytes);
-        compressed.addComponent(true, 0, header);
-
-        return compressed;
+        return write(compressed, true);
     }
 
     private ByteBuf writeUncompressed(ByteBuf message) {
-        int messageLength = message.readableBytes();
-        if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
-            throw Status.RESOURCE_EXHAUSTED
-                    .withDescription(
-                            String.format("message too large %d > %d", messageLength, maxOutboundMessageSize))
-                    .asRuntimeException();
-        }
-        CompositeByteBuf buf = alloc.compositeBuffer();
-        ByteBuf header = alloc.buffer(HEADER_LENGTH);
-        header.writeByte(UNCOMPRESSED);
-        header.writeInt(messageLength);
-        buf.addComponent(true, header);
-        buf.addComponent(true, message);
+        return write(message, false);
+    }
 
-        return buf;
+    private ByteBuf write(ByteBuf message, boolean compressed) {
+        try {
+            int messageLength = message.readableBytes();
+            if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
+                throw Status.RESOURCE_EXHAUSTED
+                        .withDescription(
+                                String.format("message too large %d > %d", messageLength,
+                                              maxOutboundMessageSize))
+                        .asRuntimeException();
+            }
+            ByteBuf buf = alloc.buffer(HEADER_LENGTH + messageLength);
+            buf.writeByte(compressed ? COMPRESSED : UNCOMPRESSED);
+            buf.writeInt(messageLength);
+            buf.writeBytes(message);
+            return buf;
+        } finally {
+            message.release();
+        }
     }
 
     private void verifyNotClosed() {
