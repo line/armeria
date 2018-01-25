@@ -126,7 +126,7 @@ service UnitTestService {
     rpc CheckRequestContext(stream SimpleRequest) returns (SimpleResponse);
 
     // A streaming RPC where the client cancels without explicitly closing the stream (e.g. socket disconnect).
-    rpc StreamClientCancels(stream SimpleRequest) returns (SimpleResponse);
+    rpc StreamClientCancels(stream SimpleRequest) returns (stream SimpleResponse);
 }
 
 // A simple service NOT implemented at servers so clients can test for
