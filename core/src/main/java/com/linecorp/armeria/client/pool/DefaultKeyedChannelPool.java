@@ -19,8 +19,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Function;
@@ -58,6 +60,8 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     private final Map<K, Deque<Channel>> pool;
     private final Map<K, Future<Channel>> pendingConnections;
 
+    private final Set<Channel> createdChannels;
+
     /**
      * Creates a new instance.
      */
@@ -74,6 +78,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
         pool = new ConcurrentHashMap<>();
         pendingConnections = new HashMap<>();
+        createdChannels = new HashSet<>();
     }
 
     @Override
@@ -172,8 +177,10 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                 Channel channel = future.getNow();
                 channel.attr(KeyedChannelPoolUtil.POOL).set(this);
                 channelPoolHandler.channelCreated(key, channel);
+                createdChannels.add(channel);
                 channel.closeFuture().addListener(f -> {
                     channelPoolHandler.channelClosed(key, channel);
+                    createdChannels.remove(channel);
                     final Deque<Channel> queue = pool.get(key);
                     if (queue != null) {
                         removeUnhealthy(queue);
@@ -280,6 +287,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     @Override
     public void close() {
+        for (Channel ch : createdChannels) {
+            if (ch.isOpen()) {
+                ch.close().syncUninterruptibly();
+            }
+        }
         for (Iterator<Deque<Channel>> i = pool.values().iterator(); i.hasNext();) {
             final Deque<Channel> queue = i.next();
             i.remove();
@@ -291,7 +303,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                 }
 
                 if (ch.isOpen()) {
-                    ch.close();
+                    ch.close().syncUninterruptibly();
                 }
             }
         }

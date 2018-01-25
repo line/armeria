@@ -28,6 +28,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
@@ -50,6 +51,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -73,6 +75,9 @@ public class HttpClientIntegrationTest {
     private static final String TEST_USER_AGENT_NAME = "ArmeriaTest";
 
     private static final AtomicReference<ByteBuf> releasedByteBuf = new AtomicReference<>();
+
+    // Used to communicate with test when the response can't be used.
+    private static final AtomicReference<Boolean> completed = new AtomicReference<>();
 
     private static final class PoolUnawareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
@@ -261,6 +266,32 @@ public class HttpClientIntegrationTest {
             sb.service("/pooled-aware", new PooledContentService().decorate(PoolAwareDecorator::new));
 
             sb.service("/pooled-unaware", new PooledContentService().decorate(PoolUnawareDecorator::new));
+
+            sb.service("/stream-closed", ((ctx, req) -> {
+                ctx.setRequestTimeout(Duration.ZERO);
+                HttpResponseWriter res = HttpResponse.streaming();
+                res.write(HttpHeaders.of(HttpStatus.OK));
+                req.subscribe(new Subscriber<HttpObject>() {
+                    @Override
+                    public void onSubscribe(Subscription s) {
+                        s.request(Long.MAX_VALUE);
+                    }
+
+                    @Override
+                    public void onNext(HttpObject httpObject) {
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        completed.set(true);
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                }, ctx.eventLoop());
+                return res;
+            }));
         }
     };
 
@@ -493,5 +524,37 @@ public class HttpClientIntegrationTest {
         assertEquals(HttpStatus.OK, response.headers().status());
         assertThat(response.content().toStringUtf8()).isEqualTo("pooled content");
         await().untilAsserted(() -> assertThat(releasedByteBuf.get().refCnt()).isZero());
+    }
+
+    @Test
+    public void testCloseClientFactory() throws Exception {
+        ClientFactory factory = new ClientFactoryBuilder().build();
+        HttpClient client = factory.newClient("none+" + server.uri("/"), HttpClient.class);
+        HttpRequestWriter req = HttpRequest.streaming(HttpHeaders.of(HttpMethod.GET, "/stream-closed"));
+        HttpResponse res = client.execute(req);
+        AtomicReference<HttpObject> obj = new AtomicReference<>();
+        res.subscribe(new Subscriber<HttpObject>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpObject httpObject) {
+                obj.set(httpObject);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+        req.write(HttpData.ofUtf8("not finishing this stream, sorry."));
+        await().untilAsserted(() -> assertThat(obj).hasValue(HttpHeaders.of(HttpStatus.OK)));
+        factory.close();
+        await().untilAsserted(() -> assertThat(completed).hasValue(true));
     }
 }
