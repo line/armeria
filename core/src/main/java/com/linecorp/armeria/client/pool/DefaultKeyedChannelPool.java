@@ -292,6 +292,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                 ch.close().syncUninterruptibly();
             }
         }
+        createdChannels.clear();
         for (Iterator<Deque<Channel>> i = pool.values().iterator(); i.hasNext();) {
             final Deque<Channel> queue = i.next();
             i.remove();
