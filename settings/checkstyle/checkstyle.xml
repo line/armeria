@@ -233,7 +233,7 @@
     <module name="EmptyLineSeparator">
       <property name="allowNoEmptyLineBetweenFields" value="true"/>
       <property name="tokens"
-                value="IMPORT, CLASS_DEF, INTERFACE_DEF, ENUM_DEF, STATIC_INIT, INSTANCE_INIT, METHOD_DEF, CTOR_DEF, VARIABLE_DEF"/>
+                value="IMPORT, CLASS_DEF, INTERFACE_DEF, ENUM_DEF, INSTANCE_INIT, METHOD_DEF, CTOR_DEF, VARIABLE_DEF"/>
     </module>
     <module name="GenericWhitespace">
       <message key="ws.followed"
