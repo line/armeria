@@ -30,6 +30,7 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
@@ -60,7 +61,9 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     private final Map<K, Deque<Channel>> pool;
     private final Map<K, Future<Channel>> pendingConnections;
 
-    private final Set<Channel> createdChannels;
+    private final Set<Channel> allChannels;
+
+    private boolean closed;
 
     /**
      * Creates a new instance.
@@ -78,7 +81,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
         pool = new ConcurrentHashMap<>();
         pendingConnections = new HashMap<>();
-        createdChannels = new HashSet<>();
+        allChannels = new HashSet<>();
     }
 
     @Override
@@ -102,6 +105,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     private Future<Channel> acquireHealthyFromPoolOrNew(final K key, final Promise<Channel> promise) {
         assert eventLoop.inEventLoop();
+
+        if (closed) {
+            promise.setFailure(ClosedSessionException.get());
+            return promise;
+        }
 
         final Channel ch = pollHealthy(key);
         if (ch == null) {
@@ -175,12 +183,19 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         try {
             if (future.isSuccess()) {
                 Channel channel = future.getNow();
+
+                if (closed) {
+                    channel.close();
+                    promise.setFailure(ClosedSessionException.get());
+                    return;
+                }
+
                 channel.attr(KeyedChannelPoolUtil.POOL).set(this);
                 channelPoolHandler.channelCreated(key, channel);
-                createdChannels.add(channel);
+                allChannels.add(channel);
                 channel.closeFuture().addListener(f -> {
                     channelPoolHandler.channelClosed(key, channel);
-                    createdChannels.remove(channel);
+                    allChannels.remove(channel);
                     final Deque<Channel> queue = pool.get(key);
                     if (queue != null) {
                         removeUnhealthy(queue);
@@ -287,26 +302,21 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     @Override
     public void close() {
-        for (Channel ch : createdChannels) {
+        if (eventLoop.inEventLoop()) {
+            doClose();
+        } else {
+            eventLoop.execute(this::doClose);
+        }
+    }
+
+    private void doClose() {
+        closed = true;
+
+        for (Channel ch : allChannels) {
             if (ch.isOpen()) {
-                ch.close().syncUninterruptibly();
+                ch.close();
             }
         }
-        createdChannels.clear();
-        for (Iterator<Deque<Channel>> i = pool.values().iterator(); i.hasNext();) {
-            final Deque<Channel> queue = i.next();
-            i.remove();
-
-            for (;;) {
-                final Channel ch = queue.pollFirst();
-                if (ch == null) {
-                    break;
-                }
-
-                if (ch.isOpen()) {
-                    ch.close().syncUninterruptibly();
-                }
-            }
-        }
+        allChannels.clear();
     }
 }
