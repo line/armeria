@@ -25,7 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -82,7 +81,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                                                                                    "channelPoolHandler"));
         this.healthCheckOnRelease = healthCheckOnRelease;
 
-        pool = new ConcurrentHashMap<>();
+        pool = new HashMap<>();
         pendingConnections = new HashMap<>();
         allChannels = new HashSet<>();
     }
@@ -318,7 +317,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     private void doClose(boolean blocking) {
         closed = true;
 
-        List<ChannelFuture> closeFutures = new ArrayList<>();
+        if (allChannels.isEmpty()) {
+            return;
+        }
+
+        final List<ChannelFuture> closeFutures = new ArrayList<>(allChannels.size());
 
         for (Channel ch : allChannels) {
             if (ch.isOpen()) {
