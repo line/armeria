@@ -17,10 +17,12 @@ package com.linecorp.armeria.client.pool;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +36,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -303,20 +306,29 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     @Override
     public void close() {
         if (eventLoop.inEventLoop()) {
-            doClose();
+            // While we'd prefer to block until the pool is actually closed, we cannot block for the channels to
+            // close if it was called from the event loop or we would deadlock. In practice, it's rare to call
+            // close from an event loop thread, and not a main thread.
+            doClose(false);
         } else {
-            eventLoop.execute(this::doClose);
+            eventLoop.submit(() -> doClose(true)).syncUninterruptibly();
         }
     }
 
-    private void doClose() {
+    private void doClose(boolean blocking) {
         closed = true;
+
+        List<ChannelFuture> closeFutures = new ArrayList<>();
 
         for (Channel ch : allChannels) {
             if (ch.isOpen()) {
-                ch.close();
+                closeFutures.add(ch.close());
             }
         }
         allChannels.clear();
+
+        if (blocking) {
+            closeFutures.forEach(ChannelFuture::syncUninterruptibly);
+        }
     }
 }
