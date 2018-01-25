@@ -133,7 +133,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onStreamRemoved(Http2Stream stream) {
-        requests.remove(stream.id());
+        DecodedHttpRequest req = requests.remove(stream.id());
+        if (req != null) {
+            req.close();
+        }
     }
 
     @Override
