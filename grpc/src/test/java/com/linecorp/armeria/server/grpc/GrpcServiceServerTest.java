@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.REQUEST_MESSAGE;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
@@ -88,6 +89,9 @@ public class GrpcServiceServerTest {
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
 
     private static final AsciiString LARGE_PAYLOAD = AsciiString.of(Strings.repeat("a", MAX_MESSAGE_SIZE + 1));
+
+    // Used to communicate completion to a test when it is not possible to return to the client.
+    private static final AtomicReference<Boolean> COMPLETED = new AtomicReference<>();
 
     private static class UnitTestServiceImpl extends UnitTestServiceImplBase {
 
@@ -201,6 +205,26 @@ public class GrpcServiceServerTest {
                 }
             };
         }
+
+        @Override
+        public StreamObserver<SimpleRequest> streamClientCancels(
+                StreamObserver<SimpleResponse> responseObserver) {
+            return new StreamObserver<SimpleRequest>() {
+                @Override
+                public void onNext(SimpleRequest value) {
+                    responseObserver.onNext(SimpleResponse.getDefaultInstance());
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    COMPLETED.set(true);
+                }
+
+                @Override
+                public void onCompleted() {
+                }
+            };
+        }
     }
 
     @ClassRule
@@ -242,6 +266,7 @@ public class GrpcServiceServerTest {
 
     @Before
     public void setUp() {
+        COMPLETED.set(false);
         blockingClient = UnitTestServiceGrpc.newBlockingStub(channel);
         streamingClient = UnitTestServiceGrpc.newStub(channel);
     }
@@ -374,6 +399,34 @@ public class GrpcServiceServerTest {
     public void compressedClient_compressedEndpoint() throws Exception {
         assertThat(blockingClient.staticUnaryCallSetsMessageCompression(REQUEST_MESSAGE))
                 .isEqualTo(RESPONSE_MESSAGE);
+    }
+
+    // TODO(anuraaga): Add HTTP1 version as well after https://github.com/line/armeria/issues/972
+    @Test
+    public void clientSocketClosedHttp2() throws Exception {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
+                                                      .usePlaintext(true)
+                                                      .build();
+        UnitTestServiceStub stub = UnitTestServiceGrpc.newStub(channel);
+        AtomicReference<SimpleResponse> response = new AtomicReference<>();
+        StreamObserver<SimpleRequest> stream = stub.streamClientCancels(new StreamObserver<SimpleResponse>() {
+            @Override
+            public void onNext(SimpleResponse value) {
+                response.set(value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onCompleted() {
+            }
+        });
+        stream.onNext(SimpleRequest.getDefaultInstance());
+        await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
+        channel.shutdownNow().awaitTermination(10, TimeUnit.SECONDS);
+        await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
     }
 
     @Test
