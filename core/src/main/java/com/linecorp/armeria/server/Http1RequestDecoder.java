@@ -27,8 +27,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

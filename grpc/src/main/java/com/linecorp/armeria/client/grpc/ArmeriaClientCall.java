@@ -109,7 +109,10 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.decompressorRegistry = decompressorRegistry;
         this.messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
         this.marshaller = new GrpcMessageMarshaller<>(
-                ctx.alloc(), serializationFormat, method, jsonMarshaller);
+                ctx.alloc(), serializationFormat, method, jsonMarshaller,
+                // TODO(anuraag): Consider adding a GrpcClientOption for this after checking the server-side
+                // works / makes sense.
+                false);
         responseReader = new HttpStreamReader(
                 decompressorRegistry,
                 new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc()),
