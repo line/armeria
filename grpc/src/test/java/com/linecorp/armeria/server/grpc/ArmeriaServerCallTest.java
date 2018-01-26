@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcUnsafeBufferUtil;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;

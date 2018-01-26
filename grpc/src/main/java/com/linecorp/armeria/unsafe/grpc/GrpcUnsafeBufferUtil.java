@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc;
+package com.linecorp.armeria.unsafe.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
 

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal;
+package com.linecorp.armeria.unsafe;
 
 import static java.util.Objects.requireNonNull;
 

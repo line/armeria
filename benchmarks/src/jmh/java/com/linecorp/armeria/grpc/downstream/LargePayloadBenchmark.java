@@ -32,7 +32,6 @@ import com.google.protobuf.util.Timestamps;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.grpc.GrpcUnsafeBufferUtil;
 import com.linecorp.armeria.grpc.BinaryProxyGrpc.BinaryProxyImplBase;
 import com.linecorp.armeria.grpc.BinaryProxyGrpc.BinaryProxyStub;
 import com.linecorp.armeria.grpc.BinaryProxyOuterClass.BinaryPayload;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.stub.StreamObserver;
 import joptsimple.internal.Strings;

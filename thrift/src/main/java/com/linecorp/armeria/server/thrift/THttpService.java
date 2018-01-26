@@ -68,12 +68,12 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 

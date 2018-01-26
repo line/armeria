@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -63,6 +62,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;

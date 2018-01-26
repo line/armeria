@@ -97,10 +97,10 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;

@@ -47,9 +47,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcUnsafeBufferUtil;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
@@ -60,6 +58,8 @@ import com.linecorp.armeria.internal.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.grpc.StatusMessageEscaper;
 import com.linecorp.armeria.internal.grpc.TransportStatusListener;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.Codec;
 import io.grpc.Codec.Identity;
