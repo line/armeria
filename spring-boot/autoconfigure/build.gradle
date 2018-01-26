@@ -1,9 +1,9 @@
 dependencies {
-    compile project(':thrift')
+    compile(project(':thrift')) {
+        ext.optional = true // To let a user choose between thrift and thrift0.9.
+    }
     compile project(':logback')
-}
 
-managedDependencies {
     compile 'io.micrometer:micrometer-spring-legacy'
     compile 'io.dropwizard.metrics:metrics-json'
     compile 'javax.inject:javax.inject'

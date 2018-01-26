@@ -1,0 +1,241 @@
+import java.nio.file.Files
+
+configure(projectsWithFlags('publish', 'java')) {
+    def needsToPublishShadedJar = project.hasFlags('relocate')
+
+    if (project.ext.isSigning()) {
+        signing {
+            sign configurations.archives
+        }
+    }
+
+    publishing {
+        publications {
+            def configureJarPublication = { boolean isShaded ->
+                def currentArtifactId = project.ext.artifactId
+                if (isShaded) {
+                    currentArtifactId += '-shaded'
+                }
+
+                artifactId currentArtifactId
+
+                // Generate the POM.
+                pom.withXml {
+                    asNode().children().last() + {
+                        resolveStrategy = Closure.DELEGATE_FIRST
+
+                        // Write the elements required by OSSRH.
+                        name "${project.ext.projectName} (${currentArtifactId})"
+                        description "${project.ext.projectDescription} (${currentArtifactId})"
+                        url "${project.ext.projectUrl}"
+                        inceptionYear "${project.ext.inceptionYear}"
+
+                        licenses {
+                            license {
+                                name "${project.ext.licenseName}"
+                                url "${project.ext.licenseUrl}"
+                                distribution 'repo'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                name "${project.ext.authorName}"
+                                email "${project.ext.authorEmail}"
+                                url "${project.ext.authorUrl}"
+                            }
+                        }
+
+                        scm {
+                            url "${project.ext.scmUrl}"
+                            connection "${project.ext.scmConnection}"
+                            developerConnection "${project.ext.scmDeveloperConnection}"
+                        }
+
+                        dependencies {
+                            def writeExclusionRules = { Set<ExcludeRule> excludeRules ->
+                                if (!excludeRules.empty) {
+                                    exclusions {
+                                        excludeRules.each { rule ->
+                                            exclusion {
+                                                groupId rule.group
+                                                artifactId rule.module
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Write compile-time project dependencies.
+                            configurations.compile.dependencies.findAll {
+                                it instanceof ProjectDependency
+                            }.collect {
+                                (ProjectDependency) it
+                            }.toSorted({
+                                "${it.group}:${it.dependencyProject.ext.artifactId}"
+                            }).each { dep ->
+                                dependency {
+                                    groupId dep.group
+                                    artifactId dep.dependencyProject.ext.artifactId + (isShaded ? '-shaded' : '')
+                                    version dep.version ?: dep.dependencyProject.version
+                                    if (dep.hasProperty('optional') && dep.optional) {
+                                        optional true
+                                    }
+                                    writeExclusionRules(dep.excludeRules)
+                                }
+                            }
+
+                            // Write runtime project dependencies.
+                            configurations.runtime.dependencies.findAll {
+                                it instanceof ProjectDependency &&
+                                !configurations.compile.dependencies.contains(it)
+                            }.collect {
+                                (ProjectDependency) it
+                            }.toSorted({
+                                "${it.group}:${it.dependencyProject.ext.artifactId}"
+                            }).each { dep ->
+                                dependency {
+                                    groupId dep.group
+                                    artifactId dep.dependencyProject.ext.artifactId + (isShaded ? '-shaded' : '')
+                                    version dep.version ?: dep.dependencyProject.version
+                                    scope 'runtime'
+                                    if (dep.hasProperty('optional') && dep.optional) {
+                                        optional true
+                                    }
+                                    writeExclusionRules(dep.excludeRules)
+                                }
+                            }
+
+                            // Write module dependencies.
+                            Set<ResolvedDependency> compileDeps =
+                                    configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
+                            Set<ResolvedDependency> runtimeDeps =
+                                    configurations.runtime.resolvedConfiguration.firstLevelModuleDependencies
+                            Set<Dependency> unresolvedDeps =
+                                    configurations.runtime.dependencies + configurations.compile.dependencies
+
+                            runtimeDeps.toSorted({ "${it.moduleGroup}:${it.moduleName}" }).each { dep ->
+                                def unresolvedDep = unresolvedDeps.find {
+                                    it.group == dep.moduleGroup && it.name == dep.moduleName
+                                }
+
+                                if (unresolvedDep instanceof ExternalModuleDependency) {
+                                    dependency {
+                                        groupId dep.moduleGroup
+                                        artifactId dep.moduleName
+                                        version dep.moduleVersion
+
+                                        // Write classifier if exists.
+                                        if (dep.moduleArtifacts.find().classifier) {
+                                            classifier dep.moduleArtifacts.find().classifier
+                                        }
+
+                                        if (!compileDeps.contains(dep)) {
+                                            scope 'runtime'
+                                        }
+
+                                        if (unresolvedDep.hasProperty('optional') && unresolvedDep.optional) {
+                                            optional true
+                                        }
+
+                                        writeExclusionRules(unresolvedDep.excludeRules)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Find the main JAR and the task that generates it.
+                File mainJarFile
+                Task mainJarTask
+                if (!isShaded) {
+                    mainJarFile = tasks.jar.archivePath
+                    mainJarTask = tasks.jar
+                } else {
+                    if (tasks.findByName('trimShadedJar')) {
+                        mainJarFile = tasks.trimShadedJar.outJarFiles.find() as File
+                        mainJarTask = tasks.trimShadedJar
+                    } else {
+                        mainJarFile = tasks.shadedJar.archivePath
+                        mainJarTask = tasks.shadedJar
+                    }
+                }
+
+                // Add the main JAR.
+                artifact(mainJarFile).builtBy(mainJarTask)
+
+                // Add the sources JAR.
+                artifact(tasks.sourceJar) {
+                    classifier = 'sources'
+                }
+
+                // Add the Javadoc JAR.
+                artifact(tasks.javadocJar) {
+                    classifier = 'javadoc'
+                }
+
+                // Add the .asc signatures.
+                if (project.ext.isSigning()) {
+                    // Add the signature to pom.xml.
+                    pom.withXml {
+                        def tmpDir = project.file("${project.buildDir}/publications/tmp")
+                        project.mkdir(tmpDir)
+                        def tmpPomFile = Files.createTempFile(tmpDir.toPath(), 'pom-', '.xml').toFile()
+                        writeTo(tmpPomFile)
+                        def pomAscFile = signing.sign(tmpPomFile).signatureFiles[0]
+                        artifact(pomAscFile) {
+                            classifier = null
+                            extension = 'pom.asc'
+                        }
+                        tmpPomFile.delete()
+                    }
+
+                    // Add the signature to the main JAR.
+                    artifact(new File("${mainJarFile}.asc")) {
+                        extension = 'jar.asc'
+                    }
+
+                    // Add the signature to the sources JAR.
+                    artifact(new File("${tasks.sourceJar.archivePath}.asc")) {
+                        classifier = 'sources'
+                        extension = 'jar.asc'
+                    }
+
+                    // Add the signature to the javadoc JAR.
+                    artifact(new File("${tasks.javadocJar.archivePath}.asc")) {
+                        classifier = 'javadoc'
+                        extension = 'jar.asc'
+                    }
+                }
+            }
+
+            jar(MavenPublication, configureJarPublication.curry(false))
+            if (needsToPublishShadedJar) {
+                shadedJar(MavenPublication, configureJarPublication.curry(true))
+            }
+        }
+    }
+
+    if (project.ext.isSigning()) {
+        model {
+            tasks.publishJarPublicationToMavenLocal {
+                dependsOn(project.tasks.signArchives)
+            }
+            tasks.publishJarPublicationToMavenRepository {
+                dependsOn(project.tasks.signArchives)
+            }
+            if (needsToPublishShadedJar) {
+                tasks.publishShadedJarPublicationToMavenLocal {
+                    dependsOn(project.tasks.signArchives)
+                }
+                tasks.publishShadedJarPublicationToMavenRepository {
+                    dependsOn(project.tasks.signArchives)
+                }
+            }
+            tasks.signArchives {
+                onlyIf { rootProject.ext.isSigning() }
+            }
+        }
+    }
+}

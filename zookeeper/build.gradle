@@ -1,4 +1,4 @@
-managedDependencies {
+dependencies {
     // ZooKeeper
     compile 'org.apache.zookeeper:zookeeper'
 

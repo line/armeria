@@ -1,8 +1,6 @@
 dependencies {
     testCompile project(':thrift')
-}
 
-managedDependencies {
     // Zipkin
     compile 'io.zipkin.brave:brave'
     compile 'io.zipkin.java:zipkin'
