@@ -409,6 +409,22 @@ public class AnnotatedHttpServiceTest {
             return parameters.get("username") + "/" + parameters.get("password");
         }
 
+        @Get("/param/enum")
+        public String paramEnum(RequestContext ctx,
+                                @Param("username") String username,
+                                @Param("level") UserLevel level) {
+            validateContext(ctx);
+            return username + "/" + level;
+        }
+
+        @Get("/param/enum2")
+        public String paramEnum2(RequestContext ctx,
+                                @Param("type") UserType type,
+                                @Param("level") UserLevel level) {
+            validateContext(ctx);
+            return type + "/" + level;
+        }
+
         @Get
         @Path("/param/default1")
         public String paramDefault1(RequestContext ctx,
@@ -680,6 +696,17 @@ public class AnnotatedHttpServiceTest {
             testBody(hc, form("/7/map/post", null,
                               "username", "line4", "password", "armeria4"), "line4/armeria4");
 
+            testBody(hc, get("/7/param/enum?username=line5&level=LV1"), "line5/LV1");
+            // Case insensitive test for enum element
+            testBody(hc, get("/7/param/enum?username=line5&level=lv1"), "line5/LV1");
+            testBody(hc, get("/7/param/enum?username=line6&level=Lv2"), "line6/LV2");
+            testStatusCode(hc, get("/7/param/enum?username=line6&level=TEST3"), 400);
+
+            // Case sensitive test enum
+            testBody(hc, get("/7/param/enum2?type=normal&level=LV1"), "normal/LV1");
+            testBody(hc, get("/7/param/enum2?type=NORMAL&level=LV1"), "NORMAL/LV1");
+            testStatusCode(hc, get("/7/param/enum2?type=MINOOX&level=LV1"), 400);
+
             testBody(hc, get("/7/param/default1"), "hello/world/(null)");
             testBody(hc, get("/7/param/default1?extra=people&number=1"), "hello/world/people/1");
 
@@ -790,6 +817,16 @@ public class AnnotatedHttpServiceTest {
 
             testStatusCode(hc, get("/11/headerWithoutValue"), 400);
         }
+    }
+
+    private enum UserLevel {
+        LV1,
+        LV2
+    }
+
+    private enum UserType {
+        normal,
+        NORMAL
     }
 
     static void testBodyAndContentType(CloseableHttpClient hc, HttpRequestBase req,
