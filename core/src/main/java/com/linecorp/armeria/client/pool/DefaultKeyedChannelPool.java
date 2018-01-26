@@ -17,20 +17,25 @@ package com.linecorp.armeria.client.pool;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -58,6 +63,10 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     private final Map<K, Deque<Channel>> pool;
     private final Map<K, Future<Channel>> pendingConnections;
 
+    private final Set<Channel> allChannels;
+
+    private boolean closed;
+
     /**
      * Creates a new instance.
      */
@@ -72,8 +81,9 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                                                                                    "channelPoolHandler"));
         this.healthCheckOnRelease = healthCheckOnRelease;
 
-        pool = new ConcurrentHashMap<>();
+        pool = new HashMap<>();
         pendingConnections = new HashMap<>();
+        allChannels = new HashSet<>();
     }
 
     @Override
@@ -97,6 +107,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     private Future<Channel> acquireHealthyFromPoolOrNew(final K key, final Promise<Channel> promise) {
         assert eventLoop.inEventLoop();
+
+        if (closed) {
+            promise.setFailure(ClosedSessionException.get());
+            return promise;
+        }
 
         final Channel ch = pollHealthy(key);
         if (ch == null) {
@@ -170,10 +185,19 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         try {
             if (future.isSuccess()) {
                 Channel channel = future.getNow();
+
+                if (closed) {
+                    channel.close();
+                    promise.setFailure(ClosedSessionException.get());
+                    return;
+                }
+
                 channel.attr(KeyedChannelPoolUtil.POOL).set(this);
                 channelPoolHandler.channelCreated(key, channel);
+                allChannels.add(channel);
                 channel.closeFuture().addListener(f -> {
                     channelPoolHandler.channelClosed(key, channel);
+                    allChannels.remove(channel);
                     final Deque<Channel> queue = pool.get(key);
                     if (queue != null) {
                         removeUnhealthy(queue);
@@ -280,20 +304,34 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     @Override
     public void close() {
-        for (Iterator<Deque<Channel>> i = pool.values().iterator(); i.hasNext();) {
-            final Deque<Channel> queue = i.next();
-            i.remove();
+        if (eventLoop.inEventLoop()) {
+            // While we'd prefer to block until the pool is actually closed, we cannot block for the channels to
+            // close if it was called from the event loop or we would deadlock. In practice, it's rare to call
+            // close from an event loop thread, and not a main thread.
+            doClose(false);
+        } else {
+            eventLoop.submit(() -> doClose(true)).syncUninterruptibly();
+        }
+    }
 
-            for (;;) {
-                final Channel ch = queue.pollFirst();
-                if (ch == null) {
-                    break;
-                }
+    private void doClose(boolean blocking) {
+        closed = true;
 
-                if (ch.isOpen()) {
-                    ch.close();
-                }
+        if (allChannels.isEmpty()) {
+            return;
+        }
+
+        final List<ChannelFuture> closeFutures = new ArrayList<>(allChannels.size());
+
+        for (Channel ch : allChannels) {
+            if (ch.isOpen()) {
+                closeFutures.add(ch.close());
             }
+        }
+        allChannels.clear();
+
+        if (blocking) {
+            closeFutures.forEach(ChannelFuture::syncUninterruptibly);
         }
     }
 }
