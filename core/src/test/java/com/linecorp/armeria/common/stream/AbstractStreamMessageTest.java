@@ -35,7 +35,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;

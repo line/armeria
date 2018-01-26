@@ -18,9 +18,13 @@ package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
+
+import java.util.IdentityHashMap;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.junit.Before;
@@ -42,15 +46,18 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.Status;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.util.AsciiString;
+import io.netty.util.Attribute;
 
 // TODO(anuraag): Currently only grpc-protobuf has been published so we only test proto here.
 // Once grpc-thrift is published, add tests for thrift stubs which will not go through the
@@ -82,6 +89,9 @@ public class ArmeriaServerCallTest {
     @Mock
     private ServiceRequestContext ctx;
 
+    @Mock
+    private Attribute<IdentityHashMap<Object, ByteBuf>> buffersAttr;
+
     private ArmeriaServerCall<SimpleRequest, SimpleResponse> call;
 
     @Before
@@ -97,11 +107,13 @@ public class ArmeriaServerCallTest {
                 MAX_MESSAGE_BYTES,
                 ctx,
                 GrpcSerializationFormats.PROTO,
-                MessageMarshaller.builder().build());
+                MessageMarshaller.builder().build(),
+                false);
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
         when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
+        when(ctx.attr(GrpcUnsafeBufferUtil.BUFFERS)).thenReturn(buffersAttr);
     }
 
     @Test
@@ -111,6 +123,35 @@ public class ArmeriaServerCallTest {
         call.messageRead(new ByteBufOrStream(GrpcTestUtil.requestByteBuf()));
 
         verify(listener, never()).onMessage(any());
+    }
+
+    @Test
+    public void messageRead_notWrappedByteBuf() throws Exception {
+        ByteBuf buf = GrpcTestUtil.requestByteBuf();
+        call.messageRead(new ByteBufOrStream(buf));
+
+        verifyZeroInteractions(buffersAttr);
+    }
+
+    @Test
+    public void messageRead_wrappedByteBuf() throws Exception {
+        call = new ArmeriaServerCall<>(
+                HttpHeaders.of(),
+                TestServiceGrpc.METHOD_UNARY_CALL,
+                CompressorRegistry.getDefaultInstance(),
+                DecompressorRegistry.getDefaultInstance(),
+                res,
+                MAX_MESSAGE_BYTES,
+                MAX_MESSAGE_BYTES,
+                ctx,
+                GrpcSerializationFormats.PROTO,
+                MessageMarshaller.builder().build(),
+                true);
+
+        ByteBuf buf = GrpcTestUtil.requestByteBuf();
+        call.messageRead(new ByteBufOrStream(buf));
+
+        verify(buffersAttr).set(argThat(map -> map.containsValue(buf)));
     }
 
     @Test

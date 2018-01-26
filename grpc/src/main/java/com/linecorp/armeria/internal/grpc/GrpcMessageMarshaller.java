@@ -31,6 +31,7 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import com.google.protobuf.UnsafeByteOperations;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -63,14 +64,17 @@ public class GrpcMessageMarshaller<I, O> {
     private final MessageMarshaller jsonMarshaller;
     private final MessageType requestType;
     private final MessageType responseType;
+    private final boolean unsafeWrapDeserializedBuffer;
 
     public GrpcMessageMarshaller(ByteBufAllocator alloc,
                                  SerializationFormat serializationFormat,
                                  MethodDescriptor<I, O> method,
-                                 @Nullable MessageMarshaller jsonMarshaller) {
+                                 @Nullable MessageMarshaller jsonMarshaller,
+                                 boolean unsafeWrapDeserializedBuffer) {
         this.alloc = requireNonNull(alloc, "alloc");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.method = requireNonNull(method, "method");
+        this.unsafeWrapDeserializedBuffer = unsafeWrapDeserializedBuffer;
         checkArgument(!GrpcSerializationFormats.isJson(serializationFormat) || jsonMarshaller != null,
                       "jsonMarshaller must be non-null when serializationFormat is JSON.");
         this.jsonMarshaller = jsonMarshaller;
@@ -109,7 +113,9 @@ public class GrpcMessageMarshaller<I, O> {
                         break;
                 }
             } finally {
-                message.buf().release();
+                if (!unsafeWrapDeserializedBuffer) {
+                    message.buf().release();
+                }
             }
         }
         try (InputStream msg = messageStream) {
@@ -148,7 +154,9 @@ public class GrpcMessageMarshaller<I, O> {
                         break;
                 }
             } finally {
-                message.buf().release();
+                if (!unsafeWrapDeserializedBuffer) {
+                    message.buf().release();
+                }
             }
         }
         try (InputStream msg = messageStream) {
@@ -188,7 +196,13 @@ public class GrpcMessageMarshaller<I, O> {
 
     private Message deserializeProto(ByteBuf buf, Message prototype) throws IOException {
         if (GrpcSerializationFormats.isProto(serializationFormat)) {
-            CodedInputStream stream = CodedInputStream.newInstance(buf.nioBuffer());
+            final CodedInputStream stream;
+            if (unsafeWrapDeserializedBuffer) {
+                stream = UnsafeByteOperations.unsafeWrap(buf.nioBuffer()).newCodedInput();
+                stream.enableAliasing(true);
+            } else {
+                stream = CodedInputStream.newInstance(buf.nioBuffer());
+            }
             try {
                 Message msg = prototype.getParserForType().parseFrom(stream);
                 try {

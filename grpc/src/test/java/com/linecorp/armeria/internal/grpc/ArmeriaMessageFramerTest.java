@@ -30,7 +30,7 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.internal.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.grpc.Codec.Gzip;
 import io.grpc.StatusRuntimeException;
