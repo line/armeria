@@ -1,0 +1,25 @@
+configure(projectsWithFlags('java')) {
+    // Use Jetty ALPN agent if dependencyManagement mentions it.
+    if (managedVersions.containsKey('org.mortbay.jetty.alpn:jetty-alpn-agent')) {
+        configurations {
+            alpnAgent
+        }
+
+        dependencies {
+            alpnAgent 'org.mortbay.jetty.alpn:jetty-alpn-agent'
+        }
+
+        task copyAlpnAgent(type: Copy) {
+            from configurations.alpnAgent
+            into "${rootProject.buildDir}"
+            rename { String fileName ->
+                fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[^\\.]+)?\\.jar", ".jar")
+            }
+        }
+
+        tasks.withType(JavaForkOptions) {
+            dependsOn tasks.copyAlpnAgent
+            jvmArgs "-javaagent:${rootProject.buildDir}/jetty-alpn-agent.jar"
+        }
+    }
+}

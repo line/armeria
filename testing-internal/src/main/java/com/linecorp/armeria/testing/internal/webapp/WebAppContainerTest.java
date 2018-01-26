@@ -114,7 +114,7 @@ public abstract class WebAppContainerTest {
                 assertThat(actualContent).isEqualTo(
                         "<html><body>" +
                         "<p>Hello, Armerian World!</p>" +
-                        "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
+                        "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
                         "<p>Context path: </p>" + // ROOT context path
                         "<p>Request URI: /index.jsp</p>" +
                         "<p>Scheme: http</p>" +
@@ -136,7 +136,7 @@ public abstract class WebAppContainerTest {
                 assertThat(actualContent).isEqualTo(
                         "<html><body>" +
                         "<p>Hello, Armerian World!</p>" +
-                        "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
+                        "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
                         "<p>Context path: </p>" + // ROOT context path
                         "<p>Request URI: /%E6%97%A5%E6%9C%AC%E8%AA%9E/index.jsp</p>" +
                         "<p>Servlet Path: /日本語/index.jsp</p>" +
@@ -157,7 +157,7 @@ public abstract class WebAppContainerTest {
         assertThat(actualContent).isEqualTo(
                 "<html><body>" +
                 "<p>Hello, Armerian World!</p>" +
-                "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
+                "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
                 "<p>Context path: </p>" + // ROOT context path
                 "<p>Request URI: /index.jsp</p>" +
                 "<p>Scheme: https</p>" +

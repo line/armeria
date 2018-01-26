@@ -1,0 +1,95 @@
+import groovy.xml.QName
+
+configure(projectsWithFlags('bom')) {
+    apply plugin: 'base'
+
+    dependencyManagement {
+        generatedPomCustomization {
+            enabled = true
+        }
+    }
+
+    publishing {
+        publications {
+            bom(MavenPublication) {
+                artifactId project.ext.artifactId
+
+                // Generate the POM.
+                pom.withXml {
+                    Node packaging = asNode().children().find {
+                        def name = it.name()
+                        if (name instanceof QName) {
+                            name = name.localPart
+                        } else {
+                            name = name.toString()
+                        }
+
+                        return name == 'packaging'
+                    }
+
+                    // maven-publish plugin will set the packaging to 'pom.asc' which is not correct.
+                    // Fix it by setting the packaging explicitly.
+                    packaging.value = ['pom']
+                    packaging + {
+                        resolveStrategy = DELEGATE_FIRST
+
+                        // Write the elements required by OSSRH.
+                        name "${project.ext.projectName} (${project.ext.artifactId})"
+                        description "${project.ext.projectDescription} (${project.ext.artifactId})"
+                        url "${project.ext.projectUrl}"
+                        inceptionYear "${project.ext.inceptionYear}"
+
+                        licenses {
+                            license {
+                                name "${project.ext.licenseName}"
+                                url "${project.ext.licenseUrl}"
+                                distribution 'repo'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                name "${project.ext.authorName}"
+                                email "${project.ext.authorEmail}"
+                                url "${project.ext.authorUrl}"
+                            }
+                        }
+
+                        scm {
+                            url "${project.ext.scmUrl}"
+                            connection "${project.ext.scmConnection}"
+                            developerConnection "${project.ext.scmDeveloperConnection}"
+                        }
+                    }
+                }
+
+                if (project.ext.isSigning()) {
+                    def outDir = project.file("${project.buildDir}/publications/bom")
+                    def pomFile = new File(outDir, 'pom-default.xml')
+                    def pomAscFile = new File(outDir, "${pomFile.name}.asc")
+
+                    artifact(pomAscFile) {
+                        classifier = null
+                        extension = 'pom.asc'
+                    }
+
+                    // Add the signature to pom.xml.
+                    pom.withXml {
+                        writeTo(pomFile)
+
+                        def actualPomAscFile = signing.sign(pomFile).signatureFiles[0]
+                        if (actualPomAscFile != pomAscFile) {
+                            if (!actualPomAscFile.renameTo(pomAscFile)) {
+                                throw new IllegalStateException("failed to rename ${actualPomAscFile} to ${pomAscFile}")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    tasks.assemble.dependsOn {
+        tasks.generatePomFileForBomPublication
+    }
+}

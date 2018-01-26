@@ -1,0 +1,25 @@
+1. Upload the artifacts to the staging repository and prepare the web site:
+
+   git checkout ${tag}
+   ./gradlew --no-daemon clean publish site
+
+2. Close and release the staging repository at:
+
+   https://oss.sonatype.org/
+
+3. Close the milestone and set its release date at:
+
+   https://github.com/line/armeria/milestones
+
+4. Update the release note at:
+
+   https://github.com/line/armeria/releases/tag/${tag}
+
+5. Copy the web site generated to the 'gh-pages' branch, e.g.
+
+   cd ../site-armeria
+   rm -fr .buildinfo .doctrees .gradle *
+   rsync -aiP --exclude '.*' ../upstream-armeria/site/build/site/ .
+   git add -A .
+   git commit --amend -m 'Deploy the web site'
+   git push --force

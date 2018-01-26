@@ -7,6 +7,7 @@
 /*/*/out
 **/gen-java
 **/gen-src
+/reports
 
 # Package Files #
 *.jar

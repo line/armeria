@@ -1,4 +1,12 @@
-apply plugin: 'com.google.protobuf'
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "me.champeau.gradle:jmh-gradle-plugin:${managedVersions['me.champeau.gradle:jmh-gradle-plugin']}"
+    }
+}
+
 apply plugin: 'me.champeau.gradle.jmh'
 
 def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
@@ -7,7 +15,7 @@ def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
 // It should be reliable enough.
 def grpcUpstream = jmhInclude.contains('grpc.upstream') || jmhInclude.contains('grpc\\.upstream')
 
-managedDependencies {
+dependencies {
     compile 'io.grpc:grpc-okhttp'
     if (grpcUpstream) {
         compile 'io.grpc:grpc-netty'
@@ -38,7 +46,7 @@ jmh {
 
 
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
-    jmhVersion = rootProject.ext.dependencyManagement['org.openjdk.jmh']['jmh-core'].version
+    jmhVersion = managedVersions['org.openjdk.jmh:jmh-core']
 
     if (rootProject.hasProperty('jmh.params')) {
         benchmarkParameters = [:]

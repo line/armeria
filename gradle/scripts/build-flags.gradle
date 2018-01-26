@@ -1,0 +1,42 @@
+def libDir = new File(buildscript.sourceFile.parentFile, 'lib')
+
+apply from: "${libDir}/common-dependencies.gradle"
+apply from: "${libDir}/common-git.gradle"
+apply from: "${libDir}/common-info.gradle"
+apply from: "${libDir}/common-publish.gradle"
+apply from: "${libDir}/common-release.gradle"
+apply from: "${libDir}/common-wrapper.gradle"
+
+if (!projectsWithFlags('bom').isEmpty()) {
+    apply from: "${libDir}/bom.gradle"
+}
+
+if (!projectsWithFlags('java').isEmpty()) {
+    apply from: "${libDir}/java.gradle"
+    apply from: "${libDir}/java-javadoc.gradle"
+    apply from: "${libDir}/java-alpn.gradle"
+    apply from: "${libDir}/java-rpc.gradle"
+    apply from: "${libDir}/java-rpc-thrift.gradle"
+
+    if (projectsWithFlags('java').find { it.ext.hasSourceDirectory('proto') }) {
+        if (!managedVersions.containsKey('com.google.protobuf:protobuf-gradle-plugin')) {
+            throw new IllegalStateException(
+                    "com.google.protobuf:protobuf-gradle-plugin must be specified in dependencies.yml " +
+                    "to compile .proto files.")
+        }
+        apply from: "${libDir}/java-rpc-proto.gradle"
+    }
+
+    if (!projectsWithFlags('java', 'relocate').isEmpty()) {
+        ['com.github.jengelman.gradle.plugins:shadow', 'net.sf.proguard:proguard-gradle'].each {
+            if (!managedVersions.containsKey(it)) {
+                throw new IllegalStateException(
+                        "${it} must be specified in dependencies.yml to use the 'relocate' flag.")
+            }
+        }
+        apply from: "${libDir}/java-shade.gradle"
+    }
+
+    apply from: "${libDir}/java-versionprops.gradle"
+    apply from: "${libDir}/java-publish.gradle"
+}
