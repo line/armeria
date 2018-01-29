@@ -16,13 +16,15 @@
 
 package com.linecorp.armeria.server.grpc.interop;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
@@ -30,23 +32,28 @@ import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.ConnectionSpec;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.ManagedChannel;
-import io.grpc.Server;
+import io.grpc.ServerInterceptors;
+import io.grpc.internal.testing.TestUtils;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.okhttp.NegotiationType;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.okhttp.internal.Platform;
-import io.grpc.testing.TestUtils;
 import io.grpc.testing.integration.AbstractInteropTest;
 import io.grpc.testing.integration.TestServiceGrpc;
+import io.grpc.testing.integration.TestServiceImpl;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
@@ -54,6 +61,11 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  * handling of the gRPC protocol.
  */
 public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
+
+    static {
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+    }
 
     private static final ApplicationProtocolConfig ALPN = new ApplicationProtocolConfig(
             Protocol.ALPN,
@@ -64,39 +76,44 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     private static final AtomicReference<ServiceRequestContext> ctxCapture = new AtomicReference<>();
 
     private static SelfSignedCertificate ssc;
-    private static Server server;
 
-    /** Starts the server with HTTPS. */
-    @BeforeClass
-    public static void startServer() throws Exception {
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
 
-        ssc = new SelfSignedCertificate("example.com");
-        ServerBuilder sb = new ServerBuilder()
-                .port(0, SessionProtocol.HTTPS)
-                .defaultMaxRequestLength(16 * 1024 * 1024)
-                .sslContext(GrpcSslContexts.forServer(ssc.certificate(), ssc.privateKey())
-                                           .applicationProtocolConfig(ALPN)
-                                           .trustManager(TestUtils.loadCert("ca.pem"))
-                                           .build());
+        private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
 
-        final ArmeriaGrpcServerBuilder builder = new ArmeriaGrpcServerBuilder(sb, new GrpcServiceBuilder(),
-                                                                              ctxCapture);
-        startStaticServer(builder);
-        server = builder.builtServer();
-    }
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            ssc = new SelfSignedCertificate("example.com");
 
-    @AfterClass
-    public static void stopServer() {
-        try {
-            stopStaticServer();
-        } finally {
-            if (ssc != null) {
-                ssc.delete();
-            }
+            sb.serverListener(new ServerListenerAdapter() {
+                @Override
+                public void serverStopped(Server server) throws Exception {
+                    executor.shutdown();
+                    ssc.delete();
+                }
+            });
+
+            sb.port(new InetSocketAddress("127.0.0.1", 0), SessionProtocol.HTTPS);
+            sb.sslContext(newSslContext());
+            sb.defaultMaxRequestLength(16 * 1024 * 1024);
+            sb.serviceUnder("/", new GrpcServiceBuilder()
+                    .addService(ServerInterceptors.intercept(
+                            new TestServiceImpl(executor), TestServiceImpl.interceptors()))
+                    .build()
+                    .decorate((delegate, ctx, req) -> {
+                        ctxCapture.set(ctx);
+                        return delegate.serve(ctx, req);
+                    }));
         }
-    }
+
+        private SslContext newSslContext() throws Exception {
+            return GrpcSslContexts.forServer(ssc.certificate(), ssc.privateKey())
+                                  .applicationProtocolConfig(ALPN)
+                                  .trustManager(TestUtils.loadCert("ca.pem"))
+                                  .build();
+        }
+    };
 
     @After
     public void clearCtxCapture() {
@@ -106,7 +123,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     @Override
     protected ManagedChannel createChannel() {
         try {
-            final int port = server.getPort();
+            final int port = server.httpsPort();
             return OkHttpChannelBuilder
                     .forAddress("localhost", port)
                     .negotiationType(NegotiationType.TLS)
@@ -123,11 +140,6 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     @Override
     protected boolean metricsExpected() {
-        return false;
-    }
-
-    @Override
-    protected boolean serverInProcess() {
         return false;
     }
 
