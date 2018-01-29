@@ -43,7 +43,7 @@ public class GrpcMessageMarshallerTest {
         marshaller = new GrpcMessageMarshaller<>(
                 ByteBufAllocator.DEFAULT,
                 GrpcSerializationFormats.PROTO,
-                TestServiceGrpc.METHOD_UNARY_CALL,
+                TestServiceGrpc.getUnaryCallMethod(),
                 MessageMarshaller.builder()
                                  .register(SimpleRequest.getDefaultInstance())
                                  .register(SimpleResponse.getDefaultInstance())
@@ -74,7 +74,7 @@ public class GrpcMessageMarshallerTest {
         marshaller = new GrpcMessageMarshaller<>(
                 ByteBufAllocator.DEFAULT,
                 GrpcSerializationFormats.PROTO,
-                TestServiceGrpc.METHOD_UNARY_CALL,
+                TestServiceGrpc.getUnaryCallMethod(),
                 MessageMarshaller.builder()
                                  .register(SimpleRequest.getDefaultInstance())
                                  .register(SimpleResponse.getDefaultInstance())
@@ -118,7 +118,7 @@ public class GrpcMessageMarshallerTest {
         marshaller = new GrpcMessageMarshaller<>(
                 ByteBufAllocator.DEFAULT,
                 GrpcSerializationFormats.PROTO,
-                TestServiceGrpc.METHOD_UNARY_CALL,
+                TestServiceGrpc.getUnaryCallMethod(),
                 MessageMarshaller.builder()
                                  .register(SimpleRequest.getDefaultInstance())
                                  .register(SimpleResponse.getDefaultInstance())

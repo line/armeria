@@ -484,7 +484,7 @@ public class GrpcClientTest {
 
         final ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<>(10);
         ClientCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
-                asyncStub.getChannel().newCall(TestServiceGrpc.METHOD_STREAMING_OUTPUT_CALL,
+                asyncStub.getChannel().newCall(TestServiceGrpc.getStreamingOutputCallMethod(),
                                                CallOptions.DEFAULT);
         call.start(new ClientCall.Listener<StreamingOutputCallResponse>() {
             @Override

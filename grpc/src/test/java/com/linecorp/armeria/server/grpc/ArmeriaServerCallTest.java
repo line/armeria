@@ -99,7 +99,7 @@ public class ArmeriaServerCallTest {
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
-                TestServiceGrpc.METHOD_UNARY_CALL,
+                TestServiceGrpc.getUnaryCallMethod(),
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
                 res,
@@ -137,7 +137,7 @@ public class ArmeriaServerCallTest {
     public void messageRead_wrappedByteBuf() throws Exception {
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
-                TestServiceGrpc.METHOD_UNARY_CALL,
+                TestServiceGrpc.getUnaryCallMethod(),
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
                 res,
