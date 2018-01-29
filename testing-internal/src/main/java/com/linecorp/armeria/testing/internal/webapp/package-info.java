@@ -17,4 +17,7 @@
 /**
  * Web application service testing utilities.
  */
+@NonNullByDefault
 package com.linecorp.armeria.testing.internal.webapp;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

@@ -17,4 +17,7 @@
 /**
  * HTTP authorization service.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.auth;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

@@ -126,4 +126,7 @@
  * <h2>{@code exceptionFilter}</h2>
  * A filter that decides whether a circuit breaker should deal with a given error.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.circuitbreaker;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

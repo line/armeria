@@ -18,4 +18,7 @@
  * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
  * (CORS)</a> support.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.cors;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

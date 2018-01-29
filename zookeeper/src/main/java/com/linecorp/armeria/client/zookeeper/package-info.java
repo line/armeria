@@ -16,4 +16,7 @@
 /**
  * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.zookeeper;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

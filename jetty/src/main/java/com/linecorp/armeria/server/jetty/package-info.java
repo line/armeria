@@ -17,4 +17,7 @@
 /**
  * Embedded <a href="https://www.eclipse.org/jetty/">Jetty</a> service.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.jetty;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

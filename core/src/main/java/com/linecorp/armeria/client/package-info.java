@@ -23,4 +23,7 @@
  *   <li>{@link com.linecorp.armeria.client.ClientBuilder}</li>
  * </ul>
  */
+@NonNullByDefault
 package com.linecorp.armeria.client;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;
