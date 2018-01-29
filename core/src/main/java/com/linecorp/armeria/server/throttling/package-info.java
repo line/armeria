@@ -17,4 +17,7 @@
 /**
  * Request throttling service decorators and strategies.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.throttling;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

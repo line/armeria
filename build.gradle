@@ -59,8 +59,7 @@ configure(projectsWithFlags('java')) {
         compile 'com.google.guava:guava'
 
         // JSR305
-        compileOnly 'com.google.code.findbugs:jsr305'
-        testCompile 'com.google.code.findbugs:jsr305'
+        compile 'com.google.code.findbugs:jsr305'
 
         // JCTools
         compile 'org.jctools:jctools-core'

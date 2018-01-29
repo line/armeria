@@ -17,4 +17,7 @@
 /**
  * Documentation service.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.docs;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

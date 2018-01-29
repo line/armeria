@@ -23,4 +23,7 @@
  *   <li>{@link com.linecorp.armeria.common.stream.StreamWriter}</li>
  * </ul>
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.stream;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

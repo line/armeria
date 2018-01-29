@@ -17,4 +17,7 @@
 /**
  * Asynchronous {@link io.netty.channel.Channel} pool.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.pool;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

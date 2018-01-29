@@ -17,4 +17,7 @@
 /**
  * {@link com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup} groups.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.endpoint.healthcheck;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

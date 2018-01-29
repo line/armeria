@@ -19,4 +19,8 @@
  * when dealing with large buffers but require careful memory management or there will be memory leaks. Only use
  * these methods if you really know what you're doing.
  */
+
+@NonNullByDefault
 package com.linecorp.armeria.unsafe;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

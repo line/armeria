@@ -17,4 +17,7 @@
 /**
  * <a href="https://projects.spring.io/spring-boot/">Spring Boot</a> integration.
  */
+@NonNullByDefault
 package com.linecorp.armeria.spring;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

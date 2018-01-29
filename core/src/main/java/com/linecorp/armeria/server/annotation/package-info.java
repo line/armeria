@@ -17,4 +17,7 @@
 /**
  * Annotations for building a RESTful service.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.annotation;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

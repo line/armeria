@@ -30,6 +30,14 @@
     <property name="maximum" value="1"/>
     <property name="message" value="missing copyright header"/>
   </module>
+  <!-- All packages must be annotated with @NonNullByDefault -->
+  <module name="RegexpSingleline">
+    <property name="id" value="NonNullByDefaultAnnotation"/>
+    <property name="format" value="^\s*@(?:com\.linecorp\.armeria\.common\.util\.)?NonNullByDefault"/>
+    <property name="minimum" value="1"/>
+    <property name="maximum" value="1"/>
+    <property name="message" value="A package must be annotated with @NonNullByDefault."/>
+  </module>
   <!-- Unmaintainable Javadoc tags -->
   <module name="RegexpSingleline">
     <property name="format" value="(?:@version|\(non-Javadoc\))"/>

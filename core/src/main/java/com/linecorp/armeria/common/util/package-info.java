@@ -17,4 +17,5 @@
 /**
  * Generic utility classes.
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.util;

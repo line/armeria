@@ -17,4 +17,7 @@
 /**
  * HTTP health check service for load balancers.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.healthcheck;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

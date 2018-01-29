@@ -24,4 +24,7 @@
  *   <li>{@link com.linecorp.armeria.server.Service}</li>
  * </ul>
  */
+@NonNullByDefault
 package com.linecorp.armeria.server;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

@@ -17,4 +17,7 @@
 /**
  * Thrift-related common classes.
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.thrift;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

@@ -17,4 +17,7 @@
 /**
  * Thrift service.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.thrift;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;
