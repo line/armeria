@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
@@ -90,6 +91,11 @@ public final class PathAndQuery {
         if (CACHE != null) {
             CACHE.put(rawPath, this);
         }
+    }
+
+    @VisibleForTesting
+    public static Cache<String, PathAndQuery> pathCache() {
+        return CACHE;
     }
 
     private final String path;

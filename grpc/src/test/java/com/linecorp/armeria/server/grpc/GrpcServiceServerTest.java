@@ -65,6 +65,7 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
+import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
@@ -269,11 +270,17 @@ public class GrpcServiceServerTest {
         COMPLETED.set(false);
         blockingClient = UnitTestServiceGrpc.newBlockingStub(channel);
         streamingClient = UnitTestServiceGrpc.newStub(channel);
+
+        PathAndQuery.pathCache().asMap().clear();
     }
 
     @Test
     public void unary_normal() throws Exception {
         assertThat(blockingClient.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+
+        // Confirm gRPC paths are cached despite using serviceUnder
+        assertThat(PathAndQuery.pathCache().asMap())
+                .containsKeys("/armeria.grpc.testing.UnitTestService/StaticUnaryCall");
     }
 
     @Test

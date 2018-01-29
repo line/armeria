@@ -331,7 +331,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             gracefulShutdownSupport.inc();
             unfinishedRequests++;
 
-            if (pathAndQuery.query() == null && mapped.mapping().paramNames().isEmpty()) {
+            if (service.shouldCachePath(pathAndQuery, mapped.mapping())) {
                 reqCtx.log().addListener(log -> {
                     HttpStatus status = log.responseHeaders().status();
                     if (status != null && status.code() >= 200 && status.code() < 400) {

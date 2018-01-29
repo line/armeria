@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.internal.PathAndQuery;
 
 /**
  * Handles a {@link Request} received by a {@link Server}.
@@ -129,5 +130,13 @@ public interface Service<I extends Request, O extends Response> {
      */
     default Service<I, O> decorate(DecoratingServiceFunction<I, O> function) {
         return new FunctionalDecoratingService<>(this, function);
+    }
+
+    /**
+     * Returns whether the given {@link PathAndQuery} should be cached if the service's result is successful.
+     * By default, exact path mappings with no input query are cached.
+     */
+    default boolean shouldCachePath(PathAndQuery pathAndQuery, PathMapping pathMapping) {
+        return pathMapping.exactPath().isPresent() && pathAndQuery.query() == null;
     }
 }

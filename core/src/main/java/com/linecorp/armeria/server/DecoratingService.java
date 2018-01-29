@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.internal.PathAndQuery;
 
 /**
  * A {@link Service} that decorates another {@link Service}. Use {@link SimpleDecoratingService} or
@@ -63,6 +64,11 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
     public final <T> Optional<T> as(Class<T> serviceType) {
         final Optional<T> result = Service.super.as(serviceType);
         return result.isPresent() ? result : delegate.as(serviceType);
+    }
+
+    @Override
+    public boolean shouldCachePath(PathAndQuery pathAndQuery, PathMapping pathMapping) {
+        return delegate.shouldCachePath(pathAndQuery, pathMapping);
     }
 
     @Override
