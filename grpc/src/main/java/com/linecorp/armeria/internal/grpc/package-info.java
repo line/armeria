@@ -17,4 +17,7 @@
 /**
  * Various classes used internally. Anything in this package can be changed or removed at any time.
  */
+@NonNullByDefault
 package com.linecorp.armeria.internal.grpc;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

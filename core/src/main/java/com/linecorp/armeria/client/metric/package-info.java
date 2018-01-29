@@ -17,4 +17,7 @@
 /**
  * Metric-collecting client decorators.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.metric;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

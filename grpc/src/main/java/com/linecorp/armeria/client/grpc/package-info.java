@@ -17,4 +17,7 @@
 /**
  * An armeria client that uses the gRPC wire protocol.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.grpc;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

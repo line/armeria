@@ -17,4 +17,7 @@
 /**
  * HTTP static file service.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.file;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

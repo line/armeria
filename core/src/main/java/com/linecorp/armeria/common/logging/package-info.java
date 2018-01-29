@@ -24,4 +24,7 @@
  *   <li>{@link com.linecorp.armeria.common.logging.RequestLogBuilder}</li>
  * </ul>
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.logging;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

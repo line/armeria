@@ -16,4 +16,7 @@
 /**
  * Common classes will be used by Server and Client implementations.
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.zookeeper;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

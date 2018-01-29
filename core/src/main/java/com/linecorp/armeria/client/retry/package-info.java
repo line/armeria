@@ -17,4 +17,7 @@
 /**
  * A {@link com.linecorp.armeria.client.Client} decorator that handles failures and retries requests.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.retry;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

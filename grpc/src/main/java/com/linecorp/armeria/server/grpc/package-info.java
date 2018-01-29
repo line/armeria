@@ -17,4 +17,7 @@
 /**
  * Allows an Armeria server to host a gRPC API using the gRPC wire protocol.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.grpc;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

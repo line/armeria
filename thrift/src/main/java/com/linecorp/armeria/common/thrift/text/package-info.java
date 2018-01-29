@@ -44,4 +44,7 @@
  *     <li>Miscellaneous style cleanups</li>
  * </ul>
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.thrift.text;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

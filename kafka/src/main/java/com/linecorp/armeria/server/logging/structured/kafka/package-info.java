@@ -17,4 +17,7 @@
 /**
  * Kafka backend integration support for structured request/response logging.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.logging.structured.kafka;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;
