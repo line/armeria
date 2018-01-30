@@ -42,7 +42,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -134,7 +133,7 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     @Override
-    public boolean shouldCachePath(PathAndQuery pathAndQuery, PathMapping pathMapping) {
+    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
         // We assume that if a file cache is enabled, the number of paths is also finite.
         return cache != null;
     }
@@ -367,11 +366,11 @@ public final class HttpFileService extends AbstractHttpService {
         }
 
         @Override
-        public boolean shouldCachePath(PathAndQuery pathAndQuery, PathMapping pathMapping) {
+        public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
             // No good way of propagating the first vs second decision to the cache decision, so just make a
             // best effort, it should work for most cases.
-            return first.shouldCachePath(pathAndQuery, pathMapping) &&
-                   second.shouldCachePath(pathAndQuery, pathMapping);
+            return first.shouldCachePath(path, query, pathMapping) &&
+                   second.shouldCachePath(path, query, pathMapping);
         }
     }
 

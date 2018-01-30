@@ -127,7 +127,7 @@ public class HttpFileServiceTest {
 
     @Before
     public void setUp() {
-        PathAndQuery.pathCache().asMap().clear();
+        PathAndQuery.clearCachedPaths();
     }
 
     @Test
@@ -148,8 +148,8 @@ public class HttpFileServiceTest {
             }
 
             // Confirm file service paths are cached when cache is enabled.
-            org.assertj.core.api.Assertions.assertThat(PathAndQuery.pathCache().asMap())
-                                           .containsKeys("/foo.txt");
+            org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                           .contains("/foo.txt");
         }
     }
 
@@ -197,8 +197,8 @@ public class HttpFileServiceTest {
                 assertThat(new String(content, StandardCharsets.UTF_8), is("foo"));
 
                 // Confirm path not cached when cache disabled.
-                org.assertj.core.api.Assertions.assertThat(PathAndQuery.pathCache().asMap())
-                                               .doesNotContainKeys("/compressed/foo.txt");
+                org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                               .doesNotContain("/compressed/foo.txt");
             }
         }
     }

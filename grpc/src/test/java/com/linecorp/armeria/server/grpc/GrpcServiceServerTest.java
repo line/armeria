@@ -271,7 +271,7 @@ public class GrpcServiceServerTest {
         blockingClient = UnitTestServiceGrpc.newBlockingStub(channel);
         streamingClient = UnitTestServiceGrpc.newStub(channel);
 
-        PathAndQuery.pathCache().asMap().clear();
+        PathAndQuery.clearCachedPaths();
     }
 
     @Test
@@ -279,8 +279,8 @@ public class GrpcServiceServerTest {
         assertThat(blockingClient.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
 
         // Confirm gRPC paths are cached despite using serviceUnder
-        assertThat(PathAndQuery.pathCache().asMap())
-                .containsKeys("/armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+        assertThat(PathAndQuery.cachedPaths())
+                .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall");
     }
 
     @Test

@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
@@ -214,7 +213,7 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Override
-    public boolean shouldCachePath(PathAndQuery pathAndQuery, PathMapping pathMapping) {
+    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
         // gRPC services always have a single path per method that is safe to cache.
         return true;
     }

@@ -20,9 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.internal.PathAndQuery;
 
 /**
  * A {@link Service} that decorates another {@link Service}. Use {@link SimpleDecoratingService} or
@@ -67,8 +68,8 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
     }
 
     @Override
-    public boolean shouldCachePath(PathAndQuery pathAndQuery, PathMapping pathMapping) {
-        return delegate.shouldCachePath(pathAndQuery, pathMapping);
+    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+        return delegate.shouldCachePath(path, query, pathMapping);
     }
 
     @Override

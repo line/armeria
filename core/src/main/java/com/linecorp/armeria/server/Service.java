@@ -22,13 +22,14 @@ import java.lang.reflect.Constructor;
 import java.util.Optional;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.internal.PathAndQuery;
 
 /**
  * Handles a {@link Request} received by a {@link Server}.
@@ -133,10 +134,10 @@ public interface Service<I extends Request, O extends Response> {
     }
 
     /**
-     * Returns whether the given {@link PathAndQuery} should be cached if the service's result is successful.
-     * By default, exact path mappings with no input query are cached.
+     * Returns whether the given {@code path} and {@code query }should be cached if the service's result is
+     * successful. By default, exact path mappings with no input query are cached.
      */
-    default boolean shouldCachePath(PathAndQuery pathAndQuery, PathMapping pathMapping) {
-        return pathMapping.exactPath().isPresent() && pathAndQuery.query() == null;
+    default boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+        return pathMapping.exactPath().isPresent() && query == null;
     }
 }

@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.internal;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -64,6 +67,24 @@ public final class PathAndQuery {
     }
 
     /**
+     * Clears the currently cached parsed paths. Only for use in tests.
+     */
+    @VisibleForTesting
+    public static void clearCachedPaths() {
+        requireNonNull(CACHE, "CACHE");
+        CACHE.asMap().clear();
+    }
+
+    /**
+     * Returns paths that have had their parse result cached. Only for use in tests.
+     */
+    @VisibleForTesting
+    public static Set<String> cachedPaths() {
+        requireNonNull(CACHE, "CACHE");
+        return CACHE.asMap().keySet();
+    }
+
+    /**
      * Validates the {@link String} that contains an absolute path and a query, and splits them into
      * the path part and the query part. If the path is usable (e.g., can be served a successful response from
      * the server and doesn't have variable path parameters), {@link PathAndQuery#storeInCache(String)} should
@@ -91,11 +112,6 @@ public final class PathAndQuery {
         if (CACHE != null) {
             CACHE.put(rawPath, this);
         }
-    }
-
-    @VisibleForTesting
-    public static Cache<String, PathAndQuery> pathCache() {
-        return CACHE;
     }
 
     private final String path;

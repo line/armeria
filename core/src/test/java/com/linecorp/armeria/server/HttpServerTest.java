@@ -56,6 +56,8 @@ import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 
+import javax.annotation.Nullable;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -430,7 +432,7 @@ public class HttpServerTest {
                 }
 
                 @Override
-                public boolean shouldCachePath(PathAndQuery pathAndQuery, PathMapping pathMapping) {
+                public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
                     return true;
                 }
             });
@@ -479,7 +481,7 @@ public class HttpServerTest {
         serverMaxRequestLength = MAX_CONTENT_LENGTH;
         clientMaxResponseLength = MAX_CONTENT_LENGTH;
 
-        PathAndQuery.pathCache().asMap().clear();
+        PathAndQuery.clearCachedPaths();
     }
 
     @After
@@ -918,8 +920,8 @@ public class HttpServerTest {
         org.assertj.core.api.Assertions.assertThat(client().get("/cached-exact-path")
                                                            .aggregate().get().status())
                                        .isEqualTo(HttpStatus.OK);
-        org.assertj.core.api.Assertions.assertThat(PathAndQuery.pathCache().asMap())
-                                       .containsKeys("/cached-exact-path");
+        org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                       .contains("/cached-exact-path");
     }
 
     @Test(timeout = 10000)
@@ -927,8 +929,8 @@ public class HttpServerTest {
         org.assertj.core.api.Assertions.assertThat(client().get("/not-cached-paths/hoge")
                                                            .aggregate().get().status())
                                        .isEqualTo(HttpStatus.OK);
-        org.assertj.core.api.Assertions.assertThat(PathAndQuery.pathCache().asMap())
-                                       .doesNotContainKeys("/not-cached-paths/hoge");
+        org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                       .doesNotContain("/not-cached-paths/hoge");
     }
 
     @Test(timeout = 10000)
@@ -936,8 +938,8 @@ public class HttpServerTest {
         org.assertj.core.api.Assertions.assertThat(client().get("/cached-paths/hoge")
                                                            .aggregate().get().status())
                                        .isEqualTo(HttpStatus.OK);
-        org.assertj.core.api.Assertions.assertThat(PathAndQuery.pathCache().asMap())
-                                       .containsKeys("/cached-paths/hoge");
+        org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                       .contains("/cached-paths/hoge");
     }
 
     private static void stream(StreamWriter<HttpObject> writer, long size, int chunkSize) {
