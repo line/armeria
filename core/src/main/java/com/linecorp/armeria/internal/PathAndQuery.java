@@ -16,13 +16,17 @@
 
 package com.linecorp.armeria.internal;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
@@ -60,6 +64,24 @@ public final class PathAndQuery {
         if (CACHE != null) {
             CaffeineMetricSupport.setup(registry, idPrefix, CACHE);
         }
+    }
+
+    /**
+     * Clears the currently cached parsed paths. Only for use in tests.
+     */
+    @VisibleForTesting
+    public static void clearCachedPaths() {
+        requireNonNull(CACHE, "CACHE");
+        CACHE.asMap().clear();
+    }
+
+    /**
+     * Returns paths that have had their parse result cached. Only for use in tests.
+     */
+    @VisibleForTesting
+    public static Set<String> cachedPaths() {
+        requireNonNull(CACHE, "CACHE");
+        return CACHE.asMap().keySet();
     }
 
     /**

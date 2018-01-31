@@ -22,6 +22,8 @@ import java.lang.reflect.Constructor;
 import java.util.Optional;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -129,5 +131,13 @@ public interface Service<I extends Request, O extends Response> {
      */
     default Service<I, O> decorate(DecoratingServiceFunction<I, O> function) {
         return new FunctionalDecoratingService<>(this, function);
+    }
+
+    /**
+     * Returns whether the given {@code path} and {@code query} should be cached if the service's result is
+     * successful. By default, exact path mappings with no input query are cached.
+     */
+    default boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+        return pathMapping.exactPath().isPresent() && query == null;
     }
 }

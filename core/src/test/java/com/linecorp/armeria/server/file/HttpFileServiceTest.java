@@ -42,12 +42,14 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
 
+import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -81,6 +83,7 @@ public class HttpFileServiceTest {
                     "/compressed/",
                     HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
                                           .serveCompressedFiles(true)
+                                          .maxCacheEntries(0)
                                           .build());
 
             sb.serviceUnder(
@@ -122,6 +125,11 @@ public class HttpFileServiceTest {
         });
     }
 
+    @Before
+    public void setUp() {
+        PathAndQuery.clearCachedPaths();
+    }
+
     @Test
     public void testClassPathGet() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -138,6 +146,10 @@ public class HttpFileServiceTest {
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert304NotModified(res, lastModified);
             }
+
+            // Confirm file service paths are cached when cache is enabled.
+            org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                           .contains("/foo.txt");
         }
     }
 
@@ -183,6 +195,10 @@ public class HttpFileServiceTest {
                 assertThat(res.getFirstHeader("Content-Type").getValue(), is("text/plain; charset=utf-8"));
                 final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
                 assertThat(new String(content, StandardCharsets.UTF_8), is("foo"));
+
+                // Confirm path not cached when cache disabled.
+                org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                               .doesNotContain("/compressed/foo.txt");
             }
         }
     }
