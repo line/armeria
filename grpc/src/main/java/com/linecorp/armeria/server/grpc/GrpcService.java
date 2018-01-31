@@ -212,6 +212,12 @@ public final class GrpcService extends AbstractHttpService
         }
     }
 
+    @Override
+    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+        // gRPC services always have a single path per method that is safe to cache.
+        return true;
+    }
+
     List<ServerServiceDefinition> services() {
         return registry.services();
     }

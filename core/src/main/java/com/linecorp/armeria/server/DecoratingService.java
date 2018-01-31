@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -63,6 +65,11 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
     public final <T> Optional<T> as(Class<T> serviceType) {
         final Optional<T> result = Service.super.as(serviceType);
         return result.isPresent() ? result : delegate.as(serviceType);
+    }
+
+    @Override
+    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+        return delegate.shouldCachePath(path, query, pathMapping);
     }
 
     @Override
