@@ -72,6 +72,11 @@ configure(projectsWithFlags('java')) {
                 if (processResourcesTask != null) {
                     processResourcesTask.dependsOn(task)
                 }
+
+                def compileTask = tasks.findByName(sourceSet.getCompileTaskName('java'))
+                if (compileTask != null) {
+                    compileTask.dependsOn(task)
+                }
             }
         }
     }
