@@ -128,16 +128,78 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.20.Final' }
-  netty-handler: { version: *NETTY_VERSION }
-  netty-resolver-dns: { version: *NETTY_VERSION }
+  netty-codec-http2:
+    version: &NETTY_VERSION '4.1.20.Final'
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-handler:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-resolver-dns:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
   netty-transport:
     version: *NETTY_VERSION
     javadocs:
     - https://netty.io/4.1/api/
-  netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.7.Final' }
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-transport-native-epoll:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-transport-native-unix-common:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-tcnative-boringssl-static:
+    version: '2.0.7.Final'
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-common:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-resolver:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-resolver-dns:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-codec:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-codec-dns:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-codec-http:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
+  netty-buffer:
+    version: *NETTY_VERSION
+    relocations:
+    - from: io.netty
+      to: com.linecorp.armeria.internal.shaded.netty
 
 io.prometheus:
   simpleclient_common:
