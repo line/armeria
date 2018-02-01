@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.metric;
 
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Splitter;
 
@@ -78,7 +80,7 @@ public final class MoreNamingConventions {
         private static final BetterPrometheusNamingConvention INSTANCE = new BetterPrometheusNamingConvention();
 
         @Override
-        public String name(String name, Type type, String baseUnit) {
+        public String name(String name, Type type, @Nullable String baseUnit) {
             final StringBuilder buf = new StringBuilder();
             for (String n : NAME_SPLITTER.split(name)) {
                 if (ALPHANUM_ONLY_PATTERN.matcher(n).matches()) {
@@ -90,7 +92,7 @@ public final class MoreNamingConventions {
             }
             buf.setLength(buf.length() - 1);
 
-            if (type == Type.Timer) {
+            if (type == Type.TIMER) {
                 baseUnit = SUFFIX_SECONDS;
             }
 
@@ -100,7 +102,7 @@ public final class MoreNamingConventions {
                 buf.append('_').append(baseUnit);
             }
 
-            if (type == Type.Counter) {
+            if (type == Type.COUNTER) {
                 if (buf.length() < SUFFIX_TOTAL.length() ||
                     !buf.substring(buf.length() - SUFFIX_TOTAL.length()).equalsIgnoreCase(SUFFIX_TOTAL)) {
                     buf.append('_').append(SUFFIX_TOTAL);

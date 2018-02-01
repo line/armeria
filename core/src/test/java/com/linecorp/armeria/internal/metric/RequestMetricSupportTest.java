@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.internal.metric;
 
+import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+
+import java.util.Map;
 
 import org.junit.Test;
 
@@ -34,7 +37,6 @@ import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Statistic;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
@@ -57,58 +59,32 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().requestContent(null, null);
         ctx.logBuilder().requestLength(123);
 
-        assertThat(registry.find("foo.activeRequests")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 1).meter()).isPresent();
-        assertThat(registry.find("foo.requestDuration")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 0).meter()).isPresent();
-        assertThat(registry.find("foo.requestDuration")
-                           .tags("method", "POST")
-                           .value(Statistic.Total, 0).meter()).isPresent();
-        assertThat(registry.find("foo.requestLength")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 0).meter()).isPresent();
-        assertThat(registry.find("foo.requestLength")
-                           .tags("method", "POST")
-                           .value(Statistic.Total, 0).meter()).isPresent();
+        Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0)
+                                .containsEntry("foo.requestDuration#count{method=POST}", 0.0)
+                                .containsEntry("foo.requestDuration#totalTime{method=POST}", 0.0)
+                                .containsEntry("foo.requestLength#count{method=POST}", 0.0)
+                                .containsEntry("foo.requestLength#total{method=POST}", 0.0);
 
         ctx.logBuilder().endRequest();
-        assertThat(registry.find("foo.requestDuration")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 1).meter()).isPresent();
-        assertThat(registry.find("foo.requestLength")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 1).meter()).isPresent();
-        assertThat(registry.find("foo.requestLength")
-                           .tags("method", "POST")
-                           .value(Statistic.Total, 123).meter()).isPresent();
+        measurements = measureAll(registry);
+        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0)
+                                .containsEntry("foo.requestDuration#count{method=POST}", 1.0)
+                                .containsEntry("foo.requestLength#count{method=POST}", 1.0)
+                                .containsEntry("foo.requestLength#total{method=POST}", 123.0);
 
         ctx.logBuilder().responseHeaders(HttpHeaders.of(200));
         ctx.logBuilder().responseLength(456);
         ctx.logBuilder().endResponse();
 
-        assertThat(registry.find("foo.activeRequests")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 0).meter()).isPresent();
-        assertThat(registry.find("foo.requests")
-                           .tags("method", "POST", "result", "success")
-                           .value(Statistic.Count, 1).meter()).isPresent();
-        assertThat(registry.find("foo.requests")
-                           .tags("method", "POST", "result", "failure")
-                           .value(Statistic.Count, 0).meter()).isPresent();
-        assertThat(registry.find("foo.responseDuration")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 1).meter()).isPresent();
-        assertThat(registry.find("foo.responseLength")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 1).meter()).isPresent();
-        assertThat(registry.find("foo.responseLength")
-                           .tags("method", "POST")
-                           .value(Statistic.Total, 456).meter()).isPresent();
-        assertThat(registry.find("foo.totalDuration")
-                           .tags("method", "POST")
-                           .value(Statistic.Count, 1).meter()).isPresent();
+        measurements = measureAll(registry);
+        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 0.0)
+                                .containsEntry("foo.requests#count{method=POST,result=success}", 1.0)
+                                .containsEntry("foo.requests#count{method=POST,result=failure}", 0.0)
+                                .containsEntry("foo.responseDuration#count{method=POST}", 1.0)
+                                .containsEntry("foo.responseLength#count{method=POST}", 1.0)
+                                .containsEntry("foo.responseLength#total{method=POST}", 456.0)
+                                .containsEntry("foo.totalDuration#count{method=POST}", 1.0);
     }
 
     @Test
@@ -127,8 +103,6 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/bar"));
         ctx.logBuilder().requestContent(new DefaultRpcRequest(Object.class, "baz"), null);
 
-        assertThat(registry.find("bar.activeRequests")
-                           .tags("method", "baz")
-                           .value(Statistic.Count, 1).meter()).isPresent();
+        assertThat(measureAll(registry)).containsEntry("bar.activeRequests#value{method=baz}", 1.0);
     }
 }

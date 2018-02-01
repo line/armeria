@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.metric;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
+import com.codahale.metrics.MetricRegistry;
+
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.NamingConvention;
@@ -70,7 +72,15 @@ public final class DropwizardMeterRegistries {
      * {@link HierarchicalNameMapper}.
      */
     public static DropwizardMeterRegistry newRegistry() {
-        return newRegistry(DEFAULT_NAME_MAPPER);
+        return newRegistry(new MetricRegistry(), DEFAULT_NAME_MAPPER);
+    }
+
+    /**
+     * Returns a newly-created {@link DropwizardMeterRegistry} instance with the specified
+     * {@link MetricRegistry} and the default {@link HierarchicalNameMapper}.
+     */
+    public static DropwizardMeterRegistry newRegistry(MetricRegistry registry) {
+        return newRegistry(registry, DEFAULT_NAME_MAPPER);
     }
 
     /**
@@ -78,7 +88,16 @@ public final class DropwizardMeterRegistries {
      * {@link HierarchicalNameMapper}.
      */
     public static DropwizardMeterRegistry newRegistry(HierarchicalNameMapper nameMapper) {
-        return newRegistry(nameMapper, Clock.SYSTEM);
+        return newRegistry(new MetricRegistry(), nameMapper, Clock.SYSTEM);
+    }
+
+    /**
+     * Returns a newly-created {@link DropwizardMeterRegistry} instance with the specified
+     * {@link MetricRegistry} and {@link HierarchicalNameMapper}.
+     */
+    public static DropwizardMeterRegistry newRegistry(MetricRegistry registry,
+                                                      HierarchicalNameMapper nameMapper) {
+        return newRegistry(registry, nameMapper, Clock.SYSTEM);
     }
 
     /**
@@ -86,18 +105,21 @@ public final class DropwizardMeterRegistries {
      * {@link HierarchicalNameMapper} and {@link Clock}.
      */
     public static DropwizardMeterRegistry newRegistry(HierarchicalNameMapper nameMapper, Clock clock) {
-        return newRegistry(DEFAULT_DROPWIZARD_CONFIG, nameMapper, clock);
+        return newRegistry(new MetricRegistry(), nameMapper, clock);
     }
 
     /**
      * Returns a newly-created {@link DropwizardMeterRegistry} instance with the specified
-     * {@link DropwizardConfig}, {@link HierarchicalNameMapper} and {@link Clock}.
+     * {@link MetricRegistry}, {@link HierarchicalNameMapper} and {@link Clock}.
      */
-    public static DropwizardMeterRegistry newRegistry(DropwizardConfig dropwizardConfig,
-                                                      HierarchicalNameMapper nameMapper, Clock clock) {
+    public static DropwizardMeterRegistry newRegistry(MetricRegistry registry,
+                                                      HierarchicalNameMapper nameMapper,
+                                                      Clock clock) {
         final DropwizardMeterRegistry meterRegistry = new DropwizardMeterRegistry(
-                requireNonNull(dropwizardConfig, "dropwizardConfig"),
-                requireNonNull(nameMapper, "nameMapper"), requireNonNull(clock, "clock"));
+                DEFAULT_DROPWIZARD_CONFIG,
+                requireNonNull(registry, "registry"),
+                requireNonNull(nameMapper, "nameMapper"),
+                requireNonNull(clock, "clock"));
         meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
         meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;

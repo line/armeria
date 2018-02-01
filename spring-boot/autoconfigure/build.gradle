@@ -5,6 +5,7 @@ dependencies {
     compile project(':logback')
 
     compile 'io.micrometer:micrometer-spring-legacy'
+    compile 'io.micrometer:micrometer-registry-prometheus'
     compile 'io.dropwizard.metrics:metrics-json'
     compile 'javax.inject:javax.inject'
     compile 'javax.validation:validation-api'

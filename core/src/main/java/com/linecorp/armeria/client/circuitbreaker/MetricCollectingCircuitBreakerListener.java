@@ -23,7 +23,6 @@ import com.linecorp.armeria.internal.metric.MicrometerUtil;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
 
 /**
  * A {@link CircuitBreakerListener} which exports the status of {@link CircuitBreaker}s to
@@ -92,7 +91,7 @@ public final class MetricCollectingCircuitBreakerListener implements CircuitBrea
     }
 
     private CircuitBreakerMetrics metricsOf(CircuitBreaker circuitBreaker) {
-        final MeterIdPrefix idPrefix = new MeterIdPrefix(name, Tags.zip("name", circuitBreaker.name()));
+        final MeterIdPrefix idPrefix = new MeterIdPrefix(name, "name", circuitBreaker.name());
         return MicrometerUtil.register(registry, idPrefix,
                                        CircuitBreakerMetrics.class,
                                        CircuitBreakerMetrics::new);

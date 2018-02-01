@@ -7,9 +7,17 @@ dependencies {
         compile "com.fasterxml.jackson.core:$it"
     }
 
-    // Micrometer
+    // Micrometer and other metric-related stuff
     compile 'io.micrometer:micrometer-core'
-    compile 'io.micrometer:micrometer-registry-prometheus'
+    compile('io.micrometer:micrometer-registry-prometheus') {
+        ext.optional = true
+    }
+    compile('io.dropwizard.metrics:metrics-core') {
+        ext.optional = true
+    }
+    compile('io.prometheus:simpleclient_common') {
+        ext.optional = true
+    }
 
     // Netty
     [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
@@ -19,9 +27,6 @@ dependencies {
     compile "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     compile 'io.netty:netty-tcnative-boringssl-static'
     runtime 'org.javassist:javassist'
-
-    // Prometheus
-    compile 'io.prometheus:simpleclient_common'
 
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'

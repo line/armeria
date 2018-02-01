@@ -96,7 +96,7 @@ public interface MeterIdPrefixFunction {
      */
     default MeterIdPrefixFunction withTags(String... keyValues) {
         requireNonNull(keyValues, "keyValues");
-        return withTags(Tags.zip(keyValues));
+        return withTags(Tags.of(keyValues));
     }
 
     /**
