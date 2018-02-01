@@ -1,5 +1,7 @@
 import groovy.text.SimpleTemplateEngine
 
+import java.util.regex.Pattern
+
 rootProject.ext {
     versionPattern = rootProject.findProperty('versionPattern')?: /^[0-9]+\.[0-9]+\.[0-9]+$/
 }
@@ -33,11 +35,30 @@ task release(
         }
 
         // Ensure the repository is upstream.
-        def expectedRepoUrl = project.ext.scmDeveloperConnection.replaceFirst('.*(://|@)', '')
-        def repoUrl = project.ext.executeGit('config', '--get', 'remote.origin.url').trim()
-        if (!repoUrl.endsWith("://${expectedRepoUrl}") && !repoUrl.endsWith("@${expectedRepoUrl}")) {
+        def repoUri = "${project.ext.executeGit('config', '--get', 'remote.origin.url').trim()}"
+        def upstreamRepoUri = getUpstreamRepoUri()
+        def upstreamRepoHost = upstreamRepoUri.host?: ''
+        def upstreamRepoPath = upstreamRepoUri.path?: '/'
+        def originIsUpstream
+        if (repoUri.contains('://')) {
+            try {
+                def parsedRepoUri = URI.create(repoUri)
+                originIsUpstream =
+                        upstreamRepoHost == parsedRepoUri.host &&
+                        upstreamRepoPath == parsedRepoUri.path
+            } catch (ignored) {
+                originIsUpstream = false
+            }
+        } else {
+            def matcher = Pattern.compile('^(?:[^@]*@)?([^:/]+)[:/]?(.*)$').matcher(repoUri)
+            originIsUpstream = matcher.matches() &&
+                    matcher.group(1) == upstreamRepoHost &&
+                    "/${matcher.group(2)}" == upstreamRepoPath
+        }
+
+        if (!originIsUpstream) {
             throw new InvalidUserDataException(
-                    "Release must be performed at the upstream repository: ${expectedRepoUrl}")
+                    "Release must be performed at the upstream repository: ${upstreamRepoHost}${upstreamRepoPath}")
         }
 
         // Ensure the repository is clean.
@@ -82,4 +103,26 @@ task release(
             print new SimpleTemplateEngine().createTemplate(postReleaseMessageFile).make([tag: tag])
         }
     }
+}
+
+def getUpstreamRepoUri() {
+    int schemeEndIndex = project.ext.scmDeveloperConnection.indexOf('://')
+    if (schemeEndIndex <= 0) {
+        rejectScmDeveloperConnection()
+    }
+    int schemeStartIndex = project.ext.scmDeveloperConnection.lastIndexOf(':', schemeEndIndex - 1)
+    try {
+        if (schemeStartIndex >= 0) {
+            return URI.create(project.ext.scmDeveloperConnection.substring(schemeStartIndex + 1))
+        } else {
+            return URI.create(project.ext.scmDeveloperConnection)
+        }
+    } catch (ignored) {
+        rejectScmDeveloperConnection()
+    }
+}
+
+def rejectScmDeveloperConnection() {
+    throw new IllegalStateException(
+            "scmDeveloperConnection must be a URI with scheme and authority: ${project.ext.scmDeveloperConnection}")
 }
