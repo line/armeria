@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
@@ -98,7 +97,7 @@ public final class MoreMeters {
 
         // Append statistic.
         buf.append('#');
-        buf.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, measurement.getStatistic().name()));
+        buf.append(measurement.getStatistic().getTagValueRepresentation());
 
         // Append tags if there are any.
         final Iterator<Tag> tagsIterator = id.getTags().iterator();
