@@ -12,17 +12,20 @@ configure(projectsWithFlags('java')) {
         }
 
         // TODO(anuraaga): Consider replacing with https://github.com/yodle/griddle
-        task compileThrift(
-                group: 'Build',
-                description: 'Compiles the .thrift files') {
+        project.sourceSets.all { sourceSet ->
+            def scope = sourceSet.name
+            def inputDir = "${projectDir}/src/${scope}/thrift"
+            def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
+            def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
 
-            project.sourceSets.all { sourceSet ->
-                def scope = sourceSet.name
-                def inputDir = "${projectDir}/src/${scope}/thrift"
-                def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
-                def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
+            if (project.file(inputDir).isDirectory()) {
+                def task = project.tasks.create([
+                        name: sourceSet.getTaskName('compile', 'thrift'),
+                        group: 'Build',
+                        description: "Compiles the ${sourceSet.name} .thrift files."
+                ])
 
-                if (project.file(inputDir).isDirectory()) {
+                task.configure {
                     inputs.dir inputDir
                     outputs.dir javaOutputDir
                     outputs.dir jsonOutputDir
@@ -64,14 +67,12 @@ configure(projectsWithFlags('java')) {
                         }
                     }
                 }
-            }
-        }
 
-        // Ensure the generated Thrift source files are available during the build.
-        tasks.processResources.finalizedBy tasks.compileThrift
-        tasks.processTestResources.finalizedBy tasks.compileThrift
-        tasks.withType(JavaCompile) {
-            dependsOn tasks.compileThrift
+                def processResourcesTask = tasks.findByName(sourceSet.getTaskName('process', 'resources'))
+                if (processResourcesTask != null) {
+                    processResourcesTask.dependsOn(task)
+                }
+            }
         }
     }
 }
