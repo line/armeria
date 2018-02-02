@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/line/gradle-scripts.git
+	branch = master
+	commit = bb502dae71d37047cbbbf0c43ad48308b8078c76
+	parent = b22d2955accd228791b7d117fb35b53111d89c90
+	cmdver = 0.3.1
