@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal;
 
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 
@@ -67,7 +69,8 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     }
 
     @Override
-    protected void onConnectionError(ChannelHandlerContext ctx, Throwable cause, Http2Exception http2Ex) {
+    protected void onConnectionError(ChannelHandlerContext ctx, boolean outbound,
+                                     Throwable cause, Http2Exception http2Ex) {
         if (handlingConnectionError) {
             return;
         }
@@ -86,10 +89,10 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
                     http2Ex.error(), goAwayDebugData(http2Ex, cause), cause, http2Ex.shutdownHint());
         }
 
-        super.onConnectionError(ctx, cause, http2Ex);
+        super.onConnectionError(ctx, outbound, cause, http2Ex);
     }
 
-    private static String goAwayDebugData(Http2Exception http2Ex, Throwable cause) {
+    private static String goAwayDebugData(@Nullable Http2Exception http2Ex, Throwable cause) {
         final StringBuilder buf = new StringBuilder(256);
         final String type;
         final String message;
