@@ -35,7 +35,7 @@ com.google.code.findbugs:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '23.6-jre'
+    version: &GUAVA_VERSION '24.0-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -128,7 +128,7 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.20.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.21.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport:
@@ -239,7 +239,7 @@ org.awaitility:
   awaitility: { version: '3.0.0' }
 
 org.checkerframework:
-  checker-compat-qual: { version: '2.3.1' }
+  checker-compat-qual: { version: '2.3.2' }
 
 org.curioswitch.curiostack:
   protobuf-jackson: { version: '0.1.1' }
