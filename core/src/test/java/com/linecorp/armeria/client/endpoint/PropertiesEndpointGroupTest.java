@@ -19,26 +19,92 @@ package com.linecorp.armeria.client.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Properties;
+
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 
 public class PropertiesEndpointGroupTest {
+
+    private static final Properties PROPS = new Properties();
+
+    static {
+        PROPS.setProperty("serverA.hosts.0", "127.0.0.1:8080");
+        PROPS.setProperty("serverA.hosts.1", "127.0.0.1:8081");
+        PROPS.setProperty("serverA.hosts.2", "127.0.0.1");
+        PROPS.setProperty("serverB.hosts.0", "127.0.0.1:8082");
+        PROPS.setProperty("serverB.hosts.1", "127.0.0.1:8083");
+    }
+
     @Test
-    public void test() {
-        PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                this.getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80);
-        PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
-                this.getClass().getClassLoader(), "server-list.properties", "serverB.hosts", 8080);
+    public void propertiesWithoutDefaultPort() {
+        PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(PROPS, "serverA.hosts");
+
+        assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1:8080"),
+                                                           Endpoint.of("127.0.0.1:8081"),
+                                                           Endpoint.of("127.0.0.1"));
+    }
+
+    @Test
+    public void propertiesWithDefaultPort() {
+        PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(PROPS, "serverA.hosts", 80);
+        PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(PROPS, "serverB.hosts", 8080);
 
         assertThat(endpointGroupA.endpoints()).containsOnly(Endpoint.of("127.0.0.1:8080"),
                                                             Endpoint.of("127.0.0.1:8081"),
                                                             Endpoint.of("127.0.0.1:80"));
         assertThat(endpointGroupB.endpoints()).containsOnly(Endpoint.of("127.0.0.1:8082"),
                                                             Endpoint.of("127.0.0.1:8083"));
+    }
+
+    @Test
+    public void resourceWithoutDefaultPort() {
+        PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
+                getClass().getClassLoader(), "server-list.properties", "serverA.hosts");
+
+        assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1:8080"),
+                                                           Endpoint.of("127.0.0.1:8081"),
+                                                           Endpoint.of("127.0.0.1"));
+    }
+
+    @Test
+    public void resourceWithDefaultPort() {
+        PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
+                getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80);
+        PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
+                getClass().getClassLoader(), "server-list.properties", "serverB.hosts", 8080);
+
+        assertThat(endpointGroupA.endpoints()).containsOnly(Endpoint.of("127.0.0.1:8080"),
+                                                            Endpoint.of("127.0.0.1:8081"),
+                                                            Endpoint.of("127.0.0.1:80"));
+        assertThat(endpointGroupB.endpoints()).containsOnly(Endpoint.of("127.0.0.1:8082"),
+                                                            Endpoint.of("127.0.0.1:8083"));
+    }
+
+    @Test
+    public void testWithPrefixThatEndsWithDot() {
+        PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
+                getClass().getClassLoader(), "server-list.properties", "serverA.hosts.");
+
+        assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1:8080"),
+                                                           Endpoint.of("127.0.0.1:8081"),
+                                                           Endpoint.of("127.0.0.1"));
+    }
+
+    @Test
+    public void containsNoHosts() {
         assertThatThrownBy(() -> PropertiesEndpointGroup.of(
-                this.getClass().getClassLoader(), "server-list.properties", "serverC.hosts", 8080))
+                getClass().getClassLoader(), "server-list.properties", "serverC.hosts", 8080))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("contains no hosts");
+    }
+
+    @Test
+    public void illegalDefaultPort() {
+        assertThatThrownBy(() -> PropertiesEndpointGroup.of(
+                getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("defaultPort");
     }
 }
