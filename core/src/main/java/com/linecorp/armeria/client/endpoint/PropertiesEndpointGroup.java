@@ -35,9 +35,11 @@ import com.linecorp.armeria.client.Endpoint;
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
- * TODO(ide) Reload the endpoint list if the file is updated.
  */
 public final class PropertiesEndpointGroup implements EndpointGroup {
+
+    // TODO(ide) Reload the endpoint list if the file is updated.
+
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
      * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file must
@@ -49,13 +51,40 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
      * example.hosts.2=example3.com:36462
      * }</pre>
      *
-     * @param resourceName the resource file name that the list of {@link Endpoint}s loaded from
+     * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     *
+     * @throws IllegalArgumentException if failed to load any hosts from the specified resource file
+     */
+    public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
+                                             String endpointKeyPrefix) {
+        return new PropertiesEndpointGroup(loadEndpoints(
+                requireNonNull(classLoader, "classLoader"),
+                requireNonNull(resourceName, "resourceName"),
+                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                0));
+    }
+
+    /**
+     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
+     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file must
+     * contain at least one property whose name starts with {@code endpointKeyPrefix}:
+     *
+     * <pre>{@code
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     * @param defaultPort the default port number to use
+     *
      * @throws IllegalArgumentException if failed to load any hosts from the specified resource file
      */
     public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
                                              String endpointKeyPrefix, int defaultPort) {
-        checkArgument(defaultPort >= 0 && defaultPort <= 65535,
-                      "defaultPort(%s) must be between 0 and 65535", defaultPort);
+        validateDefaultPort(defaultPort);
         return new PropertiesEndpointGroup(loadEndpoints(
                 requireNonNull(classLoader, "classLoader"),
                 requireNonNull(resourceName, "resourceName"),
@@ -74,21 +103,49 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
      * example.hosts.2=example3.com:36462
      * }</pre>
      *
-     * @param properties the {@link Properties} that the list of {@link Endpoint}s loaded from
+     * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     *
+     * @throws IllegalArgumentException if failed to load any hosts from the specified {@link Properties}
+     */
+    public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix) {
+        return new PropertiesEndpointGroup(loadEndpoints(
+                requireNonNull(properties, "properties"),
+                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                0));
+    }
+
+    /**
+     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
+     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} must contain at
+     * least one property whose name starts with {@code endpointKeyPrefix}:
+     *
+     * <pre>{@code
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     * @param defaultPort the default port number to use
+     *
      * @throws IllegalArgumentException if failed to load any hosts from the specified {@link Properties}
      */
     public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix,
                                              int defaultPort) {
-        return new PropertiesEndpointGroup(loadEndpoints(properties, endpointKeyPrefix, defaultPort));
+        validateDefaultPort(defaultPort);
+        return new PropertiesEndpointGroup(loadEndpoints(
+                requireNonNull(properties, "properties"),
+                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                defaultPort));
     }
 
     private static List<Endpoint> loadEndpoints(ClassLoader classLoader, String resourceName,
                                                 String endpointKeyPrefix, int defaultPort) {
         final URL resourceUrl = classLoader.getResource(resourceName);
-        if (resourceUrl == null) {
-            throw new IllegalArgumentException(resourceName + " not found");
-        }
-        if (endpointKeyPrefix.endsWith(".")) {
+        checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
+        if (!endpointKeyPrefix.endsWith(".")) {
             endpointKeyPrefix += ".";
         }
         try (InputStream in = resourceUrl.openStream()) {
@@ -110,12 +167,18 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
             if (key.startsWith(endpointKeyPrefix)) {
                 final Endpoint endpoint = Endpoint.parse(value);
                 checkState(!endpoint.isGroup(),
-                           "%s contains an endpoint group which is not allowed: %s", properties, value);
-                newEndpoints.add(endpoint.withDefaultPort(defaultPort));
+                           "properties contains an endpoint group which is not allowed: %s in %s",
+                           value, properties);
+                newEndpoints.add(defaultPort == 0 ? endpoint : endpoint.withDefaultPort(defaultPort));
             }
         }
-        checkArgument(!newEndpoints.isEmpty(), "%s contains no hosts.", properties);
+        checkArgument(!newEndpoints.isEmpty(), "properties contains no hosts: %s", properties);
         return ImmutableList.copyOf(newEndpoints);
+    }
+
+    private static void validateDefaultPort(int defaultPort) {
+        checkArgument(defaultPort > 0 && defaultPort <= 65535,
+                      "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
     private final List<Endpoint> endpoints;

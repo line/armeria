@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+
+import javax.annotation.Nullable;
 
 import com.google.common.net.HostAndPort;
 
@@ -93,6 +96,7 @@ public final class Endpoint {
     private final String host;
     private final int port;
     private final int weight;
+    @Nullable
     private String authority;
 
     private Endpoint(String groupName) {
@@ -250,9 +254,7 @@ public final class Endpoint {
     }
 
     private static void validatePort(String name, int port) {
-        if (port <= 0 || port > 65535) {
-            throw new IllegalArgumentException(name + ": " + port + " (expected: 1-65535)");
-        }
+        checkArgument(port > 0 && port <= 65535, "%s: %s (expected: 1-65535)", name, port);
     }
 
     private static void validateWeight(int weight) {
