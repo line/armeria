@@ -95,6 +95,8 @@ public class ThriftDocServiceTest {
 
             sb.service("/", helloAndSleepService);
             sb.service("/foo", fooService);
+            // Add a service with serviceUnder() to test whether prefix mapping is detected.
+            sb.serviceUnder("/foo", fooService);
             sb.service("/cassandra", cassandraService);
             sb.service("/cassandra/debug", cassandraServiceDebug);
             sb.service("/hbase", hbaseService);
@@ -124,6 +126,7 @@ public class ThriftDocServiceTest {
                         .build(),
                 new EntryBuilder(FooService.class)
                         .endpoint(new EndpointInfo("*", "/foo", "", COMPACT, ImmutableSet.of(COMPACT)))
+                        .endpoint(new EndpointInfo("*", "/foo/", "", COMPACT, ImmutableSet.of(COMPACT)))
                         .build(),
                 new EntryBuilder(Cassandra.class)
                         .endpoint(new EndpointInfo("*", "/cassandra", "", BINARY, ImmutableSet.of(BINARY)))
