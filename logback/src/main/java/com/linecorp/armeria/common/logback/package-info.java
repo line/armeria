@@ -20,4 +20,7 @@
  * <p>Read '<a href="https://line.github.io/armeria/server-basics.html">Logging contextual information</a>'
  * for more information.
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.logback;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

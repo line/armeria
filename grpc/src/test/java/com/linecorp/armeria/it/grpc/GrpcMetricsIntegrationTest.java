@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.it.grpc;
 
+import static io.micrometer.core.instrument.Statistic.COUNT;
+import static io.micrometer.core.instrument.Statistic.TOTAL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.given;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
@@ -39,7 +42,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -53,7 +58,6 @@ import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.MeterRegistry.Search;
 import io.micrometer.core.instrument.Statistic;
 
 public class GrpcMetricsIntegrationTest {
@@ -96,7 +100,7 @@ public class GrpcMetricsIntegrationTest {
     }
 
     @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+    public final TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
 
     @Test
     public void normal() throws Exception {
@@ -110,47 +114,42 @@ public class GrpcMetricsIntegrationTest {
 
         // Chance that get() returns NPE before the metric is first added, so ignore exceptions.
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                findServerMeter("UnaryCall", "requests", "result", "success")
-                        .value(Statistic.Count, 4).meter()).isPresent());
+                findServerMeter("UnaryCall", "requests", COUNT, "result", "success")).contains(4.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                findServerMeter("UnaryCall", "requests", "result", "failure")
-                        .value(Statistic.Count, 3).meter()).isPresent());
+                findServerMeter("UnaryCall", "requests", COUNT, "result", "failure")).contains(3.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                findClientMeter("UnaryCall", "requests", "result", "success")
-                        .value(Statistic.Count, 4).meter()).isPresent());
+                findClientMeter("UnaryCall", "requests", COUNT, "result", "success")).contains(4.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                findClientMeter("UnaryCall", "requests", "result", "failure")
-                        .value(Statistic.Count, 3).meter()).isPresent());
+                findClientMeter("UnaryCall", "requests", COUNT, "result", "failure")).contains(3.0));
 
-        assertThat(findServerMeter("UnaryCall", "requestLength")
-                           .value(Statistic.Count, 7).meter()).isPresent();
-        assertThat(findServerMeter("UnaryCall", "requestLength")
-                           .value(Statistic.Total, 7 * 14).meter()).isPresent();
-        assertThat(findClientMeter("UnaryCall", "requestLength")
-                           .value(Statistic.Count, 7).meter()).isPresent();
-        assertThat(findClientMeter("UnaryCall", "requestLength")
-                           .value(Statistic.Total, 7 * 14).meter()).isPresent();
-        assertThat(findServerMeter("UnaryCall", "responseLength")
-                           .value(Statistic.Count, 7).meter()).isPresent();
-        assertThat(findServerMeter("UnaryCall", "responseLength")
-                           .value(Statistic.Total, 4 * 5 /* + 3 * 0 */).meter()).isPresent();
-        assertThat(findClientMeter("UnaryCall", "responseLength")
-                           .value(Statistic.Count, 7).meter()).isPresent();
-        assertThat(findClientMeter("UnaryCall", "responseLength")
-                           .value(Statistic.Total, 4 * 5 /* + 3 * 0 */).meter()).isPresent();
+        assertThat(findServerMeter("UnaryCall", "requestLength", COUNT)).contains(7.0);
+        assertThat(findServerMeter("UnaryCall", "requestLength", TOTAL)).contains(7.0 * 14);
+        assertThat(findClientMeter("UnaryCall", "requestLength", COUNT)).contains(7.0);
+        assertThat(findClientMeter("UnaryCall", "requestLength", TOTAL)).contains(7.0 * 14);
+        assertThat(findServerMeter("UnaryCall", "responseLength", COUNT)).contains(7.0);
+        assertThat(findServerMeter("UnaryCall", "responseLength", TOTAL)).contains(4.0 * 5 /* + 3 * 0 */);
+        assertThat(findClientMeter("UnaryCall", "responseLength", COUNT)).contains(7.0);
+        assertThat(findClientMeter("UnaryCall", "responseLength", TOTAL)).contains(4.0 * 5 /* + 3 * 0 */);
     }
 
-    private static Search findServerMeter(String method, String suffix, String... keyValues) {
-        return registry.find("server." + suffix)
-                       .tags("method", "armeria.grpc.testing.TestService/" + method,
-                             "pathMapping", "catch-all")
-                       .tags(keyValues);
+    private static Optional<Double> findServerMeter(
+            String method, String suffix, Statistic type, String... keyValues) {
+        final MeterIdPrefix prefix = new MeterIdPrefix(
+                "server." + suffix + '#' + type.getTagValueRepresentation(),
+                "method", "armeria.grpc.testing.TestService/" + method,
+                "hostnamePattern", "*",
+                "pathMapping", "catch-all");
+        final String meterIdStr = prefix.withTags(keyValues).toString();
+        return Optional.ofNullable(MoreMeters.measureAll(registry).get(meterIdStr));
     }
 
-    private static Search findClientMeter(String method, String suffix, String... keyValues) {
-        return registry.find("client." + suffix)
-                       .tags("method", "armeria.grpc.testing.TestService/" + method)
-                       .tags(keyValues);
+    private static Optional<Double> findClientMeter(
+            String method, String suffix, Statistic type, String... keyValues) {
+        final MeterIdPrefix prefix = new MeterIdPrefix(
+                "client." + suffix + '#' + type.getTagValueRepresentation(),
+                "method", "armeria.grpc.testing.TestService/" + method);
+        final String meterIdStr = prefix.withTags(keyValues).toString();
+        return Optional.ofNullable(MoreMeters.measureAll(registry).get(meterIdStr));
     }
 
     private static void makeRequest(String name) throws Exception {

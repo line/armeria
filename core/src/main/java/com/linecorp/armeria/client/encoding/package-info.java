@@ -17,4 +17,7 @@
 /**
  * HTTP content decoding client.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.encoding;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

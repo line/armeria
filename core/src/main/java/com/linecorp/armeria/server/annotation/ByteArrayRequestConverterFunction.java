@@ -41,10 +41,10 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
             mediaType.is(MediaType.OCTET_STREAM) ||
             mediaType.is(MediaType.APPLICATION_BINARY)) {
 
-            if (expectedResultType.isAssignableFrom(byte[].class)) {
+            if (expectedResultType == byte[].class) {
                 return request.content().array();
             }
-            if (expectedResultType.isAssignableFrom(HttpData.class)) {
+            if (expectedResultType == HttpData.class) {
                 return request.content();
             }
         }

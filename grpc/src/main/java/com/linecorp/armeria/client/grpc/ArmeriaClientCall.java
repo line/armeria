@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -110,7 +109,10 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.decompressorRegistry = decompressorRegistry;
         this.messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
         this.marshaller = new GrpcMessageMarshaller<>(
-                ctx.alloc(), serializationFormat, method, jsonMarshaller);
+                ctx.alloc(), serializationFormat, method, jsonMarshaller,
+                // TODO(anuraag): Consider adding a GrpcClientOption for this after checking the server-side
+                // works / makes sense.
+                false);
         responseReader = new HttpStreamReader(
                 decompressorRegistry,
                 new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc()),
@@ -186,17 +188,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     public void sendMessage(I message) {
         try {
             ByteBuf serialized = marshaller.serializeRequest(message);
-            boolean success = false;
-            final HttpData frame;
-            try {
-                frame = messageFramer.writePayload(serialized);
-                success = true;
-            } finally {
-                if (!success) {
-                    serialized.release();
-                }
-            }
-            req.write(frame);
+            req.write(messageFramer.writePayload(serialized));
         } catch (Throwable t) {
             cancel(null, t);
         }

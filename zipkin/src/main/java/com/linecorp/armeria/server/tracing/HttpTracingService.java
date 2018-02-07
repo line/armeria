@@ -37,6 +37,7 @@ import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.propagation.TraceContext;
 import brave.propagation.TraceContextOrSamplingFlags;
+import io.netty.util.concurrent.FastThreadLocal;
 
 /**
  * Decorates a {@link Service} to trace inbound {@link HttpRequest}s using
@@ -46,6 +47,8 @@ import brave.propagation.TraceContextOrSamplingFlags;
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  */
 public class HttpTracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+
+    private static final FastThreadLocal<SpanInScope> SPAN_IN_THREAD = new FastThreadLocal<>();
 
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.
@@ -81,7 +84,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
         final String method = ctx.method().name();
         span.kind(Kind.SERVER).name(method).start();
 
-        SpanContextUtil.setupContext(ctx, span, tracer);
+        SpanContextUtil.setupContext(SPAN_IN_THREAD, ctx, span, tracer);
 
         ctx.log().addListener(log -> closeSpan(span, log), RequestLogAvailability.COMPLETE);
 

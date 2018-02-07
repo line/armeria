@@ -28,13 +28,15 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerConfig;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceWithPathMappings;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
@@ -64,6 +66,8 @@ public final class GrpcServiceBuilder {
     private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
     private boolean enableUnframedRequests;
+
+    private boolean unsafeRetainRequestBuffers;
 
     /**
      * Adds a gRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as
@@ -172,12 +176,35 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Constructs a new {@link GrpcService} that can be bound to
-     * {@link com.linecorp.armeria.server.ServerBuilder}. As gRPC services themselves are mounted at a path that
-     * corresponds to their protobuf package, you will almost always want to bind to a prefix, e.g. by using
-     * {@link com.linecorp.armeria.server.ServerBuilder#serviceUnder(String, Service)}.
+     * Enables unsafe retention of request buffers. Can improve performance when working with very large
+     * (i.e., several megabytes) payloads.
+     *
+     * <p><strong>DISCLAIMER:</strong> Do not use this if you don't know what you are doing. It is very easy to
+     * introduce memory leaks when using this method. You will probably spend much time debugging memory leaks
+     * during development if this is enabled. You will probably spend much time debugging memory leaks in
+     * production if this is enabled. You probably don't want to do this and should turn back now.
+     *
+     * <p>When enabled, the reference-counted buffer received from the client will be stored into
+     * {@link RequestContext} instead of being released. All {@link com.google.protobuf.ByteString} in a
+     * protobuf message will reference sections of this buffer instead of having their own copies. When done
+     * with a request message, call {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)}
+     * with the message and the request's context to release the buffer. The message must be the same
+     * reference as what was passed to the service stub - a message with the same contents will not
+     * work. If {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)} is not called, the memory
+     * will be leaked.
      */
-    public Service<HttpRequest, HttpResponse> build() {
+    public GrpcServiceBuilder unsafeWrapRequestBuffers(boolean unsafeRetainRequestBuffers) {
+        this.unsafeRetainRequestBuffers = unsafeRetainRequestBuffers;
+        return this;
+    }
+
+    /**
+     * Constructs a new {@link GrpcService} that can be bound to
+     * {@link com.linecorp.armeria.server.ServerBuilder}. It is recommended to bind the service to a server
+     * using {@link com.linecorp.armeria.server.ServerBuilder#service(ServiceWithPathMappings)} to mount all
+     * service paths without interfering with other services.
+     */
+    public ServiceWithPathMappings<HttpRequest, HttpResponse> build() {
         HandlerRegistry handlerRegistry = registryBuilder.build();
         GrpcService grpcService = new GrpcService(
                 handlerRegistry,
@@ -189,7 +216,9 @@ public final class GrpcServiceBuilder {
                       .collect(ImmutableSet.toImmutableSet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
-                supportedSerializationFormats, maxOutboundMessageSizeBytes,
+                supportedSerializationFormats,
+                maxOutboundMessageSizeBytes,
+                unsafeRetainRequestBuffers,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
     }

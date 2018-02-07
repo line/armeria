@@ -6,12 +6,12 @@ import java.util.stream.Collectors
 buildscript {
     repositories {
         mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
+        gradlePluginPortal()
     }
 
     dependencies {
-        classpath 'kr.motd.gradle:sphinx-gradle-plugin:1.0.6'
-        classpath 'gradle.plugin.net.davidecavestro:gradle-jxr-plugin:0.2.1'
+        classpath "kr.motd.gradle:sphinx-gradle-plugin:${managedVersions['kr.motd.gradle:sphinx-gradle-plugin']}"
+        classpath "gradle.plugin.net.davidecavestro:gradle-jxr-plugin:${managedVersions['gradle.plugin.net.davidecavestro:gradle-jxr-plugin']}"
     }
 }
 
@@ -24,15 +24,18 @@ sphinx {
     sourceDirectory "${project.projectDir}/src/sphinx"
 }
 
+def aggregatedProjects = projectsWithFlags('java', 'publish') - projectsWithFlags('no_aggregation')
+
 task javadoc(type: Javadoc,
              group: 'Documentation',
              description: 'Generates Javadoc API documentation for the main source code.') {
 
     destinationDir = project.file("${project.buildDir}/site/apidocs")
 
-    def javadocProjects = publishedJavaProjects - backwardCompatProjects
-    javadocProjects.each { source it.sourceSets.main.java.srcDirs }
-    classpath = javadocProjects.inject(project.files()) { result, project ->
+
+    aggregatedProjects.each { source it.sourceSets.main.java.srcDirs }
+    classpath = aggregatedProjects.inject(project.files()) { ConfigurableFileCollection result, project ->
+        result.from(project.sourceSets.main.compileClasspath)
         result.from(project.sourceSets.main.runtimeClasspath)
     }
 }
@@ -41,7 +44,7 @@ task xref(group: 'Documentation',
           description: 'Generates the source cross-reference.') {
 
     def outputDir = "${project.buildDir}/site/xref"
-    def sourceDirs = publishedJavaProjects.inject([]) { srcDirs, project ->
+    def sourceDirs = aggregatedProjects.inject([]) { srcDirs, project ->
         project.sourceSets.main.java.srcDirs.each {
             if (it.exists()) {
                 srcDirs << it.path

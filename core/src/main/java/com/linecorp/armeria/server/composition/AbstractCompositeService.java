@@ -171,7 +171,15 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
 
         @Override
         public ServiceRequestContext newDerivedContext() {
-            final ServiceRequestContext derivedCtx = super.newDerivedContext();
+            return newDerivedContext(super.newDerivedContext());
+        }
+
+        @Override
+        public ServiceRequestContext newDerivedContext(Request request) {
+            return newDerivedContext(super.newDerivedContext(request));
+        }
+
+        private ServiceRequestContext newDerivedContext(ServiceRequestContext derivedCtx) {
             return new CompositeServiceRequestContext(derivedCtx, pathMapping, mappedPath);
         }
 

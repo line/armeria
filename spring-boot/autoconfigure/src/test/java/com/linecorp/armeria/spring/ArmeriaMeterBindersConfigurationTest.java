@@ -17,6 +17,10 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+import java.util.Map;
+
 import javax.inject.Inject;
 
 import org.junit.Test;
@@ -70,14 +74,27 @@ public class ArmeriaMeterBindersConfigurationTest {
 
     @Test
     public void testDefaultMetrics() throws Exception {
-        assertThat(MoreMeters.measureAll(registry)).containsKeys(
+        final Map<String, Double> measurements = MoreMeters.measureAll(registry);
+        assertThat(measurements).containsKeys(
                 "jvm.buffer.count#value{id=direct}",
                 "jvm.classes.loaded#value",
                 "jvm.memory.max#value{area=nonheap,id=Code Cache}",
                 "jvm.threads.daemon#value",
                 "logback.events#count{level=debug}",
-                "process.open.fds#value",
                 "process.uptime#value",
                 "system.cpu.count#value");
+
+        final OperatingSystemMXBean os = ManagementFactory.getOperatingSystemMXBean();
+        boolean hasOpenFdCount = false;
+        try {
+            os.getClass().getDeclaredMethod("getOpenFileDescriptorCount");
+            hasOpenFdCount = true;
+        } catch (Exception ignored) {
+            // Not supported
+        }
+
+        if (hasOpenFdCount) {
+            assertThat(measurements).containsKeys("process.open.fds#value");
+        }
     }
 }

@@ -22,4 +22,7 @@
  *   <li>{@link com.linecorp.armeria.common.RequestContext}</li>
  * </ul>
  */
+@NonNullByDefault
 package com.linecorp.armeria.common;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

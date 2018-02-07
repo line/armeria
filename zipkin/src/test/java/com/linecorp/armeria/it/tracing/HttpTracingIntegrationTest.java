@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.HelloService.AsyncIface;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -77,6 +78,7 @@ public class HttpTracingIntegrationTest {
     private HelloService.Iface fooClientWithoutTracing;
     private HelloService.AsyncIface barClient;
     private HelloService.AsyncIface quxClient;
+    private HelloService.Iface zipClient;
     private HttpClient poolHttpClient;
 
     @Rule
@@ -93,6 +95,17 @@ public class HttpTracingIntegrationTest {
                             name = "Ms. " + name.substring(6);
                         }
                         quxClient.hello(name, new DelegatingCallback(resultHandler));
+                    })));
+
+            sb.service("/zip", decorate("service/zip", THttpService.of(
+                    (AsyncIface) (name, resultHandler) -> {
+                        ThriftCompletableFuture<String> f1 = new ThriftCompletableFuture<>();
+                        ThriftCompletableFuture<String> f2 = new ThriftCompletableFuture<>();
+                        quxClient.hello(name, f1);
+                        quxClient.hello(name, f2);
+                        CompletableFuture.allOf(f1, f2).whenComplete((aVoid, throwable) -> {
+                            resultHandler.onComplete(f1.join() + ", and " + f2.join());
+                        });
                     })));
 
             sb.service("/qux", decorate("service/qux", THttpService.of(
@@ -147,6 +160,10 @@ public class HttpTracingIntegrationTest {
                 .decorator(HttpRequest.class, HttpResponse.class,
                            HttpTracingClient.newDecorator(newTracing("client/foo")))
                 .build(HelloService.Iface.class);
+        zipClient = new ClientBuilder(server.uri(BINARY, "/zip"))
+                .decorator(HttpRequest.class, HttpResponse.class,
+                        HttpTracingClient.newDecorator(newTracing("client/zip")))
+                .build(HelloService.Iface.class);
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
@@ -181,6 +198,15 @@ public class HttpTracingIntegrationTest {
                       .spanReporter(spanReporter)
                       .sampler(Sampler.ALWAYS_SAMPLE)
                       .build();
+    }
+
+    @Test(timeout = 10000)
+    public void testServiceHasMultipleClientRequests() throws Exception {
+        assertThat(zipClient.hello("Lee")).isEqualTo("Hello, Lee!, and Hello, Lee!");
+
+        final Span[] spans = spanReporter.take(6);
+        final String traceId = spans[0].traceId();
+        assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
     }
 
     @Test(timeout = 10000)

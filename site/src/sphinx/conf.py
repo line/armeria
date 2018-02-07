@@ -33,10 +33,7 @@ copyright = properties['inceptionYear'] + '-' + str(date.today().year) + ', LINE
 
 # Set the project version and release.
 # Use the last known stable release if the current version ends with '-SNAPSHOT'.
-if re.match(r'^.*-SNAPSHOT$', properties['version']):
-    release = '0.55.1'
-else:
-    release = properties['version']
+release = properties['version']
 version = re.match(r'^[0-9]+\.[0-9]+', release).group(0)
 
 # Export the loaded properties and some useful values into epilogs
@@ -55,7 +52,10 @@ for groupId in dependencies.keys():
 rst_epilog += '\n'
 
 needs_sphinx = '1.0'
-extensions = ['sphinx.ext.autodoc']
+extensions = ['sphinx.ext.autodoc', 
+              'sphinxcontrib.httpdomain', 
+              'sphinxcontrib.inlinesyntaxhighlight',
+              'sphinxcontrib.plantuml']
 templates_path = ['_templates']
 source_suffix = '.rst'
 source_encoding = 'utf-8-sig'
@@ -73,3 +73,6 @@ html_static_path = ['_static']
 html_use_index = True
 html_show_sourcelink = False
 htmlhelp_basename = project_short
+
+# PlantUML options
+plantuml = os.getenv('plantuml')

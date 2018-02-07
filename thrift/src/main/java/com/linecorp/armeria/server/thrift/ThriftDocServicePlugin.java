@@ -55,6 +55,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
@@ -110,13 +111,17 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
                     final EntryBuilder builder =
                             map.computeIfAbsent(serviceClass, cls -> new EntryBuilder(serviceClass));
 
-                    // Add all available endpoints.
-                    c.pathMapping().exactPath().ifPresent(
-                            p -> builder.endpoint(new EndpointInfo(
-                                    c.virtualHost().hostnamePattern(),
-                                    p, serviceName,
-                                    service.defaultSerializationFormat(),
-                                    service.allowedSerializationFormats())));
+                    // Add all available endpoints. Accept only the services with exact and prefix path
+                    // mappings, whose endpoint path can be determined.
+                    final PathMapping pathMapping = c.pathMapping();
+                    final String path = pathMapping.exactPath().orElse(pathMapping.prefix().orElse(null));
+                    if (path != null) {
+                        builder.endpoint(new EndpointInfo(
+                                c.virtualHost().hostnamePattern(),
+                                path, serviceName,
+                                service.defaultSerializationFormat(),
+                                service.allowedSerializationFormats()));
+                    }
                 }
             });
         }

@@ -23,4 +23,7 @@
  *   <li>{@link com.linecorp.armeria.client.endpoint.StaticEndpointGroup}</li>
  * </ul>
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.endpoint;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

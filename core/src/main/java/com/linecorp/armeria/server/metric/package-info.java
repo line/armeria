@@ -17,4 +17,7 @@
 /**
  * Metric-collecting service decorators and exporters.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.metric;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

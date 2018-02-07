@@ -23,14 +23,15 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 
 import java.nio.charset.StandardCharsets;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -133,7 +134,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onStreamRemoved(Http2Stream stream) {
-        requests.remove(stream.id());
+        final DecodedHttpRequest req = requests.remove(stream.id());
+        if (req != null) {
+            // Ignored if the stream has already been closed.
+            req.close(ClosedSessionException.get());
+        }
     }
 
     @Override

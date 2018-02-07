@@ -1,0 +1,65 @@
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "com.google.protobuf:protobuf-gradle-plugin:${managedVersions['com.google.protobuf:protobuf-gradle-plugin']}"
+    }
+}
+
+configure(projectsWithFlags('java')) {
+    // Add protobuf/gRPC support if there is src/*/proto
+    if (project.ext.hasSourceDirectory('proto')) {
+        project.ext.applyOsDetectorPlugin()
+        apply plugin: com.google.protobuf.gradle.ProtobufPlugin
+
+        protobuf {
+            generatedFilesBaseDir = project.ext.genSrcDir
+            if (managedVersions.containsKey('com.google.protobuf:protoc')) {
+                protoc {
+                    artifact = "com.google.protobuf:protoc:${managedVersions['com.google.protobuf:protoc']}"
+                }
+            }
+
+            if (managedVersions.containsKey('io.grpc:grpc-core')) {
+                plugins {
+                    grpc {
+                        artifact = "io.grpc:protoc-gen-grpc-java:${managedVersions['io.grpc:grpc-core']}"
+                    }
+                }
+                generateProtoTasks {
+                    all()*.plugins {
+                        grpc {
+                            option 'enable_deprecated=false'
+                        }
+                    }
+                    all().each { task ->
+                        task.generateDescriptorSet = true
+                        task.descriptorSetOptions.includeSourceInfo = true
+                        task.descriptorSetOptions.includeImports = true
+                        task.descriptorSetOptions.path =
+                                "${project.ext.genSrcDir}/${task.sourceSet.name}/resources/" +
+                                        "META-INF/armeria/grpc/armeria-${task.sourceSet.name}.dsc"
+                    }
+                }
+            }
+        }
+
+        // Add the generated source directories to the source set.
+        project.sourceSets.all { sourceSet ->
+            sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/java")
+            sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/grpc")
+            sourceSet.resources.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/resources")
+        }
+
+        // Make sure protoc runs before the resources are copied so that .dsc files are included.
+        project.afterEvaluate {
+            project.sourceSets.each { sourceSet ->
+                def processResourcesTask = tasks.findByName(sourceSet.getTaskName('process', 'resources'))
+                if (processResourcesTask != null) {
+                    processResourcesTask.dependsOn(tasks.findByName(sourceSet.getTaskName('generate', 'proto')))
+                }
+            }
+        }
+    }
+}

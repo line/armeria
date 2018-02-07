@@ -31,7 +31,7 @@ public final class TrafficLoggingHandler extends LoggingHandler {
     public static final TrafficLoggingHandler CLIENT = new TrafficLoggingHandler(false);
 
     private TrafficLoggingHandler(boolean server) {
-        super("com.linecorp.armeria.traffic." + (server ? "server" : "client"), LogLevel.TRACE);
+        super("com.linecorp.armeria.logging.traffic." + (server ? "server" : "client"), LogLevel.TRACE);
     }
 
     @Override

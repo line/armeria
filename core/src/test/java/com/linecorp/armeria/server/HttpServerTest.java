@@ -56,6 +56,8 @@ import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 
+import javax.annotation.Nullable;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -96,10 +98,12 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.ByteBufHttpData;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -419,6 +423,22 @@ public class HttpServerTest {
 
             sb.service("/head-headers-only", ((ctx, req) -> HttpResponse.of(HttpHeaders.of(HttpStatus.OK))));
 
+            sb.serviceUnder("/not-cached-paths", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+
+            sb.serviceUnder("/cached-paths", new Service<HttpRequest, HttpResponse>() {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+
+                @Override
+                public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+                    return true;
+                }
+            });
+
+            sb.service("/cached-exact-path", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+
             final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
                     s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
                         @Override
@@ -460,6 +480,8 @@ public class HttpServerTest {
 
         serverMaxRequestLength = MAX_CONTENT_LENGTH;
         clientMaxResponseLength = MAX_CONTENT_LENGTH;
+
+        PathAndQuery.clearCachedPaths();
     }
 
     @After
@@ -561,7 +583,7 @@ public class HttpServerTest {
             f.get();
             fail();
         } catch (ExecutionException e) {
-            assertThat(e.getCause(), is(instanceOf(ClosedSessionException.class)));
+            assertThat(Exceptions.peel(e), is(instanceOf(ClosedSessionException.class)));
         }
     }
 
@@ -580,7 +602,7 @@ public class HttpServerTest {
             f.get();
             fail();
         } catch (ExecutionException e) {
-            assertThat(e.getCause(), is(instanceOf(ClosedSessionException.class)));
+            assertThat(Exceptions.peel(e), is(instanceOf(ClosedSessionException.class)));
         }
     }
 
@@ -891,6 +913,33 @@ public class HttpServerTest {
 
         final AggregatedHttpMessage res = f.get();
         assertThat(res.trailingHeaders().get(AsciiString.of("foo")), is("bar"));
+    }
+
+    @Test(timeout = 10000)
+    public void testExactPathCached() throws Exception {
+        org.assertj.core.api.Assertions.assertThat(client().get("/cached-exact-path")
+                                                           .aggregate().get().status())
+                                       .isEqualTo(HttpStatus.OK);
+        org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                       .contains("/cached-exact-path");
+    }
+
+    @Test(timeout = 10000)
+    public void testPrefixPathNotCached() throws Exception {
+        org.assertj.core.api.Assertions.assertThat(client().get("/not-cached-paths/hoge")
+                                                           .aggregate().get().status())
+                                       .isEqualTo(HttpStatus.OK);
+        org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                       .doesNotContain("/not-cached-paths/hoge");
+    }
+
+    @Test(timeout = 10000)
+    public void testPrefixPath_cacheForced() throws Exception {
+        org.assertj.core.api.Assertions.assertThat(client().get("/cached-paths/hoge")
+                                                           .aggregate().get().status())
+                                       .isEqualTo(HttpStatus.OK);
+        org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                                       .contains("/cached-paths/hoge");
     }
 
     private static void stream(StreamWriter<HttpObject> writer, long size, int chunkSize) {

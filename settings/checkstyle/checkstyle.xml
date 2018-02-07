@@ -30,6 +30,14 @@
     <property name="maximum" value="1"/>
     <property name="message" value="missing copyright header"/>
   </module>
+  <!-- All packages must be annotated with @NonNullByDefault -->
+  <module name="RegexpSingleline">
+    <property name="id" value="NonNullByDefaultAnnotation"/>
+    <property name="format" value="^\s*@(?:com\.linecorp\.armeria\.common\.util\.)?NonNullByDefault"/>
+    <property name="minimum" value="1"/>
+    <property name="maximum" value="1"/>
+    <property name="message" value="A package must be annotated with @NonNullByDefault."/>
+  </module>
   <!-- Unmaintainable Javadoc tags -->
   <module name="RegexpSingleline">
     <property name="format" value="(?:@version|\(non-Javadoc\))"/>
@@ -233,7 +241,7 @@
     <module name="EmptyLineSeparator">
       <property name="allowNoEmptyLineBetweenFields" value="true"/>
       <property name="tokens"
-                value="IMPORT, CLASS_DEF, INTERFACE_DEF, ENUM_DEF, STATIC_INIT, INSTANCE_INIT, METHOD_DEF, CTOR_DEF, VARIABLE_DEF"/>
+                value="IMPORT, CLASS_DEF, INTERFACE_DEF, ENUM_DEF, INSTANCE_INIT, METHOD_DEF, CTOR_DEF, VARIABLE_DEF"/>
     </module>
     <module name="GenericWhitespace">
       <message key="ws.followed"

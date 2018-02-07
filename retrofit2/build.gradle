@@ -1,4 +1,4 @@
-managedDependencies {
+dependencies {
     compile 'com.squareup.retrofit2:retrofit'
 
     testCompile 'com.squareup.retrofit2:adapter-java8'

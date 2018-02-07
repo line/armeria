@@ -23,4 +23,7 @@
  * servers.
  *
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.zookeeper;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

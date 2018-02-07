@@ -60,7 +60,9 @@ looked like the following:
 
     import com.google.common.util.concurrent.Futures;
     import com.google.common.util.concurrent.ListenableFuture;
+    import com.google.common.util.concurrent.MoreExecutors;
     import com.linecorp.armeria.client.Clients;
+    import java.util.concurrent.ForkJoinPool;
 
     HelloServiceFutureStub helloService = Clients.newClient(
             "gproto+http://127.0.0.1:8080/",
@@ -79,7 +81,10 @@ looked like the following:
         public void onFailure(Throwable t) {
             t.printStackTrace();
         }
-    });
+    }, MoreExecutors.directExecutor());
+
+    // You can also wait until the call is finished.
+    HelloReply reply = future.get();
 
 The asynchronous stub uses Guava's ListenableFuture_ and can be operated on using methods on Futures_. The
 futures-extra_ library is very convenient for working with ListenableFuture_ in Java 8, including the ability
@@ -98,13 +103,15 @@ you can use the streaming stub to send and receive multiple responses, in a full
 .. code-block:: java
 
     import com.linecorp.armeria.client.Clients;
+    import java.util.concurrent.CountDownLatch;
 
     HelloServiceStub helloService = Clients.newClient(
             "gproto+http://127.0.0.1:8080/",
             HelloServiceStub.class);
 
-    HelloRequest request = HelloRequest.newBuilder().setName("Armerian World").build();
-    StreamObserver<HelloReply> replyStream = new StreamObserver<>() {
+    // Prepare the observer that will receive the request stream.
+    CountDownLatch latch = new CountDownLatch(1);
+    StreamObserver<HelloReply> replyStream = new StreamObserver<HelloReply>() {
         @Override
         public void onNext(HelloReply reply) {
             assert reply.getMessage().equals("Hello, Armerian World!");
@@ -113,17 +120,25 @@ you can use the streaming stub to send and receive multiple responses, in a full
         @Override
         public void onError(Throwable t) {
             t.printStackTrace();
+            latch.countDown();
         }
 
         @Override
         public void onCompleted() {
             System.out.println("We're done!");
+            latch.countDown();
         }
     };
-    StreamObserver<HelloRequest> requestStream = helloService.manyHellos(responseStream);
+
+    // Send the request stream.
+    StreamObserver<HelloRequest> requestStream = helloService.manyHellos(replyStream);
+    HelloRequest request = HelloRequest.newBuilder().setName("Armerian World").build();
     requestStream.onNext(request);
     requestStream.onNext(request);
     requestStream.onCompleted();
+
+    // You may want to wait until the call is finished.
+    latch.await();
 
 You can also use the builder pattern for client construction:
 

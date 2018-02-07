@@ -17,4 +17,7 @@
 /**
  * Common metric collection utilities.
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.metric;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

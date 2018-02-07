@@ -22,7 +22,7 @@ import static org.mockito.Mockito.mock;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
@@ -36,16 +36,18 @@ public class DefaultClientRequestContextTest {
         final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/foo"));
+                ClientOptions.DEFAULT, mock(Request.class));
+
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
 
-        final ClientRequestContext derivedCtx = originalCtx.newDerivedContext();
+        Request newRequest = mock(Request.class);
+        final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest);
         assertThat(derivedCtx.endpoint()).isSameAs(originalCtx.endpoint());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
         assertThat(derivedCtx.method()).isSameAs(originalCtx.method());
         assertThat(derivedCtx.options()).isSameAs(originalCtx.options());
-        assertThat(derivedCtx.<Object>request()).isSameAs(originalCtx.request());
+        assertThat(derivedCtx.<Request>request()).isSameAs(newRequest);
 
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
         assertThat(derivedCtx.maxResponseLength()).isEqualTo(originalCtx.maxResponseLength());

@@ -17,4 +17,7 @@
 /**
  * HTTP content encoding service.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.encoding;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

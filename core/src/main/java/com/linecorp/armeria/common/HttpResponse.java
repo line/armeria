@@ -29,12 +29,11 @@ import java.util.concurrent.CompletionStage;
 
 import org.reactivestreams.Publisher;
 
-import com.google.common.base.Throwables;
-
 import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -64,7 +63,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final DeferredHttpResponse res = new DeferredHttpResponse();
         stage.whenComplete((delegate, thrown) -> {
             if (thrown != null) {
-                res.close(Throwables.getRootCause(thrown));
+                res.close(Exceptions.peel(thrown));
             } else if (delegate == null) {
                 res.close(new NullPointerException("delegate stage produced a null response: " + stage));
             } else {

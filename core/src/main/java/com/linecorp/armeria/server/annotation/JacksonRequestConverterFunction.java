@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
@@ -66,8 +67,13 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
                                     contentType.subtype().endsWith("+json"))) {
             final ObjectReader reader = readers.computeIfAbsent(expectedResultType, mapper::readerFor);
             if (reader != null) {
-                return reader.readValue(request.content().toString(
-                        contentType.charset().orElse(StandardCharsets.UTF_8)));
+                final String content = request.content().toString(
+                        contentType.charset().orElse(StandardCharsets.UTF_8));
+                try {
+                    return reader.readValue(content);
+                } catch (JsonProcessingException e) {
+                    throw new IllegalArgumentException("failed to parse a JSON document: " + e, e);
+                }
             }
         }
         return RequestConverterFunction.fallthrough();

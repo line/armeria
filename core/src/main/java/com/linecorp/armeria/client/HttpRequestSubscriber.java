@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -37,6 +36,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.logging.LoggingUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -141,15 +141,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         final HttpHeaders firstHeaders = request.headers();
-        String host = firstHeaders.authority();
-        if (host == null) {
-            host = ((InetSocketAddress) ch.remoteAddress()).getHostString();
-        } else {
-            final int colonIdx = host.lastIndexOf(':');
-            if (colonIdx > 0) {
-                host = host.substring(0, colonIdx);
-            }
-        }
+        final String host = LoggingUtil.remoteHost(firstHeaders, ch);
 
         logBuilder.startRequest(ch, session.protocol(), host);
         logBuilder.requestHeaders(firstHeaders);

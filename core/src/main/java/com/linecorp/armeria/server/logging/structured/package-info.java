@@ -17,4 +17,7 @@
 /**
  * Structured logging support for full request and response.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.logging.structured;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

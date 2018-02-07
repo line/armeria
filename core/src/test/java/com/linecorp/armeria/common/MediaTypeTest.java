@@ -44,30 +44,31 @@ import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.Streams;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.NullPointerTester;
 
@@ -77,6 +78,9 @@ import com.google.common.testing.NullPointerTester;
  * @author Gregory Kick
  */
 public class MediaTypeTest {
+
+    // Forked from Guava at abd0906f6ed288671b75aa6f828a6ba904fe4477 (24.0)
+
     @Test // reflection
     public void testParse_useConstants() throws Exception {
         for (MediaType constant : getConstants()) {
@@ -87,8 +91,10 @@ public class MediaTypeTest {
     @Test // reflection
     public void testCreate_useConstants() throws Exception {
         for (MediaType constant : getConstants()) {
-            assertSame(constant, MediaType.create(constant.type(), constant.subtype())
-                                          .withParameters(constant.parameters()));
+            assertSame(
+                    constant,
+                    MediaType.create(constant.type(), constant.subtype())
+                             .withParameters(constant.parameters()));
         }
     }
 
@@ -110,41 +116,54 @@ public class MediaTypeTest {
     }
 
     // reflection
-    private static Iterable<Field> getConstantFields() {
-        return Arrays.stream(MediaType.class.getDeclaredFields()).filter((Predicate<Field>) input -> {
+    @SuppressWarnings("Guava")
+    private static FluentIterable<Field> getConstantFields() {
+        return FluentIterable.from(asList(MediaType.class.getDeclaredFields())).filter(input -> {
             int modifiers = input.getModifiers();
-            return isPublic(modifiers) && isStatic(modifiers) && isFinal(modifiers) &&
+            return isPublic(modifiers) &&
+                   isStatic(modifiers) &&
+                   isFinal(modifiers) &&
                    MediaType.class.equals(input.getType());
-        }).collect(Collectors.toList());
+        });
     }
 
     // reflection
-    private static Iterable<MediaType> getConstants() {
-        return Streams.stream(getConstantFields()).map(input -> {
+    @SuppressWarnings("Guava")
+    private static FluentIterable<MediaType> getConstants() {
+        return getConstantFields().transform(input -> {
             try {
                 return (MediaType) input.get(null);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-        }).collect(Collectors.toList());
+        });
     }
 
     @Test
     public void testCreate_invalidType() {
-        assertThatThrownBy(() -> MediaType.create("te><t", "plaintext"))
-                .isInstanceOf(IllegalArgumentException.class);
+        try {
+            MediaType.create("te><t", "plaintext");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
     }
 
     @Test
     public void testCreate_invalidSubtype() {
-        assertThatThrownBy(() -> MediaType.create("text", "pl@intext"))
-                .isInstanceOf(IllegalArgumentException.class);
+        try {
+            MediaType.create("text", "pl@intext");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
     }
 
     @Test
     public void testCreate_wildcardTypeDeclaredSubtype() {
-        assertThatThrownBy(() -> MediaType.create("*", "text"))
-                .isInstanceOf(IllegalArgumentException.class);
+        try {
+            MediaType.create("*", "text");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
     }
 
     @Test
@@ -185,15 +204,13 @@ public class MediaTypeTest {
     @Test
     public void testGetType() {
         assertEquals("text", MediaType.parse("text/plain").type());
-        assertEquals("application",
-                     MediaType.parse("application/atom+xml; charset=utf-8").type());
+        assertEquals("application", MediaType.parse("application/atom+xml; charset=utf-8").type());
     }
 
     @Test
     public void testGetSubtype() {
         assertEquals("plain", MediaType.parse("text/plain").subtype());
-        assertEquals("atom+xml",
-                     MediaType.parse("application/atom+xml; charset=utf-8").subtype());
+        assertEquals("atom+xml", MediaType.parse("application/atom+xml; charset=utf-8").subtype());
     }
 
     private static final Map<String, Collection<String>> PARAMETERS =
@@ -202,90 +219,141 @@ public class MediaTypeTest {
     @Test
     public void testGetParameters() {
         assertEquals(ImmutableMap.of(), MediaType.parse("text/plain").parameters());
-        assertEquals(ImmutableMap.of("charset", ImmutableList.of("utf-8")),
-                     MediaType.parse("application/atom+xml; charset=utf-8").parameters());
-        assertEquals(PARAMETERS,
-                     MediaType.parse("application/atom+xml; a=1; a=2; b=3").parameters());
+        assertEquals(
+                ImmutableMap.of("charset", ImmutableList.of("utf-8")),
+                MediaType.parse("application/atom+xml; charset=utf-8").parameters());
+        assertEquals(PARAMETERS, MediaType.parse("application/atom+xml; a=1; a=2; b=3").parameters());
     }
 
     @Test
     public void testWithoutParameters() {
-        assertSame(MediaType.parse("image/gif"),
-                   MediaType.parse("image/gif").withoutParameters());
-        assertEquals(MediaType.parse("image/gif"),
-                     MediaType.parse("image/gif; foo=bar").withoutParameters());
+        assertSame(MediaType.parse("image/gif"), MediaType.parse("image/gif").withoutParameters());
+        assertEquals(
+                MediaType.parse("image/gif"), MediaType.parse("image/gif; foo=bar").withoutParameters());
     }
 
     @Test
     public void testWithParameters() {
-        assertEquals(MediaType.parse("text/plain; a=1; a=2; b=3"),
-                     MediaType.parse("text/plain").withParameters(PARAMETERS));
-        assertEquals(MediaType.parse("text/plain; a=1; a=2; b=3"),
-                     MediaType.parse("text/plain; a=1; a=2; b=3").withParameters(PARAMETERS));
+        assertEquals(
+                MediaType.parse("text/plain; a=1; a=2; b=3"),
+                MediaType.parse("text/plain").withParameters(PARAMETERS));
+        assertEquals(
+                MediaType.parse("text/plain; a=1; a=2; b=3"),
+                MediaType.parse("text/plain; a=1; a=2; b=3").withParameters(PARAMETERS));
     }
 
     @Test
     public void testWithParameters_invalidAttribute() {
         MediaType mediaType = MediaType.parse("text/plain");
-        Map<String, Collection<String>> parameters =
-                ImmutableListMultimap.of("a", "1", "@", "2", "b", "3").asMap();
-        assertThatThrownBy(() -> mediaType.withParameters(parameters))
-                .isInstanceOf(IllegalArgumentException.class);
+        ImmutableListMultimap<String, String> parameters =
+                ImmutableListMultimap.of("a", "1", "@", "2", "b", "3");
+        try {
+            mediaType.withParameters(parameters.asMap());
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
     }
 
     @Test
     public void testWithParameter() {
-        assertEquals(MediaType.parse("text/plain; a=1"),
-                     MediaType.parse("text/plain").withParameter("a", "1"));
-        assertEquals(MediaType.parse("text/plain; a=1"),
-                     MediaType.parse("text/plain; a=1; a=2").withParameter("a", "1"));
-        assertEquals(MediaType.parse("text/plain; a=3"),
-                     MediaType.parse("text/plain; a=1; a=2").withParameter("a", "3"));
-        assertEquals(MediaType.parse("text/plain; a=1; a=2; b=3"),
-                     MediaType.parse("text/plain; a=1; a=2").withParameter("b", "3"));
+        assertEquals(
+                MediaType.parse("text/plain; a=1"), MediaType.parse("text/plain").withParameter("a", "1"));
+        assertEquals(
+                MediaType.parse("text/plain; a=1"),
+                MediaType.parse("text/plain; a=1; a=2").withParameter("a", "1"));
+        assertEquals(
+                MediaType.parse("text/plain; a=3"),
+                MediaType.parse("text/plain; a=1; a=2").withParameter("a", "3"));
+        assertEquals(
+                MediaType.parse("text/plain; a=1; a=2; b=3"),
+                MediaType.parse("text/plain; a=1; a=2").withParameter("b", "3"));
     }
 
     @Test
     public void testWithParameter_invalidAttribute() {
         MediaType mediaType = MediaType.parse("text/plain");
-        assertThatThrownBy(() -> mediaType.withParameter("@", "2"))
-                .isInstanceOf(IllegalArgumentException.class);
+        try {
+            mediaType.withParameter("@", "2");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+    }
+
+    @Test
+    public void testWithParametersIterable() {
+        assertEquals(
+                MediaType.parse("text/plain"),
+                MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of()));
+        assertEquals(
+                MediaType.parse("text/plain; a=1"),
+                MediaType.parse("text/plain").withParameters("a", ImmutableSet.of("1")));
+        assertEquals(
+                MediaType.parse("text/plain; a=1"),
+                MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of("1")));
+        assertEquals(
+                MediaType.parse("text/plain; a=1; a=3"),
+                MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of("1", "3")));
+        assertEquals(
+                MediaType.parse("text/plain; a=1; a=2; b=3; b=4"),
+                MediaType.parse("text/plain; a=1; a=2").withParameters("b", ImmutableSet.of("3", "4")));
+    }
+
+    @Test
+    public void testWithParametersIterable_invalidAttribute() {
+        MediaType mediaType = MediaType.parse("text/plain");
+        try {
+            mediaType.withParameters("@", ImmutableSet.of("2"));
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+    }
+
+    @Test
+    public void testWithParametersIterable_nullValue() {
+        MediaType mediaType = MediaType.parse("text/plain");
+        try {
+            mediaType.withParameters("a", Collections.singletonList(null));
+            fail();
+        } catch (NullPointerException expected) {
+        }
     }
 
     @Test
     public void testWithCharset() {
-        assertEquals(MediaType.parse("text/plain; charset=utf-8"),
-                     MediaType.parse("text/plain").withCharset(UTF_8));
-        assertEquals(MediaType.parse("text/plain; charset=utf-8"),
-                     MediaType.parse("text/plain; charset=utf-16").withCharset(UTF_8));
+        assertEquals(
+                MediaType.parse("text/plain; charset=utf-8"),
+                MediaType.parse("text/plain").withCharset(UTF_8));
+        assertEquals(
+                MediaType.parse("text/plain; charset=utf-8"),
+                MediaType.parse("text/plain; charset=utf-16").withCharset(UTF_8));
     }
 
     @Test
     public void testHasWildcard() {
-        Assert.assertFalse(PLAIN_TEXT_UTF_8.hasWildcard());
-        Assert.assertFalse(JPEG.hasWildcard());
-        Assert.assertTrue(ANY_TYPE.hasWildcard());
-        Assert.assertTrue(ANY_APPLICATION_TYPE.hasWildcard());
-        Assert.assertTrue(ANY_AUDIO_TYPE.hasWildcard());
-        Assert.assertTrue(ANY_IMAGE_TYPE.hasWildcard());
-        Assert.assertTrue(ANY_TEXT_TYPE.hasWildcard());
-        Assert.assertTrue(ANY_VIDEO_TYPE.hasWildcard());
+        assertFalse(PLAIN_TEXT_UTF_8.hasWildcard());
+        assertFalse(JPEG.hasWildcard());
+        assertTrue(ANY_TYPE.hasWildcard());
+        assertTrue(ANY_APPLICATION_TYPE.hasWildcard());
+        assertTrue(ANY_AUDIO_TYPE.hasWildcard());
+        assertTrue(ANY_IMAGE_TYPE.hasWildcard());
+        assertTrue(ANY_TEXT_TYPE.hasWildcard());
+        assertTrue(ANY_VIDEO_TYPE.hasWildcard());
     }
 
     @Test
     public void testIs() {
-        Assert.assertTrue(PLAIN_TEXT_UTF_8.is(ANY_TYPE));
-        Assert.assertTrue(JPEG.is(ANY_TYPE));
-        Assert.assertTrue(ANY_TEXT_TYPE.is(ANY_TYPE));
-        Assert.assertTrue(PLAIN_TEXT_UTF_8.is(ANY_TEXT_TYPE));
-        Assert.assertTrue(PLAIN_TEXT_UTF_8.withoutParameters().is(ANY_TEXT_TYPE));
-        Assert.assertFalse(JPEG.is(ANY_TEXT_TYPE));
-        Assert.assertTrue(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8));
-        Assert.assertTrue(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withoutParameters()));
-        Assert.assertFalse(PLAIN_TEXT_UTF_8.withoutParameters().is(PLAIN_TEXT_UTF_8));
-        Assert.assertFalse(PLAIN_TEXT_UTF_8.is(HTML_UTF_8));
-        Assert.assertFalse(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16").is(PLAIN_TEXT_UTF_8));
-        Assert.assertFalse(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16")));
+        assertTrue(PLAIN_TEXT_UTF_8.is(ANY_TYPE));
+        assertTrue(JPEG.is(ANY_TYPE));
+        assertTrue(ANY_TEXT_TYPE.is(ANY_TYPE));
+        assertTrue(PLAIN_TEXT_UTF_8.is(ANY_TEXT_TYPE));
+        assertTrue(PLAIN_TEXT_UTF_8.withoutParameters().is(ANY_TEXT_TYPE));
+        assertFalse(JPEG.is(ANY_TEXT_TYPE));
+        assertTrue(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8));
+        assertTrue(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withoutParameters()));
+        assertFalse(PLAIN_TEXT_UTF_8.withoutParameters().is(PLAIN_TEXT_UTF_8));
+        assertFalse(PLAIN_TEXT_UTF_8.is(HTML_UTF_8));
+        assertFalse(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16").is(PLAIN_TEXT_UTF_8));
+        assertFalse(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16")));
     }
 
     @Test
@@ -301,43 +369,95 @@ public class MediaTypeTest {
 
     @Test
     public void testParse_empty() {
-        assertThatThrownBy(() -> MediaType.parse("")).isInstanceOf(IllegalArgumentException.class);
+        try {
+            MediaType.parse("");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
     }
 
     @Test
     public void testParse_badInput() {
-        assertThatThrownBy(() -> MediaType.parse("/"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("te<t/plain"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/pl@in"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain;"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; "))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a="))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a=@"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a=\"@"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a=1;"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a=1; "))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a=1; b"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a=1; b="))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> MediaType.parse("text/plain; a=\u2025"))
-                .isInstanceOf(IllegalArgumentException.class);
+        try {
+            MediaType.parse("/");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("te<t/plain");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/pl@in");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain;");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; ");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a=");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a=@");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a=\"@");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a=1;");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a=1; ");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a=1; b");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a=1; b=");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            MediaType.parse("text/plain; a=\u2025");
+            fail();
+        } catch (IllegalArgumentException expected) {
+        }
     }
 
     @Test
@@ -354,21 +474,31 @@ public class MediaTypeTest {
     @Test
     public void testGetCharset_tooMany() {
         MediaType mediaType = MediaType.parse("text/plain; charset=utf-8; charset=utf-16");
-        assertThatThrownBy(mediaType::charset).isInstanceOf(IllegalStateException.class);
+        try {
+            mediaType.charset();
+            fail();
+        } catch (IllegalStateException expected) {
+        }
     }
 
     @Test
     public void testGetCharset_illegalCharset() {
-        MediaType mediaType = MediaType.parse(
-                "text/plain; charset=\"!@#$%^&*()\"");
-        assertThatThrownBy(mediaType::charset).isInstanceOf(IllegalCharsetNameException.class);
+        MediaType mediaType = MediaType.parse("text/plain; charset=\"!@#$%^&*()\"");
+        try {
+            mediaType.charset();
+            fail();
+        } catch (IllegalCharsetNameException expected) {
+        }
     }
 
     @Test
     public void testGetCharset_unsupportedCharset() {
-        MediaType mediaType = MediaType.parse(
-                "text/plain; charset=utf-wtf");
-        assertThatThrownBy(mediaType::charset).isInstanceOf(UnsupportedCharsetException.class);
+        MediaType mediaType = MediaType.parse("text/plain; charset=utf-wtf");
+        try {
+            mediaType.charset();
+            fail();
+        } catch (UnsupportedCharsetException expected) {
+        }
     }
 
     @Test
@@ -432,10 +562,11 @@ public class MediaTypeTest {
     @Test
     public void testToString() {
         assertEquals("text/plain", MediaType.create("text", "plain").toString());
-        assertEquals("text/plain; something=\"cr@zy\"; something-else=\"crazy with spaces\"",
-                     MediaType.create("text", "plain")
-                              .withParameter("something", "cr@zy")
-                              .withParameter("something-else", "crazy with spaces")
-                              .toString());
+        assertEquals(
+                "text/plain; something=\"cr@zy\"; something-else=\"crazy with spaces\"",
+                MediaType.create("text", "plain")
+                         .withParameter("something", "cr@zy")
+                         .withParameter("something-else", "crazy with spaces")
+                         .toString());
     }
 }

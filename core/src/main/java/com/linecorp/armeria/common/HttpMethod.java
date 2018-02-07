@@ -37,6 +37,8 @@ import static java.util.Objects.requireNonNull;
  */
 public enum HttpMethod {
 
+    // Forked from Netty at 93b144b7b4872ea623a378c75b92d33bea28ab51
+
     /**
      * The OPTIONS method represents a request for information about the communication options
      * available on the request/response chain identified by the Request-URI. This method allows

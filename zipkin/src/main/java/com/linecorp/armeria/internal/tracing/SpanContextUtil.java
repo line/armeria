@@ -28,18 +28,17 @@ import io.netty.util.concurrent.FastThreadLocal;
  */
 public final class SpanContextUtil {
 
-    private static final FastThreadLocal<SpanInScope> SPAN_IN_THREAD = new FastThreadLocal<>();
-
     /**
      * Sets up the {@link RequestContext} to push and pop the {@link Span} whenever it is entered/exited.
      */
-    public static void setupContext(RequestContext ctx, Span span, Tracer tracer) {
-        ctx.onEnter(unused -> SPAN_IN_THREAD.set(tracer.withSpanInScope(span)));
+    public static void setupContext(FastThreadLocal<SpanInScope> threadLocalSpan, RequestContext ctx, Span span,
+                                    Tracer tracer) {
+        ctx.onEnter(unused -> threadLocalSpan.set(tracer.withSpanInScope(span)));
         ctx.onExit(unused -> {
-            SpanInScope spanInScope = SPAN_IN_THREAD.get();
+            SpanInScope spanInScope = threadLocalSpan.get();
             if (spanInScope != null) {
                 spanInScope.close();
-                SPAN_IN_THREAD.remove();
+                threadLocalSpan.remove();
             }
         });
     }

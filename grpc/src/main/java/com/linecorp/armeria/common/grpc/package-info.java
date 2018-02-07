@@ -17,4 +17,7 @@
 /**
  * gRPC-related common classes.
  */
+@NonNullByDefault
 package com.linecorp.armeria.common.grpc;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

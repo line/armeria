@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 
 final class THttpClientInvocationHandler implements InvocationHandler, ClientBuilderParams {
 
@@ -138,7 +139,7 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
                 try {
                     return reply.get();
                 } catch (ExecutionException e) {
-                    throw e.getCause();
+                    throw Exceptions.peel(e);
                 }
             }
         } catch (Throwable cause) {

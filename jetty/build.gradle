@@ -1,4 +1,4 @@
-managedDependencies {
+dependencies {
     // Jetty
     compile 'org.eclipse.jetty:jetty-server'
     ['jetty-webapp', 'jetty-annotations', 'apache-jsp', 'apache-jstl'].each {

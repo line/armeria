@@ -25,20 +25,18 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 /**
  * Default {@link HttpRequest} implementation.
  *
- * @deprecated Use {@link HttpRequest#streaming()}.
+ * @deprecated Use {@link HttpRequest#streaming(HttpHeaders)}.
  */
 @Deprecated
 public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> implements HttpRequestWriter {
 
     private final HttpHeaders headers;
-    private final boolean keepAlive;
 
     /**
      * Creates a new instance with the specified headers.
      */
-    public DefaultHttpRequest(HttpHeaders headers, boolean keepAlive) {
+    public DefaultHttpRequest(HttpHeaders headers) {
         this.headers = requireNonNull(headers, "headers");
-        this.keepAlive = keepAlive;
     }
 
     @Override
@@ -47,14 +45,8 @@ public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> impleme
     }
 
     @Override
-    public boolean isKeepAlive() {
-        return keepAlive;
-    }
-
-    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("keepAlive", isKeepAlive())
-                          .add("headers", headers()).toString();
+                          .addValue(headers()).toString();
     }
 }

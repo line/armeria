@@ -34,9 +34,8 @@ import com.google.common.collect.ImmutableList;
  * The options are divided into two groups which are base options and decorators. Base options include
  * {@link ExponentialBackoff}, {@link FixedBackoff} and {@link RandomBackoff}. Only one of them can be
  * specified in the {@code specification}, otherwise {@link IllegalArgumentException} will occur.
- * When you create a {@link Backoff} using {@link #build()}, decorators, {@link JitterAddingBackoff} and
- * {@link AttemptLimitingBackoff}, are chaining with the base option in order even if you didn't specify
- * them in the {@code specification}.
+ * When you create a {@link Backoff} using {@link #build()}, {@link JitterAddingBackoff} will be added
+ * regardless whether you specify the {@code jitter} in the spec or not.
  *
  * @see Backoff#of(String) for the format of the specification, please refer to Backoff#of(String)
  */
@@ -51,7 +50,6 @@ final class BackoffSpec {
     private static final long DEFAULT_MAX_DELAY_MILLIS = 10000;
     private static final double DEFAULT_MULTIPLIER = 2.0;
     private static final double DEFAULT_MAX_JITTER_RATE = 0.2;
-    private static final int DEFAULT_MAX_ATTEMPTS = 10;
 
     private final String specification;
 
@@ -77,7 +75,7 @@ final class BackoffSpec {
     @VisibleForTesting
     double maxJitterRate = DEFAULT_MAX_JITTER_RATE;
     @VisibleForTesting
-    int maxAttempts = DEFAULT_MAX_ATTEMPTS;
+    int maxAttempts;
     @VisibleForTesting
     long fixedDelayMillis;
     @VisibleForTesting
@@ -278,7 +276,12 @@ final class BackoffSpec {
             backoff = Backoff.exponential(initialDelayMillis, maxDelayMillis, multiplier);
         }
 
-        return backoff.withJitter(minJitterRate, maxJitterRate).withMaxAttempts(maxAttempts);
+        backoff = backoff.withJitter(minJitterRate, maxJitterRate);
+        if (maxAttemptsConfigured) {
+            backoff = backoff.withMaxAttempts(maxAttempts);
+        }
+
+        return backoff;
     }
 
     @Override
@@ -295,7 +298,11 @@ final class BackoffSpec {
                         .add("multiplier", multiplier);
         }
 
-        return stringHelper.add("minJitterRate", minJitterRate).add("maxJitterRate", maxJitterRate)
-                           .add("maxAttempts", maxAttempts).toString();
+        stringHelper.add("minJitterRate", minJitterRate).add("maxJitterRate", maxJitterRate);
+        if (maxAttemptsConfigured) {
+            stringHelper.add("maxAttempts", maxAttempts);
+        }
+
+        return stringHelper.toString();
     }
 }

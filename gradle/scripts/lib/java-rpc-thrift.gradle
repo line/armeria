@@ -1,0 +1,83 @@
+def libDir = "${buildscript.sourceFile.parentFile}"
+
+configure(projectsWithFlags('java')) {
+    // Add Thrift support if there is src/*/thrift
+    if (project.ext.hasSourceDirectory('thrift')) {
+        project.ext.applyOsDetectorPlugin()
+        def thriftJsonEnabled = true
+        ext {
+            thriftVersion = '0.11'
+            thriftPath = null
+            disableThriftJson = { thriftJsonEnabled = false }
+        }
+
+        // TODO(anuraaga): Consider replacing with https://github.com/yodle/griddle
+        project.sourceSets.all { sourceSet ->
+            def scope = sourceSet.name
+            def inputDir = "${projectDir}/src/${scope}/thrift"
+            def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
+            def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
+
+            if (project.file(inputDir).isDirectory()) {
+                def task = project.tasks.create([
+                        name: sourceSet.getTaskName('compile', 'thrift'),
+                        group: 'Build',
+                        description: "Compiles the ${sourceSet.name} .thrift files."
+                ])
+
+                task.configure {
+                    inputs.dir inputDir
+                    outputs.dir javaOutputDir
+                    outputs.dir jsonOutputDir
+                    project.sourceSets[scope].java.srcDir javaOutputDir
+                    project.sourceSets[scope].resources.srcDir jsonOutputDir
+
+                    doLast {
+                        def actualThriftPath
+                        if (project.ext.thriftPath != null) {
+                            actualThriftPath = project.ext.thriftPath
+                        } else {
+                            actualThriftPath = "${libDir}/thrift/${project.ext.thriftVersion}/thrift.${osdetector.classifier}"
+                        }
+
+                        project.fileTree(inputDir) {
+                            include '**/*.thrift'
+                        }.each { sourceFile ->
+                            logger.info("Using ${actualThriftPath} to generate Java sources from ${sourceFile}")
+                            project.mkdir(javaOutputDir)
+                            project.exec {
+                                commandLine actualThriftPath,
+                                        '-gen', 'java',
+                                        '-out', javaOutputDir,
+                                        '-I', "${sourceFile.parentFile.absolutePath}",
+                                        sourceFile.absolutePath
+                            }
+                            if (thriftJsonEnabled) {
+                                logger.info("Using ${actualThriftPath} to generate JSON from ${sourceFile}")
+                                def outDir = "${jsonOutputDir}/META-INF/armeria/thrift"
+                                project.mkdir(outDir)
+                                project.exec {
+                                    commandLine actualThriftPath,
+                                            '-gen', 'json',
+                                            '-out', outDir,
+                                            '-I', "${sourceFile.parentFile.absolutePath}",
+                                            sourceFile.absolutePath
+                                }
+                            }
+                        }
+                    }
+                }
+
+                def processResourcesTask = tasks.findByName(sourceSet.getTaskName('process', 'resources'))
+                if (processResourcesTask != null) {
+                    processResourcesTask.dependsOn(task)
+                }
+
+                def compileTask = tasks.findByName(sourceSet.getCompileTaskName('java'))
+                if (compileTask != null) {
+                    compileTask.dependsOn(task)
+                }
+            }
+        }
+    }
+}

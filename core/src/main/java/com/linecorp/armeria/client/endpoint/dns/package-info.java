@@ -17,4 +17,7 @@
 /**
  * DNS-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
  */
+@NonNullByDefault
 package com.linecorp.armeria.client.endpoint.dns;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

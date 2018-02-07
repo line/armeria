@@ -59,6 +59,8 @@ import com.google.common.io.Closeables;
  */
 public final class Version {
 
+    // Forked from Netty at d0912f27091e4548466df81f545c017a25c9d256
+
     private static final String PROP_RESOURCE_PATH = "META-INF/com.linecorp.armeria.versions.properties";
 
     private static final String PROP_VERSION = ".version";

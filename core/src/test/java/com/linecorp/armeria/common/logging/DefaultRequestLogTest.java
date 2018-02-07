@@ -93,7 +93,7 @@ public class DefaultRequestLogTest {
         log.responseContent(RpcResponse.ofFailure(error), null);
         log.endResponse(error2);
         assertThat(log.responseDurationNanos()).isZero();
-        assertThat(log.responseCause()).isSameAs(error2);
+        assertThat(log.responseCause()).isSameAs(error);
     }
 
     @Test

@@ -48,7 +48,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
@@ -59,6 +58,8 @@ import com.linecorp.armeria.internal.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.grpc.StatusMessageEscaper;
 import com.linecorp.armeria.internal.grpc.TransportStatusListener;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.Codec;
 import io.grpc.Codec.Identity;
@@ -103,6 +104,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final ServiceRequestContext ctx;
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
+    private final boolean unsafeWrapRequestBuffers;
 
     // Only set once.
     private ServerCall.Listener<I> listener;
@@ -130,7 +132,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       int maxOutboundMessageSizeBytes,
                       ServiceRequestContext ctx,
                       SerializationFormat serializationFormat,
-                      MessageMarshaller jsonMarshaller) {
+                      MessageMarshaller jsonMarshaller,
+                      boolean unsafeWrapRequestBuffers) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -149,7 +152,9 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
-        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller);
+        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
+                                                 unsafeWrapRequestBuffers);
+        this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
     }
 
     @Override
@@ -277,9 +282,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void messageRead(ByteBufOrStream message) {
-        boolean success = false;
+
         final I request;
 
+        boolean success = false;
         try {
             // Special case for unary calls.
             if (messageReceived && method.getType() == MethodType.UNARY) {
@@ -292,17 +298,21 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             if (isCancelled()) {
                 return;
             }
-
-            try {
-                request = marshaller.deserializeRequest(message);
-                success = true;
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+            success = true;
         } finally {
             if (message.buf() != null && !success) {
                 message.buf().release();
             }
+        }
+
+        try {
+            request = marshaller.deserializeRequest(message);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        if (unsafeWrapRequestBuffers && message.buf() != null) {
+            GrpcUnsafeBufferUtil.storeBuffer(message.buf(), request, ctx);
         }
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {

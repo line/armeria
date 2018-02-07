@@ -17,4 +17,7 @@
 /**
  * Service composition.
  */
+@NonNullByDefault
 package com.linecorp.armeria.server.composition;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;

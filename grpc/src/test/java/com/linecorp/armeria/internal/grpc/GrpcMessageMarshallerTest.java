@@ -33,7 +33,6 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 
 public class GrpcMessageMarshallerTest {
 
@@ -44,11 +43,12 @@ public class GrpcMessageMarshallerTest {
         marshaller = new GrpcMessageMarshaller<>(
                 ByteBufAllocator.DEFAULT,
                 GrpcSerializationFormats.PROTO,
-                TestServiceGrpc.METHOD_UNARY_CALL,
+                TestServiceGrpc.getUnaryCallMethod(),
                 MessageMarshaller.builder()
                                  .register(SimpleRequest.getDefaultInstance())
                                  .register(SimpleResponse.getDefaultInstance())
-                                 .build());
+                                 .build(),
+                false);
     }
 
     @Test
@@ -61,9 +61,31 @@ public class GrpcMessageMarshallerTest {
 
     @Test
     public void deserializeRequest_byteBuf() throws Exception {
-        SimpleRequest request = marshaller.deserializeRequest(
-                new ByteBufOrStream(Unpooled.wrappedBuffer(GrpcTestUtil.REQUEST_MESSAGE.toByteArray())));
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.REQUEST_MESSAGE.getSerializedSize());
+        assertThat(buf.refCnt()).isEqualTo(1);
+        buf.writeBytes(GrpcTestUtil.REQUEST_MESSAGE.toByteArray());
+        SimpleRequest request = marshaller.deserializeRequest(new ByteBufOrStream(buf));
         assertThat(request).isEqualTo(GrpcTestUtil.REQUEST_MESSAGE);
+        assertThat(buf.refCnt()).isEqualTo(0);
+    }
+
+    @Test
+    public void deserializeRequest_wrappedByteBuf() throws Exception {
+        marshaller = new GrpcMessageMarshaller<>(
+                ByteBufAllocator.DEFAULT,
+                GrpcSerializationFormats.PROTO,
+                TestServiceGrpc.getUnaryCallMethod(),
+                MessageMarshaller.builder()
+                                 .register(SimpleRequest.getDefaultInstance())
+                                 .register(SimpleResponse.getDefaultInstance())
+                                 .build(),
+                true);
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.REQUEST_MESSAGE.getSerializedSize());
+        assertThat(buf.refCnt()).isEqualTo(1);
+        buf.writeBytes(GrpcTestUtil.REQUEST_MESSAGE.toByteArray());
+        SimpleRequest request = marshaller.deserializeRequest(new ByteBufOrStream(buf));
+        assertThat(request).isEqualTo(GrpcTestUtil.REQUEST_MESSAGE);
+        assertThat(buf.refCnt()).isEqualTo(1);
     }
 
     @Test
@@ -83,9 +105,31 @@ public class GrpcMessageMarshallerTest {
 
     @Test
     public void deserializeResponse_bytebuf() throws Exception {
-        SimpleResponse response = marshaller.deserializeResponse(
-                new ByteBufOrStream(Unpooled.wrappedBuffer(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray())));
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.RESPONSE_MESSAGE.getSerializedSize());
+        assertThat(buf.refCnt()).isEqualTo(1);
+        buf.writeBytes(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray());
+        SimpleResponse response = marshaller.deserializeResponse(new ByteBufOrStream(buf));
         assertThat(response).isEqualTo(GrpcTestUtil.RESPONSE_MESSAGE);
+        assertThat(buf.refCnt()).isEqualTo(0);
+    }
+
+    @Test
+    public void deserializeResponse_wrappedByteBuf() throws Exception {
+        marshaller = new GrpcMessageMarshaller<>(
+                ByteBufAllocator.DEFAULT,
+                GrpcSerializationFormats.PROTO,
+                TestServiceGrpc.getUnaryCallMethod(),
+                MessageMarshaller.builder()
+                                 .register(SimpleRequest.getDefaultInstance())
+                                 .register(SimpleResponse.getDefaultInstance())
+                                 .build(),
+                true);
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.RESPONSE_MESSAGE.getSerializedSize());
+        assertThat(buf.refCnt()).isEqualTo(1);
+        buf.writeBytes(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray());
+        SimpleResponse response = marshaller.deserializeResponse(new ByteBufOrStream(buf));
+        assertThat(response).isEqualTo(GrpcTestUtil.RESPONSE_MESSAGE);
+        assertThat(buf.refCnt()).isEqualTo(1);
     }
 
     @Test

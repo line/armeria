@@ -24,7 +24,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 
 /**
- * A ZooKeeper Server Listener.When you add this listener, server will be automatically registered
+ * A ZooKeeper Server Listener. When you add this listener, server will be automatically registered
  * into the ZooKeeper.
  */
 public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
@@ -62,7 +62,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     @Override
-    public void serverStarting(Server server) throws Exception {
+    public void serverStarted(Server server) {
         if (endpoint == null) {
             assert server.activePort().isPresent();
             endpoint = Endpoint.of(server.defaultHostname(),
@@ -73,7 +73,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     @Override
-    public void serverStopping(Server server) throws Exception {
+    public void serverStopping(Server server) {
         if (connector != null) {
             connector.close(true);
         }
