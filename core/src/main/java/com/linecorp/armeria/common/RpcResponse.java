@@ -24,6 +24,8 @@ import java.util.concurrent.Future;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.util.Exceptions;
+
 /**
  * An RPC {@link Response}. It is a {@link CompletionStage} whose result signifies the return value of an RPC
  * call.
@@ -54,6 +56,16 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
         stage.whenComplete((value, cause) -> {
             if (cause != null) {
                 res.completeExceptionally(cause);
+                return;
+            }
+            if (value instanceof RpcResponse) {
+                ((RpcResponse) value).whenComplete((rpcResponseResult, rpcResponseCause) -> {
+                    if (rpcResponseCause != null) {
+                        res.completeExceptionally(Exceptions.peel(rpcResponseCause));
+                        return;
+                    }
+                    res.complete(rpcResponseResult);
+                });
             } else {
                 res.complete(value);
             }
