@@ -82,7 +82,8 @@ sensible defaults. By applying them, you can:
            mavenCentral()
        }
        dependencies {
-           classpath "com.google.gradle:osdetector-gradle-plugin:1.4.0"
+           classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+           classpath 'io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE'
        }
    }
 
@@ -212,7 +213,7 @@ applied so you can conveniently check if your dependencies are out of date:
 $ ./gradlew dependencyUpdates -Drevision=release
 ...
 The following dependencies have later integration versions:
- - com.google.guava:guava [0.17 -> 23.6-jre]
+ - com.google.guava:guava [17.0 -> 24.0-jre]
 ```
 
 ## Built-in properties and functions

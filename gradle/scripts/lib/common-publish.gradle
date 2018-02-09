@@ -5,17 +5,6 @@ def publishUrlForSnapshot = rootProject.findProperty('publishUrlForSnapshot')
 def publishUsernameProperty = rootProject.findProperty('publishUsernameProperty')
 def publishPasswordProperty = rootProject.findProperty('publishPasswordProperty')
 
-if (publishUrlForRelease == null || publishUrlForSnapshot == null ||
-    publishUsernameProperty == null || publishPasswordProperty == null) {
-    throw new IllegalStateException('''Add publication properties to gradle.properties:
-
-publishUrlForRelease=https://oss.sonatype.org/service/local/staging/deploy/maven2/
-publishUrlForSnapshot=https://oss.sonatype.org/content/repositories/snapshots/
-publishUsernameProperty=ossrhUsername
-publishPasswordProperty=ossrhPassword
-''')
-}
-
 if (publishSignatureRequired) {
     apply plugin: 'signing'
 }

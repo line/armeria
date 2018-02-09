@@ -1,6 +1,5 @@
 allprojects {
     ext {
-        applyOsDetectorPlugin = this.&applyOsDetectorPlugin.curry(project)
         hasSourceDirectory = this.&hasSourceDirectory.curry(project)
     }
 }
@@ -13,29 +12,6 @@ configure(projectsWithFlags('java')) {
     // Delete the generated source directory on clean.
     clean {
         delete project.ext.genSrcDir
-    }
-}
-
-static void applyOsDetectorPlugin(Project project) {
-    // Ensure osdetector-gradle-plugin is available, because:
-    // - protobuf-gradle-plugin calls project.apply([plugin: 'com.google.osdetector'])
-    // - applying a plugin with ID from an external script is not supported yet.
-    // See: https://github.com/gradle/gradle/issues/1262
-
-    try {
-        project.apply plugin: 'com.google.osdetector'
-    } catch (UnknownPluginException e) {
-        throw new IllegalStateException('''Add the following to the top-level build.gradle file:
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
-    }
-}
-''', e)
     }
 }
 

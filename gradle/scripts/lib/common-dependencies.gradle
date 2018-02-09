@@ -23,7 +23,51 @@ rootProject.ext {
     } else {
         dependenciesYaml = Collections.emptyMap()
     }
+}
 
+allprojects {
+    apply plugin: 'io.spring.dependency-management'
+
+    dependencyManagement {
+        generatedPomCustomization {
+            enabled = false
+        }
+
+        imports {
+            if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
+                dependenciesYaml['boms'].each {
+                    mavenBom "${it}"
+                }
+            }
+        }
+
+        dependencies {
+            rootProject.ext.dependenciesYaml.forEach { String key, value ->
+                if (key != 'boms') {
+                    def groupId = key
+                    def artifact = value as Map
+                    artifact.forEach { String artifactId, Map props ->
+                        if (props.containsKey('version')) {
+                            dependency("${groupId}:${artifactId}:${props['version']}") {
+                                if (props.containsKey('exclusions')) {
+                                    props['exclusions'].each { String spec ->
+                                        exclude spec
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ext {
+        managedVersions = dependencyManagement.managedVersions
+    }
+}
+
+rootProject.ext {
     // Build the relocation table from dependencies.yml.
     relocations = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
         if (entry.key != 'boms') {
@@ -46,8 +90,8 @@ rootProject.ext {
         if (entry.key != 'boms') {
             def groupId = entry.key
             entry.value.forEach { String artifactId, Map props ->
-                def version = "${props['version']}"
                 if (props.containsKey('javadocs')) {
+                    def version = String.valueOf(managedVersions["${groupId}:${artifactId}"])
                     props['javadocs'].each { url ->
                         list.add([
                                 groupId: groupId,
@@ -63,50 +107,23 @@ rootProject.ext {
     }
 }
 
-allprojects {
-    apply plugin: io.spring.gradle.dependencymanagement.DependencyManagementPlugin
-
-    dependencyManagement {
-        generatedPomCustomization {
-            enabled = false
-        }
-
-        imports {
-            if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
-                dependenciesYaml['boms'].each {
-                    mavenBom "${it}"
-                }
-            }
-        }
-
-        dependencies {
-            rootProject.ext.dependenciesYaml.forEach { String key, value ->
-                if (key != 'boms') {
-                    def groupId = key
-                    def artifact = value as Map
-                    artifact.forEach { String artifactId, Map props ->
-                        dependency("${groupId}:${artifactId}:${props['version']}") {
-                            if (props.containsKey('exclusions')) {
-                                props['exclusions'].each { String spec ->
-                                    exclude spec
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    ext {
-        managedVersions = dependencyManagement.managedVersions
-    }
-}
-
 subprojects {
     ext {
         dependenciesYaml = rootProject.ext.dependenciesYaml
         relocations = rootProject.ext.relocations
         javadocLinks = rootProject.ext.javadocLinks
+    }
+}
+
+configure(rootProject) {
+    task managedVersions(
+            group: 'Build',
+            description: 'Generates the file that contains dependency versions.') {
+        inputs.properties dependencyManagement.managedVersions
+        doLast {
+            file("${project.buildDir}/managed_versions.yml").withWriter('UTF-8') {
+                new Yaml().dump(dependencyManagement.managedVersions, it)
+            }
+        }
     }
 }

@@ -13,27 +13,6 @@ rootProject.ext {
     scmUrl = project.findProperty('scmUrl')
     scmConnection = project.findProperty('scmConnection')
     scmDeveloperConnection = project.findProperty('scmDeveloperConnection')
-
-    if (projectName == null || projectUrl == null ||
-        inceptionYear == null || licenseName == null || licenseUrl == null ||
-        scmUrl == null || scmConnection == null || scmDeveloperConnection == null) {
-        throw new IllegalStateException('''Add project info properties to gradle.properties:
-
-projectName=My Example
-projectUrl=https://www.example.com/
-projectDescription=My example project
-authorName=John Doe
-authorEmail=john@doe.com
-authorUrl=https://john.doe.com/
-inceptionYear=2018
-licenseName=The Apache License, Version 2.0
-licenseUrl=https://www.apache.org/license/LICENSE-2.0.txt
-scmUrl=https://github.com/john.doe/example
-scmConnection=scm:git:https://github.com/john.doe/example.git
-scmDeveloperConnection=scm:git:ssh://git@github.com/john.doe/example.git
-''')
-    }
-
     copyrightFooter =
             '&copy; Copyright ' + "${rootProject.ext.inceptionYear}&ndash;${LocalDateTime.now().year} " +
             '<a href="' + rootProject.ext.authorUrl + '">' + rootProject.ext.authorName + '</a>. ' +

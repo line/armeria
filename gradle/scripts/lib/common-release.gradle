@@ -72,8 +72,11 @@ task release(
 
         def gradlePropsFile = project.file("${project.projectDir}/gradle.properties")
         def gradlePropsContent = gradlePropsFile.getText('ISO-8859-1')
-        def versionPattern = /\nversion=[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT(\r?\n)/
-        assert gradlePropsContent =~ versionPattern
+        def versionPattern = /\nversion=[^\r\n]*(\r?\n)/
+        if (!(gradlePropsContent =~ versionPattern)) {
+            throw new IllegalStateException(
+                    "Cannot find a valid 'version' property from gradle.properties");
+        }
 
         // Update the version to the release version, commit and tag.
         gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${releaseVersion}\$1"),

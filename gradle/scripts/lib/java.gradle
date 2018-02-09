@@ -6,6 +6,11 @@ def checkstyleEnabled = new File(checkstyleConfigDir).isDirectory() &&
 // Enable JaCoCo test coverage when '-Pcoverage' option is specified.
 def jacocoEnabled = project.hasProperty('coverage')
 
+configure(rootProject) {
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+}
+
 configure(projectsWithFlags('java')) {
 
     apply plugin: 'java'
