@@ -121,7 +121,9 @@ configure(rootProject) {
             description: 'Generates the file that contains dependency versions.') {
         inputs.properties dependencyManagement.managedVersions
         doLast {
-            file("${project.buildDir}/managed_versions.yml").withWriter('UTF-8') {
+            def f = file("${project.buildDir}/managed_versions.yml")
+            f.parentFile.mkdir()
+            f.withWriter('UTF-8') {
                 new Yaml().dump(dependencyManagement.managedVersions, it)
             }
         }
