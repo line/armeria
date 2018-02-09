@@ -16,10 +16,7 @@
 
 package com.linecorp.armeria.server.throttling;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.concurrent.CompletableFuture;
 
 import org.junit.Test;
 
@@ -31,7 +28,7 @@ public class ThrottlingStrategyTest {
     public void name() {
         assertThat(ThrottlingStrategy.always().name()).isEqualTo("throttling-strategy-always");
         assertThat(ThrottlingStrategy.never().name()).isEqualTo("throttling-strategy-never");
-        assertThat(ThrottlingStrategy.of((ctx, req) -> completedFuture(false), "test-strategy").name())
+        assertThat(ThrottlingStrategy.of((ctx, req) -> false, "test-strategy").name())
                 .isEqualTo("test-strategy");
         assertThat(new TestThrottlingStrategy().name())
                 .isEqualTo("throttling-strategy-TestThrottlingStrategy");
@@ -39,8 +36,8 @@ public class ThrottlingStrategyTest {
 
     private static class TestThrottlingStrategy extends ThrottlingStrategy<RpcRequest> {
         @Override
-        public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, RpcRequest request) {
-            return completedFuture(true);
+        public boolean accept(ServiceRequestContext ctx, RpcRequest request) {
+            return true;
         }
     }
 }

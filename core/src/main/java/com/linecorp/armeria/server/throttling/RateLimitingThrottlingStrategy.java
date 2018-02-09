@@ -17,9 +17,6 @@ package com.linecorp.armeria.server.throttling;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-
-import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -63,7 +60,7 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
     }
 
     @Override
-    public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request) {
-        return completedFuture(rateLimiter.tryAcquire());
+    public boolean accept(ServiceRequestContext ctx, T request) {
+        return rateLimiter.tryAcquire();
     }
 }

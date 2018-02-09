@@ -15,9 +15,6 @@
  */
 package com.linecorp.armeria.server.throttling;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
@@ -35,16 +32,16 @@ public abstract class ThrottlingStrategy<T extends Request> {
     private static final ThrottlingStrategy<?> NEVER =
             new ThrottlingStrategy<Request>("throttling-strategy-never") {
                 @Override
-                public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, Request request) {
-                    return completedFuture(false);
+                public boolean accept(ServiceRequestContext ctx, Request request) {
+                    return false;
                 }
             };
 
     private static final ThrottlingStrategy<?> ALWAYS =
             new ThrottlingStrategy<Request>("throttling-strategy-always") {
                 @Override
-                public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, Request request) {
-                    return completedFuture(true);
+                public boolean accept(ServiceRequestContext ctx, Request request) {
+                    return true;
                 }
             };
 
@@ -91,11 +88,11 @@ public abstract class ThrottlingStrategy<T extends Request> {
      * using a given {@link BiFunction} instance.
      */
     public static <T extends Request> ThrottlingStrategy<T> of(
-            BiFunction<ServiceRequestContext, T, CompletableFuture<Boolean>> function,
+            BiFunction<ServiceRequestContext, T, Boolean> function,
             String strategyName) {
         return new ThrottlingStrategy<T>(strategyName) {
             @Override
-            public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request) {
+            public boolean accept(ServiceRequestContext ctx, T request) {
                 return function.apply(ctx, request);
             }
         };
@@ -106,10 +103,10 @@ public abstract class ThrottlingStrategy<T extends Request> {
      * using a given {@link BiFunction} instance.
      */
     public static <T extends Request> ThrottlingStrategy<T> of(
-            BiFunction<ServiceRequestContext, T, CompletableFuture<Boolean>> function) {
+            BiFunction<ServiceRequestContext, T, Boolean> function) {
         return new ThrottlingStrategy<T>(null) {
             @Override
-            public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request) {
+            public boolean accept(ServiceRequestContext ctx, T request) {
                 return function.apply(ctx, request);
             }
         };
@@ -118,7 +115,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
     /**
      * Returns whether a given request should be treated as failed before it is handled actually.
      */
-    public abstract CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request);
+    public abstract boolean accept(ServiceRequestContext ctx, T request);
 
     /**
      * Returns the name of this {@link ThrottlingStrategy}.
