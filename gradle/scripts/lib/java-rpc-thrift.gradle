@@ -3,7 +3,7 @@ def libDir = "${buildscript.sourceFile.parentFile}"
 configure(projectsWithFlags('java')) {
     // Add Thrift support if there is src/*/thrift
     if (project.ext.hasSourceDirectory('thrift')) {
-        project.ext.applyOsDetectorPlugin()
+        apply plugin: 'com.google.osdetector'
         def thriftJsonEnabled = true
         ext {
             thriftVersion = '0.11'

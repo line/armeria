@@ -1,5 +1,6 @@
 def libDir = new File(buildscript.sourceFile.parentFile, 'lib')
 
+apply from: "${libDir}/prerequisite.gradle"
 apply from: "${libDir}/common-dependencies.gradle"
 apply from: "${libDir}/common-git.gradle"
 apply from: "${libDir}/common-info.gradle"
