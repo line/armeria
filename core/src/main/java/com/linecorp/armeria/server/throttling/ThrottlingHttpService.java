@@ -19,8 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -47,7 +45,7 @@ public class ThrottlingHttpService extends ThrottlingService<HttpRequest, HttpRe
      */
     protected ThrottlingHttpService(Service<HttpRequest, HttpResponse> delegate,
                                     ThrottlingStrategy<HttpRequest> strategy) {
-        super(delegate, strategy, HttpResponse::from);
+        super(delegate, strategy);
     }
 
     /**
@@ -55,7 +53,7 @@ public class ThrottlingHttpService extends ThrottlingService<HttpRequest, HttpRe
      * {@link HttpStatus#SERVICE_UNAVAILABLE} status.
      */
     @Override
-    protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable cause)
+    protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req)
             throws Exception {
         return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
     }

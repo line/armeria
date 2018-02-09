@@ -17,15 +17,9 @@ package com.linecorp.armeria.server.throttling;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
-
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -37,16 +31,13 @@ public abstract class ThrottlingService<I extends Request, O extends Response>
         extends SimpleDecoratingService<I, O> {
 
     private final ThrottlingStrategy<I> strategy;
-    private final Function<CompletionStage<? extends O>, O> responseConverter;
 
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected ThrottlingService(Service<I, O> delegate, ThrottlingStrategy<I> strategy,
-                                Function<CompletionStage<? extends O>, O> responseConverter) {
+    protected ThrottlingService(Service<I, O> delegate, ThrottlingStrategy<I> strategy) {
         super(delegate);
         this.strategy = requireNonNull(strategy, "strategy");
-        this.responseConverter = requireNonNull(responseConverter);
     }
 
     /**
@@ -61,21 +52,11 @@ public abstract class ThrottlingService<I extends Request, O extends Response>
      * Invoked when {@code req} is throttled. By default, this method responds with the
      * {@link HttpStatus#SERVICE_UNAVAILABLE} status.
      */
-    protected abstract O onFailure(ServiceRequestContext ctx, I req, @Nullable Throwable cause)
+    protected abstract O onFailure(ServiceRequestContext ctx, I req)
             throws Exception;
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        return responseConverter.apply(
-                strategy.accept(ctx, req).handleAsync((accept, thrown) -> {
-                    try {
-                        if (thrown != null || !accept) {
-                            return onFailure(ctx, req, thrown);
-                        }
-                        return onSuccess(ctx, req);
-                    } catch (Exception e) {
-                        return Exceptions.throwUnsafely(e);
-                    }
-                }, ctx.contextAwareEventLoop()));
+        return strategy.accept(ctx, req) ? onSuccess(ctx, req) : onFailure(ctx, req);
     }
 }

@@ -19,8 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -48,7 +46,7 @@ public class ThrottlingRpcService extends ThrottlingService<RpcRequest, RpcRespo
      */
     protected ThrottlingRpcService(Service<RpcRequest, RpcResponse> delegate,
                                    ThrottlingStrategy<RpcRequest> strategy) {
-        super(delegate, strategy, RpcResponse::from);
+        super(delegate, strategy);
     }
 
     /**
@@ -56,7 +54,7 @@ public class ThrottlingRpcService extends ThrottlingService<RpcRequest, RpcRespo
      * {@link HttpStatusException} with {@code 503 Service Unavailable}.
      */
     @Override
-    protected RpcResponse onFailure(ServiceRequestContext ctx, RpcRequest req, @Nullable Throwable cause)
+    protected RpcResponse onFailure(ServiceRequestContext ctx, RpcRequest req)
             throws Exception {
         return RpcResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE));
     }

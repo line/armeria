@@ -41,8 +41,8 @@ public class RateLimitingThrottlingStrategyTest {
         when(rateLimiter.tryAcquire()).thenReturn(true)
                                       .thenReturn(false)
                                       .thenReturn(true);
-        assertThat(strategy.accept(null, null).get()).isEqualTo(true);
-        assertThat(strategy.accept(null, null).get()).isEqualTo(false);
-        assertThat(strategy.accept(null, null).get()).isEqualTo(true);
+        assertThat(strategy.accept(null, null)).isEqualTo(true);
+        assertThat(strategy.accept(null, null)).isEqualTo(false);
+        assertThat(strategy.accept(null, null)).isEqualTo(true);
     }
 }

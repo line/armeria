@@ -17,8 +17,6 @@ package com.linecorp.armeria.server.throttling;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
-
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -47,7 +45,7 @@ public final class CircuitBreakerThrottlingStrategy<T extends Request> extends T
     }
 
     @Override
-    public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request) {
-        return CompletableFuture.completedFuture(circuitBreaker.canRequest());
+    public boolean accept(ServiceRequestContext ctx, T request) {
+        return circuitBreaker.canRequest();
     }
 }
