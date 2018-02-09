@@ -120,6 +120,13 @@ configure(projectsWithFlags('publish', 'java')) {
                                 }
 
                                 if (unresolvedDep instanceof ExternalModuleDependency) {
+                                    if (isShaded && project.ext.relocations.find({
+                                        it.name == "${dep.moduleGroup}:${dep.moduleName}"
+                                    })) {
+                                        // Shaded dependency
+                                        return
+                                    }
+
                                     dependency {
                                         groupId dep.moduleGroup
                                         artifactId dep.moduleName
