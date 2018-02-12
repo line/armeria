@@ -45,6 +45,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * @param sessionTimeout  session timeout
      * @param endpoint        the endpoint of the server being registered
      */
+    @Deprecated
     public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                      Endpoint endpoint) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
@@ -59,6 +60,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
      * @param sessionTimeout  session timeout
      */
+    @Deprecated
     public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
