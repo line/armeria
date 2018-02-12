@@ -33,12 +33,11 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperConnector;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
- * {@link Endpoint}s from a ZooKeeper depending on {@link Mode} and updates it when the children of the
+ * {@link Endpoint}s from a ZooKeeper using {@link NodeValueCodec} and updates it when the children of the
  * zNode changes.
  */
 public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
@@ -47,33 +46,29 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value or a node's value depending on value store type {@link Mode}.
+     * node value using {@link NodeValueCodec}.
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
-     * @param mode       where data was stored, as a node value or as a node's all children
      */
-    public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                  Mode mode) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT, mode);
+    public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
+        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT);
     }
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value or a node's value depending on value store type {@link Mode}.
+     * node value using {@link NodeValueCodec}.
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
      * @param nodeValueCodec  the nodeValueCodec
-     * @param mode       where data was stored, as a node value or as a node's all children
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                  NodeValueCodec nodeValueCodec, Mode mode) {
-        requireNonNull(mode, "mode");
+                                  NodeValueCodec nodeValueCodec) {
         zooKeeperConnector = new ZooKeeperConnector(zkConnectionStr, zNodePath, sessionTimeout,
-                                                    createListener(mode));
+                                                    createListener());
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         zooKeeperConnector.connect();
     }
@@ -84,66 +79,32 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     }
 
     /**
-     * Value store type. As a node value or as a node's all Children.
-     */
-    public enum Mode {
-        IN_CHILD_NODES, IN_NODE_VALUE
-    }
-
-    /**
      * Create a {@link ZooKeeperListener} listens specific ZooKeeper events.
-     * @param mode mode
      * @return  {@link ZooKeeperListener}
      */
-    private ZooKeeperListener createListener(Mode mode) {
-        switch (mode) {
-            case IN_CHILD_NODES:
-                return new ZooKeeperListener() {
-                    @Override
-                    public void nodeChildChange(Map<String, String> newChildrenValue) {
-                        List<Endpoint> newData = newChildrenValue.values().stream()
-                                                                 .map(nodeValueCodec::decode)
-                                                                 .filter(Objects::nonNull)
-                                                                 .collect(toImmutableList());
-                        final List<Endpoint> prevData = endpoints();
-                        if (prevData == null || !prevData.equals(newData)) {
-                            setEndpoints(newData);
-                        }
-                    }
+    private ZooKeeperListener createListener() {
+        return new ZooKeeperListener() {
+            @Override
+            public void nodeChildChange(Map<String, String> newChildrenValue) {
+                List<Endpoint> newData = newChildrenValue.values().stream()
+                                                         .map(nodeValueCodec::decode)
+                                                         .filter(Objects::nonNull)
+                                                         .collect(toImmutableList());
+                final List<Endpoint> prevData = endpoints();
+                if (prevData == null || !prevData.equals(newData)) {
+                    setEndpoints(newData);
+                }
+            }
 
-                    @Override
-                    public void nodeValueChange(String newValue) {
-                        //ignore value change event
-                    }
+            @Override
+            public void nodeValueChange(String newValue) {
+                //ignore value change event
+            }
 
-                    @Override
-                    public void connected() {
-                    }
-                };
-            case IN_NODE_VALUE:
-                return new ZooKeeperListener() {
-                    @Override
-                    public void nodeChildChange(Map<String, String> newChildrenValue) {
-                    }
-
-                    @Override
-                    public void nodeValueChange(String newValue) {
-                        final List<Endpoint> prevData = endpoints();
-                        List<Endpoint> newData = nodeValueCodec.decodeAll(newValue).stream()
-                                                               .filter(Objects::nonNull)
-                                                               .collect(toImmutableList());
-                        if (prevData == null || !prevData.equals(newData)) {
-                            setEndpoints(newData);
-                        }
-                    }
-
-                    @Override
-                    public void connected() {
-                    }
-                };
-            default:
-                throw new ZooKeeperException("unknown listener type: " + mode);
-        }
+            @Override
+            public void connected() {
+            }
+        };
     }
 
     @VisibleForTesting
