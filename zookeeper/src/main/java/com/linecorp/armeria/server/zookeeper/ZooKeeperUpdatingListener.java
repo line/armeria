@@ -45,7 +45,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
                                      Endpoint endpoint) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        this.endpoint = requireNonNull(endpoint, "endPoint");
+        this.endpoint = requireNonNull(endpoint, "endpoint");
         this.sessionTimeout = sessionTimeout;
     }
 
