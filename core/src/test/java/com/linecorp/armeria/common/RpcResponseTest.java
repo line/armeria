@@ -50,4 +50,34 @@ public class RpcResponseTest {
         assertThat(res.isDone()).isTrue();
         assertThatThrownBy(res::join).isInstanceOf(CompletionException.class).hasCause(CAUSE);
     }
+
+    @Test
+    public void successfulFromResponseFuture() {
+        CompletableFuture<RpcResponse> future = new CompletableFuture<>();
+        RpcResponse res = RpcResponse.from(future);
+        assertThat(res.isDone()).isFalse();
+        future.complete(RpcResponse.of(RESULT));
+        assertThat(res.isDone()).isTrue();
+        assertThat(res.join()).isSameAs(RESULT);
+    }
+
+    @Test
+    public void failedFromResponseFuture() {
+        final CompletableFuture<RpcResponse> future = new CompletableFuture<>();
+        final RpcResponse res = RpcResponse.from(future);
+        assertThat(res.isDone()).isFalse();
+        future.completeExceptionally(CAUSE);
+        assertThat(res.isDone()).isTrue();
+        assertThatThrownBy(res::join).isInstanceOf(CompletionException.class).hasCause(CAUSE);
+    }
+
+    @Test
+    public void failedFromFailedResponseFuture() {
+        final CompletableFuture<RpcResponse> future = new CompletableFuture<>();
+        final RpcResponse res = RpcResponse.from(future);
+        assertThat(res.isDone()).isFalse();
+        future.complete(RpcResponse.ofFailure(CAUSE));
+        assertThat(res.isDone()).isTrue();
+        assertThatThrownBy(res::join).isInstanceOf(CompletionException.class).hasCause(CAUSE);
+    }
 }
