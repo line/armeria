@@ -6,7 +6,6 @@
 .. _`EndpointGroup`: apidocs/index.html?com/linecorp/armeria/client/EndpointGroup.html
 .. _`EndpointGroupRegistry`: apidocs/index.html?com/linecorp/armeria/client/EndpointGroupRegistry.html
 .. _`ZooKeeperEndpointGroup`: apidocs/index.html?com/linecorp/armeria/client/zookeeper/ZooKeeperEndpointGroup.html
-.. _`ZooKeeperEndpointGroup.Mode`: apidocs/index.html?com/linecorp/armeria/client/zookeeper/ZooKeeperEndpointGroup.Mode.html
 .. _`ZooKeeperUpdatingListener`: apidocs/index.html?com/linecorp/armeria/server/zookeeper/ZooKeeperUpdatingListener.html
 
 .. _advanced-zookeeper:
@@ -37,13 +36,11 @@ Create a `ZooKeeperEndpointGroup`_ to retrieve this information:
 
     import com.linecorp.armeria.client.endpoint.EndpointGroup;
     import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
-    import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup.Mode;
 
     EndpointGroup myEndpointGroup = new ZooKeeperEndpointGroup(
             /* zkConnectionStr */ "myZooKeeperHost:2181",
             /* zNodePath       */ "/myProductionEndpoints",
-            /* sessionTimeout  */ 10000,
-            /* mode            */ Mode.IN_CHILD_NODES /* or Mode.IN_NODE_VALUE */);
+            /* sessionTimeout  */ 10000);
 
 
 And then register it to the `EndpointGroupRegistry`_, and specify it in a client URI:
