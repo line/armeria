@@ -21,13 +21,16 @@ import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.always;
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.never;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import org.apache.thrift.TApplicationException;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -40,9 +43,9 @@ import com.linecorp.armeria.testing.server.ServerRule;
 public class ThrottlingRpcServiceTest {
 
     @Rule
-    public final ServerRule server = new ServerRule() {
+    public final ServerRule server = new ServerRule(false) {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service("/thrift-never", ThriftCallService.of(serviceHandler)
                                                          .decorate(ThrottlingRpcService.newDecorator(never()))
                                                          .decorate(THttpService.newDecorator()));
@@ -53,7 +56,18 @@ public class ThrottlingRpcServiceTest {
         }
     };
 
-    private final HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
+    @Rule
+    public MockitoRule mocks = MockitoJUnit.rule();
+
+    @Mock
+    private HelloService.Iface serviceHandler;
+
+    @Before
+    public void setup() {
+        // Start server here to avoid Rule ordering issue. Remove once
+        // https://github.com/junit-team/junit4/pull/1445 will release.
+        server.start();
+    }
 
     @Test
     public void serve() throws Exception {
