@@ -256,6 +256,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private void write(HttpObject o, boolean endOfStream, boolean flush) {
         if (state == State.DONE) {
+            ReferenceCountUtil.safeRelease(o);
             throw newIllegalStateException(
                     "a response publisher published an HttpObject after a trailing HttpHeaders: " + o);
         }

@@ -203,12 +203,14 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void write(HttpObject o, boolean endOfStream, boolean flush) {
         if (state == State.DONE) {
+            ReferenceCountUtil.safeRelease(o);
             throw newIllegalStateException(
                     "a request publisher published an HttpObject after a trailing HttpHeaders: " + o);
         }
 
         final Channel ch = ctx.channel();
         if (!ch.isActive()) {
+            ReferenceCountUtil.safeRelease(o);
             fail(ClosedSessionException.get());
             return;
         }
