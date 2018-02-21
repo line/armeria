@@ -33,10 +33,9 @@ import io.micrometer.core.instrument.Meter.Id;
 import io.micrometer.core.instrument.Meter.Type;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.histogram.HistogramConfig;
-import io.micrometer.core.instrument.histogram.pause.PauseDetector;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
+import io.micrometer.core.instrument.distribution.pause.PauseDetector;
 import io.micrometer.core.instrument.noop.NoopCounter;
-import io.micrometer.core.instrument.noop.NoopDistributionSummary;
 import io.micrometer.core.instrument.noop.NoopFunctionCounter;
 import io.micrometer.core.instrument.noop.NoopFunctionTimer;
 import io.micrometer.core.instrument.noop.NoopGauge;
@@ -79,13 +78,14 @@ public final class NoopMeterRegistry extends MeterRegistry {
     }
 
     @Override
-    protected Timer newTimer(Id id, HistogramConfig histogramConfig, PauseDetector pauseDetector) {
+    protected Timer newTimer(Id id, DistributionStatisticConfig histogramConfig, PauseDetector pauseDetector) {
         return new NoopTimer(id);
     }
 
     @Override
-    protected DistributionSummary newDistributionSummary(Id id, HistogramConfig histogramConfig) {
-        return new NoopDistributionSummary(id);
+    protected DistributionSummary newDistributionSummary(Id id, DistributionStatisticConfig distributionConfig,
+            double scale) {
+        return null;
     }
 
     @Override
@@ -111,7 +111,7 @@ public final class NoopMeterRegistry extends MeterRegistry {
     }
 
     @Override
-    protected HistogramConfig defaultHistogramConfig() {
-        return HistogramConfig.NONE;
+    protected DistributionStatisticConfig defaultHistogramConfig() {
+        return DistributionStatisticConfig.NONE;
     }
 }
