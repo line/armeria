@@ -156,6 +156,12 @@ public abstract class ServerRule extends ExternalResource {
         return port(HTTPS);
     }
 
+    /**
+     * Returns the port number of the {@link Server} for the specified {@link SessionProtocol}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or it did not open a port of the
+     *     specified protocol.
+     */
     public int port(SessionProtocol protocol) {
         return server().activePorts().values().stream()
                        .filter(p1 -> p1.protocol() == protocol).findAny()
