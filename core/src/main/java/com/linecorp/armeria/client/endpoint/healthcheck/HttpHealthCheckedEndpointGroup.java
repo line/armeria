@@ -64,11 +64,11 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
                                                     Duration healthCheckRetryInterval) {
         return new HttpHealthCheckedEndpointGroupBuilder(delegate, healthCheckPath)
                 .clientFactory(clientFactory)
-                .healthCheckRetryInterval(healthCheckRetryInterval)
+                .retryInterval(healthCheckRetryInterval)
                 .build();
     }
 
-    private final SessionProtocol healthCheckProtocol;
+    private final SessionProtocol protocol;
     private final String healthCheckPath;
 
     /**
@@ -76,18 +76,18 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
      */
     HttpHealthCheckedEndpointGroup(ClientFactory clientFactory,
                                    EndpointGroup delegate,
-                                   SessionProtocol healthCheckProtocol,
+                                   SessionProtocol protocol,
                                    String healthCheckPath,
                                    Duration healthCheckRetryInterval) {
         super(clientFactory, delegate, healthCheckRetryInterval);
-        this.healthCheckProtocol = requireNonNull(healthCheckProtocol, "healthCheckProtocol");
+        this.protocol = requireNonNull(protocol, "protocol");
         this.healthCheckPath = requireNonNull(healthCheckPath, "healthCheckPath");
         init();
     }
 
     @Override
     protected EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint) {
-        return new HttpEndpointHealthChecker(clientFactory(), endpoint, healthCheckProtocol, healthCheckPath);
+        return new HttpEndpointHealthChecker(clientFactory(), endpoint, protocol, healthCheckPath);
     }
 
     private static final class HttpEndpointHealthChecker implements EndpointHealthChecker {

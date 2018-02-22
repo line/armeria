@@ -35,8 +35,8 @@ public class HttpHealthCheckedEndpointGroupBuilder {
     private final EndpointGroup delegate;
     private final String healthCheckPath;
 
-    private SessionProtocol healthCheckProtocol = SessionProtocol.HTTP;
-    private Duration healthCheckRetryInterval = DEFAULT_HEALTHCHECK_RETRY_INTERVAL;
+    private SessionProtocol protocol = SessionProtocol.HTTP;
+    private Duration retryInterval = DEFAULT_HEALTHCHECK_RETRY_INTERVAL;
     private ClientFactory clientFactory = ClientFactory.DEFAULT;
 
     /**
@@ -51,19 +51,19 @@ public class HttpHealthCheckedEndpointGroupBuilder {
     /**
      * Sets the {@link SessionProtocol} to be used when making health check requests.
      */
-    public HttpHealthCheckedEndpointGroupBuilder healthCheckProtocol(SessionProtocol healthCheckProtocol) {
-        this.healthCheckProtocol = requireNonNull(healthCheckProtocol, "healthCheckProtocol");
+    public HttpHealthCheckedEndpointGroupBuilder protocol(SessionProtocol protocol) {
+        this.protocol = requireNonNull(protocol, "protocol");
         return this;
     }
 
     /**
      * Sets the interval between health check requests. Must be positive.
      */
-    public HttpHealthCheckedEndpointGroupBuilder healthCheckRetryInterval(Duration healthCheckRetryInterval) {
-        requireNonNull(healthCheckRetryInterval, "healthCheckRetryInterval");
-        checkArgument(!healthCheckRetryInterval.isNegative() && !healthCheckRetryInterval.isZero(),
-                      "healthCheckRetryInterval must be positive.");
-        this.healthCheckRetryInterval = healthCheckRetryInterval;
+    public HttpHealthCheckedEndpointGroupBuilder retryInterval(Duration retryInterval) {
+        requireNonNull(retryInterval, "retryInterval");
+        checkArgument(!retryInterval.isNegative() && !retryInterval.isZero(),
+                      "retryInterval: %s (expected > 0)", retryInterval);
+        this.retryInterval = retryInterval;
         return this;
     }
 
@@ -82,7 +82,7 @@ public class HttpHealthCheckedEndpointGroupBuilder {
      * {@link HttpHealthCheckedEndpointGroupBuilder}.
      */
     public HttpHealthCheckedEndpointGroup build() {
-        return new HttpHealthCheckedEndpointGroup(clientFactory, delegate, healthCheckProtocol, healthCheckPath,
-                                                  healthCheckRetryInterval);
+        return new HttpHealthCheckedEndpointGroup(clientFactory, delegate, protocol, healthCheckPath,
+                                                  retryInterval);
     }
 }

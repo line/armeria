@@ -51,8 +51,8 @@ public class HttpHealthCheckedEndpointGroupTest {
 
     private static final String HEALTH_CHECK_PATH = "/healthcheck";
 
-    @Parameters(name = "{index}: healthCheckProtocol={0}")
-    public static Collection<SessionProtocol> healthCheckProtocols() {
+    @Parameters(name = "{index}: protocol={0}")
+    public static Collection<SessionProtocol> protocols() {
         return ImmutableList.of(HTTP, HTTPS);
     }
 
@@ -86,10 +86,10 @@ public class HttpHealthCheckedEndpointGroupTest {
             .sslContextCustomizer(s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE))
             .build();
 
-    private final SessionProtocol healthCheckProtocol;
+    private final SessionProtocol protocol;
 
-    public HttpHealthCheckedEndpointGroupTest(SessionProtocol healthCheckProtocol) {
-        this.healthCheckProtocol = healthCheckProtocol;
+    public HttpHealthCheckedEndpointGroupTest(SessionProtocol protocol) {
+        this.protocol = protocol;
     }
 
     @Test
@@ -97,13 +97,13 @@ public class HttpHealthCheckedEndpointGroupTest {
         serverOne.start();
         serverTwo.start();
 
-        final int portOne = serverOne.port(healthCheckProtocol);
-        final int portTwo = serverTwo.port(healthCheckProtocol);
+        final int portOne = serverOne.port(protocol);
+        final int portTwo = serverTwo.port(protocol);
         final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
                 new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
                                         Endpoint.of("127.0.0.1", portTwo)),
                 HEALTH_CHECK_PATH)
-                .healthCheckProtocol(healthCheckProtocol)
+                .protocol(protocol)
                 .clientFactory(clientFactory)
                 .build();
 
@@ -142,13 +142,13 @@ public class HttpHealthCheckedEndpointGroupTest {
     public void endpoints_containsUnhealthyServer() throws Exception {
         serverOne.start();
 
-        final int portOne = serverOne.port(healthCheckProtocol);
+        final int portOne = serverOne.port(protocol);
         final int portTwo = 65535;
         final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
                 new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
                                         Endpoint.of("127.0.0.1", portTwo)),
                 HEALTH_CHECK_PATH)
-                .healthCheckProtocol(healthCheckProtocol)
+                .protocol(protocol)
                 .clientFactory(clientFactory)
                 .build();
 
@@ -172,13 +172,13 @@ public class HttpHealthCheckedEndpointGroupTest {
     public void endpoints_duplicateEntries() throws Exception {
         serverOne.start();
 
-        final int portOne = serverOne.port(healthCheckProtocol);
+        final int portOne = serverOne.port(protocol);
         final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
                 new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
                                         Endpoint.of("127.0.0.1", portOne),
                                         Endpoint.of("127.0.0.1", portOne)),
                 HEALTH_CHECK_PATH)
-                .healthCheckProtocol(healthCheckProtocol)
+                .protocol(protocol)
                 .clientFactory(clientFactory)
                 .build();
 
