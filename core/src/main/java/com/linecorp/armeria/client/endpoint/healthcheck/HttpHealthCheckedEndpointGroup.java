@@ -96,10 +96,10 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
 
         private HttpEndpointHealthChecker(ClientFactory clientFactory,
                                           Endpoint endpoint,
-                                          SessionProtocol healthCheckProtocol,
+                                          SessionProtocol protocol,
                                           String healthCheckPath) {
             httpClient = HttpClient.of(clientFactory,
-                                       healthCheckProtocol.uriText() + "://" + endpoint.authority());
+                                       protocol.uriText() + "://" + endpoint.authority());
             this.healthCheckPath = healthCheckPath;
         }
 
