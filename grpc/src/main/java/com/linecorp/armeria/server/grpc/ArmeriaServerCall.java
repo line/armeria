@@ -336,6 +336,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void transportReportStatus(Status status) {
+        if (closeCalled) {
+            // We've already called close on the server-side and will close the listener with the server-side
+            // status, so we ignore client transport status's at this point (it's usually the RST_STREAM
+            // corresponding to a successful stream ending in practice, but even if it was an actual transport
+            // failure there's no need to notify the server listener of it).
+            return;
+        }
         closeListener(status);
     }
 
