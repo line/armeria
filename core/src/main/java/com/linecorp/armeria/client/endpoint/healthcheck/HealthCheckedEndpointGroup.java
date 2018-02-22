@@ -42,7 +42,7 @@ import io.micrometer.core.instrument.binder.MeterBinder;
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
  */
 public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
-    protected static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3);
+    static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3);
 
     private final ClientFactory clientFactory;
     private final EndpointGroup delegate;

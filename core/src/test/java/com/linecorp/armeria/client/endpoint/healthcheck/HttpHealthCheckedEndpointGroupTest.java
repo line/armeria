@@ -16,27 +16,50 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.Collection;
+
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
+import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
+@RunWith(Parameterized.class)
 public class HttpHealthCheckedEndpointGroupTest {
 
     private static final String HEALTH_CHECK_PATH = "/healthcheck";
 
-    private static class HealthCheckServerRule extends ServerRule {
+    @Parameters(name = "{index}: healthCheckProtocol={0}")
+    public static Collection<SessionProtocol> healthCheckProtocols() {
+        return ImmutableList.of(HTTP, HTTPS);
+    }
+
+    @Rule
+    public final SelfSignedCertificateRule certificate = new SelfSignedCertificateRule();
+
+    private class HealthCheckServerRule extends ServerRule {
 
         protected HealthCheckServerRule() {
             super(false); // Disable auto-start.
@@ -44,6 +67,9 @@ public class HttpHealthCheckedEndpointGroupTest {
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.port(0, HTTP);
+            sb.port(0, HTTPS);
+            sb.sslContext(HTTPS, certificate.certificateFile(), certificate.privateKeyFile());
             sb.service(HEALTH_CHECK_PATH, new HttpHealthCheckService());
         }
     }
@@ -56,17 +82,30 @@ public class HttpHealthCheckedEndpointGroupTest {
     @Rule
     public final ServerRule serverTwo = new HealthCheckServerRule();
 
+    private final ClientFactory clientFactory = new ClientFactoryBuilder()
+            .sslContextCustomizer(s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE))
+            .build();
+
+    private final SessionProtocol healthCheckProtocol;
+
+    public HttpHealthCheckedEndpointGroupTest(SessionProtocol healthCheckProtocol) {
+        this.healthCheckProtocol = healthCheckProtocol;
+    }
+
     @Test
     public void endpoints() throws Exception {
         serverOne.start();
         serverTwo.start();
 
-        final int portOne = serverOne.httpPort();
-        final int portTwo = serverTwo.httpPort();
-        final HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
+        final int portOne = serverOne.port(healthCheckProtocol);
+        final int portTwo = serverTwo.port(healthCheckProtocol);
+        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
                 new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
                                         Endpoint.of("127.0.0.1", portTwo)),
-                HEALTH_CHECK_PATH);
+                HEALTH_CHECK_PATH)
+                .healthCheckProtocol(healthCheckProtocol)
+                .clientFactory(clientFactory)
+                .build();
 
         endpointGroup.newMeterBinder("foo").bindTo(registry);
 
@@ -103,12 +142,15 @@ public class HttpHealthCheckedEndpointGroupTest {
     public void endpoints_containsUnhealthyServer() throws Exception {
         serverOne.start();
 
-        final int portOne = serverOne.httpPort();
+        final int portOne = serverOne.port(healthCheckProtocol);
         final int portTwo = 65535;
-        final HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
+        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
                 new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
                                         Endpoint.of("127.0.0.1", portTwo)),
-                HEALTH_CHECK_PATH);
+                HEALTH_CHECK_PATH)
+                .healthCheckProtocol(healthCheckProtocol)
+                .clientFactory(clientFactory)
+                .build();
 
         endpointGroup.newMeterBinder("bar").bindTo(registry);
 
@@ -130,12 +172,15 @@ public class HttpHealthCheckedEndpointGroupTest {
     public void endpoints_duplicateEntries() throws Exception {
         serverOne.start();
 
-        final int portOne = serverOne.httpPort();
-        final HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
+        final int portOne = serverOne.port(healthCheckProtocol);
+        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
                 new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
                                         Endpoint.of("127.0.0.1", portOne),
                                         Endpoint.of("127.0.0.1", portOne)),
-                HEALTH_CHECK_PATH);
+                HEALTH_CHECK_PATH)
+                .healthCheckProtocol(healthCheckProtocol)
+                .clientFactory(clientFactory)
+                .build();
 
         endpointGroup.newMeterBinder("baz").bindTo(registry);
 

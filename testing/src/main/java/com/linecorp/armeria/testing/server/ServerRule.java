@@ -144,10 +144,7 @@ public abstract class ServerRule extends ExternalResource {
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
      */
     public int httpPort() {
-        return server().activePorts().values().stream()
-                       .filter(p1 -> p1.protocol() == HTTP).findAny()
-                       .flatMap(p -> Optional.of(p.localAddress().getPort()))
-                       .orElseThrow(() -> new IllegalStateException("HTTP port not open"));
+        return port(HTTP);
     }
 
     /**
@@ -156,10 +153,14 @@ public abstract class ServerRule extends ExternalResource {
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
      */
     public int httpsPort() {
+        return port(HTTPS);
+    }
+
+    public int port(SessionProtocol protocol) {
         return server().activePorts().values().stream()
-                       .filter(p1 -> p1.protocol() == HTTPS).findAny()
+                       .filter(p1 -> p1.protocol() == protocol).findAny()
                        .flatMap(p -> Optional.of(p.localAddress().getPort()))
-                       .orElseThrow(() -> new IllegalStateException("HTTPS port not open"));
+                       .orElseThrow(() -> new IllegalStateException(protocol + " port not open"));
     }
 
     /**

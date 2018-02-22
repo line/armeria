@@ -25,24 +25,27 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * HTTP implementation of {@link HealthCheckedEndpointGroup}.
  */
 public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointGroup {
-    private final String healthCheckPath;
 
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
      */
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
                                                     String healthCheckPath) {
-        return of(delegate, healthCheckPath, DEFAULT_HEALTHCHECK_RETRY_INTERVAL);
+        return new HttpHealthCheckedEndpointGroupBuilder(delegate, healthCheckPath).build();
     }
 
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
+     *
+     * @deprecated use {@link HttpHealthCheckedEndpointGroupBuilder}
      */
+    @Deprecated
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
                                                     String healthCheckPath,
                                                     Duration healthCheckRetryInterval) {
@@ -51,32 +54,40 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
 
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
+     *
+     * @deprecated use {@link HttpHealthCheckedEndpointGroupBuilder}
      */
+    @Deprecated
     public static HttpHealthCheckedEndpointGroup of(ClientFactory clientFactory,
                                                     EndpointGroup delegate,
                                                     String healthCheckPath,
                                                     Duration healthCheckRetryInterval) {
-        return new HttpHealthCheckedEndpointGroup(clientFactory,
-                                                  delegate,
-                                                  healthCheckPath,
-                                                  healthCheckRetryInterval);
+        return new HttpHealthCheckedEndpointGroupBuilder(delegate, healthCheckPath)
+                .clientFactory(clientFactory)
+                .healthCheckRetryInterval(healthCheckRetryInterval)
+                .build();
     }
+
+    private final SessionProtocol healthCheckProtocol;
+    private final String healthCheckPath;
 
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
      */
-    private HttpHealthCheckedEndpointGroup(ClientFactory clientFactory,
-                                           EndpointGroup delegate,
-                                           String healthCheckPath,
-                                           Duration healthCheckRetryInterval) {
+    HttpHealthCheckedEndpointGroup(ClientFactory clientFactory,
+                                   EndpointGroup delegate,
+                                   SessionProtocol healthCheckProtocol,
+                                   String healthCheckPath,
+                                   Duration healthCheckRetryInterval) {
         super(clientFactory, delegate, healthCheckRetryInterval);
+        this.healthCheckProtocol = requireNonNull(healthCheckProtocol, "healthCheckProtocol");
         this.healthCheckPath = requireNonNull(healthCheckPath, "healthCheckPath");
         init();
     }
 
     @Override
     protected EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint) {
-        return new HttpEndpointHealthChecker(clientFactory(), endpoint, healthCheckPath);
+        return new HttpEndpointHealthChecker(clientFactory(), endpoint, healthCheckProtocol, healthCheckPath);
     }
 
     private static final class HttpEndpointHealthChecker implements EndpointHealthChecker {
@@ -85,8 +96,10 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
 
         private HttpEndpointHealthChecker(ClientFactory clientFactory,
                                           Endpoint endpoint,
+                                          SessionProtocol healthCheckProtocol,
                                           String healthCheckPath) {
-            httpClient = HttpClient.of(clientFactory, "http://" + endpoint.authority());
+            httpClient = HttpClient.of(clientFactory,
+                                       healthCheckProtocol.uriText() + "://" + endpoint.authority());
             this.healthCheckPath = healthCheckPath;
         }
 
