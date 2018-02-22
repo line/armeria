@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ClientRequestContext.HTTP_HEADERS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -86,8 +87,10 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     private static void autoFillHeaders(ClientRequestContext ctx, Endpoint endpoint, HttpRequest req) {
         requireNonNull(req, "req");
         final HttpHeaders headers = req.headers();
+        final HttpHeaders clientOptionHeaders = ctx.hasAttr(HTTP_HEADERS) ? ctx.attr(HTTP_HEADERS).get()
+                                                                          : HttpHeaders.EMPTY_HEADERS;
 
-        if (headers.authority() == null) {
+        if (headers.authority() == null && clientOptionHeaders.authority() == null) {
             final String hostname = endpoint.host();
             final int port = endpoint.port();
 
@@ -110,8 +113,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
 
         // Add the headers specified in ClientOptions, if not overridden by request.
-        if (ctx.hasAttr(ClientRequestContext.HTTP_HEADERS)) {
-            HttpHeaders clientOptionHeaders = ctx.attr(ClientRequestContext.HTTP_HEADERS).get();
+        if (!clientOptionHeaders.isEmpty()) {
             clientOptionHeaders.forEach(entry -> {
                 AsciiString name = entry.getKey();
                 if (!headers.contains(name)) {
