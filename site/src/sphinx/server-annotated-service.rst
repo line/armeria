@@ -452,7 +452,7 @@ to an HttpResponse_.
             if (result instanceof MyObject) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.PLAIN_TEXT_UTF_8,
-                                       "Hello, %s!", result.processedName());
+                                       "Hello, %s!", ((MyObject) result).processedName());
             }
 
             // To the next response converter.
