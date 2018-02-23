@@ -51,7 +51,6 @@ public final class ClientOptions extends AbstractOptions {
     @SuppressWarnings("deprecation")
     private static final Collection<AsciiString> BLACKLISTED_HEADER_NAMES =
             Collections.unmodifiableCollection(Arrays.asList(
-                    HttpHeaderNames.AUTHORITY,
                     HttpHeaderNames.CONNECTION,
                     HttpHeaderNames.HOST,
                     HttpHeaderNames.KEEP_ALIVE,
