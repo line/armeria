@@ -112,17 +112,17 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.0-rc.9'
+    version: &MICROMETER_VERSION '1.0.0'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.0-rc.9/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.0/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.0-rc.9/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.0/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.0-rc.9/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.0/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
