@@ -37,6 +37,9 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
@@ -84,5 +87,33 @@ public class DefaultHttpResponseTest {
         }).hasCauseInstanceOf(AbortedStreamException.class);
 
         assertThat(callbackThread.get()).isNotSameAs(mainThread);
+    }
+
+    @Test
+    public void splitHeaders() {
+        final HttpResponseWriter res = HttpResponse.streaming();
+        res.write(HttpHeaders.of(100));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
+        res.write(HttpHeaders.of(200));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
+        res.write(HttpData.ofUtf8("foo"));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("e"), "f"));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("g"), "h"));
+        res.close();
+
+        final AggregatedHttpMessage aggregated = res.aggregate().join();
+        // Informational headers
+        assertThat(aggregated.informationals()).containsExactly(
+                HttpHeaders.of(100).add(HttpHeaderNames.of("a"), "b"));
+        // Non-informational header
+        assertThat(aggregated.headers()).isEqualTo(
+                HttpHeaders.of(200)
+                           .add(HttpHeaderNames.of("c"), "d")
+                           .add(HttpHeaderNames.CONTENT_LENGTH, "3"));
+        // Content
+        assertThat(aggregated.content().toStringUtf8()).isEqualTo("foo");
+        // Trailing headers
+        assertThat(aggregated.trailingHeaders()).isEqualTo(
+                HttpHeaders.of(HttpHeaderNames.of("e"), "f", HttpHeaderNames.of("g"), "h"));
     }
 }
