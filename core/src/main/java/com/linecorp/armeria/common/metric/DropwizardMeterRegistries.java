@@ -24,9 +24,9 @@ import com.codahale.metrics.MetricRegistry;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.NamingConvention;
+import io.micrometer.core.instrument.distribution.pause.NoPauseDetector;
 import io.micrometer.core.instrument.dropwizard.DropwizardConfig;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
-import io.micrometer.core.instrument.histogram.pause.NoPauseDetector;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 
 /**

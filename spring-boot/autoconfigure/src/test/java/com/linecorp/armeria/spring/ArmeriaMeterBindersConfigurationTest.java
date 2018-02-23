@@ -94,7 +94,7 @@ public class ArmeriaMeterBindersConfigurationTest {
         }
 
         if (hasOpenFdCount) {
-            assertThat(measurements).containsKeys("process.open.fds#value");
+            assertThat(measurements).containsKeys("process.files.open#value");
         }
     }
 }
