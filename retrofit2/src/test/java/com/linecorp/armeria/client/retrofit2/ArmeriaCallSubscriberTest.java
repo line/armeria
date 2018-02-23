@@ -21,6 +21,8 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
+import javax.annotation.Nullable;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -30,7 +32,9 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.retrofit2.ArmeriaCallFactory.ArmeriaCall;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -41,7 +45,9 @@ public class ArmeriaCallSubscriberTest {
 
     private static class ManualMockCallback implements Callback {
         private int callbackCallingCount;
+        @Nullable
         private Response response;
+        @Nullable
         private IOException exception;
 
         @Override
@@ -57,18 +63,19 @@ public class ArmeriaCallSubscriberTest {
         }
     }
 
+    @Rule
+    public final MockitoRule mockingRule = MockitoJUnit.rule();
+
     @Mock
+    @Nullable
     ArmeriaCall armeriaCall;
 
     @Mock
+    @Nullable
     Subscription subscription;
-
-    @Rule
-    public MockitoRule mockingRule = MockitoJUnit.rule();
 
     @Test
     public void completeNormally() throws Exception {
-
         when(armeriaCall.tryFinish()).thenReturn(true);
 
         ManualMockCallback callback = new ManualMockCallback();
@@ -84,6 +91,28 @@ public class ArmeriaCallSubscriberTest {
         verify(subscription).request(Long.MAX_VALUE);
         assertThat(callback.callbackCallingCount).isEqualTo(1);
         assertThat(callback.response.body().string()).isEqualTo("{\"name\":\"foo\"}");
+    }
+
+    @Test
+    public void splitHeaders() throws Exception {
+        when(armeriaCall.tryFinish()).thenReturn(true);
+
+        ManualMockCallback callback = new ManualMockCallback();
+        ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(armeriaCall,
+                                                                     callback,
+                                                                     new Request.Builder().url("http://bar.com")
+                                                                                          .build());
+        subscriber.onSubscribe(subscription);
+        subscriber.onNext(HttpHeaders.of(100));
+        subscriber.onNext(HttpHeaders.of(200));
+        subscriber.onNext(HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8.toString()));
+        subscriber.onNext(HttpData.ofUtf8("bar"));
+        subscriber.onComplete();
+
+        verify(subscription).request(Long.MAX_VALUE);
+        assertThat(callback.callbackCallingCount).isEqualTo(1);
+        assertThat(callback.response.header("content-type")).isEqualToIgnoringCase("text/plain; charset=utf-8");
+        assertThat(callback.response.body().string()).isEqualTo("bar");
     }
 
     @Test
