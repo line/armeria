@@ -99,6 +99,7 @@ public interface RequestContext extends AttributeMap {
      *                             in the current thread. If {@code null}, the {@code null} will be returned
      *                             when the context is unavailable in the current thread.
      */
+    @Nullable
     static <T> T mapCurrent(
             Function<? super RequestContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
 
