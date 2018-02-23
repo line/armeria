@@ -78,9 +78,7 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
             healthMap.entrySet().forEach(e -> {
                 final String authority = e.getKey();
                 final Boolean healthy = endpointsToUpdate.remove(authority);
-                if (healthy != null) {
-                    e.setValue(healthy);
-                }
+                e.setValue(Boolean.TRUE.equals(healthy));
             });
 
             // Process the newly appeared endpoints.
