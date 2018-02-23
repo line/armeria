@@ -271,7 +271,7 @@ annotated with `@Header`_ can also be specified as one of the built-in types as 
         public HttpResponse hello1(@Header("Authorization") String auth) { ... }
 
         @Post("/hello2")
-        public HttpResponse hello2(@Param("Content-Length") long contentLength) { ... }
+        public HttpResponse hello2(@Header("Content-Length") long contentLength) { ... }
     }
 
 Other classes automatically injected
