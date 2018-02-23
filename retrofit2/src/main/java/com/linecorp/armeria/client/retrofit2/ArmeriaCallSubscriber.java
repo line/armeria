@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 
 import okhttp3.Callback;
@@ -72,7 +73,8 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
             return;
         }
         if (httpObject instanceof HttpHeaders) {
-            if (((HttpHeaders) httpObject).status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+            final HttpStatus status = ((HttpHeaders) httpObject).status();
+            if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                 return;
             }
             if (headers != null) {
