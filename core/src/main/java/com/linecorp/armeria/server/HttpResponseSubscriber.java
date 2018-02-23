@@ -255,11 +255,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     }
 
     private void write(HttpObject o, boolean endOfStream, boolean flush) {
-        if (state == State.DONE) {
-            throw newIllegalStateException(
-                    "a response publisher published an HttpObject after a trailing HttpHeaders: " + o);
-        }
-
         final Channel ch = ctx.channel();
         if (endOfStream) {
             setDone();

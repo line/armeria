@@ -136,7 +136,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 new HttpRequestSubscriber(channel, requestEncoder,
                                           numRequestsSent, req, wrappedRes, ctx,
                                           writeTimeoutMillis),
-                channel.eventLoop());
+                channel.eventLoop(),
+                true);
 
         if (numRequestsSent >= MAX_NUM_REQUESTS_SENT) {
             responseDecoder.disconnectWhenFinished();
