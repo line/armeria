@@ -68,11 +68,10 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
 public class HttpClientIntegrationTest {
-
-    private static final String TEST_USER_AGENT_NAME = "ArmeriaTest";
 
     private static final AtomicReference<ByteBuf> releasedByteBuf = new AtomicReference<>();
 
@@ -235,6 +234,14 @@ public class HttpClientIntegrationTest {
                 }
             });
 
+            sb.service("/authority", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    String ua = req.headers().get(HttpHeaderNames.AUTHORITY, "undefined");
+                    return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, ua);
+                }
+            });
+
             sb.service("/hello/world", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
@@ -373,35 +380,58 @@ public class HttpClientIntegrationTest {
     }
 
     /**
+     * :authority header should be overridden by ClientOption.HTTP_HEADER
+     */
+    @Test
+    public void testAuthorityOverridableByClientOption() throws Exception {
+
+        testHeaderOverridableByClientOption("/authority", HttpHeaderNames.AUTHORITY, "foo:8080");
+    }
+
+    @Test
+    public void testAuthorityOverridableByRequestHeader() throws Exception {
+
+        testHeaderOverridableByRequestHeader("/authority", HttpHeaderNames.AUTHORITY, "bar:8080");
+    }
+
+    /**
      * User-agent header should be overridden by ClientOption.HTTP_HEADER
      */
     @Test
     public void testUserAgentOverridableByClientOption() throws Exception {
-
-        HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.USER_AGENT, TEST_USER_AGENT_NAME);
-        ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
-        HttpClient client = HttpClient.of(server.uri("/"), options);
-
-        AggregatedHttpMessage response = client.get("/useragent").aggregate().get();
-
-        assertEquals(TEST_USER_AGENT_NAME, response.content().toStringUtf8());
+        testHeaderOverridableByClientOption("/useragent", HttpHeaderNames.USER_AGENT, "foo-agent");
     }
 
     @Test
     public void testUserAgentOverridableByRequestHeader() throws Exception {
+        testHeaderOverridableByRequestHeader("/useragent", HttpHeaderNames.USER_AGENT, "bar-agent");
+    }
 
-        HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.USER_AGENT, TEST_USER_AGENT_NAME);
+    private static void testHeaderOverridableByClientOption(String path, AsciiString headerName,
+                                                            String headerValue) throws Exception {
+        HttpHeaders headers = HttpHeaders.of(headerName, headerValue);
         ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
         HttpClient client = HttpClient.of(server.uri("/"), options);
 
-        final String OVERIDDEN_USER_AGENT_NAME = "Overridden";
+        AggregatedHttpMessage response = client.get(path).aggregate().get();
+
+        assertEquals(headerValue, response.content().toStringUtf8());
+    }
+
+    private static void testHeaderOverridableByRequestHeader(String path, AsciiString headerName,
+                                                             String headerValue) throws Exception {
+        HttpHeaders headers = HttpHeaders.of(headerName, headerValue);
+        ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
+        HttpClient client = HttpClient.of(server.uri("/"), options);
+
+        final String OVERRIDDEN_VALUE = "Overridden";
 
         AggregatedHttpMessage response =
-                client.execute(HttpHeaders.of(HttpMethod.GET, "/useragent")
-                                          .add(HttpHeaderNames.USER_AGENT, OVERIDDEN_USER_AGENT_NAME))
+                client.execute(HttpHeaders.of(HttpMethod.GET, path)
+                                          .add(headerName, OVERRIDDEN_VALUE))
                       .aggregate().get();
 
-        assertEquals(OVERIDDEN_USER_AGENT_NAME, response.content().toStringUtf8());
+        assertEquals(OVERRIDDEN_VALUE, response.content().toStringUtf8());
     }
 
     @Test
