@@ -76,7 +76,7 @@ public class NonBlockingCircuitBreakerTest {
         ticker.advance(counterUpdateInterval.toNanos());
         cb.onFailure();
         Assertions.assertThat(cb.state().isOpen()).isTrue();
-        assertThat(cb.canRequest(), is(false));
+        Assertions.assertThat(cb.canRequest()).isFalse();
         return cb;
     }
 
@@ -86,10 +86,10 @@ public class NonBlockingCircuitBreakerTest {
 
         ticker.advance(circuitOpenWindow.toNanos());
 
-        assertThat(cb.state().isHalfOpen(), is(false));
+        Assertions.assertThat(cb.state().isHalfOpen()).isFalse();
         Assertions.assertThat(cb.canRequest()).isTrue(); // first request is allowed
         Assertions.assertThat(cb.state().isHalfOpen()).isTrue();
-        assertThat(cb.canRequest(), is(false)); // seconds request is refused
+        Assertions.assertThat(cb.canRequest()).isFalse(); // seconds request is refused
         return cb;
     }
 
@@ -115,7 +115,7 @@ public class NonBlockingCircuitBreakerTest {
         cb.onFailure();
 
         Assertions.assertThat(cb.state().isOpen()).isTrue();
-        assertThat(cb.canRequest(), is(false));
+        Assertions.assertThat(cb.canRequest()).isFalse();
     }
 
     @Test
@@ -145,7 +145,7 @@ public class NonBlockingCircuitBreakerTest {
         cb.onFailure();
 
         Assertions.assertThat(cb.state().isOpen()).isTrue(); // 10 vs 11 (0.52)
-        assertThat(cb.canRequest(), is(false));
+        Assertions.assertThat(cb.canRequest()).isFalse();
     }
 
     @Test
@@ -175,7 +175,7 @@ public class NonBlockingCircuitBreakerTest {
         cb.onFailure();
 
         Assertions.assertThat(cb.state().isOpen()).isTrue();
-        assertThat(cb.canRequest(), is(false));
+        Assertions.assertThat(cb.canRequest()).isFalse();
     }
 
     @Test
@@ -187,7 +187,7 @@ public class NonBlockingCircuitBreakerTest {
         Assertions.assertThat(cb.state().isHalfOpen()).isTrue();
         Assertions.assertThat(cb.canRequest()).isTrue(); // first request is allowed
         Assertions.assertThat(cb.state().isHalfOpen()).isTrue();
-        assertThat(cb.canRequest(), is(false)); // seconds request is refused
+        Assertions.assertThat(cb.canRequest()).isFalse(); // seconds request is refused
     }
 
     @Test

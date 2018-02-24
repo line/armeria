@@ -584,7 +584,7 @@ public class HttpServerTest {
             f.get();
             fail();
         } catch (ExecutionException e) {
-            assertThat(Exceptions.peel(e), is(instanceOf(ClosedSessionException.class)));
+            Assertions.assertThat(Exceptions.peel(e)).isInstanceOf(ClosedSessionException.class);
         }
     }
 
@@ -603,7 +603,7 @@ public class HttpServerTest {
             f.get();
             fail();
         } catch (ExecutionException e) {
-            assertThat(Exceptions.peel(e), is(instanceOf(ClosedSessionException.class)));
+            Assertions.assertThat(Exceptions.peel(e)).isInstanceOf(ClosedSessionException.class);
         }
     }
 

@@ -46,6 +46,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.thrift.server.TServlet;
+import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.http2.server.HTTP2CServerConnectionFactory;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
@@ -293,7 +294,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             // Test if no upgrade attempt is made thanks to the cache.
             assertThat(e.expected(), is(H2C));
             // It has no idea about the actual protocol, because it did not create any connection.
-            assertThat(e.actual().isPresent(), is(false));
+            Assertions.assertThat(e.actual().isPresent()).isFalse();
         }
     }
 

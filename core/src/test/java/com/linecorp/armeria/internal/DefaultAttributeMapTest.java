@@ -44,6 +44,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -133,7 +134,7 @@ public class DefaultAttributeMapTest {
 
     @Test
     public void testIteratorWithEmptyMap() {
-        assertThat(map.attrs().hasNext(), is(false));
+        Assertions.assertThat(map.attrs().hasNext()).isFalse();
     }
 
     @Test

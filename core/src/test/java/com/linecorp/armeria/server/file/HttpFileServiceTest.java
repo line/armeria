@@ -329,7 +329,7 @@ public class HttpFileServiceTest {
             assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue(),
                        startsWith(expectedContentType));
         } else {
-            assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE), is(false));
+            Assertions.assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isFalse();
         }
 
         return lastModified;

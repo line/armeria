@@ -19,10 +19,8 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -195,7 +193,7 @@ public class CircuitBreakerClientTest {
             // The future is `failureRes` itself
             Assertions.assertThat(future.isCompletedExceptionally()).isTrue();
             // This is not a CircuitBreakerException
-            assertThat(future.cause(), is(not(instanceOf(FailFastException.class))));
+            Assertions.assertThat(future.cause()).isNotInstanceOf(FailFastException.class);
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 
@@ -356,7 +354,7 @@ public class CircuitBreakerClientTest {
             // The future is `failedFuture` itself
             Assertions.assertThat(future.isCompletedExceptionally()).isTrue();
             // This is not a CircuitBreakerException
-            assertThat(future.cause(), is(not(instanceOf(FailFastException.class))));
+            Assertions.assertThat(future.cause()).isNotInstanceOf(FailFastException.class);
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 
@@ -364,7 +362,7 @@ public class CircuitBreakerClientTest {
         RpcResponse future1 = stub.execute(ctx, req);
         // The circuit is still CLOSED
         Assertions.assertThat(future1.isCompletedExceptionally()).isTrue();
-        assertThat(future1.cause(), is(not(instanceOf(FailFastException.class))));
+        Assertions.assertThat(future1.cause()).isNotInstanceOf(FailFastException.class);
     }
 
     private static void invoke(Function<Client<RpcRequest, RpcResponse>,
