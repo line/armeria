@@ -37,6 +37,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
+import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -80,7 +81,8 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
             for (HttpUriRequest r: reqs) {
                 try (CloseableHttpResponse res = hc.execute(r)) {
                     assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
-                    assertThat(EntityUtils.toString(res.getEntity()), is(not("Hello, world!")));
+                    Assertions.assertThat(EntityUtils.toString(res.getEntity()))
+                              .isNotEqualTo("Hello, world!");
                 }
             }
         }

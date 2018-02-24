@@ -25,12 +25,7 @@ import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -561,7 +556,7 @@ public class HttpServerTest {
     public void testTimeoutAfterInformationals() throws Exception {
         serverRequestTimeoutMillis = 1000L;
         final AggregatedHttpMessage res = client().get("/informed_delay/2000").aggregate().get();
-        assertThat(res.informationals(), is(not(empty())));
+        Assertions.assertThat(res.informationals()).isNotEmpty();
         res.informationals().forEach(h -> {
             assertThat(h.status(), is(HttpStatus.PROCESSING));
             assertThat(h.names(), contains(HttpHeaderNames.STATUS));

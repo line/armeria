@@ -290,7 +290,7 @@ public class HttpFileServiceTest {
                 final String newLastModified = assert200Ok(res, "text/html", expectedContentB);
 
                 // Ensure that the 'Last-Modified' changed.
-                assertThat(newLastModified, is(not(lastModified)));
+                Assertions.assertThat(newLastModified).isNotEqualTo(lastModified);
             }
 
             // Test if the cache detects the file removal correctly.

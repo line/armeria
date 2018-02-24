@@ -20,6 +20,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 public class VirtualHostBuilderTest {
@@ -28,14 +29,14 @@ public class VirtualHostBuilderTest {
     public void defaultVirtualHost() {
         final VirtualHost h = new VirtualHostBuilder().build();
         assertThat(h.hostnamePattern(), is("*"));
-        assertThat(h.defaultHostname(), is(not("*")));
+        Assertions.assertThat(h.defaultHostname()).isNotEqualTo("*");
     }
 
     @Test
     public void defaultVirtualHostWithExplicitAsterisk() {
         final VirtualHost h = new VirtualHostBuilder("*").build();
         assertThat(h.hostnamePattern(), is("*"));
-        assertThat(h.defaultHostname(), is(not("*")));
+        Assertions.assertThat(h.defaultHostname()).isNotEqualTo("*");
     }
 
     @Test
