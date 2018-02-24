@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.stream;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import javax.annotation.CheckReturnValue;
+
 import org.reactivestreams.Subscriber;
 
 /**
@@ -67,6 +69,7 @@ public interface StreamWriter<T> {
      *
      * @throws IllegalArgumentException if the publication of the specified object has been rejected
      */
+    @CheckReturnValue
     boolean tryWrite(T o);
 
     /**
@@ -76,6 +79,7 @@ public interface StreamWriter<T> {
      * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
      *         stream has been closed already.
      */
+    @CheckReturnValue
     default boolean tryWrite(Supplier<? extends T> o) {
         return tryWrite(o.get());
     }
