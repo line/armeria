@@ -25,6 +25,7 @@ import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -56,6 +57,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -156,6 +158,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private boolean handledLastRequest;
 
     private final Consumer<RequestLog> accessLogWriter;
+    private final IdentityHashMap<HttpResponse, Boolean> unfinishedResponses;
 
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
@@ -171,6 +174,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             responseEncoder = new Http1ObjectEncoder(true, protocol.isTls());
         }
 
+        unfinishedResponses = new IdentityHashMap<>();
         accessLogWriter = config.accessLogWriter();
     }
 
@@ -182,6 +186,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     @Override
     public int unfinishedRequests() {
         return unfinishedRequests;
+    }
+
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        super.channelUnregistered(ctx);
+        unfinishedResponses.keySet().forEach(StreamMessage::abort);
     }
 
     @Override
@@ -303,12 +313,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-            HttpResponse res;
+            HttpResponse serviceResponse;
             try {
                 req.init(reqCtx);
-                res = service.serve(reqCtx, req);
+                serviceResponse = service.serve(reqCtx, req);
             } catch (HttpResponseException cause) {
-                res = cause.httpResponse();
+                serviceResponse = cause.httpResponse();
             } catch (Throwable cause) {
                 try {
                     if (cause instanceof HttpStatusException) {
@@ -323,6 +333,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
                 return;
             }
+            final HttpResponse res = serviceResponse;
 
             final EventLoop eventLoop = channel.eventLoop();
 
@@ -330,6 +341,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // clean up the request stream when response stream ends.
             gracefulShutdownSupport.inc();
             unfinishedRequests++;
+            unfinishedResponses.put(res, true);
 
             if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), mapped.mapping())) {
                 reqCtx.log().addListener(log -> {
@@ -353,6 +365,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
                 eventLoop.execute(() -> {
                     gracefulShutdownSupport.dec();
+                    unfinishedResponses.remove(res);
                     if (--unfinishedRequests == 0 && handledLastRequest) {
                         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                     }

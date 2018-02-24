@@ -54,7 +54,7 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
     }
 
     @Override
-    public boolean write(T obj) {
+    public boolean tryWrite(T obj) {
         requireNonNull(obj, "obj");
         if (obj instanceof ReferenceCounted) {
             ((ReferenceCounted) obj).touch();

@@ -37,12 +37,37 @@ public interface StreamWriter<T> {
      * Writes the specified object to the {@link StreamMessage}. The written object will be transferred to the
      * {@link Subscriber}.
      *
+     * @throws AbortedStreamException if the stream was already closed
+     * @throws IllegalArgumentException if the publication of the specified object has been rejected
+     */
+    default void write(T o) {
+        if (!tryWrite(o)) {
+            throw AbortedStreamException.get();
+        }
+    }
+
+    /**
+     * Writes the specified object {@link Supplier} to the {@link StreamMessage}. The object provided by the
+     * {@link Supplier} will be transferred to the {@link Subscriber}.
+     *
+     * @throws AbortedStreamException if the stream was already closed.
+     */
+    default void write(Supplier<? extends T> o) {
+        if (!tryWrite(o)) {
+            throw AbortedStreamException.get();
+        }
+    }
+
+    /**
+     * Writes the specified object to the {@link StreamMessage}. The written object will be transferred to the
+     * {@link Subscriber}.
+     *
      * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
      *         stream has been closed already.
      *
      * @throws IllegalArgumentException if the publication of the specified object has been rejected
      */
-    boolean write(T o);
+    boolean tryWrite(T o);
 
     /**
      * Writes the specified object {@link Supplier} to the {@link StreamMessage}. The object provided by the
@@ -51,8 +76,8 @@ public interface StreamWriter<T> {
      * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
      *         stream has been closed already.
      */
-    default boolean write(Supplier<? extends T> o) {
-        return write(o.get());
+    default boolean tryWrite(Supplier<? extends T> o) {
+        return tryWrite(o.get());
     }
 
     /**

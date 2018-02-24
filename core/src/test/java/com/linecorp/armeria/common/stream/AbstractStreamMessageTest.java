@@ -184,7 +184,7 @@ public abstract class AbstractStreamMessageTest {
         StreamMessage<ByteBuf> stream = newStream(ImmutableList.of(buf));
 
         if (stream instanceof StreamWriter) {
-            assertThat(((StreamWriter<ByteBuf>) stream).write(buf)).isTrue();
+            ((StreamWriter<ByteBuf>) stream).write(buf);
             ((StreamWriter<?>) stream).close();
         }
         assertThat(buf.refCnt()).isEqualTo(1);
@@ -222,7 +222,7 @@ public abstract class AbstractStreamMessageTest {
         StreamMessage<ByteBufHolder> stream = newStream(ImmutableList.of(data));
 
         if (stream instanceof StreamWriter) {
-            assertThat(((StreamWriter<ByteBufHolder>) stream).write(data)).isTrue();
+            ((StreamWriter<ByteBufHolder>) stream).write(data);
             ((StreamWriter<?>) stream).close();
         }
         assertThat(data.refCnt()).isEqualTo(1);

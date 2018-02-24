@@ -313,7 +313,7 @@ public class StreamMessageDuplicatorTest {
         for (int i = 0; i < 30; i++) {
             final ByteBuf buf = newUnpooledBuffer();
             bufs[i] = buf;
-            assertThat(publisher.write(buf)).isTrue();  // Removing internal caches happens when i = 25
+            publisher.write(buf);
             assertThat(buf.refCnt()).isOne();
         }
 
