@@ -17,9 +17,9 @@
 package com.linecorp.armeria.server;
 
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
+import org.apache.http.Header;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -110,8 +110,8 @@ public class HttpServiceTest {
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 Assertions.assertThat(res.containsHeader("Content-Length")).isTrue();
-                assertThat(res.getHeaders("Content-Length").length, is(1));
-                assertThat(res.getHeaders("Content-Length")[0].getValue(), is("6"));
+                Assertions.assertThat(res.getHeaders("Content-Length"))
+                          .extracting(Header::getValue).containsExactly("6");
                 assertThat(EntityUtils.toString(res.getEntity()), is("200 OK"));
             }
         }

@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.time.Duration;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 public class CircuitBreakerBuilderTest {
@@ -51,7 +52,8 @@ public class CircuitBreakerBuilderTest {
     @Test
     public void testConstructor() {
         assertThat(new CircuitBreakerBuilder(remoteServiceName).build().name(), is(remoteServiceName));
-        assertThat(new CircuitBreakerBuilder().build().name(), is(startsWith("circuit-breaker-")));
+        Assertions.assertThat(new CircuitBreakerBuilder().build().name()).startsWith(
+                "circuit-breaker-");
     }
 
     @Test

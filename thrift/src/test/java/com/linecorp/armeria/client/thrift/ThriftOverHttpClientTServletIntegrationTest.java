@@ -282,7 +282,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             // Test if a failed upgrade attempt triggers an exception with
             // both 'expected' and 'actual' protocols.
             assertThat(e.expected(), is(H2C));
-            assertThat(e.actual().orElse(null), is(H1C));
+            Assertions.assertThat(e.actual()).contains(H1C);
             // .. and if the negotiation cache is updated.
             assertTrue(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C));
         }

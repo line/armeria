@@ -642,7 +642,7 @@ public class HttpServerTest {
         // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
         // If the number of deferred reads did not increase and the testStreaming() above did not fail,
         // it probably means the client failed to produce enough amount of traffic.
-        assertThat(InboundTrafficController.numDeferredReads(), is(greaterThan(oldNumDeferredReads)));
+        Assertions.assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
     }
 
     @Test(timeout = 10000)
@@ -825,7 +825,7 @@ public class HttpServerTest {
         // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
         // If the number of deferred reads did not increase and the testStreaming() above did not fail,
         // it probably means the client failed to produce enough amount of traffic.
-        assertThat(InboundTrafficController.numDeferredReads(), is(greaterThan(oldNumDeferredReads)));
+        Assertions.assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
     }
 
     @Test(timeout = 30000)

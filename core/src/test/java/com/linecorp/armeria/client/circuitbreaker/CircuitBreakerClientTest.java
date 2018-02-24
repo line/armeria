@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.fail;
@@ -301,7 +300,7 @@ public class CircuitBreakerClientTest {
                 stub.execute(ctx, req);
                 assertThat(i, is(lessThanOrEqualTo(minimumRequestThreshold)));
             } catch (FailFastException e) {
-                assertThat(i, is(greaterThan(minimumRequestThreshold)));
+                Assertions.assertThat(i).isGreaterThan(minimumRequestThreshold);
             }
             ticker.advance(Duration.ofMillis(1).toNanos());
         }

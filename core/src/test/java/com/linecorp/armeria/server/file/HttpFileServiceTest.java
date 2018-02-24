@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.file;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
 
@@ -232,9 +231,8 @@ public class HttpFileServiceTest {
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
                 final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
-                assertThat(content,
-                           is(Resources.toByteArray(Resources.getResource(
-                                   baseResourceDir + "foo/foo.txt.br"))));
+                Assertions.assertThat(content).containsExactly(
+                        Resources.toByteArray(Resources.getResource(baseResourceDir + "foo/foo.txt.br")));
             }
         }
     }
@@ -250,9 +248,8 @@ public class HttpFileServiceTest {
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
                 final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
-                assertThat(content,
-                           is(Resources.toByteArray(Resources.getResource(
-                                   baseResourceDir + "foo/foo.txt.br"))));
+                Assertions.assertThat(content).containsExactly(
+                        Resources.toByteArray(Resources.getResource(baseResourceDir + "foo/foo.txt.br")));
             }
         }
     }

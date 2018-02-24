@@ -36,6 +36,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
@@ -128,7 +129,8 @@ public class JettyServiceTest extends WebAppContainerTest {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
                            startsWith("image/x-icon"));
-                assertThat(EntityUtils.toByteArray(res.getEntity()).length, is(greaterThan(0)));
+                Assertions.assertThat(EntityUtils.toByteArray(res.getEntity()).length)
+                          .isGreaterThan(0);
             }
         }
     }
