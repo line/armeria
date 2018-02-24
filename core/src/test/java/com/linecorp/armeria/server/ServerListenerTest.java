@@ -18,55 +18,58 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
-import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class ServerListenerTest {
-    private static long STARTING_AT = 0L;
-    private static long STARTED_AT = 0L;
-    private static long STOPPING_AT = 0L;
-    private static long STOPPED_AT = 0L;
+    private static long STARTING_AT;
+    private static long STARTED_AT;
+    private static long STOPPING_AT;
+    private static long STOPPED_AT;
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.meterRegistry(PrometheusMeterRegistries.newRegistry());
-
-            final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
-                    new EchoService().decorate(LoggingService.newDecorator());
-
-            sb.service("/", immediateResponseOnIoThread);
+            sb.meterRegistry(PrometheusMeterRegistries.newRegistry())
+              .service("/", new EchoService());
 
             // Record when the method triggered
             ServerListener sl = new ServerListenerBuilder()
-                    .onStarting(() -> {
+                    // add a callback.
+                    .addStartingCallback(() -> {
                         ServerListenerTest.STARTING_AT = System.currentTimeMillis();
                     })
-                    .onStarted(() -> {
+                    // add multiple callbacks, one by one.
+                    .addStartedCallback(() -> {
+                        ServerListenerTest.STARTED_AT = -1;
+                    })
+                    .addStartedCallback(() -> {
                         ServerListenerTest.STARTED_AT = System.currentTimeMillis();
                     })
-                    .onStopping(() -> {
+                    // add multiple callbacks at once, with vargs api.
+                    .addStoppingCallbacks(() -> {
                         ServerListenerTest.STOPPING_AT = System.currentTimeMillis();
                     }, () -> {
                         ServerListenerTest.STARTING_AT = 0L;
                     })
-                    .onStopped(() -> {
-                        ServerListenerTest.STOPPED_AT = System.currentTimeMillis();
-                    }, () -> {
-                        ServerListenerTest.STARTED_AT = 0L;
-                    })
+                    // add multiple callbacks at once, with iterable api.
+                    .addStoppedCallbacks(
+                            Lists.newArrayList(() -> {
+                                ServerListenerTest.STOPPED_AT = System.currentTimeMillis();
+                            }, () -> {
+                                ServerListenerTest.STARTED_AT = 0L;
+                            })
+                    )
                     .build();
             sb.serverListener(sl);
         }
@@ -96,13 +99,6 @@ public class ServerListenerTest {
     }
 
     private static class EchoService extends AbstractHttpService {
-        @Override
-        protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(req.aggregate()
-                                        .thenApply(this::echo)
-                                        .exceptionally(CompletionActions::log));
-        }
-
         protected HttpResponse echo(AggregatedHttpMessage aReq) {
             return HttpResponse.of(
                     HttpHeaders.of(HttpStatus.OK),

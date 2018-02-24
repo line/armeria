@@ -16,68 +16,235 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
  * Builds a new {@link ServerListener}.
+ * <h2>Example</h2>
+ * <pre>{@code
+ * ServerListenerBuilder slb = new ServerListenerBuilder();
+ * // Add a {@link ServerListener#serverStarting(Server)} callback.
+ * slb.addStartingCallback(() -> {...});
+ * // Add multiple {@link ServerListener#serverStarted(Server)} callbacks, one by one.
+ * slb.addStartedCallback(() -> {...});
+ * slb.addStartedCallback(() -> {...});
+ * // Add multiple {@link ServerListener#serverStopping(Server)} callbacks at once, with varargs api.
+ * slb.addStoppingCallbacks(runnable1, runnable2, runnable3);
+ * // Add multiple {@link ServerListener#serverStopped(Server)} callbacks at once, with iterable api.
+ * slb.addStoppedCallbacks(runnableIterable);
+ * // Build a `ServerListener` instance.
+ * ServerListener sl = slb.build();
+ * // Set to `Server`.
+ * Server server = ...
+ * server.serverListener(sl);
+ * }</pre>
  * */
 public class ServerListenerBuilder {
 
     /**
-     * {@link Runnable}s invoked on when the {@link Server} is starting.
+     * {@link Runnable}s invoked when the {@link Server} is starting.
      * */
-    private List<Runnable> onStartings = new ArrayList<>();
+    private final List<Runnable> serverStartingCallbacks = new ArrayList<>();
 
     /**
-     * {@link Runnable}s invoked on when the {@link Server} is started.
+     * {@link Runnable}s invoked when the {@link Server} is started.
      * */
-    private List<Runnable> onStarteds = new ArrayList<>();
+    private final List<Runnable> serverStartedCallbacks = new ArrayList<>();
 
     /**
-     * {@link Runnable}s invoked on when the {@link Server} is stopping.
+     * {@link Runnable}s invoked when the {@link Server} is stopping.
      * */
-    private List<Runnable> onStoppings = new ArrayList<>();
+    private final List<Runnable> serverStoppingCallbacks = new ArrayList<>();
 
     /**
-     * {@link Runnable}s invoked on when the {@link Server} is stopped.
+     * {@link Runnable}s invoked when the {@link Server} is stopped.
      * */
-    private List<Runnable> onStoppeds = new ArrayList<>();
+    private final List<Runnable> serverStoppedCallbacks = new ArrayList<>();
+
+    private static class CallbackServerListener implements ServerListener {
+        /**
+         * {@link Runnable}s invoked when the {@link Server} is starting.
+         * */
+        private final List<Runnable> serverStartingCallbacks;
+
+        /**
+         * {@link Runnable}s invoked when the {@link Server} is started.
+         * */
+        private final List<Runnable> serverStartedCallbacks;
+
+        /**
+         * {@link Runnable}s invoked when the {@link Server} is stopping.
+         * */
+        private final List<Runnable> serverStoppingCallbacks;
+
+        /**
+         * {@link Runnable}s invoked when the {@link Server} is stopped.
+         * */
+        private final List<Runnable> serverStoppedCallbacks;
+
+        CallbackServerListener(List<Runnable> serverStartingCallbacks,
+                               List<Runnable> serverStartedCallbacks,
+                               List<Runnable> serverStoppingCallbacks,
+                               List<Runnable> serverStoppedCallbacks) {
+            this.serverStartingCallbacks = serverStartingCallbacks;
+            this.serverStartedCallbacks = serverStartedCallbacks;
+            this.serverStoppingCallbacks = serverStoppingCallbacks;
+            this.serverStoppedCallbacks = serverStoppedCallbacks;
+        }
+
+        @Override
+        public void serverStarting(Server server) {
+            for (Runnable serverStartingCallback : serverStartingCallbacks) {
+                serverStartingCallback.run();
+            }
+        }
+
+        @Override
+        public void serverStarted(Server server) {
+            for (Runnable serverStartedCallback : serverStartedCallbacks) {
+                serverStartedCallback.run();
+            }
+        }
+
+        @Override
+        public void serverStopping(Server server) {
+            for (Runnable serverStoppingCallback : serverStoppingCallbacks) {
+                serverStoppingCallback.run();
+            }
+        }
+
+        @Override
+        public void serverStopped(Server server) {
+            for (Runnable serverStoppedCallback : serverStoppedCallbacks) {
+                serverStoppedCallback.run();
+            }
+        }
+    }
 
     /**
-     * Set {@link Runnable}s invoked on when the {@link Server} is starting.
+     * Add {@link Runnable} invoked when the {@link Server} is starting.
      * (see: {@link ServerListener#serverStarting(Server)})
      */
-    public ServerListenerBuilder onStarting(Runnable... runnables) {
-        onStartings = Arrays.asList(runnables);
+    public ServerListenerBuilder addStartingCallback(Runnable runnable) {
+        serverStartingCallbacks.add(requireNonNull(runnable));
         return this;
     }
 
     /**
-     * Set {@link Runnable}s invoked on when the {@link Server} is started.
+     * Add {@link Runnable}s invoked when the {@link Server} is starting.
+     * (see: {@link ServerListener#serverStarting(Server)})
+     */
+    public ServerListenerBuilder addStartingCallbacks(Runnable... runnables) {
+        for (Runnable runnable : runnables) {
+            serverStartingCallbacks.add(requireNonNull(runnable));
+        }
+        return this;
+    }
+
+    /**
+     * Add {@link Runnable}s invoked when the {@link Server} is starting.
+     * (see: {@link ServerListener#serverStarting(Server)})
+     */
+    public ServerListenerBuilder addStartingCallbacks(Iterable<Runnable> runnables) {
+        for (Runnable runnable : runnables) {
+            serverStartingCallbacks.add(requireNonNull(runnable));
+        }
+        return this;
+    }
+
+    /**
+     * Add {@link Runnable} invoked when the {@link Server} is started.
      * (see: {@link ServerListener#serverStarted(Server)})
      */
-    public ServerListenerBuilder onStarted(Runnable... runnables) {
-        onStarteds = Arrays.asList(runnables);
+    public ServerListenerBuilder addStartedCallback(Runnable runnable) {
+        serverStartedCallbacks.add(requireNonNull(runnable));
         return this;
     }
 
     /**
-     * Set {@link Runnable}s invoked on when the {@link Server} is stopping.
+     * Add {@link Runnable}s invoked when the {@link Server} is started.
+     * (see: {@link ServerListener#serverStarted(Server)})
+     */
+    public ServerListenerBuilder addStartedCallbacks(Runnable... runnables) {
+        for (Runnable runnable : runnables) {
+            serverStartedCallbacks.add(requireNonNull(runnable));
+        }
+        return this;
+    }
+
+    /**
+     * Add {@link Runnable}s invoked when the {@link Server} is started.
+     * (see: {@link ServerListener#serverStarted(Server)})
+     */
+    public ServerListenerBuilder addStartedCallbacks(Iterable<Runnable> runnables) {
+        for (Runnable runnable : runnables) {
+            serverStartedCallbacks.add(requireNonNull(runnable));
+        }
+        return this;
+    }
+
+    /**
+     * Add {@link Runnable} invoked when the {@link Server} is stopping.
      * (see: {@link ServerListener#serverStopping(Server)})
      */
-    public ServerListenerBuilder onStopping(Runnable... runnables) {
-        onStoppings = Arrays.asList(runnables);
+    public ServerListenerBuilder addStoppingCallback(Runnable runnable) {
+        serverStoppingCallbacks.add(requireNonNull(runnable));
         return this;
     }
 
     /**
-     * Set {@link Runnable}s invoked on when the {@link Server} is stopped.
+     * Add {@link Runnable}s invoked when the {@link Server} is stopping.
+     * (see: {@link ServerListener#serverStopping(Server)})
+     */
+    public ServerListenerBuilder addStoppingCallbacks(Runnable... runnables) {
+        for (Runnable runnable : runnables) {
+            serverStoppingCallbacks.add(requireNonNull(runnable));
+        }
+        return this;
+    }
+
+    /**
+     * Add {@link Runnable}s invoked when the {@link Server} is stopping.
+     * (see: {@link ServerListener#serverStopping(Server)})
+     */
+    public ServerListenerBuilder addStoppingCallbacks(Iterable<Runnable> runnables) {
+        for (Runnable runnable : runnables) {
+            serverStoppingCallbacks.add(requireNonNull(runnable));
+        }
+        return this;
+    }
+
+    /**
+     * Add {@link Runnable} invoked on when the {@link Server} is stopped.
      * (see: {@link ServerListener#serverStopped(Server)})
      */
-    public ServerListenerBuilder onStopped(Runnable... runnables) {
-        onStoppeds = Arrays.asList(runnables);
+    public ServerListenerBuilder addStoppedCallbacks(Runnable runnable) {
+        serverStoppedCallbacks.add(requireNonNull(runnable));
+        return this;
+    }
+
+    /**
+     * Add {@link Runnable}s invoked on when the {@link Server} is stopped.
+     * (see: {@link ServerListener#serverStopped(Server)})
+     */
+    public ServerListenerBuilder addStoppedCallbacks(Runnable... runnables) {
+        for (Runnable runnable : runnables) {
+            serverStoppedCallbacks.add(requireNonNull(runnable));
+        }
+        return this;
+    }
+
+    /**
+     * Add {@link Runnable}s invoked on when the {@link Server} is stopped.
+     * (see: {@link ServerListener#serverStopped(Server)})
+     */
+    public ServerListenerBuilder addStoppedCallbacks(Iterable<Runnable> runnables) {
+        for (Runnable runnable : runnables) {
+            serverStoppedCallbacks.add(requireNonNull(runnable));
+        }
         return this;
     }
 
@@ -85,35 +252,7 @@ public class ServerListenerBuilder {
      * Returns a newly-created {@link ServerListener} based on the {@link Runnable}s added to this builder.
      */
     public ServerListener build() {
-        return new ServerListener() {
-
-            @Override
-            public void serverStarting(Server server) {
-                for (Runnable onStarting : onStartings) {
-                    onStarting.run();
-                }
-            }
-
-            @Override
-            public void serverStarted(Server server) {
-                for (Runnable onStarted : onStarteds) {
-                    onStarted.run();
-                }
-            }
-
-            @Override
-            public void serverStopping(Server server) {
-                for (Runnable onStopping : onStoppings) {
-                    onStopping.run();
-                }
-            }
-
-            @Override
-            public void serverStopped(Server server) {
-                for (Runnable onStopped : onStoppeds) {
-                    onStopped.run();
-                }
-            }
-        };
+        return new CallbackServerListener(serverStartingCallbacks, serverStartedCallbacks,
+                                          serverStoppingCallbacks, serverStoppedCallbacks);
     }
 }
