@@ -771,8 +771,8 @@ public class HttpServerTest {
             out.write("HEAD /head-headers-only HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
 
             // Should neither be chunked nor have content.
-            assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo("HTTP/1.1 200 OK\r\n" +
-                                                                                     "content-length: 0\r\n\r\n");
+            assertThat(new String(ByteStreams.toByteArray(in)))
+                    .isEqualTo("HTTP/1.1 200 OK\r\ncontent-length: 0\r\n\r\n");
         }
     }
 
