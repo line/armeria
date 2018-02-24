@@ -16,11 +16,6 @@
 
 package com.linecorp.armeria.server.jetty;
 
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertThat;
-
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -115,8 +110,9 @@ public class JettyServiceTest extends WebAppContainerTest {
 
     @Test
     public void configurator() throws Exception {
-        assertThat(jettyBeans, hasItems(instanceOf(ThreadPool.class),
-                                        instanceOf(WebAppContext.class)));
+        Assertions.assertThat(jettyBeans)
+                  .hasAtLeastOneElementOfType(ThreadPool.class)
+                  .hasAtLeastOneElementOfType(WebAppContext.class);
     }
 
     @Test
@@ -125,8 +121,8 @@ public class JettyServiceTest extends WebAppContainerTest {
             try (CloseableHttpResponse res = hc.execute(
                     new HttpGet(server.uri("/default/favicon.ico")))) {
                 Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
-                           startsWith("image/x-icon"));
+                Assertions.assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
+                              .startsWith("image/x-icon");
                 Assertions.assertThat(EntityUtils.toByteArray(res.getEntity()).length)
                           .isGreaterThan(0);
             }

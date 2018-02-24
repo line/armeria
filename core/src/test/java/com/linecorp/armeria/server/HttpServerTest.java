@@ -23,8 +23,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.awaitility.Awaitility.await;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -558,7 +556,7 @@ public class HttpServerTest {
         Assertions.assertThat(res.informationals()).isNotEmpty();
         res.informationals().forEach(h -> {
             Assertions.assertThat(h.status()).isEqualTo(HttpStatus.PROCESSING);
-            assertThat(h.names(), contains(HttpHeaderNames.STATUS));
+            Assertions.assertThat(h.names()).contains(HttpHeaderNames.STATUS);
         });
 
         Assertions.assertThat(res.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);

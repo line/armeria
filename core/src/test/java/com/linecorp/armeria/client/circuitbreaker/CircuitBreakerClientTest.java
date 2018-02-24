@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -296,7 +295,7 @@ public class CircuitBreakerClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             try {
                 stub.execute(ctx, req);
-                Assertions.assertThat(i).isEqualTo(lessThanOrEqualTo(minimumRequestThreshold));
+                Assertions.assertThat(i).isLessThanOrEqualTo(minimumRequestThreshold);
             } catch (FailFastException e) {
                 Assertions.assertThat(i).isGreaterThan(minimumRequestThreshold);
             }

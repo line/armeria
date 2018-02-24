@@ -18,9 +18,6 @@ package com.linecorp.armeria.server.thrift;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasItems;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -386,7 +383,7 @@ public class ThriftServiceTest {
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
             Assertions.assertThat(e.getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
-            assertThat(e.getMessage(), containsString(exception.toString()));
+            Assertions.assertThat(e.getMessage()).contains(exception.toString());
         }
     }
 
@@ -408,7 +405,7 @@ public class ThriftServiceTest {
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
             Assertions.assertThat(e.getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
-            assertThat(e.getMessage(), containsString(exception.toString()));
+            Assertions.assertThat(e.getMessage()).contains(exception.toString());
         }
     }
 
@@ -561,7 +558,7 @@ public class ThriftServiceTest {
             out.add(result.get(i));
         }
 
-        assertThat(out, hasItems((byte) 2, (byte) 3));
+        Assertions.assertThat(out).contains((byte) 2, (byte) 3);
     }
 
     @Test

@@ -16,8 +16,6 @@
 package com.linecorp.armeria.server.file;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertThat;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +28,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
+
+import javax.annotation.Nullable;
 
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -310,7 +310,8 @@ public class HttpFileServiceTest {
     }
 
     private static String assert200Ok(
-            CloseableHttpResponse res, String expectedContentType, String expectedContent) throws Exception {
+            CloseableHttpResponse res, @Nullable String expectedContentType, String expectedContent)
+            throws Exception {
 
         assertStatusLine(res, "HTTP/1.1 200 OK");
 
@@ -325,8 +326,8 @@ public class HttpFileServiceTest {
 
         if (expectedContentType != null) {
             Assertions.assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isTrue();
-            assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue(),
-                       startsWith(expectedContentType));
+            Assertions.assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue())
+                      .startsWith(expectedContentType);
         } else {
             Assertions.assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isFalse();
         }
