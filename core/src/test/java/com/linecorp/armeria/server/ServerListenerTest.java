@@ -84,7 +84,7 @@ public class ServerListenerTest {
     public void testServerListener() throws Exception {
         // Before stop
         assertThat(ServerListenerTest.STARTING_AT).isGreaterThan(0L);
-        assertThat(ServerListenerTest.STARTED_AT).isGreaterThan(ServerListenerTest.STARTING_AT);
+        assertThat(ServerListenerTest.STARTED_AT).isGreaterThanOrEqualTo(ServerListenerTest.STARTING_AT);
         assertThat(ServerListenerTest.STOPPING_AT).isEqualTo(0L);
         assertThat(ServerListenerTest.STOPPED_AT).isEqualTo(0L);
 
@@ -94,8 +94,8 @@ public class ServerListenerTest {
         // After stop
         assertThat(ServerListenerTest.STARTING_AT).isEqualTo(0L);
         assertThat(ServerListenerTest.STARTED_AT).isEqualTo(0L);
-        assertThat(ServerListenerTest.STOPPING_AT).isGreaterThan(0L);
-        assertThat(ServerListenerTest.STOPPED_AT).isGreaterThan(ServerListenerTest.STOPPING_AT);
+        assertThat(ServerListenerTest.STOPPING_AT).isGreaterThanOrEqualTo(0L);
+        assertThat(ServerListenerTest.STOPPED_AT).isGreaterThanOrEqualTo(ServerListenerTest.STOPPING_AT);
     }
 
     private static class EchoService extends AbstractHttpService {
