@@ -170,7 +170,7 @@ public class GrpcDocServicePluginTest {
                 .methods()
                 .stream()
                 .collect(toImmutableMap(MethodInfo::name, Function.identity()));
-        assertThat(functions).hasSize(7);
+        assertThat(functions).hasSize(8);
         MethodInfo emptyCall = functions.get("EmptyCall");
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
@@ -185,6 +185,7 @@ public class GrpcDocServicePluginTest {
         // Just sanity check that all methods are present, function conversion is more thoroughly tested in
         // newMethodInfo()
         assertThat(functions.get("UnaryCall").name()).isEqualTo("UnaryCall");
+        assertThat(functions.get("UnaryCall2").name()).isEqualTo("UnaryCall2");
         assertThat(functions.get("StreamingOutputCall").name()).isEqualTo("StreamingOutputCall");
         assertThat(functions.get("StreamingInputCall").name()).isEqualTo("StreamingInputCall");
         assertThat(functions.get("FullDuplexCall").name()).isEqualTo("FullDuplexCall");

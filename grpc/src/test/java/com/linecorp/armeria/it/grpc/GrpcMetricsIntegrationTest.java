@@ -37,9 +37,13 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -67,6 +71,16 @@ public class GrpcMetricsIntegrationTest {
     private static class TestServiceImpl extends TestServiceImplBase {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            if ("world".equals(request.getPayload().getBody().toStringUtf8())) {
+                responseObserver.onNext(SimpleResponse.getDefaultInstance());
+                responseObserver.onCompleted();
+                return;
+            }
+            responseObserver.onError(new IllegalArgumentException("bad argument"));
+        }
+
+        @Override
+        public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             if ("world".equals(request.getPayload().getBody().toStringUtf8())) {
                 responseObserver.onNext(SimpleResponse.getDefaultInstance());
                 responseObserver.onCompleted();
@@ -132,6 +146,25 @@ public class GrpcMetricsIntegrationTest {
         assertThat(findClientMeter("UnaryCall", "responseLength", TOTAL)).contains(4.0 * 5 /* + 3 * 0 */);
     }
 
+    @Test
+    public void unframed() throws Exception {
+        makeUnframedRequest("world");
+        makeUnframedRequest("world");
+        makeUnframedRequest("space");
+        makeUnframedRequest("world");
+        makeUnframedRequest("space");
+        makeUnframedRequest("space");
+        makeUnframedRequest("world");
+
+        // Chance that get() returns NPE before the metric is first added, so ignore exceptions.
+        given().ignoreExceptions().untilAsserted(() -> assertThat(
+                findServerMeter("UnaryCall2", "requests", COUNT, "result", "success")).contains(4.0));
+        given().ignoreExceptions().untilAsserted(() -> assertThat(
+                findServerMeter("UnaryCall2", "requests", COUNT, "result", "failure")).contains(3.0));
+        assertThat(findServerMeter("UnaryCall2", "responseLength", COUNT)).contains(7.0);
+        assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL)).contains(42.0);
+    }
+
     private static Optional<Double> findServerMeter(
             String method, String suffix, Statistic type, String... keyValues) {
         final MeterIdPrefix prefix = new MeterIdPrefix(
@@ -167,6 +200,24 @@ public class GrpcMetricsIntegrationTest {
                              .build();
         try {
             client.unaryCall(request);
+        } catch (Throwable t) {
+            // Ignore, we will count these up
+        }
+    }
+
+    private static void makeUnframedRequest(String name) throws Exception {
+        HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
+                .factory(clientFactory)
+                .addHttpHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
+                .build(HttpClient.class);
+
+        SimpleRequest request =
+                SimpleRequest.newBuilder()
+                             .setPayload(Payload.newBuilder()
+                                                .setBody(ByteString.copyFromUtf8(name)))
+                             .build();
+        try {
+            client.post("/armeria.grpc.testing.TestService/UnaryCall2", request.toByteArray());
         } catch (Throwable t) {
             // Ignore, we will count these up
         }
