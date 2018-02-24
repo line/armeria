@@ -16,8 +16,6 @@
 package com.linecorp.armeria.server.file;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
 

@@ -16,10 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.when;
 
 import org.apache.http.HttpHeaders;

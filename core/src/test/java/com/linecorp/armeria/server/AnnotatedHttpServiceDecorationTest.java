@@ -17,8 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.AnnotatedHttpServiceTest.validateContextAndRequest;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import org.assertj.core.api.Assertions;
 import org.junit.ClassRule;

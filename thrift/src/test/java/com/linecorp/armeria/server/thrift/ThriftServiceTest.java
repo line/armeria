@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doNothing;

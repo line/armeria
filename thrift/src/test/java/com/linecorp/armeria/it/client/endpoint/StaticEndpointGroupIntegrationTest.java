@@ -17,8 +17,6 @@
 package com.linecorp.armeria.it.client.endpoint;
 
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;

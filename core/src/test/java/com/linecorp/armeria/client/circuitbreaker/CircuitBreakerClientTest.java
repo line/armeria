@@ -17,8 +17,6 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;

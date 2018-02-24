@@ -17,8 +17,6 @@
 package com.linecorp.armeria.server.auth;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;

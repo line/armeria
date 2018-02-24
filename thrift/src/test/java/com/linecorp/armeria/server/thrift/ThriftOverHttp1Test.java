@@ -16,9 +16,6 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 
 import java.security.GeneralSecurityException;
 

@@ -17,8 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import java.security.cert.X509Certificate;
 

@@ -19,7 +19,6 @@ package com.linecorp.armeria.common;
 import static io.netty.util.AsciiString.of;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import org.assertj.core.api.Assertions;
