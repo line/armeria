@@ -57,8 +57,8 @@ public class ThriftDocStringExtractorTest {
                                 "META-INF/armeria/thrift/cassandra.json"))));
         assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.Compression"),
                    is("CQL query compression"));
-        assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType"),
-                   is(nullValue()));
+        Assertions.assertThat(
+                docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType")).isNull();
     }
 
     @Test

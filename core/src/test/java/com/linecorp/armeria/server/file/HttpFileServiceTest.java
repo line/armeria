@@ -192,7 +192,7 @@ public class HttpFileServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             try (CloseableHttpResponse res = hc.execute(request)) {
-                assertThat(res.getFirstHeader("Content-Encoding"), is(nullValue()));
+                Assertions.assertThat(res.getFirstHeader("Content-Encoding")).isNull();
                 assertThat(res.getFirstHeader("Content-Type").getValue(), is("text/plain; charset=utf-8"));
                 final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
                 assertThat(new String(content, StandardCharsets.UTF_8), is("foo"));
@@ -344,13 +344,13 @@ public class HttpFileServiceTest {
         assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue(), is(expectedLastModified));
 
         // Ensure that the content does not exist.
-        assertThat(res.getEntity(), is(nullValue()));
+        Assertions.assertThat(res.getEntity()).isNull();
     }
 
     private static void assert404NotFound(CloseableHttpResponse res) {
         assertStatusLine(res, "HTTP/1.1 404 Not Found");
         // Ensure that the 'Last-Modified' header does not exist.
-        assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED), is(nullValue()));
+        Assertions.assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED)).isNull();
     }
 
     private static void assertStatusLine(CloseableHttpResponse res, String expectedStatusLine) {

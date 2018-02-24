@@ -21,7 +21,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -213,11 +212,11 @@ public class CircuitBreakerClientTest {
 
         // HALF OPEN
         RpcResponse future2 = stub.execute(ctx, req);
-        assertThat(future2.get(), is(nullValue()));
+        Assertions.assertThat(future2.get()).isNull();
 
         // CLOSED
         RpcResponse future3 = stub.execute(ctx, req);
-        assertThat(future3.get(), is(nullValue()));
+        Assertions.assertThat(future3.get()).isNull();
     }
 
     @Test
@@ -317,7 +316,7 @@ public class CircuitBreakerClientTest {
 
         // CLOSED (methodB)
         RpcResponse future2 = stub.execute(ctxB, reqB);
-        assertThat(future2.get(), is(nullValue()));
+        Assertions.assertThat(future2.get()).isNull();
     }
 
     @Test

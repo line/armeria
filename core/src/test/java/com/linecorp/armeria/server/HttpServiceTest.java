@@ -120,13 +120,13 @@ public class HttpServiceTest {
             // Ensure the HEAD response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpHead(rule.httpUri("/200")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.getEntity(), is(nullValue()));
+                Assertions.assertThat(res.getEntity()).isNull();
             }
 
             // Ensure the 204 response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/204")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 204 No Content"));
-                assertThat(res.getEntity(), is(nullValue()));
+                Assertions.assertThat(res.getEntity()).isNull();
             }
         }
     }

@@ -653,8 +653,8 @@ public class HttpServerTest {
         final AggregatedHttpMessage res = f.get();
 
         assertThat(res.status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
-        assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
+        Assertions.assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
+        Assertions.assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
         assertThat(res.content().toStringUtf8(), is("Armeria is awesome!"));
     }
 
@@ -688,8 +688,8 @@ public class HttpServerTest {
         final AggregatedHttpMessage res = f.get();
 
         assertThat(res.status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
-        assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
+        Assertions.assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
+        Assertions.assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
         assertThat(res.content().toStringUtf8(), is("Armeria is awesome!"));
     }
 
@@ -702,8 +702,8 @@ public class HttpServerTest {
         final AggregatedHttpMessage res = f.get();
 
         assertThat(res.status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
-        assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
+        Assertions.assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
+        Assertions.assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
         assertThat(res.content().toStringUtf8(), is(Strings.repeat("a", 1023)));
     }
 
@@ -755,8 +755,8 @@ public class HttpServerTest {
         final AggregatedHttpMessage res = f.get();
 
         assertThat(res.status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
-        assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
+        Assertions.assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
+        Assertions.assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
         assertThat(res.content().toStringUtf8(), is("Armeria is awesome!"));
     }
 
