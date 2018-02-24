@@ -201,7 +201,7 @@ public class CircuitBreakerClientTest {
             fail();
         } catch (FailFastException e) {
             // The circuit is OPEN
-            assertThat(e.getCircuitBreaker(), is(circuitBreaker));
+            Assertions.assertThat(e.getCircuitBreaker()).isEqualTo(circuitBreaker);
         }
 
         ticker.advance(circuitOpenWindow.toNanos());
@@ -298,7 +298,7 @@ public class CircuitBreakerClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             try {
                 stub.execute(ctx, req);
-                assertThat(i, is(lessThanOrEqualTo(minimumRequestThreshold)));
+                Assertions.assertThat(i).isEqualTo(lessThanOrEqualTo(minimumRequestThreshold));
             } catch (FailFastException e) {
                 Assertions.assertThat(i).isGreaterThan(minimumRequestThreshold);
             }
@@ -383,7 +383,7 @@ public class CircuitBreakerClientTest {
                 invoke(decorator);
                 fail();
             } catch (FailFastException e) {
-                assertThat(e.getCircuitBreaker(), is(circuitBreaker));
+                Assertions.assertThat(e.getCircuitBreaker()).isEqualTo(circuitBreaker);
             }
         }
     }

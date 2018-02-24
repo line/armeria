@@ -209,7 +209,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         for (int i = 0; i <= MAX_RETRIES; i++) {
             try {
                 assertEquals("Hello, old world!", client.hello("old world"));
-                assertThat(sessionProtocol.get(), is(H1C));
+                Assertions.assertThat(sessionProtocol.get()).isEqualTo(H1C);
                 if (i != 0) {
                     logger.warn("Succeeded after {} retries.", i);
                 }
@@ -238,7 +238,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         for (int i = 0; i <= MAX_RETRIES; i++) {
             try {
                 assertEquals("Hello, ancient world!", client.hello("ancient world"));
-                assertThat(sessionProtocol.get(), is(H1C));
+                Assertions.assertThat(sessionProtocol.get()).isEqualTo(H1C);
                 if (i != 0) {
                     logger.warn("Succeeded after {} retries.", i);
                 }
@@ -259,7 +259,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         final HelloService.Iface client = newSchemeCapturingClient(http2uri(HTTP), sessionProtocol);
 
         assertEquals("Hello, new world!", client.hello("new world"));
-        assertThat(sessionProtocol.get(), is(H2C));
+        Assertions.assertThat(sessionProtocol.get()).isEqualTo(H2C);
     }
 
     /**
@@ -281,7 +281,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         } catch (SessionProtocolNegotiationException e) {
             // Test if a failed upgrade attempt triggers an exception with
             // both 'expected' and 'actual' protocols.
-            assertThat(e.expected(), is(H2C));
+            Assertions.assertThat(e.expected()).isEqualTo(H2C);
             Assertions.assertThat(e.actual()).contains(H1C);
             // .. and if the negotiation cache is updated.
             assertTrue(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C));
@@ -292,7 +292,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             fail();
         } catch (SessionProtocolNegotiationException e) {
             // Test if no upgrade attempt is made thanks to the cache.
-            assertThat(e.expected(), is(H2C));
+            Assertions.assertThat(e.expected()).isEqualTo(H2C);
             // It has no idea about the actual protocol, because it did not create any connection.
             Assertions.assertThat(e.actual().isPresent()).isFalse();
         }

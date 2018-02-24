@@ -126,7 +126,7 @@ public class JettyServiceTest extends WebAppContainerTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
                     new HttpGet(server.uri("/default/favicon.ico")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
                            startsWith("image/x-icon"));
                 Assertions.assertThat(EntityUtils.toByteArray(res.getEntity()).length)

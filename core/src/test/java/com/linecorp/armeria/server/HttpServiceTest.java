@@ -85,17 +85,19 @@ public class HttpServiceTest {
     public void testHello() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/hello/foo")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Hello, foo!"));
+                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                Assertions.assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, foo!");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/hello/foo/bar")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpDelete(rule.httpUri("/hello/bar")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("405 Method Not Allowed"));
+                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo(
+                        "HTTP/1.1 405 Method Not Allowed");
+                Assertions.assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(
+                        "405 Method Not Allowed");
             }
         }
     }
@@ -108,24 +110,24 @@ public class HttpServiceTest {
             HttpUriRequest req = new HttpGet(rule.httpUri("/200"));
             req.setHeader("Connection", "Close");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 Assertions.assertThat(res.containsHeader("Content-Length")).isTrue();
                 Assertions.assertThat(res.getHeaders("Content-Length"))
                           .extracting(Header::getValue).containsExactly("6");
-                assertThat(EntityUtils.toString(res.getEntity()), is("200 OK"));
+                Assertions.assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("200 OK");
             }
         }
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Ensure the HEAD response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpHead(rule.httpUri("/200")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 Assertions.assertThat(res.getEntity()).isNull();
             }
 
             // Ensure the 204 response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/204")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 204 No Content"));
+                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 204 No Content");
                 Assertions.assertThat(res.getEntity()).isNull();
             }
         }

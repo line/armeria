@@ -16,10 +16,6 @@
 
 package com.linecorp.armeria.server.thrift;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
-
 import java.io.IOException;
 import java.util.Map;
 
@@ -43,9 +39,9 @@ public class ThriftDocStringExtractorTest {
                         "META-INF/armeria/thrift/ThriftTest.json",
                         Resources.toByteArray(Resources.getResource(
                                 "META-INF/armeria/thrift/ThriftTest.json"))));
-        assertThat(docStrings.get("thrift.test.Numberz"), is("Docstring!"));
-        assertThat(docStrings.get("thrift.test.ThriftTest/testVoid"),
-                   is("Prints \"testVoid()\" and returns nothing."));
+        Assertions.assertThat(docStrings.get("thrift.test.Numberz")).isEqualTo("Docstring!");
+        Assertions.assertThat(docStrings.get("thrift.test.ThriftTest/testVoid")).isEqualTo(
+                "Prints \"testVoid()\" and returns nothing.");
     }
 
     @Test
@@ -55,8 +51,8 @@ public class ThriftDocStringExtractorTest {
                         "META-INF/armeria/thrift/ThriftTest.json",
                         Resources.toByteArray(Resources.getResource(
                                 "META-INF/armeria/thrift/cassandra.json"))));
-        assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.Compression"),
-                   is("CQL query compression"));
+        Assertions.assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.Compression"))
+                  .isEqualTo("CQL query compression");
         Assertions.assertThat(
                 docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType")).isNull();
     }

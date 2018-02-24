@@ -80,7 +80,8 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             for (HttpUriRequest r: reqs) {
                 try (CloseableHttpResponse res = hc.execute(r)) {
-                    assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
+                    Assertions.assertThat(res.getStatusLine().toString()).isEqualTo(
+                            "HTTP/1.1 405 Method Not Allowed");
                     Assertions.assertThat(EntityUtils.toString(res.getEntity()))
                               .isNotEqualTo("Hello, world!");
                 }
@@ -99,9 +100,9 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
             client.send_sleep(1000);
             client.send_sleep(500);
             client.send_sleep(0);
-            assertThat(client.recv_sleep(), is(1000L));
-            assertThat(client.recv_sleep(), is(500L));
-            assertThat(client.recv_sleep(), is(0L));
+            Assertions.assertThat(client.recv_sleep()).isEqualTo(1000L);
+            Assertions.assertThat(client.recv_sleep()).isEqualTo(500L);
+            Assertions.assertThat(client.recv_sleep()).isEqualTo(0L);
         }
     }
 }

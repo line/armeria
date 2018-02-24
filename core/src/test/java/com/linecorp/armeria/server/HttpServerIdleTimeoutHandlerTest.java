@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -91,14 +92,14 @@ public class HttpServerIdleTimeoutHandlerTest {
     private void readRequest() {
         final Object msg = new Object();
         ch.writeInbound(msg);
-        assertThat(ch.readInbound(), is(msg));
+        Assertions.assertThat(ch.readInbound()).isEqualTo(msg);
         server.unfinishedRequests++;
     }
 
     private void writeResponse() {
         final Object msg = new Object();
         ch.writeOutbound(msg);
-        assertThat(ch.readOutbound(), is(msg));
+        Assertions.assertThat(ch.readOutbound()).isEqualTo(msg);
         server.unfinishedRequests--;
     }
 

@@ -20,6 +20,7 @@ import static com.linecorp.armeria.server.AnnotatedHttpServiceTest.validateConte
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+import org.assertj.core.api.Assertions;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -156,27 +157,28 @@ public class AnnotatedHttpServiceDecorationTest {
         AggregatedHttpMessage response;
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/ok")).aggregate().get();
-        assertThat(response.headers().status(), is(HttpStatus.OK));
+        Assertions.assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/tooManyRequests")).aggregate().get();
-        assertThat(response.headers().status(), is(HttpStatus.TOO_MANY_REQUESTS));
+        Assertions.assertThat(response.headers().status()).isEqualTo(
+                HttpStatus.TOO_MANY_REQUESTS);
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/locked")).aggregate().get();
-        assertThat(response.headers().status(), is(HttpStatus.LOCKED));
+        Assertions.assertThat(response.headers().status()).isEqualTo(HttpStatus.LOCKED);
 
         // Call inherited methods.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/tooManyRequests")).aggregate().get();
-        assertThat(response.headers().status(), is(HttpStatus.TOO_MANY_REQUESTS));
+        Assertions.assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/locked")).aggregate().get();
-        assertThat(response.headers().status(), is(HttpStatus.LOCKED));
+        Assertions.assertThat(response.headers().status()).isEqualTo(HttpStatus.LOCKED);
 
         // Call a new method.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/added")).aggregate().get();
-        assertThat(response.headers().status(), is(HttpStatus.OK));
+        Assertions.assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
 
         // Call an overriding method.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/override")).aggregate().get();
-        assertThat(response.headers().status(), is(HttpStatus.TOO_MANY_REQUESTS));
+        Assertions.assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 }

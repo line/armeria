@@ -20,6 +20,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,14 +95,14 @@ public class HttpClientIdleTimeoutHandlerTest {
         session.unfinishedResponses--;
         final Object res = new Object();
         ch.writeInbound(res);
-        assertThat(ch.readInbound(), is(res));
+        Assertions.assertThat(ch.readInbound()).isEqualTo(res);
     }
 
     private void writeRequest() {
         session.unfinishedResponses++;
         final Object req = new Object();
         ch.writeOutbound(req);
-        assertThat(ch.readOutbound(), is(req));
+        Assertions.assertThat(ch.readOutbound()).isEqualTo(req);
     }
 
     private static final class MockHttpSessionHandler

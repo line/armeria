@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.when;
 
 import org.apache.http.HttpHeaders;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -72,32 +73,32 @@ public class ManagedHttpHealthCheckServiceTest {
 
         AggregatedHttpMessage res = service.serve(context, HC_TURN_OFF_REQ).aggregate().get();
 
-        assertThat(res.status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE)),
-                   is(MediaType.PLAIN_TEXT_UTF_8.toString()));
-        assertThat(res.content().toStringUtf8(), is("Set unhealthy."));
+        Assertions.assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE)))
+                  .isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
+        Assertions.assertThat(res.content().toStringUtf8()).isEqualTo("Set unhealthy.");
 
         res = service.serve(context, HC_REQ).aggregate().get();
 
-        assertThat(res.status(), is(HttpStatus.SERVICE_UNAVAILABLE));
-        assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE)),
-                   is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        Assertions.assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        Assertions.assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE))).isEqualTo(
+                MediaType.PLAIN_TEXT_UTF_8.toString());
     }
 
     @Test
     public void turnOn() throws Exception {
         AggregatedHttpMessage res = service.serve(context, HC_TURN_ON_REQ).aggregate().get();
 
-        assertThat(res.status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE)),
-                   is(MediaType.PLAIN_TEXT_UTF_8.toString()));
-        assertThat(res.content().toStringUtf8(), is("Set healthy."));
+        Assertions.assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE))).isEqualTo(
+                MediaType.PLAIN_TEXT_UTF_8.toString());
+        Assertions.assertThat(res.content().toStringUtf8()).isEqualTo("Set healthy.");
 
         res = service.serve(context, HC_REQ).aggregate().get();
 
-        assertThat(res.status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE)),
-                   is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        Assertions.assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE))).isEqualTo(
+                MediaType.PLAIN_TEXT_UTF_8.toString());
     }
 
     @Test
@@ -108,10 +109,10 @@ public class ManagedHttpHealthCheckServiceTest {
 
         AggregatedHttpMessage res = service.serve(context, noopRequest).aggregate().get();
 
-        assertThat(res.status(), is(HttpStatus.BAD_REQUEST));
-        assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE)),
-                   is(MediaType.PLAIN_TEXT_UTF_8.toString()));
-        assertThat(res.content().toStringUtf8(), is("Not supported."));
+        Assertions.assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        Assertions.assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE))).isEqualTo(
+                MediaType.PLAIN_TEXT_UTF_8.toString());
+        Assertions.assertThat(res.content().toStringUtf8()).isEqualTo("Not supported.");
 
         service.serverHealth.setHealthy(true);
 
@@ -121,9 +122,9 @@ public class ManagedHttpHealthCheckServiceTest {
 
         res = service.serve(context, noopRequest).aggregate().get();
 
-        assertThat(res.status(), is(HttpStatus.BAD_REQUEST));
-        assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE)),
-                   is(MediaType.PLAIN_TEXT_UTF_8.toString()));
-        assertThat(res.content().toStringUtf8(), is("Not supported."));
+        Assertions.assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        Assertions.assertThat(res.headers().get(AsciiString.of(HttpHeaders.CONTENT_TYPE))).isEqualTo(
+                MediaType.PLAIN_TEXT_UTF_8.toString());
+        Assertions.assertThat(res.content().toStringUtf8()).isEqualTo("Not supported.");
     }
 }

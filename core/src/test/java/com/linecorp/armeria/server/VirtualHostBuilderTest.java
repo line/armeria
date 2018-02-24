@@ -28,36 +28,36 @@ public class VirtualHostBuilderTest {
     @Test
     public void defaultVirtualHost() {
         final VirtualHost h = new VirtualHostBuilder().build();
-        assertThat(h.hostnamePattern(), is("*"));
+        Assertions.assertThat(h.hostnamePattern()).isEqualTo("*");
         Assertions.assertThat(h.defaultHostname()).isNotEqualTo("*");
     }
 
     @Test
     public void defaultVirtualHostWithExplicitAsterisk() {
         final VirtualHost h = new VirtualHostBuilder("*").build();
-        assertThat(h.hostnamePattern(), is("*"));
+        Assertions.assertThat(h.hostnamePattern()).isEqualTo("*");
         Assertions.assertThat(h.defaultHostname()).isNotEqualTo("*");
     }
 
     @Test
     public void defaultVirtualHostWithExplicitAsterisk2() {
         final VirtualHost h = new VirtualHostBuilder("foo", "*").build();
-        assertThat(h.hostnamePattern(), is("*"));
-        assertThat(h.defaultHostname(), is("foo"));
+        Assertions.assertThat(h.hostnamePattern()).isEqualTo("*");
+        Assertions.assertThat(h.defaultHostname()).isEqualTo("foo");
     }
 
     @Test
     public void virtualHostWithoutPattern() {
         final VirtualHost h = new VirtualHostBuilder("foo.com", "foo.com").build();
-        assertThat(h.hostnamePattern(), is("foo.com"));
-        assertThat(h.defaultHostname(), is("foo.com"));
+        Assertions.assertThat(h.hostnamePattern()).isEqualTo("foo.com");
+        Assertions.assertThat(h.defaultHostname()).isEqualTo("foo.com");
     }
 
     @Test
     public void virtualHostWithPattern() {
         final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com").build();
-        assertThat(h.hostnamePattern(), is("*.foo.com"));
-        assertThat(h.defaultHostname(), is("bar.foo.com"));
+        Assertions.assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
+        Assertions.assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
     }
 
     @Test(expected = IllegalArgumentException.class)

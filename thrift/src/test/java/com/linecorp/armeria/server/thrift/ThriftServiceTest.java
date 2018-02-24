@@ -152,7 +152,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(client.recv_hello(), is("Hello, foo!"));
+        Assertions.assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
     }
 
     @Test
@@ -167,7 +167,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(client.recv_hello(), is("Hello, foo!"));
+        Assertions.assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
     }
 
     @Test
@@ -181,7 +181,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(client.recv_hello(), is("false"));
+        Assertions.assertThat(client.recv_hello()).isEqualTo("false");
     }
 
     @Test
@@ -196,7 +196,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(client.recv_hello(), is("false"));
+        Assertions.assertThat(client.recv_hello()).isEqualTo("false");
     }
 
     @Test
@@ -214,7 +214,7 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        assertThat(promise.get(), is(promise2.get()));
+        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
@@ -231,7 +231,7 @@ public class ThriftServiceTest {
         invoke(service);
 
         Assertions.assertThat(promise.get().isEmpty()).isTrue();
-        assertThat(actualName.get(), is(FOO));
+        Assertions.assertThat(actualName.get()).isEqualTo(FOO);
     }
 
     @Test
@@ -250,7 +250,7 @@ public class ThriftServiceTest {
         invoke(service);
 
         Assertions.assertThat(promise.get().isEmpty()).isTrue();
-        assertThat(actualName.get(), is(FOO));
+        Assertions.assertThat(actualName.get()).isEqualTo(FOO);
     }
 
     @Test
@@ -266,7 +266,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(consumed.get(), is(FOO));
+        Assertions.assertThat(consumed.get()).isEqualTo(FOO);
 
         client.recv_consume();
     }
@@ -286,7 +286,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(consumed.get(), is("bar"));
+        Assertions.assertThat(consumed.get()).isEqualTo("bar");
 
         client.recv_consume();
     }
@@ -307,7 +307,7 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        assertThat(promise.get(), is(promise2.get()));
+        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
@@ -366,7 +366,7 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        assertThat(promise.get(), is(promise2.get()));
+        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
@@ -386,7 +386,7 @@ public class ThriftServiceTest {
             client.recv_create();
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
-            assertThat(e.getType(), is(TApplicationException.INTERNAL_ERROR));
+            Assertions.assertThat(e.getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
             assertThat(e.getMessage(), containsString(exception.toString()));
         }
     }
@@ -408,7 +408,7 @@ public class ThriftServiceTest {
             client.recv_create();
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
-            assertThat(e.getType(), is(TApplicationException.INTERNAL_ERROR));
+            Assertions.assertThat(e.getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
             assertThat(e.getMessage(), containsString(exception.toString()));
         }
     }
@@ -430,7 +430,7 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        assertThat(promise.get(), is(promise2.get()));
+        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
@@ -444,7 +444,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(client.recv_removeMiddle(), is(new Name(BAZ, null, FOO)));
+        Assertions.assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
     }
 
     @Test
@@ -460,7 +460,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(client.recv_removeMiddle(), is(new Name(BAZ, null, FOO)));
+        Assertions.assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
     }
 
     @Test
@@ -479,7 +479,7 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        assertThat(promise.get(), is(promise2.get()));
+        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
@@ -536,7 +536,7 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        assertThat(promise.get(), is(promise2.get()));
+        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
@@ -594,7 +594,7 @@ public class ThriftServiceTest {
         final HttpData res2 = promise2.get();
 
         in.reset(res1.array(), res1.offset(), res1.length());
-        assertThat(client1.recv_removeMiddle(), is(new Name(BAZ, null, FOO)));
+        Assertions.assertThat(client1.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
 
         in.reset(res2.array(), res2.offset(), res2.length());
         Assertions.assertThat(client2.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
