@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.jetty;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -29,7 +31,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
@@ -110,7 +111,7 @@ public class JettyServiceTest extends WebAppContainerTest {
 
     @Test
     public void configurator() throws Exception {
-        Assertions.assertThat(jettyBeans)
+        assertThat(jettyBeans)
                   .hasAtLeastOneElementOfType(ThreadPool.class)
                   .hasAtLeastOneElementOfType(WebAppContext.class);
     }
@@ -120,10 +121,10 @@ public class JettyServiceTest extends WebAppContainerTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
                     new HttpGet(server.uri("/default/favicon.ico")))) {
-                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
-                Assertions.assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                               .startsWith("image/x-icon");
-                Assertions.assertThat(EntityUtils.toByteArray(res.getEntity()).length)
+                assertThat(EntityUtils.toByteArray(res.getEntity()).length)
                           .isGreaterThan(0);
             }
         }

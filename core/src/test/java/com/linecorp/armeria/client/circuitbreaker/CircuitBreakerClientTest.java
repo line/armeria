@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -28,7 +29,6 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.util.function.Function;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import com.google.common.testing.FakeTicker;
@@ -186,9 +186,9 @@ public class CircuitBreakerClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             RpcResponse future = stub.execute(ctx, req);
             // The future is `failureRes` itself
-            Assertions.assertThat(future.isCompletedExceptionally()).isTrue();
+            assertThat(future.isCompletedExceptionally()).isTrue();
             // This is not a CircuitBreakerException
-            Assertions.assertThat(future.cause()).isNotInstanceOf(FailFastException.class);
+            assertThat(future.cause()).isNotInstanceOf(FailFastException.class);
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 
@@ -198,7 +198,7 @@ public class CircuitBreakerClientTest {
             fail();
         } catch (FailFastException e) {
             // The circuit is OPEN
-            Assertions.assertThat(e.getCircuitBreaker()).isEqualTo(circuitBreaker);
+            assertThat(e.getCircuitBreaker()).isEqualTo(circuitBreaker);
         }
 
         ticker.advance(circuitOpenWindow.toNanos());
@@ -208,11 +208,11 @@ public class CircuitBreakerClientTest {
 
         // HALF OPEN
         RpcResponse future2 = stub.execute(ctx, req);
-        Assertions.assertThat(future2.get()).isNull();
+        assertThat(future2.get()).isNull();
 
         // CLOSED
         RpcResponse future3 = stub.execute(ctx, req);
-        Assertions.assertThat(future3.get()).isNull();
+        assertThat(future3.get()).isNull();
     }
 
     @Test
@@ -295,9 +295,9 @@ public class CircuitBreakerClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             try {
                 stub.execute(ctx, req);
-                Assertions.assertThat(i).isLessThanOrEqualTo(minimumRequestThreshold);
+                assertThat(i).isLessThanOrEqualTo(minimumRequestThreshold);
             } catch (FailFastException e) {
-                Assertions.assertThat(i).isGreaterThan(minimumRequestThreshold);
+                assertThat(i).isGreaterThan(minimumRequestThreshold);
             }
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
@@ -312,7 +312,7 @@ public class CircuitBreakerClientTest {
 
         // CLOSED (methodB)
         RpcResponse future2 = stub.execute(ctxB, reqB);
-        Assertions.assertThat(future2.get()).isNull();
+        assertThat(future2.get()).isNull();
     }
 
     @Test
@@ -347,17 +347,17 @@ public class CircuitBreakerClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             RpcResponse future = stub.execute(ctx, req);
             // The future is `failedFuture` itself
-            Assertions.assertThat(future.isCompletedExceptionally()).isTrue();
+            assertThat(future.isCompletedExceptionally()).isTrue();
             // This is not a CircuitBreakerException
-            Assertions.assertThat(future.cause()).isNotInstanceOf(FailFastException.class);
+            assertThat(future.cause()).isNotInstanceOf(FailFastException.class);
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 
         // OPEN
         RpcResponse future1 = stub.execute(ctx, req);
         // The circuit is still CLOSED
-        Assertions.assertThat(future1.isCompletedExceptionally()).isTrue();
-        Assertions.assertThat(future1.cause()).isNotInstanceOf(FailFastException.class);
+        assertThat(future1.isCompletedExceptionally()).isTrue();
+        assertThat(future1.cause()).isNotInstanceOf(FailFastException.class);
     }
 
     private static void invoke(Function<Client<RpcRequest, RpcResponse>,
@@ -380,7 +380,7 @@ public class CircuitBreakerClientTest {
                 invoke(decorator);
                 fail();
             } catch (FailFastException e) {
-                Assertions.assertThat(e.getCircuitBreaker()).isEqualTo(circuitBreaker);
+                assertThat(e.getCircuitBreaker()).isEqualTo(circuitBreaker);
             }
         }
     }

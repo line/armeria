@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.thrift;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -44,7 +45,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.thrift.server.TServlet;
-import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.http2.server.HTTP2CServerConnectionFactory;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
@@ -207,7 +207,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         for (int i = 0; i <= MAX_RETRIES; i++) {
             try {
                 assertEquals("Hello, old world!", client.hello("old world"));
-                Assertions.assertThat(sessionProtocol.get()).isEqualTo(H1C);
+                assertThat(sessionProtocol.get()).isEqualTo(H1C);
                 if (i != 0) {
                     logger.warn("Succeeded after {} retries.", i);
                 }
@@ -236,7 +236,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         for (int i = 0; i <= MAX_RETRIES; i++) {
             try {
                 assertEquals("Hello, ancient world!", client.hello("ancient world"));
-                Assertions.assertThat(sessionProtocol.get()).isEqualTo(H1C);
+                assertThat(sessionProtocol.get()).isEqualTo(H1C);
                 if (i != 0) {
                     logger.warn("Succeeded after {} retries.", i);
                 }
@@ -257,7 +257,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         final HelloService.Iface client = newSchemeCapturingClient(http2uri(HTTP), sessionProtocol);
 
         assertEquals("Hello, new world!", client.hello("new world"));
-        Assertions.assertThat(sessionProtocol.get()).isEqualTo(H2C);
+        assertThat(sessionProtocol.get()).isEqualTo(H2C);
     }
 
     /**
@@ -279,8 +279,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         } catch (SessionProtocolNegotiationException e) {
             // Test if a failed upgrade attempt triggers an exception with
             // both 'expected' and 'actual' protocols.
-            Assertions.assertThat(e.expected()).isEqualTo(H2C);
-            Assertions.assertThat(e.actual()).contains(H1C);
+            assertThat(e.expected()).isEqualTo(H2C);
+            assertThat(e.actual()).contains(H1C);
             // .. and if the negotiation cache is updated.
             assertTrue(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C));
         }
@@ -290,9 +290,9 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             fail();
         } catch (SessionProtocolNegotiationException e) {
             // Test if no upgrade attempt is made thanks to the cache.
-            Assertions.assertThat(e.expected()).isEqualTo(H2C);
+            assertThat(e.expected()).isEqualTo(H2C);
             // It has no idea about the actual protocol, because it did not create any connection.
-            Assertions.assertThat(e.actual().isPresent()).isFalse();
+            assertThat(e.actual().isPresent()).isFalse();
         }
     }
 

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.file;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +39,6 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -146,7 +146,7 @@ public class HttpFileServiceTest {
             }
 
             // Confirm file service paths are cached when cache is enabled.
-            org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+            assertThat(PathAndQuery.cachedPaths())
                                            .contains("/foo.txt");
         }
     }
@@ -189,14 +189,14 @@ public class HttpFileServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             try (CloseableHttpResponse res = hc.execute(request)) {
-                Assertions.assertThat(res.getFirstHeader("Content-Encoding")).isNull();
-                Assertions.assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
+                assertThat(res.getFirstHeader("Content-Encoding")).isNull();
+                assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
                         "text/plain; charset=utf-8");
                 final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
-                Assertions.assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo");
+                assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo");
 
                 // Confirm path not cached when cache disabled.
-                org.assertj.core.api.Assertions.assertThat(PathAndQuery.cachedPaths())
+                assertThat(PathAndQuery.cachedPaths())
                                                .doesNotContain("/compressed/foo.txt");
             }
         }
@@ -208,14 +208,14 @@ public class HttpFileServiceTest {
             HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "gzip");
             try (CloseableHttpResponse res = hc.execute(request)) {
-                Assertions.assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("gzip");
-                Assertions.assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
+                assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("gzip");
+                assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
                         "text/plain; charset=utf-8");
                 final byte[] content;
                 try (GZIPInputStream unzipper = new GZIPInputStream(res.getEntity().getContent())) {
                     content = ByteStreams.toByteArray(unzipper);
                 }
-                Assertions.assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo");
+                assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo");
             }
         }
     }
@@ -226,13 +226,13 @@ public class HttpFileServiceTest {
             HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "br");
             try (CloseableHttpResponse res = hc.execute(request)) {
-                Assertions.assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("br");
-                Assertions.assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
+                assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("br");
+                assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
                         "text/plain; charset=utf-8");
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
                 final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
-                Assertions.assertThat(content).containsExactly(
+                assertThat(content).containsExactly(
                         Resources.toByteArray(Resources.getResource(baseResourceDir + "foo/foo.txt.br")));
             }
         }
@@ -244,13 +244,13 @@ public class HttpFileServiceTest {
             HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "gzip, br");
             try (CloseableHttpResponse res = hc.execute(request)) {
-                Assertions.assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("br");
-                Assertions.assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
+                assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("br");
+                assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
                         "text/plain; charset=utf-8");
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
                 final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
-                Assertions.assertThat(content).containsExactly(
+                assertThat(content).containsExactly(
                         Resources.toByteArray(Resources.getResource(baseResourceDir + "foo/foo.txt.br")));
             }
         }
@@ -285,19 +285,19 @@ public class HttpFileServiceTest {
 
             // HTTP-date has no sub-second precision; just add a few seconds to the time.
             Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
-            Assertions.assertThat(
+            assertThat(
                     barFile.setLastModified(now.getTime() + TimeUnit.SECONDS.toMillis(5))).isTrue();
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 final String newLastModified = assert200Ok(res, "text/html", expectedContentB);
 
                 // Ensure that the 'Last-Modified' changed.
-                Assertions.assertThat(newLastModified).isNotEqualTo(lastModified);
+                assertThat(newLastModified).isNotEqualTo(lastModified);
             }
 
             // Test if the cache detects the file removal correctly.
             final boolean deleted = barFile.delete();
-            Assertions.assertThat(deleted).isTrue();
+            assertThat(deleted).isTrue();
 
             req = new HttpGet(newUri("/fs/bar.html"));
             req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
@@ -317,19 +317,19 @@ public class HttpFileServiceTest {
 
         // Ensure that the 'Last-Modified' header exists and is well-formed.
         final String lastModified;
-        Assertions.assertThat(res.containsHeader(HttpHeaders.LAST_MODIFIED)).isTrue();
+        assertThat(res.containsHeader(HttpHeaders.LAST_MODIFIED)).isTrue();
         lastModified = res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue();
         DateFormatter.parseHttpDate(lastModified);
 
         // Ensure the content and its type are correct.
-        Assertions.assertThat(EntityUtils.toString(res.getEntity()).trim()).isEqualTo(expectedContent);
+        assertThat(EntityUtils.toString(res.getEntity()).trim()).isEqualTo(expectedContent);
 
         if (expectedContentType != null) {
-            Assertions.assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isTrue();
-            Assertions.assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue())
+            assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isTrue();
+            assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue())
                       .startsWith(expectedContentType);
         } else {
-            Assertions.assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isFalse();
+            assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isFalse();
         }
 
         return lastModified;
@@ -341,21 +341,21 @@ public class HttpFileServiceTest {
         assertStatusLine(res, "HTTP/1.1 304 Not Modified");
 
         // Ensure that the 'Last-Modified' header did not change.
-        Assertions.assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue()).isEqualTo(
+        assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue()).isEqualTo(
                 expectedLastModified);
 
         // Ensure that the content does not exist.
-        Assertions.assertThat(res.getEntity()).isNull();
+        assertThat(res.getEntity()).isNull();
     }
 
     private static void assert404NotFound(CloseableHttpResponse res) {
         assertStatusLine(res, "HTTP/1.1 404 Not Found");
         // Ensure that the 'Last-Modified' header does not exist.
-        Assertions.assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED)).isNull();
+        assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED)).isNull();
     }
 
     private static void assertStatusLine(CloseableHttpResponse res, String expectedStatusLine) {
-        Assertions.assertThat(res.getStatusLine().toString()).isEqualTo(expectedStatusLine);
+        assertThat(res.getStatusLine().toString()).isEqualTo(expectedStatusLine);
     }
 
     private static String currentHttpDate() {

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.tomcat;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.File;
 
 import org.apache.catalina.connector.Connector;
@@ -25,7 +27,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -85,7 +86,7 @@ public class UnmanagedTomcatServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/empty/")))) {
                 // as connector is not configured, TomcatServiceInvocationHandler will throw.
-                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo(
+                assertThat(res.getStatusLine().toString()).isEqualTo(
                         "HTTP/1.1 503 Service Unavailable");
             }
         }
@@ -97,7 +98,7 @@ public class UnmanagedTomcatServiceTest {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/no-webapp/")))) {
                 // as no webapp is configured inside tomcat, 404 will be thrown.
                 System.err.println("Entity: " + EntityUtils.toString(res.getEntity()));
-                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo(
+                assertThat(res.getStatusLine().toString()).isEqualTo(
                         "HTTP/1.1 404 Not Found");
             }
         }
@@ -107,7 +108,7 @@ public class UnmanagedTomcatServiceTest {
     public void ok() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/some-webapp/")))) {
-                Assertions.assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
         }
     }

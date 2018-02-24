@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.thrift;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -39,7 +40,6 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
-import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -141,21 +141,21 @@ public class ThriftServiceTest {
     public void testSync_HelloService_hello() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
         invoke(service);
 
-        Assertions.assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
+        assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
     }
 
     @Test
     public void testAsync_HelloService_hello() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
@@ -163,28 +163,28 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        Assertions.assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
+        assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
     }
 
     @Test
     public void testSync_HelloService_hello_with_null() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(null);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (HelloService.Iface) name -> String.valueOf(name != null), defaultSerializationFormat);
 
         invoke(service);
 
-        Assertions.assertThat(client.recv_hello()).isEqualTo("false");
+        assertThat(client.recv_hello()).isEqualTo("false");
     }
 
     @Test
     public void testAsync_HelloService_hello_with_null() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(null);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
@@ -192,14 +192,14 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        Assertions.assertThat(client.recv_hello()).isEqualTo("false");
+        assertThat(client.recv_hello()).isEqualTo("false");
     }
 
     @Test
     public void testIdentity_HelloService_hello() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService syncService = THttpService.of(
                 (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
@@ -210,7 +210,7 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
+        assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
@@ -219,15 +219,15 @@ public class ThriftServiceTest {
 
         OnewayHelloService.Client client = new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (OnewayHelloService.Iface) actualName::set, defaultSerializationFormat);
 
         invoke(service);
 
-        Assertions.assertThat(promise.get().isEmpty()).isTrue();
-        Assertions.assertThat(actualName.get()).isEqualTo(FOO);
+        assertThat(promise.get().isEmpty()).isTrue();
+        assertThat(actualName.get()).isEqualTo(FOO);
     }
 
     @Test
@@ -236,7 +236,7 @@ public class ThriftServiceTest {
 
         OnewayHelloService.Client client = new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
             actualName.set(name);
@@ -245,8 +245,8 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        Assertions.assertThat(promise.get().isEmpty()).isTrue();
-        Assertions.assertThat(actualName.get()).isEqualTo(FOO);
+        assertThat(promise.get().isEmpty()).isTrue();
+        assertThat(actualName.get()).isEqualTo(FOO);
     }
 
     @Test
@@ -255,14 +255,14 @@ public class ThriftServiceTest {
 
         DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume(FOO);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (DevNullService.Iface) consumed::set, defaultSerializationFormat);
 
         invoke(service);
 
-        Assertions.assertThat(consumed.get()).isEqualTo(FOO);
+        assertThat(consumed.get()).isEqualTo(FOO);
 
         client.recv_consume();
     }
@@ -273,7 +273,7 @@ public class ThriftServiceTest {
 
         DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume("bar");
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of((DevNullService.AsyncIface) (value, resultHandler) -> {
             consumed.set(value);
@@ -282,7 +282,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        Assertions.assertThat(consumed.get()).isEqualTo("bar");
+        assertThat(consumed.get()).isEqualTo("bar");
 
         client.recv_consume();
     }
@@ -291,7 +291,7 @@ public class ThriftServiceTest {
     public void testIdentity_DevNullService_consume() throws Exception {
         DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume(FOO);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService syncService = THttpService.of((DevNullService.Iface) value -> {
             // NOOP
@@ -303,14 +303,14 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
+        assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
     public void testSync_FileService_create_reply() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of((FileService.Iface) path -> {
             throw newFileServiceException();
@@ -330,7 +330,7 @@ public class ThriftServiceTest {
     public void testAsync_FileService_create_reply() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
@@ -350,7 +350,7 @@ public class ThriftServiceTest {
     public void testIdentity_FileService_create_reply() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService syncService = THttpService.of((FileService.Iface) path -> {
             throw newFileServiceException();
@@ -362,14 +362,14 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
+        assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
     public void testSync_FileService_create_exception() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
         THttpService service = THttpService.of((FileService.Iface) path -> {
@@ -382,8 +382,8 @@ public class ThriftServiceTest {
             client.recv_create();
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
-            Assertions.assertThat(e.getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
-            Assertions.assertThat(e.getMessage()).contains(exception.toString());
+            assertThat(e.getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
+            assertThat(e.getMessage()).contains(exception.toString());
         }
     }
 
@@ -391,7 +391,7 @@ public class ThriftServiceTest {
     public void testAsync_FileService_create_exception() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
         THttpService service = THttpService.of(
@@ -404,8 +404,8 @@ public class ThriftServiceTest {
             client.recv_create();
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
-            Assertions.assertThat(e.getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
-            Assertions.assertThat(e.getMessage()).contains(exception.toString());
+            assertThat(e.getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
+            assertThat(e.getMessage()).contains(exception.toString());
         }
     }
 
@@ -413,7 +413,7 @@ public class ThriftServiceTest {
     public void testIdentity_FileService_create_exception() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
         THttpService syncService = THttpService.of((FileService.Iface) path -> {
@@ -426,28 +426,28 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
+        assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
     public void testSync_NameService_removeMiddle() throws Exception {
         NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
         invoke(service);
 
-        Assertions.assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
+        assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
     }
 
     @Test
     public void testAsync_NameService_removeMiddle() throws Exception {
         NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of(
                 (NameService.AsyncIface) (name, resultHandler) ->
@@ -456,14 +456,14 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        Assertions.assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
+        assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
     }
 
     @Test
     public void testIdentity_NameService_removeMiddle() throws Exception {
         NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(FOO, BAZ, BAR));
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService syncService = THttpService.of(
                 (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
@@ -475,14 +475,14 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
+        assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
     public void testSync_NameSortService_sort() throws Exception {
         NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of((NameSortService.Iface) names -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
@@ -492,14 +492,14 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        Assertions.assertThat(client.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
+        assertThat(client.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
     @Test
     public void testAsync_NameSortService_sort() throws Exception {
         NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService service = THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
@@ -509,14 +509,14 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        Assertions.assertThat(client.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
+        assertThat(client.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
     @Test
     public void testIdentity_NameSortService_sort() throws Exception {
         NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         THttpService syncService = THttpService.of((NameSortService.Iface) names -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
@@ -532,7 +532,7 @@ public class ThriftServiceTest {
 
         invokeTwice(syncService, asyncService);
 
-        Assertions.assertThat(promise.get()).isEqualTo(promise2.get());
+        assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
     @Test
@@ -558,14 +558,14 @@ public class ThriftServiceTest {
             out.add(result.get(i));
         }
 
-        Assertions.assertThat(out).contains((byte) 2, (byte) 3);
+        assertThat(out).contains((byte) 2, (byte) 3);
     }
 
     @Test
     public void testMultipleInheritance() throws Exception {
         NameService.Client client1 = new NameService.Client.Factory().getClient(inProto, outProto);
         client1.send_removeMiddle(new Name(BAZ, BAR, FOO));
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         final HttpData req1 = HttpData.of(out.getArray(), 0, out.length());
 
@@ -574,7 +574,7 @@ public class ThriftServiceTest {
 
         NameSortService.Client client2 = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client2.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
-        Assertions.assertThat(out.length()).isGreaterThan(0);
+        assertThat(out.length()).isGreaterThan(0);
 
         final HttpData req2 = HttpData.of(out.getArray(), 0, out.length());
 
@@ -590,10 +590,10 @@ public class ThriftServiceTest {
         final HttpData res2 = promise2.get();
 
         in.reset(res1.array(), res1.offset(), res1.length());
-        Assertions.assertThat(client1.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
+        assertThat(client1.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
 
         in.reset(res2.array(), res2.offset(), res2.length());
-        Assertions.assertThat(client2.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
+        assertThat(client2.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
     // NB: By making this interface functional, we can use lambda expression to implement

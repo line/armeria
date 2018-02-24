@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import org.assertj.core.api.Assertions;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.Test;
 
 public class VirtualHostBuilderTest {
@@ -24,36 +25,36 @@ public class VirtualHostBuilderTest {
     @Test
     public void defaultVirtualHost() {
         final VirtualHost h = new VirtualHostBuilder().build();
-        Assertions.assertThat(h.hostnamePattern()).isEqualTo("*");
-        Assertions.assertThat(h.defaultHostname()).isNotEqualTo("*");
+        assertThat(h.hostnamePattern()).isEqualTo("*");
+        assertThat(h.defaultHostname()).isNotEqualTo("*");
     }
 
     @Test
     public void defaultVirtualHostWithExplicitAsterisk() {
         final VirtualHost h = new VirtualHostBuilder("*").build();
-        Assertions.assertThat(h.hostnamePattern()).isEqualTo("*");
-        Assertions.assertThat(h.defaultHostname()).isNotEqualTo("*");
+        assertThat(h.hostnamePattern()).isEqualTo("*");
+        assertThat(h.defaultHostname()).isNotEqualTo("*");
     }
 
     @Test
     public void defaultVirtualHostWithExplicitAsterisk2() {
         final VirtualHost h = new VirtualHostBuilder("foo", "*").build();
-        Assertions.assertThat(h.hostnamePattern()).isEqualTo("*");
-        Assertions.assertThat(h.defaultHostname()).isEqualTo("foo");
+        assertThat(h.hostnamePattern()).isEqualTo("*");
+        assertThat(h.defaultHostname()).isEqualTo("foo");
     }
 
     @Test
     public void virtualHostWithoutPattern() {
         final VirtualHost h = new VirtualHostBuilder("foo.com", "foo.com").build();
-        Assertions.assertThat(h.hostnamePattern()).isEqualTo("foo.com");
-        Assertions.assertThat(h.defaultHostname()).isEqualTo("foo.com");
+        assertThat(h.hostnamePattern()).isEqualTo("foo.com");
+        assertThat(h.defaultHostname()).isEqualTo("foo.com");
     }
 
     @Test
     public void virtualHostWithPattern() {
         final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com").build();
-        Assertions.assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
-        Assertions.assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
+        assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
+        assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
     }
 
     @Test(expected = IllegalArgumentException.class)

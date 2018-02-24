@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -38,7 +40,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
-import org.assertj.core.api.Assertions;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -865,22 +866,22 @@ public class AnnotatedHttpServiceTest {
                             @Nullable Charset encoding,
                             @Nullable String contentType) throws IOException {
         final HttpStatus status = HttpStatus.valueOf(statusCode);
-        Assertions.assertThat(res.getStatusLine().toString()).isEqualTo(
+        assertThat(res.getStatusLine().toString()).isEqualTo(
                 "HTTP/1.1 " + status);
         if (body != null) {
             if (encoding != null) {
-                Assertions.assertThat(EntityUtils.toString(res.getEntity(), encoding))
+                assertThat(EntityUtils.toString(res.getEntity(), encoding))
                           .isEqualTo(body);
             } else {
-                Assertions.assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(body);
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(body);
             }
         }
 
         final org.apache.http.Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
         if (contentType != null) {
-            Assertions.assertThat(MediaType.parse(header.getValue())).isEqualTo(MediaType.parse(contentType));
+            assertThat(MediaType.parse(header.getValue())).isEqualTo(MediaType.parse(contentType));
         } else if (statusCode >= 400) {
-            Assertions.assertThat(header.getValue()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
+            assertThat(header.getValue()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
         } else {
             assert header == null;
         }

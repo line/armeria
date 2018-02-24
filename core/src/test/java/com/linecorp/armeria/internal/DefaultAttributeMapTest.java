@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.internal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -42,7 +43,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -132,7 +132,7 @@ public class DefaultAttributeMapTest {
 
     @Test
     public void testIteratorWithEmptyMap() {
-        Assertions.assertThat(map.attrs().hasNext()).isFalse();
+        assertThat(map.attrs().hasNext()).isFalse();
     }
 
     @Test
