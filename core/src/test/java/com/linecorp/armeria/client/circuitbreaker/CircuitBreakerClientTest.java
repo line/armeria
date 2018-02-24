@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.util.function.Function;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import com.google.common.testing.FakeTicker;
@@ -192,7 +193,7 @@ public class CircuitBreakerClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             RpcResponse future = stub.execute(ctx, req);
             // The future is `failureRes` itself
-            assertThat(future.isCompletedExceptionally(), is(true));
+            Assertions.assertThat(future.isCompletedExceptionally()).isTrue();
             // This is not a CircuitBreakerException
             assertThat(future.cause(), is(not(instanceOf(FailFastException.class))));
             ticker.advance(Duration.ofMillis(1).toNanos());
@@ -353,7 +354,7 @@ public class CircuitBreakerClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             RpcResponse future = stub.execute(ctx, req);
             // The future is `failedFuture` itself
-            assertThat(future.isCompletedExceptionally(), is(true));
+            Assertions.assertThat(future.isCompletedExceptionally()).isTrue();
             // This is not a CircuitBreakerException
             assertThat(future.cause(), is(not(instanceOf(FailFastException.class))));
             ticker.advance(Duration.ofMillis(1).toNanos());
@@ -362,7 +363,7 @@ public class CircuitBreakerClientTest {
         // OPEN
         RpcResponse future1 = stub.execute(ctx, req);
         // The circuit is still CLOSED
-        assertThat(future1.isCompletedExceptionally(), is(true));
+        Assertions.assertThat(future1.isCompletedExceptionally()).isTrue();
         assertThat(future1.cause(), is(not(instanceOf(FailFastException.class))));
     }
 

@@ -44,6 +44,7 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -230,7 +231,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(promise.get().isEmpty(), is(true));
+        Assertions.assertThat(promise.get().isEmpty()).isTrue();
         assertThat(actualName.get(), is(FOO));
     }
 
@@ -249,7 +250,7 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        assertThat(promise.get().isEmpty(), is(true));
+        Assertions.assertThat(promise.get().isEmpty()).isTrue();
         assertThat(actualName.get(), is(FOO));
     }
 

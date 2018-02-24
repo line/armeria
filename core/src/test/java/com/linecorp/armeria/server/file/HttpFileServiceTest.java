@@ -41,6 +41,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -285,8 +286,8 @@ public class HttpFileServiceTest {
 
             // HTTP-date has no sub-second precision; just add a few seconds to the time.
             Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
-            assertThat(barFile.setLastModified(now.getTime() + TimeUnit.SECONDS.toMillis(5)),
-                       is(true));
+            Assertions.assertThat(
+                    barFile.setLastModified(now.getTime() + TimeUnit.SECONDS.toMillis(5))).isTrue();
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 final String newLastModified = assert200Ok(res, "text/html", expectedContentB);
@@ -297,7 +298,7 @@ public class HttpFileServiceTest {
 
             // Test if the cache detects the file removal correctly.
             final boolean deleted = barFile.delete();
-            assertThat(deleted, is(true));
+            Assertions.assertThat(deleted).isTrue();
 
             req = new HttpGet(newUri("/fs/bar.html"));
             req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
@@ -316,7 +317,7 @@ public class HttpFileServiceTest {
 
         // Ensure that the 'Last-Modified' header exists and is well-formed.
         final String lastModified;
-        assertThat(res.containsHeader(HttpHeaders.LAST_MODIFIED), is(true));
+        Assertions.assertThat(res.containsHeader(HttpHeaders.LAST_MODIFIED)).isTrue();
         lastModified = res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue();
         DateFormatter.parseHttpDate(lastModified);
 
@@ -324,7 +325,7 @@ public class HttpFileServiceTest {
         assertThat(EntityUtils.toString(res.getEntity()).trim(), is(expectedContent));
 
         if (expectedContentType != null) {
-            assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE), is(true));
+            Assertions.assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isTrue();
             assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue(),
                        startsWith(expectedContentType));
         } else {

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertThat;
 import java.io.IOException;
 import java.util.Map;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -63,8 +64,9 @@ public class ThriftDocStringExtractorTest {
     @Test
     public void testGetAllDocStrings() throws IOException {
         Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
-        assertThat(docStrings.containsKey("thrift.test.Numberz"), is(true));
-        assertThat(docStrings.containsKey("com.linecorp.armeria.service.test.thrift.cassandra.Compression"),
-                   is(true));
+        Assertions.assertThat(docStrings.containsKey("thrift.test.Numberz")).isTrue();
+        Assertions.assertThat(
+                docStrings.containsKey("com.linecorp.armeria.service.test.thrift.cassandra.Compression"))
+                  .isTrue();
     }
 }

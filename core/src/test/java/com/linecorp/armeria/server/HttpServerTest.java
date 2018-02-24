@@ -58,6 +58,7 @@ import java.util.zip.InflaterInputStream;
 
 import javax.annotation.Nullable;
 
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -505,7 +506,7 @@ public class HttpServerTest {
     public void testHead() throws Exception {
         final AggregatedHttpMessage res = client().head("/path/blah").aggregate().get();
         assertThat(res.headers().status(), is(HttpStatus.OK));
-        assertThat(res.content().isEmpty(), is(true));
+        Assertions.assertThat(res.content().isEmpty()).isTrue();
         assertThat(res.headers().getInt(HttpHeaderNames.CONTENT_LENGTH), is(5));
     }
 

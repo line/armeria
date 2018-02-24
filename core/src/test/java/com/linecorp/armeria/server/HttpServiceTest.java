@@ -28,6 +28,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -108,7 +109,7 @@ public class HttpServiceTest {
             req.setHeader("Connection", "Close");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.containsHeader("Content-Length"), is(true));
+                Assertions.assertThat(res.containsHeader("Content-Length")).isTrue();
                 assertThat(res.getHeaders("Content-Length").length, is(1));
                 assertThat(res.getHeaders("Content-Length")[0].getValue(), is("6"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("200 OK"));
