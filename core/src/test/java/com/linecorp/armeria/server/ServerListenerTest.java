@@ -46,27 +46,27 @@ public class ServerListenerTest {
             // Record when the method triggered
             ServerListener sl = new ServerListenerBuilder()
                     // add a callback.
-                    .addStartingCallback(() -> {
+                    .addStartingCallback((Server server) -> {
                         ServerListenerTest.STARTING_AT = System.currentTimeMillis();
                     })
                     // add multiple callbacks, one by one.
-                    .addStartedCallback(() -> {
+                    .addStartedCallback((Server server) -> {
                         ServerListenerTest.STARTED_AT = -1;
                     })
-                    .addStartedCallback(() -> {
+                    .addStartedCallback((Server server) -> {
                         ServerListenerTest.STARTED_AT = System.currentTimeMillis();
                     })
                     // add multiple callbacks at once, with vargs api.
-                    .addStoppingCallbacks(() -> {
+                    .addStoppingCallbacks((Server server) -> {
                         ServerListenerTest.STOPPING_AT = System.currentTimeMillis();
-                    }, () -> {
+                    }, (Server server) -> {
                         ServerListenerTest.STARTING_AT = 0L;
                     })
                     // add multiple callbacks at once, with iterable api.
                     .addStoppedCallbacks(
-                            Lists.newArrayList(() -> {
+                            Lists.newArrayList((Server server) -> {
                                 ServerListenerTest.STOPPED_AT = System.currentTimeMillis();
-                            }, () -> {
+                            }, (Server server) -> {
                                 ServerListenerTest.STARTED_AT = 0L;
                             })
                     )
