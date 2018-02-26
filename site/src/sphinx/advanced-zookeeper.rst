@@ -6,7 +6,7 @@
 .. _`EndpointGroup`: apidocs/index.html?com/linecorp/armeria/client/EndpointGroup.html
 .. _`EndpointGroupRegistry`: apidocs/index.html?com/linecorp/armeria/client/EndpointGroupRegistry.html
 .. _`ZooKeeperEndpointGroup`: apidocs/index.html?com/linecorp/armeria/client/zookeeper/ZooKeeperEndpointGroup.html
-.. _`ZooKeeperUpdatingListener`: apidocs/index.html?com/linecorp/armeria/server/zookeeper/ZooKeeperUpdatingListener.html
+.. _`ZookeeperRegisterBuilder`: apidocs/index.html?com/linecorp/armeria/server/zookeeper/ZookeeperRegisterBuilder.html
 
 .. _advanced-zookeeper:
 
@@ -60,24 +60,28 @@ For more information, please refer to the API documentation of the `com.linecorp
 Automatic service registration
 ------------------------------
 
-Use `ZooKeeperUpdatingListener`_ to register your server to a ZooKeeper cluster:
+Use `ZookeeperRegisterBuilder`_ to register your server to a ZooKeeper cluster:
 
 .. code-block:: java
 
     import com.linecorp.armeria.server.ServerListener;
-    import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener;
+    import com.linecorp.armeria.server.zookeeper.ZookeeperRegisterBuilder;
 
     // This constructor will use server's default host name, port and weight.
     // Use the other constructors to override the defaults.
-    ServerListener listener = new ZooKeeperUpdatingListener(
-            /* zkConnectionStr */ "myZooKeeperHost:2181",
-            /* zNode           */ "/myProductionEndpoints",
-            /* sessionTimeout  */ 10000);
+    ServerListener listener = new ZookeeperRegisterBuilder()
+            // Zookeeper Connection String
+            .connect("myZooKeeperHost:2181")
+            // Zookeeper Node to use
+            .node("/myProductionEndpoints")
+            // Session Timeout
+            .sessionTimeout(10000)
+            .build();
     server.addListener(listener);
     server.start();
     ...
 
-When your server starts up, `ZooKeeperUpdatingListener`_ will register the server automatically to the
+When your server starts up, the `ServerListener`_ instance will register the server automatically to the
 specified zNode as a member of the cluster. Each server will represent itself as `an EPHEMERAL node`_, which
 means when a server stops or a network partition between your server and ZooKeeper cluster occurs, the node of
 the server that became unreachable will be deleted automatically by ZooKeeper. As a result, the clients that

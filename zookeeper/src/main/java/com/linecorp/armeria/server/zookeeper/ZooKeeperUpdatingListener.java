@@ -74,6 +74,9 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     /**
      * A ZooKeeper server listener, used for register server into ZooKeeper.
+     *
+     * @deprecated Use {@link ZookeeperRegisterBuilder} instead.
+     *
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
      * @param sessionTimeout  session timeout
@@ -91,6 +94,9 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     /**
      * A ZooKeeper server listener, used for register server into ZooKeeper.
+     *
+     * @deprecated Use {@link ZookeeperRegisterBuilder} instead.
+     *
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
      * @param sessionTimeout  session timeout
