@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
@@ -29,14 +30,14 @@ import com.google.common.collect.ImmutableList;
  * <pre>{@code
  * ServerListenerBuilder slb = new ServerListenerBuilder();
  * // Add a {@link ServerListener#serverStarting(Server)} callback.
- * slb.addStartingCallback(() -> {...});
+ * slb.addStartingCallback((Server server) -> {...});
  * // Add multiple {@link ServerListener#serverStarted(Server)} callbacks, one by one.
- * slb.addStartedCallback(() -> {...});
- * slb.addStartedCallback(() -> {...});
+ * slb.addStartedCallback((Server server) -> {...});
+ * slb.addStartedCallback((Server server) -> {...});
  * // Add multiple {@link ServerListener#serverStopping(Server)} callbacks at once, with varargs api.
- * slb.addStoppingCallbacks(runnable1, runnable2, runnable3);
+ * slb.addStoppingCallbacks(consumer1, consumer2, consumer3);
  * // Add multiple {@link ServerListener#serverStopped(Server)} callbacks at once, with iterable api.
- * slb.addStoppedCallbacks(runnableIterable);
+ * slb.addStoppedCallbacks(consumerIterable);
  * // Build a `ServerListener` instance.
  * ServerListener sl = slb.build();
  * // Set to `Server`.
@@ -47,50 +48,50 @@ import com.google.common.collect.ImmutableList;
 public class ServerListenerBuilder {
 
     /**
-     * {@link Runnable}s invoked when the {@link Server} is starting.
+     * {@link Consumer}s invoked when the {@link Server} is starting.
      * */
-    private final List<Runnable> serverStartingCallbacks = new ArrayList<>();
+    private final List<Consumer<? super Server>> serverStartingCallbacks = new ArrayList<>();
 
     /**
-     * {@link Runnable}s invoked when the {@link Server} is started.
+     * {@link Consumer}s invoked when the {@link Server} is started.
      * */
-    private final List<Runnable> serverStartedCallbacks = new ArrayList<>();
+    private final List<Consumer<? super Server>> serverStartedCallbacks = new ArrayList<>();
 
     /**
-     * {@link Runnable}s invoked when the {@link Server} is stopping.
+     * {@link Consumer}s invoked when the {@link Server} is stopping.
      * */
-    private final List<Runnable> serverStoppingCallbacks = new ArrayList<>();
+    private final List<Consumer<? super Server>> serverStoppingCallbacks = new ArrayList<>();
 
     /**
-     * {@link Runnable}s invoked when the {@link Server} is stopped.
+     * {@link Consumer}s invoked when the {@link Server} is stopped.
      * */
-    private final List<Runnable> serverStoppedCallbacks = new ArrayList<>();
+    private final List<Consumer<? super Server>> serverStoppedCallbacks = new ArrayList<>();
 
     private static class CallbackServerListener implements ServerListener {
         /**
-         * {@link Runnable}s invoked when the {@link Server} is starting.
+         * {@link Consumer}s invoked when the {@link Server} is starting.
          * */
-        private final List<Runnable> serverStartingCallbacks;
+        private final List<Consumer<? super Server>> serverStartingCallbacks;
 
         /**
-         * {@link Runnable}s invoked when the {@link Server} is started.
+         * {@link Consumer}s invoked when the {@link Server} is started.
          * */
-        private final List<Runnable> serverStartedCallbacks;
+        private final List<Consumer<? super Server>> serverStartedCallbacks;
 
         /**
-         * {@link Runnable}s invoked when the {@link Server} is stopping.
+         * {@link Consumer}s invoked when the {@link Server} is stopping.
          * */
-        private final List<Runnable> serverStoppingCallbacks;
+        private final List<Consumer<? super Server>> serverStoppingCallbacks;
 
         /**
-         * {@link Runnable}s invoked when the {@link Server} is stopped.
+         * {@link Consumer}s invoked when the {@link Server} is stopped.
          * */
-        private final List<Runnable> serverStoppedCallbacks;
+        private final List<Consumer<? super Server>> serverStoppedCallbacks;
 
-        CallbackServerListener(List<Runnable> serverStartingCallbacks,
-                               List<Runnable> serverStartedCallbacks,
-                               List<Runnable> serverStoppingCallbacks,
-                               List<Runnable> serverStoppedCallbacks) {
+        CallbackServerListener(List<Consumer<? super Server>> serverStartingCallbacks,
+                               List<Consumer<? super Server>> serverStartedCallbacks,
+                               List<Consumer<? super Server>> serverStoppingCallbacks,
+                               List<Consumer<? super Server>> serverStoppedCallbacks) {
             this.serverStartingCallbacks = ImmutableList.copyOf(serverStartingCallbacks);
             this.serverStartedCallbacks = ImmutableList.copyOf(serverStartedCallbacks);
             this.serverStoppingCallbacks = ImmutableList.copyOf(serverStoppingCallbacks);
@@ -99,22 +100,30 @@ public class ServerListenerBuilder {
 
         @Override
         public void serverStarting(Server server) {
-            serverStartingCallbacks.forEach(Runnable::run);
+            for (Consumer<? super Server> serverStartingCallback : serverStartingCallbacks) {
+                serverStartingCallback.accept(server);
+            }
         }
 
         @Override
         public void serverStarted(Server server) {
-            serverStartedCallbacks.forEach(Runnable::run);
+            for (Consumer<? super Server> serverStartedCallback : serverStartedCallbacks) {
+                serverStartedCallback.accept(server);
+            }
         }
 
         @Override
         public void serverStopping(Server server) {
-            serverStoppingCallbacks.forEach(Runnable::run);
+            for (Consumer<? super Server> serverStoppingCallback : serverStoppingCallbacks) {
+                serverStoppingCallback.accept(server);
+            }
         }
 
         @Override
         public void serverStopped(Server server) {
-            serverStoppedCallbacks.forEach(Runnable::run);
+            for (Consumer<? super Server> serverStoppedCallback : serverStoppedCallbacks) {
+                serverStoppedCallback.accept(server);
+            }
         }
     }
 
@@ -123,30 +132,40 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarting(Server)})
      */
     public ServerListenerBuilder addStartingCallback(Runnable runnable) {
-        serverStartingCallbacks.add(requireNonNull(runnable, "runnable"));
+        requireNonNull(runnable, "runnable");
+        serverStartingCallbacks.add((Server server) -> runnable.run());
         return this;
     }
 
     /**
-     * Add {@link Runnable}s invoked when the {@link Server} is starting.
+     * Add {@link Consumer} invoked when the {@link Server} is starting.
      * (see: {@link ServerListener#serverStarting(Server)})
      */
-    public ServerListenerBuilder addStartingCallbacks(Runnable... runnables) {
-        requireNonNull(runnables, "runnables");
-        for (Runnable runnable : runnables) {
-            serverStartingCallbacks.add(requireNonNull(runnable));
+    public ServerListenerBuilder addStartingCallback(Consumer<? super Server> consumer) {
+        serverStartingCallbacks.add(requireNonNull(consumer, "consumer"));
+        return this;
+    }
+
+    /**
+     * Add {@link Consumer}s invoked when the {@link Server} is starting.
+     * (see: {@link ServerListener#serverStarting(Server)})
+     */
+    public ServerListenerBuilder addStartingCallbacks(Consumer<? super Server>... consumers) {
+        requireNonNull(consumers, "consumers");
+        for (Consumer<? super Server> consumer : consumers) {
+            serverStartingCallbacks.add(requireNonNull(consumer));
         }
         return this;
     }
 
     /**
-     * Add {@link Runnable}s invoked when the {@link Server} is starting.
+     * Add {@link Consumer}s invoked when the {@link Server} is starting.
      * (see: {@link ServerListener#serverStarting(Server)})
      */
-    public ServerListenerBuilder addStartingCallbacks(Iterable<Runnable> runnables) {
-        requireNonNull(runnables, "runnables");
-        for (Runnable runnable : runnables) {
-            serverStartingCallbacks.add(requireNonNull(runnable));
+    public ServerListenerBuilder addStartingCallbacks(Iterable<Consumer<? super Server>> consumers) {
+        requireNonNull(consumers, "consumers");
+        for (Consumer<? super Server> consumer : consumers) {
+            serverStartingCallbacks.add(requireNonNull(consumer));
         }
         return this;
     }
@@ -156,30 +175,40 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarted(Server)})
      */
     public ServerListenerBuilder addStartedCallback(Runnable runnable) {
-        serverStartedCallbacks.add(requireNonNull(runnable, "runnable"));
+        requireNonNull(runnable, "runnable");
+        serverStartedCallbacks.add((Server server) -> runnable.run());
         return this;
     }
 
     /**
-     * Add {@link Runnable}s invoked when the {@link Server} is started.
+     * Add {@link Consumer} invoked when the {@link Server} is started.
      * (see: {@link ServerListener#serverStarted(Server)})
      */
-    public ServerListenerBuilder addStartedCallbacks(Runnable... runnables) {
-        requireNonNull(runnables, "runnables");
-        for (Runnable runnable : runnables) {
-            serverStartedCallbacks.add(requireNonNull(runnable));
+    public ServerListenerBuilder addStartedCallback(Consumer<? super Server> consumer) {
+        serverStartedCallbacks.add(requireNonNull(consumer, "consumer"));
+        return this;
+    }
+
+    /**
+     * Add {@link Consumer}s invoked when the {@link Server} is started.
+     * (see: {@link ServerListener#serverStarted(Server)})
+     */
+    public ServerListenerBuilder addStartedCallbacks(Consumer<? super Server>... consumers) {
+        requireNonNull(consumers, "consumers");
+        for (Consumer<? super Server> consumer : consumers) {
+            serverStartedCallbacks.add(requireNonNull(consumer));
         }
         return this;
     }
 
     /**
-     * Add {@link Runnable}s invoked when the {@link Server} is started.
+     * Add {@link Consumer}s invoked when the {@link Server} is started.
      * (see: {@link ServerListener#serverStarted(Server)})
      */
-    public ServerListenerBuilder addStartedCallbacks(Iterable<Runnable> runnables) {
-        requireNonNull(runnables, "runnables");
-        for (Runnable runnable : runnables) {
-            serverStartedCallbacks.add(requireNonNull(runnable));
+    public ServerListenerBuilder addStartedCallbacks(Iterable<Consumer<? super Server>> consumers) {
+        requireNonNull(consumers, "consumers");
+        for (Consumer<? super Server> consumer : consumers) {
+            serverStartedCallbacks.add(requireNonNull(consumer));
         }
         return this;
     }
@@ -189,63 +218,83 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopping(Server)})
      */
     public ServerListenerBuilder addStoppingCallback(Runnable runnable) {
-        serverStoppingCallbacks.add(requireNonNull(runnable, "runnable"));
+        requireNonNull(runnable, "runnable");
+        serverStoppingCallbacks.add((Server server) -> runnable.run());
         return this;
     }
 
     /**
-     * Add {@link Runnable}s invoked when the {@link Server} is stopping.
+     * Add {@link Consumer} invoked when the {@link Server} is stopping.
      * (see: {@link ServerListener#serverStopping(Server)})
      */
-    public ServerListenerBuilder addStoppingCallbacks(Runnable... runnables) {
-        requireNonNull(runnables, "runnables");
-        for (Runnable runnable : runnables) {
-            serverStoppingCallbacks.add(requireNonNull(runnable));
-        }
+    public ServerListenerBuilder addStoppingCallback(Consumer<? super Server> consumer) {
+        serverStoppingCallbacks.add(requireNonNull(consumer, "consumer"));
         return this;
     }
 
     /**
-     * Add {@link Runnable}s invoked when the {@link Server} is stopping.
+     * Add {@link Consumer}s invoked when the {@link Server} is stopping.
      * (see: {@link ServerListener#serverStopping(Server)})
      */
-    public ServerListenerBuilder addStoppingCallbacks(Iterable<Runnable> runnables) {
-        requireNonNull(runnables, "runnables");
-        for (Runnable runnable : runnables) {
-            serverStoppingCallbacks.add(requireNonNull(runnable));
+    public ServerListenerBuilder addStoppingCallbacks(Consumer<? super Server>... consumers) {
+        requireNonNull(consumers, "consumers");
+        for (Consumer<? super Server> consumer : consumers) {
+            serverStoppingCallbacks.add(requireNonNull(consumer));
         }
         return this;
     }
 
     /**
-     * Add {@link Runnable} invoked on when the {@link Server} is stopped.
-     * (see: {@link ServerListener#serverStopped(Server)})
+     * Add {@link Consumer}s invoked when the {@link Server} is stopping.
+     * (see: {@link ServerListener#serverStopping(Server)})
      */
-    public ServerListenerBuilder addStoppedCallbacks(Runnable runnable) {
-        serverStoppedCallbacks.add(requireNonNull(runnable, "runnable"));
-        return this;
-    }
-
-    /**
-     * Add {@link Runnable}s invoked on when the {@link Server} is stopped.
-     * (see: {@link ServerListener#serverStopped(Server)})
-     */
-    public ServerListenerBuilder addStoppedCallbacks(Runnable... runnables) {
-        requireNonNull(runnables, "runnables");
-        for (Runnable runnable : runnables) {
-            serverStoppedCallbacks.add(requireNonNull(runnable));
+    public ServerListenerBuilder addStoppingCallbacks(Iterable<Consumer<? super Server>> consumers) {
+        requireNonNull(consumers, "consumers");
+        for (Consumer<? super Server> consumer : consumers) {
+            serverStoppingCallbacks.add(requireNonNull(consumer));
         }
         return this;
     }
 
     /**
-     * Add {@link Runnable}s invoked on when the {@link Server} is stopped.
+     * Add {@link Runnable} invoked when the {@link Server} is stopped.
      * (see: {@link ServerListener#serverStopped(Server)})
      */
-    public ServerListenerBuilder addStoppedCallbacks(Iterable<Runnable> runnables) {
-        requireNonNull(runnables, "runnables");
-        for (Runnable runnable : runnables) {
-            serverStoppedCallbacks.add(requireNonNull(runnable));
+    public ServerListenerBuilder addStoppedCallback(Runnable runnable) {
+        requireNonNull(runnable, "runnable");
+        serverStoppedCallbacks.add((Server server) -> runnable.run());
+        return this;
+    }
+
+    /**
+     * Add {@link Consumer} invoked when the {@link Server} is stopped.
+     * (see: {@link ServerListener#serverStopped(Server)})
+     */
+    public ServerListenerBuilder addStoppedCallback(Consumer<? super Server> consumer) {
+        serverStoppedCallbacks.add(requireNonNull(consumer, "consumer"));
+        return this;
+    }
+
+    /**
+     * Add {@link Consumer}s invoked when the {@link Server} is stopped.
+     * (see: {@link ServerListener#serverStopped(Server)})
+     */
+    public ServerListenerBuilder addStoppedCallbacks(Consumer<? super Server>... consumers) {
+        requireNonNull(consumers, "consumers");
+        for (Consumer<? super Server> consumer : consumers) {
+            serverStoppedCallbacks.add(requireNonNull(consumer));
+        }
+        return this;
+    }
+
+    /**
+     * Add {@link Consumer}s invoked when the {@link Server} is stopped.
+     * (see: {@link ServerListener#serverStopped(Server)})
+     */
+    public ServerListenerBuilder addStoppedCallbacks(Iterable<Consumer<? super Server>> consumers) {
+        requireNonNull(consumers, "consumers");
+        for (Consumer<? super Server> consumer : consumers) {
+            serverStoppedCallbacks.add(requireNonNull(consumer));
         }
         return this;
     }
