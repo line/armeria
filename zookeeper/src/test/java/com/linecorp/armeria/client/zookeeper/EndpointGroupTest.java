@@ -62,7 +62,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     }
 
     @After
-    public void disconnectZk() throws Throwable {
+    public void disconnectZk() {
         try {
             endpointGroup.close();
             //clear node data
@@ -157,7 +157,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
         assertExists(zNode);
     }
 
-    private void setNodeChild(Set<Endpoint> children) throws Throwable {
+    private void setNodeChild(Set<Endpoint> children) {
         try (CloseableZooKeeper closeableZooKeeper = connection()) {
             //if the parent node dose not exist, create it
             try {
