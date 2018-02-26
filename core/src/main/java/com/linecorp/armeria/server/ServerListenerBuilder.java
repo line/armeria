@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * Builds a new {@link ServerListener}.
  * <h2>Example</h2>
@@ -89,38 +91,30 @@ public class ServerListenerBuilder {
                                List<Runnable> serverStartedCallbacks,
                                List<Runnable> serverStoppingCallbacks,
                                List<Runnable> serverStoppedCallbacks) {
-            this.serverStartingCallbacks = serverStartingCallbacks;
-            this.serverStartedCallbacks = serverStartedCallbacks;
-            this.serverStoppingCallbacks = serverStoppingCallbacks;
-            this.serverStoppedCallbacks = serverStoppedCallbacks;
+            this.serverStartingCallbacks = ImmutableList.copyOf(serverStartingCallbacks);
+            this.serverStartedCallbacks = ImmutableList.copyOf(serverStartedCallbacks);
+            this.serverStoppingCallbacks = ImmutableList.copyOf(serverStoppingCallbacks);
+            this.serverStoppedCallbacks = ImmutableList.copyOf(serverStoppedCallbacks);
         }
 
         @Override
         public void serverStarting(Server server) {
-            for (Runnable serverStartingCallback : serverStartingCallbacks) {
-                serverStartingCallback.run();
-            }
+            serverStartingCallbacks.forEach(Runnable::run);
         }
 
         @Override
         public void serverStarted(Server server) {
-            for (Runnable serverStartedCallback : serverStartedCallbacks) {
-                serverStartedCallback.run();
-            }
+            serverStartedCallbacks.forEach(Runnable::run);
         }
 
         @Override
         public void serverStopping(Server server) {
-            for (Runnable serverStoppingCallback : serverStoppingCallbacks) {
-                serverStoppingCallback.run();
-            }
+            serverStoppingCallbacks.forEach(Runnable::run);
         }
 
         @Override
         public void serverStopped(Server server) {
-            for (Runnable serverStoppedCallback : serverStoppedCallbacks) {
-                serverStoppedCallback.run();
-            }
+            serverStoppedCallbacks.forEach(Runnable::run);
         }
     }
 
@@ -129,7 +123,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarting(Server)})
      */
     public ServerListenerBuilder addStartingCallback(Runnable runnable) {
-        serverStartingCallbacks.add(requireNonNull(runnable));
+        serverStartingCallbacks.add(requireNonNull(runnable, "runnable"));
         return this;
     }
 
@@ -138,6 +132,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarting(Server)})
      */
     public ServerListenerBuilder addStartingCallbacks(Runnable... runnables) {
+        requireNonNull(runnables, "runnables");
         for (Runnable runnable : runnables) {
             serverStartingCallbacks.add(requireNonNull(runnable));
         }
@@ -149,6 +144,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarting(Server)})
      */
     public ServerListenerBuilder addStartingCallbacks(Iterable<Runnable> runnables) {
+        requireNonNull(runnables, "runnables");
         for (Runnable runnable : runnables) {
             serverStartingCallbacks.add(requireNonNull(runnable));
         }
@@ -160,7 +156,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarted(Server)})
      */
     public ServerListenerBuilder addStartedCallback(Runnable runnable) {
-        serverStartedCallbacks.add(requireNonNull(runnable));
+        serverStartedCallbacks.add(requireNonNull(runnable, "runnable"));
         return this;
     }
 
@@ -169,6 +165,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarted(Server)})
      */
     public ServerListenerBuilder addStartedCallbacks(Runnable... runnables) {
+        requireNonNull(runnables, "runnables");
         for (Runnable runnable : runnables) {
             serverStartedCallbacks.add(requireNonNull(runnable));
         }
@@ -180,6 +177,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarted(Server)})
      */
     public ServerListenerBuilder addStartedCallbacks(Iterable<Runnable> runnables) {
+        requireNonNull(runnables, "runnables");
         for (Runnable runnable : runnables) {
             serverStartedCallbacks.add(requireNonNull(runnable));
         }
@@ -191,7 +189,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopping(Server)})
      */
     public ServerListenerBuilder addStoppingCallback(Runnable runnable) {
-        serverStoppingCallbacks.add(requireNonNull(runnable));
+        serverStoppingCallbacks.add(requireNonNull(runnable, "runnable"));
         return this;
     }
 
@@ -200,6 +198,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopping(Server)})
      */
     public ServerListenerBuilder addStoppingCallbacks(Runnable... runnables) {
+        requireNonNull(runnables, "runnables");
         for (Runnable runnable : runnables) {
             serverStoppingCallbacks.add(requireNonNull(runnable));
         }
@@ -211,6 +210,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopping(Server)})
      */
     public ServerListenerBuilder addStoppingCallbacks(Iterable<Runnable> runnables) {
+        requireNonNull(runnables, "runnables");
         for (Runnable runnable : runnables) {
             serverStoppingCallbacks.add(requireNonNull(runnable));
         }
@@ -222,7 +222,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopped(Server)})
      */
     public ServerListenerBuilder addStoppedCallbacks(Runnable runnable) {
-        serverStoppedCallbacks.add(requireNonNull(runnable));
+        serverStoppedCallbacks.add(requireNonNull(runnable, "runnable"));
         return this;
     }
 
@@ -231,6 +231,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopped(Server)})
      */
     public ServerListenerBuilder addStoppedCallbacks(Runnable... runnables) {
+        requireNonNull(runnables, "runnables");
         for (Runnable runnable : runnables) {
             serverStoppedCallbacks.add(requireNonNull(runnable));
         }
@@ -242,6 +243,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopped(Server)})
      */
     public ServerListenerBuilder addStoppedCallbacks(Iterable<Runnable> runnables) {
+        requireNonNull(runnables, "runnables");
         for (Runnable runnable : runnables) {
             serverStoppedCallbacks.add(requireNonNull(runnable));
         }
