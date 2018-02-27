@@ -133,7 +133,7 @@ public class ServerListenerBuilder {
      */
     public ServerListenerBuilder addStartingCallback(Runnable runnable) {
         requireNonNull(runnable, "runnable");
-        serverStartingCallbacks.add((Server server) -> runnable.run());
+        serverStartingCallbacks.add((unused) -> runnable.run());
         return this;
     }
 
@@ -153,7 +153,7 @@ public class ServerListenerBuilder {
     public ServerListenerBuilder addStartingCallbacks(Consumer<? super Server>... consumers) {
         requireNonNull(consumers, "consumers");
         for (Consumer<? super Server> consumer : consumers) {
-            serverStartingCallbacks.add(requireNonNull(consumer));
+            serverStartingCallbacks.add(requireNonNull(consumer, "consumer"));
         }
         return this;
     }
@@ -165,7 +165,7 @@ public class ServerListenerBuilder {
     public ServerListenerBuilder addStartingCallbacks(Iterable<Consumer<? super Server>> consumers) {
         requireNonNull(consumers, "consumers");
         for (Consumer<? super Server> consumer : consumers) {
-            serverStartingCallbacks.add(requireNonNull(consumer));
+            serverStartingCallbacks.add(requireNonNull(consumer, "consumer"));
         }
         return this;
     }
@@ -176,7 +176,7 @@ public class ServerListenerBuilder {
      */
     public ServerListenerBuilder addStartedCallback(Runnable runnable) {
         requireNonNull(runnable, "runnable");
-        serverStartedCallbacks.add((Server server) -> runnable.run());
+        serverStartedCallbacks.add((unused) -> runnable.run());
         return this;
     }
 
@@ -196,7 +196,7 @@ public class ServerListenerBuilder {
     public ServerListenerBuilder addStartedCallbacks(Consumer<? super Server>... consumers) {
         requireNonNull(consumers, "consumers");
         for (Consumer<? super Server> consumer : consumers) {
-            serverStartedCallbacks.add(requireNonNull(consumer));
+            serverStartedCallbacks.add(requireNonNull(consumer, "consumer"));
         }
         return this;
     }
@@ -208,7 +208,7 @@ public class ServerListenerBuilder {
     public ServerListenerBuilder addStartedCallbacks(Iterable<Consumer<? super Server>> consumers) {
         requireNonNull(consumers, "consumers");
         for (Consumer<? super Server> consumer : consumers) {
-            serverStartedCallbacks.add(requireNonNull(consumer));
+            serverStartedCallbacks.add(requireNonNull(consumer, "consumer"));
         }
         return this;
     }
@@ -219,7 +219,7 @@ public class ServerListenerBuilder {
      */
     public ServerListenerBuilder addStoppingCallback(Runnable runnable) {
         requireNonNull(runnable, "runnable");
-        serverStoppingCallbacks.add((Server server) -> runnable.run());
+        serverStoppingCallbacks.add((unused) -> runnable.run());
         return this;
     }
 
@@ -239,7 +239,7 @@ public class ServerListenerBuilder {
     public ServerListenerBuilder addStoppingCallbacks(Consumer<? super Server>... consumers) {
         requireNonNull(consumers, "consumers");
         for (Consumer<? super Server> consumer : consumers) {
-            serverStoppingCallbacks.add(requireNonNull(consumer));
+            serverStoppingCallbacks.add(requireNonNull(consumer, "consumer"));
         }
         return this;
     }
@@ -251,7 +251,7 @@ public class ServerListenerBuilder {
     public ServerListenerBuilder addStoppingCallbacks(Iterable<Consumer<? super Server>> consumers) {
         requireNonNull(consumers, "consumers");
         for (Consumer<? super Server> consumer : consumers) {
-            serverStoppingCallbacks.add(requireNonNull(consumer));
+            serverStoppingCallbacks.add(requireNonNull(consumer, "consumer"));
         }
         return this;
     }
@@ -262,7 +262,7 @@ public class ServerListenerBuilder {
      */
     public ServerListenerBuilder addStoppedCallback(Runnable runnable) {
         requireNonNull(runnable, "runnable");
-        serverStoppedCallbacks.add((Server server) -> runnable.run());
+        serverStoppedCallbacks.add((unused) -> runnable.run());
         return this;
     }
 
@@ -282,7 +282,7 @@ public class ServerListenerBuilder {
     public ServerListenerBuilder addStoppedCallbacks(Consumer<? super Server>... consumers) {
         requireNonNull(consumers, "consumers");
         for (Consumer<? super Server> consumer : consumers) {
-            serverStoppedCallbacks.add(requireNonNull(consumer));
+            serverStoppedCallbacks.add(requireNonNull(consumer, "consumer"));
         }
         return this;
     }
@@ -294,7 +294,7 @@ public class ServerListenerBuilder {
     public ServerListenerBuilder addStoppedCallbacks(Iterable<Consumer<? super Server>> consumers) {
         requireNonNull(consumers, "consumers");
         for (Consumer<? super Server> consumer : consumers) {
-            serverStoppedCallbacks.add(requireNonNull(consumer));
+            serverStoppedCallbacks.add(requireNonNull(consumer, "consumer"));
         }
         return this;
     }
