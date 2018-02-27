@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -151,11 +152,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarting(Server)})
      */
     public ServerListenerBuilder addStartingCallbacks(Consumer<? super Server>... consumers) {
-        requireNonNull(consumers, "consumers");
-        for (Consumer<? super Server> consumer : consumers) {
-            serverStartingCallbacks.add(requireNonNull(consumer, "consumer"));
-        }
-        return this;
+        return addStartingCallbacks(Arrays.asList(consumers));
     }
 
     /**
@@ -194,11 +191,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStarted(Server)})
      */
     public ServerListenerBuilder addStartedCallbacks(Consumer<? super Server>... consumers) {
-        requireNonNull(consumers, "consumers");
-        for (Consumer<? super Server> consumer : consumers) {
-            serverStartedCallbacks.add(requireNonNull(consumer, "consumer"));
-        }
-        return this;
+        return addStartedCallbacks(Arrays.asList(consumers));
     }
 
     /**
@@ -237,11 +230,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopping(Server)})
      */
     public ServerListenerBuilder addStoppingCallbacks(Consumer<? super Server>... consumers) {
-        requireNonNull(consumers, "consumers");
-        for (Consumer<? super Server> consumer : consumers) {
-            serverStoppingCallbacks.add(requireNonNull(consumer, "consumer"));
-        }
-        return this;
+        return addStoppingCallbacks(Arrays.asList(consumers));
     }
 
     /**
@@ -280,11 +269,7 @@ public class ServerListenerBuilder {
      * (see: {@link ServerListener#serverStopped(Server)})
      */
     public ServerListenerBuilder addStoppedCallbacks(Consumer<? super Server>... consumers) {
-        requireNonNull(consumers, "consumers");
-        for (Consumer<? super Server> consumer : consumers) {
-            serverStoppedCallbacks.add(requireNonNull(consumer, "consumer"));
-        }
-        return this;
+        return addStoppedCallbacks(Arrays.asList(consumers));
     }
 
     /**
