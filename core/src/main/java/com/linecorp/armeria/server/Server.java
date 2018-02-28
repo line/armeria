@@ -278,7 +278,7 @@ public final class Server implements AutoCloseable {
         final ServerBootstrap b = new ServerBootstrap();
         serverBootstrap = b;
 
-        config.nettyCustomizer().afterBootstrapInitialized(b);
+        config.nettyCustomizer().accept(b);
         b.group(EventLoopGroups.newEventLoopGroup(1, r -> {
             final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName(port));
             thread.setDaemon(false);

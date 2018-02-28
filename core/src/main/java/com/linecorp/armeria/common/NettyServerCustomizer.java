@@ -15,19 +15,15 @@
  */
 package com.linecorp.armeria.common;
 
+import java.util.function.Consumer;
+
 import io.netty.bootstrap.ServerBootstrap;
 
-public interface NettyServerCustomizer {
+public interface NettyServerCustomizer extends Consumer<ServerBootstrap>{
     NettyServerCustomizer DEFAULT = new NettyServerCustomizer() {
         @Override
-        public void afterBootstrapInitialized(ServerBootstrap bootstrap) {
-            //noop
+        public void accept(ServerBootstrap serverBootstrap) {
+            // noop
         }
     };
-
-    /**
-     * TBD
-     * @param bootstrap
-     */
-    void afterBootstrapInitialized(ServerBootstrap bootstrap);
 }

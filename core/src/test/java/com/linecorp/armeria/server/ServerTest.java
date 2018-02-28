@@ -136,12 +136,7 @@ public class ServerTest {
             sb.decorator(decorator);
 
             sb.idleTimeoutMillis(idleTimeoutMillis);
-            sb.nettyCustomizer(new NettyServerCustomizer() {
-                @Override
-                public void afterBootstrapInitialized(ServerBootstrap bootstrap) {
-                    bootstrap.option(ChannelOption.SO_BACKLOG, 1024);
-                }
-            });
+            sb.nettyCustomizer(b -> b.option(ChannelOption.SO_BACKLOG, 1024));
         }
     };
 
