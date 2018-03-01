@@ -821,6 +821,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             elements = new Object[16];
         }
 
+        // Steals a reference to o.
         int addAndRemoveIfRequested(Object o) {
             requireNonNull(o);
             int removedLength = 0;
@@ -836,6 +837,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             return removedLength;
         }
 
+        // Releases references to removed elements.
         private int removeElements() {
             final int removalRequestedOffset = lastRemovalRequestedOffset;
             final int numElementsToBeRemoved = removalRequestedOffset - headOffset;
@@ -883,6 +885,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             this.elements = a;
         }
 
+        // Steals a reference to the object.
         Object get(int offset) {
             final int head = this.head;
             final int tail = this.tail;
@@ -917,6 +920,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             return size;
         }
 
+        // Removes references to all objects.
         void clear() {
             Object[] oldElements = elements;
             if (oldElements == null) {

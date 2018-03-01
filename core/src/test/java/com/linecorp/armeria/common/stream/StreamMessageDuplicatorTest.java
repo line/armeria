@@ -309,6 +309,7 @@ public class StreamMessageDuplicatorTest {
         // duplicateStream() is not allowed anymore.
         assertThatThrownBy(duplicator::duplicateStream).isInstanceOf(IllegalStateException.class);
 
+        // Only used to read refCnt, not an actual reference.
         final ByteBuf[] bufs = new ByteBuf[30];
         for (int i = 0; i < 30; i++) {
             final ByteBuf buf = newUnpooledBuffer();
@@ -322,8 +323,8 @@ public class StreamMessageDuplicatorTest {
         }
         for (int i = 25; i < 30; i++) {  // rest of them are still in the queue.
             assertThat(bufs[i].refCnt()).isOne();
-            bufs[i].release();
         }
+        duplicator.close();
     }
 
     private static ByteBuf newUnpooledBuffer() {
