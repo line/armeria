@@ -90,8 +90,8 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     }
 
     @Override
-    public boolean write(HttpObject obj) {
-        final boolean published = super.write(obj);
+    public boolean tryWrite(HttpObject obj) {
+        final boolean published = super.tryWrite(obj);
         if (published && obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             inboundTrafficController.inc(length);

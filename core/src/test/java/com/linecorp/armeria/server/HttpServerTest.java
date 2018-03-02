@@ -936,7 +936,7 @@ public class HttpServerTest {
     }
 
     private static void stream(StreamWriter<HttpObject> writer, long size, int chunkSize) {
-        if (!writer.write(HttpData.of(new byte[chunkSize]))) {
+        if (!writer.tryWrite(HttpData.of(new byte[chunkSize]))) {
             return;
         }
 

@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.stream;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import javax.annotation.CheckReturnValue;
+
 import org.reactivestreams.Subscriber;
 
 /**
@@ -37,12 +39,38 @@ public interface StreamWriter<T> {
      * Writes the specified object to the {@link StreamMessage}. The written object will be transferred to the
      * {@link Subscriber}.
      *
+     * @throws IllegalStateException if the stream was already closed
+     * @throws IllegalArgumentException if the publication of the specified object has been rejected
+     */
+    default void write(T o) {
+        if (!tryWrite(o)) {
+            throw new IllegalStateException("stream closed");
+        }
+    }
+
+    /**
+     * Writes the specified object {@link Supplier} to the {@link StreamMessage}. The object provided by the
+     * {@link Supplier} will be transferred to the {@link Subscriber}.
+     *
+     * @throws IllegalStateException if the stream was already closed.
+     */
+    default void write(Supplier<? extends T> o) {
+        if (!tryWrite(o)) {
+            throw new IllegalStateException("stream closed");
+        }
+    }
+
+    /**
+     * Writes the specified object to the {@link StreamMessage}. The written object will be transferred to the
+     * {@link Subscriber}.
+     *
      * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
      *         stream has been closed already.
      *
      * @throws IllegalArgumentException if the publication of the specified object has been rejected
      */
-    boolean write(T o);
+    @CheckReturnValue
+    boolean tryWrite(T o);
 
     /**
      * Writes the specified object {@link Supplier} to the {@link StreamMessage}. The object provided by the
@@ -51,8 +79,9 @@ public interface StreamWriter<T> {
      * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
      *         stream has been closed already.
      */
-    default boolean write(Supplier<? extends T> o) {
-        return write(o.get());
+    @CheckReturnValue
+    default boolean tryWrite(Supplier<? extends T> o) {
+        return tryWrite(o.get());
     }
 
     /**

@@ -19,9 +19,12 @@ package com.linecorp.armeria.server;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -72,6 +75,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private final InboundTrafficController inboundTrafficController;
 
     /** The request being decoded currently. */
+    @Nullable
     private DecodedHttpRequest req;
     private int receivedRequests;
     private int sentResponses;
@@ -81,6 +85,15 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = new InboundTrafficController(channel);
+    }
+
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        super.channelUnregistered(ctx);
+        if (req != null) {
+            // Ignored if the stream has already been closed.
+            req.close(ClosedSessionException.get());
+        }
     }
 
     @Override

@@ -184,7 +184,7 @@ abstract class HttpResponseDecoder {
         }
 
         @Override
-        public boolean write(HttpObject o) {
+        public boolean tryWrite(HttpObject o) {
             if (o instanceof HttpHeaders) {
                 // NB: It's safe to call logBuilder.start() multiple times.
                 //     See AbstractMessageLog.start() for more information.
@@ -197,12 +197,12 @@ abstract class HttpResponseDecoder {
             } else if (o instanceof HttpData) {
                 logBuilder.increaseResponseLength(((HttpData) o).length());
             }
-            return delegate.write(o);
+            return delegate.tryWrite(o);
         }
 
         @Override
-        public boolean write(Supplier<? extends HttpObject> o) {
-            return delegate.write(o);
+        public boolean tryWrite(Supplier<? extends HttpObject> o) {
+            return delegate.tryWrite(o);
         }
 
         @Override

@@ -43,6 +43,8 @@ import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
@@ -70,6 +72,7 @@ import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.Codec;
@@ -93,6 +96,10 @@ public class GrpcServiceServerTest {
 
     // Used to communicate completion to a test when it is not possible to return to the client.
     private static final AtomicReference<Boolean> COMPLETED = new AtomicReference<>();
+
+    // Used to communicate that the client has closed to allow the server to continue executing logic when
+    // required.
+    private static final AtomicReference<Boolean> CLIENT_CLOSED = new AtomicReference<>();
 
     private static class UnitTestServiceImpl extends UnitTestServiceImplBase {
 
@@ -222,9 +229,23 @@ public class GrpcServiceServerTest {
                 }
 
                 @Override
-                public void onCompleted() {
-                }
+                public void onCompleted() {}
             };
+        }
+
+        @Override
+        public void streamClientCancelsBeforeResponseClosed(SimpleRequest request,
+                                                            StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.getDefaultInstance());
+            ServiceRequestContext ctx = RequestContext.current();
+            ctx.blockingTaskExecutor().execute(() -> {
+                await().until(CLIENT_CLOSED::get);
+                try {
+                    responseObserver.onNext(SimpleResponse.getDefaultInstance());
+                } catch (IllegalStateException e) {
+                    COMPLETED.set(true);
+                }
+            });
         }
     }
 
@@ -268,6 +289,7 @@ public class GrpcServiceServerTest {
     @Before
     public void setUp() {
         COMPLETED.set(false);
+        CLIENT_CLOSED.set(false);
         blockingClient = UnitTestServiceGrpc.newBlockingStub(channel);
         streamingClient = UnitTestServiceGrpc.newStub(channel);
 
@@ -408,13 +430,22 @@ public class GrpcServiceServerTest {
                 .isEqualTo(RESPONSE_MESSAGE);
     }
 
-    // TODO(anuraaga): Add HTTP1 version as well after https://github.com/line/armeria/issues/972
     @Test
-    public void clientSocketClosedHttp2() throws Exception {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
-                                                      .usePlaintext(true)
-                                                      .build();
-        UnitTestServiceStub stub = UnitTestServiceGrpc.newStub(channel);
+    public void clientSocketClosedBeforeHalfCloseHttp2() throws Exception {
+        clientSocketClosedBeforeHalfClose("h2c");
+    }
+
+    @Test
+    public void clientSocketClosedBeforeHalfCloseHttp1() throws Exception {
+        clientSocketClosedBeforeHalfClose("h1c");
+    }
+
+    private void clientSocketClosedBeforeHalfClose(String protocol) {
+        ClientFactory factory = new ClientFactoryBuilder().build();
+        UnitTestServiceStub stub =
+                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + "/")
+                        .factory(factory)
+                        .build(UnitTestServiceStub.class);
         AtomicReference<SimpleResponse> response = new AtomicReference<>();
         StreamObserver<SimpleRequest> stream = stub.streamClientCancels(new StreamObserver<SimpleResponse>() {
             @Override
@@ -432,7 +463,46 @@ public class GrpcServiceServerTest {
         });
         stream.onNext(SimpleRequest.getDefaultInstance());
         await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
-        channel.shutdownNow().awaitTermination(10, TimeUnit.SECONDS);
+        factory.close();
+        await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
+    }
+
+    @Test
+    public void clientSocketClosedAfterHalfCloseBeforeCloseHttp2() throws Exception {
+        clientSocketClosedAfterHalfCloseBeforeClose("h2c");
+    }
+
+    @Test
+    public void clientSocketClosedAfterHalfCloseBeforeCloseHttp1() throws Exception {
+        clientSocketClosedAfterHalfCloseBeforeClose("h1c");
+    }
+
+    private void clientSocketClosedAfterHalfCloseBeforeClose(String protocol) {
+        ClientFactory factory = new ClientFactoryBuilder().build();
+        UnitTestServiceStub stub =
+                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + "/")
+                        .factory(factory)
+                        .build(UnitTestServiceStub.class);
+        AtomicReference<SimpleResponse> response = new AtomicReference<>();
+        stub.streamClientCancelsBeforeResponseClosed(
+                SimpleRequest.getDefaultInstance(),
+                new StreamObserver<SimpleResponse>() {
+                    @Override
+                    public void onNext(SimpleResponse value) {
+                        response.set(value);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
+        await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
+        factory.close();
+        CLIENT_CLOSED.set(true);
         await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
     }
 

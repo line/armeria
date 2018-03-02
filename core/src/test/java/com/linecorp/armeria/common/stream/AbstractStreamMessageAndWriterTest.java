@@ -22,7 +22,6 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -39,6 +38,7 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.EventExecutor;
 
 public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamMessageTest {
 
@@ -52,7 +52,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
     /**
      * Makes sure {@link Subscriber#onComplete()} is always invoked after
      * {@link Subscriber#onSubscribe(Subscription)} even if
-     * {@link StreamMessage#subscribe(Subscriber, Executor)}  is called from non-{@link EventLoop}.
+     * {@link StreamMessage#subscribe(Subscriber, EventExecutor)} is called from non-{@link EventLoop}.
      */
     @Test
     public void onSubscribeBeforeOnComplete() throws Exception {
@@ -110,7 +110,8 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
         stream.close();
 
-        await().untilAsserted(() -> assertThat(stream.write(buf)).isFalse());
+        await().untilAsserted(() -> assertThat(stream.tryWrite(buf)).isFalse());
+        assertThatThrownBy(() -> stream.write(buf)).isInstanceOf(IllegalStateException.class);
         assertThat(buf.refCnt()).isZero();
     }
 
@@ -120,7 +121,8 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
         final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
         stream.close();
 
-        await().untilAsserted(() -> assertThat(stream.write(data)).isFalse());
+        await().untilAsserted(() -> assertThat(stream.tryWrite(data)).isFalse());
+        assertThatThrownBy(() -> stream.write(data)).isInstanceOf(IllegalStateException.class);
         assertThat(data.refCnt()).isZero();
     }
 }

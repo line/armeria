@@ -65,7 +65,7 @@ public class EventLoopStreamMessageVerification extends StreamMessageVerificatio
         stream.onDemand(() -> {
             for (;;) {
                 final long r = remaining.decrementAndGet();
-                final boolean written = stream.write(elements - r);
+                final boolean written = stream.tryWrite(elements - r);
                 if (r == 0) {
                     if (abort) {
                         stream.abort();
