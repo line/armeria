@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -243,7 +242,7 @@ public class GrpcServiceServerTest {
                 await().until(CLIENT_CLOSED::get);
                 try {
                     responseObserver.onNext(SimpleResponse.getDefaultInstance());
-                } catch (AbortedStreamException e) {
+                } catch (IllegalStateException e) {
                     COMPLETED.set(true);
                 }
             });
