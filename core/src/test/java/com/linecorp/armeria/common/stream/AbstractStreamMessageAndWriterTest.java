@@ -111,7 +111,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
         stream.close();
 
         await().untilAsserted(() -> assertThat(stream.tryWrite(buf)).isFalse());
-        assertThatThrownBy(() -> stream.write(buf)).isInstanceOf(AbortedStreamException.class);
+        assertThatThrownBy(() -> stream.write(buf)).isInstanceOf(IllegalStateException.class);
         assertThat(buf.refCnt()).isZero();
     }
 
@@ -122,7 +122,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
         stream.close();
 
         await().untilAsserted(() -> assertThat(stream.tryWrite(data)).isFalse());
-        assertThatThrownBy(() -> stream.write(data)).isInstanceOf(AbortedStreamException.class);
+        assertThatThrownBy(() -> stream.write(data)).isInstanceOf(IllegalStateException.class);
         assertThat(data.refCnt()).isZero();
     }
 }
