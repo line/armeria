@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
-import com.linecorp.armeria.internal.tracing.SpanTags;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -112,8 +111,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
 
     private void finishSpan(Span span, RequestLog log) {
         setRemoteEndpoint(span, log);
-        SpanTags.addTags(span, log);
-        span.finish();
+        SpanContextUtil.closeSpan(span, log);
     }
 
     private void setRemoteEndpoint(Span span, RequestLog log) {
