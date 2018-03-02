@@ -21,11 +21,9 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
-import com.linecorp.armeria.internal.tracing.SpanTags;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -86,15 +84,10 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
         SpanContextUtil.setupContext(SPAN_IN_THREAD, ctx, span, tracer);
 
-        ctx.log().addListener(log -> closeSpan(span, log), RequestLogAvailability.COMPLETE);
+        ctx.log().addListener(log -> SpanContextUtil.closeSpan(span, log), RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().serve(ctx, req);
         }
-    }
-
-    private void closeSpan(Span span, RequestLog log) {
-        SpanTags.addTags(span, log);
-        span.finish();
     }
 }

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.tracing;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 import brave.Span;
 import brave.Tracer;
@@ -41,6 +42,15 @@ public final class SpanContextUtil {
                 threadLocalSpan.remove();
             }
         });
+    }
+
+    /**
+     * Adds logging tags to the provided {@link Span} and closes it.
+     * The span cannot be used further after this method has been called.
+     */
+    public static void closeSpan(Span span, RequestLog log) {
+        SpanTags.addTags(span, log);
+        span.finish();
     }
 
     private SpanContextUtil() {}
