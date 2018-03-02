@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 import java.time.Duration;
@@ -50,8 +48,8 @@ public class CircuitBreakerBuilderTest {
 
     @Test
     public void testConstructor() {
-        assertThat(new CircuitBreakerBuilder(remoteServiceName).build().name(), is(remoteServiceName));
-        assertThat(new CircuitBreakerBuilder().build().name(), is(startsWith("circuit-breaker-")));
+        assertThat(new CircuitBreakerBuilder(remoteServiceName).build().name()).isEqualTo(remoteServiceName);
+        assertThat(new CircuitBreakerBuilder().build().name()).startsWith("circuit-breaker-");
     }
 
     @Test
@@ -66,8 +64,10 @@ public class CircuitBreakerBuilderTest {
 
     @Test
     public void testFailureRateThreshold() {
-        assertThat(confOf(builder().failureRateThreshold(0.123).build()).failureRateThreshold(), is(0.123));
-        assertThat(confOf(builder().failureRateThreshold(1).build()).failureRateThreshold(), is(1.0));
+        assertThat(confOf(builder().failureRateThreshold(0.123).build()).failureRateThreshold())
+                .isEqualTo(0.123);
+        assertThat(confOf(builder().failureRateThreshold(1).build()).failureRateThreshold())
+                .isEqualTo(1.0);
     }
 
     @Test
@@ -80,10 +80,10 @@ public class CircuitBreakerBuilderTest {
     @Test
     public void testMinimumRequestThreshold() {
         CircuitBreakerConfig config1 = confOf(builder().minimumRequestThreshold(Long.MAX_VALUE).build());
-        assertThat(config1.minimumRequestThreshold(), is(Long.MAX_VALUE));
+        assertThat(config1.minimumRequestThreshold()).isEqualTo(Long.MAX_VALUE);
 
         CircuitBreakerConfig config2 = confOf(builder().minimumRequestThreshold(0).build());
-        assertThat(config2.minimumRequestThreshold(), is(0L));
+        assertThat(config2.minimumRequestThreshold()).isEqualTo(0L);
     }
 
     @Test
@@ -94,14 +94,14 @@ public class CircuitBreakerBuilderTest {
     @Test
     public void testTrialRequestInterval() {
         CircuitBreakerConfig config = confOf(builder().trialRequestInterval(oneSecond).build());
-        assertThat(config.trialRequestInterval(), is(oneSecond));
+        assertThat(config.trialRequestInterval()).isEqualTo(oneSecond);
     }
 
     @Test
     public void testTrialRequestIntervalInMillis() {
         CircuitBreakerConfig config = confOf(
                 builder().trialRequestIntervalMillis(oneSecond.toMillis()).build());
-        assertThat(config.trialRequestInterval(), is(oneSecond));
+        assertThat(config.trialRequestInterval()).isEqualTo(oneSecond);
     }
 
     @Test
@@ -116,13 +116,13 @@ public class CircuitBreakerBuilderTest {
     @Test
     public void testCircuitOpenWindow() {
         CircuitBreakerConfig config = confOf(builder().circuitOpenWindow(oneSecond).build());
-        assertThat(config.circuitOpenWindow(), is(oneSecond));
+        assertThat(config.circuitOpenWindow()).isEqualTo(oneSecond);
     }
 
     @Test
     public void testCircuitOpenWindowInMillis() {
         CircuitBreakerConfig config = confOf(builder().circuitOpenWindowMillis(oneSecond.toMillis()).build());
-        assertThat(config.circuitOpenWindow(), is(oneSecond));
+        assertThat(config.circuitOpenWindow()).isEqualTo(oneSecond);
     }
 
     @Test
@@ -137,14 +137,14 @@ public class CircuitBreakerBuilderTest {
     @Test
     public void testCounterSlidingWindow() {
         CircuitBreakerConfig config = confOf(builder().counterSlidingWindow(twoSeconds).build());
-        assertThat(config.counterSlidingWindow(), is(twoSeconds));
+        assertThat(config.counterSlidingWindow()).isEqualTo(twoSeconds);
     }
 
     @Test
     public void testCounterSlidingWindowInMillis() {
         CircuitBreakerConfig config = confOf(
                 builder().counterSlidingWindowMillis(twoSeconds.toMillis()).build());
-        assertThat(config.counterSlidingWindow(), is(twoSeconds));
+        assertThat(config.counterSlidingWindow()).isEqualTo(twoSeconds);
     }
 
     @Test
@@ -162,14 +162,14 @@ public class CircuitBreakerBuilderTest {
     @Test
     public void testCounterUpdateInterval() {
         CircuitBreakerConfig config = confOf(builder().counterUpdateInterval(oneSecond).build());
-        assertThat(config.counterUpdateInterval(), is(oneSecond));
+        assertThat(config.counterUpdateInterval()).isEqualTo(oneSecond);
     }
 
     @Test
     public void testCounterUpdateIntervalInMillis() {
         CircuitBreakerConfig config = confOf(
                 builder().counterUpdateIntervalMillis(oneSecond.toMillis()).build());
-        assertThat(config.counterUpdateInterval(), is(oneSecond));
+        assertThat(config.counterUpdateInterval()).isEqualTo(oneSecond);
     }
 
     @Test
@@ -184,7 +184,7 @@ public class CircuitBreakerBuilderTest {
     @Test
     public void testExceptionFilter() {
         ExceptionFilter instance = e -> true;
-        assertThat(confOf(builder().exceptionFilter(instance).build()).exceptionFilter(), is(instance));
+        assertThat(confOf(builder().exceptionFilter(instance).build()).exceptionFilter()).isEqualTo(instance);
     }
 
     @Test

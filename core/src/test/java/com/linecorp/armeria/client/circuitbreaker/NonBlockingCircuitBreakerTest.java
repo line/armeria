@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -61,8 +60,8 @@ public class NonBlockingCircuitBreakerTest {
 
     private static CircuitBreaker closedState(long minimumRequestThreshold, double failureRateThreshold) {
         NonBlockingCircuitBreaker cb = create(minimumRequestThreshold, failureRateThreshold);
-        assertThat(cb.state().isClosed(), is(true));
-        assertThat(cb.canRequest(), is(true));
+        assertThat(cb.state().isClosed()).isTrue();
+        assertThat(cb.canRequest()).isTrue();
         return cb;
     }
 
@@ -74,8 +73,8 @@ public class NonBlockingCircuitBreakerTest {
         cb.onFailure();
         ticker.advance(counterUpdateInterval.toNanos());
         cb.onFailure();
-        assertThat(cb.state().isOpen(), is(true));
-        assertThat(cb.canRequest(), is(false));
+        assertThat(cb.state().isOpen()).isTrue();
+        assertThat(cb.canRequest()).isFalse();
         return cb;
     }
 
@@ -85,10 +84,10 @@ public class NonBlockingCircuitBreakerTest {
 
         ticker.advance(circuitOpenWindow.toNanos());
 
-        assertThat(cb.state().isHalfOpen(), is(false));
-        assertThat(cb.canRequest(), is(true)); // first request is allowed
-        assertThat(cb.state().isHalfOpen(), is(true));
-        assertThat(cb.canRequest(), is(false)); // seconds request is refused
+        assertThat(cb.state().isHalfOpen()).isFalse();
+        assertThat(cb.canRequest()).isTrue(); // first request is allowed
+        assertThat(cb.state().isHalfOpen()).isTrue();
+        assertThat(cb.canRequest()).isFalse(); // seconds request is refused
         return cb;
     }
 
@@ -100,21 +99,21 @@ public class NonBlockingCircuitBreakerTest {
     @Test
     public void testMinimumRequestThreshold() {
         NonBlockingCircuitBreaker cb = create(4, 0.5);
-        assertThat(cb.state().isClosed() && cb.canRequest(), is(true));
+        assertThat(cb.state().isClosed() && cb.canRequest()).isTrue();
 
         cb.onFailure();
         ticker.advance(counterUpdateInterval.toNanos());
         cb.onFailure();
-        assertThat(cb.state().isClosed(), is(true));
-        assertThat(cb.canRequest(), is(true));
+        assertThat(cb.state().isClosed()).isTrue();
+        assertThat(cb.canRequest()).isTrue();
 
         cb.onFailure();
         cb.onFailure();
         ticker.advance(counterUpdateInterval.toNanos());
         cb.onFailure();
 
-        assertThat(cb.state().isOpen(), is(true));
-        assertThat(cb.canRequest(), is(false));
+        assertThat(cb.state().isOpen()).isTrue();
+        assertThat(cb.canRequest()).isFalse();
     }
 
     @Test
@@ -131,20 +130,20 @@ public class NonBlockingCircuitBreakerTest {
         ticker.advance(counterUpdateInterval.toNanos());
         cb.onFailure();
 
-        assertThat(cb.state().isClosed(), is(true)); // 10 vs 9 (0.47)
-        assertThat(cb.canRequest(), is(true));
+        assertThat(cb.state().isClosed()).isTrue(); // 10 vs 9 (0.47)
+        assertThat(cb.canRequest()).isTrue();
 
         ticker.advance(counterUpdateInterval.toNanos());
         cb.onFailure();
 
-        assertThat(cb.state().isClosed(), is(true)); // 10 vs 10 (0.5)
-        assertThat(cb.canRequest(), is(true));
+        assertThat(cb.state().isClosed()).isTrue(); // 10 vs 10 (0.5)
+        assertThat(cb.canRequest()).isTrue();
 
         ticker.advance(counterUpdateInterval.toNanos());
         cb.onFailure();
 
-        assertThat(cb.state().isOpen(), is(true)); // 10 vs 11 (0.52)
-        assertThat(cb.canRequest(), is(false));
+        assertThat(cb.state().isOpen()).isTrue(); // 10 vs 11 (0.52)
+        assertThat(cb.canRequest()).isFalse();
     }
 
     @Test
@@ -163,8 +162,8 @@ public class NonBlockingCircuitBreakerTest {
 
         cb.onSuccess();
 
-        assertThat(cb.state().isClosed(), is(true));
-        assertThat(cb.canRequest(), is(true));
+        assertThat(cb.state().isClosed()).isTrue();
+        assertThat(cb.canRequest()).isTrue();
     }
 
     @Test
@@ -173,8 +172,8 @@ public class NonBlockingCircuitBreakerTest {
 
         cb.onFailure();
 
-        assertThat(cb.state().isOpen(), is(true));
-        assertThat(cb.canRequest(), is(false));
+        assertThat(cb.state().isOpen()).isTrue();
+        assertThat(cb.canRequest()).isFalse();
     }
 
     @Test
@@ -183,10 +182,10 @@ public class NonBlockingCircuitBreakerTest {
 
         ticker.advance(trialRequestInterval.toNanos());
 
-        assertThat(cb.state().isHalfOpen(), is(true));
-        assertThat(cb.canRequest(), is(true)); // first request is allowed
-        assertThat(cb.state().isHalfOpen(), is(true));
-        assertThat(cb.canRequest(), is(false)); // seconds request is refused
+        assertThat(cb.state().isHalfOpen()).isTrue();
+        assertThat(cb.canRequest()).isTrue(); // first request is allowed
+        assertThat(cb.state().isHalfOpen()).isTrue();
+        assertThat(cb.canRequest()).isFalse(); // seconds request is refused
     }
 
     @Test

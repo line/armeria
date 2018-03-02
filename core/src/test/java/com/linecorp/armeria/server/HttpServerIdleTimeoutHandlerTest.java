@@ -15,8 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -91,14 +90,14 @@ public class HttpServerIdleTimeoutHandlerTest {
     private void readRequest() {
         final Object msg = new Object();
         ch.writeInbound(msg);
-        assertThat(ch.readInbound(), is(msg));
+        assertThat((Object) ch.readInbound()).isEqualTo(msg);
         server.unfinishedRequests++;
     }
 
     private void writeResponse() {
         final Object msg = new Object();
         ch.writeOutbound(msg);
-        assertThat(ch.readOutbound(), is(msg));
+        assertThat((Object) ch.readOutbound()).isEqualTo(msg);
         server.unfinishedRequests--;
     }
 

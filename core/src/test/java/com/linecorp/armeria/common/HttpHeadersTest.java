@@ -17,10 +17,8 @@
 package com.linecorp.armeria.common;
 
 import static io.netty.util.AsciiString.of;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
 
@@ -34,11 +32,12 @@ public class HttpHeadersTest {
                                                    of("HEADER2"), "value2",
                                                    of("Header3"), "VALUE3");
 
-        assertThat(headers.get(of("HeAdEr1")), is("value1"));
-        assertThat(headers.get(of("header2")), is("value2"));
-        assertThat(headers.get(of("HEADER3")), is("VALUE3"));
+        assertThat(headers.get(of("HeAdEr1"))).isEqualTo("value1");
+        assertThat(headers.get(of("header2"))).isEqualTo("value2");
+        assertThat(headers.get(of("HEADER3"))).isEqualTo("VALUE3");
 
-        assertThat(headers.names(), containsInAnyOrder(of("header1"), of("header2"), of("header3")));
+        assertThat(headers.names())
+                  .containsExactlyInAnyOrder(of("header1"), of("header2"), of("header3"));
     }
 
     @Test
