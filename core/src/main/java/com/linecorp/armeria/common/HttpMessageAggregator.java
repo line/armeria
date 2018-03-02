@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -31,6 +33,7 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
     private final CompletableFuture<AggregatedHttpMessage> future;
     private final List<HttpData> contentList = new ArrayList<>();
     private int contentLength;
+    @Nullable
     private Subscription subscription;
 
     protected HttpMessageAggregator(CompletableFuture<AggregatedHttpMessage> future) {
@@ -68,7 +71,7 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
 
     protected abstract void onHeaders(HttpHeaders headers);
 
-    private void onData(HttpData data) {
+    protected void onData(HttpData data) {
         boolean added = false;
         try {
             if (future.isDone()) {
