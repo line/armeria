@@ -47,8 +47,11 @@ public class AnnotatedHttpServiceDecorationTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/1", new MyDecorationService1(),
                                 LoggingService.newDecorator());
-
             sb.annotatedService("/2", new MyDecorationService2(),
+                                LoggingService.newDecorator());
+            sb.annotatedService("/3", new MyDecorationService3(),
+                                LoggingService.newDecorator());
+            sb.annotatedService("/4", new MyDecorationService4(),
                                 LoggingService.newDecorator());
         }
     };
@@ -101,6 +104,30 @@ public class AnnotatedHttpServiceDecorationTest {
         @Get("/added")
         @Decorator(FallThroughDecorator.class)
         public String added(ServiceRequestContext ctx, HttpRequest req) {
+            validateContextAndRequest(ctx, req);
+            return "OK";
+        }
+    }
+
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    @Decorator(AlwaysTooManyRequestsDecorator.class)
+    public static class MyDecorationService3 {
+
+        @Get("/tooManyRequests")
+        @Decorator(AlwaysLockedDecorator.class)
+        public String tooManyRequests(ServiceRequestContext ctx, HttpRequest req) {
+            validateContextAndRequest(ctx, req);
+            return "OK";
+        }
+    }
+
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    @Decorator(FallThroughDecorator.class)
+    public static class MyDecorationService4 {
+
+        @Get("/tooManyRequests")
+        @Decorator(AlwaysTooManyRequestsDecorator.class)
+        public String tooManyRequests(ServiceRequestContext ctx, HttpRequest req) {
             validateContextAndRequest(ctx, req);
             return "OK";
         }
@@ -177,6 +204,14 @@ public class AnnotatedHttpServiceDecorationTest {
 
         // Call an overriding method.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/override")).aggregate().get();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+
+        // Respond by the class-level decorator.
+        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/3/tooManyRequests")).aggregate().get();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+
+        // Respond by the method-level decorator.
+        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/4/tooManyRequests")).aggregate().get();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 }
