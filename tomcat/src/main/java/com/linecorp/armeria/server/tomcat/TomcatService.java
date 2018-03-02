@@ -388,7 +388,7 @@ public final class TomcatService implements HttpService {
                         res.write(headers);
                         for (;;) {
                             final HttpData d = data.poll();
-                            if (d == null || !res.write(d)) {
+                            if (d == null || !res.tryWrite(d)) {
                                 break;
                             }
                         }

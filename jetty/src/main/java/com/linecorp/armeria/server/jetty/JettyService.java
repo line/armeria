@@ -282,7 +282,7 @@ public final class JettyService implements HttpService {
             res.write(headers);
             for (;;) {
                 final HttpData data = out.poll();
-                if (data == null || !res.write(data)) {
+                if (data == null || !res.tryWrite(data)) {
                     break;
                 }
             }
