@@ -39,8 +39,8 @@ public interface StreamWriter<T> {
      * Writes the specified object to the {@link StreamMessage}. The written object will be transferred to the
      * {@link Subscriber}.
      *
-     * @throws IllegalArgumentException if the stream was already closed or the publication of the specified
-     *         object has been rejected
+     * @throws IllegalStateException if the stream was already closed
+     * @throws IllegalArgumentException if the publication of the specified object has been rejected
      */
     default void write(T o) {
         if (!tryWrite(o)) {
@@ -52,8 +52,7 @@ public interface StreamWriter<T> {
      * Writes the specified object {@link Supplier} to the {@link StreamMessage}. The object provided by the
      * {@link Supplier} will be transferred to the {@link Subscriber}.
      *
-     * @throws IllegalArgumentException if the stream was already closed or the publication of the specified
-     *         object has been rejected
+     * @throws IllegalStateException if the stream was already closed.
      */
     default void write(Supplier<? extends T> o) {
         if (!tryWrite(o)) {
