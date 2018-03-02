@@ -15,10 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-
-import java.util.Optional;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
@@ -34,10 +31,10 @@ public class ClientOptionsTest {
         HttpHeaders httpHeader = HttpHeaders.of(AsciiString.of("x-user-defined"), "HEADER_VALUE");
 
         ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
-        assertThat(options.get(ClientOption.HTTP_HEADERS), is(Optional.of(httpHeader)));
+        assertThat(options.get(ClientOption.HTTP_HEADERS)).contains(httpHeader);
 
         ClientOptions options2 = ClientOptions.DEFAULT;
-        assertThat(options2.get(ClientOption.HTTP_HEADERS), is(Optional.of(HttpHeaders.EMPTY_HEADERS)));
+        assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.EMPTY_HEADERS);
     }
 
     @Test(expected = IllegalArgumentException.class)

@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.server;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.http.Header;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -84,17 +83,19 @@ public class HttpServiceTest {
     public void testHello() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/hello/foo")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Hello, foo!"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, foo!");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/hello/foo/bar")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpDelete(rule.httpUri("/hello/bar")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("405 Method Not Allowed"));
+                assertThat(res.getStatusLine().toString()).isEqualTo(
+                        "HTTP/1.1 405 Method Not Allowed");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(
+                        "405 Method Not Allowed");
             }
         }
     }
@@ -107,25 +108,25 @@ public class HttpServiceTest {
             HttpUriRequest req = new HttpGet(rule.httpUri("/200"));
             req.setHeader("Connection", "Close");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.containsHeader("Content-Length"), is(true));
-                assertThat(res.getHeaders("Content-Length").length, is(1));
-                assertThat(res.getHeaders("Content-Length")[0].getValue(), is("6"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("200 OK"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.containsHeader("Content-Length")).isTrue();
+                assertThat(res.getHeaders("Content-Length"))
+                          .extracting(Header::getValue).containsExactly("6");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("200 OK");
             }
         }
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Ensure the HEAD response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpHead(rule.httpUri("/200")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.getEntity(), is(nullValue()));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getEntity()).isNull();
             }
 
             // Ensure the 204 response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/204")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 204 No Content"));
-                assertThat(res.getEntity(), is(nullValue()));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 204 No Content");
+                assertThat(res.getEntity()).isNull();
             }
         }
     }

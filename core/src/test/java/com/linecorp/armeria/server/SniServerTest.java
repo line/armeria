@@ -17,8 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.security.cert.X509Certificate;
 
@@ -92,18 +91,20 @@ public class SniServerTest {
     public void testSniMatch() throws Exception {
         try (CloseableHttpClient hc = newHttpClient()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet("https://a.com:" + server.httpsPort()))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("a.com: CN=a.com"));
+                assertThat(res.getStatusLine().toString()).isEqualTo(
+                        "HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(
+                        "a.com: CN=a.com");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet("https://b.com:" + server.httpsPort()))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("b.com: CN=b.com"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("b.com: CN=b.com");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet("https://c.com:" + server.httpsPort()))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("c.com: CN=c.com"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }
         }
     }
@@ -112,13 +113,13 @@ public class SniServerTest {
     public void testSniMismatch() throws Exception {
         try (CloseableHttpClient hc = newHttpClient()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet("https://mismatch.com:" + server.httpsPort()))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("c.com: CN=c.com"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpsUri("/")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("c.com: CN=c.com"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }
         }
     }

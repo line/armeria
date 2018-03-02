@@ -15,10 +15,8 @@
  */
 package com.linecorp.armeria.spring;
 
-import static net.javacrumbs.jsonunit.JsonMatchers.jsonPartMatches;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.is;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -157,9 +155,8 @@ public class ArmeriaAutoConfigurationTest {
 
         AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(msg.content().toStringUtf8()).matches(
-                jsonPartMatches("services[0].exampleHttpHeaders[0].x-additional-header",
-                                is("headerVal")));
+        assertThatJson(msg.content().toStringUtf8())
+                .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
     }
 
     @Test
