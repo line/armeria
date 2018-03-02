@@ -44,7 +44,7 @@ public interface StreamWriter<T> {
      */
     default void write(T o) {
         if (!tryWrite(o)) {
-            throw AbortedStreamException.get();
+            throw new IllegalStateException("stream closed");
         }
     }
 
@@ -56,7 +56,7 @@ public interface StreamWriter<T> {
      */
     default void write(Supplier<? extends T> o) {
         if (!tryWrite(o)) {
-            throw AbortedStreamException.get();
+            throw new IllegalStateException("stream closed");
         }
     }
 
