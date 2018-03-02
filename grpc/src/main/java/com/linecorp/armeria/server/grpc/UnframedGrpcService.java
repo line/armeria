@@ -38,6 +38,7 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -143,6 +144,11 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+
+        // Because we must aggregate the request before passing on to GrpcService, metrics would already be
+        // recorded using the HTTP information before we get chance to set RPC metric information. To prevent
+        // this, we set the RPC information in advance here, preventing the HTTP information from overriding it.
+        ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture);

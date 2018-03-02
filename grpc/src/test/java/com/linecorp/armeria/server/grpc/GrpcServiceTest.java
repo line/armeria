@@ -121,6 +121,7 @@ public class GrpcServiceTest {
                 .containsExactlyInAnyOrder(
                         PathMapping.ofExact("/armeria.grpc.testing.TestService/EmptyCall"),
                         PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall"),
+                        PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall2"),
                         PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingOutputCall"),
                         PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingInputCall"),
                         PathMapping.ofExact("/armeria.grpc.testing.TestService/FullDuplexCall"),
