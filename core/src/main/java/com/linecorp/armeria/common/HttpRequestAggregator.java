@@ -31,7 +31,15 @@ final class HttpRequestAggregator extends HttpMessageAggregator {
 
     @Override
     protected void onHeaders(HttpHeaders headers) {
-        trailingHeaders = headers;
+        if (headers.isEmpty()) {
+            return;
+        }
+
+        if (trailingHeaders.isEmpty()) {
+            trailingHeaders = headers;
+        } else {
+            trailingHeaders.add(headers);
+        }
     }
 
     @Override
