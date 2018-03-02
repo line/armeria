@@ -18,9 +18,10 @@ package com.linecorp.armeria.client.pool;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
         pool = new HashMap<>();
         pendingConnections = new HashMap<>();
-        allChannels = new HashSet<>();
+        allChannels = Collections.newSetFromMap(new IdentityHashMap<>());
     }
 
     @Override
@@ -118,9 +119,9 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
             final Future<Channel> pendingChannel = pendingConnections.get(key);
             if (pendingChannel != null) {
                 // Try acquiring again after the pending connection is completed.
-                pendingChannel.addListener((unused) -> acquireHealthyFromPoolOrNew(key, promise));
+                pendingChannel.addListener(unused -> acquireHealthyFromPoolOrNew(key, promise));
             } else {
-                Future<Channel> f = channelFactory.apply(key);
+                final Future<Channel> f = channelFactory.apply(key);
                 pendingConnections.put(key, f);
                 if (f.isDone()) {
                     notifyConnect(key, f, promise);
@@ -166,7 +167,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     void removeUnhealthy(Deque<Channel> queue) {
         if (!queue.isEmpty()) {
-            for (Iterator<Channel> i = queue.iterator(); i.hasNext();) {
+            for (final Iterator<Channel> i = queue.iterator(); i.hasNext();) {
                 final Channel ch = i.next();
                 if (healthChecker.test(ch)) {
                     break;
@@ -184,8 +185,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
         try {
             if (future.isSuccess()) {
-                Channel channel = future.getNow();
-
+                final Channel channel = future.getNow();
                 if (closed) {
                     channel.close();
                     promise.setFailure(ClosedSessionException.get());
@@ -241,7 +241,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         requireNonNull(promise, "promise");
 
         try {
-            EventLoop loop = channel.eventLoop();
+            final EventLoop loop = channel.eventLoop();
             if (loop.inEventLoop()) {
                 doRelease(key, channel, promise);
             } else {
@@ -322,14 +322,15 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         }
 
         final List<ChannelFuture> closeFutures = new ArrayList<>(allChannels.size());
-
         for (Channel ch : allChannels) {
             if (ch.isOpen()) {
-                closeFutures.add(ch.close());
+                // NB: Do not call close() here, because it will trigger the closeFuture listener
+                //     which mutates allChannels.
+                closeFutures.add(ch.closeFuture());
             }
         }
-        allChannels.clear();
 
+        closeFutures.forEach(f -> f.channel().close());
         if (blocking) {
             closeFutures.forEach(ChannelFuture::syncUninterruptibly);
         }
