@@ -61,6 +61,9 @@ service TestService {
   // One request followed by one response.
   rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
 
+  // Another method with one request followed by one response.
+  rpc UnaryCall2(SimpleRequest) returns (SimpleResponse);
+
   // One request followed by a sequence of responses (streamed download).
   // The server returns the payload with client desired type and sizes.
   rpc StreamingOutputCall(StreamingOutputCallRequest)
