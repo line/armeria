@@ -86,7 +86,6 @@ configure(projectsWithFlags('java')) {
         testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
         testCompile 'org.awaitility:awaitility'
         testRuntime 'org.checkerframework:checker-compat-qual' // Required by guava-testlib
-        testCompile 'org.hamcrest:hamcrest-library'
         testCompile 'org.assertj:assertj-core'
         testCompile 'org.mockito:mockito-core'
         testCompile 'org.apache.httpcomponents:httpclient'

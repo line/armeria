@@ -42,11 +42,11 @@ import io.micrometer.core.instrument.binder.MeterBinder;
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
  */
 public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
-    protected static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3);
+    static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3);
 
     private final ClientFactory clientFactory;
     private final EndpointGroup delegate;
-    private final Duration healthCheckRetryInterval;
+    private final Duration retryInterval;
 
     volatile List<ServerConnection> allServers = ImmutableList.of();
 
@@ -56,10 +56,10 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      */
     protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
                                          EndpointGroup delegate,
-                                         Duration healthCheckRetryInterval) {
+                                         Duration retryInterval) {
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.delegate = requireNonNull(delegate, "delegate");
-        this.healthCheckRetryInterval = requireNonNull(healthCheckRetryInterval, "healthCheckRetryInterval");
+        this.retryInterval = requireNonNull(retryInterval, "retryInterval");
     }
 
     /**
@@ -81,7 +81,7 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private void scheduleCheckAndUpdateHealthyServers() {
         clientFactory.eventLoopGroup().schedule(
                 () -> checkAndUpdateHealthyServers().thenRun(this::scheduleCheckAndUpdateHealthyServers),
-                healthCheckRetryInterval.toMillis(), TimeUnit.MILLISECONDS);
+                retryInterval.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     private CompletableFuture<Void> checkAndUpdateHealthyServers() {

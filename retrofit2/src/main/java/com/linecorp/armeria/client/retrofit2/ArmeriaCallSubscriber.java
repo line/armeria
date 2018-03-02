@@ -17,6 +17,8 @@ package com.linecorp.armeria.client.retrofit2;
 
 import java.io.IOException;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -27,6 +29,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 
 import okhttp3.Callback;
@@ -38,13 +41,20 @@ import okhttp3.ResponseBody;
 import okio.Buffer;
 
 final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
+
+    private static final long NO_CONTENT_LENGTH = -1;
+
     private final ArmeriaCall armeriaCall;
     private final Callback callback;
     private final Request request;
     private final Response.Builder responseBuilder = new Response.Builder();
     private final Buffer responseDataBuffer = new Buffer();
+    @Nullable
     private Subscription subscription;
-    private HttpHeaders headers;
+    private boolean nonInformationalHeadersStarted;
+    @Nullable
+    private String contentType;
+    private long contentLength = NO_CONTENT_LENGTH;
     private boolean callbackCalled;
 
     ArmeriaCallSubscriber(ArmeriaCall armeriaCall, Callback callback, Request request) {
@@ -72,26 +82,33 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
             return;
         }
         if (httpObject instanceof HttpHeaders) {
-            if (((HttpHeaders) httpObject).status().codeClass() == HttpStatusClass.INFORMATIONAL) {
-                return;
-            }
-            if (headers != null) {
-                return;
+            final HttpHeaders headers = (HttpHeaders) httpObject;
+            final HttpStatus status = headers.status();
+            if (!nonInformationalHeadersStarted) { // If not received a non-informational header yet
+                // Ignore informational headers or the headers without :status.
+                if (status == null || status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+                    return;
+                }
+                nonInformationalHeadersStarted = true;
+                responseBuilder.code(status.code());
+                responseBuilder.message(status.reasonPhrase());
             }
 
-            headers = (HttpHeaders) httpObject;
-            String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
             headers.forEach(header -> responseBuilder.addHeader(header.getKey().toString(),
                                                                 header.getValue()));
-            responseBuilder.code(headers.status().code());
-            responseBuilder.message(headers.status().reasonPhrase());
-            responseBuilder.body(ResponseBody.create(
-                    Strings.isNullOrEmpty(contentType) ? null : MediaType.parse(contentType),
-                    headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1L),
-                    responseDataBuffer));
+
+            if (contentType == null) {
+                contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
+            }
+
+            if (contentLength == NO_CONTENT_LENGTH) {
+                contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, NO_CONTENT_LENGTH);
+            }
+
             return;
         }
-        HttpData data = (HttpData) httpObject;
+
+        final HttpData data = (HttpData) httpObject;
         responseDataBuffer.write(data.array(), data.offset(), data.length());
     }
 
@@ -107,6 +124,9 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
     @Override
     public void onComplete() {
         if (armeriaCall.tryFinish()) {
+            responseBuilder.body(ResponseBody.create(
+                    Strings.isNullOrEmpty(contentType) ? null : MediaType.parse(contentType),
+                    contentLength, responseDataBuffer));
             responseBuilder.request(request);
             responseBuilder.protocol(Protocol.HTTP_1_1);
             safeOnResponse(responseBuilder.build());

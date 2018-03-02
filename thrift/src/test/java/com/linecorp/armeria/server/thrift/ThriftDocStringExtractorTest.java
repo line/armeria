@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.util.Map;
@@ -42,9 +40,9 @@ public class ThriftDocStringExtractorTest {
                         "META-INF/armeria/thrift/ThriftTest.json",
                         Resources.toByteArray(Resources.getResource(
                                 "META-INF/armeria/thrift/ThriftTest.json"))));
-        assertThat(docStrings.get("thrift.test.Numberz"), is("Docstring!"));
-        assertThat(docStrings.get("thrift.test.ThriftTest/testVoid"),
-                   is("Prints \"testVoid()\" and returns nothing."));
+        assertThat(docStrings.get("thrift.test.Numberz")).isEqualTo("Docstring!");
+        assertThat(docStrings.get("thrift.test.ThriftTest/testVoid")).isEqualTo(
+                "Prints \"testVoid()\" and returns nothing.");
     }
 
     @Test
@@ -54,17 +52,18 @@ public class ThriftDocStringExtractorTest {
                         "META-INF/armeria/thrift/ThriftTest.json",
                         Resources.toByteArray(Resources.getResource(
                                 "META-INF/armeria/thrift/cassandra.json"))));
-        assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.Compression"),
-                   is("CQL query compression"));
-        assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType"),
-                   is(nullValue()));
+        assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.Compression"))
+                  .isEqualTo("CQL query compression");
+        assertThat(
+                docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType")).isNull();
     }
 
     @Test
     public void testGetAllDocStrings() throws IOException {
         Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
-        assertThat(docStrings.containsKey("thrift.test.Numberz"), is(true));
-        assertThat(docStrings.containsKey("com.linecorp.armeria.service.test.thrift.cassandra.Compression"),
-                   is(true));
+        assertThat(docStrings.containsKey("thrift.test.Numberz")).isTrue();
+        assertThat(
+                docStrings.containsKey("com.linecorp.armeria.service.test.thrift.cassandra.Compression"))
+                  .isTrue();
     }
 }

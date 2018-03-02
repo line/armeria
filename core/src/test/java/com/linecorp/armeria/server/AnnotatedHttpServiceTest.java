@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -867,20 +866,22 @@ public class AnnotatedHttpServiceTest {
                             @Nullable Charset encoding,
                             @Nullable String contentType) throws IOException {
         final HttpStatus status = HttpStatus.valueOf(statusCode);
-        assertThat(res.getStatusLine().toString(), is("HTTP/1.1 " + status));
+        assertThat(res.getStatusLine().toString()).isEqualTo(
+                "HTTP/1.1 " + status);
         if (body != null) {
             if (encoding != null) {
-                assertThat(EntityUtils.toString(res.getEntity(), encoding), is(body));
+                assertThat(EntityUtils.toString(res.getEntity(), encoding))
+                          .isEqualTo(body);
             } else {
-                assertThat(EntityUtils.toString(res.getEntity()), is(body));
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(body);
             }
         }
 
         final org.apache.http.Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
         if (contentType != null) {
-            assertThat(MediaType.parse(header.getValue()), is(MediaType.parse(contentType)));
+            assertThat(MediaType.parse(header.getValue())).isEqualTo(MediaType.parse(contentType));
         } else if (statusCode >= 400) {
-            assertThat(header.getValue(), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+            assertThat(header.getValue()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
         } else {
             assert header == null;
         }

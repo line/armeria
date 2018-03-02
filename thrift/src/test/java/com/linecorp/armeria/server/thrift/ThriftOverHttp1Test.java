@@ -16,9 +16,7 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.security.GeneralSecurityException;
 
@@ -79,8 +77,10 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             for (HttpUriRequest r: reqs) {
                 try (CloseableHttpResponse res = hc.execute(r)) {
-                    assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
-                    assertThat(EntityUtils.toString(res.getEntity()), is(not("Hello, world!")));
+                    assertThat(res.getStatusLine().toString()).isEqualTo(
+                            "HTTP/1.1 405 Method Not Allowed");
+                    assertThat(EntityUtils.toString(res.getEntity()))
+                              .isNotEqualTo("Hello, world!");
                 }
             }
         }
@@ -97,9 +97,9 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
             client.send_sleep(1000);
             client.send_sleep(500);
             client.send_sleep(0);
-            assertThat(client.recv_sleep(), is(1000L));
-            assertThat(client.recv_sleep(), is(500L));
-            assertThat(client.recv_sleep(), is(0L));
+            assertThat(client.recv_sleep()).isEqualTo(1000L);
+            assertThat(client.recv_sleep()).isEqualTo(500L);
+            assertThat(client.recv_sleep()).isEqualTo(0L);
         }
     }
 }

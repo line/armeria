@@ -38,8 +38,12 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.DefaultHttpRequest;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 @RunWith(Parameterized.class)
@@ -85,5 +89,25 @@ public class DefaultHttpRequestTest {
         }).hasCauseInstanceOf(AbortedStreamException.class);
 
         assertThat(callbackThread.get()).isNotSameAs(mainThread);
+    }
+
+    @Test
+    public void splitHeaders() {
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/foo");
+        req.write(HttpData.ofUtf8("foo"));
+        req.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
+        req.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
+        req.close();
+
+        final AggregatedHttpMessage aggregated = req.aggregate().join();
+        // Request headers
+        assertThat(aggregated.headers()).isEqualTo(
+                HttpHeaders.of(HttpMethod.GET, "/foo")
+                           .add(HttpHeaderNames.CONTENT_LENGTH, "3"));
+        // Content
+        assertThat(aggregated.content().toStringUtf8()).isEqualTo("foo");
+        // Trailing headers
+        assertThat(aggregated.trailingHeaders()).isEqualTo(
+                HttpHeaders.of(HttpHeaderNames.of("a"), "b", HttpHeaderNames.of("c"), "d"));
     }
 }
