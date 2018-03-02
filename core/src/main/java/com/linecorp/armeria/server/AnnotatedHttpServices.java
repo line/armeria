@@ -38,6 +38,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -309,19 +311,37 @@ final class AnnotatedHttpServices {
      * Returns a decorator chain which is specified by {@link Decorator} annotations.
      */
     private static Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> decorator(Method method) {
+            ? extends Service<HttpRequest, HttpResponse>> decorator(Method method, Class<?> clazz) {
 
-        final Decorator[] decorators = method.getAnnotationsByType(Decorator.class);
+        // Class-level decorators are applied before method-level decorators.
+        final Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> decorator =
+                decorator(clazz.getAnnotationsByType(Decorator.class),
+                          decorator(method.getAnnotationsByType(Decorator.class), null));
+
+        return decorator == null ? Function.identity() : decorator;
+    }
+
+    /**
+     * Returns a decorator chain which is specified by {@link Decorator} annotations.
+     */
+    @Nullable
+    private static Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> decorator(
+            Decorator[] decorators,
+            @Nullable Function<Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
         if (decorators.length == 0) {
-            return Function.identity();
+            return decorator;
         }
 
         // Respect the order of decorators which is specified by a user. The first one is first applied.
-        Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>>
-                decorator = newDecorator(decorators[decorators.length - 1]);
-        for (int i = decorators.length - 2; i >= 0; i--) {
-            decorator = decorator.andThen(newDecorator(decorators[i]));
+        for (int i = decorators.length - 1; i >= 0; i--) {
+            if (decorator == null) {
+                decorator = newDecorator(decorators[i]);
+            } else {
+                decorator = decorator.andThen(newDecorator(decorators[i]));
+            }
         }
         return decorator;
     }
@@ -472,7 +492,7 @@ final class AnnotatedHttpServices {
                         "They would not be automatically injected: " + missing);
         }
 
-        return new AnnotatedHttpService(pathMapping, function, decorator(method));
+        return new AnnotatedHttpService(pathMapping, function, decorator(method, clazz));
     }
 
     /**

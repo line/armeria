@@ -32,7 +32,7 @@ import com.linecorp.armeria.server.DecoratingServiceFunction;
  */
 @Repeatable(Decorators.class)
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ ElementType.TYPE, ElementType.METHOD })
 public @interface Decorator {
 
     /**

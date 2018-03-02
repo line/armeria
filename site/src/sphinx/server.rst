@@ -11,7 +11,7 @@ Writing a server
     server-grpc
     server-thrift
     server-docservice
-    server-rest
+    server-annotated-service
     server-http-file
     server-servlet
     server-access-log
