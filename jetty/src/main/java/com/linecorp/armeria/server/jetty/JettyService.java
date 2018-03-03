@@ -77,8 +77,6 @@ public final class JettyService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(JettyService.class);
 
-    private static final Splitter PATH_SPLITTER = Splitter.on('/');
-
     /**
      * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
      *
