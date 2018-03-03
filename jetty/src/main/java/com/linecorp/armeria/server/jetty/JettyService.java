@@ -171,7 +171,7 @@ public final class JettyService implements HttpService {
     }
 
     @Override
-    public void serviceAdded(ServiceConfig cfg) throws Exception {
+    public void serviceAdded(ServiceConfig cfg) {
         if (armeriaServer != null) {
             if (armeriaServer != cfg.server()) {
                 throw new IllegalStateException("cannot be added to more than one server");
@@ -211,7 +211,7 @@ public final class JettyService implements HttpService {
         }
     }
 
-    void stop() throws Exception {
+    void stop() {
         final Server server = this.server;
         this.server = null;
         connector = null;
@@ -231,7 +231,7 @@ public final class JettyService implements HttpService {
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
         final ArmeriaConnector connector = this.connector;
         assert connector != null;
 
