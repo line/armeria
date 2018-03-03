@@ -73,7 +73,7 @@ public abstract class StructuredLoggingService<I extends Request, O extends Resp
         associatedServer = cfg.server();
         associatedServer.addListener(new ServerListenerAdapter() {
             @Override
-            public void serverStopped(Server server) throws Exception {
+            public void serverStopped(Server server) {
                 close();
             }
         });
