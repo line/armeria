@@ -126,7 +126,7 @@ public class HttpHealthCheckService extends AbstractHttpService {
     }
 
     @Override
-    protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
         return HttpResponse.of(newResponse(ctx).headers()); // Send without the content.
     }
 
