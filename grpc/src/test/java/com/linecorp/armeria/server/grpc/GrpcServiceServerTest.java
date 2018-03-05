@@ -242,10 +242,17 @@ public class GrpcServiceServerTest {
                 await().until(CLIENT_CLOSED::get);
                 try {
                     responseObserver.onNext(SimpleResponse.getDefaultInstance());
-                } catch (IllegalStateException e) {
+                } catch (Throwable t) {
                     COMPLETED.set(true);
                 }
             });
+        }
+
+        @Override
+        public void streamClientCancelsBeforeResponseClosedCancels(
+                SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            ((ServerCallStreamObserver<?>) responseObserver).setOnCancelHandler(() -> COMPLETED.set(true));
+            responseObserver.onNext(SimpleResponse.getDefaultInstance());
         }
     }
 
@@ -485,6 +492,45 @@ public class GrpcServiceServerTest {
                         .build(UnitTestServiceStub.class);
         AtomicReference<SimpleResponse> response = new AtomicReference<>();
         stub.streamClientCancelsBeforeResponseClosed(
+                SimpleRequest.getDefaultInstance(),
+                new StreamObserver<SimpleResponse>() {
+                    @Override
+                    public void onNext(SimpleResponse value) {
+                        response.set(value);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
+        await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
+        factory.close();
+        CLIENT_CLOSED.set(true);
+        await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
+    }
+
+    @Test
+    public void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
+        clientSocketClosedAfterHalfCloseBeforeCloseCancels("h2c");
+    }
+
+    @Test
+    public void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp1() throws Exception {
+        clientSocketClosedAfterHalfCloseBeforeCloseCancels("h1c");
+    }
+
+    private void clientSocketClosedAfterHalfCloseBeforeCloseCancels(String protocol) {
+        ClientFactory factory = new ClientFactoryBuilder().build();
+        UnitTestServiceStub stub =
+                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + "/")
+                        .factory(factory)
+                        .build(UnitTestServiceStub.class);
+        AtomicReference<SimpleResponse> response = new AtomicReference<>();
+        stub.streamClientCancelsBeforeResponseClosedCancels(
                 SimpleRequest.getDefaultInstance(),
                 new StreamObserver<SimpleResponse>() {
                     @Override

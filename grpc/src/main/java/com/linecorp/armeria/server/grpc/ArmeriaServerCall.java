@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static io.netty.util.AsciiString.c2b;
 import static java.util.Objects.requireNonNull;
 
@@ -155,6 +156,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
+
+        res.completionFuture().handleAsync(voidFunction((unused, t) -> {
+            if (!closeCalled) {
+                // Closed by client, not by server.
+                cancelled = true;
+                close(Status.CANCELLED, EMPTY_METADATA);
+            }
+        }), ctx.contextAwareEventLoop());
     }
 
     @Override
@@ -237,6 +246,11 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!closeCalled, "call already closed");
 
         closeCalled = true;
+        if (cancelled) {
+            // No need to write anything to client if cancelled already.
+            closeListener(status);
+            return;
+        }
 
         HttpHeaders trailers = statusToTrailers(status, sendHeadersCalled);
         final HttpObject trailersObj;
