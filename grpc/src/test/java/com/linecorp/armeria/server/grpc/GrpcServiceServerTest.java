@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
@@ -476,18 +477,18 @@ public class GrpcServiceServerTest {
 
     @Test
     public void clientSocketClosedAfterHalfCloseBeforeCloseHttp2() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeClose("h2c");
+        clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol.H2C);
     }
 
     @Test
     public void clientSocketClosedAfterHalfCloseBeforeCloseHttp1() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeClose("h1c");
+        clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol.H1C);
     }
 
-    private void clientSocketClosedAfterHalfCloseBeforeClose(String protocol) {
+    private void clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol protocol) {
         ClientFactory factory = new ClientFactoryBuilder().build();
         UnitTestServiceStub stub =
-                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + "/")
+                new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
                         .factory(factory)
                         .build(UnitTestServiceStub.class);
         AtomicReference<SimpleResponse> response = new AtomicReference<>();
@@ -515,18 +516,18 @@ public class GrpcServiceServerTest {
 
     @Test
     public void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeCloseCancels("h2c");
+        clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C);
     }
 
     @Test
     public void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp1() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeCloseCancels("h1c");
+        clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H1C);
     }
 
-    private void clientSocketClosedAfterHalfCloseBeforeCloseCancels(String protocol) {
+    private void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol) {
         ClientFactory factory = new ClientFactoryBuilder().build();
         UnitTestServiceStub stub =
-                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + "/")
+                new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
                         .factory(factory)
                         .build(UnitTestServiceStub.class);
         AtomicReference<SimpleResponse> response = new AtomicReference<>();
