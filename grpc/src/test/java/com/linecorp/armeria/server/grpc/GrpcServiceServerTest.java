@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
@@ -242,10 +243,17 @@ public class GrpcServiceServerTest {
                 await().until(CLIENT_CLOSED::get);
                 try {
                     responseObserver.onNext(SimpleResponse.getDefaultInstance());
-                } catch (IllegalStateException e) {
+                } catch (Throwable t) {
                     COMPLETED.set(true);
                 }
             });
+        }
+
+        @Override
+        public void streamClientCancelsBeforeResponseClosedCancels(
+                SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            ((ServerCallStreamObserver<?>) responseObserver).setOnCancelHandler(() -> COMPLETED.set(true));
+            responseObserver.onNext(SimpleResponse.getDefaultInstance());
         }
     }
 
@@ -469,22 +477,61 @@ public class GrpcServiceServerTest {
 
     @Test
     public void clientSocketClosedAfterHalfCloseBeforeCloseHttp2() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeClose("h2c");
+        clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol.H2C);
     }
 
     @Test
     public void clientSocketClosedAfterHalfCloseBeforeCloseHttp1() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeClose("h1c");
+        clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol.H1C);
     }
 
-    private void clientSocketClosedAfterHalfCloseBeforeClose(String protocol) {
+    private void clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol protocol) {
         ClientFactory factory = new ClientFactoryBuilder().build();
         UnitTestServiceStub stub =
-                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + "/")
+                new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
                         .factory(factory)
                         .build(UnitTestServiceStub.class);
         AtomicReference<SimpleResponse> response = new AtomicReference<>();
         stub.streamClientCancelsBeforeResponseClosed(
+                SimpleRequest.getDefaultInstance(),
+                new StreamObserver<SimpleResponse>() {
+                    @Override
+                    public void onNext(SimpleResponse value) {
+                        response.set(value);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
+        await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
+        factory.close();
+        CLIENT_CLOSED.set(true);
+        await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
+    }
+
+    @Test
+    public void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
+        clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C);
+    }
+
+    @Test
+    public void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp1() throws Exception {
+        clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H1C);
+    }
+
+    private void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol) {
+        ClientFactory factory = new ClientFactoryBuilder().build();
+        UnitTestServiceStub stub =
+                new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
+                        .factory(factory)
+                        .build(UnitTestServiceStub.class);
+        AtomicReference<SimpleResponse> response = new AtomicReference<>();
+        stub.streamClientCancelsBeforeResponseClosedCancels(
                 SimpleRequest.getDefaultInstance(),
                 new StreamObserver<SimpleResponse>() {
                     @Override
