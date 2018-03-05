@@ -218,6 +218,10 @@ public abstract class ServerRule extends ExternalResource {
      *                               it did not open a port of the protocol.
      */
     public String uri(SessionProtocol protocol, SerializationFormat format, String path) {
+        requireNonNull(protocol, "protocol");
+        requireNonNull(format, "format");
+        requireNonNull(path, "path");
+
         // This will ensure that the server has started.
         server();
 
