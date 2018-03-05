@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.metric;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 import com.codahale.metrics.MetricRegistry;
 
 import io.micrometer.core.instrument.Clock;
@@ -58,10 +60,11 @@ public final class DropwizardMeterRegistries {
     private static final DropwizardConfig DEFAULT_DROPWIZARD_CONFIG = new DropwizardConfig() {
         @Override
         public String prefix() {
-            return null;
+            return "dropwizard";
         }
 
         @Override
+        @Nullable
         public String get(String k) {
             return null;
         }
@@ -119,7 +122,14 @@ public final class DropwizardMeterRegistries {
                 DEFAULT_DROPWIZARD_CONFIG,
                 requireNonNull(registry, "registry"),
                 requireNonNull(nameMapper, "nameMapper"),
-                requireNonNull(clock, "clock"));
+                requireNonNull(clock, "clock")) {
+
+            @Override
+            protected Double nullGaugeValue() {
+                return 0.0;
+            }
+        };
+
         meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
         meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;

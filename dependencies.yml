@@ -20,9 +20,9 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.6.1'
+    version: '2.6.2'
     javadocs:
-    - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.6.1/
+    - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.6.2/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -88,7 +88,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.9.0'
+    version: &GRPC_VERSION '1.10.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -112,23 +112,23 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.0'
+    version: &MICROMETER_VERSION '1.0.1'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.1/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.1/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.1/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.21.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.22.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport:
@@ -141,15 +141,15 @@ io.netty:
 
 io.prometheus:
   simpleclient_common:
-    version: '0.2.0'
+    version: '0.3.0'
     javadocs:
     - http://prometheus.github.io/client_java/
 
 io.zipkin.brave:
-  brave: { version: &BRAVE_VERSION '4.14.3' }
+  brave: { version: &BRAVE_VERSION '4.16.2' }
 
 io.zipkin.java:
-  zipkin: { version: &ZIPKIN_VERSION '2.4.5' }
+  zipkin: { version: &ZIPKIN_VERSION '2.5.0' }
 
 it.unimi.dsi:
   fastutil:
@@ -218,7 +218,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '8.5.27'
+    version: &TOMCAT_VERSION '8.5.28'
     javadocs:
     - https://tomcat.apache.org/tomcat-8.5-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -233,13 +233,13 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.9.0' }
+  assertj-core: { version: '3.9.1' }
 
 org.awaitility:
-  awaitility: { version: '3.0.0' }
+  awaitility: { version: '3.1.0' }
 
 org.checkerframework:
-  checker-compat-qual: { version: '2.3.2' }
+  checker-compat-qual: { version: '2.4.0' }
 
 org.curioswitch.curiostack:
   protobuf-jackson: { version: '0.1.1' }
@@ -281,7 +281,7 @@ org.jctools:
       to: com.linecorp.armeria.internal.shaded.jctools
 
 org.mockito:
-  mockito-core: { version: '2.13.0' }
+  mockito-core: { version: '2.15.0' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.7' }
