@@ -236,10 +236,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                boolean exclusive) {}
 
     @Override
-    public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) {}
+    public void onPingRead(ChannelHandlerContext ctx, long data) {}
 
     @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) {}
+    public void onPingAckRead(ChannelHandlerContext ctx, long data) {}
 
     @Override
     public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {}
