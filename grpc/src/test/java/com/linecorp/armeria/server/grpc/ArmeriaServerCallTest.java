@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
@@ -25,9 +26,13 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.IdentityHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -35,6 +40,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -56,6 +62,8 @@ import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.EventLoop;
 import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 
@@ -73,6 +81,18 @@ public class ArmeriaServerCallTest {
                        .set(AsciiString.of("grpc-accept-encoding"),
                             DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings())
                        .asImmutable();
+
+    private static EventLoop eventLoop;
+
+    @BeforeClass
+    public static void setUpClass() {
+        eventLoop = new DefaultEventLoop(Executors.newSingleThreadExecutor());
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        eventLoop.shutdownGracefully().syncUninterruptibly();
+    }
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
@@ -94,8 +114,14 @@ public class ArmeriaServerCallTest {
 
     private ArmeriaServerCall<SimpleRequest, SimpleResponse> call;
 
+    private CompletableFuture<Void> completionFuture;
+
     @Before
     public void setUp() {
+        completionFuture = new CompletableFuture<>();
+        when(res.completionFuture()).thenReturn(completionFuture);
+        when(ctx.contextAwareEventLoop()).thenReturn(eventLoop);
+
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
@@ -174,5 +200,12 @@ public class ArmeriaServerCallTest {
         assertThat(call.isReady()).isTrue();
         call.close(Status.OK, new Metadata());
         assertThat(call.isReady()).isFalse();
+    }
+
+    @Test
+    public void closedIfCancelled() {
+        assertThat(call.isCancelled()).isFalse();
+        completionFuture.completeExceptionally(ClosedSessionException.get());
+        await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());
     }
 }
