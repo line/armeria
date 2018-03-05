@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.NettyServerCustomizer;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -57,6 +59,8 @@ import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -132,6 +136,7 @@ public class ServerTest {
             sb.decorator(decorator);
 
             sb.idleTimeoutMillis(idleTimeoutMillis);
+            sb.nettyCustomizer(b -> b.option(ChannelOption.SO_BACKLOG, 1024));
         }
     };
 
@@ -164,6 +169,12 @@ public class ServerTest {
     @Test
     public void testInvocation() throws Exception {
         testInvocation0("/");
+    }
+
+    @Test
+    public void testNettyCustomizer() throws Exception {
+        final Server server = ServerTest.server.server();
+        assertEquals(1024, server.bootstrap().config().options().get(ChannelOption.SO_BACKLOG));
     }
 
     @Test

@@ -44,6 +44,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
@@ -81,6 +82,7 @@ public final class Server implements AutoCloseable {
 
     private final ServerConfig config;
     private final DomainNameMapping<SslContext> sslContexts;
+    private ServerBootstrap serverBootstrap;
 
     private final StateManager stateManager = new StateManager();
     private final Set<Channel> serverChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -274,7 +276,9 @@ public final class Server implements AutoCloseable {
 
     private ChannelFuture start(ServerPort port) {
         final ServerBootstrap b = new ServerBootstrap();
+        serverBootstrap = b;
 
+        config.nettyCustomizer().accept(b);
         b.group(EventLoopGroups.newEventLoopGroup(1, r -> {
             final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName(port));
             thread.setDaemon(false);
@@ -344,6 +348,9 @@ public final class Server implements AutoCloseable {
     public EventLoop nextEventLoop() {
         return config().workerGroup().next();
     }
+
+    @VisibleForTesting
+    ServerBootstrap bootstrap() { return serverBootstrap; }
 
     private void stop0(CompletableFuture<Void> future) {
         assert future != null;

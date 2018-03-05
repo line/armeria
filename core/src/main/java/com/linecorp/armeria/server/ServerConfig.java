@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import com.linecorp.armeria.common.NettyServerCustomizer;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
@@ -64,6 +65,7 @@ public final class ServerConfig {
     private final int defaultMaxHttp1InitialLineLength;
     private final int defaultMaxHttp1HeaderSize;
     private final int defaultMaxHttp1ChunkSize;
+    private final NettyServerCustomizer nettyCustomizer;
 
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
@@ -87,13 +89,14 @@ public final class ServerConfig {
             int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
-            Consumer<RequestLog> accessLogWriter) {
+            Consumer<RequestLog> accessLogWriter, NettyServerCustomizer nettyCustomizer) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
 
         // Set the primitive properties.
+        this.nettyCustomizer = nettyCustomizer;
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
         this.shutdownWorkerGroupOnStop = shutdownWorkerGroupOnStop;
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
@@ -272,6 +275,10 @@ public final class ServerConfig {
      */
     public VirtualHost defaultVirtualHost() {
         return defaultVirtualHost;
+    }
+
+    public NettyServerCustomizer nettyCustomizer() {
+        return nettyCustomizer;
     }
 
     /**

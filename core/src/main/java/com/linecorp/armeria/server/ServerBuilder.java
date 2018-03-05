@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.NettyServerCustomizer;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -110,6 +111,7 @@ public final class ServerBuilder {
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
     private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
     private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
+    private NettyServerCustomizer nettyCustomizer = NettyServerCustomizer.DEFAULT;
     private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
     private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
@@ -174,6 +176,14 @@ public final class ServerBuilder {
      */
     public ServerBuilder virtualHost(VirtualHost virtualHost) {
         virtualHosts.add(requireNonNull(virtualHost, "virtualHost"));
+        return this;
+    }
+
+    /**
+     * TBD
+     */
+    public ServerBuilder nettyCustomizer(NettyServerCustomizer nettyCustomizer) {
+        this.nettyCustomizer = requireNonNull(nettyCustomizer, "nettyCustomizer") ;
         return this;
     }
 
@@ -730,7 +740,7 @@ public final class ServerBuilder {
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
-                meterRegistry, serviceLoggerPrefix, accessLogWriter));
+                meterRegistry, serviceLoggerPrefix, accessLogWriter, nettyCustomizer));
         serverListeners.forEach(server::addListener);
         return server;
     }
