@@ -29,6 +29,9 @@ To serve anything, you need to specify which TCP/IP port you want to bind onto:
 .. code-block:: java
 
     import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+	import java.util.concurrent.CompletableFuture;
+	import com.linecorp.armeria.server.Server;
+	import com.linecorp.armeria.server.ServerBuilder;
 
     ServerBuilder sb = new ServerBuilder();
     // Configure an HTTP port.
@@ -45,13 +48,26 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.HttpRequest;
-    import com.linecorp.armeria.common.HttpResponseWriter;
-    import com.linecorp.armeria.common.HttpStatus;
-    import com.linecorp.armeria.common.MediaType;
+    import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 
-    import com.linecorp.armeria.server.ServiceRequestContext;
-    import com.linecorp.armeria.server.AbstractHttpService;
+	import java.util.concurrent.CompletableFuture;
+	
+	import com.linecorp.armeria.common.HttpParameters;
+	import com.linecorp.armeria.common.HttpRequest;
+	import com.linecorp.armeria.common.HttpResponse;
+	import com.linecorp.armeria.common.HttpResponseWriter;
+	import com.linecorp.armeria.common.HttpStatus;
+	import com.linecorp.armeria.common.MediaType;
+	import com.linecorp.armeria.server.AbstractHttpService;
+	import com.linecorp.armeria.server.Server;
+	import com.linecorp.armeria.server.ServerBuilder;
+	import com.linecorp.armeria.server.ServiceRequestContext;
+	import com.linecorp.armeria.server.annotation.ConsumeType;
+	import com.linecorp.armeria.server.annotation.Get;
+	import com.linecorp.armeria.server.annotation.Param;
+	import com.linecorp.armeria.server.annotation.Post;
+	import com.linecorp.armeria.server.annotation.ProduceType;
+	import com.linecorp.armeria.server.logging.LoggingService;
 
     ServerBuilder sb = new ServerBuilder();
     sb.port(8080, HTTP);
@@ -73,7 +89,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
             String name = ctx.pathParam("name");
             res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
         }
-    }.decorate(LoggingService.newDecorator()); // Enable logging
+    }).decorator(LoggingService.newDecorator()); // Enable logging
 
     // Using an annotated service object:
     sb.annotatedService(new Object() {
@@ -88,7 +104,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
         @Override
         protected void doGet(ServiceRequestContext ctx,
                              HttpRequest req, HttpResponseWriter res) {
-            String path = ctx.pathWithoutPrefix();  // Get the path without the prefix ('/hello')
+            String path = ctx.mappedPath();  // Get the path without the prefix ('/greet3')
             String name = path.substring(1); // Strip the leading slash ('/')
             res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
         }
@@ -117,7 +133,8 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
         @Get("/greet6")
         public HttpResponse greet(HttpParameters parameters) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!",
-                                   parameters.get("name");
+                                   parameters.get("name"));
+        }
     });
 
     // Using media type negotiation:
