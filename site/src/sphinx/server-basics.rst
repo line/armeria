@@ -45,53 +45,54 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
 
 .. code-block:: java
 
+    import com.linecorp.armeria.common.HttpParameters;
     import com.linecorp.armeria.common.HttpRequest;
-    import com.linecorp.armeria.common.HttpResponseWriter;
+    import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.common.HttpStatus;
     import com.linecorp.armeria.common.MediaType;
+    import com.linecorp.armeria.common.SessionProtocol;
 
-    import com.linecorp.armeria.server.ServiceRequestContext;
     import com.linecorp.armeria.server.AbstractHttpService;
+    import com.linecorp.armeria.server.Server;
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.ServiceRequestContext;
+    import com.linecorp.armeria.server.annotation.ConsumeType;
+    import com.linecorp.armeria.server.annotation.Default;
+    import com.linecorp.armeria.server.annotation.Get;
+    import com.linecorp.armeria.server.annotation.Param;
+    import com.linecorp.armeria.server.annotation.Post;
+    import com.linecorp.armeria.server.annotation.ProduceType;
+    import com.linecorp.armeria.server.logging.LoggingService;
 
     ServerBuilder sb = new ServerBuilder();
     sb.port(8080, HTTP);
 
     // Add a simple 'Hello, world!' service.
-    sb.service("/", new AbstractHttpService() {
-        @Override
-        protected void doGet(ServiceRequestContext ctx,
-                             HttpRequest req, HttpResponseWriter res) {
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, world!");
-        }
-    });
+    sb.service("/", (ctx, res) -> HttpResponse.of(
+            HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, world!"));
 
     // Using path variables:
     sb.service("/greet/{name}", new AbstractHttpService() {
         @Override
-        protected void doGet(ServiceRequestContext ctx,
-                             HttpRequest req, HttpResponseWriter res) {
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             String name = ctx.pathParam("name");
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
         }
-    }.decorate(LoggingService.newDecorator()); // Enable logging
+    }.decorate(LoggingService.newDecorator())); // Enable logging
 
     // Using an annotated service object:
     sb.annotatedService(new Object() {
-        @Get("/greet2/{name}")
+        @Get("/greet2/:name") // `:name` style is also available
         public HttpResponse greet(@Param("name") String name) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
         }
     });
 
     // Just in case your name contains a slash:
-    sb.serviceUnder("/greet3", new AbstractHttpService() {
-        @Override
-        protected void doGet(ServiceRequestContext ctx,
-                             HttpRequest req, HttpResponseWriter res) {
-            String path = ctx.pathWithoutPrefix();  // Get the path without the prefix ('/hello')
-            String name = path.substring(1); // Strip the leading slash ('/')
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
-        }
+    sb.serviceUnder("/greet3", (ctx, req) -> {
+        String path = ctx.mappedPath();  // Get the path without the prefix ('/greet3')
+        String name = path.substring(1); // Strip the leading slash ('/')
+        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
     });
 
     // Using an annotated service object:
@@ -106,7 +107,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     sb.annotatedService(new Object() {
         @Get("/greet5")
         public HttpResponse greet(@Param("name") String name,
-                                  @Param("title") @Optional("Mr.") String title) {
+                                  @Param("title") @Default("Mr.") String title) {
             // "Mr." is used by default if there is no title parameter in the request.
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s %s!", title, name);
         }
@@ -117,7 +118,8 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
         @Get("/greet6")
         public HttpResponse greet(HttpParameters parameters) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!",
-                                   parameters.get("name");
+                                   parameters.get("name"));
+        }
     });
 
     // Using media type negotiation:
