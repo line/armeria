@@ -64,7 +64,7 @@ public class RedirectServiceTest {
             try (ServerSocket ss = new ServerSocket(0)) {
                 final int serverRule1Port = ss.getLocalPort();
 
-                sb.port(serverRule1Port, "HTTP");
+                sb.http(serverRule1Port);
                 sb.service("/new0/branch1", SERVICE_BRANCH_1);
                 sb.service("/new0/branch2", SERVICE_BRANCH_2);
 

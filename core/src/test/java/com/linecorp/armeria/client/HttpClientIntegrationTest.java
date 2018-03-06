@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -172,8 +171,6 @@ public class HttpClientIntegrationTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.port(0, HTTP);
-
             sb.service("/httptestbody", new AbstractHttpService() {
 
                 @Override

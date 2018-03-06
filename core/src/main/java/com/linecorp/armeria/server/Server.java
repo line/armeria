@@ -64,7 +64,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
-import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -80,6 +79,7 @@ public final class Server implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     private final ServerConfig config;
+    @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
 
     private final StateManager stateManager = new StateManager();
@@ -92,6 +92,7 @@ public final class Server implements AutoCloseable {
 
     private final ConnectionLimitingHandler connectionLimitingHandler;
 
+    @Nullable
     private volatile ServerPort primaryActivePort;
 
     /**
@@ -100,34 +101,11 @@ public final class Server implements AutoCloseable {
      */
     private volatile GracefulShutdownSupport gracefulShutdownSupport = GracefulShutdownSupport.disabled();
 
-    Server(ServerConfig config) {
+    Server(ServerConfig config, @Nullable DomainNameMapping<SslContext> sslContexts) {
         this.config = requireNonNull(config, "config");
+        this.sslContexts = sslContexts;
+
         config.setServer(this);
-
-        // Pre-populate the domain name mapping for later matching.
-        SslContext lastSslContext = null;
-        for (VirtualHost h: config.virtualHosts()) {
-            lastSslContext = h.sslContext();
-        }
-
-        if (lastSslContext == null) {
-            sslContexts = null;
-            for (ServerPort p: config.ports()) {
-                if (p.protocol().isTls()) {
-                    throw new IllegalArgumentException("no SSL context specified");
-                }
-            }
-        } else {
-            final DomainNameMappingBuilder<SslContext>
-                    mappingBuilder = new DomainNameMappingBuilder<>(lastSslContext);
-            for (VirtualHost h : config.virtualHosts()) {
-                final SslContext sslCtx = h.sslContext();
-                if (sslCtx != null) {
-                    mappingBuilder.add(h.hostnamePattern(), sslCtx);
-                }
-            }
-            sslContexts = mappingBuilder.build();
-        }
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
@@ -489,7 +467,7 @@ public final class Server implements AutoCloseable {
         final StateType type;
         final CompletableFuture<Void> future;
 
-        State(StateType type, CompletableFuture<Void> future) {
+        State(StateType type, @Nullable CompletableFuture<Void> future) {
             this.type = type;
             this.future = future;
         }
@@ -651,6 +629,15 @@ public final class Server implements AutoCloseable {
                 // The port that has been activated first becomes the primary port.
                 if (primaryActivePort == null) {
                     primaryActivePort = actualPort;
+                }
+
+                if (localAddress.getAddress().isAnyLocalAddress() ||
+                    localAddress.getAddress().isLoopbackAddress()) {
+                    logger.info("Serving {} at {} - {}://127.0.0.1:{}/",
+                                port.protocol().name(), localAddress,
+                                port.protocol().uriText(), localAddress.getPort());
+                } else {
+                    logger.info("Serving {} at {}", port.protocol().name(), localAddress);
                 }
 
                 if (remainingPorts.decrementAndGet() == 0) {

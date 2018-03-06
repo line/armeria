@@ -27,7 +27,6 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -35,7 +34,6 @@ import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
 
@@ -140,7 +138,6 @@ public final class ServerConfig {
         this.ports = Collections.unmodifiableList(portsCopy);
 
         // Set virtual host definitions and initialize their domain name mapping.
-        defaultVirtualHost = normalizeDefaultVirtualHost(defaultVirtualHost, portsCopy);
         final DomainNameMappingBuilder<VirtualHost> mappingBuilder =
                 new DomainNameMappingBuilder<>(defaultVirtualHost);
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
@@ -220,21 +217,6 @@ public final class ServerConfig {
             throw new IllegalArgumentException(largerFieldName + " must be greater than or equal to" +
                                                smallerFieldName);
         }
-    }
-
-    private static VirtualHost normalizeDefaultVirtualHost(VirtualHost h, List<ServerPort> ports) {
-        final SslContext sslCtx = h.sslContext();
-        // The default virtual host must have sslContext set if TLS is in use.
-        if (sslCtx == null && ports.stream().anyMatch(p -> p.protocol().isTls())) {
-            throw new IllegalArgumentException(
-                    "defaultVirtualHost must have sslContext set when TLS is enabled.");
-        }
-
-        return new VirtualHost(
-                h.defaultHostname(), "*", sslCtx,
-                h.serviceConfigs().stream().map(
-                        e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
-                 .collect(Collectors.toList()), h.producibleMediaTypes());
     }
 
     /**

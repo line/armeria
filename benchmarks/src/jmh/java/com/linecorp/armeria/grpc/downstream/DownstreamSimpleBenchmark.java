@@ -59,7 +59,6 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
     @Override
     protected void setUp() throws Exception {
         server = new ServerBuilder()
-                .port(0, HTTP)
                 .serviceUnder("/", new GrpcServiceBuilder().addService(new GithubApiService()).build())
                 .build();
         server.start().join();

@@ -32,7 +32,6 @@ import com.google.common.io.ByteStreams;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.util.NetUtil;
@@ -43,7 +42,6 @@ public class HttpServerPathTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.port(0, SessionProtocol.HTTP);
             sb.service("/service/foo", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {

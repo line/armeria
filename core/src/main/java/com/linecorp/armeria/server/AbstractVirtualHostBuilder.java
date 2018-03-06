@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -119,7 +120,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private final String defaultHostname;
     private final String hostnamePattern;
     private final List<ServiceConfig> services = new ArrayList<>();
+    @Nullable
     private SslContext sslContext;
+    @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
 
     /**
@@ -162,17 +165,54 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Sets the {@link SslContext} of this {@link VirtualHost}.
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@link SslContext}.
      */
-    public B sslContext(SslContext sslContext) {
+    public B tls(SslContext sslContext) {
         this.sslContext = VirtualHost.validateSslContext(requireNonNull(sslContext, "sslContext"));
         return self();
     }
 
     /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile}
+     * and cleartext {@code keyFile}.
+     */
+    public B tls(File keyCertChainFile, File keyFile) throws SSLException {
+        tls(keyCertChainFile, keyFile, null);
+        return self();
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
+     * {@code keyFile} and {@code keyPassword}.
+     */
+    public B tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
+        final SslContextBuilder builder = SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword);
+
+        builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
+        builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+        builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
+
+        tls(builder.build());
+        return self();
+    }
+
+    /**
+     * Sets the {@link SslContext} of this {@link VirtualHost}.
+     *
+     * @deprecated Use {@link #tls(SslContext)}.
+     */
+    @Deprecated
+    public B sslContext(SslContext sslContext) {
+        return tls(sslContext);
+    }
+
+    /**
      * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
      * {@code keyCertChainFile} and cleartext {@code keyFile}.
+     *
+     * @deprecated Use {@link #tls(File, File)}.
      */
+    @Deprecated
     public B sslContext(
             SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
         sslContext(protocol, keyCertChainFile, keyFile, null);
@@ -182,23 +222,19 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     /**
      * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
      * {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
+     *
+     * @deprecated Use {@link #tls(File, File, String)}.
      */
+    @Deprecated
     public B sslContext(
             SessionProtocol protocol,
-            File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
+            File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
 
         if (requireNonNull(protocol, "protocol") != SessionProtocol.HTTPS) {
             throw new IllegalArgumentException("unsupported protocol: " + protocol);
         }
 
-        final SslContextBuilder builder = SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword);
-
-        builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
-        builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
-        builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
-
-        sslContext(builder.build());
-        return self();
+        return tls(keyCertChainFile, keyFile, keyPassword);
     }
 
     /**

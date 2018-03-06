@@ -67,9 +67,9 @@ public class HttpHealthCheckedEndpointGroupTest {
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.port(0, HTTP);
-            sb.port(0, HTTPS);
-            sb.sslContext(HTTPS, certificate.certificateFile(), certificate.privateKeyFile());
+            sb.http(0);
+            sb.https(0);
+            sb.tls(certificate.certificateFile(), certificate.privateKeyFile());
             sb.service(HEALTH_CHECK_PATH, new HttpHealthCheckService());
         }
     }

@@ -19,7 +19,7 @@ First, add DocService_ to the ServerBuilder_:
 .. code-block:: java
 
     ServerBuilder sb = new ServerBuilder();
-    sb.port(8080, "http");
+    sb.http(8080);
     // Add some RPC services.
     sb.service("/hello", THttpService.of(new MyHelloService());
     // Add DocService.
