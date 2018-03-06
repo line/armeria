@@ -28,11 +28,9 @@ To serve anything, you need to specify which TCP/IP port you want to bind onto:
 
 .. code-block:: java
 
-    import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-
     ServerBuilder sb = new ServerBuilder();
     // Configure an HTTP port.
-    sb.port(8080, HTTP);
+    sb.http(8080);
     // TODO: Add your services here.
     Server server = sb.build();
     CompletableFuture<Void> future = server.start();
@@ -50,7 +48,6 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.common.HttpStatus;
     import com.linecorp.armeria.common.MediaType;
-    import com.linecorp.armeria.common.SessionProtocol;
 
     import com.linecorp.armeria.server.AbstractHttpService;
     import com.linecorp.armeria.server.Server;
@@ -65,7 +62,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     import com.linecorp.armeria.server.logging.LoggingService;
 
     ServerBuilder sb = new ServerBuilder();
-    sb.port(8080, HTTP);
+    sb.http(8080);
 
     // Add a simple 'Hello, world!' service.
     sb.service("/", (ctx, res) -> HttpResponse.of(
@@ -158,11 +155,9 @@ You can also add an HTTPS port with your certificate and its private key files:
 
 .. code-block:: java
 
-    import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
-
     ServerBuilder sb = new ServerBuilder();
-    sb.port(8443, HTTPS)
-      .sslContext(HTTPS, new File("certificate.crt"), new File("private.key"), "myPassphrase");
+    sb.https(8443)
+      .tls(new File("certificate.crt"), new File("private.key"), "myPassphrase");
     ...
 
 Virtual hosts
@@ -179,14 +174,14 @@ Use ``ServerBuilder.withVirtualHost()`` to configure `a name-based virtual host`
     // Configure foo.com.
     sb.withVirtualHost("foo.com")
       .service(...)
-      .sslContext(...)
+      .tls(...)
       .and() // Configure *.bar.com.
       .withVirtualHost("*.bar.com")
       .service(...)
-      .sslContext(...)
+      .tls(...)
       .and() // Configure the default virtual host.
       .service(...)
-      .sslContext(...);
+      .tls(...);
     ...
 
 See also

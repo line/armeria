@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.REQUEST_MESSAGE;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -262,7 +261,6 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.port(0, HTTP);
             sb.defaultMaxRequestLength(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()

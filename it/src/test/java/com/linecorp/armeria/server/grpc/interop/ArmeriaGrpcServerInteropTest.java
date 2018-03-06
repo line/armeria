@@ -31,7 +31,6 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.ConnectionSpec;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -94,8 +93,8 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                 }
             });
 
-            sb.port(new InetSocketAddress("127.0.0.1", 0), SessionProtocol.HTTPS);
-            sb.sslContext(newSslContext());
+            sb.https(new InetSocketAddress("127.0.0.1", 0));
+            sb.tls(newSslContext());
             sb.defaultMaxRequestLength(16 * 1024 * 1024);
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(ServerInterceptors.intercept(

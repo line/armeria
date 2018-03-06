@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -61,7 +60,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         listeners = new ArrayList<>();
 
         for (Endpoint endpoint : sampleEndpoints) {
-            Server server = new ServerBuilder().port(endpoint.port(), SessionProtocol.HTTP)
+            Server server = new ServerBuilder().http(endpoint.port())
                                                .service("/", new EchoService())
                                                .build();
             ZooKeeperUpdatingListener listener;

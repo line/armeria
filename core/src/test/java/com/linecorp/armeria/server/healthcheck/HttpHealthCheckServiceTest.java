@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
@@ -115,7 +114,6 @@ public class HttpHealthCheckServiceTest {
     @Test
     public void testGet() throws Exception {
         final ServerBuilder builder = new ServerBuilder();
-        builder.port(0, HTTP);
         builder.service("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {
@@ -143,7 +141,6 @@ public class HttpHealthCheckServiceTest {
     @Test
     public void testHead() throws Exception {
         final ServerBuilder builder = new ServerBuilder();
-        builder.port(0, HTTP);
         builder.service("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {

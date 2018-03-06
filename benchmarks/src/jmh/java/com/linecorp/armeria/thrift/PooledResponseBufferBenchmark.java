@@ -141,7 +141,6 @@ public class PooledResponseBufferBenchmark {
     @Setup
     public void startServer() throws Exception {
         ServerBuilder sb = new ServerBuilder()
-                .port(0, HTTP)
                 .service("/a", THttpService.of(
                         (AsyncIface) (name, resultHandler) ->
                                 resultHandler.onComplete(RESPONSE))

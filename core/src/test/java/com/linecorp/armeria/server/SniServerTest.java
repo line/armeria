@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.security.cert.X509Certificate;
@@ -75,15 +74,13 @@ public class SniServerTest {
             b.service("/", new SniTestService("b.com"));
             c.service("/", new SniTestService("c.com"));
 
-            a.sslContext(HTTPS, sscA.certificateFile(), sscA.privateKeyFile());
-            b.sslContext(HTTPS, sscB.certificateFile(), sscB.privateKeyFile());
-            c.sslContext(HTTPS, sscC.certificateFile(), sscC.privateKeyFile());
+            a.tls(sscA.certificateFile(), sscA.privateKeyFile());
+            b.tls(sscB.certificateFile(), sscB.privateKeyFile());
+            c.tls(sscC.certificateFile(), sscC.privateKeyFile());
 
             sb.virtualHost(a.build());
             sb.virtualHost(b.build());
             sb.defaultVirtualHost(c.build());
-
-            sb.port(0, HTTPS);
         }
     };
 

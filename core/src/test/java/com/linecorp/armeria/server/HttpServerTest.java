@@ -20,8 +20,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertNotNull;
@@ -147,11 +145,11 @@ public class HttpServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
 
             sb.workerGroup(workerGroup, true);
-            sb.port(0, HTTP);
-            sb.port(0, HTTPS);
+            sb.http(0);
+            sb.https(0);
 
             SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
+            sb.tls(ssc.certificate(), ssc.privateKey());
 
             sb.service("/delay/{delay}", new AbstractHttpService() {
                 @Override

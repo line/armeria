@@ -98,11 +98,11 @@ public abstract class AbstractThriftOverHttpTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            sb.port(0, HTTP);
-            sb.port(0, HTTPS);
+            sb.http(0);
+            sb.https(0);
 
             ssc = new SelfSignedCertificate("127.0.0.1");
-            sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
+            sb.tls(ssc.certificate(), ssc.privateKey());
 
             sb.service("/hello", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!')));
