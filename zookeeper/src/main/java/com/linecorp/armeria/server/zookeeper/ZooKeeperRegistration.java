@@ -69,17 +69,6 @@ class ZooKeeperRegistration {
         zooKeeperConnector.connect();
     }
 
-    /**
-     * Create a server register.
-     * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will registered)
-     * @param sessionTimeout  session timeout
-     * @param endpoint        register information
-     */
-    ZooKeeperRegistration(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, endpoint, NodeValueCodec.DEFAULT);
-    }
-
     public void close(boolean active) {
         zooKeeperConnector.close(active);
     }

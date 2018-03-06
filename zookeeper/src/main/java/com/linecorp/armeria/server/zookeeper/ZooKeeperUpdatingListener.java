@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 
@@ -33,10 +34,43 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     private final String zkConnectionStr;
     private final String zNodePath;
     private final int sessionTimeout;
+    private final NodeValueCodec nodeValueCodec;
     @Nullable
     private Endpoint endpoint;
     @Nullable
     private ZooKeeperRegistration connector;
+
+    /**
+     * A ZooKeeper server listener, used for register server into ZooKeeper.
+     * @param zkConnectionStr ZooKeeper connection string
+     * @param zNodePath       ZooKeeper node path(under which this server will registered)
+     * @param sessionTimeout  session timeout
+     * @param endpoint        the endpoint of the server being registered
+     * @param nodeValueCodec  {@link NodeValueCodec} to use
+     */
+    ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
+                              Endpoint endpoint, NodeValueCodec nodeValueCodec) {
+        this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
+        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        this.endpoint = requireNonNull(endpoint, "endpoint");
+        this.sessionTimeout = sessionTimeout;
+        this.nodeValueCodec = requireNonNull(nodeValueCodec);
+    }
+
+    /**
+     * A ZooKeeper server listener, used for register server into ZooKeeper.
+     * @param zkConnectionStr ZooKeeper connection string
+     * @param zNodePath       ZooKeeper node path(under which this server will registered)
+     * @param sessionTimeout  session timeout
+     * @param nodeValueCodec  {@link NodeValueCodec} to use
+     */
+    ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
+                              NodeValueCodec nodeValueCodec) {
+        this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
+        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        this.sessionTimeout = sessionTimeout;
+        this.nodeValueCodec = requireNonNull(nodeValueCodec);
+    }
 
     /**
      * A ZooKeeper server listener, used for register server into ZooKeeper.
@@ -52,6 +86,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.endpoint = requireNonNull(endpoint, "endpoint");
         this.sessionTimeout = sessionTimeout;
+        this.nodeValueCodec = NodeValueCodec.DEFAULT;
     }
 
     /**
@@ -65,6 +100,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.sessionTimeout = sessionTimeout;
+        this.nodeValueCodec = NodeValueCodec.DEFAULT;
     }
 
     @Override
@@ -75,7 +111,8 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
                                    server.activePort().get()
                                          .localAddress().getPort());
         }
-        connector = new ZooKeeperRegistration(zkConnectionStr, zNodePath, sessionTimeout, endpoint);
+        connector = new ZooKeeperRegistration(zkConnectionStr, zNodePath, sessionTimeout, endpoint,
+                                              nodeValueCodec);
     }
 
     @Override
