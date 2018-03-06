@@ -67,7 +67,6 @@ public class LargePayloadBenchmark {
     @Setup
     public void setUp() {
         server = new ServerBuilder()
-                .port(0, HTTP)
                 .serviceUnder("/", new GrpcServiceBuilder().addService(
                         new BinaryProxyImplBase() {
                             @Override

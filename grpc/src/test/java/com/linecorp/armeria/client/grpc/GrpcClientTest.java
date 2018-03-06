@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.grpc;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.grpc.testing.Messages.PayloadType.COMPRESSABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -105,7 +104,6 @@ public class GrpcClientTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.port(0, HTTP);
             sb.defaultMaxRequestLength(MAX_MESSAGE_SIZE);
             sb.idleTimeoutMillis(0);
 

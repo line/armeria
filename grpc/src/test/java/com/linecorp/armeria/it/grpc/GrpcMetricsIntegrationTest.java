@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -95,7 +94,6 @@ public class GrpcMetricsIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.meterRegistry(registry);
-            sb.port(0, SessionProtocol.HTTP);
             sb.serviceUnder("/", new GrpcServiceBuilder()
                          .addService(new TestServiceImpl())
                          .enableUnframedRequests(true)

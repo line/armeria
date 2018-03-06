@@ -25,6 +25,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
@@ -36,6 +38,7 @@ public final class ServerPort implements Comparable<ServerPort> {
     private final String localAddressString;
     private final SessionProtocol protocol;
     private int hashCode;
+    @Nullable
     private String strVal;
 
     /**
@@ -136,7 +139,7 @@ public final class ServerPort implements Comparable<ServerPort> {
         return strVal;
     }
 
-    static String toString(Class<?> type, InetSocketAddress localAddress, SessionProtocol protocol) {
+    static String toString(@Nullable Class<?> type, InetSocketAddress localAddress, SessionProtocol protocol) {
         StringBuilder buf = new StringBuilder();
         if (type != null) {
             buf.append(type.getSimpleName());

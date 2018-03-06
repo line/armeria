@@ -68,16 +68,14 @@ public class HttpClientSniTest {
             sscA = new SelfSignedCertificate("a.com");
             sscB = new SelfSignedCertificate("b.com");
 
-            sb.port(0, HTTPS);
-
             final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
             final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
 
             a.service("/", new SniTestService("a.com"));
             b.service("/", new SniTestService("b.com"));
 
-            a.sslContext(HTTPS, sscA.certificate(), sscA.privateKey());
-            b.sslContext(HTTPS, sscB.certificate(), sscB.privateKey());
+            a.tls(sscA.certificate(), sscA.privateKey());
+            b.tls(sscB.certificate(), sscB.privateKey());
 
             sb.virtualHost(a.build());
             sb.defaultVirtualHost(b.build());

@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
@@ -233,7 +234,7 @@ public class ArmeriaAutoConfiguration {
 
     private static void configurePorts(ArmeriaSettings armeriaSettings, ServerBuilder server) {
         if (armeriaSettings.getPorts().isEmpty()) {
-            server.port(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocol());
+            server.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocol()));
             return;
         }
 
@@ -245,12 +246,12 @@ public class ArmeriaAutoConfiguration {
 
             if (ip == null) {
                 if (iface == null) {
-                    server.port(new InetSocketAddress(port), proto);
+                    server.port(new ServerPort(port, proto));
                 } else {
                     try {
                         Enumeration<InetAddress> e = NetworkInterface.getByName(iface).getInetAddresses();
                         while (e.hasMoreElements()) {
-                            server.port(new InetSocketAddress(e.nextElement(), port), proto);
+                            server.port(new ServerPort(new InetSocketAddress(e.nextElement(), port), proto));
                         }
                     } catch (SocketException e) {
                         throw new IllegalStateException("Failed to find an iface: " + iface, e);
@@ -260,7 +261,8 @@ public class ArmeriaAutoConfiguration {
                 if (NetUtil.isValidIpV4Address(ip) || NetUtil.isValidIpV6Address(ip)) {
                     final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(ip);
                     try {
-                        server.port(new InetSocketAddress(InetAddress.getByAddress(bytes), port), proto);
+                        server.port(new ServerPort(new InetSocketAddress(
+                                InetAddress.getByAddress(bytes), port), proto));
                     } catch (UnknownHostException e) {
                         // Should never happen.
                         throw new Error(e);
