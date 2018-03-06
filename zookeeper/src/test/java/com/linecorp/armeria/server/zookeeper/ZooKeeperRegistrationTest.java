@@ -52,7 +52,6 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
     @Before
     public void startServers() {
         servers = new ArrayList<>();
-        listeners = new ArrayList<>();
 
         for (Endpoint endpoint : sampleEndpoints) {
             Server server = new ServerBuilder().http(endpoint.port())
@@ -67,7 +66,6 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
                     .build();
             server.addListener(listener);
             server.start().join();
-            listeners.add(listener);
             servers.add(server);
         }
     }

@@ -15,25 +15,19 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
+import java.io.IOException;
 
-import org.apache.zookeeper.Watcher.Event.KeeperState;
-import org.apache.zookeeper.ZooKeeper;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperConnector;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -42,7 +36,7 @@ import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
  */
 public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     private final NodeValueCodec nodeValueCodec;
-    private final ZooKeeperConnector zooKeeperConnector;
+    private final PathChildrenCache pathChildrenCache;
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
@@ -67,58 +61,40 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                   NodeValueCodec nodeValueCodec) {
-        zooKeeperConnector = new ZooKeeperConnector(zkConnectionStr, zNodePath, sessionTimeout,
-                                                    createListener());
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        zooKeeperConnector.connect();
+        ExponentialBackoffRetry retryPolicy = new ExponentialBackoffRetry(1000, 3);
+        CuratorFramework client = CuratorFrameworkFactory.builder()
+                                                         .connectString(zkConnectionStr)
+                                                         .retryPolicy(retryPolicy)
+                                                         .sessionTimeoutMs(sessionTimeout)
+                                                         .build();
+        client.start();
+        pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
+        pathChildrenCache.getListenable().addListener((c, event) -> {
+            switch (event.getType()) {
+                case CHILD_ADDED:
+                    addEndpoint(nodeValueCodec.decode(event.getData().getData()));
+                    break;
+                case CHILD_REMOVED:
+                    removeEndpoint(nodeValueCodec.decode(event.getData().getData()));
+                    break;
+                default:
+                    break;
+            }
+        });
+        try {
+            pathChildrenCache.start();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override
     public void close() {
-        zooKeeperConnector.close(true);
-    }
-
-    /**
-     * Create a {@link ZooKeeperListener} listens specific ZooKeeper events.
-     * @return  {@link ZooKeeperListener}
-     */
-    private ZooKeeperListener createListener() {
-        return new ZooKeeperListener() {
-            @Override
-            public void nodeChildChange(Map<String, String> newChildrenValue) {
-                final List<Endpoint> newData = newChildrenValue.values().stream()
-                                                               .map(nodeValueCodec::decode)
-                                                               .filter(Objects::nonNull)
-                                                               .collect(toImmutableList());
-                final List<Endpoint> prevData = endpoints();
-                if (!prevData.equals(newData)) {
-                    setEndpoints(newData);
-                }
-            }
-
-            @Override
-            public void nodeValueChange(String newValue) {
-                //ignore value change event
-            }
-
-            @Override
-            public void connected() {
-            }
-        };
-    }
-
-    @VisibleForTesting
-    void enableStateRecording() {
-        zooKeeperConnector.enableStateRecording();
-    }
-
-    @VisibleForTesting
-    ZooKeeper underlyingClient() {
-        return zooKeeperConnector.underlyingClient();
-    }
-
-    @VisibleForTesting
-    BlockingQueue<KeeperState> stateQueue() {
-        return zooKeeperConnector.stateQueue();
+        try {
+            pathChildrenCache.close();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
