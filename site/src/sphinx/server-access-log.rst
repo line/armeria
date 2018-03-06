@@ -27,7 +27,7 @@ logback
 
       <appender name="ACCESS" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>access.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
           <!-- daily rollover -->
           <fileNamePattern>access.%d{yyyy-MM-dd}-%i.log</fileNamePattern>
           <!-- each file should be at most 1GB, keep 30 days worth of history, but at most 30GB -->
