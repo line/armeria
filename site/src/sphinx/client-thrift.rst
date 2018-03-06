@@ -60,6 +60,9 @@ the following:
               return null;
           });
 
+    // You can also wait until the call is finished.
+    String reply = future.get();
+
 The example above introduces a new class called ThriftCompletableFuture_. It is a subtype of Java 8
 CompletableFuture_ that implements Thrift AsyncMethodCallback_. Once passed as a callback of an asynchronous
 Thrift call, ThriftCompletableFuture_ will complete itself when the reply is received or the call fails.
