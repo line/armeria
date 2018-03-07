@@ -72,7 +72,6 @@ import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.Codec;
@@ -231,21 +230,6 @@ public class GrpcServiceServerTest {
                 @Override
                 public void onCompleted() {}
             };
-        }
-
-        @Override
-        public void streamClientCancelsBeforeResponseClosed(SimpleRequest request,
-                                                            StreamObserver<SimpleResponse> responseObserver) {
-            responseObserver.onNext(SimpleResponse.getDefaultInstance());
-            ServiceRequestContext ctx = RequestContext.current();
-            ctx.blockingTaskExecutor().execute(() -> {
-                await().until(CLIENT_CLOSED::get);
-                try {
-                    responseObserver.onNext(SimpleResponse.getDefaultInstance());
-                } catch (Throwable t) {
-                    COMPLETED.set(true);
-                }
-            });
         }
 
         @Override
@@ -470,45 +454,6 @@ public class GrpcServiceServerTest {
         stream.onNext(SimpleRequest.getDefaultInstance());
         await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
         factory.close();
-        await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
-    }
-
-    @Test
-    public void clientSocketClosedAfterHalfCloseBeforeCloseHttp2() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol.H2C);
-    }
-
-    @Test
-    public void clientSocketClosedAfterHalfCloseBeforeCloseHttp1() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol.H1C);
-    }
-
-    private void clientSocketClosedAfterHalfCloseBeforeClose(SessionProtocol protocol) {
-        ClientFactory factory = new ClientFactoryBuilder().build();
-        UnitTestServiceStub stub =
-                new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
-                        .factory(factory)
-                        .build(UnitTestServiceStub.class);
-        AtomicReference<SimpleResponse> response = new AtomicReference<>();
-        stub.streamClientCancelsBeforeResponseClosed(
-                SimpleRequest.getDefaultInstance(),
-                new StreamObserver<SimpleResponse>() {
-                    @Override
-                    public void onNext(SimpleResponse value) {
-                        response.set(value);
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                    }
-                });
-        await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
-        factory.close();
-        CLIENT_CLOSED.set(true);
         await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
     }
 

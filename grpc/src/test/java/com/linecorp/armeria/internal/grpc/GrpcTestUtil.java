@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.grpc;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.zip.GZIPOutputStream;
 
 import com.google.common.io.ByteStreams;
@@ -46,22 +48,24 @@ public final class GrpcTestUtil {
                                              .setBody(ByteString.copyFromUtf8("grpc and armeria")))
                           .build();
 
-    public static byte[] uncompressedResponseBytes() throws Exception {
+    public static byte[] uncompressedResponseBytes() {
         return uncompressedFrame(protoByteBuf(RESPONSE_MESSAGE));
     }
 
-    public static byte[] compressedResponseBytes() throws Exception {
+    public static byte[] compressedResponseBytes() {
         return compressedFrame(protoByteBuf(RESPONSE_MESSAGE));
     }
 
-    public static ByteBuf requestByteBuf() throws Exception {
+    public static ByteBuf requestByteBuf() {
         return protoByteBuf(REQUEST_MESSAGE);
     }
 
-    public static ByteBuf protoByteBuf(MessageLite msg) throws Exception {
+    public static ByteBuf protoByteBuf(MessageLite msg) {
         ByteBuf buf = Unpooled.buffer();
         try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
             msg.writeTo(os);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
         return buf;
     }
@@ -77,11 +81,13 @@ public final class GrpcTestUtil {
         return result;
     }
 
-    public static byte[] compressedFrame(ByteBuf uncompressed) throws Exception {
+    public static byte[] compressedFrame(ByteBuf uncompressed) {
         ByteBuf compressed = Unpooled.buffer();
         try (ByteBufInputStream is = new ByteBufInputStream(uncompressed, true);
              GZIPOutputStream os = new GZIPOutputStream(new ByteBufOutputStream(compressed))) {
             ByteStreams.copy(is, os);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
         ByteBuf buf = Unpooled.buffer();
         buf.writeByte(1);

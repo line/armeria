@@ -161,6 +161,14 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void cancel(@Nullable String message, @Nullable Throwable cause) {
+        if (ctx.eventLoop().inEventLoop()) {
+            doCancel(message, cause);
+        } else {
+            ctx.eventLoop().submit(() -> doCancel(message, cause));
+        }
+    }
+
+    private void doCancel(@Nullable String message, @Nullable Throwable cause) {
         if (message == null && cause == null) {
             cause = new CancellationException("Cancelled without a message or cause");
             logger.warn("Cancelling without a message or cause is suboptimal", cause);
@@ -182,11 +190,23 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void halfClose() {
-        req.close();
+        if (ctx.eventLoop().inEventLoop()) {
+            req.close();
+        } else {
+            ctx.eventLoop().submit((Runnable) req::close);
+        }
     }
 
     @Override
     public void sendMessage(I message) {
+        if (ctx.eventLoop().inEventLoop()) {
+            doSendMessage(message);
+        } else {
+            ctx.eventLoop().submit(() -> doSendMessage(message));
+        }
+    }
+
+    private void doSendMessage(I message) {
         try {
             final ByteBuf serialized = marshaller.serializeRequest(message);
             req.write(messageFramer.writePayload(serialized));
@@ -196,7 +216,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Override
-    public void setMessageCompression(boolean enabled) {
+    public synchronized void setMessageCompression(boolean enabled) {
         messageFramer.setMessageCompression(enabled);
     }
 

@@ -179,6 +179,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void sendHeaders(Metadata unusedGrpcMetadata) {
+        if (ctx.eventLoop().inEventLoop()) {
+            doSendHeaders(unusedGrpcMetadata);
+        } else {
+            ctx.eventLoop().submit(() -> doSendHeaders(unusedGrpcMetadata));
+        }
+    }
+
+    private void doSendHeaders(Metadata unusedGrpcMetadata) {
         checkState(!sendHeadersCalled, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
@@ -213,6 +221,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void sendMessage(O message) {
+        if (ctx.eventLoop().inEventLoop()) {
+            doSendMessage(message);
+        } else {
+            ctx.eventLoop().submit(() -> doSendMessage(message));
+        }
+    }
+
+    private void doSendMessage(O message) {
         checkState(sendHeadersCalled, "sendHeaders has not been called");
         checkState(!closeCalled, "call is closed");
 
@@ -246,6 +262,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void close(Status status, Metadata unusedGrpcMetadata) {
+        if (ctx.eventLoop().inEventLoop()) {
+            doClose(status, unusedGrpcMetadata);
+        } else {
+            ctx.eventLoop().submit(() -> doClose(status, unusedGrpcMetadata));
+        }
+    }
+
+    private void doClose(Status status, Metadata unusedGrpcMetadata) {
         checkState(!closeCalled, "call already closed");
 
         closeCalled = true;
@@ -279,13 +303,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     @Override
-    public void setMessageCompression(boolean messageCompression) {
+    public synchronized void setMessageCompression(boolean messageCompression) {
         messageFramer.setMessageCompression(messageCompression);
         this.messageCompression = messageCompression;
     }
 
     @Override
-    public void setCompression(String compressorName) {
+    public synchronized void setCompression(String compressorName) {
         checkState(!sendHeadersCalled, "sendHeaders has been called");
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
