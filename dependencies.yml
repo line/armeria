@@ -146,10 +146,10 @@ io.prometheus:
     - http://prometheus.github.io/client_java/
 
 io.zipkin.brave:
-  brave: { version: &BRAVE_VERSION '4.16.2' }
+  brave: { version: &BRAVE_VERSION '4.17.2' }
 
 io.zipkin.java:
-  zipkin: { version: &ZIPKIN_VERSION '2.5.0' }
+  zipkin: { version: &ZIPKIN_VERSION '2.5.1' }
 
 it.unimi.dsi:
   fastutil:
@@ -203,7 +203,7 @@ org.apache.httpcomponents:
 
 org.apache.kafka:
   kafka-clients:
-    version: '1.0.0'
+    version: '1.0.1'
     javadocs:
     - https://kafka.apache.org/0100/javadoc/
 
