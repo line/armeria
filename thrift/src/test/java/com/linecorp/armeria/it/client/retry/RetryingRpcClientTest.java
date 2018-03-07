@@ -27,7 +27,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.Rule;
@@ -50,21 +49,21 @@ import com.linecorp.armeria.testing.server.ServerRule;
 public class RetryingRpcClientTest {
     private static final RetryStrategy<RpcRequest, RpcResponse> ALWAYS =
             (request, response) -> {
-                final CompletableFuture<Optional<Backoff>> future = new CompletableFuture<>();
+                final CompletableFuture<Backoff> future = new CompletableFuture<>();
                 response.handle(voidFunction((unused1, unused2) -> {
-                    future.complete(Optional.of(Backoff.withoutDelay()));
+                    future.complete(Backoff.withoutDelay());
                 }));
                 return future;
             };
 
     private static final RetryStrategy<RpcRequest, RpcResponse> ONLY_HANDLES_EXCEPTION =
         (request, response) -> {
-            final CompletableFuture<Optional<Backoff>> future = new CompletableFuture<>();
+            final CompletableFuture<Backoff> future = new CompletableFuture<>();
             response.handle(voidFunction((unused1, cause) -> {
                 if (cause != null) {
-                    future.complete(Optional.of(Backoff.withoutDelay()));
+                    future.complete(Backoff.withoutDelay());
                 } else {
-                    future.complete(Optional.empty());
+                    future.complete(null);
                 }
             }));
             return future;
