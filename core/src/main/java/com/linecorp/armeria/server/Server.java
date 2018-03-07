@@ -219,6 +219,14 @@ public final class Server implements AutoCloseable {
         return listeners.remove(requireNonNull(listener, "listener"));
     }
 
+    private void setupServerMetrics() {
+        final MeterRegistry meterRegistry = config().meterRegistry();
+        meterRegistry.gauge("armeria.server.pendingResponses", gracefulShutdownSupport,
+                            GracefulShutdownSupport::pendingResponses);
+        meterRegistry.gauge("armeria.server.numConnections", connectionLimitingHandler,
+                            ConnectionLimitingHandler::numConnections);
+    }
+
     /**
      * Starts this {@link Server} to listen to the {@link ServerPort}s specified in the {@link ServerConfig}.
      * Note that the startup procedure is asynchronous and thus this method returns immediately. To wait until
@@ -270,6 +278,7 @@ public final class Server implements AutoCloseable {
         } catch (Throwable t) {
             completeFutureExceptionally(future, t);
         }
+        setupServerMetrics();
     }
 
     private ChannelFuture start(ServerPort port) {

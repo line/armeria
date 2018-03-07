@@ -57,6 +57,11 @@ public abstract class GracefulShutdownSupport {
     public abstract void dec();
 
     /**
+     * Returns the number of pending responses.
+     */
+    public abstract int pendingResponses();
+
+    /**
      * Indicates the quiet period duration has passed since the last request.
      */
     abstract boolean completedQuietPeriod();
@@ -67,6 +72,11 @@ public abstract class GracefulShutdownSupport {
 
         @Override
         public void dec() {}
+
+        @Override
+        public int pendingResponses() {
+            return 0;
+        }
 
         @Override
         boolean completedQuietPeriod() {
@@ -106,6 +116,11 @@ public abstract class GracefulShutdownSupport {
             lastResTimeNanos = ticker.read();
             updatedLastResTimeNanos = true;
             pendingResponses.decrementAndGet();
+        }
+
+        @Override
+        public int pendingResponses() {
+            return pendingResponses.get();
         }
 
         @Override
