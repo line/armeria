@@ -27,6 +27,8 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -137,6 +139,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
      *   <li>{@code "baz"} -> {@code null}</li>
      * </ul>
      */
+    @Nullable
     private static String paramName(String token) {
         if (token.startsWith("{") && token.endsWith("}")) {
             return token.substring(1, token.length() - 1);
@@ -203,7 +206,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
             return false;
         }
 
-        DefaultPathMapping that = (DefaultPathMapping) o;
+        final DefaultPathMapping that = (DefaultPathMapping) o;
 
         return skeleton.equals(that.skeleton) &&
                Arrays.equals(paramNameArray, that.paramNameArray);

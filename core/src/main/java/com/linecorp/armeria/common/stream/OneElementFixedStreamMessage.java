@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import javax.annotation.Nullable;
+
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -23,6 +25,7 @@ import io.netty.util.ReferenceCountUtil;
  */
 public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
+    @Nullable
     private T obj;
 
     protected OneElementFixedStreamMessage(T obj) {
@@ -59,7 +62,8 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     private void doNotify(SubscriptionImpl subscription) {
         // Only called with correct demand, so no need to even check it.
-        T published = prepareObjectForNotification(subscription, obj);
+        assert obj != null;
+        final T published = prepareObjectForNotification(subscription, obj);
         obj = null;
         // Not possible to have re-entrant onNext with only one item, so no need to keep track of it.
         subscription.subscriber().onNext(published);

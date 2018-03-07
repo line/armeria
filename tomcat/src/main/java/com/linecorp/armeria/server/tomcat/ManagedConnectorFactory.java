@@ -69,6 +69,7 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
         // Retrieve the components configured by newServer(), so we can use it in checkConfiguration().
         final Service service = server.findServices()[0];
         final Engine engine = TomcatUtil.engine(service);
+        assert engine != null;
         final StandardHost host = (StandardHost) engine.findChildren()[0];
         final Context context = (Context) host.findChildren()[0];
 

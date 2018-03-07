@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import org.reactivestreams.Subscriber;
@@ -113,8 +114,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     private final HttpClientFactory clientFactory;
+    @Nullable
     private final SslContext sslCtx;
     private final HttpPreference httpPreference;
+    @Nullable
     private InetSocketAddress remoteAddress;
 
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory, SessionProtocol sessionProtocol) {
@@ -199,6 +202,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      * See <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>.
      */
     private void configureAsHttps(Channel ch, InetSocketAddress remoteAddr) {
+        assert sslCtx != null;
+
         final ChannelPipeline p = ch.pipeline();
         final SslHandler sslHandler = sslCtx.newHandler(ch.alloc(),
                                                         remoteAddr.getHostString(),
@@ -267,6 +272,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             attemptUpgrade = false;
             break;
         case HTTP2_PREFERRED:
+            assert remoteAddress != null;
             attemptUpgrade = !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
             break;
         case HTTP2_REQUIRED:
@@ -283,13 +289,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 pipeline.addLast(new DowngradeHandler());
                 pipeline.addLast(http2Handler);
             } else {
-                Http1ClientCodec http1Codec = newHttp1Codec(
+                final Http1ClientCodec http1Codec = newHttp1Codec(
                         clientFactory.maxHttp1InitialLineLength(),
                         clientFactory.maxHttp1HeaderSize(),
                         clientFactory.maxHttp1ChunkSize());
-                Http2ClientUpgradeCodec http2ClientUpgradeCodec =
+                final Http2ClientUpgradeCodec http2ClientUpgradeCodec =
                         new Http2ClientUpgradeCodec(http2Handler);
-                HttpClientUpgradeHandler http2UpgradeHandler =
+                final HttpClientUpgradeHandler http2UpgradeHandler =
                         new HttpClientUpgradeHandler(
                                 http1Codec, http2ClientUpgradeCodec,
                                 (int) Math.min(Integer.MAX_VALUE, UPGRADE_RESPONSE_MAX_LENGTH));
@@ -376,6 +382,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private final class UpgradeRequestHandler extends ChannelInboundHandlerAdapter {
 
         private final Http2ResponseDecoder responseDecoder;
+        @Nullable
         private UpgradeEvent upgradeEvt;
         private boolean needsToClose;
 
@@ -394,6 +401,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             // Note: There's no need to fill Connection, Upgrade, and HTTP2-Settings headers here
             //       because they are filled by Http2ClientUpgradeCodec.
 
+            assert remoteAddress != null;
             final String host = HttpHeaderUtil.hostHeader(
                     remoteAddress.getHostString(), remoteAddress.getPort(), H1C.defaultPort());
 
@@ -592,11 +600,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final Http2Connection conn = new DefaultHttp2Connection(false);
         conn.addListener(new Http2GoAwayListener(ch));
 
-        Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
-        Http2FrameWriter writer = new DefaultHttp2FrameWriter();
+        final Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
+        final Http2FrameWriter writer = new DefaultHttp2FrameWriter();
 
-        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
-        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
+        final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
+        final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
         final Http2Settings http2Settings = http2Settings();
 

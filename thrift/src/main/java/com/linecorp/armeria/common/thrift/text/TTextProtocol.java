@@ -35,6 +35,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Stack;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TBase;
 import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
@@ -126,6 +128,7 @@ public class TTextProtocol extends TProtocol {
     private final Stack<WriterByteArrayOutputStream> writers;
     private final Stack<BaseContext> contextStack;
     private final Stack<Class<?>> currentFieldClass;
+    @Nullable
     private JsonNode root;
 
     /**
@@ -253,7 +256,7 @@ public class TTextProtocol extends TProtocol {
             getCurrentWriter().writeEndObject();
             popContext();
             if (getCurrentContext().isMapKey()) {
-                String writerString = getWriterString();
+                final String writerString = getWriterString();
                 popWriter();
                 getCurrentWriter().writeFieldName(writerString);
             }
@@ -393,19 +396,19 @@ public class TTextProtocol extends TProtocol {
         if (!root.has("method")) {
             throw new TException("Object must have field 'method' with the rpc method name!");
         }
-        String methodName = root.get("method").asText();
+        final String methodName = root.get("method").asText();
 
         if (!root.has("type")) {
             throw new TException(
                     "Object must have field 'type' with the message type (CALL, REPLY, EXCEPTION, ONEWAY)!");
         }
-        Byte messageType = TypedParser.TMESSAGE_TYPE.readFromJsonElement(root.get("type"));
+        final Byte messageType = TypedParser.TMESSAGE_TYPE.readFromJsonElement(root.get("type"));
 
         if (!root.has("args") || !root.get("args").isObject()) {
             throw new TException("Object must have field 'args' with the rpc method args!");
         }
 
-        int sequenceId = root.has("seqid") ? root.get("seqid").asInt() : 0;
+        final int sequenceId = root.has("seqid") ? root.get("seqid").asInt() : 0;
 
         // Override the root with the content of args - thrift's rpc reading will
         // proceed to read it as a message object.
@@ -454,7 +457,7 @@ public class TTextProtocol extends TProtocol {
             throw new TException("Expected Json Object!");
         }
 
-        Class<?> fieldClass = getCurrentFieldClassIfIs(TBase.class);
+        final Class<?> fieldClass = getCurrentFieldClassIfIs(TBase.class);
         if (fieldClass != null) {
             pushContext(new StructContext(structElem, fieldClass));
         } else {
@@ -476,13 +479,13 @@ public class TTextProtocol extends TProtocol {
 
         getCurrentContext().read();
 
-        JsonNode jsonName = getCurrentContext().getCurrentChild();
+        final JsonNode jsonName = getCurrentContext().getCurrentChild();
 
         if (!jsonName.isTextual()) {
             throw new RuntimeException("Expected String for a field name");
         }
 
-        String fieldName = jsonName.asText();
+        final String fieldName = jsonName.asText();
         currentFieldClass.push(getCurrentContext().getClassByFieldName(fieldName));
 
         return getCurrentContext().getTFieldByName(fieldName);
@@ -523,7 +526,7 @@ public class TTextProtocol extends TProtocol {
 
     @Override
     public TList readListBegin() throws TException {
-        int size = readSequenceBegin();
+        final int size = readSequenceBegin();
         return new TList(UNUSED_TYPE, size);
     }
 
@@ -534,7 +537,7 @@ public class TTextProtocol extends TProtocol {
 
     @Override
     public TSet readSetBegin() throws TException {
-        int size = readSequenceBegin();
+        final int size = readSequenceBegin();
         return new TSet(UNUSED_TYPE, size);
     }
 
@@ -552,7 +555,7 @@ public class TTextProtocol extends TProtocol {
             throw new TException(SEQUENCE_AS_KEY_ILLEGAL);
         }
 
-        JsonNode curElem = getCurrentContext().getCurrentChild();
+        final JsonNode curElem = getCurrentContext().getCurrentChild();
         if (!curElem.isArray()) {
             throw new TException("Expected JSON Array!");
         }
@@ -585,17 +588,17 @@ public class TTextProtocol extends TProtocol {
 
     @Override
     public int readI32() throws TException {
-        Class<?> fieldClass = getCurrentFieldClassIfIs(TEnum.class);
+        final Class<?> fieldClass = getCurrentFieldClassIfIs(TEnum.class);
         if (fieldClass != null) {
             // Enum fields may be set by string, even though they represent integers.
             getCurrentContext().read();
-            JsonNode elem = getCurrentContext().getCurrentChild();
+            final JsonNode elem = getCurrentContext().getCurrentChild();
             if (elem.isInt()) {
                 return TypedParser.INTEGER.readFromJsonElement(elem);
             } else if (elem.isTextual()) {
                 // All TEnum are enums
                 @SuppressWarnings({ "unchecked", "rawtypes" })
-                TEnum tEnum = (TEnum) Enum.valueOf((Class<Enum>) fieldClass,
+                final TEnum tEnum = (TEnum) Enum.valueOf((Class<Enum>) fieldClass,
                                                    TypedParser.STRING.readFromJsonElement(elem));
                 return tEnum.getValue();
             } else {
@@ -641,7 +644,7 @@ public class TTextProtocol extends TProtocol {
     private <T> T readNameOrValue(TypedParser<T> ch) {
         getCurrentContext().read();
 
-        JsonNode elem = getCurrentContext().getCurrentChild();
+        final JsonNode elem = getCurrentContext().getCurrentChild();
         if (getCurrentContext().isMapKey()) {
             // Will throw a ClassCastException if this is not a JsonPrimitive string
             return ch.readFromString(elem.asText());
@@ -657,8 +660,8 @@ public class TTextProtocol extends TProtocol {
         if (root != null) {
             return;
         }
-        ByteArrayOutputStream content = new ByteArrayOutputStream();
-        byte[] buffer = new byte[READ_BUFFER_SIZE];
+        final ByteArrayOutputStream content = new ByteArrayOutputStream();
+        final byte[] buffer = new byte[READ_BUFFER_SIZE];
         try {
             while (trans_.read(buffer, 0, READ_BUFFER_SIZE) > 0) {
                 content.write(buffer);
@@ -700,8 +703,8 @@ public class TTextProtocol extends TProtocol {
     }
 
     private String getWriterString() throws TException {
-        WriterByteArrayOutputStream wbaos = writers.peek();
-        String ret;
+        final WriterByteArrayOutputStream wbaos = writers.peek();
+        final String ret;
         try {
             wbaos.writer.flush();
             ret = new String(wbaos.baos.toByteArray());
@@ -712,11 +715,12 @@ public class TTextProtocol extends TProtocol {
         return ret;
     }
 
+    @Nullable
     private Class<?> getCurrentFieldClassIfIs(Class<?> classToMatch) {
         if (currentFieldClass.isEmpty() || currentFieldClass.peek() == null) {
             return null;
         }
-        Class<?> classToCheck = currentFieldClass.peek();
+        final Class<?> classToCheck = currentFieldClass.peek();
         if (classToMatch.isAssignableFrom(classToCheck)) {
             return classToCheck;
         }
@@ -724,7 +728,7 @@ public class TTextProtocol extends TProtocol {
     }
 
     private void pushWriter(ByteArrayOutputStream baos) {
-        JsonGenerator generator;
+        final JsonGenerator generator;
         try {
             generator = OBJECT_MAPPER.getFactory().createGenerator(baos, JsonEncoding.UTF8)
                     .useDefaultPrettyPrinter();
@@ -733,7 +737,7 @@ public class TTextProtocol extends TProtocol {
             throw new IllegalStateException(e);
         }
 
-        WriterByteArrayOutputStream wbaos = new WriterByteArrayOutputStream(generator, baos);
+        final WriterByteArrayOutputStream wbaos = new WriterByteArrayOutputStream(generator, baos);
         writers.push(wbaos);
     }
 
@@ -781,7 +785,7 @@ public class TTextProtocol extends TProtocol {
         public void flush() throws IOException {
             try {
                 super.flush();
-                byte[] bytes = toByteArray();
+                final byte[] bytes = toByteArray();
                 trans_.write(bytes);
                 trans_.flush();
             } catch (TTransportException ex) {

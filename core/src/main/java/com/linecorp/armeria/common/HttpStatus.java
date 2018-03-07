@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
@@ -349,7 +351,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     /**
      * Creates a new instance with the specified {@code code} and its {@code reasonPhrase}.
      */
-    public HttpStatus(int code, String reasonPhrase) {
+    public HttpStatus(int code, @Nullable String reasonPhrase) {
         if (code < 0) {
             throw new IllegalArgumentException(
                     "code: " + code + " (expected: 0+)");
@@ -360,7 +362,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         }
 
         for (int i = 0; i < reasonPhrase.length(); i++) {
-            char c = reasonPhrase.charAt(i);
+            final char c = reasonPhrase.charAt(i);
             // Check prohibited characters.
             switch (c) {
                 case '\n': case '\r':
@@ -430,7 +432,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
      * for equality.
      */
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (!(o instanceof HttpStatus)) {
             return false;
         }

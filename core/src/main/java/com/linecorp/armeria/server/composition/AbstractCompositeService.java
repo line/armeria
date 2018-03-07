@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpStatus;
@@ -68,7 +70,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 public abstract class AbstractCompositeService<I extends Request, O extends Response> implements Service<I, O> {
 
     private final List<CompositeServiceEntry<I, O>> services;
+    @Nullable
     private Server server;
+    @Nullable
     private Router<Service<I, O>> router;
 
     /**
@@ -131,6 +135,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
      *         {@link PathMapped#empty()} if there's no match.
      */
     protected PathMapped<Service<I, O>> findService(PathMappingContext mappingCtx) {
+        assert router != null;
         return router.find(mappingCtx);
     }
 

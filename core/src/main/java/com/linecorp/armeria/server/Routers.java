@@ -29,6 +29,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,7 +152,7 @@ public final class Routers {
     /**
      * Finds the most suitable service from the given {@link ServiceConfig} list.
      */
-    private static <V> PathMapped<V> findsBest(PathMappingContext mappingCtx, List<V> values,
+    private static <V> PathMapped<V> findsBest(PathMappingContext mappingCtx, @Nullable List<V> values,
                                                Function<V, PathMapping> pathMappingResolver) {
         PathMapped<V> result = PathMapped.empty();
         if (values != null) {
@@ -244,7 +246,7 @@ public final class Routers {
         @Override
         public void dump(OutputStream output) {
             // Do not close this writer in order to keep output stream open.
-            PrintWriter p = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
+            final PrintWriter p = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
             p.printf("Dump of %s:%n", this);
             for (int i = 0; i < values.size(); i++) {
                 p.printf("<%d> %s%n", i, values.get(i));

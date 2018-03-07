@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import javax.annotation.Nullable;
+
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -23,7 +25,9 @@ import io.netty.util.ReferenceCountUtil;
  */
 public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
+    @Nullable
     private T obj1;
+    @Nullable
     private T obj2;
 
     private boolean inOnNext;
@@ -58,7 +62,7 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     final void doRequest(SubscriptionImpl subscription, long n) {
-        int oldDemand = requested();
+        final int oldDemand = requested();
         if (oldDemand >= 2) {
             // Already have demand, so don't need to do anything, the current demand will complete the
             // stream.
@@ -112,7 +116,7 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     private void doNotifyObject(SubscriptionImpl subscription, T obj) {
-        T published = prepareObjectForNotification(subscription, obj);
+        final T published = prepareObjectForNotification(subscription, obj);
         inOnNext = true;
         try {
             subscription.subscriber().onNext(published);

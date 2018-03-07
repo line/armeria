@@ -24,6 +24,8 @@ import java.net.URI;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.HttpClient;
@@ -73,6 +75,7 @@ public final class ArmeriaRetrofitBuilder {
 
     private final Retrofit.Builder retrofitBuilder;
     private final ClientFactory clientFactory;
+    @Nullable
     private String baseUrl;
     private BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator =
             DEFAULT_CONFIGURATOR;
@@ -99,10 +102,10 @@ public final class ArmeriaRetrofitBuilder {
      */
     public ArmeriaRetrofitBuilder baseUrl(String baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
-        URI uri = URI.create(baseUrl);
+        final URI uri = URI.create(baseUrl);
         checkArgument(SessionProtocol.find(uri.getScheme()).isPresent(),
                       "baseUrl must have an HTTP scheme: %s", baseUrl);
-        String path = uri.getPath();
+        final String path = uri.getPath();
         if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {
             throw new IllegalArgumentException("baseUrl must end with /: " + baseUrl);
         }
@@ -186,11 +189,14 @@ public final class ArmeriaRetrofitBuilder {
                                                       .map(Scheme::sessionProtocol)
                                                       .orElseGet(() -> SessionProtocol.of(uri.getScheme()));
         final String authority = uri.getAuthority();
-        String protocol = sessionProtocol.isTls() ? "https" : "http";
+        final String protocol = sessionProtocol.isTls() ? "https" : "http";
+        final HttpUrl parsed;
         if (authority.startsWith("group:")) {
-            return HttpUrl.parse(protocol + "://" + authority.replace("group:", groupPrefix) + basePath);
+            parsed = HttpUrl.parse(protocol + "://" + authority.replace("group:", groupPrefix) + basePath);
         } else {
-            return HttpUrl.parse(protocol + "://" + authority + basePath);
+            parsed = HttpUrl.parse(protocol + "://" + authority + basePath);
         }
+        assert parsed != null;
+        return parsed;
     }
 }

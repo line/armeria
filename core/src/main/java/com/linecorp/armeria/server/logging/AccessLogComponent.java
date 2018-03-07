@@ -97,17 +97,20 @@ interface AccessLogComponent {
      */
     abstract class ResponseHeaderConditional implements AccessLogComponent {
 
+        @Nullable
         private final Function<HttpHeaders, Boolean> condition;
 
         protected ResponseHeaderConditional(@Nullable Function<HttpHeaders, Boolean> condition) {
             this.condition = condition;
         }
 
+        @Nullable
         @VisibleForTesting
         Function<HttpHeaders, Boolean> condition() {
             return condition;
         }
 
+        @Nullable
         @Override
         public final Object getMessage(RequestLog log) {
             if (condition != null &&
@@ -160,6 +163,7 @@ interface AccessLogComponent {
             this.addQuote = addQuote;
         }
 
+        @Nullable
         @Override
         public Object getMessage0(RequestLog log) {
             switch (type) {
@@ -257,6 +261,7 @@ interface AccessLogComponent {
             return key;
         }
 
+        @Nullable
         @Override
         Object getMessage0(RequestLog log) {
             final Attribute<?> value = log.context().attr(key);

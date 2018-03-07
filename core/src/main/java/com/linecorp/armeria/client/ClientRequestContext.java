@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -61,8 +63,9 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the fragment part of the URI of the current {@link Request}, as defined in
      * <a href="https://tools.ietf.org/html/rfc3986#section-3.5">the section 3.5 of RFC3986</a>.
      *
-     * @return the fragment part of the request URI, or an empty string if no fragment was specified
+     * @return the fragment part of the request URI, or {@code null} if no fragment was specified
      */
+    @Nullable
     String fragment();
 
     /**

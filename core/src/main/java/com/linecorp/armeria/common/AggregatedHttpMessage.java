@@ -27,6 +27,8 @@ import java.util.Formatter;
 import java.util.List;
 import java.util.Locale;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -384,6 +386,7 @@ public interface AggregatedHttpMessage {
      *
      * @return the scheme, or {@code null} if there's no such header
      */
+    @Nullable
     default String scheme() {
         return headers().scheme();
     }
@@ -393,6 +396,7 @@ public interface AggregatedHttpMessage {
      *
      * @return the method, or {@code null} if there's no such header
      */
+    @Nullable
     default HttpMethod method() {
         return headers().method();
     }
@@ -402,6 +406,7 @@ public interface AggregatedHttpMessage {
      *
      * @return the path, or {@code null} if there's no such header
      */
+    @Nullable
     default String path() {
         return headers().path();
     }
@@ -412,6 +417,7 @@ public interface AggregatedHttpMessage {
      *
      * @return the authority, or {@code null} if there's no such header
      */
+    @Nullable
     default String authority() {
         return headers().authority();
     }
@@ -421,6 +427,7 @@ public interface AggregatedHttpMessage {
      *
      * @return the status, or {@code null} if there's no such header
      */
+    @Nullable
     default HttpStatus status() {
         return headers().status();
     }

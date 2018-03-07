@@ -41,9 +41,11 @@ public final class ServiceConfig {
     /**
      * Initialized later by {@link VirtualHost} via {@link #build(VirtualHost)}.
      */
+    @Nullable
     private VirtualHost virtualHost;
 
     private final PathMapping pathMapping;
+    @Nullable
     private final String loggerName;
     private final Service<HttpRequest, HttpResponse> service;
 

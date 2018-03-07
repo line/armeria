@@ -36,6 +36,7 @@ public final class EnumInfo implements NamedTypeInfo {
 
     private final String name;
     private final List<EnumValueInfo> values;
+    @Nullable
     private final String docString;
 
     /**
@@ -111,8 +112,7 @@ public final class EnumInfo implements NamedTypeInfo {
     }
 
     private static Iterable<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {
-        @SuppressWarnings("rawtypes")
-        final Class rawEnumType = requireNonNull(enumType, "enumType");
+        final Class<?> rawEnumType = requireNonNull(enumType, "enumType");
         @SuppressWarnings({ "unchecked", "rawtypes" })
         final Set<Enum> values = EnumSet.allOf((Class<Enum>) rawEnumType);
         return values.stream().map(e -> new EnumValueInfo(e.name()))::iterator;

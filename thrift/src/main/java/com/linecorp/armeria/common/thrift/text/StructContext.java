@@ -77,11 +77,11 @@ class StructContext extends PairContext {
     /**
      * Build the name -> TField map.
      */
-    StructContext(JsonNode json) {
+    StructContext(@Nullable JsonNode json) {
         this(json, getCurrentThriftMessageClass());
     }
 
-    StructContext(JsonNode json, Class<?> clazz) {
+    StructContext(@Nullable JsonNode json, Class<?> clazz) {
         super(json);
         classMap = new HashMap<>();
         fieldNameMap = computeFieldNameMap(clazz);
@@ -132,14 +132,14 @@ class StructContext extends PairContext {
      * TProtocol.writeStructBegin(), rather than relying on the stack trace.
      */
     private static Class<?> getCurrentThriftMessageClass() {
-        StackTraceElement[] frames =
+        final StackTraceElement[] frames =
                 Thread.currentThread().getStackTrace();
 
         for (StackTraceElement f : frames) {
-            String className = f.getClassName();
+            final String className = f.getClassName();
 
             try {
-                Class<?> clazz = Class.forName(className);
+                final Class<?> clazz = Class.forName(className);
 
                 // Note, we need to check
                 // if the class is abstract, because abstract class does not have metaDataMap
@@ -180,9 +180,9 @@ class StructContext extends PairContext {
     }
 
     private static boolean hasNoArgConstructor(Class<?> clazz) {
-        Constructor<?>[] allConstructors = clazz.getConstructors();
+        final Constructor<?>[] allConstructors = clazz.getConstructors();
         for (Constructor<?> ctor : allConstructors) {
-            Class<?>[] pType = ctor.getParameterTypes();
+            final Class<?>[] pType = ctor.getParameterTypes();
             if (pType.length == 0) {
                 return true;
             }
@@ -196,12 +196,12 @@ class StructContext extends PairContext {
      * we are parsing.
      */
     private Map<String, TField> computeFieldNameMap(Class<?> clazz) {
-        Map<String, TField> map = new HashMap<>();
+        final Map<String, TField> map = new HashMap<>();
 
         if (isTBase(clazz)) {
             // Get the metaDataMap for this Thrift class
             @SuppressWarnings("unchecked")
-            Map<? extends TFieldIdEnum, FieldMetaData> metaDataMap =
+            final Map<? extends TFieldIdEnum, FieldMetaData> metaDataMap =
                     FieldMetaData.getStructMetaDataMap((Class<? extends TBase<?, ?>>) clazz);
 
             for (Entry<? extends TFieldIdEnum, FieldMetaData> e : metaDataMap.entrySet()) {
@@ -236,8 +236,8 @@ class StructContext extends PairContext {
                 // The thrift generated parsing code requires that, when expecting
                 // a value of enum, we actually parse a value of type int32. The
                 // generated read() method then looks up the enum value in a map.
-                byte type = TType.ENUM == metaData.valueMetaData.type ? TType.I32
-                                                                      : metaData.valueMetaData.type;
+                final byte type = TType.ENUM == metaData.valueMetaData.type ? TType.I32
+                                                                            : metaData.valueMetaData.type;
 
                 map.put(fieldName,
                         new TField(fieldName,

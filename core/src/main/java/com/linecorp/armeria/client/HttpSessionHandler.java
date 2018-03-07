@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ScheduledFuture;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,9 +73,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     /**
      * The current negotiated {@link SessionProtocol}.
      */
+    @Nullable
     private SessionProtocol protocol;
 
+    @Nullable
     private HttpResponseDecoder responseDecoder;
+    @Nullable
     private HttpObjectEncoder requestEncoder;
 
     /**
@@ -103,11 +108,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public InboundTrafficController inboundTrafficController() {
+        assert responseDecoder != null;
         return responseDecoder.inboundTrafficController();
     }
 
     @Override
     public boolean hasUnfinishedResponses() {
+        assert responseDecoder != null;
         return responseDecoder.hasUnfinishedResponses();
     }
 
@@ -127,6 +134,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         final long writeTimeoutMillis = ctx.writeTimeoutMillis();
         final long responseTimeoutMillis = ctx.responseTimeoutMillis();
         final long maxContentLength = ctx.maxResponseLength();
+
+        assert responseDecoder != null;
+        assert requestEncoder != null;
 
         final int numRequestsSent = ++this.numRequestsSent;
         final HttpResponseWrapper wrappedRes =

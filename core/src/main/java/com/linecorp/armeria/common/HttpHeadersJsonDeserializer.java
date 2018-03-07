@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -44,6 +46,7 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
         super(HttpHeaders.class);
     }
 
+    @Nullable
     @Override
     public HttpHeaders deserialize(JsonParser p, DeserializationContext ctx)
             throws IOException {
@@ -56,7 +59,7 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
         final ObjectNode obj = (ObjectNode) tree;
         final HttpHeaders headers = HttpHeaders.of();
 
-        for (Iterator<Entry<String, JsonNode>> i = obj.fields(); i.hasNext();) {
+        for (final Iterator<Entry<String, JsonNode>> i = obj.fields(); i.hasNext();) {
             final Entry<String, JsonNode> e = i.next();
             final AsciiString name = HttpHeaderNames.of(e.getKey());
             final JsonNode values = e.getValue();

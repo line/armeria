@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.util;
 
 import java.util.concurrent.CompletionStage;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ public final class CompletionActions {
      *
      * @return {@code null}
      */
+    @Nullable
     public static <T> T log(Throwable cause) {
         logger.warn("Unexpected exception from a completion action:", cause);
         return null;

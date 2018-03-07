@@ -89,7 +89,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
             final String line = new BufferedReader(new InputStreamReader(process.getInputStream())).readLine();
             if (line == null) {
                 logger.warn("The 'hostname' command returned nothing; " +
-                            "using InetAddress.getLocalHost() instead", line);
+                            "using InetAddress.getLocalHost() instead");
             } else {
                 hostname = normalizeDefaultHostname(line.trim());
                 logger.info("Hostname: {} (via 'hostname' command)", hostname);

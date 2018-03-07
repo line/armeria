@@ -242,7 +242,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
-        Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor().get();
+        final Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor().get();
         if (type.isEnum()) {
             return newEnumInfo(type);
         }
@@ -491,6 +491,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         }
     }
 
+    @Nullable
     private static TBase<?, ?> asTBase(Object exampleRequest) {
         final TBase<?, ?> exampleTBase = (TBase<?, ?>) exampleRequest;
         final Class<?> type = exampleTBase.getClass();

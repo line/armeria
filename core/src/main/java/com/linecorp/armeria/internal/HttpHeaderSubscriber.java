@@ -21,6 +21,8 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -40,7 +42,9 @@ public final class HttpHeaderSubscriber
         implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
 
     private final CompletableFuture<HttpHeaders> future;
+    @Nullable
     private Subscription subscription;
+    @Nullable
     private HttpHeaders headers;
 
     /**
@@ -63,6 +67,7 @@ public final class HttpHeaderSubscriber
             final HttpStatus status = headers.status();
             if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL && this.headers == null) {
                 this.headers = headers;
+                assert subscription != null;
                 subscription.cancel();
             }
         }

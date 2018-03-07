@@ -228,7 +228,8 @@ public final class TomcatService implements HttpService {
         buf.append("(serviceName: ");
         buf.append(serviceName);
         if (TomcatVersion.major() >= 8) {
-            buf.append(", catalinaBase: " + server.getCatalinaBase());
+            buf.append(", catalinaBase: ");
+            buf.append(server.getCatalinaBase());
         }
         buf.append(')');
 
@@ -239,18 +240,23 @@ public final class TomcatService implements HttpService {
     private final Consumer<Connector> postStopTask;
     private final ServerListener configurator;
 
+    @Nullable
     private org.apache.catalina.Server server;
+    @Nullable
     private Server armeriaServer;
+    @Nullable
     private String hostname;
+    @Nullable
     private Connector connector;
+    @Nullable
     private String engineName;
     private boolean started;
 
-    private TomcatService(String hostname, Function<String, Connector> connectorFactory) {
+    private TomcatService(@Nullable String hostname, Function<String, Connector> connectorFactory) {
         this(hostname, connectorFactory, unused -> { /* unused */ });
     }
 
-    private TomcatService(String hostname,
+    private TomcatService(@Nullable String hostname,
                           Function<String, Connector> connectorFactory, Consumer<Connector> postStopTask) {
 
         this.hostname = hostname;
@@ -427,13 +433,13 @@ public final class TomcatService implements HttpService {
         coyoteReq.setLocalPort(localAddr.getPort());
 
         final String hostHeader = req.headers().authority();
-        int colonPos = hostHeader.indexOf(':');
+        final int colonPos = hostHeader.indexOf(':');
         if (colonPos < 0) {
             coyoteReq.serverName().setString(hostHeader);
         } else {
             coyoteReq.serverName().setString(hostHeader.substring(0, colonPos));
             try {
-                int port = Integer.parseInt(hostHeader.substring(colonPos + 1));
+                final int port = Integer.parseInt(hostHeader.substring(colonPos + 1));
                 coyoteReq.setServerPort(port);
             } catch (NumberFormatException e) {
                 // Invalid port number
@@ -518,6 +524,7 @@ public final class TomcatService implements HttpService {
         return headers;
     }
 
+    @Nullable
     private static AsciiString toHeaderName(MessageBytes value) {
         switch (value.getType()) {
             case MessageBytes.T_BYTES: {
@@ -535,6 +542,7 @@ public final class TomcatService implements HttpService {
         return null;
     }
 
+    @Nullable
     private static String toHeaderValue(MessageBytes value) {
         switch (value.getType()) {
             case MessageBytes.T_BYTES: {

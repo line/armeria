@@ -28,8 +28,9 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Throwables;
 
@@ -45,8 +46,6 @@ import io.netty.handler.codec.http2.Http2Exception;
  * Provides methods that are useful for handling exceptions.
  */
 public final class Exceptions {
-
-    private static final Logger logger = LoggerFactory.getLogger(Exceptions.class);
 
     private static final Pattern IGNORABLE_SOCKET_ERROR_MESSAGE = Pattern.compile(
             "(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe)", Pattern.CASE_INSENSITIVE);
@@ -94,7 +93,8 @@ public final class Exceptions {
     /**
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
-    public static void logIfUnexpected(Logger logger, Channel ch, SessionProtocol protocol, Throwable cause) {
+    public static void logIfUnexpected(Logger logger, Channel ch,
+                                       @Nullable SessionProtocol protocol, Throwable cause) {
         if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
@@ -106,7 +106,7 @@ public final class Exceptions {
     /**
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
-    public static void logIfUnexpected(Logger logger, Channel ch, SessionProtocol protocol,
+    public static void logIfUnexpected(Logger logger, Channel ch, @Nullable SessionProtocol protocol,
                                        String debugData, Throwable cause) {
 
         if (!logger.isWarnEnabled() || isExpected(cause)) {
@@ -117,7 +117,7 @@ public final class Exceptions {
                     ch, protocolName(protocol), debugData, cause);
     }
 
-    private static String protocolName(SessionProtocol protocol) {
+    private static String protocolName(@Nullable SessionProtocol protocol) {
         return protocol != null ? protocol.uriText() : "<unknown>";
     }
 
@@ -193,7 +193,7 @@ public final class Exceptions {
      */
     public static <T> T throwUnsafely(Throwable cause) {
         doThrowUnsafely(requireNonNull(cause, "cause"));
-        return null;
+        return null; // Never reaches here.
     }
 
     // This black magic causes the Java compiler to believe E is an unchecked exception type.

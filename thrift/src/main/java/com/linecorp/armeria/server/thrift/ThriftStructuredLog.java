@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
@@ -33,9 +35,13 @@ import com.linecorp.armeria.server.logging.structured.StructuredLogBuilder;
  */
 public class ThriftStructuredLog extends StructuredLog {
 
+    @Nullable
     private final String thriftServiceName;
+    @Nullable
     private final String thriftMethodName;
+    @Nullable
     private final ThriftCall thriftCall;
+    @Nullable
     private final ThriftReply thriftReply;
 
     ThriftStructuredLog(long timestampMillis,
@@ -60,7 +66,7 @@ public class ThriftStructuredLog extends StructuredLog {
     public ThriftStructuredLog(RequestLog reqLog) {
         super(reqLog);
 
-        Object requestContent = reqLog.rawRequestContent();
+        final Object requestContent = reqLog.rawRequestContent();
         if (requestContent == null) {
             // Request might be responded as error before reading arguments.
             thriftServiceName = null;
@@ -92,6 +98,7 @@ public class ThriftStructuredLog extends StructuredLog {
      *
      * @return fully qualified Thrift service name
      */
+    @Nullable
     @JsonProperty
     public String thriftServiceName() {
         return thriftServiceName;
@@ -102,6 +109,7 @@ public class ThriftStructuredLog extends StructuredLog {
      *
      * @return Thrift method name
      */
+    @Nullable
     @JsonProperty
     public String thriftMethodName() {
         return thriftMethodName;
@@ -112,6 +120,7 @@ public class ThriftStructuredLog extends StructuredLog {
      *
      * @return an instance of {@link ThriftCall} which is associated to the log
      */
+    @Nullable
     @JsonProperty
     public ThriftCall thriftCall() {
         return thriftCall;
@@ -122,6 +131,7 @@ public class ThriftStructuredLog extends StructuredLog {
      *
      * @return an instance of {@link ThriftReply} which is associated to the log
      */
+    @Nullable
     @JsonProperty
     public ThriftReply thriftReply() {
         return thriftReply;

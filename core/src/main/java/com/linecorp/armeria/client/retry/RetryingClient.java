@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -173,6 +175,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         private final long responseTimeoutMillis;
         private final long deadlineNanos;
 
+        @Nullable
         private Backoff lastBackoff;
         private int currentAttemptNoWithLastBackoff;
         private int totalAttemptNo;

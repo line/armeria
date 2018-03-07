@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.zookeeper;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static org.apache.zookeeper.KeeperException.Code.get;
 
@@ -25,6 +26,8 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+
+import javax.annotation.Nullable;
 
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.CreateMode;
@@ -52,11 +55,16 @@ public final class ZooKeeperConnector {
     private final String zNodePath;
     private final int sessionTimeout;
     private final ZooKeeperListener listener;
+    @Nullable
     private ZooKeeper zooKeeper;
+    @Nullable
     private BlockingQueue<KeeperState> stateQueue;
+    @Nullable
     private CountDownLatch latch;
     private boolean activeClose;
+    @Nullable
     private String prevNodeValue;
+    @Nullable
     private Map<String, String> prevChildValue;
 
     /**
@@ -105,6 +113,7 @@ public final class ZooKeeperConnector {
      * @param value    node value
      */
     public void createChild(String nodePath, byte[] value) {
+        assert zooKeeper != null;
         try {
             //first check the parent node
             if (zooKeeper.exists(zNodePath, false) == null) {
@@ -130,7 +139,9 @@ public final class ZooKeeperConnector {
     public void close(boolean active) {
         try {
             activeClose = active;
-            zooKeeper.close();
+            if (zooKeeper != null) {
+                zooKeeper.close();
+            }
         } catch (Exception e) {
             throw new EndpointGroupException("Failed to close underlying ZooKeeper connection", e);
         }
@@ -151,24 +162,25 @@ public final class ZooKeeperConnector {
         if (activeClose) {
             return;
         }
-        List<String> children;
-        byte[] newValueBytes;
+        final List<String> children;
+        final byte[] newValueBytes;
         try {
+            assert zooKeeper != null;
             if (zooKeeper.exists(zNodePath, true) == null) {
                 return;
             }
             children = zooKeeper.getChildren(zNodePath, true);
             newValueBytes = zooKeeper.getData(zNodePath, false, null);
             if (newValueBytes != null) {
-                String newValue = new String(newValueBytes, StandardCharsets.UTF_8);
-                if (prevNodeValue == null || !prevNodeValue.equals(newValue)) {
+                final String newValue = new String(newValueBytes, StandardCharsets.UTF_8);
+                if (!newValue.equals(prevNodeValue)) {
                     listener.nodeValueChange(newValue);
                     prevNodeValue = newValue;
                 }
             }
             //check children status
             if (children != null) {
-                Map<String, String> newChildValue = new HashMap<>();
+                final Map<String, String> newChildValue = new HashMap<>();
                 children.forEach(child -> {
                     try {
                         newChildValue.put(child,
@@ -181,7 +193,7 @@ public final class ZooKeeperConnector {
                                                      zNodePath + '/' + child, e);
                     }
                 });
-                if (prevChildValue == null || !prevChildValue.equals(newChildValue)) {
+                if (!newChildValue.equals(prevChildValue)) {
                     listener.nodeChildChange(newChildValue);
                     prevChildValue = newChildValue;
                 }
@@ -202,7 +214,7 @@ public final class ZooKeeperConnector {
             if (stateQueue != null) {
                 enqueueState(event.getState());
             }
-            String path = event.getPath();
+            final String path = event.getPath();
             if (event.getType() == Event.EventType.None) {
                 // Connection state has been changed. Keep retrying until the connection is recovered.
                 switch (event.getState()) {
@@ -214,6 +226,7 @@ public final class ZooKeeperConnector {
                         // - reconnection due to session timeout or
                         // - reconnection due to session expiration
                         // Once connected, reset the retry delay.
+                        assert latch != null;
                         latch.countDown();
                         break;
                     case Expired:
@@ -236,6 +249,7 @@ public final class ZooKeeperConnector {
                 if (path != null && path.startsWith(zNodePath)) {
                     // Something has changed on the node, let's find out.
                     try {
+                        assert zooKeeper != null;
                         zooKeeper.exists(path, true, this, null);
                     } catch (Exception e) {
                         throw new EndpointGroupException("Failed to process a ZooKeeper watch event", e);
@@ -246,7 +260,7 @@ public final class ZooKeeperConnector {
 
         @Override
         public void processResult(int responseCodeInt, String path, Object ctx, Stat stat) {
-            Code responseCode = get(responseCodeInt);
+            final Code responseCode = get(responseCodeInt);
             switch (responseCode) {
                 case OK:
                     break;
@@ -262,6 +276,7 @@ public final class ZooKeeperConnector {
                 default:
                     // Retry on recoverable errors. Fatal errors go to the process() method above.
                     try {
+                        assert zooKeeper != null;
                         zooKeeper.exists(path, true, this, null);
                     } catch (Exception ex) {
                         throw new ZooKeeperException("Failed to process ZooKeeper callback event", ex);
@@ -293,13 +308,17 @@ public final class ZooKeeperConnector {
         }
     }
 
+    /**
+     * Returns the queue that contains the state recording.
+     */
     @VisibleForTesting
     public BlockingQueue<KeeperState> stateQueue() {
+        checkState(stateQueue != null, "stateQueue disabled");
         return stateQueue;
     }
 
     /**
-     * Open state recording.
+     * Enables state recording.
      */
     @VisibleForTesting
     public void enableStateRecording() {
@@ -308,8 +327,12 @@ public final class ZooKeeperConnector {
         }
     }
 
+    /**
+     * Returns the underlying {@link ZooKeeper} instace.
+     */
     @VisibleForTesting
     public ZooKeeper underlyingClient() {
+        checkState(zooKeeper != null, "ZooKeeper not created yet");
         return zooKeeper;
     }
 }

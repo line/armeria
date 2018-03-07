@@ -123,12 +123,13 @@ public interface HttpVfs {
          *
          * @return {@code null} if unknown
          */
+        @Nullable
         MediaType mediaType();
 
         /**
          * The content encoding of the entry. Will be set for precompressed files.
          *
-         * @return {code null} if not compressed
+         * @return {@code null} if not compressed
          */
         @Nullable
         String contentEncoding();
@@ -223,7 +224,7 @@ public interface HttpVfs {
                 return HttpData.EMPTY_DATA;
             }
 
-            byte[] buf = new byte[length];
+            final byte[] buf = new byte[length];
             int endOffset = 0;
 
             for (;;) {

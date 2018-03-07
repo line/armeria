@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -165,7 +167,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                 }
 
                 @SuppressWarnings("unchecked")
-                T obj = (T) e;
+                final T obj = (T) e;
                 onRemoval(obj);
             } finally {
                 ReferenceCountUtil.safeRelease(e);
@@ -258,9 +260,10 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     }
 
     static final class CloseEvent {
+        @Nullable
         private final Throwable cause;
 
-        CloseEvent(Throwable cause) {
+        CloseEvent(@Nullable Throwable cause) {
             this.cause = cause;
         }
 

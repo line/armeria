@@ -34,6 +34,8 @@ import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
 
+import javax.annotation.Nullable;
+
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.ValueConverter;
 
@@ -49,8 +51,9 @@ final class StringValueConverter implements ValueConverter<String> {
 
     private StringValueConverter() {}
 
+    @Nullable
     @Override
-    public String convertObject(Object value) {
+    public String convertObject(@Nullable Object value) {
         if (value == null) {
             return null;
         }

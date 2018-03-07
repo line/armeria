@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 
@@ -23,11 +25,13 @@ final class RequestContextThreadLocal {
 
     private static final FastThreadLocal<RequestContext> context = new FastThreadLocal<>();
 
+    @Nullable
     @SuppressWarnings("unchecked")
     static <T extends RequestContext> T get() {
         return (T) context.get();
     }
 
+    @Nullable
     @SuppressWarnings("unchecked")
     static <T extends RequestContext> T getAndSet(RequestContext ctx) {
         final InternalThreadLocalMap map = InternalThreadLocalMap.get();

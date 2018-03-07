@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.testing.server;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -24,6 +25,8 @@ import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+
+import javax.annotation.Nullable;
 
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
@@ -35,12 +38,18 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  */
 public class SelfSignedCertificateRule extends ExternalResource {
 
+    @Nullable
     private final String fqdn;
+    @Nullable
     private final SecureRandom random;
+    @Nullable
     private final Integer bits;
+    @Nullable
     private final Date notBefore;
+    @Nullable
     private final Date notAfter;
 
+    @Nullable
     private SelfSignedCertificate certificate;
 
     /**
@@ -160,13 +169,16 @@ public class SelfSignedCertificateRule extends ExternalResource {
      */
     @Override
     protected void after() {
-        certificate.delete();
+        if (certificate != null) {
+            certificate.delete();
+        }
     }
 
     /**
      *  Returns the generated {@link X509Certificate}.
      */
     public X509Certificate certificate() {
+        ensureCertificate();
         return certificate.cert();
     }
 
@@ -174,6 +186,7 @@ public class SelfSignedCertificateRule extends ExternalResource {
      * Returns the self-signed certificate file.
      */
     public File certificateFile() {
+        ensureCertificate();
         return certificate.certificate();
     }
 
@@ -181,6 +194,7 @@ public class SelfSignedCertificateRule extends ExternalResource {
      * Returns the {@link PrivateKey} of the self-signed certificate.
      */
     public PrivateKey privateKey() {
+        ensureCertificate();
         return certificate.key();
     }
 
@@ -188,6 +202,11 @@ public class SelfSignedCertificateRule extends ExternalResource {
      * Returns the private key file of the self-signed certificate.
      */
     public File privateKeyFile() {
+        ensureCertificate();
         return certificate.privateKey();
+    }
+
+    private void ensureCertificate() {
+        checkState(certificate != null, "certificate not created");
     }
 }

@@ -36,6 +36,7 @@ public final class FieldInfo {
     private final String name;
     private final FieldRequirement requirement;
     private final TypeSignature typeSignature;
+    @Nullable
     private final String docString;
 
     /**

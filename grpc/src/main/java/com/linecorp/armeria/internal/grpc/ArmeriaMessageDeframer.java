@@ -132,7 +132,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 return false;
             }
 
-            ByteBufOrStream that = (ByteBufOrStream) o;
+            final ByteBufOrStream that = (ByteBufOrStream) o;
 
             return Objects.equals(buf, that.buf) && Objects.equals(stream, that.stream);
         }
@@ -175,7 +175,9 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
     private boolean compressedFlag;
     private boolean endOfStream;
+    @Nullable
     private CompositeByteBuf nextFrame;
+    @Nullable
     private CompositeByteBuf unprocessed;
     private long pendingDeliveries;
     private boolean deliveryStalled = true;
@@ -327,10 +329,10 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             * frame and not in unprocessed.  If there is extra data but no pending deliveries, it will
             * be in unprocessed.
             */
-            boolean stalled = !unprocessed.isReadable();
+            final boolean stalled = !unprocessed.isReadable();
 
             if (endOfStream && stalled) {
-                boolean havePartialMessage = nextFrame != null && nextFrame.isReadable();
+                final boolean havePartialMessage = nextFrame != null && nextFrame.isReadable();
                 if (!havePartialMessage) {
                     listener.endOfStream();
                     deliveryStalled = false;
@@ -361,12 +363,12 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         // Read until the buffer contains all the required bytes.
         int missingBytes;
         while ((missingBytes = requiredLength - nextFrame.readableBytes()) > 0) {
-            int numUnprocessedBytes = unprocessed.readableBytes();
+            final int numUnprocessedBytes = unprocessed.readableBytes();
             if (numUnprocessedBytes == 0) {
                 // No more data is available.
                 return false;
             }
-            int toRead = Math.min(missingBytes, numUnprocessedBytes);
+            final int toRead = Math.min(missingBytes, numUnprocessedBytes);
             if (toRead > 0) {
                 nextFrame.addComponent(true, unprocessed.readBytes(toRead));
                 unprocessed.discardReadComponents();
@@ -380,7 +382,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * frame length.
      */
     private void processHeader() {
-        int type = nextFrame.readUnsignedByte();
+        final int type = nextFrame.readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
             throw Status.INTERNAL.withDescription(
                     DEBUG_STRING + ": Frame header malformed: reserved bits not zero")
@@ -406,7 +408,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * several gRPC messages within it.
      */
     private void processBody() {
-        ByteBufOrStream msg = compressedFlag ? getCompressedBody() : getUncompressedBody();
+        final ByteBufOrStream msg = compressedFlag ? getCompressedBody() : getUncompressedBody();
         nextFrame = null;
         listener.messageRead(msg);
 
@@ -428,7 +430,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         try {
             // Enforce the maxMessageSizeBytes limit on the returned stream.
-            InputStream unlimitedStream =
+            final InputStream unlimitedStream =
                     decompressor.decompress(new ByteBufInputStream(nextFrame, true));
             return new ByteBufOrStream(
                     new SizeEnforcingInputStream(unlimitedStream, maxMessageSizeBytes, DEBUG_STRING));
@@ -456,7 +458,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         @Override
         public int read() throws IOException {
-            int result = in.read();
+            final int result = in.read();
             if (result != -1) {
                 count++;
             }
@@ -467,7 +469,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         @Override
         public int read(byte[] b, int off, int len) throws IOException {
-            int result = in.read(b, off, len);
+            final int result = in.read(b, off, len);
             if (result != -1) {
                 count += result;
             }
@@ -478,7 +480,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         @Override
         public long skip(long n) throws IOException {
-            long result = in.skip(n);
+            final long result = in.skip(n);
             count += result;
             verifySize();
             reportCount();

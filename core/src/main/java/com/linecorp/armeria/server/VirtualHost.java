@@ -61,19 +61,22 @@ public final class VirtualHost {
     /**
      * Initialized later by {@link ServerConfig} via {@link #setServerConfig(ServerConfig)}.
      */
+    @Nullable
     private ServerConfig serverConfig;
 
     private final String defaultHostname;
     private final String hostnamePattern;
+    @Nullable
     private final SslContext sslContext;
     private final List<ServiceConfig> services;
     private final Router<ServiceConfig> router;
     private final MediaTypeSet producibleMediaTypes;
 
+    @Nullable
     private String strVal;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
-                SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
+                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
@@ -155,7 +158,7 @@ public final class VirtualHost {
     private static boolean needsNormalization(String hostnamePattern) {
         final int length = hostnamePattern.length();
         for (int i = 0; i < length; i++) {
-            int c = hostnamePattern.charAt(i);
+            final int c = hostnamePattern.charAt(i);
             if (c > 0x7F) {
                 return true;
             }
@@ -163,7 +166,8 @@ public final class VirtualHost {
         return false;
     }
 
-    static SslContext validateSslContext(SslContext sslContext) {
+    @Nullable
+    static SslContext validateSslContext(@Nullable SslContext sslContext) {
         if (sslContext != null && !sslContext.isServer()) {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
@@ -211,6 +215,7 @@ public final class VirtualHost {
     /**
      * Returns the {@link SslContext} of this virtual host.
      */
+    @Nullable
     public SslContext sslContext() {
         return sslContext;
     }
@@ -276,10 +281,10 @@ public final class VirtualHost {
         return strVal;
     }
 
-    static String toString(Class<?> type, String defaultHostname, String hostnamePattern,
-                           SslContext sslContext, List<?> services) {
+    static String toString(@Nullable Class<?> type, String defaultHostname, String hostnamePattern,
+                           @Nullable SslContext sslContext, List<?> services) {
 
-        StringBuilder buf = new StringBuilder();
+        final StringBuilder buf = new StringBuilder();
         if (type != null) {
             buf.append(type.getSimpleName());
         }

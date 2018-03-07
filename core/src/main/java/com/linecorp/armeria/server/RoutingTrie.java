@@ -84,6 +84,7 @@ final class RoutingTrie<V> {
     /**
      * Returns a {@link Node} which is mapped to the given {@code path}.
      */
+    @Nullable
     Node<V> findNode(String path) {
         return findNode(path, false);
     }
@@ -92,6 +93,7 @@ final class RoutingTrie<V> {
      * Returns a {@link Node} which is mapped to the given {@code path}.
      * If {@code exact} is {@code true}, internally-added node may be returned.
      */
+    @Nullable
     @VisibleForTesting
     Node<V> findNode(String path, boolean exact) {
         requireNonNull(path, "path");
@@ -102,6 +104,7 @@ final class RoutingTrie<V> {
      * Finds a {@link Node} which is mapped to the given {@code path}. It is recursively called by itself
      * to visit the children of the given node. Returns {@code null} if there is no {@link Node} to find.
      */
+    @Nullable
     private Node<V> findNode(Node<V> node, String path, int begin, boolean exact) {
         final int next;
         switch (node.type()) {
@@ -143,14 +146,14 @@ final class RoutingTrie<V> {
 
         Node<V> child = node.child(path.charAt(next));
         if (child != null) {
-            Node<V> found = findNode(child, path, next, exact);
+            final Node<V> found = findNode(child, path, next, exact);
             if (found != null) {
                 return found;
             }
         }
         child = node.parameterChild();
         if (child != null) {
-            Node<V> found = findNode(child, path, next, exact);
+            final Node<V> found = findNode(child, path, next, exact);
             if (found != null) {
                 return found;
             }
@@ -165,7 +168,7 @@ final class RoutingTrie<V> {
 
     public void dump(OutputStream output) {
         // Do not close this writer in order to keep output stream open.
-        PrintWriter p = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
+        final PrintWriter p = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
         p.printf("Dump of %s:%n", this);
         dump(p, root, 0);
         p.flush();
@@ -185,6 +188,7 @@ final class RoutingTrie<V> {
     static final class Builder<V> {
 
         private final List<Entry<String, V>> routes = new ArrayList<>();
+        @Nullable
         private Comparator<V> comparator;
 
         /**
@@ -277,16 +281,19 @@ final class RoutingTrie<V> {
         private Node<V> insertAndGetRoot(String path, V value) {
             Node<V> node = insertChild(null, path, value);
             // Only the root node has no parent.
-            while (node.parent() != null) {
-                node = node.parent();
+            for (;;) {
+                final Node<V> parent = node.parent();
+                if (parent == null) {
+                    return node;
+                }
+                node = parent;
             }
-            return node;
         }
 
         /**
          * Makes a node and then inserts it to the given node as a child.
          */
-        private Node<V> insertChild(Node<V> node, String path, V value) {
+        private Node<V> insertChild(@Nullable Node<V> node, String path, V value) {
             int pathStart = 0;
             final int max = path.length();
 
@@ -318,6 +325,7 @@ final class RoutingTrie<V> {
                 node = asChild(new Node<>(node, Type.EXACT, path.substring(pathStart)));
             }
             // Attach the value to the last node.
+            assert node != null;
             node.addValue(value, comparator);
             return node;
         }
@@ -346,6 +354,7 @@ final class RoutingTrie<V> {
         private static final char KEY_CATCH_ALL = 0x02;
 
         // The parent may be changed when this node is split into two.
+        @Nullable
         private Node<V> parent;
 
         private final Type type;
@@ -354,16 +363,20 @@ final class RoutingTrie<V> {
         // But the first character of the path should not be changed even if this node is split.
         private String path;
 
+        @Nullable
         private Map<Character, Node<V>> children;
 
         // Short-cuts to the special-purpose children.
+        @Nullable
         private Node<V> parameterChild;
+        @Nullable
         private Node<V> catchAllChild;
 
         // These values are sorted every time a new value is added.
+        @Nullable
         private List<V> values;
 
-        Node(Node<V> parent, Type type, String path) {
+        Node(@Nullable Node<V> parent, Type type, String path) {
             this.parent = parent;
             this.type = requireNonNull(type, "type");
             this.path = requireNonNull(path, "path");
@@ -439,7 +452,7 @@ final class RoutingTrie<V> {
          * Attaches a given {@code value} to the value list. If the list is not empty
          * the {@code value} is added, and sorted by the given {@link Comparator}.
          */
-        private void addValue(V value, Comparator<V> comparator) {
+        private void addValue(V value, @Nullable Comparator<V> comparator) {
             if (values == null) {
                 values = new ArrayList<>();
             }
@@ -536,7 +549,7 @@ final class RoutingTrie<V> {
         /**
          * Validates the given path.
          */
-        static void validatePath(String path) {
+        static void validatePath(@Nullable String path) {
             checkArgument(path != null && !path.isEmpty(),
                           "A path should not be null and empty.");
             checkArgument(path.indexOf(KEY_PARAMETER) < 0,

@@ -74,6 +74,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders;
     private final Map<String, ListMultimap<String, String>> exampleRequests;
 
+    @Nullable
     private Server server;
 
     /**

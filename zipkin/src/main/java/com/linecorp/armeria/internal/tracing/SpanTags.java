@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.tracing;
 
+import java.net.SocketAddress;
+
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 
@@ -47,15 +49,18 @@ public final class SpanTags {
             .tag(TraceKeys.HTTP_PATH, log.path())
             .tag(TraceKeys.HTTP_URL, uriBuilder.toString())
             .tag(TraceKeys.HTTP_STATUS_CODE, String.valueOf(log.statusCode()));
-        if (log.responseCause() != null) {
-            span.tag(Constants.ERROR, log.responseCause().toString());
+        final Throwable responseCause = log.responseCause();
+        if (responseCause != null) {
+            span.tag(Constants.ERROR, responseCause.toString());
         }
 
-        if (log.context().remoteAddress() != null) {
-            span.tag("address.remote", log.context().remoteAddress().toString());
+        final SocketAddress raddr = log.context().remoteAddress();
+        if (raddr != null) {
+            span.tag("address.remote", raddr.toString());
         }
-        if (log.context().localAddress() != null) {
-            span.tag("address.local", log.context().localAddress().toString());
+        final SocketAddress laddr = log.context().localAddress();
+        if (laddr != null) {
+            span.tag("address.local", laddr.toString());
         }
 
         final Object requestContent = log.requestContent();

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -32,6 +34,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     private final boolean keepAlive;
     private final InboundTrafficController inboundTrafficController;
     private final long defaultMaxRequestLength;
+    @Nullable
     private ServiceRequestContext ctx;
     private long transferredBytes;
 

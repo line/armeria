@@ -32,6 +32,7 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
     private static final long serialVersionUID = 5788454584691399858L;
 
     private final SessionProtocol expected;
+    @Nullable
     private final SessionProtocol actual;
 
     /**

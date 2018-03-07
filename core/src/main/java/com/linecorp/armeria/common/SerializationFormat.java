@@ -60,6 +60,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      * @deprecated Use {@code ThriftSerializationFormats.BINARY}. Note that the value of this field will be
      *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
+    @Nullable
     @Deprecated
     public static final SerializationFormat THRIFT_BINARY;
 
@@ -69,6 +70,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      * @deprecated Use {@code ThriftSerializationFormats.COMPACT}. Note that the value of this field will be
      *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
+    @Nullable
     @Deprecated
     public static final SerializationFormat THRIFT_COMPACT;
 
@@ -78,6 +80,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      * @deprecated Use {@code ThriftSerializationFormats.JSON}. Note that the value of this field will be
      *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
+    @Nullable
     @Deprecated
     public static final SerializationFormat THRIFT_JSON;
 
@@ -87,14 +90,17 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      * @deprecated Use {@code ThriftSerializationFormats.TEXT}. Note that the value of this field will be
      *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
+    @Nullable
     @Deprecated
     public static final SerializationFormat THRIFT_TEXT;
 
+    @Nullable
     private static final Set<SerializationFormat> THRIFT_FORMATS;
 
     static {
-        BiMap<String, SerializationFormat> mutableUriTextToFormats = HashBiMap.create();
-        Multimap<MediaType, SerializationFormat> mutableSimplifiedMediaTypeToFormats = HashMultimap.create();
+        final BiMap<String, SerializationFormat> mutableUriTextToFormats = HashBiMap.create();
+        final Multimap<MediaType, SerializationFormat> mutableSimplifiedMediaTypeToFormats =
+                HashMultimap.create();
 
         // Register the core formats first.
         NONE = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,

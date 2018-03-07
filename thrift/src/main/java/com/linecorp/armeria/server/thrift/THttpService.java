@@ -418,8 +418,8 @@ public final class THttpService extends AbstractHttpService {
                                    MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
         }
 
-        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        HttpResponse res = HttpResponse.from(responseFuture);
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
         req.aggregate().handle(voidFunction((aReq, cause) -> {
@@ -441,7 +441,7 @@ public final class THttpService extends AbstractHttpService {
         final HttpHeaders headers = req.headers();
         final MediaType contentType = headers.contentType();
 
-        SerializationFormat serializationFormat;
+        final SerializationFormat serializationFormat;
         if (contentType != null) {
             serializationFormat = findSerializationFormat(contentType);
             if (serializationFormat == null) {
@@ -453,7 +453,7 @@ public final class THttpService extends AbstractHttpService {
         return serializationFormat;
     }
 
-    private boolean validateAcceptHeaders(HttpRequest req, SerializationFormat serializationFormat) {
+    private static boolean validateAcceptHeaders(HttpRequest req, SerializationFormat serializationFormat) {
         // If accept header is present, make sure it is sane. Currently, we do not support accept
         // headers with a different format than the content type header.
         final List<String> acceptHeaders = req.headers().getAll(HttpHeaderNames.ACCEPT);
@@ -464,6 +464,7 @@ public final class THttpService extends AbstractHttpService {
         return true;
     }
 
+    @Nullable
     private SerializationFormat findSerializationFormat(MediaType contentType) {
 
         for (SerializationFormat format : allowedSerializationFormatArray) {

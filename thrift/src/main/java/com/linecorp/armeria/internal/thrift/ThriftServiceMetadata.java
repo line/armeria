@@ -25,6 +25,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TBaseAsyncProcessor;
@@ -70,7 +72,7 @@ public final class ThriftServiceMetadata {
         return init(implementation, Types.getAllInterfaces(implementation.getClass()));
     }
 
-    private Set<Class<?>> init(Object implementation, Iterable<Class<?>> candidateInterfaces) {
+    private Set<Class<?>> init(@Nullable Object implementation, Iterable<Class<?>> candidateInterfaces) {
 
         // Build the map of method names and their corresponding process functions.
         final Set<String> methodNames = new HashSet<>();
@@ -106,8 +108,9 @@ public final class ThriftServiceMetadata {
         return Collections.unmodifiableSet(interfaces);
     }
 
-    private static Map<String, ProcessFunction<?, ?>> getThriftProcessMap(Object service, Class<?> iface) {
-
+    @Nullable
+    private static Map<String, ProcessFunction<?, ?>> getThriftProcessMap(@Nullable Object service,
+                                                                          Class<?> iface) {
         final String name = iface.getName();
         if (!name.endsWith("$Iface")) {
             return null;
@@ -126,7 +129,7 @@ public final class ThriftServiceMetadata {
             final TBaseProcessor processor = (TBaseProcessor) processorConstructor.newInstance(service);
 
             @SuppressWarnings("unchecked")
-            Map<String, ProcessFunction<?, ?>> processMap =
+            final Map<String, ProcessFunction<?, ?>> processMap =
                     (Map<String, ProcessFunction<?, ?>>) processor.getProcessMapView();
 
             return processMap;
@@ -136,8 +139,9 @@ public final class ThriftServiceMetadata {
         }
     }
 
+    @Nullable
     private static Map<String, AsyncProcessFunction<?, ?, ?>> getThriftAsyncProcessMap(
-            Object service, Class<?> iface) {
+            @Nullable Object service, Class<?> iface) {
 
         final String name = iface.getName();
         if (!name.endsWith("$AsyncIface")) {
@@ -146,7 +150,7 @@ public final class ThriftServiceMetadata {
 
         final String processorName = name.substring(0, name.length() - 10) + "AsyncProcessor";
         try {
-            Class<?> processorClass = Class.forName(processorName, false, iface.getClassLoader());
+            final Class<?> processorClass = Class.forName(processorName, false, iface.getClassLoader());
             if (!TBaseAsyncProcessor.class.isAssignableFrom(processorClass)) {
                 return null;
             }
@@ -158,7 +162,7 @@ public final class ThriftServiceMetadata {
                     (TBaseAsyncProcessor) processorConstructor.newInstance(service);
 
             @SuppressWarnings("unchecked")
-            Map<String, AsyncProcessFunction<?, ?, ?>> processMap =
+            final Map<String, AsyncProcessFunction<?, ?, ?>> processMap =
                     (Map<String, AsyncProcessFunction<?, ?, ?>>) processor.getProcessMapView();
 
             return processMap;
@@ -205,6 +209,7 @@ public final class ThriftServiceMetadata {
      *
      * @return the {@link ThriftFunction}. {@code null} if there's no such function.
      */
+    @Nullable
     public ThriftFunction function(String method) {
         return functions.get(method);
     }

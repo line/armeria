@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.ToDoubleFunction;
 import java.util.function.ToLongFunction;
 
+import javax.annotation.Nullable;
+
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -36,6 +38,7 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.micrometer.core.instrument.distribution.pause.PauseDetector;
 import io.micrometer.core.instrument.noop.NoopCounter;
+import io.micrometer.core.instrument.noop.NoopDistributionSummary;
 import io.micrometer.core.instrument.noop.NoopFunctionCounter;
 import io.micrometer.core.instrument.noop.NoopFunctionTimer;
 import io.micrometer.core.instrument.noop.NoopGauge;
@@ -63,7 +66,7 @@ public final class NoopMeterRegistry extends MeterRegistry {
     }
 
     @Override
-    protected <T> Gauge newGauge(Id id, T obj, ToDoubleFunction<T> f) {
+    protected <T> Gauge newGauge(Id id, @Nullable T obj, ToDoubleFunction<T> f) {
         return new NoopGauge(id);
     }
 
@@ -85,7 +88,7 @@ public final class NoopMeterRegistry extends MeterRegistry {
     @Override
     protected DistributionSummary newDistributionSummary(Id id, DistributionStatisticConfig distributionConfig,
             double scale) {
-        return null;
+        return new NoopDistributionSummary(id);
     }
 
     @Override

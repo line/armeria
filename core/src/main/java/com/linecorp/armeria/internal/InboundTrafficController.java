@@ -35,6 +35,7 @@ public final class InboundTrafficController extends AtomicInteger {
         return numDeferredReads;
     }
 
+    @Nullable
     private final ChannelConfig cfg;
     private final int highWatermark;
     private final int lowWatermark;

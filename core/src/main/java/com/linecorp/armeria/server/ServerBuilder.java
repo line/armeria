@@ -33,7 +33,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
@@ -790,7 +789,8 @@ public final class ServerBuilder {
      * @return {@link VirtualHostBuilder} for build the virtual host
      */
     public ChainedVirtualHostBuilder withVirtualHost(String hostnamePattern) {
-        ChainedVirtualHostBuilder virtualHostBuilder = new ChainedVirtualHostBuilder(hostnamePattern, this);
+        final ChainedVirtualHostBuilder virtualHostBuilder =
+                new ChainedVirtualHostBuilder(hostnamePattern, this);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -804,7 +804,7 @@ public final class ServerBuilder {
      * @return {@link VirtualHostBuilder} for build the virtual host
      */
     public ChainedVirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
-        ChainedVirtualHostBuilder virtualHostBuilder =
+        final ChainedVirtualHostBuilder virtualHostBuilder =
                 new ChainedVirtualHostBuilder(defaultHostname, hostnamePattern, this);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
@@ -823,7 +823,7 @@ public final class ServerBuilder {
         requireNonNull(decorator, "decorator");
 
         @SuppressWarnings("unchecked")
-        Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
                 (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
 
         if (this.decorator != null) {
@@ -905,7 +905,8 @@ public final class ServerBuilder {
         return server;
     }
 
-    private static VirtualHost normalizeDefaultVirtualHost(VirtualHost h, SslContext defaultSslContext) {
+    private static VirtualHost normalizeDefaultVirtualHost(VirtualHost h,
+                                                           @Nullable SslContext defaultSslContext) {
         final SslContext sslCtx = h.sslContext() != null ? h.sslContext() : defaultSslContext;
         return new VirtualHost(
                 h.defaultHostname(), "*", sslCtx,
@@ -914,7 +915,7 @@ public final class ServerBuilder {
                  .collect(Collectors.toList()), h.producibleMediaTypes());
     }
 
-    @Nonnull
+    @Nullable
     private static SslContext findDefaultSslContext(VirtualHost defaultVirtualHost,
                                                     List<VirtualHost> virtualHosts) {
         SslContext lastSslContext = null;

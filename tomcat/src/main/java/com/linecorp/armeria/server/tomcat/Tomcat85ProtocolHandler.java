@@ -19,6 +19,8 @@ package com.linecorp.armeria.server.tomcat;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
+
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.ProtocolHandler;
@@ -34,6 +36,7 @@ public final class Tomcat85ProtocolHandler implements ProtocolHandler {
     private static final AtomicInteger nextId = new AtomicInteger();
 
     private final int id = nextId.getAndIncrement();
+    @Nullable
     private Adapter adapter;
 
     @Override
@@ -41,6 +44,7 @@ public final class Tomcat85ProtocolHandler implements ProtocolHandler {
         this.adapter = adapter;
     }
 
+    @Nullable
     @Override
     public Adapter getAdapter() {
         return adapter;
@@ -53,6 +57,7 @@ public final class Tomcat85ProtocolHandler implements ProtocolHandler {
         return id;
     }
 
+    @Nullable
     @Override
     public Executor getExecutor() {
         // Doesn't seem to be used.

@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.MediaType;
 class PathMappingContextWrapper implements PathMappingContext {
 
     private final PathMappingContext delegate;
+    @Nullable
     private List<Object> summary;
 
     PathMappingContextWrapper(PathMappingContext delegate) {

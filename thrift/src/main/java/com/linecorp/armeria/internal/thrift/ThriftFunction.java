@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TApplicationException;
@@ -49,8 +51,10 @@ public final class ThriftFunction {
     private final Type type;
     private final Class<?> serviceType;
     private final String name;
+    @Nullable
     private final TBase<?, ?> result;
     private final TFieldIdEnum[] argFields;
+    @Nullable
     private final TFieldIdEnum successField;
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
     private final Class<?>[] declaredExceptions;
@@ -67,7 +71,8 @@ public final class ThriftFunction {
 
     private ThriftFunction(
             Class<?> serviceType, String name, Object func, Type type,
-            TFieldIdEnum[] argFields, TBase<?, ?> result, Class<?>[] declaredExceptions) throws Exception {
+            TFieldIdEnum[] argFields, @Nullable TBase<?, ?> result,
+            Class<?>[] declaredExceptions) throws Exception {
 
         this.func = func;
         this.type = type;
@@ -97,10 +102,10 @@ public final class ThriftFunction {
                     continue;
                 }
 
-                Class<?> fieldType = resultType.getField(fieldName).getType();
+                final Class<?> fieldType = resultType.getField(fieldName).getType();
                 if (Throwable.class.isAssignableFrom(fieldType)) {
                     @SuppressWarnings("unchecked")
-                    Class<Throwable> exceptionFieldType = (Class<Throwable>) fieldType;
+                    final Class<Throwable> exceptionFieldType = (Class<Throwable>) fieldType;
                     exceptionFieldsBuilder.put(exceptionFieldType, key);
                 }
             }
@@ -170,6 +175,7 @@ public final class ThriftFunction {
     /**
      * Returns the field that holds the successful result.
      */
+    @Nullable
     public TFieldIdEnum successField() {
         return successField;
     }
@@ -216,6 +222,7 @@ public final class ThriftFunction {
      * Returns a new empty result instance.
      */
     public TBase<?, ?> newResult() {
+        assert result != null;
         return result.deepCopy();
     }
 
@@ -231,6 +238,7 @@ public final class ThriftFunction {
     /**
      * Converts the specified {@code result} into a Java object.
      */
+    @Nullable
     public Object getResult(TBase<?, ?> result) throws TException {
         for (TFieldIdEnum fieldIdEnum : exceptionFields()) {
             if (ThriftFieldAccess.isSet(result, fieldIdEnum)) {
@@ -250,14 +258,17 @@ public final class ThriftFunction {
         }
     }
 
+    @Nullable
     private static TBase<?, ?> getResult(ProcessFunction<?, ?> func) {
         return getResult0(Type.SYNC, func.getClass(), func.getMethodName());
     }
 
+    @Nullable
     private static TBase<?, ?> getResult(AsyncProcessFunction<?, ?, ?> asyncFunc) {
         return getResult0(Type.ASYNC, asyncFunc.getClass(), asyncFunc.getMethodName());
     }
 
+    @Nullable
     private static TBase<?, ?> getResult0(Type type, Class<?> funcClass, String methodName) {
 
         final String resultTypeName = typeName(type, funcClass, methodName, methodName + "_result");
@@ -278,7 +289,7 @@ public final class ThriftFunction {
      * Sets the exception field of the specified {@code result} to the specified {@code cause}.
      */
     public boolean setException(TBase<?, ?> result, Throwable cause) {
-        Class<?> causeType = cause.getClass();
+        final Class<?> causeType = cause.getClass();
         for (Entry<Class<Throwable>, TFieldIdEnum> e : exceptionFields.entrySet()) {
             if (e.getKey().isAssignableFrom(causeType)) {
                 ThriftFieldAccess.set(result, e.getValue(), cause);
@@ -319,7 +330,8 @@ public final class ThriftFunction {
     private static TFieldIdEnum[] getArgFields0(Type type, Class<?> funcClass, String methodName) {
         final String fieldIdEnumTypeName = typeName(type, funcClass, methodName, methodName + "_args$_Fields");
         try {
-            Class<?> fieldIdEnumType = Class.forName(fieldIdEnumTypeName, false, funcClass.getClassLoader());
+            final Class<?> fieldIdEnumType =
+                    Class.forName(fieldIdEnumTypeName, false, funcClass.getClassLoader());
             return (TFieldIdEnum[]) requireNonNull(fieldIdEnumType.getEnumConstants(),
                                                    "field enum may not be empty");
         } catch (Exception e) {
@@ -340,7 +352,7 @@ public final class ThriftFunction {
 
         final String ifaceTypeName = typeName(type, funcClass, methodName, "Iface");
         try {
-            Class<?> ifaceType = Class.forName(ifaceTypeName, false, funcClass.getClassLoader());
+            final Class<?> ifaceType = Class.forName(ifaceTypeName, false, funcClass.getClassLoader());
             for (Method m : ifaceType.getDeclaredMethods()) {
                 if (!m.getName().equals(methodName)) {
                     continue;

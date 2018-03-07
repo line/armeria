@@ -47,6 +47,7 @@ public final class ServiceInfo {
     private final String name;
     private final Set<MethodInfo> methods;
     private final List<HttpHeaders> exampleHttpHeaders;
+    @Nullable
     private final String docString;
 
     /**
