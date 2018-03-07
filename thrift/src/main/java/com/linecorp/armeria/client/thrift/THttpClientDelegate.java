@@ -25,6 +25,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
@@ -191,7 +193,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             return;
         }
 
-        TBase<?, ?> result = func.newResult();
+        final TBase<?, ?> result = func.newResult();
         result.read(inputProtocol);
         inputProtocol.readMessageEnd();
 
@@ -223,6 +225,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
                                           result.getClass().getName() + '.' + successField.getFieldName()));
     }
 
+    @Nullable
     private static TApplicationException readApplicationException(int seqId, ThriftFunction func,
                                                                   TProtocol inputProtocol,
                                                                   TMessage msg) throws TException {
@@ -244,13 +247,13 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
     }
 
     private static void handleSuccess(ClientRequestContext ctx, DefaultRpcResponse reply,
-                                      Object returnValue, ThriftReply rawResponseContent) {
+                                      @Nullable Object returnValue, @Nullable ThriftReply rawResponseContent) {
         reply.complete(returnValue);
         ctx.logBuilder().responseContent(reply, rawResponseContent);
     }
 
     private static void handleException(ClientRequestContext ctx, DefaultRpcResponse reply,
-                                        ThriftReply rawResponseContent, Exception cause) {
+                                        @Nullable ThriftReply rawResponseContent, Exception cause) {
         reply.completeExceptionally(cause);
         ctx.logBuilder().responseContent(reply, rawResponseContent);
     }
@@ -261,7 +264,8 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
                         decodeException(cause, thriftMethod.declaredExceptions()));
     }
 
-    private static Exception decodeException(Throwable cause, Class<?>[] declaredThrowableExceptions) {
+    private static Exception decodeException(Throwable cause,
+                                             @Nullable Class<?>[] declaredThrowableExceptions) {
         if (cause instanceof RuntimeException || cause instanceof TException) {
             return (Exception) cause;
         }

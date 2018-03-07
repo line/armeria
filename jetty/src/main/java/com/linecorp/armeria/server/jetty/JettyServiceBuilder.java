@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
@@ -48,12 +50,19 @@ public final class JettyServiceBuilder {
     private final List<LifeCycle.Listener> lifeCycleListeners = new ArrayList<>();
     private final List<Consumer<? super Server>> configurators = new ArrayList<>();
 
+    @Nullable
     private String hostname;
+    @Nullable
     private Boolean dumpAfterStart;
+    @Nullable
     private Boolean dumpBeforeStop;
+    @Nullable
     private Handler handler;
+    @Nullable
     private RequestLog requestLog;
+    @Nullable
     private Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
+    @Nullable
     private Long stopTimeoutMillis;
 
     /**

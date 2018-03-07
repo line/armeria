@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.io.OutputStream;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.MoreObjects;
@@ -39,6 +41,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  */
 final class RouteCache {
 
+    @Nullable
     private static final Cache<PathMappingContext, ServiceConfig> CACHE =
             Flags.routeCacheSpec().map(RouteCache::<ServiceConfig>buildCache)
                  .orElse(null);

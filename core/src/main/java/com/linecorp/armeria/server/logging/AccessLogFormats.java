@@ -201,6 +201,7 @@ final class AccessLogFormats {
         }
 
         if (TextComponent.isSupported(type)) {
+            assert variable != null;
             return ofText(variable);
         }
 
@@ -212,9 +213,11 @@ final class AccessLogFormats {
             return new CommonComponent(type, addQuote, condition);
         }
         if (RequestHeaderComponent.isSupported(type)) {
+            assert variable != null;
             return new RequestHeaderComponent(AsciiString.of(variable), addQuote, condition);
         }
         if (AttributeComponent.isSupported(type)) {
+            assert variable != null;
             final Function<Object, String> stringifier;
             final String[] components = variable.split(":");
             if (components.length == 2) {

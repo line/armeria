@@ -66,7 +66,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     @Override
     HttpResponseWrapper addResponse(
-            int id, HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
+            int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
             long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper resWrapper =
@@ -177,6 +177,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         final ByteBuf data = content.content();
                         final int dataLength = data.readableBytes();
                         if (dataLength > 0) {
+                            assert res != null;
                             final long maxContentLength = res.maxContentLength();
                             if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
                                 fail(ctx, ContentTooLargeException.get());
@@ -188,6 +189,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                         if (msg instanceof LastHttpContent) {
                             final HttpResponseWrapper res = removeResponse(resId++);
+                            assert res != null;
                             assert this.res == res;
                             this.res = null;
 

@@ -24,6 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -143,7 +145,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                                      : -1;
                                resDuplicator.close();
 
-                               long nextDelay;
+                               final long nextDelay;
                                try {
                                    nextDelay = getNextDelay(ctx, backoffOpt.get(), millisAfter);
                                } catch (Exception e) {
@@ -177,7 +179,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     private static long getRetryAfterMillis(HttpResponse res) {
         final HttpHeaders headers = getHttpHeaders(res);
         long millisAfter = -1;
-        String value = headers.get(HttpHeaderNames.RETRY_AFTER);
+        final String value = headers.get(HttpHeaderNames.RETRY_AFTER);
         if (value != null) {
             try {
                 millisAfter = Duration.ofSeconds(Integer.parseInt(value)).toMillis();
@@ -217,6 +219,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
         private final int contentPreviewLength;
         private int contentLength;
+        @Nullable
         private Subscription subscription;
 
         ContentPreviewResponse(HttpResponse delegate, int contentPreviewLength) {
@@ -239,6 +242,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                 final int dataLength = ((HttpData) obj).length();
                 contentLength += dataLength;
                 if (contentLength >= contentPreviewLength) {
+                    assert subscription != null;
                     subscription.cancel();
                 }
             }

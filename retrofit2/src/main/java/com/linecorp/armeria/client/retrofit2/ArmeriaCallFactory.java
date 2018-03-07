@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.HttpClient;
@@ -103,6 +105,7 @@ final class ArmeriaCallFactory implements Factory {
 
         private final Request request;
 
+        @Nullable
         private volatile HttpResponse httpResponse;
 
         @SuppressWarnings("FieldMayBeFinal")
@@ -114,10 +117,10 @@ final class ArmeriaCallFactory implements Factory {
         }
 
         private static HttpResponse doCall(ArmeriaCallFactory callFactory, Request request) {
-            HttpUrl httpUrl = request.url();
-            URI uri = httpUrl.uri();
-            HttpClient httpClient = callFactory.getHttpClient(uri.getAuthority(), uri.getScheme());
-            StringBuilder uriBuilder = new StringBuilder(httpUrl.encodedPath());
+            final HttpUrl httpUrl = request.url();
+            final URI uri = httpUrl.uri();
+            final HttpClient httpClient = callFactory.getHttpClient(uri.getAuthority(), uri.getScheme());
+            final StringBuilder uriBuilder = new StringBuilder(httpUrl.encodedPath());
             if (uri.getQuery() != null) {
                 uriBuilder.append('?').append(httpUrl.encodedQuery());
             }

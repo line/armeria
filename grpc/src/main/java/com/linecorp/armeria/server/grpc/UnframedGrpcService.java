@@ -108,8 +108,8 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             }
         }
 
-        String methodName = GrpcRequestUtil.determineMethod(ctx);
-        MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
+        final String methodName = GrpcRequestUtil.determineMethod(ctx);
+        final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
             return delegate().serve(ctx, req);
@@ -121,7 +121,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                                    "Only unary methods can be used with non-framed requests.");
         }
 
-        HttpHeaders grpcHeaders = HttpHeaders.copyOf(clientHeaders);
+        final HttpHeaders grpcHeaders = HttpHeaders.copyOf(clientHeaders);
 
         final MediaType framedContentType;
         if (contentType.is(MediaType.PROTOBUF)) {
@@ -172,8 +172,8 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
-            HttpData content = clientRequest.content();
-            ByteBuf message = ctx.alloc().buffer(content.length());
+            final HttpData content = clientRequest.content();
+            final ByteBuf message = ctx.alloc().buffer(content.length());
             final HttpData frame;
             boolean success = false;
             try {
@@ -207,18 +207,18 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                 ctx.eventLoop());
     }
 
-    private void deframeAndRespond(
+    private static void deframeAndRespond(
             ServiceRequestContext ctx,
             AggregatedHttpMessage grpcResponse,
             CompletableFuture<HttpResponse> res) {
-        HttpHeaders trailers = !grpcResponse.trailingHeaders().isEmpty() ?
-                               grpcResponse.trailingHeaders() : grpcResponse.headers();
-        String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
-        Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
+        final HttpHeaders trailers = !grpcResponse.trailingHeaders().isEmpty() ?
+                                     grpcResponse.trailingHeaders() : grpcResponse.headers();
+        final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
+        final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
         if (grpcStatus.getCode() != Status.OK.getCode()) {
-            StringBuilder message = new StringBuilder("grpc-status: " + grpcStatusCode);
-            String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
+            final StringBuilder message = new StringBuilder("grpc-status: " + grpcStatusCode);
+            final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
             }
@@ -229,12 +229,14 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             return;
         }
 
-        MediaType grpcMediaType = grpcResponse.headers().contentType();
-        HttpHeaders unframedHeaders = HttpHeaders.copyOf(grpcResponse.headers());
-        if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
-            unframedHeaders.contentType(MediaType.PROTOBUF);
-        } else if (grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
-            unframedHeaders.contentType(MediaType.JSON_UTF_8);
+        final MediaType grpcMediaType = grpcResponse.headers().contentType();
+        final HttpHeaders unframedHeaders = HttpHeaders.copyOf(grpcResponse.headers());
+        if (grpcMediaType != null) {
+            if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
+                unframedHeaders.contentType(MediaType.PROTOBUF);
+            } else if (grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
+                unframedHeaders.contentType(MediaType.JSON_UTF_8);
+            }
         }
 
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
@@ -243,7 +245,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                     public void messageRead(ByteBufOrStream message) {
                         // We know there is only one message in total, so don't bother with checking endOfStream
                         // We also know that we don't support compression, so this is always a ByteBuffer.
-                        HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
+                        final HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
                         res.complete(HttpResponse.of(unframedHeaders, unframedContent));
                     }

@@ -50,7 +50,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -69,7 +72,7 @@ import io.netty.buffer.CompositeByteBuf;
  *
  * <p>The logic has mostly been copied from {@code io.grpc.internal.MessageFramer}, while removing the buffer
  * abstraction in favor of using {@link ByteBuf} directly. The code has been vastly simplified due to the lack
- * of support for arbitrary {@link java.io.InputStream}s.
+ * of support for arbitrary {@link InputStream}s.
  */
 public class ArmeriaMessageFramer implements AutoCloseable {
 
@@ -83,6 +86,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private final int maxOutboundMessageSize;
 
     private boolean messageCompression;
+    @Nullable
     private Compressor compressor;
     private boolean closed;
 
@@ -96,12 +100,12 @@ public class ArmeriaMessageFramer implements AutoCloseable {
      *
      * @param message the message to be written out. Ownership is taken by {@link ArmeriaMessageFramer}.
      *
-     * @returns a {@link ByteBufHttpData} with the framed payload. Ownership is passed to caller.
+     * @return a {@link ByteBufHttpData} with the framed payload. Ownership is passed to caller.
      */
     public ByteBufHttpData writePayload(ByteBuf message) {
         verifyNotClosed();
-        boolean compressed = messageCompression && compressor != Codec.Identity.NONE;
-        int messageLength = message.readableBytes();
+        final boolean compressed = messageCompression && compressor != Codec.Identity.NONE;
+        final int messageLength = message.readableBytes();
         try {
             final ByteBuf buf;
             if (messageLength != 0 && compressed) {
@@ -110,13 +114,8 @@ public class ArmeriaMessageFramer implements AutoCloseable {
                 buf = writeUncompressed(message);
             }
             return new ByteBufHttpData(buf, false);
-        } catch (IOException e) {
-            // This should not be possible, since sink#deliverFrame doesn't throw.
-            throw Status.INTERNAL
-                    .withDescription("Failed to frame message")
-                    .withCause(e)
-                    .asRuntimeException();
-        } catch (RuntimeException e) {
+        } catch (IOException | RuntimeException e) {
+            // IOException will not be thrown, since sink#deliverFrame doesn't throw.
             throw Status.INTERNAL
                     .withDescription("Failed to frame message")
                     .withCause(e)
@@ -133,7 +132,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     }
 
     private ByteBuf writeCompressed(ByteBuf message) throws IOException {
-        CompositeByteBuf compressed = alloc.compositeBuffer();
+        final CompositeByteBuf compressed = alloc.compositeBuffer();
         try (OutputStream compressingStream = compressor.compress(new ByteBufOutputStream(compressed))) {
             compressingStream.write(ByteBufUtil.getBytes(message));
         } finally {
@@ -149,7 +148,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
 
     private ByteBuf write(ByteBuf message, boolean compressed) {
         try {
-            int messageLength = message.readableBytes();
+            final int messageLength = message.readableBytes();
             if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
                 throw Status.RESOURCE_EXHAUSTED
                         .withDescription(
@@ -157,7 +156,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
                                               maxOutboundMessageSize))
                         .asRuntimeException();
             }
-            ByteBuf buf = alloc.buffer(HEADER_LENGTH + messageLength);
+            final ByteBuf buf = alloc.buffer(HEADER_LENGTH + messageLength);
             buf.writeByte(compressed ? COMPRESSED : UNCOMPRESSED);
             buf.writeInt(messageLength);
             buf.writeBytes(message);

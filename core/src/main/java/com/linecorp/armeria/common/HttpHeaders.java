@@ -121,6 +121,7 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     /**
      * Gets the {@link HttpHeaderNames#METHOD} header or {@code null} if there is no such header.
      */
+    @Nullable
     HttpMethod method();
 
     /**
@@ -131,6 +132,7 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     /**
      * Gets the {@link HttpHeaderNames#SCHEME} header or {@code null} if there is no such header.
      */
+    @Nullable
     String scheme();
 
     /**
@@ -141,6 +143,7 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     /**
      * Gets the {@link HttpHeaderNames#AUTHORITY} header or {@code null} if there is no such header.
      */
+    @Nullable
     String authority();
 
     /**
@@ -151,6 +154,7 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     /**
      * Gets the {@link HttpHeaderNames#PATH} header or {@code null} if there is no such header.
      */
+    @Nullable
     String path();
 
     /**

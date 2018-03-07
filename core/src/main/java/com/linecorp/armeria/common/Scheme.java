@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
@@ -72,7 +74,7 @@ public final class Scheme implements Comparable<Scheme> {
      * @return {@link Optional#empty()} if the specified {@link String} could not be parsed or
      *         there is no such {@link Scheme} available
      */
-    public static Optional<Scheme> tryParse(String scheme) {
+    public static Optional<Scheme> tryParse(@Nullable String scheme) {
         if (scheme == null) {
             return Optional.empty();
         }

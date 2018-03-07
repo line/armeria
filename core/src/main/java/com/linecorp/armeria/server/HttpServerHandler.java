@@ -151,6 +151,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
+    @Nullable
     private HttpObjectEncoder responseEncoder;
 
     private int unfinishedRequests;
@@ -257,6 +258,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         // Handle 'OPTIONS * HTTP/1.1'.
         final String originalPath = headers.path();
+        if (originalPath == null) {
+            respond(ctx, req, HttpStatus.BAD_REQUEST,
+                    new IllegalArgumentException("Request path is missing."));
+            return;
+        }
         if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
             if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
                 handleOptions(ctx, req);
@@ -345,7 +351,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), mapped.mapping())) {
                 reqCtx.log().addListener(log -> {
-                    HttpStatus status = log.responseHeaders().status();
+                    final HttpStatus status = log.responseHeaders().status();
                     if (status != null && status.code() >= 200 && status.code() < 400) {
                         pathAndQuery.storeInCache(originalPath);
                     }
@@ -372,6 +378,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 });
             })).exceptionally(CompletionActions::log);
 
+            assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =
                     new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, accessLogWriter);
             reqCtx.setRequestTimeoutChangeListener(resSubscriber);
@@ -391,7 +398,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                           VirtualHost host, PathAndQuery pathAndQuery,
                                           PathMappingContext mappingCtx) {
 
-        String path = mappingCtx.path();
+        final String path = mappingCtx.path();
         if (path.charAt(path.length() - 1) != '/') {
             // Handle the case where /path doesn't exist but /path/ exists.
             final String pathWithSlash = path + '/';
@@ -505,6 +512,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RequestLogBuilder logBuilder = reqCtx.logBuilder();
 
         logBuilder.startResponse();
+        assert responseEncoder != null;
         ChannelFuture future = responseEncoder.writeHeaders(
                 ctx, req.id(), req.streamId(), res.headers(), contentAndTrailingHeadersEmpty);
         logBuilder.responseHeaders(res.headers());
@@ -558,8 +566,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().length());
     }
 
+    @Nullable
     private static SSLSession getSSLSession(Channel channel) {
-        SslHandler sslHandler = channel.pipeline().get(SslHandler.class);
+        final SslHandler sslHandler = channel.pipeline().get(SslHandler.class);
         return sslHandler != null ? sslHandler.engine().getSession() : null;
     }
 
@@ -626,11 +635,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         @Override
         public RequestContext newDerivedContext(Request request) {
             // There are no attributes which should be copied to a new instance.
-            return new EarlyRespondingRequestContext(channel(), meterRegistry(), sessionProtocol(),
+            return new EarlyRespondingRequestContext(channel, meterRegistry(), sessionProtocol(),
                                                      method(), path(), query(), request);
         }
 
-        @Nullable
         @Override
         protected Channel channel() {
             return channel;

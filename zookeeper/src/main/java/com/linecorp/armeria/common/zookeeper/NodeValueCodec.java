@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.Endpoint;
 
 /**
@@ -64,8 +66,9 @@ public interface NodeValueCodec {
     /**
      * Decode a zNode value to a {@link Endpoint}.
      * @param zNodeValue ZooKeeper node value
-     * @return an {@link Endpoint}
+     * @return an {@link Endpoint} or {@code null} if value needs to be skipped
      */
+    @Nullable
     default Endpoint decode(byte[] zNodeValue) {
         requireNonNull(zNodeValue, "zNodeValue");
         return decode(new String(zNodeValue, StandardCharsets.UTF_8));
@@ -74,8 +77,9 @@ public interface NodeValueCodec {
     /**
      * Decode a zNode value to a {@link Endpoint}.
      * @param zNodeValue ZooKeeper node value
-     * @return an {@link Endpoint}
+     * @return an {@link Endpoint} or {@code null} if value needs to be skipped
      */
+    @Nullable
     Endpoint decode(String zNodeValue);
 
     /**

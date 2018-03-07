@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
@@ -68,6 +70,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private final ServerConfig config;
     private final ServerPort port;
+    @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
@@ -76,7 +79,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
      */
     HttpServerPipelineConfigurator(
             ServerConfig config, ServerPort port,
-            DomainNameMapping<SslContext> sslContexts,
+            @Nullable DomainNameMapping<SslContext> sslContexts,
             GracefulShutdownSupport gracefulShutdownSupport) {
 
         this.config = requireNonNull(config, "config");
@@ -92,6 +95,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         p.addLast(ReadSuppressingHandler.INSTANCE);
 
         if (port.protocol().isTls()) {
+            assert sslContexts != null;
             p.addLast(new SniHandler(sslContexts));
             p.addLast(TrafficLoggingHandler.SERVER);
             configureHttps(p);
@@ -122,11 +126,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http2Connection conn = new DefaultHttp2Connection(true);
         conn.addListener(new Http2GoAwayListener(pipeline.channel()));
 
-        Http2FrameReader reader = new DefaultHttp2FrameReader(true);
-        Http2FrameWriter writer = new DefaultHttp2FrameWriter();
+        final Http2FrameReader reader = new DefaultHttp2FrameReader(true);
+        final Http2FrameWriter writer = new DefaultHttp2FrameWriter();
 
-        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
-        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
+        final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
+        final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
         final Http2ConnectionHandler handler =
                 new Http2ServerConnectionHandler(decoder, encoder, new Http2Settings());
@@ -184,6 +188,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private final class Http2PrefaceOrHttpHandler extends ByteToMessageDecoder {
 
+        @Nullable
         private String name;
 
         @Override
@@ -217,6 +222,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.defaultMaxHttp1ChunkSize());
 
             String baseName = name;
+            assert baseName != null;
             baseName = addAfter(p, baseName, http1codec);
             baseName = addAfter(p, baseName, new HttpServerUpgradeHandler(
                     http1codec,
@@ -235,6 +241,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void configureHttp2(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
+            assert name != null;
             addAfter(p, name, newHttp2ConnectionHandler(p));
         }
 

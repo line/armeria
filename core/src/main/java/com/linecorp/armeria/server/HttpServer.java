@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
@@ -25,6 +27,7 @@ import io.netty.channel.ChannelPipeline;
 
 interface HttpServer {
 
+    @Nullable
     static HttpServer get(Channel channel) {
         final ChannelPipeline p = channel.pipeline();
         final ChannelHandler lastHandler = p.last();
@@ -41,6 +44,7 @@ interface HttpServer {
         return null;
     }
 
+    @Nullable
     static HttpServer get(ChannelHandlerContext ctx) {
         return get(ctx.channel());
     }

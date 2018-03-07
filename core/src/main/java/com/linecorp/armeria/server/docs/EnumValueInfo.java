@@ -30,6 +30,7 @@ import com.google.common.base.Strings;
 public final class EnumValueInfo {
 
     private final String name;
+    @Nullable
     private final String docString;
 
     /**

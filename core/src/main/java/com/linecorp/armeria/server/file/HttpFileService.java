@@ -190,15 +190,18 @@ public final class HttpFileService extends AbstractHttpService {
             return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
-                                         .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
-                                         .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis);
-        if (entry.mediaType() != null) {
-            headers.contentType(entry.mediaType());
+        final HttpHeaders headers =
+                HttpHeaders.of(HttpStatus.OK)
+                           .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
+                           .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
+                           .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis);
+        final MediaType mediaType = entry.mediaType();
+        if (mediaType != null) {
+            headers.contentType(mediaType);
         }
-        if (entry.contentEncoding() != null) {
-            headers.set(HttpHeaderNames.CONTENT_ENCODING, entry.contentEncoding());
+        final String contentEncoding = entry.contentEncoding();
+        if (contentEncoding != null) {
+            headers.set(HttpHeaderNames.CONTENT_ENCODING, contentEncoding);
         }
 
         return HttpResponse.of(headers, data);
@@ -207,13 +210,13 @@ public final class HttpFileService extends AbstractHttpService {
     private Entry getEntry(ServiceRequestContext ctx, HttpRequest req) {
         final String mappedPath = ctx.mappedPath();
 
-        EnumSet<FileServiceContentEncoding> supportedEncodings =
+        final EnumSet<FileServiceContentEncoding> supportedEncodings =
                 EnumSet.noneOf(FileServiceContentEncoding.class);
 
         if (config.serveCompressedFiles()) {
             // We do a simple parse of the accept-encoding header, without worrying about star values
             // or priorities.
-            String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
+            final String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
             if (acceptEncoding != null) {
                 for (String encoding : COMMA_SPLITTER.split(acceptEncoding)) {
                     for (FileServiceContentEncoding possibleEncoding : FileServiceContentEncoding.values()) {
@@ -242,13 +245,13 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     private Entry getEntry(String path, @Nullable String contentEncoding) {
-        assert path != null;
-
         if (cache == null) {
             return config.vfs().get(path, contentEncoding);
         }
 
-        return cache.get(new PathAndEncoding(path, contentEncoding));
+        final CachedEntry entry = cache.get(new PathAndEncoding(path, contentEncoding));
+        assert entry != null; // Non-existent entry will have lastModifiedMillis of 0.
+        return entry;
     }
 
     private CachedEntry getEntryWithoutCache(PathAndEncoding pathAndEncoding) {
@@ -271,6 +274,7 @@ public final class HttpFileService extends AbstractHttpService {
 
         private final Entry entry;
         private final int maxCacheEntrySizeBytes;
+        @Nullable
         private HttpData cachedContent;
         private volatile long cachedLastModifiedMillis;
 

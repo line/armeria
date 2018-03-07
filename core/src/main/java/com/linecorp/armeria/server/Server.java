@@ -226,7 +226,6 @@ public final class Server implements AutoCloseable {
         }
 
         if (!stateManager.enterStarting(future, this::stop0)) {
-            assert future.isCompletedExceptionally();
             return;
         }
 
@@ -465,6 +464,7 @@ public final class Server implements AutoCloseable {
         static final State STOPPED = new State(StateType.STOPPED, null);
 
         final StateType type;
+        @Nullable
         final CompletableFuture<Void> future;
 
         State(StateType type, @Nullable CompletableFuture<Void> future) {
@@ -534,7 +534,7 @@ public final class Server implements AutoCloseable {
             return future;
         }
 
-        boolean enterStopping(State expect, CompletableFuture<Void> future) {
+        boolean enterStopping(@Nullable State expect, CompletableFuture<Void> future) {
             final State update = new State(StateType.STOPPING, future);
             final State oldState;
             if (expect != null) {

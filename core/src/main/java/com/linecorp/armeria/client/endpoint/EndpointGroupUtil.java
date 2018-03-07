@@ -19,14 +19,17 @@ package com.linecorp.armeria.client.endpoint;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 final class EndpointGroupUtil {
 
     private static final String ENDPOINT_GROUP_MARK = "group:";
     private static final Pattern ENDPOINT_GROUP_PATTERN = Pattern.compile(
             "://(?:[^@]*@)?(" + ENDPOINT_GROUP_MARK + "([^:/]+)(:\\d+)?)");
 
+    @Nullable
     static String getEndpointGroupName(String uri) {
-        Matcher matcher = ENDPOINT_GROUP_PATTERN.matcher(uri);
+        final Matcher matcher = ENDPOINT_GROUP_PATTERN.matcher(uri);
         if (matcher.find()) {
             return matcher.group(2);
         }
@@ -34,7 +37,7 @@ final class EndpointGroupUtil {
     }
 
     static String replaceEndpointGroup(String uri, String endpointUri) {
-        Matcher matcher = ENDPOINT_GROUP_PATTERN.matcher(uri);
+        final Matcher matcher = ENDPOINT_GROUP_PATTERN.matcher(uri);
         if (matcher.find()) {
             return new StringBuilder(uri).replace(matcher.start(1), matcher.end(1), endpointUri).toString();
         }

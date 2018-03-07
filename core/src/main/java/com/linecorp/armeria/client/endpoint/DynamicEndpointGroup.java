@@ -44,7 +44,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     protected final void addEndpoint(Endpoint e) {
         endpointsLock.lock();
         try {
-            ImmutableList.Builder<Endpoint> newEndpointsBuilder = ImmutableList.builder();
+            final ImmutableList.Builder<Endpoint> newEndpointsBuilder = ImmutableList.builder();
             newEndpointsBuilder.addAll(endpoints);
             newEndpointsBuilder.add(e);
             endpoints = newEndpointsBuilder.build();

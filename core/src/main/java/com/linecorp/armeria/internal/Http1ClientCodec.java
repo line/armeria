@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.annotation.Nullable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -218,7 +220,7 @@ public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseD
         protected void decode(
                 ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
             if (done) {
-                int readable = actualReadableBytes();
+                final int readable = actualReadableBytes();
                 if (readable == 0) {
                     // if non is readable just return null
                     // https://github.com/netty/netty/issues/1159
@@ -226,10 +228,10 @@ public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseD
                 }
                 out.add(buffer.readBytes(readable));
             } else {
-                int oldSize = out.size();
+                final int oldSize = out.size();
                 super.decode(ctx, buffer, out);
                 if (failOnMissingResponse) {
-                    int size = out.size();
+                    final int size = out.size();
                     for (int i = oldSize; i < size; i++) {
                         decrement(out.get(i));
                     }
@@ -237,7 +239,7 @@ public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseD
             }
         }
 
-        private void decrement(Object msg) {
+        private void decrement(@Nullable Object msg) {
             if (msg == null) {
                 return;
             }
@@ -259,9 +261,9 @@ public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseD
 
             // Get the getMethod of the HTTP request that corresponds to the
             // current response.
-            HttpMethod method = queue.poll();
+            final HttpMethod method = queue.poll();
 
-            char firstChar = method.name().charAt(0);
+            final char firstChar = method.name().charAt(0);
             switch (firstChar) {
                 case 'H':
                     // According to 4.3, RFC2616:
@@ -310,7 +312,7 @@ public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseD
             super.channelInactive(ctx);
 
             if (failOnMissingResponse) {
-                long missingResponses = requestResponseCounter.get();
+                final long missingResponses = requestResponseCounter.get();
                 if (missingResponses > 0) {
                     ctx.fireExceptionCaught(new PrematureChannelClosureException(
                             "channel gone inactive with " + missingResponses +

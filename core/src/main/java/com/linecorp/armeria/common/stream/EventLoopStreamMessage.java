@@ -69,6 +69,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     private final EventLoop eventLoop;
     private final Queue<Object> queue;
 
+    @Nullable
     private SubscriptionImpl subscription;
     private long demand;
     private boolean invokedOnSubscribe;
@@ -126,7 +127,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
 
     @Override
     void subscribe(SubscriptionImpl subscription) {
-        Subscriber<?> subscriber = subscription.subscriber();
+        final Subscriber<?> subscriber = subscription.subscriber();
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
             eventLoop.execute(() -> failLateSubscriber(this.subscription, subscriber));
             return;
@@ -287,7 +288,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
 
     private void doAddObject(T obj) {
         if (queue.isEmpty() && demand > 0 && !inOnNext) {
-            SubscriptionImpl subscription = this.subscription;
+            final SubscriptionImpl subscription = this.subscription;
             // Nothing in the queue and the subscriber is ready for an object, so send it directly.
             demand--;
             doNotifySubscriberOfObject(subscription, obj);
@@ -372,7 +373,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             demand--;
 
             @SuppressWarnings("unchecked")
-            T obj = (T) queue.remove();
+            final T obj = (T) queue.remove();
             doNotifySubscriberOfObject(subscription, obj);
         }
     }
@@ -458,5 +459,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
      * Indicates an invocation of {@link EventLoopStreamMessage#EventLoopStreamMessage()} with no available
      * event loop, likely causing significant performance issues.
      */
-    private static class UnexpectedEventLoopException extends RuntimeException {}
+    private static class UnexpectedEventLoopException extends RuntimeException {
+        private static final long serialVersionUID = 5610415039321743416L;
+    }
 }

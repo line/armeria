@@ -46,12 +46,16 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final SessionProtocol sessionProtocol;
     private final HttpMethod method;
     private final String path;
+    @Nullable
     private final String query;
     private final Request request;
 
     // Callbacks
+    @Nullable
     private List<Consumer<? super RequestContext>> onEnterCallbacks;
+    @Nullable
     private List<Consumer<? super RequestContext>> onExitCallbacks;
+    @Nullable
     private List<BiConsumer<? super RequestContext, ? super RequestContext>> onChildCallbacks;
 
     /**
@@ -190,7 +194,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         invokeCallbacks(onExitCallbacks);
     }
 
-    private void invokeCallbacks(List<Consumer<? super RequestContext>> callbacks) {
+    private void invokeCallbacks(@Nullable List<Consumer<? super RequestContext>> callbacks) {
         if (callbacks == null) {
             return;
         }

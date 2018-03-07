@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.logging.structured;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -41,6 +43,7 @@ public abstract class StructuredLoggingService<I extends Request, O extends Resp
         extends SimpleDecoratingService<I, O> {
 
     private final StructuredLogBuilder<L> logBuilder;
+    @Nullable
     private Server associatedServer;
 
     /**
@@ -79,7 +82,7 @@ public abstract class StructuredLoggingService<I extends Request, O extends Resp
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         ctx.log().addListener(log -> {
-            L structuredLog = logBuilder.build(log);
+            final L structuredLog = logBuilder.build(log);
             if (structuredLog != null) {
                 writeLog(log, structuredLog);
             }

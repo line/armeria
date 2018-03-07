@@ -92,7 +92,9 @@ public final class Endpoint {
         return new Endpoint(host, port, weight);
     }
 
+    @Nullable
     private final String groupName;
+    @Nullable
     private final String host;
     private final int port;
     private final int weight;

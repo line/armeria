@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
 
 import org.eclipse.jetty.http.HttpFields;
@@ -47,8 +48,6 @@ import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.thread.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
@@ -76,8 +75,6 @@ import io.netty.util.AsciiString;
 public final class JettyService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(JettyService.class);
-
-    private static final Splitter PATH_SPLITTER = Splitter.on('/');
 
     /**
      * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
@@ -149,17 +146,21 @@ public final class JettyService implements HttpService {
     private final Consumer<Server> postStopTask;
     private final Configurator configurator;
 
+    @Nullable
     private String hostname;
+    @Nullable
     private Server server;
+    @Nullable
     private ArmeriaConnector connector;
+    @Nullable
     private com.linecorp.armeria.server.Server armeriaServer;
     private boolean startedServer;
 
-    private JettyService(String hostname, Function<ExecutorService, Server> serverSupplier) {
+    private JettyService(@Nullable String hostname, Function<ExecutorService, Server> serverSupplier) {
         this(hostname, serverSupplier, unused -> { /* unused */ });
     }
 
-    private JettyService(String hostname,
+    private JettyService(@Nullable String hostname,
                          Function<ExecutorService, Server> serverFactory,
                          Consumer<Server> postStopTask) {
 
@@ -189,6 +190,7 @@ public final class JettyService implements HttpService {
     void start() throws Exception {
         boolean success = false;
         try {
+            assert armeriaServer != null;
             server = serverFactory.apply(armeriaServer.config().blockingTaskExecutor());
             connector = new ArmeriaConnector(server);
             server.addConnector(connector);
@@ -231,6 +233,7 @@ public final class JettyService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final ArmeriaConnector connector = this.connector;
+        assert connector != null;
 
         final HttpResponseWriter res = HttpResponse.streaming();
 
@@ -356,7 +359,9 @@ public final class JettyService implements HttpService {
         final HttpMethod method;
         final Queue<HttpData> out = new ArrayDeque<>();
         long contentLength;
+        @Nullable
         MetaData.Response info;
+        @Nullable
         Throwable cause;
 
         ArmeriaHttpTransport(HttpMethod method) {
@@ -364,7 +369,7 @@ public final class JettyService implements HttpService {
         }
 
         @Override
-        public void send(MetaData.Response info, boolean head,
+        public void send(@Nullable MetaData.Response info, boolean head,
                          ByteBuffer content, boolean lastContent, Callback callback) {
 
             if (info != null) {
@@ -418,7 +423,8 @@ public final class JettyService implements HttpService {
         private final InetSocketAddress localAddress;
         private final InetSocketAddress remoteAddress;
 
-        ArmeriaEndPoint(String hostname, Scheduler scheduler, SocketAddress local, SocketAddress remote) {
+        ArmeriaEndPoint(@Nullable String hostname, Scheduler scheduler,
+                        SocketAddress local, SocketAddress remote) {
             super(scheduler);
 
             localAddress = addHostname((InetSocketAddress) local, hostname);
@@ -441,7 +447,7 @@ public final class JettyService implements HttpService {
          * Adds the hostname string to the specified {@link InetSocketAddress} so that
          * Jetty's {@code ServletRequest.getLocalName()} implementation returns the configured hostname.
          */
-        private static InetSocketAddress addHostname(InetSocketAddress address, String hostname) {
+        private static InetSocketAddress addHostname(InetSocketAddress address, @Nullable String hostname) {
             try {
                 return new InetSocketAddress(InetAddress.getByAddress(
                         hostname, address.getAddress().getAddress()), address.getPort());
@@ -466,6 +472,7 @@ public final class JettyService implements HttpService {
             return true;
         }
 
+        @Nullable
         @Override
         public Object getTransport() {
             return null;

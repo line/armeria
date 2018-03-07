@@ -65,7 +65,7 @@ abstract class HttpResponseDecoder {
     }
 
     HttpResponseWrapper addResponse(
-            int id, HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
+            int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
             long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
@@ -116,15 +116,17 @@ abstract class HttpResponseDecoder {
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject>, Runnable {
+        @Nullable
         private final HttpRequest request;
         private final DecodedHttpResponse delegate;
         private final RequestLogBuilder logBuilder;
         private final long responseTimeoutMillis;
         private final long maxContentLength;
+        @Nullable
         private ScheduledFuture<?> responseTimeoutFuture;
 
-        HttpResponseWrapper(HttpRequest request, DecodedHttpResponse delegate, RequestLogBuilder logBuilder,
-                            long responseTimeoutMillis, long maxContentLength) {
+        HttpResponseWrapper(@Nullable HttpRequest request, DecodedHttpResponse delegate,
+                            RequestLogBuilder logBuilder, long responseTimeoutMillis, long maxContentLength) {
             this.request = request;
             this.delegate = delegate;
             this.logBuilder = logBuilder;

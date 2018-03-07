@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
@@ -70,10 +71,11 @@ class HttpEncodedResponse extends FilteredHttpResponse {
     @Override
     protected HttpObject filter(HttpObject obj) {
         if (obj instanceof HttpHeaders) {
-            HttpHeaders headers = (HttpHeaders) obj;
+            final HttpHeaders headers = (HttpHeaders) obj;
 
             // Skip informational headers.
-            if (headers.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+            final HttpStatus status = headers.status();
+            if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                 return obj;
             }
 
@@ -81,6 +83,12 @@ class HttpEncodedResponse extends FilteredHttpResponse {
                 // Trailing headers, no modification.
                 return obj;
             }
+
+            if (status == null) {
+                // Follow-up headers for informational headers, no modification.
+                return obj;
+            }
+
             headersSent = true;
             if (!shouldEncodeResponse(headers)) {
                 return obj;
@@ -108,7 +116,8 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             return obj;
         }
 
-        HttpData data = (HttpData) obj;
+        final HttpData data = (HttpData) obj;
+        assert encodedStream != null;
         try {
             encodingStream.write(data.array(), data.offset(), data.length());
             encodingStream.flush();
@@ -158,7 +167,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
         if (headers.contentType() != null) {
             // Make sure the content type is worth encoding.
             try {
-                MediaType contentType = headers.contentType();
+                final MediaType contentType = headers.contentType();
                 if (!encodableContentTypePredicate.test(contentType)) {
                     return false;
                 }

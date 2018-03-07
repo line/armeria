@@ -55,19 +55,23 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private final ServiceConfig cfg;
     private final PathMappingContext pathMappingContext;
     private final PathMappingResult pathMappingResult;
+    @Nullable
     private final SSLSession sslSession;
 
     private final DefaultRequestLog log;
     private final Logger logger;
 
+    @Nullable
     private ExecutorService blockingTaskExecutor;
 
     private long requestTimeoutMillis;
     @Nullable
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
+    @Nullable
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
 
+    @Nullable
     private String strVal;
 
     /**
@@ -124,7 +128,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
                 pathMappingResult, request, sslSession());
-        for (Iterator<Attribute<?>> i = attrs(); i.hasNext();) {
+        for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();) {
             ctx.addAttr(i.next());
         }
         return ctx;

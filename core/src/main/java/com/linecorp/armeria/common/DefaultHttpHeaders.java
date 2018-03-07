@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.netty.handler.codec.DefaultHeaders;
@@ -36,8 +38,11 @@ public final class DefaultHttpHeaders
 
     private final boolean endOfStream;
 
+    @Nullable
     private HttpMethod method;
+    @Nullable
     private HttpStatus status;
+    @Nullable
     private MediaType contentType;
 
     /**
@@ -80,9 +85,10 @@ public final class DefaultHttpHeaders
         this.endOfStream = endOfStream;
     }
 
+    @Nullable
     @Override
     public HttpMethod method() {
-        HttpMethod method = this.method;
+        final HttpMethod method = this.method;
         if (method != null) {
             return method;
         }
@@ -143,9 +149,10 @@ public final class DefaultHttpHeaders
         return this;
     }
 
+    @Nullable
     @Override
     public HttpStatus status() {
-        HttpStatus status = this.status;
+        final HttpStatus status = this.status;
         if (status != null) {
             return status;
         }
@@ -176,6 +183,7 @@ public final class DefaultHttpHeaders
         return this;
     }
 
+    @Nullable
     @Override
     public MediaType contentType() {
         final MediaType contentType = this.contentType;
@@ -192,6 +200,7 @@ public final class DefaultHttpHeaders
             this.contentType = MediaType.parse(contentTypeString);
             return this.contentType;
         } catch (IllegalArgumentException unused) {
+            // Invalid media type
             return null;
         }
     }
@@ -218,7 +227,7 @@ public final class DefaultHttpHeaders
         final StringBuilder buf = new StringBuilder(size() * 16).append('[');
         String separator = "";
         for (AsciiString name : names()) {
-            List<String> values = getAll(name);
+            final List<String> values = getAll(name);
             for (int i = 0; i < values.size(); ++i) {
                 buf.append(separator);
                 buf.append(name).append('=').append(values.get(i));

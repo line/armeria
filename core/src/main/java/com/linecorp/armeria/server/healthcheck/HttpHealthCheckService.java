@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
@@ -78,6 +80,7 @@ public class HttpHealthCheckService extends AbstractHttpService {
 
     final SettableHealthChecker serverHealth;
 
+    @Nullable
     private Server server;
 
     /**

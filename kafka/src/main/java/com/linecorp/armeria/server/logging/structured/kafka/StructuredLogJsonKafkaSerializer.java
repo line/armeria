@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.logging.structured.kafka;
 
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
@@ -43,6 +45,7 @@ public class StructuredLogJsonKafkaSerializer<L> implements Serializer<L> {
     @Override
     public void configure(Map<String, ?> map, boolean b) { /* noop */ }
 
+    @Nullable
     @Override
     public byte[] serialize(String topic, L value) {
         if (value == null) {
@@ -50,7 +53,7 @@ public class StructuredLogJsonKafkaSerializer<L> implements Serializer<L> {
         }
 
         try {
-            String json = objectMapper.writeValueAsString(value);
+            final String json = objectMapper.writeValueAsString(value);
             return stringSerializer.serialize(topic, json);
         } catch (JsonProcessingException ex) {
             throw new IllegalArgumentException(ex);

@@ -70,6 +70,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     private final SessionProtocol sessionProtocol;
     private final Endpoint endpoint;
     private final SerializationFormat serializationFormat;
+    @Nullable
     private final MessageMarshaller jsonMarshaller;
 
     ArmeriaChannel(ClientBuilderParams params,
@@ -91,11 +92,10 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     @Override
     public <I, O> ClientCall<I, O> newCall(
             MethodDescriptor<I, O> method, CallOptions callOptions) {
-        HttpRequestWriter req = HttpRequest.streaming(
-                HttpHeaders
-                        .of(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
-                        .contentType(serializationFormat.mediaType()));
-        ClientRequestContext ctx = newContext(HttpMethod.POST, req);
+        final HttpRequestWriter req = HttpRequest.streaming(
+                HttpHeaders.of(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
+                           .contentType(serializationFormat.mediaType()));
+        final ClientRequestContext ctx = newContext(HttpMethod.POST, req);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
         ctx.logBuilder().deferResponseContent();

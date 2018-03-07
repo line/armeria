@@ -46,6 +46,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.StringJoiner;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 
@@ -161,7 +163,7 @@ public final class ArmeriaHttpUtil {
     /**
      * Concatenates two path strings.
      */
-    public static String concatPaths(String path1, String path2) {
+    public static String concatPaths(@Nullable String path1, @Nullable String path2) {
         path2 = path2 == null ? "" : path2;
 
         if (path1 == null || path1.isEmpty() || EMPTY_REQUEST_PATH.equals(path1)) {
@@ -301,7 +303,7 @@ public final class ArmeriaHttpUtil {
 
         if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
             // Attempt to take from HOST header before taking from the request-line
-            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+            final String host = inHeaders.getAsString(HttpHeaderNames.HOST);
             setHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
         }
 
@@ -314,7 +316,7 @@ public final class ArmeriaHttpUtil {
      * Converts the headers of the given Netty HTTP/1.x response into Armeria HTTP/2 headers.
      */
     public static HttpHeaders toArmeria(HttpResponse in) {
-        io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
+        final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final HttpHeaders out = new DefaultHttpHeaders(true, inHeaders.size());
         out.status(in.status().code());
 
@@ -379,10 +381,10 @@ public final class ArmeriaHttpUtil {
 
     private static CharSequenceMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
                                                   int arraySizeHint) {
-        CharSequenceMap result = new CharSequenceMap(arraySizeHint);
+        final CharSequenceMap result = new CharSequenceMap(arraySizeHint);
 
         while (valuesIter.hasNext()) {
-            AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
+            final AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
             try {
                 int index = lowerCased.forEachByte(FIND_COMMA);
                 if (index != -1) {
@@ -420,7 +422,7 @@ public final class ArmeriaHttpUtil {
                 out.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString());
             }
         } else {
-            List<CharSequence> teValues = StringUtil.unescapeCsvFields(entry.getValue());
+            final List<CharSequence> teValues = StringUtil.unescapeCsvFields(entry.getValue());
             for (CharSequence teValue : teValues) {
                 if (AsciiString.contentEqualsIgnoreCase(AsciiString.trim(teValue),
                                                         HttpHeaderValues.TRAILERS)) {
@@ -471,7 +473,7 @@ public final class ArmeriaHttpUtil {
     }
 
     @VisibleForTesting
-    static void setHttp2Authority(String authority, HttpHeaders out) {
+    static void setHttp2Authority(@Nullable String authority, HttpHeaders out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {
             final String actualAuthority;
@@ -492,14 +494,14 @@ public final class ArmeriaHttpUtil {
     }
 
     private static void setHttp2Scheme(io.netty.handler.codec.http.HttpHeaders in, URI uri, HttpHeaders out) {
-        String value = uri.getScheme();
+        final String value = uri.getScheme();
         if (value != null) {
             out.scheme(value);
             return;
         }
 
         // Consume the Scheme extension header if present
-        CharSequence cValue = in.get(ExtensionHeaderNames.SCHEME.text());
+        final CharSequence cValue = in.get(ExtensionHeaderNames.SCHEME.text());
         if (cValue != null) {
             out.scheme(cValue.toString());
         } else {
@@ -557,7 +559,7 @@ public final class ArmeriaHttpUtil {
             for (Entry<AsciiString, String> entry : inputHeaders) {
                 final AsciiString name = entry.getKey();
                 final String value = entry.getValue();
-                AsciiString translatedName = translations.get(name);
+                final AsciiString translatedName = translations.get(name);
                 if (translatedName != null) {
                     outputHeaders.add(translatedName, value);
                     continue;

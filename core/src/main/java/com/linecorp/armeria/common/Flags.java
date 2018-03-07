@@ -21,6 +21,7 @@ import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
 
 import org.slf4j.Logger;
@@ -543,6 +544,7 @@ public final class Flags {
         return defaultValue;
     }
 
+    @Nullable
     private static String getLowerCased(String fullName) {
         String value = System.getProperty(fullName);
         if (value != null) {

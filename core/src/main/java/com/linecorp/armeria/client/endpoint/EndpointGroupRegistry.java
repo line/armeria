@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -83,6 +85,7 @@ public final class EndpointGroupRegistry {
      *
      * @return the {@link EndpointSelector}, or {@code null} if {@code groupName} has not been registered yet.
      */
+    @Nullable
     public static EndpointSelector getNodeSelector(String groupName) {
         groupName = normalizeGroupName(groupName);
         return serverGroups.get(groupName);
@@ -93,9 +96,10 @@ public final class EndpointGroupRegistry {
      *
      * @return the {@link EndpointSelector}, or {@code null} if {@code groupName} has not been registered yet.
      */
+    @Nullable
     public static EndpointGroup get(String groupName) {
         groupName = normalizeGroupName(groupName);
-        EndpointSelector endpointSelector = serverGroups.get(groupName);
+        final EndpointSelector endpointSelector = serverGroups.get(groupName);
         if (endpointSelector == null) {
             return null;
         }
@@ -108,7 +112,7 @@ public final class EndpointGroupRegistry {
      */
     public static Endpoint selectNode(ClientRequestContext ctx, String groupName) {
         groupName = normalizeGroupName(groupName);
-        EndpointSelector endpointSelector = getNodeSelector(groupName);
+        final EndpointSelector endpointSelector = getNodeSelector(groupName);
         if (endpointSelector == null) {
             throw new EndpointGroupException("non-existent EndpointGroup: " + groupName);
         }

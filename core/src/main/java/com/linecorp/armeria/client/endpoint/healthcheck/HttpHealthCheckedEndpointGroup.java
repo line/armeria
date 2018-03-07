@@ -107,7 +107,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
         public CompletableFuture<Boolean> isHealthy(Endpoint endpoint) {
             return httpClient.get(healthCheckPath)
                              .aggregate()
-                             .thenApply(message -> message.status().equals(HttpStatus.OK));
+                             .thenApply(message -> HttpStatus.OK.equals(message.status()));
         }
     }
 }

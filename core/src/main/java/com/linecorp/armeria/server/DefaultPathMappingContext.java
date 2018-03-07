@@ -51,10 +51,14 @@ final class DefaultPathMappingContext implements PathMappingContext {
     private final String hostname;
     private final HttpMethod method;
     private final String path;
+    @Nullable
     private final String query;
+    @Nullable
     private final MediaType consumeType;
+    @Nullable
     private final List<MediaType> produceTypes;
     private final List<Object> summary;
+    @Nullable
     private Throwable delayedCause;
 
     DefaultPathMappingContext(VirtualHost virtualHost, String hostname,
@@ -143,7 +147,6 @@ final class DefaultPathMappingContext implements PathMappingContext {
     /**
      * Returns a new {@link PathMappingContext} instance.
      */
-    @VisibleForTesting
     static PathMappingContext of(VirtualHost virtualHost, String hostname,
                                  String path, @Nullable String query,
                                  HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes) {
@@ -153,6 +156,7 @@ final class DefaultPathMappingContext implements PathMappingContext {
                                              consumeType, produceTypes);
     }
 
+    @Nullable
     @VisibleForTesting
     static MediaType resolveConsumeType(HttpHeaders headers) {
         final MediaType contentType = headers.contentType();
@@ -162,8 +166,10 @@ final class DefaultPathMappingContext implements PathMappingContext {
         return null;
     }
 
+    @Nullable
     @VisibleForTesting
-    static List<MediaType> resolveProduceTypes(HttpHeaders headers, MediaTypeSet producibleMediaTypes) {
+    static List<MediaType> resolveProduceTypes(HttpHeaders headers,
+                                               @Nullable MediaTypeSet producibleMediaTypes) {
         if (producibleMediaTypes == null || producibleMediaTypes.isEmpty()) {
             // No media type negotiation supports.
             return null;
@@ -226,14 +232,14 @@ final class DefaultPathMappingContext implements PathMappingContext {
         // 2 : Path
         // 3 : Content-Type
         // 4~: Accept
-        List<Object> summary = new ArrayList<>(8);
+        final List<Object> summary = new ArrayList<>(8);
 
         summary.add(mappingCtx.virtualHost());
         summary.add(mappingCtx.method());
         summary.add(mappingCtx.path());
         summary.add(mappingCtx.consumeType());
 
-        List<MediaType> produceTypes = mappingCtx.produceTypes();
+        final List<MediaType> produceTypes = mappingCtx.produceTypes();
         if (produceTypes != null) {
             summary.addAll(produceTypes);
         }

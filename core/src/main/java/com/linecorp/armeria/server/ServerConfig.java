@@ -28,6 +28,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
@@ -45,6 +47,7 @@ public final class ServerConfig {
     /**
      * Initialized later by {@link Server} via {@link #setServer(Server)}.
      */
+    @Nullable
     private Server server;
 
     private final List<ServerPort> ports;
@@ -74,6 +77,7 @@ public final class ServerConfig {
 
     private final Consumer<RequestLog> accessLogWriter;
 
+    @Nullable
     private String strVal;
 
     ServerConfig(
@@ -290,7 +294,7 @@ public final class ServerConfig {
                 // Consider the case where the specified service is decorated before being added.
                 final Service<?, ?> s = c.service();
                 @SuppressWarnings("rawtypes")
-                Optional<? extends Service> sOpt = s.as(serviceType);
+                final Optional<? extends Service> sOpt = s.as(serviceType);
                 if (!sOpt.isPresent()) {
                     continue;
                 }
@@ -444,17 +448,17 @@ public final class ServerConfig {
     }
 
     static String toString(
-            Class<?> type,
-            Iterable<ServerPort> ports, VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
+            @Nullable Class<?> type, Iterable<ServerPort> ports,
+            @Nullable VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis, long defaultRequestTimeoutMillis,
             long defaultMaxRequestLength, long defaultMaxHttp1InitialLineLength,
             long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
+            Executor blockingTaskExecutor, @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
             Consumer<RequestLog> accessLogWriter) {
 
-        StringBuilder buf = new StringBuilder();
+        final StringBuilder buf = new StringBuilder();
         if (type != null) {
             buf.append(type.getSimpleName());
         }

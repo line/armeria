@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.thrift;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TBase;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
@@ -56,7 +58,7 @@ public final class ThriftCall extends ThriftMessage {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

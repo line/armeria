@@ -92,7 +92,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         super.onConnectionError(ctx, outbound, cause, http2Ex);
     }
 
-    private static String goAwayDebugData(@Nullable Http2Exception http2Ex, Throwable cause) {
+    private static String goAwayDebugData(@Nullable Http2Exception http2Ex, @Nullable Throwable cause) {
         final StringBuilder buf = new StringBuilder(256);
         final String type;
         final String message;

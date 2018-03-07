@@ -95,6 +95,7 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
      * @return the cause, or
      *         {@code null} if this {@link RpcResponse} completed successfully or did not complete yet.
      */
+    @Nullable
     Throwable cause();
 
     /**

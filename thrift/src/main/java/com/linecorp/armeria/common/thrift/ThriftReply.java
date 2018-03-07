@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.protocol.TMessage;
@@ -37,7 +39,9 @@ import com.linecorp.armeria.common.logging.RequestLog;
  */
 public final class ThriftReply extends ThriftMessage {
 
+    @Nullable
     private final TBase<?, ?> result;
+    @Nullable
     private final TApplicationException exception;
 
     /**
@@ -100,7 +104,7 @@ public final class ThriftReply extends ThriftMessage {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

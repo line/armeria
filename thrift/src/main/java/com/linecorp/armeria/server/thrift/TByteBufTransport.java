@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static java.util.Objects.requireNonNull;
+
+import javax.annotation.Nullable;
+
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
@@ -26,7 +30,7 @@ final class TByteBufTransport extends TTransport {
     private final ByteBuf buf;
 
     TByteBufTransport(ByteBuf buf) {
-        this.buf = buf;
+        this.buf = requireNonNull(buf, "buf");
     }
 
     @Override
@@ -42,8 +46,8 @@ final class TByteBufTransport extends TTransport {
 
     @Override
     public int read(byte[] buf, int off, int len) {
-        int bytesRemaining = this.buf.readableBytes();
-        int amtToRead = len > bytesRemaining ? bytesRemaining : len;
+        final int bytesRemaining = this.buf.readableBytes();
+        final int amtToRead = len > bytesRemaining ? bytesRemaining : len;
         if (amtToRead > 0) {
             this.buf.readBytes(buf, off, amtToRead);
         }
@@ -52,7 +56,7 @@ final class TByteBufTransport extends TTransport {
 
     @Override
     public int readAll(byte[] buf, int off, int len) throws TTransportException {
-        int bytesRemaining = this.buf.readableBytes();
+        final int bytesRemaining = this.buf.readableBytes();
         if (len > bytesRemaining) {
             throw new TTransportException("unexpected end of frame");
         }
@@ -66,10 +70,11 @@ final class TByteBufTransport extends TTransport {
         this.buf.writeBytes(buf, off, len);
     }
 
+    @Nullable
     @Override
     public byte[] getBuffer() {
-        ByteBuf buf = this.buf;
-        if (buf == null || !buf.hasArray())  {
+        final ByteBuf buf = this.buf;
+        if (!buf.hasArray())  {
             return null;
         } else {
             return buf.array();
@@ -78,8 +83,8 @@ final class TByteBufTransport extends TTransport {
 
     @Override
     public int getBufferPosition() {
-        ByteBuf buf = this.buf;
-        if (buf == null || !buf.hasArray())  {
+        final ByteBuf buf = this.buf;
+        if (!buf.hasArray())  {
             return 0;
         } else {
             return buf.arrayOffset() + buf.readerIndex();
@@ -88,7 +93,7 @@ final class TByteBufTransport extends TTransport {
 
     @Override
     public int getBytesRemainingInBuffer() {
-        ByteBuf buf = this.buf;
+        final ByteBuf buf = this.buf;
         if (buf.hasArray()) {
             return buf.readableBytes();
         } else {

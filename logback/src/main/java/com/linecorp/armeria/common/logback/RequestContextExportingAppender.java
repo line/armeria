@@ -66,6 +66,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(RequestContextExportingAppender.class, "STATE");
 
+    @Nullable
     private RequestContextExporter exporter;
 
     private final AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<>();
@@ -241,8 +242,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
         final Attribute<State> attr = ctx.attr(STATE);
         final State state = attr.get();
         if (state == null) {
-            State newState = new State();
-            State oldState = attr.setIfAbsent(newState);
+            final State newState = new State();
+            final State oldState = attr.setIfAbsent(newState);
             if (oldState != null) {
                 return oldState;
             } else {
@@ -257,7 +258,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      * to the export list via {@code add*()} calls and {@code <export />} tags. Override this method to export
      * additional properties.
      */
-    protected void export(Map<String, String> out, RequestContext ctx, @Nullable RequestLog log) {
+    protected void export(Map<String, String> out, RequestContext ctx, RequestLog log) {
+        assert exporter != null;
         exporter.export(out, ctx, log);
     }
 
@@ -319,12 +321,14 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
     private static final class State extends Object2ObjectOpenHashMap<String, String> {
         private static final long serialVersionUID = -7084248226635055988L;
 
+        @Nullable
         Set<RequestLogAvailability> availabilities;
     }
 
     private static final class LoggingEventWrapper implements ILoggingEvent {
         private final ILoggingEvent event;
         private final Map<String, String> mdcPropertyMap;
+        @Nullable
         private final LoggerContextVO vo;
 
         LoggingEventWrapper(ILoggingEvent event, Map<String, String> mdcPropertyMap) {
@@ -370,6 +374,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
         }
 
         @Override
+        @Nullable
         public LoggerContextVO getLoggerContextVO() {
             return vo;
         }

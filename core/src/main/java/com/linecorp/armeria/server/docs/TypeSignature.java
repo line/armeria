@@ -23,6 +23,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -205,6 +207,7 @@ public final class TypeSignature {
     }
 
     private final String name;
+    @Nullable
     private final Object namedTypeDescriptor;
     private final List<TypeSignature> typeParameters;
 
