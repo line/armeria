@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -50,15 +52,20 @@ public final class CorsConfig {
     public static final CorsConfig DISABLED = new CorsConfig();
 
     private final boolean enabled;
+    @Nullable
     private final Set<String> origins;
     private final boolean anyOriginSupported;
     private final boolean nullOriginAllowed;
     private final boolean credentialsAllowed;
     private final boolean shortCircuit;
     private final long maxAge;
+    @Nullable
     private final Set<AsciiString> exposedHeaders;
+    @Nullable
     private final Set<HttpMethod> allowedRequestMethods;
+    @Nullable
     private final Set<AsciiString> allowedRequestHeaders;
+    @Nullable
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
     CorsConfig() {
@@ -325,11 +332,12 @@ public final class CorsConfig {
                         preflightResponseHeaders);
     }
 
-    static String toString(Object obj, boolean enabled, Set<String> origins, boolean anyOriginSupported,
-                           boolean nullOriginAllowed, boolean credentialsAllowed, boolean shortCircuit,
-                           long maxAge, Set<AsciiString> exposedHeaders, Set<HttpMethod> allowedRequestMethods,
-                           Set<AsciiString> allowedRequestHeaders,
-                           Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
+    static String toString(Object obj, boolean enabled, @Nullable Set<String> origins,
+                           boolean anyOriginSupported, boolean nullOriginAllowed, boolean credentialsAllowed,
+                           boolean shortCircuit, long maxAge, @Nullable Set<AsciiString> exposedHeaders,
+                           @Nullable Set<HttpMethod> allowedRequestMethods,
+                           @Nullable Set<AsciiString> allowedRequestHeaders,
+                           @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         if (enabled) {
             return MoreObjects.toStringHelper(obj)
                               .add("origins", origins)

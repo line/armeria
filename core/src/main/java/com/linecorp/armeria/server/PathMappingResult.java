@@ -69,11 +69,15 @@ public final class PathMappingResult {
         return new PathMappingResult(path, query, pathParams, score);
     }
 
+    @Nullable
     private final String path;
+    @Nullable
     private final String query;
+    @Nullable
     private final Map<String, String> pathParams;
 
     private int score;
+    @Nullable
     private MediaType negotiatedProduceType;
 
     private PathMappingResult(@Nullable String path, @Nullable String query,

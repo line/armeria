@@ -76,8 +76,11 @@ final class RequestContextExporter {
     private static final BaseEncoding lowerCasedBase16 = BaseEncoding.base16().lowerCase();
 
     private final BuiltInProperties builtIns;
+    @Nullable
     private final ExportEntry<AttributeKey<?>>[] attrs;
+    @Nullable
     private final ExportEntry<AsciiString>[] httpReqHeaders;
+    @Nullable
     private final ExportEntry<AsciiString>[] httpResHeaders;
 
     @SuppressWarnings("unchecked")
@@ -108,9 +111,7 @@ final class RequestContextExporter {
         }
     }
 
-    void export(Map<String, String> out, RequestContext ctx,
-                @Nullable RequestLog log) {
-
+    void export(Map<String, String> out, RequestContext ctx, RequestLog log) {
         // Built-ins
         if (builtIns.containsAddresses()) {
             exportAddresses(out, ctx);
@@ -158,17 +159,11 @@ final class RequestContextExporter {
         }
 
         // Attributes
-        if (attrs != null) {
-            exportAttributes(out, ctx);
-        }
+        exportAttributes(out, ctx);
 
         // HTTP headers
-        if (httpReqHeaders != null) {
-            exportHttpRequestHeaders(out, ctx, log);
-        }
-        if (httpResHeaders != null) {
-            exportHttpResponseHeaders(out, log);
-        }
+        exportHttpRequestHeaders(out, log);
+        exportHttpResponseHeaders(out, log);
     }
 
     private void exportAddresses(Map<String, String> out, RequestContext ctx) {
@@ -200,7 +195,7 @@ final class RequestContextExporter {
         }
     }
 
-    private static void exportScheme(Map<String, String> out, RequestContext ctx, @Nullable RequestLog log) {
+    private static void exportScheme(Map<String, String> out, RequestContext ctx, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.SCHEME)) {
             out.put(SCHEME.mdcKey, log.scheme().uriText());
         } else {
@@ -220,16 +215,13 @@ final class RequestContextExporter {
         out.put(REQ_DIRECTION.mdcKey, d);
     }
 
-    private static void exportAuthority(Map<String, String> out, RequestContext ctx, @Nullable RequestLog log) {
+    private static void exportAuthority(Map<String, String> out, RequestContext ctx, RequestLog log) {
         final Set<RequestLogAvailability> availabilities = log.availabilities();
         if (availabilities.contains(RequestLogAvailability.REQUEST_HEADERS)) {
-            final Object envelope = log.requestHeaders();
-            if (envelope instanceof HttpHeaders) {
-                final String authority = getAuthority(ctx, (HttpHeaders) envelope);
-                if (authority != null) {
-                    out.put(REQ_AUTHORITY.mdcKey, authority);
-                    return;
-                }
+            final String authority = getAuthority(ctx, log.requestHeaders());
+            if (authority != null) {
+                out.put(REQ_AUTHORITY.mdcKey, authority);
+                return;
             }
         }
 
@@ -246,6 +238,7 @@ final class RequestContextExporter {
             String authority = log.host();
             if (authority != null) {
                 final Channel ch = log.channel();
+                assert ch != null;
                 final InetSocketAddress addr = (InetSocketAddress)
                         (ctx instanceof ServiceRequestContext ? ch.localAddress() : ch.remoteAddress());
                 final int port = addr.getPort();
@@ -287,6 +280,7 @@ final class RequestContextExporter {
         out.put(REQ_AUTHORITY.mdcKey, authority);
     }
 
+    @Nullable
     private static String getAuthority(RequestContext ctx, HttpHeaders headers) {
         String authority = headers.authority();
         if (authority != null) {
@@ -313,26 +307,26 @@ final class RequestContextExporter {
         out.put(REQ_METHOD.mdcKey, ctx.method().name());
     }
 
-    private static void exportRequestContentLength(Map<String, String> out, @Nullable RequestLog log) {
+    private static void exportRequestContentLength(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.REQUEST_END)) {
             out.put(REQ_CONTENT_LENGTH.mdcKey, String.valueOf(log.requestLength()));
         }
     }
 
-    private static void exportStatusCode(Map<String, String> out, @Nullable RequestLog log) {
+    private static void exportStatusCode(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
             final HttpStatus status = log.status();
             out.put(RES_STATUS_CODE.mdcKey, status != null ? status.codeAsText() : "-1");
         }
     }
 
-    private static void exportResponseContentLength(Map<String, String> out, @Nullable RequestLog log) {
+    private static void exportResponseContentLength(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.RESPONSE_END)) {
             out.put(RES_CONTENT_LENGTH.mdcKey, String.valueOf(log.responseLength()));
         }
     }
 
-    private static void exportElapsedNanos(Map<String, String> out, @Nullable RequestLog log) {
+    private static void exportElapsedNanos(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.COMPLETE)) {
             out.put(ELAPSED_NANOS.mdcKey, String.valueOf(log.totalDurationNanos()));
         }
@@ -362,7 +356,7 @@ final class RequestContextExporter {
         }
     }
 
-    private void exportRpcRequest(Map<String, String> out, @Nullable RequestLog log) {
+    private void exportRpcRequest(Map<String, String> out, RequestLog log) {
         if (!log.isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
             return;
         }
@@ -379,7 +373,7 @@ final class RequestContextExporter {
         }
     }
 
-    private void exportRpcResponse(Map<String, String> out, @Nullable RequestLog log) {
+    private void exportRpcResponse(Map<String, String> out, RequestLog log) {
         if (!log.isAvailable(RequestLogAvailability.RESPONSE_CONTENT)) {
             return;
         }
@@ -400,6 +394,10 @@ final class RequestContextExporter {
     }
 
     private void exportAttributes(Map<String, String> out, RequestContext ctx) {
+        if (attrs == null) {
+            return;
+        }
+
         for (ExportEntry<AttributeKey<?>> e : attrs) {
             final AttributeKey<?> attrKey = e.key;
             final String mdcKey = e.mdcKey;
@@ -412,33 +410,20 @@ final class RequestContextExporter {
         }
     }
 
-    private void exportHttpRequestHeaders(Map<String, String> out, RequestContext ctx, RequestLog log) {
-        if (!log.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+    private void exportHttpRequestHeaders(Map<String, String> out, RequestLog log) {
+        if (httpReqHeaders == null || !log.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
             return;
         }
 
-        final Object requestEnvelope = log.requestHeaders();
-        final HttpHeaders headers;
-        if (requestEnvelope instanceof HttpHeaders) {
-            headers = (HttpHeaders) requestEnvelope;
-        } else if (ctx.request() instanceof HttpRequest) {
-            headers = ((HttpRequest) ctx.request()).headers();
-        } else {
-            return;
-        }
-
-        exportHttpHeaders(out, headers, httpReqHeaders);
+        exportHttpHeaders(out, log.requestHeaders(), httpReqHeaders);
     }
 
     private void exportHttpResponseHeaders(Map<String, String> out, RequestLog log) {
-        if (!log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+        if (httpResHeaders == null || !log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
             return;
         }
 
-        final Object responseEnvelope = log.responseHeaders();
-        if (responseEnvelope instanceof HttpHeaders) {
-            exportHttpHeaders(out, (HttpHeaders) responseEnvelope, httpResHeaders);
-        }
+        exportHttpHeaders(out, log.responseHeaders(), httpResHeaders);
     }
 
     private static void exportHttpHeaders(Map<String, String> out, HttpHeaders headers,
@@ -455,10 +440,11 @@ final class RequestContextExporter {
     static final class ExportEntry<T> {
         final T key;
         final String mdcKey;
+        @Nullable
         final Function<Object, String> stringifier;
 
         @SuppressWarnings("unchecked")
-        ExportEntry(T key, String mdcKey, Function<?, ?> stringifier) {
+        ExportEntry(T key, String mdcKey, @Nullable Function<?, ?> stringifier) {
             assert key != null;
             assert mdcKey != null;
             this.key = key;
@@ -466,7 +452,8 @@ final class RequestContextExporter {
             this.stringifier = (Function<Object, String>) stringifier;
         }
 
-        String stringify(Object value) {
+        @Nullable
+        String stringify(@Nullable Object value) {
             if (stringifier == null) {
                 return value != null ? value.toString() : null;
             } else {

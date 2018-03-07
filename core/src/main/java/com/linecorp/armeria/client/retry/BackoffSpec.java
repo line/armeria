@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
@@ -59,6 +61,7 @@ final class BackoffSpec {
         random
     }
 
+    @Nullable
     private BaseOption baseOption;
 
     private boolean jitterConfigured;
@@ -148,9 +151,9 @@ final class BackoffSpec {
         checkNegative(key, maxDelayMillis, ORDINALS.get(1));
 
         if (initialDelayMillis > maxDelayMillis) {
-            long temp = initialDelayMillis;
-            this.initialDelayMillis = maxDelayMillis;
-            this.maxDelayMillis = temp;
+            final long temp = initialDelayMillis;
+            initialDelayMillis = maxDelayMillis;
+            maxDelayMillis = temp;
         }
 
         if (values.size() == 3) {
@@ -188,9 +191,9 @@ final class BackoffSpec {
         checkNegative(key, randomMaxDelayMillis, ORDINALS.get(1));
 
         if (randomMinDelayMillis > randomMaxDelayMillis) {
-            long temp = randomMinDelayMillis;
-            this.randomMinDelayMillis = randomMaxDelayMillis;
-            this.randomMaxDelayMillis = temp;
+            final long temp = randomMinDelayMillis;
+            randomMinDelayMillis = randomMaxDelayMillis;
+            randomMaxDelayMillis = temp;
         }
     }
 
@@ -205,7 +208,7 @@ final class BackoffSpec {
                       "the number of values for '%s' should be 1 or 2. input '%s'", key, jitterValues);
 
         if (values.size() == 1) {
-            double jitterRate = parseDouble(key, values.get(0), ORDINALS.get(0));
+            final double jitterRate = parseDouble(key, values.get(0), ORDINALS.get(0));
             checkDoubleBetween(key, jitterRate, 0.0, 1.0, ORDINALS.get(0));
             minJitterRate = jitterRate * -1;
             maxJitterRate = jitterRate;
@@ -215,14 +218,14 @@ final class BackoffSpec {
             maxJitterRate = parseDouble(key, values.get(1), ORDINALS.get(1));
             checkDoubleBetween(key, maxJitterRate, -1.0, 1.0, ORDINALS.get(1));
             if (minJitterRate > maxJitterRate) {
-                double temp = minJitterRate;
+                final double temp = minJitterRate;
                 minJitterRate = maxJitterRate;
                 maxJitterRate = temp;
             }
         }
     }
 
-    private void checkDoubleBetween(String key, double value, double min, double max, String ordinal) {
+    private static void checkDoubleBetween(String key, double value, double min, double max, String ordinal) {
         checkArgument(min <= value && value <= max,
                       "%s parameter for %s must be >= %s and <= %s. input: %s",
                       ordinal, key, min, max, value);

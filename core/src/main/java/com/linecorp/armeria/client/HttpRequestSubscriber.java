@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -31,6 +33,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
@@ -64,7 +67,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private final ClientRequestContext reqCtx;
     private final RequestLogBuilder logBuilder;
     private final long timeoutMillis;
+    @Nullable
     private Subscription subscription;
+    @Nullable
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
 
@@ -93,6 +98,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 // Successfully sent the request; schedule the response timeout.
                 response.scheduleTimeout(ctx);
             } else {
+                assert subscription != null;
                 subscription.request(1);
             }
             return;
@@ -144,7 +150,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         final HttpHeaders firstHeaders = request.headers();
         final String host = LoggingUtil.remoteHost(firstHeaders, ch);
 
-        logBuilder.startRequest(ch, session.protocol(), host);
+        final SessionProtocol protocol = session.protocol();
+        assert protocol != null;
+        logBuilder.startRequest(ch, protocol, host);
         logBuilder.requestHeaders(firstHeaders);
 
         if (request.isEmpty()) {
@@ -239,6 +247,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         if (state == State.DONE) {
+            assert subscription != null;
             subscription.cancel();
         }
     }
@@ -250,6 +259,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private void fail(Throwable cause) {
         setDone();
         logBuilder.endRequest(cause);
+        assert subscription != null;
         subscription.cancel();
     }
 

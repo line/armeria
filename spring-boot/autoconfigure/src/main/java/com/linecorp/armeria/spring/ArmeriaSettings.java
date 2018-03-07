@@ -71,6 +71,7 @@ public class ArmeriaSettings {
         /**
          * Returns the IP address {@link Server} uses.
          */
+        @Nullable
         public String getIp() {
             return ip;
         }
@@ -86,6 +87,7 @@ public class ArmeriaSettings {
         /**
          * Returns the network interface {@link Server} use.
          */
+        @Nullable
         public String getIface() {
             return iface;
         }

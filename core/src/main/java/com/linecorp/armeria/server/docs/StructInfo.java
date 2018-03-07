@@ -38,6 +38,7 @@ public final class StructInfo implements NamedTypeInfo {
 
     private final String name;
     private final List<FieldInfo> fields;
+    @Nullable
     private final String docString;
 
     /**

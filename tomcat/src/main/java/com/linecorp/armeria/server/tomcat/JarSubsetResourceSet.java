@@ -37,6 +37,8 @@ import java.util.HashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import javax.annotation.Nullable;
+
 import org.apache.catalina.WebResourceRoot;
 import org.apache.catalina.webresources.JarResourceSet;
 
@@ -56,6 +58,7 @@ final class JarSubsetResourceSet extends JarResourceSet {
         prefix = jarRoot.substring(1) + '/';
     }
 
+    @Nullable
     @Override
     protected HashMap<String,JarEntry> getArchiveEntries(boolean single) {
         synchronized (archiveLock) {
@@ -64,7 +67,7 @@ final class JarSubsetResourceSet extends JarResourceSet {
                 archiveEntries = new HashMap<>();
                 try {
                     jarFile = openJarFile();
-                    Enumeration<JarEntry> entries = jarFile.entries();
+                    final Enumeration<JarEntry> entries = jarFile.entries();
                     while (entries.hasMoreElements()) {
                         final JarEntry entry = entries.nextElement();
                         final String name = entry.getName();

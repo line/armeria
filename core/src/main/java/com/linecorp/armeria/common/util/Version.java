@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.io.Closeables;
 
 /**
@@ -84,18 +86,18 @@ public final class Version {
      *
      * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
      */
-    public static Map<String, Version> identify(ClassLoader classLoader) {
+    public static Map<String, Version> identify(@Nullable ClassLoader classLoader) {
         if (classLoader == null) {
             classLoader = getContextClassLoader();
         }
 
         // Collect all properties.
-        Properties props = new Properties();
+        final Properties props = new Properties();
         try {
-            Enumeration<URL> resources = classLoader.getResources(PROP_RESOURCE_PATH);
+            final Enumeration<URL> resources = classLoader.getResources(PROP_RESOURCE_PATH);
             while (resources.hasMoreElements()) {
-                URL url = resources.nextElement();
-                InputStream in = url.openStream();
+                final URL url = resources.nextElement();
+                final InputStream in = url.openStream();
                 try {
                     props.load(in);
                 } finally {
@@ -107,16 +109,16 @@ public final class Version {
         }
 
         // Collect all artifactIds.
-        Set<String> artifactIds = new HashSet<>();
+        final Set<String> artifactIds = new HashSet<>();
         for (Object o: props.keySet()) {
-            String k = (String) o;
+            final String k = (String) o;
 
-            int dotIndex = k.indexOf('.');
+            final int dotIndex = k.indexOf('.');
             if (dotIndex <= 0) {
                 continue;
             }
 
-            String artifactId = k.substring(0, dotIndex);
+            final String artifactId = k.substring(0, dotIndex);
 
             // Skip the entries without required information.
             if (!props.containsKey(artifactId + PROP_VERSION) ||
@@ -130,7 +132,7 @@ public final class Version {
             artifactIds.add(artifactId);
         }
 
-        Map<String, Version> versions = new HashMap<>();
+        final Map<String, Version> versions = new HashMap<>();
         for (String artifactId: artifactIds) {
             versions.put(
                     artifactId,

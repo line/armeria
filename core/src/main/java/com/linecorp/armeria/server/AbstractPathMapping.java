@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 /**
  * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(PathMappingContext)}.
  */
@@ -67,7 +69,7 @@ public abstract class AbstractPathMapping implements PathMapping {
         return "__UNKNOWN__";
     }
 
-    static String loggerName(String pathish) {
+    static String loggerName(@Nullable String pathish) {
         if (pathish == null) {
             return "__UNKNOWN__";
         }

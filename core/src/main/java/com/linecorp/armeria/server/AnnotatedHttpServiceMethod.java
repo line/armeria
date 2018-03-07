@@ -195,7 +195,7 @@ final class AnnotatedHttpServiceMethod {
     /**
      * Converts the specified {@code result} to {@link HttpResponse}.
      */
-    private HttpResponse convertResponse(ServiceRequestContext ctx, Object result) {
+    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
         if (result instanceof HttpResponse) {
             return (HttpResponse) result;
         }
@@ -224,6 +224,7 @@ final class AnnotatedHttpServiceMethod {
     /**
      * Returns a {@link HttpResponse} which is created by {@link ExceptionHandlerFunction}.
      */
+    @Nullable // Poorly-written user function can still return null.
     private HttpResponse convertException(ServiceRequestContext ctx, HttpRequest req,
                                           Throwable cause) {
         final Throwable peeledCause = Exceptions.peel(cause);
@@ -345,7 +346,7 @@ final class AnnotatedHttpServiceMethod {
                                             @Nullable AggregatedHttpMessage message,
                                             List<RequestConverterFunction> requestConverters) throws Exception {
         HttpParameters httpParameters = null;
-        Object[] values = new Object[parameters.size()];
+        final Object[] values = new Object[parameters.size()];
         for (int i = 0; i < parameters.size(); ++i) {
             final Parameter entry = parameters.get(i);
             final String value;
@@ -492,7 +493,8 @@ final class AnnotatedHttpServiceMethod {
         throw new IllegalArgumentException("Required parameter '" + entry.name() + "' is missing.");
     }
 
-    private static Object convertParameter(String value, Parameter entry) {
+    @Nullable
+    private static Object convertParameter(@Nullable String value, Parameter entry) {
         Object converted = null;
         if (value != null) {
             converted = entry.isEnum() ? entry.getEnumElement(value)
@@ -502,6 +504,7 @@ final class AnnotatedHttpServiceMethod {
         return entry.isOptionalWrapped() ? Optional.ofNullable(converted) : converted;
     }
 
+    @Nullable
     private static String httpHeaderValue(Parameter entry, HttpRequest req) {
         final String name = entry.name();
         assert name != null;
@@ -640,10 +643,14 @@ final class AnnotatedHttpServiceMethod {
         private final boolean isRequired;
         private final boolean isOptionalWrapped;
         private final Class<?> type;
+        @Nullable
         private final String name;
+        @Nullable
         private final String defaultValue;
+        @Nullable
         private final RequestConverterFunction requestConverterFunction;
         private final boolean isCaseSensitiveEnum;
+        @Nullable
         private final Map<String, ? extends Enum<?>> enumMap;
 
         Parameter(ParameterType parameterType,
@@ -660,7 +667,7 @@ final class AnnotatedHttpServiceMethod {
 
             if (type.isEnum()) {
                 final Set<? extends Enum<?>> enumInstances = EnumSet.allOf(type.asSubclass(Enum.class));
-                Map<String, ? extends Enum<?>> lowerCaseEnumMap = enumInstances.stream().collect(
+                final Map<String, ? extends Enum<?>> lowerCaseEnumMap = enumInstances.stream().collect(
                         toImmutableMap(e -> Ascii.toLowerCase(e.name()), Function.identity(), (e1, e2) -> e1));
                 if (enumInstances.size() != lowerCaseEnumMap.size()) {
                     enumMap = enumInstances.stream().collect(toImmutableMap(Enum::name, Function.identity()));
@@ -676,6 +683,7 @@ final class AnnotatedHttpServiceMethod {
         }
 
         <T> T getEnumElement(String str) {
+            assert enumMap != null;
             final Object o = enumMap.get(isCaseSensitiveEnum ? str : Ascii.toLowerCase(str));
 
             if (o == null) {

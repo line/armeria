@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -41,7 +43,7 @@ public final class CircuitBreakerThrottlingStrategy<T extends Request> extends T
      * Creates a new named {@link ThrottlingStrategy} that determines whether a request should be throttled
      * or not using a given {@code circuitBreaker}.
      */
-    public CircuitBreakerThrottlingStrategy(CircuitBreaker circuitBreaker, String name) {
+    public CircuitBreakerThrottlingStrategy(CircuitBreaker circuitBreaker, @Nullable String name) {
         super(name);
         this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
     }

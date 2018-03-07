@@ -25,6 +25,8 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -41,10 +43,11 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
     private final ClientBuilderParams params;
     private final THttpClient thriftClient;
     private final String path;
+    @Nullable
     private final String fragment;
 
     THttpClientInvocationHandler(ClientBuilderParams params,
-                                 THttpClient thriftClient, String path, String fragment) {
+                                 THttpClient thriftClient, String path, @Nullable String fragment) {
         this.params = params;
         this.thriftClient = thriftClient;
         this.path = path;
@@ -71,6 +74,7 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
         return params.options();
     }
 
+    @Nullable
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         final Class<?> declaringClass = method.getDeclaringClass();
@@ -99,7 +103,8 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
         }
     }
 
-    private Object invokeClientMethod(Method method, Object[] args) throws Throwable {
+    @Nullable
+    private Object invokeClientMethod(Method method, @Nullable Object[] args) throws Throwable {
         final AsyncMethodCallback<Object> callback;
         if (args == null) {
             args = NO_ARGS;

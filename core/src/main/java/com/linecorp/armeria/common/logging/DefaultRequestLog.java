@@ -67,6 +67,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private final RequestContext ctx;
 
+    @Nullable
     private List<RequestLog> children;
     private boolean hasLastChild;
 
@@ -83,29 +84,40 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestStartTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
+    @Nullable
     private Throwable requestCause;
 
     private long responseStartTimeMillis;
     private long responseStartTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
+    @Nullable
     private Throwable responseCause;
 
+    @Nullable
     private Channel channel;
+    @Nullable
     private SessionProtocol sessionProtocol;
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
+    @Nullable
     private String host;
 
     private HttpHeaders requestHeaders = HttpHeaders.EMPTY_HEADERS;
     private HttpHeaders responseHeaders = HttpHeaders.EMPTY_HEADERS;
+    @Nullable
     private Object requestContent;
+    @Nullable
     private Object rawRequestContent;
+    @Nullable
     private Object responseContent;
+    @Nullable
     private Object rawResponseContent;
 
     private volatile int requestStrFlags = -1;
     private volatile int responseStrFlags = -1;
+    @Nullable
     private String requestStr;
+    @Nullable
     private String responseStr;
 
     /**
@@ -148,7 +160,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void endResponseWithLastChild() {
         checkState(!hasLastChild, "last child is already added");
-        checkState(!children.isEmpty(), "at least one child should be already added");
+        checkState(children != null && !children.isEmpty(), "at least one child should be already added");
         hasLastChild = true;
         final RequestLog lastChild = children.get(children.size() - 1);
         propagateResponseSideLog(lastChild);
@@ -302,8 +314,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                       updateAvailability);
     }
 
-    private void startRequest0(long requestStartTimeNanos, long requestStartTimeMillis, Channel channel,
-                               SessionProtocol sessionProtocol, String host, boolean updateAvailability) {
+    private void startRequest0(long requestStartTimeNanos, long requestStartTimeMillis,
+                               @Nullable Channel channel, SessionProtocol sessionProtocol,
+                               @Nullable String host, boolean updateAvailability) {
         if (isAvailabilityAlreadyUpdated(REQUEST_START)) {
             return;
         }
@@ -483,11 +496,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         endRequest0(requireNonNull(requestCause, "requestCause"));
     }
 
-    private void endRequest0(Throwable requestCause) {
+    private void endRequest0(@Nullable Throwable requestCause) {
         endRequest0(System.nanoTime(), requestCause);
     }
 
-    private void endRequest0(long requestEndTimeNanos, Throwable requestCause) {
+    private void endRequest0(long requestEndTimeNanos, @Nullable Throwable requestCause) {
         final int flags = requestCause == null && requestContentDeferred ? FLAGS_REQUEST_END_WITHOUT_CONTENT
                                                                          : REQUEST_END.setterFlags();
         if (isAvailable(flags)) {
@@ -617,12 +630,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (responseContent instanceof RpcResponse) {
-            RpcResponse rpcResponse = (RpcResponse) responseContent;
+            final RpcResponse rpcResponse = (RpcResponse) responseContent;
             if (!rpcResponse.isDone()) {
                 throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
             }
             if (rpcResponse.cause() != null) {
-                this.responseCause = rpcResponse.cause();
+                responseCause = rpcResponse.cause();
             }
         }
 
@@ -660,11 +673,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         endResponse0(requireNonNull(responseCause, "responseCause"));
     }
 
-    private void endResponse0(Throwable responseCause) {
+    private void endResponse0(@Nullable Throwable responseCause) {
         endResponse0(System.nanoTime(), responseCause);
     }
 
-    private void endResponse0(long responseEndTimeNanos, Throwable responseCause) {
+    private void endResponse0(long responseEndTimeNanos, @Nullable Throwable responseCause) {
         final int flags = responseCause == null && responseContentDeferred ? FLAGS_RESPONSE_END_WITHOUT_CONTENT
                                                                            : RESPONSE_END.setterFlags();
         if (isAvailable(flags)) {
@@ -709,6 +722,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
+    @Nullable
     private RequestLogListener[] removeSatisfiedListeners() {
         if (listeners.isEmpty()) {
             return null;
@@ -735,7 +749,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return satisfied;
     }
 
-    private void notifyListeners(RequestLogListener[] listeners) {
+    private void notifyListeners(@Nullable RequestLogListener[] listeners) {
         if (listeners == null) {
             return;
         }
@@ -816,7 +830,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             buf.append(", host=").append(host);
 
-            if (isAvailable(flags, REQUEST_HEADERS) && requestHeaders != null) {
+            if (isAvailable(flags, REQUEST_HEADERS)) {
                 buf.append(", headers=").append(headersSanitizer.apply(requestHeaders));
             }
 
@@ -866,7 +880,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 }
             }
 
-            if (isAvailable(flags, RESPONSE_HEADERS) && responseHeaders != null) {
+            if (isAvailable(flags, RESPONSE_HEADERS)) {
                 buf.append(", headers=").append(headersSanitizer.apply(responseHeaders));
             }
 

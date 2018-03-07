@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.client.grpc;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -85,6 +85,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final Executor executor;
 
     // Effectively final, only set once during start()
+    @Nullable
     private Listener<O> listener;
 
     private boolean cancelCalled;
@@ -107,8 +108,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.callOptions = callOptions;
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
-        this.messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
-        this.marshaller = new GrpcMessageMarshaller<>(
+        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
+        marshaller = new GrpcMessageMarshaller<>(
                 ctx.alloc(), serializationFormat, method, jsonMarshaller,
                 // TODO(anuraag): Consider adding a GrpcClientOption for this after checking the server-side
                 // works / makes sense.
@@ -187,7 +188,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     @Override
     public void sendMessage(I message) {
         try {
-            ByteBuf serialized = marshaller.serializeRequest(message);
+            final ByteBuf serialized = marshaller.serializeRequest(message);
             req.write(messageFramer.writePayload(serialized));
         } catch (Throwable t) {
             cancel(null, t);
@@ -196,20 +197,19 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void setMessageCompression(boolean enabled) {
-        checkState(req != null, "Not started");
         messageFramer.setMessageCompression(enabled);
     }
 
     @Override
     public void messageRead(ByteBufOrStream message) {
         try {
-            O msg = marshaller.deserializeResponse(message);
+            final O msg = marshaller.deserializeResponse(message);
             try (SafeCloseable ignored = RequestContext.push(ctx)) {
                 listener.onMessage(msg);
             }
         } catch (Throwable t) {
             req.close(Status.fromThrowable(t).asException());
-            throw (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t);
+            throw t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t);
         }
     }
 
@@ -227,7 +227,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (compressor != Identity.NONE) {
             headers.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
         }
-        String advertisedEncodings = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
+        final String advertisedEncodings =
+                String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
         if (!advertisedEncodings.isEmpty()) {
             headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodings);
         }
@@ -248,8 +249,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     /**
      * Armeria does not support {@link CallOptions} set by the user, however gRPC stubs set an {@link Executor}
      * within blocking stubs which is used to notify the stub when processing is finished. It's unclear why
-     * the stubs use a loop and {@link java.util.concurrent.Future#isDone()} instead of just blocking on
-     * {@link java.util.concurrent.Future#get}, but we make sure to run the {@link Executor} so the stub can
+     * the stubs use a loop and {@link Future#isDone()} instead of just blocking on
+     * {@link Future#get}, but we make sure to run the {@link Executor} so the stub can
      * be notified of completion.
      */
     private void notifyExecutor() {

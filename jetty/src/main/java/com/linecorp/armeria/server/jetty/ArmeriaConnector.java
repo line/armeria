@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
+import javax.annotation.Nullable;
+
 import org.eclipse.jetty.io.ArrayByteBufferPool;
 import org.eclipse.jetty.io.ByteBufferPool;
 import org.eclipse.jetty.io.Connection;
@@ -102,11 +104,13 @@ final class ArmeriaConnector extends ContainerLifeCycle implements Connector {
         return byteBufferPool;
     }
 
+    @Nullable
     @Override
     public ConnectionFactory getConnectionFactory(String nextProtocol) {
         return PROTOCOL_NAME.equals(nextProtocol) ? connectionFactory : null;
     }
 
+    @Nullable
     @Override
     @SuppressWarnings("unchecked")
     public <T> T getConnectionFactory(Class<T> factoryType) {

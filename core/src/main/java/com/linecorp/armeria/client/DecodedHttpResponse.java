@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
@@ -27,6 +29,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class DecodedHttpResponse extends DefaultHttpResponse {
 
     private final EventLoop eventLoop;
+    @Nullable
     private InboundTrafficController inboundTrafficController;
     private long writtenBytes;
 
@@ -52,6 +55,7 @@ final class DecodedHttpResponse extends DefaultHttpResponse {
         final boolean published = super.tryWrite(obj);
         if (published && obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
+            assert inboundTrafficController != null;
             inboundTrafficController.inc(length);
             writtenBytes += length;
         }
@@ -62,6 +66,7 @@ final class DecodedHttpResponse extends DefaultHttpResponse {
     protected void onRemoval(HttpObject obj) {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
+            assert inboundTrafficController != null;
             inboundTrafficController.dec(length);
         }
     }

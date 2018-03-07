@@ -52,6 +52,7 @@ public final class MethodInfo {
     private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHttpHeaders;
     private final List<String> exampleRequests;
+    @Nullable
     private final String docString;
 
     /**

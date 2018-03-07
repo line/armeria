@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 
 /**
@@ -118,7 +120,7 @@ public enum LogLevel {
      * Logs a message at this level.
      */
     @SuppressWarnings("MethodParameterNamingConvention")
-    public void log(Logger logger, String format, Object arg1, Object arg2) {
+    public void log(Logger logger, String format, @Nullable Object arg1, @Nullable Object arg2) {
         switch (this) {
             case TRACE:
                 logger.trace(format, arg1, arg2);

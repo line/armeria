@@ -38,6 +38,7 @@ public class DefaultRpcResponse extends CompletableFuture<Object> implements Rpc
     private static final AtomicReferenceFieldUpdater<DefaultRpcResponse, Throwable> causeUpdater =
             AtomicReferenceFieldUpdater.newUpdater(DefaultRpcResponse.class, Throwable.class, "cause");
 
+    @Nullable
     private volatile Throwable cause;
 
     /**
@@ -64,6 +65,7 @@ public class DefaultRpcResponse extends CompletableFuture<Object> implements Rpc
         completeExceptionally(cause);
     }
 
+    @Nullable
     @Override
     public final Throwable cause() {
         return cause;

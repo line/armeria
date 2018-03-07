@@ -17,6 +17,8 @@ package com.linecorp.armeria.common;
 
 import java.io.IOException;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -37,6 +39,7 @@ public final class MediaTypeJsonDeserializer extends StdDeserializer<MediaType> 
         super(MediaType.class);
     }
 
+    @Nullable
     @Override
     public MediaType deserialize(JsonParser p, DeserializationContext ctx)
             throws IOException {

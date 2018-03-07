@@ -30,6 +30,8 @@
 // =================================================================================================
 package com.linecorp.armeria.common.thrift.text;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -42,7 +44,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 class MapContext extends PairContext {
 
     // SUPPRESS CHECKSTYLE JavadocMethod
-    protected MapContext(JsonNode json) {
+    protected MapContext(@Nullable JsonNode json) {
         super(json);
     }
 

@@ -16,10 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
@@ -38,6 +40,20 @@ import com.linecorp.armeria.common.RequestContext;
  * {@link ServiceRequestContext} instance.
  */
 public interface ServiceRequestContext extends RequestContext {
+
+    /**
+     * Returns the remote address of this request.
+     */
+    @Nonnull
+    @Override
+    <A extends SocketAddress> A remoteAddress();
+
+    /**
+     * Returns the local address of this request.
+     */
+    @Nonnull
+    @Override
+    <A extends SocketAddress> A localAddress();
 
     @Override
     ServiceRequestContext newDerivedContext();
@@ -75,6 +91,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the value of the specified path parameter.
      */
+    @Nullable
     default String pathParam(String name) {
         return pathParams().get(name);
     }

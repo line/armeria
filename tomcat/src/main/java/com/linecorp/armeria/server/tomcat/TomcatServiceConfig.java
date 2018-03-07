@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import org.apache.catalina.Realm;
 import org.apache.catalina.core.StandardEngine;
 import org.apache.catalina.core.StandardServer;
@@ -34,16 +36,19 @@ import com.google.common.base.MoreObjects;
 final class TomcatServiceConfig {
 
     private final String serviceName;
+    @Nullable
     private final String engineName;
     private final Path baseDir;
     private final Realm realm;
+    @Nullable
     private final String hostname;
     private final Path docBase;
+    @Nullable
     private final String jarRoot;
     private final List<Consumer<? super StandardServer>> configurators;
 
-    TomcatServiceConfig(String serviceName, String engineName, Path baseDir, Realm realm,
-                        String hostname, Path docBase, String jarRoot,
+    TomcatServiceConfig(String serviceName, @Nullable String engineName, Path baseDir, Realm realm,
+                        @Nullable String hostname, Path docBase, @Nullable String jarRoot,
                         List<Consumer<? super StandardServer>> configurators) {
 
         this.engineName = engineName;
@@ -121,8 +126,9 @@ final class TomcatServiceConfig {
                         docBase(), jarRoot().orElse(null));
     }
 
-    static String toString(Object holder, String serviceName, String engineName,
-                           Path baseDir, Realm realm, String hostname, Path docBase, String jarRoot) {
+    static String toString(Object holder, String serviceName, @Nullable String engineName,
+                           @Nullable Path baseDir, @Nullable Realm realm, @Nullable String hostname,
+                           Path docBase, @Nullable String jarRoot) {
 
         return holder.getClass().getSimpleName() +
                "(serviceName: " + serviceName +

@@ -229,10 +229,12 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         }
 
         // Convert leading headers.
+        final String path = headers.path();
+        assert path != null;
         final HttpRequest req = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1,
                 io.netty.handler.codec.http.HttpMethod.valueOf(method.name()),
-                headers.path(), false);
+                path, false);
 
         convert(streamId, headers, req.headers(), false);
 
@@ -370,7 +372,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
     private static ByteBuf dataChunk(HttpData data, int offset, int chunkSize) {
         if (data instanceof ByteBufHolder) {
-            ByteBuf buf = ((ByteBufHolder) data).content();
+            final ByteBuf buf = ((ByteBufHolder) data).content();
             return buf.retainedSlice(offset, chunkSize);
         } else {
             return Unpooled.wrappedBuffer(data.array(), offset, chunkSize);

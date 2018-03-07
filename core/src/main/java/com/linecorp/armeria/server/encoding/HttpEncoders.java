@@ -33,7 +33,7 @@ final class HttpEncoders {
 
     @Nullable
     static HttpEncodingType getWrapperForRequest(HttpRequest request) {
-        String acceptEncoding = request.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
+        final String acceptEncoding = request.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptEncoding == null) {
             return null;
         }
@@ -57,13 +57,14 @@ final class HttpEncoders {
     }
 
     // Copied from netty's HttpContentCompressor.
+    @Nullable
     private static HttpEncodingType determineEncoding(String acceptEncoding) {
         float starQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;
         for (String encoding : acceptEncoding.split(",")) {
             float q = 1.0f;
-            int equalsPos = encoding.indexOf('=');
+            final int equalsPos = encoding.indexOf('=');
             if (equalsPos != -1) {
                 try {
                     q = Float.parseFloat(encoding.substring(equalsPos + 1));

@@ -34,6 +34,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import org.apache.catalina.Realm;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardEngine;
@@ -172,16 +174,21 @@ public final class TomcatServiceBuilder {
     }
 
     private final Path docBase;
+    @Nullable
     private final String jarRoot;
     private final List<Consumer<? super StandardServer>> configurators = new ArrayList<>();
 
     private String serviceName = DEFAULT_SERVICE_NAME;
+    @Nullable
     private String engineName;
+    @Nullable
     private Path baseDir;
+    @Nullable
     private Realm realm;
+    @Nullable
     private String hostname;
 
-    private TomcatServiceBuilder(Path docBase, String jarRoot) {
+    private TomcatServiceBuilder(Path docBase, @Nullable String jarRoot) {
         this.docBase = validateDocBase(docBase);
         if (TomcatUtil.isZip(docBase)) {
             this.jarRoot = normalizeJarRoot(jarRoot);
@@ -208,7 +215,7 @@ public final class TomcatServiceBuilder {
         return docBase;
     }
 
-    private static String normalizeJarRoot(String jarRoot) {
+    private static String normalizeJarRoot(@Nullable String jarRoot) {
         if (jarRoot == null || jarRoot.isEmpty() || "/".equals(jarRoot)) {
             return "/";
         }

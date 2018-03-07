@@ -34,6 +34,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +96,7 @@ public class ArmeriaAutoConfiguration {
      * Create a {@link Server} bean.
      */
     @Bean
+    @Nullable
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
@@ -129,8 +132,8 @@ public class ArmeriaAutoConfiguration {
 
         configurePorts(armeriaSettings, server);
 
-        List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
-        Map<String, Collection<HttpHeaders>> docServiceHeaders = new HashMap<>();
+        final List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
+        final Map<String, Collection<HttpHeaders>> docServiceHeaders = new HashMap<>();
         thriftServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (metricsEnabled) {
@@ -175,7 +178,7 @@ public class ArmeriaAutoConfiguration {
         }
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getDocsPath())) {
-            DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+            final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
             docServiceBuilder.exampleRequest(docServiceRequests);
             for (Entry<String, Collection<HttpHeaders>> entry : docServiceHeaders.entrySet()) {
                 docServiceBuilder.exampleHttpHeaders(entry.getKey(), entry.getValue());
@@ -217,7 +220,7 @@ public class ArmeriaAutoConfiguration {
                 initializers -> initializers.forEach(
                         initializer -> initializer.configure(server)));
 
-        Server s = server.build();
+        final Server s = server.build();
 
         s.start().join();
         logger.info("Armeria server started at ports: {}", s.activePorts());
@@ -226,10 +229,13 @@ public class ArmeriaAutoConfiguration {
 
     private static void addPrometheusExposition(ArmeriaSettings armeriaSettings, ServerBuilder server,
                                                 PrometheusMeterRegistry registry) {
-        final CollectorRegistry prometheusRegistry =
-                registry.getPrometheusRegistry();
-        server.service(armeriaSettings.getMetricsPath(),
-                       new PrometheusExpositionService(prometheusRegistry));
+        final String metricsPath = armeriaSettings.getMetricsPath();
+        if (metricsPath == null) {
+            return;
+        }
+
+        final CollectorRegistry prometheusRegistry = registry.getPrometheusRegistry();
+        server.service(metricsPath, new PrometheusExpositionService(prometheusRegistry));
     }
 
     private static void configurePorts(ArmeriaSettings armeriaSettings, ServerBuilder server) {
@@ -249,7 +255,7 @@ public class ArmeriaAutoConfiguration {
                     server.port(new ServerPort(port, proto));
                 } else {
                     try {
-                        Enumeration<InetAddress> e = NetworkInterface.getByName(iface).getInetAddresses();
+                        final Enumeration<InetAddress> e = NetworkInterface.getByName(iface).getInetAddresses();
                         while (e.hasMoreElements()) {
                             server.port(new ServerPort(new InetSocketAddress(e.nextElement(), port), proto));
                         }

@@ -21,6 +21,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.Sets;
 
 final class UnionMap<K, V> extends AbstractMap<K, V> {
@@ -28,6 +30,7 @@ final class UnionMap<K, V> extends AbstractMap<K, V> {
     private final Map<K, V> first;
     private final Map<K, V> second;
     private int size = -1;
+    @Nullable
     private Set<Entry<K, V>> entrySet;
 
     UnionMap(Map<K, V> first, Map<K, V> second) {

@@ -20,6 +20,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -64,7 +66,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final Consumer<RequestLog> accessLogWriter;
     private final long startTimeNanos;
 
+    @Nullable
     private Subscription subscription;
+    @Nullable
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_HEADERS;
     private boolean isComplete;
@@ -111,7 +115,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private void onTimeout() {
         if (state != State.DONE) {
             reqCtx.setTimedOut();
-            Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
+            final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
             if (requestTimeoutHandler != null) {
                 requestTimeoutHandler.run();
             } else {

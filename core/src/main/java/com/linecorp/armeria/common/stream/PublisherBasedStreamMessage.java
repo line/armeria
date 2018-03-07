@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -47,6 +49,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     private final Publisher<? extends T> publisher;
     private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+    @Nullable
     @SuppressWarnings("unused") // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;
     private volatile boolean publishedAny;
@@ -160,6 +163,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private final EventExecutor executor;
         private Subscriber<Object> subscriber;
         private volatile boolean abortPending;
+        @Nullable
         private volatile Subscription subscription;
 
         @SuppressWarnings("unchecked")

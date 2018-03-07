@@ -86,12 +86,12 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         return new ZooKeeperListener() {
             @Override
             public void nodeChildChange(Map<String, String> newChildrenValue) {
-                List<Endpoint> newData = newChildrenValue.values().stream()
-                                                         .map(nodeValueCodec::decode)
-                                                         .filter(Objects::nonNull)
-                                                         .collect(toImmutableList());
+                final List<Endpoint> newData = newChildrenValue.values().stream()
+                                                               .map(nodeValueCodec::decode)
+                                                               .filter(Objects::nonNull)
+                                                               .collect(toImmutableList());
                 final List<Endpoint> prevData = endpoints();
-                if (prevData == null || !prevData.equals(newData)) {
+                if (!prevData.equals(newData)) {
                     setEndpoints(newData);
                 }
             }

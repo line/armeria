@@ -52,6 +52,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private final EventLoop eventLoop;
     private final ClientOptions options;
     private final Endpoint endpoint;
+    @Nullable
     private final String fragment;
 
     private final DefaultRequestLog log;
@@ -60,6 +61,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long responseTimeoutMillis;
     private long maxResponseLength;
 
+    @Nullable
     private String strVal;
 
     /**
@@ -110,10 +112,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request) {
         super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), request);
 
-        this.eventLoop = ctx.eventLoop();
-        this.options = ctx.options();
-        this.endpoint = ctx.endpoint();
-        this.fragment = ctx.fragment();
+        eventLoop = ctx.eventLoop();
+        options = ctx.options();
+        endpoint = ctx.endpoint();
+        fragment = ctx.fragment();
 
         log = new DefaultRequestLog(this);
 
@@ -121,7 +123,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         responseTimeoutMillis = ctx.responseTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
-        for (Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
+        for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
             addAttr(i.next());
         }
         runThreadLocalContextCustomizer();
@@ -144,6 +146,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
+    @Nullable
     protected Channel channel() {
         if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
             return log.channel();

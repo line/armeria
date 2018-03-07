@@ -17,6 +17,8 @@ package com.linecorp.armeria.server.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -31,7 +33,9 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     private final String zkConnectionStr;
     private final String zNodePath;
     private final int sessionTimeout;
+    @Nullable
     private Endpoint endpoint;
+    @Nullable
     private ZooKeeperRegistration connector;
 
     /**
@@ -79,11 +83,13 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         }
     }
 
+    @Nullable
     @VisibleForTesting
     ZooKeeperRegistration getConnector() {
         return connector;
     }
 
+    @Nullable
     @VisibleForTesting
     Endpoint getEndpoint() {
         return endpoint;

@@ -53,6 +53,7 @@ public final class PathAndQuery {
 
     private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
 
+    @Nullable
     private static final Cache<String, PathAndQuery> CACHE =
             Flags.parsedPathCacheSpec().map(PathAndQuery::buildCache).orElse(null);
 
@@ -96,7 +97,7 @@ public final class PathAndQuery {
     @Nullable
     public static PathAndQuery parse(String rawPath) {
         if (CACHE != null) {
-            PathAndQuery parsed = CACHE.getIfPresent(rawPath);
+            final PathAndQuery parsed = CACHE.getIfPresent(rawPath);
             if (parsed != null) {
                 return parsed;
             }
@@ -142,14 +143,14 @@ public final class PathAndQuery {
             return false;
         }
 
-        PathAndQuery that = (PathAndQuery) o;
+        final PathAndQuery that = (PathAndQuery) o;
         return Objects.equals(path, that.path) &&
                Objects.equals(query, that.query);
     }
 
     @Override
     public int hashCode() {
-        return 31 * path.hashCode() + query.hashCode();
+        return Objects.hash(path, query);
     }
 
     @Override
@@ -160,6 +161,7 @@ public final class PathAndQuery {
                 .toString();
     }
 
+    @Nullable
     private static PathAndQuery splitPathAndQuery(final String pathAndQuery) {
         final String path;
         final String query;
@@ -200,7 +202,7 @@ public final class PathAndQuery {
         return new PathAndQuery(CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/"), query);
     }
 
-    private static boolean isValidEncoding(String value) {
+    private static boolean isValidEncoding(@Nullable String value) {
         if (value == null) {
             return true;
         }

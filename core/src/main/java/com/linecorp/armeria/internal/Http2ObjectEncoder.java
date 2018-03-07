@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
@@ -73,6 +75,7 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
         return encoder.writeRstStream(ctx, streamId, error.code(), ctx.newPromise());
     }
 
+    @Nullable
     private ChannelFuture validateStream(ChannelHandlerContext ctx, int streamId) {
         final Http2Stream stream = encoder.connection().stream(streamId);
         if (stream != null) {

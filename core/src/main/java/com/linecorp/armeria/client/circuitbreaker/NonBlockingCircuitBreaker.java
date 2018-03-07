@@ -84,7 +84,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     }
 
     @Override
-    public void onFailure(Throwable cause) {
+    public void onFailure(@Nullable Throwable cause) {
         try {
             if (cause != null && !config.exceptionFilter().shouldDealWith(cause)) {
                 return;

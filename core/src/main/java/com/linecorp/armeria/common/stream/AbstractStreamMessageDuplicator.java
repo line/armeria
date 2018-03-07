@@ -46,6 +46,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Allows subscribing to a {@link StreamMessage} multiple times by duplicating the stream.
@@ -186,6 +187,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @SuppressWarnings("unused")
         private volatile long requestedDemand;
+        @Nullable
         private volatile Subscription upstreamSubscription;
 
         private volatile State state = State.DUPLICABLE;
@@ -195,7 +197,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                                EventExecutor executor, long maxSignalLength) {
             this.upstream = upstream;
             this.signalLengthGetter = (SignalLengthGetter<Object>) signalLengthGetter;
-            this.processorExecutor = executor;
+            processorExecutor = executor;
             if (maxSignalLength == 0 || maxSignalLength > Integer.MAX_VALUE) {
                 this.maxSignalLength = Integer.MAX_VALUE;
             } else {
@@ -310,7 +312,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
         }
 
-        void unsubscribe(DownstreamSubscription<T> subscription, Throwable cause) {
+        void unsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
             if (processorExecutor.inEventLoop()) {
                 doUnsubscribe(subscription, cause);
             } else {
@@ -318,7 +320,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
         }
 
-        private void doUnsubscribe(DownstreamSubscription<T> subscription, Throwable cause) {
+        private void doUnsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
             if (!downstreamSubscriptions.remove(subscription)) {
                 return;
             }
@@ -420,6 +422,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private final StreamMessageProcessor<T> processor;
         private final boolean lastStream;
 
+        @Nullable
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
 
@@ -513,7 +516,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
 
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
-                    this, AbortingSubscriber.get(), processor, null, false, false);
+                    this, AbortingSubscriber.get(), processor, ImmediateEventExecutor.INSTANCE, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
                 newSubscription.completionFuture().completeExceptionally(AbortedStreamException.get());
             } else {
@@ -552,6 +555,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         /**
          * {@link CancelledSubscriptionException} if cancelled. {@link AbortedStreamException} if aborted.
          */
+        @Nullable
         @SuppressWarnings("unused")
         private volatile Throwable cancelledOrAborted;
 
@@ -719,7 +723,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                         // don't need to use AtomicBoolean cause it's used for rough counting
                         processor.downstreamSignaledCounter = 0;
                         int minOffset = Integer.MAX_VALUE;
-                        for (DownstreamSubscription s : processor.downstreamSubscriptions) {
+                        for (DownstreamSubscription<?> s : processor.downstreamSubscriptions) {
                             minOffset = Math.min(minOffset, s.offset);
                         }
                         processor.signals().requestRemovalAheadOf(minOffset);
@@ -776,9 +780,10 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
 
+        @Nullable
         private final Throwable cause;
 
-        CloseEvent(Throwable cause) {
+        CloseEvent(@Nullable Throwable cause) {
             this.cause = cause;
         }
 
@@ -806,6 +811,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         private final SignalLengthGetter<Object> signalLengthGetter;
 
+        @Nullable
         @VisibleForTesting
         volatile Object[] elements;
         private volatile int head;
@@ -831,7 +837,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final int t = tail;
             elements[t] = o;
             size++;
-            if ((tail = (t + 1) & (elements.length - 1)) == head) {
+            if ((tail = t + 1 & elements.length - 1) == head) {
                 doubleCapacity();
             }
             return removedLength;
@@ -845,7 +851,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final int oldHead = head;
             int removedLength = 0;
             for (int numRemovals = 0; numRemovals < numElementsToBeRemoved; numRemovals++) {
-                final int index = (oldHead + numRemovals) & bitMask;
+                final int index = oldHead + numRemovals & bitMask;
                 final Object o = elements[index];
                 if (!(o instanceof CloseEvent)) {
                     removedLength += signalLengthGetter.length(o);
@@ -853,9 +859,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 ReferenceCountUtil.safeRelease(o);
                 elements[index] = null;
             }
-            head = (oldHead + numElementsToBeRemoved) & bitMask;
+            head = oldHead + numElementsToBeRemoved & bitMask;
             headOffset = removalRequestedOffset;
-            size = size - numElementsToBeRemoved;
+            size -= numElementsToBeRemoved;
             return removedLength;
         }
 
@@ -875,7 +881,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 // [4, 5, 6, 3] will be [N, N, N, 3, 4, 5, 6, N]
                 System.arraycopy(elements, h, a, h, r); // copy 3
                 System.arraycopy(elements, 0, a, n, h); // copy 4,5,6
-                tail = tail + n;
+                tail += n;
             } else { // odd number head wrap-around
                 // [8, 5, 6, 7] will be [8, N, N, N, N, 5, 6, 7]
                 System.arraycopy(elements, h, a, h + n, r); // copy 5,6,7
@@ -890,11 +896,11 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final int head = this.head;
             final int tail = this.tail;
             final int length = elements.length;
-            final int convertedIndex = offset & (length - 1);
+            final int convertedIndex = offset & length - 1;
             checkState(size > 0, "queue is empty");
             checkArgument(head < tail ? head <= convertedIndex && convertedIndex < tail
-                                      : (head <= convertedIndex && convertedIndex < length) ||
-                                        (0 <= convertedIndex && convertedIndex < tail),
+                                      : head <= convertedIndex && convertedIndex < length ||
+                                        0 <= convertedIndex && convertedIndex < tail,
                           "offset: %s is invalid. head: %s, tail: %s, capacity: %s ",
                           offset, head, tail, length);
             checkArgument(offset >= lastRemovalRequestedOffset,
@@ -922,12 +928,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         // Removes references to all objects.
         void clear() {
-            Object[] oldElements = elements;
+            final Object[] oldElements = elements;
             if (oldElements == null) {
                 return; // Already cleared.
             }
-            this.elements = null;
-            int t = tail;
+            elements = null;
+            final int t = tail;
             for (int i = head; i < t; i++) {
                 ReferenceCountUtil.safeRelease(oldElements[i]);
             }

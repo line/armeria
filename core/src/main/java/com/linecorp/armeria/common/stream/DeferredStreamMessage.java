@@ -22,12 +22,13 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.util.CompletionActions;
 
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -54,12 +55,15 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             AtomicIntegerFieldUpdater.newUpdater(
                     DeferredStreamMessage.class, "subscribedToDelegate");
 
+    @Nullable
     @SuppressWarnings("unused") // Updated only via delegateUpdater
     private volatile StreamMessage<T> delegate;
 
     // Only accessed from subscription's executor.
+    @Nullable
     private Subscription delegateSubscription;
 
+    @Nullable
     @SuppressWarnings("unused") // Updated only via subscriptionUpdater
     private volatile SubscriptionImpl subscription;
 
@@ -179,6 +183,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     @Override
     void cancel() {
         // A user cannot access subscription without subscribing.
+        final SubscriptionImpl subscription = this.subscription;
         assert subscription != null;
 
         if (subscription.needsDirectInvocation()) {
@@ -194,6 +199,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             try {
                 delegateSubscription.cancel();
             } finally {
+                final SubscriptionImpl subscription = this.subscription;
+                assert subscription != null;
                 subscription.clearSubscriber();
             }
         } else {
@@ -236,16 +243,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
-        final EventExecutor executor = subscription.executor();
-        final boolean withPooledObjects = subscription.withPooledObjects();
-
-        final Subscriber<T> delegateSubscriber = new ForwardingSubscriber();
-
-        if (executor == null) {
-            delegate.subscribe(delegateSubscriber, withPooledObjects);
-        } else {
-            delegate.subscribe(delegateSubscriber, executor, withPooledObjects);
-        }
+        delegate.subscribe(new ForwardingSubscriber(),
+                           subscription.executor(),
+                           subscription.withPooledObjects());
     }
 
     @Override

@@ -24,6 +24,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nullable;
+
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
@@ -134,7 +136,7 @@ public abstract class ServerRule extends ExternalResource {
         return server;
     }
 
-    private static boolean isStopped(Server server) {
+    private static boolean isStopped(@Nullable Server server) {
         return server == null || server.activePorts().isEmpty();
     }
 

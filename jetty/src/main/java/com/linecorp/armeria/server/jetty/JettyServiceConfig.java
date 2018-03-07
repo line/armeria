@@ -25,6 +25,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
@@ -37,12 +39,19 @@ import com.google.common.base.MoreObjects;
 
 final class JettyServiceConfig {
 
+    @Nullable
     private final String hostname;
+    @Nullable
     private final Boolean dumpAfterStart;
+    @Nullable
     private final Boolean dumpBeforeStop;
+    @Nullable
     private final Long stopTimeoutMillis;
+    @Nullable
     private final Handler handler;
+    @Nullable
     private final RequestLog requestLog;
+    @Nullable
     private final Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
     private final Map<String, Object> attrs;
     private final List<Bean> beans;
@@ -51,10 +60,11 @@ final class JettyServiceConfig {
     private final List<LifeCycle.Listener> lifeCycleListeners;
     private final List<Consumer<? super Server>> configurators;
 
-    JettyServiceConfig(String hostname,
-                       Boolean dumpAfterStart, Boolean dumpBeforeStop, Long stopTimeoutMillis,
-                       Handler handler, RequestLog requestLog,
-                       Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory,
+    JettyServiceConfig(@Nullable String hostname,
+                       @Nullable Boolean dumpAfterStart, @Nullable Boolean dumpBeforeStop,
+                       @Nullable Long stopTimeoutMillis,
+                       @Nullable Handler handler, @Nullable RequestLog requestLog,
+                       @Nullable Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory,
                        Map<String, Object> attrs, List<Bean> beans, List<HandlerWrapper> handlerWrappers,
                        List<Listener> eventListeners, List<LifeCycle.Listener> lifeCycleListeners,
                        List<Consumer<? super Server>> configurators) {
@@ -135,9 +145,10 @@ final class JettyServiceConfig {
     }
 
     static String toString(
-            Object holder, String hostname, Boolean dumpAfterStart, Boolean dumpBeforeStop, Long stopTimeout,
-            Handler handler, RequestLog requestLog,
-            Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory,
+            Object holder, @Nullable String hostname, @Nullable Boolean dumpAfterStart,
+            @Nullable Boolean dumpBeforeStop, @Nullable Long stopTimeout,
+            @Nullable Handler handler, @Nullable RequestLog requestLog,
+            @Nullable Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory,
             Map<String, Object> attrs, List<Bean> beans, List<HandlerWrapper> handlerWrappers,
             List<Listener> eventListeners, List<LifeCycle.Listener> lifeCycleListeners,
             List<Consumer<? super Server>> configurators) {
@@ -162,9 +173,10 @@ final class JettyServiceConfig {
     static final class Bean {
 
         private final Object bean;
+        @Nullable
         private final Boolean managed;
 
-        Bean(Object bean, Boolean managed) {
+        Bean(Object bean, @Nullable Boolean managed) {
             this.bean = requireNonNull(bean, "bean");
             this.managed = managed;
         }
@@ -173,6 +185,7 @@ final class JettyServiceConfig {
             return bean;
         }
 
+        @Nullable
         Boolean isManaged() {
             return managed;
         }

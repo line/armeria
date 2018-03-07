@@ -33,6 +33,8 @@ package com.linecorp.armeria.common.thrift.text;
 import java.util.Iterator;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
@@ -53,14 +55,16 @@ import com.fasterxml.jackson.databind.node.TextNode;
  */
 class PairContext extends BaseContext {
 
+    @Nullable
     private final Iterator<Map.Entry<String, JsonNode>> children;
     private boolean lhs;
+    @Nullable
     private Map.Entry<String, JsonNode> currentChild;
 
     /**
      * Creates an iterator over this object's children.
      */
-    protected PairContext(JsonNode json) {
+    protected PairContext(@Nullable JsonNode json) {
         children = null != json ? json.fields() : null;
     }
 
@@ -75,6 +79,7 @@ class PairContext extends BaseContext {
         // every other time, do a read, since the read gets the name & value
         // at once.
         if (isLhs()) {
+            assert children != null;
             if (!children.hasNext()) {
                 throw new RuntimeException(
                         "Called PairContext.read() too many times!");
@@ -85,6 +90,7 @@ class PairContext extends BaseContext {
 
     @Override
     protected JsonNode getCurrentChild() {
+        assert currentChild != null;
         if (lhs) {
             return new TextNode(currentChild.getKey());
         }
@@ -93,6 +99,7 @@ class PairContext extends BaseContext {
 
     @Override
     protected boolean hasMoreChildren() {
+        assert children != null;
         return children.hasNext();
     }
 

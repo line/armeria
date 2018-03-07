@@ -32,6 +32,8 @@ package com.linecorp.armeria.common.thrift.text;
 
 import java.util.Iterator;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -42,19 +44,22 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 class SequenceContext extends BaseContext {
 
+    @Nullable
     private final Iterator<JsonNode> children;
+    @Nullable
     private JsonNode currentChild;
 
     /**
      * Create an iterator over the children. May be constructed with a null
      * JsonArray if we only use it for writing.
      */
-    protected SequenceContext(JsonNode json) {
+    protected SequenceContext(@Nullable JsonNode json) {
         children = null != json ? json.elements() : null;
     }
 
     @Override
     protected void read() {
+        assert children != null;
         if (!children.hasNext()) {
             throw new RuntimeException(
                     "Called SequenceContext.read() too many times!");
@@ -64,11 +69,13 @@ class SequenceContext extends BaseContext {
 
     @Override
     protected JsonNode getCurrentChild() {
+        assert currentChild != null;
         return currentChild;
     }
 
     @Override
     protected boolean hasMoreChildren() {
+        assert children != null;
         return children.hasNext();
     }
 }

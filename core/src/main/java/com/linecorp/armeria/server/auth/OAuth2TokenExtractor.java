@@ -20,6 +20,8 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,14 +39,15 @@ final class OAuth2TokenExtractor implements Function<HttpHeaders, OAuth2Token> {
     private static final Pattern AUTHORIZATION_HEADER_PATTERN = Pattern.compile(
             "\\s*(?i)bearer\\s+(?<accessToken>\\S+)\\s*");
 
+    @Nullable
     @Override
     public OAuth2Token apply(HttpHeaders headers) {
-        String authorization = headers.get(HttpHeaderNames.AUTHORIZATION);
+        final String authorization = headers.get(HttpHeaderNames.AUTHORIZATION);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;
         }
 
-        Matcher matcher = AUTHORIZATION_HEADER_PATTERN.matcher(authorization);
+        final Matcher matcher = AUTHORIZATION_HEADER_PATTERN.matcher(authorization);
         if (!matcher.matches()) {
             logger.warn("Invalid authorization header: " + authorization);
             return null;

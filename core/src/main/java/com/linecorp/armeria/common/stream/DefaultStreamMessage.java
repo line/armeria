@@ -21,8 +21,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import javax.annotation.Nullable;
 
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
@@ -74,6 +75,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private final Queue<Object> queue;
 
+    @Nullable
     @SuppressWarnings("unused")
     private volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
 
@@ -274,10 +276,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         final SubscriptionImpl subscription = this.subscription;
         if (!invokedOnSubscribe) {
-            Executor executor = subscription.executor();
-            if (executor == null) {
-                executor = ForkJoinPool.commonPool();
-            }
+            final Executor executor = subscription.executor();
 
             // Subscriber.onSubscribe() was not invoked yet.
             // Reschedule the notification so that onSubscribe() is invoked before other events.

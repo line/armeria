@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -31,6 +33,7 @@ interface HttpSession {
         private final InboundTrafficController inboundTrafficController =
                 new InboundTrafficController(null, 0, 0);
 
+        @Nullable
         @Override
         public SessionProtocol protocol() {
             return null;
@@ -81,6 +84,7 @@ interface HttpSession {
         return INACTIVE;
     }
 
+    @Nullable
     SessionProtocol protocol();
 
     boolean isActive();

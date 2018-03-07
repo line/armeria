@@ -108,11 +108,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final boolean unsafeWrapRequestBuffers;
 
     // Only set once.
+    @Nullable
     private ServerCall.Listener<I> listener;
 
     @Nullable
     private final String clientAcceptEncoding;
 
+    @Nullable
     private Compressor compressor;
     private boolean messageCompression;
     private boolean messageReceived;
@@ -139,7 +141,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
-        this.messageReader = new HttpStreamReader(
+        messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
                 new ArmeriaMessageDeframer(
                         this,
@@ -147,10 +149,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                         ctx.alloc())
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry)),
                 this);
-        this.messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
+        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
-        this.clientAcceptEncoding =
+        clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
@@ -180,14 +182,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!sendHeadersCalled, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
-        HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
 
         headers.contentType(serializationFormat.mediaType());
 
         if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
             compressor = Codec.Identity.NONE;
         } else {
-            List<String> acceptedEncodingsList =
+            final List<String> acceptedEncodingsList =
                     ACCEPT_ENCODING_SPLITTER.splitToList(clientAcceptEncoding);
             if (!acceptedEncodingsList.contains(compressor.getMessageEncoding())) {
                 // resort to using no compression.
@@ -199,7 +201,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         // Always put compressor, even if it's identity.
         headers.add(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
 
-        String advertisedEncodings = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
+        final String advertisedEncodings =
+                String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
         if (!advertisedEncodings.isEmpty()) {
             headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodings);
         }
@@ -252,7 +255,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             return;
         }
 
-        HttpHeaders trailers = statusToTrailers(status, sendHeadersCalled);
+        final HttpHeaders trailers = statusToTrailers(status, sendHeadersCalled);
         final HttpObject trailersObj;
         if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
             // Normal trailers are not supported in grpc-web and must be encoded as a message.
@@ -427,7 +430,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private HttpData serializeTrailersAsMessage(HttpHeaders trailers) {
-        ByteBuf serialized = ctx.alloc().buffer();
+        final ByteBuf serialized = ctx.alloc().buffer();
         boolean success = false;
         try {
             serialized.writeByte(TRAILERS_FRAME_HEADER);
@@ -436,7 +439,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             for (Map.Entry<AsciiString, String> trailer : trailers) {
                 encodeHeader(trailer.getKey(), trailer.getValue(), serialized);
             }
-            int messageSize = serialized.readableBytes() - 5;
+            final int messageSize = serialized.readableBytes() - 5;
             serialized.setInt(1, messageSize);
             success = true;
         } finally {
@@ -448,11 +451,11 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private static Decompressor clientDecompressor(HttpHeaders headers, DecompressorRegistry registry) {
-        String encoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
+        final String encoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
         if (encoding == null) {
             return Identity.NONE;
         }
-        Decompressor decompressor = registry.lookupDecompressor(encoding);
+        final Decompressor decompressor = registry.lookupDecompressor(encoding);
         return firstNonNull(decompressor, Identity.NONE);
     }
 
