@@ -6,7 +6,7 @@ configure(projectsWithFlags('java')) {
         apply plugin: 'com.google.osdetector'
         def thriftJsonEnabled = true
         ext {
-            thriftVersion = '0.10'
+            thriftVersion = '0.11'
             thriftPath = null
             disableThriftJson = { thriftJsonEnabled = false }
         }
