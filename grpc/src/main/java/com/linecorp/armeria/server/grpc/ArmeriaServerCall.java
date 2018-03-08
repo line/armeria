@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -86,6 +87,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerCall.class);
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<ArmeriaServerCall> pendingMessagesUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(ArmeriaServerCall.class, "pendingMessages");
+
     // Only most significant bit of a byte is set.
     @VisibleForTesting
     static final byte TRAILERS_FRAME_HEADER = (byte) (1 << 7);
@@ -125,6 +130,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private volatile boolean listenerClosed;
     private boolean sendHeadersCalled;
     private boolean closeCalled;
+
+    private volatile int pendingMessages;
 
     ArmeriaServerCall(HttpHeaders clientHeaders,
                       MethodDescriptor<I, O> method,
@@ -221,6 +228,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void sendMessage(O message) {
+        pendingMessagesUpdater.incrementAndGet(this);
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
@@ -234,6 +242,15 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         try {
             res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
+            res.onDemand(() -> {
+                if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
+                    try {
+                        listener.onReady();
+                    } catch (Throwable t) {
+                        close(Status.fromThrowable(t), EMPTY_METADATA);
+                    }
+                }
+            });
         } catch (RuntimeException e) {
             close(Status.fromThrowable(e), EMPTY_METADATA);
             throw e;
@@ -241,23 +258,11 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             close(Status.fromThrowable(t), EMPTY_METADATA);
             throw new RuntimeException(t);
         }
-
-        // We don't have a good way of listening to actual stream writes, and this functionality
-        // probably isn't used in most applications anyways, so just say we're always ready for more messages.
-        // In cases where flow control is activated, this may result in excessive internal buffering.
-        final boolean notifyReady = isReady();
-        if (notifyReady) {
-            try (SafeCloseable ignored = RequestContext.push(ctx)) {
-                listener.onReady();
-            } catch (Throwable t) {
-                close(Status.fromThrowable(t), EMPTY_METADATA);
-            }
-        }
     }
 
     @Override
     public boolean isReady() {
-        return !closeCalled;
+        return !closeCalled && pendingMessages == 0;
     }
 
     @Override
