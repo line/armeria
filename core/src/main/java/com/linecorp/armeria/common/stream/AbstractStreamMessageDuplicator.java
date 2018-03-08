@@ -607,7 +607,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             if (n <= 0) {
                 final Throwable cause = new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)");
-                executor.execute(() -> subscriber.onError(cause));
+                processor.unsubscribe(this, cause);
                 return;
             }
 
@@ -704,18 +704,26 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 @SuppressWarnings("unchecked")
                 T obj = (T) signal;
                 ReferenceCountUtil.touch(obj);
-                if (withPooledObjects) {
-                    if (obj instanceof ByteBufHolder) {
-                        obj = retainedDuplicate((ByteBufHolder) obj);
-                    } else if (obj instanceof ByteBuf) {
-                        obj = retainedDuplicate((ByteBuf) obj);
+                try {
+                    if (withPooledObjects) {
+                        if (obj instanceof ByteBufHolder) {
+                            obj = retainedDuplicate((ByteBufHolder) obj);
+                        } else if (obj instanceof ByteBuf) {
+                            obj = retainedDuplicate((ByteBuf) obj);
+                        }
+                    } else {
+                        if (obj instanceof ByteBufHolder) {
+                            obj = copy((ByteBufHolder) obj);
+                        } else if (obj instanceof ByteBuf) {
+                            obj = copy((ByteBuf) obj);
+                        }
                     }
-                } else {
-                    if (obj instanceof ByteBufHolder) {
-                        obj = copy((ByteBufHolder) obj);
-                    } else if (obj instanceof ByteBuf) {
-                        obj = copy((ByteBuf) obj);
-                    }
+                } catch (Throwable thrown) {
+                    // If an exception such as IllegalReferenceCountException is raised while operating
+                    // on the ByteBuf, catch it and notify the subscriber with it. So the
+                    // subscriber does not hang forever.
+                    processor.unsubscribe(this, thrown);
+                    return false;
                 }
 
                 if (processor.isLastDownstreamAdded()) {
