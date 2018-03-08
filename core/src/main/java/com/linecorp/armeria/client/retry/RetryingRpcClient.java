@@ -96,11 +96,11 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
         final RpcResponse response = getResponse(ctx, req);
 
-        retryStrategy().shouldRetry(req, response).handle(voidFunction((backoffOpt, unused) -> {
-            if (backoffOpt.isPresent()) {
+        retryStrategy().shouldRetry(req, response).handle(voidFunction((backoff, unused) -> {
+            if (backoff != null) {
                 long nextDelay;
                 try {
-                    nextDelay = getNextDelay(ctx, backoffOpt.get());
+                    nextDelay = getNextDelay(ctx, backoff);
                 } catch (Exception e) {
                     completeOnException(ctx, responseFuture, e);
                     return;

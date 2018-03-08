@@ -18,9 +18,8 @@ package com.linecorp.armeria.client.retry;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -30,35 +29,27 @@ import com.linecorp.armeria.internal.HttpHeaderSubscriber;
 
 /**
  * Provides a {@link RetryStrategy} that decides to retry the request based on the {@link HttpStatus} of
- * its response.
+ * its response or the {@link Exception} raised while processing the {@link HttpResponse}.
  */
 final class HttpStatusBasedRetryStrategy implements RetryStrategy<HttpRequest, HttpResponse> {
 
-    private final Function<HttpStatus, Optional<Backoff>> statusBasedBackoffFunction;
+    private final BiFunction<HttpStatus, Throwable, Backoff> backoffFunction;
 
     /**
      * Creates a new instance.
      */
-    HttpStatusBasedRetryStrategy(Function<HttpStatus, Optional<Backoff>> statusBasedBackoffFunction) {
-        this.statusBasedBackoffFunction = requireNonNull(
-                statusBasedBackoffFunction, "statusBasedBackoffFunction");
+    HttpStatusBasedRetryStrategy(BiFunction<HttpStatus, Throwable, Backoff> backoffFunction) {
+        this.backoffFunction = requireNonNull(backoffFunction, "backoffFunction");
     }
 
     @Override
-    public CompletableFuture<Optional<Backoff>> shouldRetry(HttpRequest request, HttpResponse response) {
+    public CompletableFuture<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
         final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
         response.completionFuture().whenComplete(subscriber);
         response.subscribe(subscriber);
 
-        return future.handle((headers, unused) -> {
-            if (headers != null) {
-                final HttpStatus resStatus = headers.status();
-                if (resStatus != null) {
-                    return statusBasedBackoffFunction.apply(resStatus);
-                }
-            }
-            return Optional.empty();
-        });
+        return future.handle((headers, thrown) -> backoffFunction
+                .apply(headers != null ? headers.status() : null, thrown));
     }
 }

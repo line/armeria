@@ -78,6 +78,9 @@ public abstract class RetryingClientBuilder<
      * dose not specify.
      *
      * @return {@link T} to support method chaining.
+     *
+     * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
+     *      timeout</a>
      */
     public T responseTimeoutMillisForEachAttempt(long responseTimeoutMillisForEachAttempt) {
         checkArgument(responseTimeoutMillisForEachAttempt >= 0,
@@ -92,6 +95,9 @@ public abstract class RetryingClientBuilder<
      * corresponding responses are timed out by this value. {@code 0} disables the timeout.
      *
      * @return {@link T} to support method chaining.
+     *
+     * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
+     *      timeout</a>
      */
     public T responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
         checkArgument(
