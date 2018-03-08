@@ -22,6 +22,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -72,6 +73,10 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaClientCall.class);
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<ArmeriaClientCall> pendingMessagesUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(ArmeriaClientCall.class, "pendingMessages");
+
     private final ClientRequestContext ctx;
     private final Client<HttpRequest, HttpResponse> httpClient;
     private final HttpRequestWriter req;
@@ -89,6 +94,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private Listener<O> listener;
 
     private boolean cancelCalled;
+
+    private volatile int pendingMessages;
 
     ArmeriaClientCall(
             ClientRequestContext ctx,
@@ -199,6 +206,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void sendMessage(I message) {
+        pendingMessagesUpdater.incrementAndGet(this);
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
@@ -206,10 +214,24 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
     }
 
+    @Override
+    public boolean isReady() {
+        return pendingMessages == 0;
+    }
+
     private void doSendMessage(I message) {
         try {
             final ByteBuf serialized = marshaller.serializeRequest(message);
             req.write(messageFramer.writePayload(serialized));
+            req.onDemand(() -> {
+                if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
+                    try {
+                        listener.onReady();
+                    } catch (Throwable t) {
+                        close(Status.fromThrowable(t));
+                    }
+                }
+            });
         } catch (Throwable t) {
             cancel(null, t);
         }
