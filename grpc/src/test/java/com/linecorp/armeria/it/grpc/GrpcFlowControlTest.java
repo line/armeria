@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -51,6 +52,9 @@ import io.grpc.stub.ClientResponseObserver;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
+// This test depends on the rate of flow of bytes in the connection. It should be run manually to verify
+// flow control where it is known the rate of flow will be reasonably fast.
+@Ignore
 public class GrpcFlowControlTest {
 
     private static final int TOTAL_NUM_MESSAGES = 10;
