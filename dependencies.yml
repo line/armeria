@@ -268,7 +268,7 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.7.Final' }
+  hibernate-validator: { version: '6.0.8.Final' }
 
 org.javassist:
   javassist: { version: '3.22.0-GA' }
