@@ -48,6 +48,7 @@ import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 public class StreamMessageDuplicatorTest {
@@ -327,6 +328,24 @@ public class StreamMessageDuplicatorTest {
         duplicator.close();
     }
 
+    @Test
+    public void raiseExceptionInOnNext() {
+        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
+        final ByteBufDuplicator duplicator = new ByteBufDuplicator(publisher);
+
+        final ByteBuf buf = newUnpooledBuffer();
+        publisher.write(buf);
+        assertThat(buf.refCnt()).isOne();
+
+        // Release the buf after writing to the publisher which must not happen!
+        buf.release();
+
+        final ByteBufSubscriber subscriber = new ByteBufSubscriber();
+        duplicator.duplicateStream().subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
+        assertThatThrownBy(() -> subscriber.completionFuture().get()).hasCauseInstanceOf(
+                IllegalReferenceCountException.class);
+    }
+
     private static ByteBuf newUnpooledBuffer() {
         return UnpooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
     }
@@ -411,6 +430,13 @@ public class StreamMessageDuplicatorTest {
     }
 
     private static class ByteBufSubscriber implements Subscriber<ByteBuf> {
+
+        private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+
+        public CompletableFuture<Void> completionFuture() {
+            return completionFuture;
+        }
+
         @Override
         public void onSubscribe(Subscription subscription) {
             subscription.request(Long.MAX_VALUE);
@@ -420,9 +446,13 @@ public class StreamMessageDuplicatorTest {
         public void onNext(ByteBuf o) {}
 
         @Override
-        public void onError(Throwable throwable) {}
+        public void onError(Throwable throwable) {
+            completionFuture.completeExceptionally(throwable);
+        }
 
         @Override
-        public void onComplete() {}
+        public void onComplete() {
+            completionFuture.complete(null);
+        }
     }
 }
