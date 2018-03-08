@@ -126,6 +126,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private boolean sendHeadersCalled;
     private boolean closeCalled;
 
+    private volatile boolean ready = true;
+
     ArmeriaServerCall(HttpHeaders clientHeaders,
                       MethodDescriptor<I, O> method,
                       CompressorRegistry compressorRegistry,
@@ -221,6 +223,17 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void sendMessage(O message) {
+        if (ready) {
+            ready = false;
+            res.onDemand(() -> {
+                ready = true;
+                try {
+                    listener.onReady();
+                } catch (Throwable t) {
+                    close(Status.fromThrowable(t), EMPTY_METADATA);
+                }
+            });
+        }
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
@@ -241,23 +254,11 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             close(Status.fromThrowable(t), EMPTY_METADATA);
             throw new RuntimeException(t);
         }
-
-        // We don't have a good way of listening to actual stream writes, and this functionality
-        // probably isn't used in most applications anyways, so just say we're always ready for more messages.
-        // In cases where flow control is activated, this may result in excessive internal buffering.
-        final boolean notifyReady = isReady();
-        if (notifyReady) {
-            try (SafeCloseable ignored = RequestContext.push(ctx)) {
-                listener.onReady();
-            } catch (Throwable t) {
-                close(Status.fromThrowable(t), EMPTY_METADATA);
-            }
-        }
     }
 
     @Override
     public boolean isReady() {
-        return !closeCalled;
+        return !closeCalled && ready;
     }
 
     @Override

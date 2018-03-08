@@ -90,6 +90,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private boolean cancelCalled;
 
+    private volatile boolean ready = true;
+
     ArmeriaClientCall(
             ClientRequestContext ctx,
             Client<HttpRequest, HttpResponse> httpClient,
@@ -199,11 +201,27 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void sendMessage(I message) {
+        if (ready) {
+            ready = false;
+            req.onDemand(() -> {
+                ready = true;
+                try {
+                    listener.onReady();
+                } catch (Throwable t) {
+                    close(Status.fromThrowable(t));
+                }
+            });
+        }
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
             ctx.eventLoop().submit(() -> doSendMessage(message));
         }
+    }
+
+    @Override
+    public boolean isReady() {
+        return ready;
     }
 
     private void doSendMessage(I message) {
