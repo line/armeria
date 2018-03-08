@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.HttpResponse;
 public class RetryingHttpClientBuilder extends RetryingClientBuilder<
         RetryingHttpClientBuilder, RetryingHttpClient, HttpRequest, HttpResponse> {
 
-    private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = 1024 * 1024; // 1 MiB
+    private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = 0; // no preview (0 byte)
 
     private boolean useRetryAfter;
 
@@ -61,7 +61,9 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
     /**
      * Sets the length of content to look up whether retry or not. If the total length of content exceeds
      * this and there's no retry condition matched, it will hand over the stream to the client.
-     * @param contentPreviewLength the content length to preview. {@code 0} disables the length limit
+     * @param contentPreviewLength the content length to preview. Unlike other length related arguments,
+     *                             {@code 0} does not disable the length limit. It means that it will not
+     *                             look up the content
      * @return {@link RetryingHttpClientBuilder} to support method chaining
      */
     public RetryingHttpClientBuilder contentPreviewLength(int contentPreviewLength) {

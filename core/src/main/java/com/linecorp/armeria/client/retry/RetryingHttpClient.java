@@ -135,19 +135,20 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
         final HttpResponseDuplicator resDuplicator =
                 new HttpResponseDuplicator(response, maxSignalLength(ctx.maxResponseLength()), ctx.eventLoop());
-        final ContentPreviewResponse contentPreviewResponse =
-                new ContentPreviewResponse(resDuplicator.duplicateStream(), contentPreviewLength);
-        retryStrategy().shouldRetry(rootReqDuplicator.duplicateStream(), contentPreviewResponse)
-                       .handle(voidFunction((backoffOpt, unused) -> {
-                           if (backoffOpt.isPresent()) {
-                               final long millisAfter =
-                                       useRetryAfter ? getRetryAfterMillis(resDuplicator.duplicateStream())
-                                                     : -1;
+        retryStrategy().shouldRetry(rootReqDuplicator.duplicateStream(), contentPreviewResponse(resDuplicator))
+                       .handle(voidFunction((backoff, unused) -> {
+                           if (backoff != null) {
+                               final long millisAfter;
+                               if (useRetryAfter) {
+                                   millisAfter = getRetryAfterMillis(contentPreviewResponse(resDuplicator));
+                               } else {
+                                   millisAfter = -1;
+                               }
                                resDuplicator.close();
 
                                final long nextDelay;
                                try {
-                                   nextDelay = getNextDelay(ctx, backoffOpt.get(), millisAfter);
+                                   nextDelay = getNextDelay(ctx, backoff, millisAfter);
                                } catch (Exception e) {
                                    closeOnException(ctx, res, rootReqDuplicator, e);
                                    return;
@@ -174,6 +175,10 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             return Integer.MAX_VALUE;
         }
         return (int) maxResponseLength;
+    }
+
+    private ContentPreviewResponse contentPreviewResponse(HttpResponseDuplicator resDuplicator) {
+        return new ContentPreviewResponse(resDuplicator.duplicateStream(), contentPreviewLength);
     }
 
     private static long getRetryAfterMillis(HttpResponse res) {
@@ -203,8 +208,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
         res.completionFuture().whenComplete(subscriber);
         res.subscribe(subscriber);
-        // Neither blocks here nor throws an exception because it already has headers.
-        return future.join();
+        // Future does not block here because it is already complete.
+        return future.handle((headers, thrown) -> thrown != null ? HttpHeaders.EMPTY_HEADERS : headers).join();
     }
 
     private static void closeOnException(ClientRequestContext ctx,
@@ -224,11 +229,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
         ContentPreviewResponse(HttpResponse delegate, int contentPreviewLength) {
             super(delegate);
-            if (contentPreviewLength == 0) {
-                this.contentPreviewLength = Integer.MAX_VALUE;
-            } else {
-                this.contentPreviewLength = contentPreviewLength;
-            }
+            this.contentPreviewLength = contentPreviewLength;
         }
 
         @Override
