@@ -120,6 +120,7 @@ public class ArmeriaServerCallTest {
     public void setUp() {
         completionFuture = new CompletableFuture<>();
         when(res.completionFuture()).thenReturn(completionFuture);
+        when(ctx.eventLoop()).thenReturn(eventLoop);
         when(ctx.contextAwareEventLoop()).thenReturn(eventLoop);
 
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
@@ -143,16 +144,19 @@ public class ArmeriaServerCallTest {
     }
 
     @Test
-    public void messageReadAfterClose_byteBuf() throws Exception {
+    public void messageReadAfterClose_byteBuf() {
         call.close(Status.ABORTED, new Metadata());
 
-        call.messageRead(new ByteBufOrStream(GrpcTestUtil.requestByteBuf()));
+        // messageRead is always called from the event loop.
+        eventLoop.submit(() -> {
+            call.messageRead(new ByteBufOrStream(GrpcTestUtil.requestByteBuf()));
 
-        verify(listener, never()).onMessage(any());
+            verify(listener, never()).onMessage(any());
+        }).syncUninterruptibly();
     }
 
     @Test
-    public void messageRead_notWrappedByteBuf() throws Exception {
+    public void messageRead_notWrappedByteBuf() {
         ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.messageRead(new ByteBufOrStream(buf));
 
@@ -160,7 +164,7 @@ public class ArmeriaServerCallTest {
     }
 
     @Test
-    public void messageRead_wrappedByteBuf() throws Exception {
+    public void messageRead_wrappedByteBuf() {
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
                 TestServiceGrpc.getUnaryCallMethod(),
@@ -181,12 +185,15 @@ public class ArmeriaServerCallTest {
     }
 
     @Test
-    public void messageReadAfterClose_stream() throws Exception {
+    public void messageReadAfterClose_stream() {
         call.close(Status.ABORTED, new Metadata());
 
-        call.messageRead(new ByteBufOrStream(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true)));
+        // messageRead is always called from the event loop.
+        eventLoop.submit(() -> {
+            call.messageRead(new ByteBufOrStream(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true)));
 
-        verify(listener, never()).onMessage(any());
+            verify(listener, never()).onMessage(any());
+        }).syncUninterruptibly();
     }
 
     @Test
@@ -199,7 +206,7 @@ public class ArmeriaServerCallTest {
     public void notReadyAfterClose() {
         assertThat(call.isReady()).isTrue();
         call.close(Status.OK, new Metadata());
-        assertThat(call.isReady()).isFalse();
+        await().untilAsserted(() -> assertThat(call.isReady()).isFalse());
     }
 
     @Test
