@@ -19,7 +19,9 @@ To start a server, you need to build it first. Use `ServerBuilder`_:
     ServerBuilder sb = new ServerBuilder();
     // TODO: Configure your server here.
     Server server = sb.build();
-    server.start();
+    CompletableFuture<Void> future = server.start();
+    // Wait until the server is ready.
+    future.join();
 
 Ports
 -----
