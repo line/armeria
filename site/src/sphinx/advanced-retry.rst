@@ -39,9 +39,9 @@ You can just use the ``decorator()`` method in ClientBuilder_ to build a Retryin
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
     HttpClient client = new ClientBuilder(...)
-                              .decorator(HttpRequest.class, HttpResponse.class,
-                                         RetryingHttpClient.newDecorator(strategy))
-                              .build(HttpClient.class);
+            .decorator(HttpRequest.class, HttpResponse.class,
+                       RetryingHttpClient.newDecorator(strategy))
+            .build(HttpClient.class);
 
     client.execute(...).aggregate().join();
 
@@ -53,15 +53,16 @@ or even simply,
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
     HttpClient client = new HttpClientBuilder(...)
-                              .decorator(RetryingHttpClient.newDecorator(strategy))
-                              .build();
+            .decorator(RetryingHttpClient.newDecorator(strategy))
+            .build();
 
     client.execute(...).aggregate().join();
 
 That's it. The client will keep attempting until it succeeds or the number of attempts exceeds the maximum
 number of total attempts. You can configure the ``maxTotalAttempts`` when making the decorator using
 ``RetryingHttpClient.newDecorator(strategy, maxTotalAttempts)``. Meanwhile, the ``strategy`` will decide to
-retry depending on the response. In this case, the client retries when it receives ``5xx`` response error.
+retry depending on the response. In this case, the client retries when it receives ``5xx`` response error or
+an exception is raised.
 
 .. _retry-strategy:
 
@@ -79,22 +80,22 @@ You can customize the ``strategy`` by implementing RetryStrategy_.
         final Backoff backoff = RetryStrategy.defaultBackoff;
 
         @Override
-        public CompletableFuture<Optional<Backoff>> shouldRetry(HttpRequest request,
-                                                                HttpResponse response) {
+        public CompletableFuture<Backoff> shouldRetry(HttpRequest request,
+                                                      HttpResponse response) {
             return response.aggregate().handle((result, cause) -> { // Do not use get() or join()!
                 if (cause != null) {
                     if (cause instanceof ResponseTimeoutException) {
-                        return Optional.of(backoff);
+                        return backoff;
                     }
                 } else if (result.headers().status() == HttpStatus.CONFLICT) {
-                    return Optional.of(backoff);
+                    return backoff;
                 }
-                return Optional.empty(); // Return no backoff to stop retrying.
+                return null; // Return no backoff to stop retrying.
             });
         }
     };
 
-This will retry when the response's status is ``409`` or ResponseTimeoutException_ is raised.
+This will retry when the response's status is ``409 Conflict`` or ResponseTimeoutException_ is raised.
 
 .. note::
 
@@ -119,19 +120,19 @@ You can return a different Backoff_ according to the response.
         final Backoff backoffOnConflict = Backoff.fixed(100);
 
         @Override
-        public CompletableFuture<Optional<Backoff>> shouldRetry(HttpRequest request,
-                                                                HttpResponse response) {
+        public CompletableFuture<Backoff> shouldRetry(HttpRequest request,
+                                                      HttpResponse response) {
             return response.aggregate().handle((result, cause) -> {
                 if (cause != null) {
                     if (cause instanceof ResponseTimeoutException) {
-                        return Optional.of(backoffOnServerErrorOrTimeout);
+                        return backoffOnServerErrorOrTimeout;
                     }
                 } else if (result.headers().status().codeClass() == HttpStatusClass.SERVER_ERROR) {
-                    return Optional.of(backoffOnServerErrorOrTimeout);
+                    return backoffOnServerErrorOrTimeout;
                 } else if (result.headers().status() == HttpStatus.CONFLICT) {
-                    return Optional.of(backoffOnConflict);
+                    return backoffOnConflict;
                 }
-                return Optional.empty();
+                return null;
             });
         }
     };
@@ -231,9 +232,9 @@ decorate LoggingClient_ with RetryingClient_. That is:
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
     HttpClient client = new HttpClientBuilder(...)
-                              .decorator(LoggingClient.newDecorator())
-                              .decorator(RetryingHttpClient.newDecorator(strategy))
-                              .build();
+            .decorator(LoggingClient.newDecorator())
+            .decorator(RetryingHttpClient.newDecorator(strategy))
+            .build();
 
 This will produce following logs when there are three attempts:
 
@@ -254,10 +255,11 @@ do the reverse:
     import com.linecorp.armeria.client.logging.LoggingClient;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
+    // Note the order of decoration.
     HttpClient client = new HttpClientBuilder(...)
-                              .decorator(RetryingHttpClient.newDecorator(strategy))
-      /* notice the order */  .decorator(LoggingClient.newDecorator())
-                              .build();
+            .decorator(RetryingHttpClient.newDecorator(strategy))
+            .decorator(LoggingClient.newDecorator())
+            .build();
 
 This will produce only single request and response log pair regardless how many attempts are made:
 
