@@ -37,7 +37,7 @@ public class EndpointGroupRegistryTest {
     }
 
     @Test
-    public void testRegistration() throws Exception {
+    public void testRegistration() {
         // Unregister a non-existent group.
         assertThat(EndpointGroupRegistry.unregister("foo3")).isFalse();
 
@@ -59,7 +59,7 @@ public class EndpointGroupRegistryTest {
     }
 
     @Test
-    public void testBadGroupNames() throws Exception {
+    public void testBadGroupNames() {
         final EndpointGroup g = mock(EndpointGroup.class);
         final EndpointSelectionStrategy s = EndpointSelectionStrategy.ROUND_ROBIN;
         assertThatThrownBy(() -> EndpointGroupRegistry.register("a:b", g, s))
