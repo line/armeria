@@ -22,21 +22,18 @@ import static java.util.Objects.requireNonNull;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.zookeeper.CreateMode;
 
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
-import com.linecorp.armeria.server.ServerListenerBuilder;
 
 /**
  * Builds a new {@link ServerListener}, which registers the server to the zookeeper instance.
  * <h2>Example</h2>
  * <pre>{@code
- * ServerListener register = new ZookeeperRegisterBuilder()
+ * ServerListener register = new ZooKeeperUpdatingListenerBuilder()
  * // Zookeeper Connection String
  * .connect("myZooKeeperHost:2181")
  * // Zookeeper Node to use
@@ -56,7 +53,7 @@ import com.linecorp.armeria.server.ServerListenerBuilder;
  *
  * <h2>Example</h2>
  * <pre>{@code
- * ServerListener register = new ZookeeperRegisterBuilder()
+ * ServerListener register = new ZooKeeperUpdatingListenerBuilder()
  * // CuratorFramework
  * .client(curatorFramework)
  * // Zookeeper Node to use
@@ -69,7 +66,7 @@ import com.linecorp.armeria.server.ServerListenerBuilder;
  * server.serverListener(register);
  * }</pre>
  * */
-public final class ZookeeperRegisterBuilder {
+public final class ZooKeeperUpdatingListenerBuilder {
     private static final int DEFAULT_CONNECT_TIMEOUT = 1000;
     private static final int DEFAULT_SESSION_TIMEOUT = 10000;
 
@@ -86,8 +83,8 @@ public final class ZookeeperRegisterBuilder {
      *
      * @param client the curator framework instance.
      */
-    public ZookeeperRegisterBuilder client(CuratorFramework client) {
-        checkArgument(isNullOrEmpty(connect), "connect is alread set");
+    public ZooKeeperUpdatingListenerBuilder client(CuratorFramework client) {
+        checkArgument(isNullOrEmpty(connect), String.format("connect is already set: %s", connect));
         this.client = requireNonNull(client, "client");
         return this;
     }
@@ -99,7 +96,7 @@ public final class ZookeeperRegisterBuilder {
      *
      * @param connect the zookeeper connection string.
      */
-    public ZookeeperRegisterBuilder connect(String connect) {
+    public ZooKeeperUpdatingListenerBuilder connect(String connect) {
         checkArgument(client == null, "client is already set");
         checkArgument(!isNullOrEmpty(connect), "connect");
         this.connect = connect;
@@ -111,7 +108,7 @@ public final class ZookeeperRegisterBuilder {
      *
      * @param node the zookeeper node to register.
      */
-    public ZookeeperRegisterBuilder node(String node) {
+    public ZooKeeperUpdatingListenerBuilder node(String node) {
         checkArgument(!isNullOrEmpty(node), "node");
         this.node = node;
         return this;
@@ -124,7 +121,7 @@ public final class ZookeeperRegisterBuilder {
      *
      * @param timeout the connect timeout.
      */
-    public ZookeeperRegisterBuilder connectTimeout(int timeout) {
+    public ZooKeeperUpdatingListenerBuilder connectTimeout(int timeout) {
         checkArgument(timeout > 0, "timeout: %s (expected: > 0)", timeout);
         this.connectTimeout = timeout;
         return this;
@@ -137,7 +134,7 @@ public final class ZookeeperRegisterBuilder {
      *
      * @param timeout the session timeout.
      */
-    public ZookeeperRegisterBuilder sessionTimeout(int timeout) {
+    public ZooKeeperUpdatingListenerBuilder sessionTimeout(int timeout) {
         checkArgument(timeout > 0, "timeout: %s (expected: > 0)", timeout);
         this.sessionTimeout = timeout;
         return this;
@@ -148,7 +145,7 @@ public final class ZookeeperRegisterBuilder {
      *
      * @param endpoint the {@link Endpoint} to register.
      */
-    public ZookeeperRegisterBuilder endpoint(Endpoint endpoint) {
+    public ZooKeeperUpdatingListenerBuilder endpoint(Endpoint endpoint) {
         this.endpoint = requireNonNull(endpoint, "endpoint");
         return this;
     }
@@ -158,7 +155,7 @@ public final class ZookeeperRegisterBuilder {
      *
      * @param nodeValueCodec the {@link NodeValueCodec} instance to use.
      */
-    public ZookeeperRegisterBuilder nodeValueCodec(NodeValueCodec nodeValueCodec) {
+    public ZooKeeperUpdatingListenerBuilder nodeValueCodec(NodeValueCodec nodeValueCodec) {
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "requireNonNull");
         return this;
     }
@@ -167,7 +164,7 @@ public final class ZookeeperRegisterBuilder {
      * Returns a newly-created {@link ServerListener} instance that registers the server to zookeeper
      * when the server starts.
      */
-    public ServerListener build() {
+    public ZooKeeperUpdatingListener build() {
         if (client == null) {
             checkArgument(!Strings.isNullOrEmpty(connect), "connect");
             ExponentialBackoffRetry retryPolicy = new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT, 3);
@@ -180,29 +177,6 @@ public final class ZookeeperRegisterBuilder {
         }
         checkArgument(!isNullOrEmpty(node), "node");
 
-        return new ServerListenerBuilder()
-                .addStartedCallback((Server server) -> {
-                    if (endpoint == null) {
-                        assert server.activePort().isPresent();
-                        endpoint = Endpoint.of(server.defaultHostname(),
-                                               server.activePort().get()
-                                                     .localAddress().getPort());
-                    }
-                    client.start();
-                    String key = endpoint.host() + '_' + endpoint.port();
-                    byte[] value = nodeValueCodec.encode(endpoint);
-                    try {
-                        client.create()
-                              .creatingParentsIfNeeded()
-                              .withMode(CreateMode.EPHEMERAL)
-                              .forPath(node + '/' + key, value);
-                    } catch (Exception e) {
-                        throw new IllegalStateException(e);
-                    }
-                })
-                .addStoppingCallback((unused) -> {
-                    client.close();
-                })
-                .build();
+        return new ZooKeeperUpdatingListener(client, node, nodeValueCodec, endpoint);
     }
 }

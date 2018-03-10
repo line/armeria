@@ -52,7 +52,7 @@ import com.linecorp.armeria.server.ServerListenerBuilder;
  * - Stops given {@link CuratorFramework} instances in reverse order when {@link Server} stopping.
  *
  * <p>Note: you don't have to start or close the {@link CuratorFramework} instance used in
- * {@link ZookeeperRegisterBuilder}.
+ * {@link ZooKeeperUpdatingListenerBuilder}.
  * */
 public class ZookeeperConnectorBuilder {
     final List<Consumer<? super Server>> starters = new ArrayList<>();

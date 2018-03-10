@@ -58,7 +58,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
                                                .service("/", new EchoService())
                                                .build();
             ServerListener listener;
-            listener = new ZookeeperRegisterBuilder()
+            listener = new ZooKeeperUpdatingListenerBuilder()
                     .connect(instance().connectString().get())
                     .node(zNode)
                     .sessionTimeout(sessionTimeout)
