@@ -37,7 +37,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -46,7 +45,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -58,12 +56,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 public abstract class WebAppContainerTest {
 
     private static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
-
-    /**
-     * The self-signed certificate that is used for testing a TLS connection.
-     */
-    @ClassRule
-    public static final SelfSignedCertificateRule certificate = new SelfSignedCertificateRule();
 
     /**
      * Returns the doc-base directory of the test web application.

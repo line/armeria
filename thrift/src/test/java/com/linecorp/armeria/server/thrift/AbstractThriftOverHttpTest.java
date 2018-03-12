@@ -61,8 +61,6 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-
 public abstract class AbstractThriftOverHttpTest {
 
     private static final String LARGER_THAN_TLS = Strings.repeat("A", 16384);
@@ -94,15 +92,12 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     static {
-        final SelfSignedCertificate ssc;
         final ServerBuilder sb = new ServerBuilder();
 
         try {
             sb.http(0);
             sb.https(0);
-
-            ssc = new SelfSignedCertificate("127.0.0.1");
-            sb.tls(ssc.certificate(), ssc.privateKey());
+            sb.tlsSelfSigned();
 
             sb.service("/hello", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!')));

@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
-import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -56,10 +55,7 @@ public class HttpHealthCheckedEndpointGroupTest {
         return ImmutableList.of(HTTP, HTTPS);
     }
 
-    @Rule
-    public final SelfSignedCertificateRule certificate = new SelfSignedCertificateRule();
-
-    private class HealthCheckServerRule extends ServerRule {
+    private static class HealthCheckServerRule extends ServerRule {
 
         protected HealthCheckServerRule() {
             super(false); // Disable auto-start.
@@ -69,7 +65,7 @@ public class HttpHealthCheckedEndpointGroupTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.http(0);
             sb.https(0);
-            sb.tls(certificate.certificateFile(), certificate.privateKeyFile());
+            sb.tlsSelfSigned();
             sb.service(HEALTH_CHECK_PATH, new HttpHealthCheckService());
         }
     }
