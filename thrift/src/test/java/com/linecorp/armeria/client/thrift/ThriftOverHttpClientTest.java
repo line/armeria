@@ -82,7 +82,6 @@ import com.linecorp.armeria.service.test.thrift.main.TimeService;
 
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
@@ -185,15 +184,12 @@ public class ThriftOverHttpClientTest {
     }
 
     static {
-        final SelfSignedCertificate ssc;
         final ServerBuilder sb = new ServerBuilder();
 
         try {
             sb.http(0);
             sb.https(0);
-
-            ssc = new SelfSignedCertificate("127.0.0.1");
-            sb.tls(ssc.certificate(), ssc.privateKey());
+            sb.tlsSelfSigned();
 
             for (Handlers h : Handlers.values()) {
                 for (SerializationFormat defaultSerializationFormat : ThriftSerializationFormats.values()) {

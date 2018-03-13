@@ -59,8 +59,7 @@ public class JettyServiceTest extends WebAppContainerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.http(0);
             sb.https(0);
-            sb.tls(certificate.certificateFile(),
-                   certificate.privateKeyFile());
+            sb.tlsSelfSigned();
 
             sb.serviceUnder(
                     "/jsp/",

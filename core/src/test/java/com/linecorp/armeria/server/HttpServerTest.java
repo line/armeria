@@ -100,7 +100,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 import io.netty.util.ResourceLeakDetector;
@@ -147,9 +146,7 @@ public class HttpServerTest {
             sb.workerGroup(workerGroup, true);
             sb.http(0);
             sb.https(0);
-
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sb.tls(ssc.certificate(), ssc.privateKey());
+            sb.tlsSelfSigned();
 
             sb.service("/delay/{delay}", new AbstractHttpService() {
                 @Override
