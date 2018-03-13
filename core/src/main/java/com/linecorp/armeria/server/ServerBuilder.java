@@ -463,7 +463,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Configures SSL or TLS of  the default {@link VirtualHost} from the specified {@code keyCertChainFile}
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
@@ -492,7 +492,8 @@ public final class ServerBuilder {
 
     /**
      * Configures SSL or TLS of the default {@link VirtualHost} with an auto-generated self-signed
-     * certificate. Note: You should never use this in production but only for a testing purpose.
+     * certificate. <strong>Note:</strong> You should never use this in production but only for a testing
+     * purpose.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already

@@ -200,7 +200,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with an auto-generated self-signed certificate.
-     * Note: You should never use this in production but only for a testing purpose.
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @throws CertificateException if failed to generate a self-signed certificate
      */
