@@ -1,5 +1,6 @@
 import java.security.MessageDigest
 
+def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
 def javadocCacheDir = new File(gradle.gradleUserHomeDir, 'caches/package-lists')
 def defaultStylesheetFile = new File(buildscript.sourceFile.parentFile, 'java-javadoc.css')
 
@@ -121,7 +122,7 @@ allprojects {
 
                 def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
                 def packageListFile = new File(javadocCacheDir, "${name}/${javadocUrlSha1}/package-list")
-                if (!packageListFile.exists()) {
+                if (!packageListFile.exists() && !offlineJavadoc) {
                     packageListFile.parentFile.mkdirs()
                     def packageListUrl = new URL("${javadocUrl}package-list")
                     logger.lifecycle("Downloading: ${packageListUrl}")
@@ -141,7 +142,9 @@ allprojects {
                     }
                 }
 
-                linksOffline javadocUrl, "${packageListFile.parentFile}"
+                if (packageListFile.exists()) {
+                    linksOffline javadocUrl, "${packageListFile.parentFile}"
+                }
             }
 
             addOfflineLink('java9', 'https://docs.oracle.com/javase/9/docs/api/')
