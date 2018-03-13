@@ -25,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -57,6 +58,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * Contains information for the build of the virtual host.
@@ -194,6 +196,17 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         tls(builder.build());
         return self();
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with an auto-generated self-signed certificate.
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @throws CertificateException if failed to generate a self-signed certificate
+     */
+    public B tlsSelfSigned() throws SSLException, CertificateException {
+        final SelfSignedCertificate ssc = new SelfSignedCertificate(defaultHostname);
+        return tls(ssc.certificate(), ssc.privateKey());
     }
 
     /**

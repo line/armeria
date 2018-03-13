@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -462,8 +463,8 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link SslContext} of the default {@link VirtualHost} from the specified
-     * {@code keyCertChainFile} and cleartext {@code keyFile}.
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile}
+     * and cleartext {@code keyFile}.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
@@ -475,8 +476,8 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link SslContext} of the default {@link VirtualHost} from the specified
-     * {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
+     * {@code keyFile} and {@code keyPassword}.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
@@ -486,6 +487,21 @@ public final class ServerBuilder {
 
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, keyPassword);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of the default {@link VirtualHost} with an auto-generated self-signed
+     * certificate. <strong>Note:</strong> You should never use this in production but only for a testing
+     * purpose.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     * @throws CertificateException if failed to generate a self-signed certificate
+     */
+    public ServerBuilder tlsSelfSigned() throws SSLException, CertificateException {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.tlsSelfSigned();
         return this;
     }
 

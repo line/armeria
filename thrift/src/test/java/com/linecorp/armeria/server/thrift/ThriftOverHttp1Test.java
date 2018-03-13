@@ -58,6 +58,7 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
 
         final THttpClient client = new THttpClient(
                 uri, HttpClientBuilder.create()
+                                      .setSSLHostnameVerifier((hostname, session) -> true)
                                       .setSSLContext(sslContext)
                                       .build());
         client.setCustomHeaders(
