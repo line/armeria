@@ -353,6 +353,9 @@ When a project has a `java` flag:
       - https://developers.google.com/protocol-buffers/docs/reference/java/
   ```
 
+  If you are in an environment with restricted network access, you can specify
+  `-PofflineJavadoc` option to disable the downloads.
+
 - The `.proto` files under `src/*/proto` will be compiled into Java code with
   [protobuf-gradle-plugin](https://github.com/google/protobuf-gradle-plugin).
 
