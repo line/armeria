@@ -81,8 +81,8 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
 
     @Test
     public void testUpdateEndpointGroup() throws Throwable {
-        Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001, 2),
-                                                 Endpoint.of("127.0.0.1", 8002, 3));
+        Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001).withWeight(2),
+                                                 Endpoint.of("127.0.0.1", 8002).withWeight(3));
         //add two more node
         setNodeChild(expected);
         //construct the final expected node list

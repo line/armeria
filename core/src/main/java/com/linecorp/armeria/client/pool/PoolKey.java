@@ -18,12 +18,19 @@ package com.linecorp.armeria.client.pool;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
+
+import javax.annotation.Nullable;
+
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * The default key of {@link KeyedChannelPool}. It consists of:
  * <ul>
  *   <li>the server's host name</li>
+ *   <li>the server's IP address, if resolved</li>
  *   <li>the server's port number</li>
  *   <li>the server's {@link SessionProtocol}</li>
  * </ul>
@@ -31,14 +38,18 @@ import com.linecorp.armeria.common.SessionProtocol;
 public final class PoolKey {
 
     private final String host;
+    @Nullable
+    private final String ipAddr;
     private final int port;
     private final SessionProtocol sessionProtocol;
 
     /**
-     * Creates a new key with the specified {@code host}, {@code port} and {@code sessionProtocol}.
+     * Creates a new key with the specified {@code host}, {@code ipAddr}, {@code port} and
+     * {@code sessionProtocol}.
      */
-    public PoolKey(String host, int port, SessionProtocol sessionProtocol) {
+    public PoolKey(String host, @Nullable String ipAddr, int port, SessionProtocol sessionProtocol) {
         this.host = requireNonNull(host, "host");
+        this.ipAddr = ipAddr;
         this.port = port;
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
     }
@@ -48,6 +59,16 @@ public final class PoolKey {
      */
     public String host() {
         return host;
+    }
+
+    /**
+     * Returns the IP address of the server associated with this key.
+     *
+     * @return the IP address, or {@code null} if the host name is not resolved.
+     */
+    @Nullable
+    public String ipAddr() {
+        return ipAddr;
     }
 
     /**
@@ -75,16 +96,23 @@ public final class PoolKey {
         }
 
         final PoolKey that = (PoolKey) o;
-        return host.equals(that.host) && port == that.port && sessionProtocol == that.sessionProtocol;
+        return host.equals(that.host) && Objects.equals(ipAddr, that.ipAddr) &&
+               port == that.port && sessionProtocol == that.sessionProtocol;
     }
 
     @Override
     public int hashCode() {
-        return (host.hashCode() * 31 + port) * 31 + sessionProtocol.hashCode();
+        return ((host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port) * 31 +
+               sessionProtocol.hashCode();
     }
 
     @Override
     public String toString() {
-        return sessionProtocol.uriText() + "://" + host + ':' + port;
+        return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("sessionProtocol", sessionProtocol.uriText())
+                          .add("host", host)
+                          .add("ipAddr", ipAddr)
+                          .add("port", port)
+                          .toString();
     }
 }

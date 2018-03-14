@@ -31,7 +31,7 @@ public class NodeValueCodecTest {
                 .containsExactlyInAnyOrder(Endpoint.of("foo.com"),
                                            Endpoint.of("bar.com", 8080),
                                            Endpoint.of("10.0.2.15").withWeight(500),
-                                           Endpoint.of("192.168.1.2", 8443, 700));
+                                           Endpoint.of("192.168.1.2", 8443).withWeight(700));
         assertThatThrownBy(() -> NodeValueCodec.DEFAULT
                 .decodeAll("http://foo.com:8001, bar.com:8002"))
                 .isInstanceOf(EndpointGroupException.class);

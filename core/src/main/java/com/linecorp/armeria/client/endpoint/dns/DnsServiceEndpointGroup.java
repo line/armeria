@@ -231,6 +231,6 @@ public class DnsServiceEndpointGroup extends DynamicEndpointGroup {
         String target = DefaultDnsRecordDecoder.decodeName(recordContent);
         // Last character always a '.'
         target = target.substring(0, target.length() - 1);
-        return Endpoint.of(target, port, weight);
+        return Endpoint.of(target, port).withWeight(weight);
     }
 }
