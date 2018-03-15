@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.metric;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -24,7 +26,12 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Splitter;
 
 import io.micrometer.core.instrument.Meter.Type;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.config.NamingConvention;
+import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.micrometer.prometheus.PrometheusNamingConvention;
 
 /**
@@ -51,6 +58,52 @@ public final class MoreNamingConventions {
      */
     public static NamingConvention prometheus() {
         return BetterPrometheusNamingConvention.INSTANCE;
+    }
+
+    /**
+     * Configures all the {@link MeterRegistry}s added to the {@link Metrics#globalRegistry} to use the
+     * {@link NamingConvention}s provided by this class. {@link DropwizardMeterRegistry} and
+     * {@link PrometheusMeterRegistry} will be configured to use {@link #dropwizard()} and
+     * {@link #prometheus()} respectively. This method is a shortcut of:
+     *
+     * <pre>{@code
+     * configure(Metrics.globalRegistry);
+     * }</pre>
+     */
+    public static void configure() {
+        configure(Metrics.globalRegistry);
+    }
+
+    /**
+     * Configures the specified {@link MeterRegistry} to use the {@link NamingConvention}s provided by this
+     * class. {@link DropwizardMeterRegistry} and {@link PrometheusMeterRegistry} will be configured to use
+     * {@link #dropwizard()} and {@link #prometheus()} respectively. A {@link CompositeMeterRegistry} will be
+     * configured recursively.
+     */
+    public static void configure(MeterRegistry registry) {
+        requireNonNull(registry, "registry");
+        if (registry instanceof CompositeMeterRegistry) {
+            ((CompositeMeterRegistry) registry).getRegistries().forEach(MoreNamingConventions::configure);
+        }
+
+        if (registryTypeMatches(registry, "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry")) {
+            registry.config().namingConvention(dropwizard());
+        } else if (registryTypeMatches(registry, "io.micrometer.prometheus.PrometheusMeterRegistry")) {
+            registry.config().namingConvention(prometheus());
+        } else {
+            // Probably OK to use the default.
+        }
+    }
+
+    private static boolean registryTypeMatches(MeterRegistry registry, String typeName) {
+        try {
+            final Class<?> type = Class.forName(typeName, false, registry.getClass().getClassLoader());
+            return type.isInstance(registry);
+        } catch (ClassNotFoundException e) {
+            // Can't find the registry class, most likely that registry is not an instance of
+            // the type denoted by typeName.
+            return false;
+        }
     }
 
     private MoreNamingConventions() {}
