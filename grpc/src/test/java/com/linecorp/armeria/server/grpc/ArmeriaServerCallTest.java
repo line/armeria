@@ -43,7 +43,6 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponseWriter;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -64,7 +63,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
-import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 
 // TODO(anuraag): Currently only grpc-protobuf has been published so we only test proto here.
@@ -73,14 +71,6 @@ import io.netty.util.Attribute;
 public class ArmeriaServerCallTest {
 
     private static final int MAX_MESSAGE_BYTES = 1024;
-
-    private static final HttpHeaders DEFAULT_RESPONSE_HEADERS =
-            HttpHeaders.of(HttpStatus.OK)
-                       .set(AsciiString.of("content-type"), "application/grpc+proto")
-                       .set(AsciiString.of("grpc-encoding"), "identity")
-                       .set(AsciiString.of("grpc-accept-encoding"),
-                            DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings())
-                       .asImmutable();
 
     private static EventLoop eventLoop;
 
