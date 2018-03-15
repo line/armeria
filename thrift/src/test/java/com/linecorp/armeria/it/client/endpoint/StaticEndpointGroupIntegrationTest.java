@@ -68,9 +68,9 @@ public class StaticEndpointGroupIntegrationTest {
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());
 
         StaticEndpointGroup serverGroup2 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", serverOne.httpPort(), 2),
-                Endpoint.of("127.0.0.1", serverTwo.httpPort(), 4),
-                Endpoint.of("127.0.0.1", serverThree.httpPort(), 2));
+                Endpoint.of("127.0.0.1", serverOne.httpPort()).withWeight(2),
+                Endpoint.of("127.0.0.1", serverTwo.httpPort()).withWeight(4),
+                Endpoint.of("127.0.0.1", serverThree.httpPort()).withWeight(2));
 
         EndpointGroupRegistry.register(groupName, serverGroup2, WEIGHTED_ROUND_ROBIN);
 

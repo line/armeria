@@ -56,7 +56,7 @@ final class DefaultNodeValueCodec implements NodeValueCodec {
                 if (port == 0) {
                     endpoint = Endpoint.of(host).withWeight(weight);
                 } else {
-                    endpoint = Endpoint.of(host, port, weight);
+                    endpoint = Endpoint.of(host, port).withWeight(weight);
                 }
                 break;
             }

@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.client;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -34,6 +36,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
@@ -57,7 +60,13 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
     @Override
     public Future<Channel> apply(PoolKey key) {
-        final InetSocketAddress remoteAddress = InetSocketAddress.createUnresolved(key.host(), key.port());
+        final InetSocketAddress remoteAddress;
+        try {
+            remoteAddress = toRemoteAddress(key);
+        } catch (UnknownHostException e) {
+            return eventLoop.newFailedFuture(e);
+        }
+
         final SessionProtocol protocol = key.sessionProtocol();
 
         if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, protocol)) {
@@ -70,6 +79,19 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         connect(remoteAddress, protocol, sessionPromise);
 
         return sessionPromise;
+    }
+
+    private static InetSocketAddress toRemoteAddress(PoolKey key) throws UnknownHostException {
+        final InetSocketAddress remoteAddress;
+        final String ipAddr = key.ipAddr();
+        if (ipAddr == null) {
+            remoteAddress = InetSocketAddress.createUnresolved(key.host(), key.port());
+        } else {
+            final InetAddress inetAddr = InetAddress.getByAddress(
+                        key.host(), NetUtil.createByteArrayFromIpAddressString(ipAddr));
+            remoteAddress = new InetSocketAddress(inetAddr, key.port());
+        }
+        return remoteAddress;
     }
 
     void connect(SocketAddress remoteAddress, SessionProtocol protocol, Promise<Channel> sessionPromise) {
@@ -87,7 +109,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
     private Bootstrap bootstrap(SessionProtocol sessionProtocol) {
         return bootstrapMap.computeIfAbsent(sessionProtocol, sp -> {
-            Bootstrap bs = baseBootstrap.clone();
+            final Bootstrap bs = baseBootstrap.clone();
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
