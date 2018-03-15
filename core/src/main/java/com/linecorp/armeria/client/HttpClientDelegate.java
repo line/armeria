@@ -59,13 +59,14 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
 
         final EventLoop eventLoop = ctx.eventLoop();
-        final PoolKey poolKey = new PoolKey(endpoint.host(), endpoint.port(), ctx.sessionProtocol());
+        final PoolKey poolKey = new PoolKey(endpoint.host(), endpoint.ipAddr(),
+                                            endpoint.port(), ctx.sessionProtocol());
         final Future<Channel> channelFuture = factory.pool(eventLoop).acquire(poolKey);
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         if (channelFuture.isDone()) {
             if (channelFuture.isSuccess()) {
-                Channel ch = channelFuture.getNow();
+                final Channel ch = channelFuture.getNow();
                 invoke0(ch, ctx, req, res, poolKey);
             } else {
                 res.close(channelFuture.cause());
@@ -73,7 +74,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         } else {
             channelFuture.addListener((Future<Channel> future) -> {
                 if (future.isSuccess()) {
-                    Channel ch = future.getNow();
+                    final Channel ch = future.getNow();
                     invoke0(ch, ctx, req, res, poolKey);
                 } else {
                     res.close(channelFuture.cause());
@@ -115,7 +116,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         // Add the headers specified in ClientOptions, if not overridden by request.
         if (!clientOptionHeaders.isEmpty()) {
             clientOptionHeaders.forEach(entry -> {
-                AsciiString name = entry.getKey();
+                final AsciiString name = entry.getKey();
                 if (!headers.contains(name)) {
                     headers.set(name, entry.getValue());
                 }

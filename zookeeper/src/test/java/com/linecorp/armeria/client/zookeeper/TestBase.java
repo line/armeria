@@ -50,9 +50,9 @@ public class TestBase {
 
     static {
         final int[] ports = unusedPorts(3);
-        sampleEndpoints = ImmutableSet.of(Endpoint.of("127.0.0.1", ports[0], 2),
-                                          Endpoint.of("127.0.0.1", ports[1], 4),
-                                          Endpoint.of("127.0.0.1", ports[2], 2));
+        sampleEndpoints = ImmutableSet.of(Endpoint.of("127.0.0.1", ports[0]).withWeight(2),
+                                          Endpoint.of("127.0.0.1", ports[1]).withWeight(4),
+                                          Endpoint.of("127.0.0.1", ports[2]).withWeight(2));
     }
 
     private static final Duration duration = Duration.ofSeconds(10);

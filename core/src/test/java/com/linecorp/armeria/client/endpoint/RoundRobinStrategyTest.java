@@ -30,8 +30,10 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
 public class RoundRobinStrategyTest {
-    private static final EndpointGroup ENDPOINT_GROUP = new StaticEndpointGroup(Endpoint.of("localhost:1234"),
-                                                                                Endpoint.of("localhost:2345"));
+    private static final EndpointGroup ENDPOINT_GROUP =
+            new StaticEndpointGroup(Endpoint.parse("localhost:1234"),
+                                    Endpoint.parse("localhost:2345"));
+
     private static final EndpointGroup EMPTY_ENDPOINT_GROUP = new StaticEndpointGroup();
 
     private final RoundRobinStrategy strategy = new RoundRobinStrategy();

@@ -35,8 +35,10 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
 public class WeightedRoundRobinStrategyTest {
-    private static final EndpointGroup ENDPOINT_GROUP = new StaticEndpointGroup(Endpoint.of("localhost:1234"),
-                                                                                Endpoint.of("localhost:2345"));
+    private static final EndpointGroup ENDPOINT_GROUP =
+            new StaticEndpointGroup(Endpoint.parse("localhost:1234"),
+                                    Endpoint.parse("localhost:2345"));
+
     private static final EndpointGroup EMPTY_ENDPOINT_GROUP = new StaticEndpointGroup();
 
     private final WeightedRoundRobinStrategy strategy = new WeightedRoundRobinStrategy();
@@ -83,9 +85,9 @@ public class WeightedRoundRobinStrategyTest {
     public void testWeightedRoundRobinSelect() {
         //weight 1,2,3
         EndpointGroup endpointGroup = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 1),
-                Endpoint.of("127.0.0.1", 2345, 2),
-                Endpoint.of("127.0.0.1", 3456, 3));
+                Endpoint.of("127.0.0.1", 1234).withWeight(1),
+                Endpoint.of("127.0.0.1", 2345).withWeight(2),
+                Endpoint.of("127.0.0.1", 3456).withWeight(3));
         String groupName = "weighted";
 
         EndpointGroupRegistry.register(groupName, endpointGroup, WEIGHTED_ROUND_ROBIN);
@@ -106,9 +108,9 @@ public class WeightedRoundRobinStrategyTest {
 
         //weight 3,2,2
         EndpointGroup endpointGroup2 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 3),
-                Endpoint.of("127.0.0.1", 2345, 2),
-                Endpoint.of("127.0.0.1", 3456, 2));
+                Endpoint.of("127.0.0.1", 1234).withWeight(3),
+                Endpoint.of("127.0.0.1", 2345).withWeight(2),
+                Endpoint.of("127.0.0.1", 3456).withWeight(2));
         EndpointGroupRegistry.register(groupName, endpointGroup2, WEIGHTED_ROUND_ROBIN);
 
         assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
@@ -129,9 +131,9 @@ public class WeightedRoundRobinStrategyTest {
 
         //weight 4,4,4
         EndpointGroup endpointGroup3 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 4),
-                Endpoint.of("127.0.0.1", 2345, 4),
-                Endpoint.of("127.0.0.1", 3456, 4));
+                Endpoint.of("127.0.0.1", 1234).withWeight(4),
+                Endpoint.of("127.0.0.1", 2345).withWeight(4),
+                Endpoint.of("127.0.0.1", 3456).withWeight(4));
         EndpointGroupRegistry.register(groupName, endpointGroup3, WEIGHTED_ROUND_ROBIN);
 
         assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
@@ -143,9 +145,9 @@ public class WeightedRoundRobinStrategyTest {
 
         //weight 2,4,6
         EndpointGroup endpointGroup4 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 2),
-                Endpoint.of("127.0.0.1", 2345, 4),
-                Endpoint.of("127.0.0.1", 3456, 6));
+                Endpoint.of("127.0.0.1", 1234).withWeight(2),
+                Endpoint.of("127.0.0.1", 2345).withWeight(4),
+                Endpoint.of("127.0.0.1", 3456).withWeight(6));
         EndpointGroupRegistry.register(groupName, endpointGroup4, WEIGHTED_ROUND_ROBIN);
 
         assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
@@ -184,15 +186,15 @@ public class WeightedRoundRobinStrategyTest {
         EndpointSelector selector = EndpointGroupRegistry.getNodeSelector("dynamic");
         assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1000));
 
-        endpointGroup.updateEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111, 1),
-                                                       Endpoint.of("127.0.0.1", 2222, 2)));
+        endpointGroup.updateEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111).withWeight(1),
+                                                       Endpoint.of("127.0.0.1", 2222).withWeight(2)));
 
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111, 1));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111, 1));
+        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
+        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
+        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111).withWeight(1));
+        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
+        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
+        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111).withWeight(1));
     }
 
     private static final class TestDynamicEndpointGroup extends DynamicEndpointGroup {

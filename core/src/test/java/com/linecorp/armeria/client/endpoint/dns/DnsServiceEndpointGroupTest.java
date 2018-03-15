@@ -66,9 +66,9 @@ public class DnsServiceEndpointGroupTest {
 
     private static final List<Endpoint> ENDPOINTS =
             ImmutableList.of(
-                    Endpoint.of("1.armeria.com", 443, 1),
-                    Endpoint.of("2.armeria.com", 8080, 1),
-                    Endpoint.of("3.armeria.com", 9000, 5));
+                    Endpoint.of("1.armeria.com", 443).withWeight(1),
+                    Endpoint.of("2.armeria.com", 8080).withWeight(1),
+                    Endpoint.of("3.armeria.com", 9000).withWeight(5));
 
     private static EventLoop EVENT_LOOP;
 

@@ -46,13 +46,13 @@ public class StickyEndpointSelectionStrategyTest {
     final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
 
     private static final EndpointGroup STATIC_ENDPOINT_GROUP = new StaticEndpointGroup(
-            Endpoint.of("localhost:1234"),
-            Endpoint.of("localhost:2345"),
-            Endpoint.of("localhost:3333"),
-            Endpoint.of("localhost:5555"),
-            Endpoint.of("localhost:3444"),
-            Endpoint.of("localhost:9999"),
-            Endpoint.of("localhost:1111")
+            Endpoint.parse("localhost:1234"),
+            Endpoint.parse("localhost:2345"),
+            Endpoint.parse("localhost:3333"),
+            Endpoint.parse("localhost:5555"),
+            Endpoint.parse("localhost:3444"),
+            Endpoint.parse("localhost:9999"),
+            Endpoint.parse("localhost:1111")
     );
 
     private static final DynamicEndpointGroup DYNAMIC_ENDPOINT_GROUP = new DynamicEndpointGroup();
@@ -86,7 +86,7 @@ public class StickyEndpointSelectionStrategyTest {
         }
 
         //confirm rebuild tree of dynamic
-        Endpoint ep4 = Endpoint.of("localhost:9494");
+        Endpoint ep4 = Endpoint.parse("localhost:9494");
         DYNAMIC_ENDPOINT_GROUP.addEndpoint(ep4);
         assertThat(EndpointGroupRegistry.selectNode(
                 contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "dynamic")).isEqualTo(ep4);
