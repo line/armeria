@@ -23,8 +23,31 @@ import javax.annotation.CheckReturnValue;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCounted;
+
 /**
  * Produces the objects to be published by a {@link StreamMessage}.
+ *
+ * <h3 id="reference-counted">Life cycle of reference-counted objects</h3>
+ *
+ * <p>When the following methods are given with a {@link ReferenceCounted} object, such as {@link ByteBuf} and
+ * {@link ByteBufHttpData}, or the {@link Supplier} that provides such an object:
+ *
+ * <ul>
+ *   <li>{@link #tryWrite(Object)}</li>
+ *   <li>{@link #tryWrite(Supplier)}</li>
+ *   <li>{@link #write(Object)}</li>
+ *   <li>{@link #write(Supplier)}</li>
+ * </ul>
+ * the object will be released automatically by the stream when it's no longer in use, such as when:
+ * <ul>
+ *   <li>The method returns {@code false} or raises an exception.</li>
+ *   <li>The {@link Subscriber} of the stream consumes it.</li>
+ *   <li>The stream is cancelled, aborted or failed.</li>
+ * </ul>
  *
  * @param <T> the type of the stream element
  */
@@ -41,6 +64,7 @@ public interface StreamWriter<T> {
      *
      * @throws IllegalStateException if the stream was already closed
      * @throws IllegalArgumentException if the publication of the specified object has been rejected
+     * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      */
     default void write(T o) {
         if (!tryWrite(o)) {
@@ -53,6 +77,7 @@ public interface StreamWriter<T> {
      * {@link Supplier} will be transferred to the {@link Subscriber}.
      *
      * @throws IllegalStateException if the stream was already closed.
+     * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      */
     default void write(Supplier<? extends T> o) {
         if (!tryWrite(o)) {
@@ -68,6 +93,7 @@ public interface StreamWriter<T> {
      *         stream has been closed already.
      *
      * @throws IllegalArgumentException if the publication of the specified object has been rejected
+     * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      */
     @CheckReturnValue
     boolean tryWrite(T o);
@@ -78,6 +104,7 @@ public interface StreamWriter<T> {
      *
      * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
      *         stream has been closed already.
+     * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      */
     @CheckReturnValue
     default boolean tryWrite(Supplier<? extends T> o) {

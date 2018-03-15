@@ -27,6 +27,8 @@ import java.util.Locale;
 
 import com.linecorp.armeria.common.stream.StreamWriter;
 
+import io.netty.util.ReferenceCountUtil;
+
 /**
  * An {@link HttpResponse} that can have {@link HttpObject}s written to it.
  */
@@ -175,6 +177,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
                            .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
 
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+            ReferenceCountUtil.safeRelease(content);
             write(headers);
         } else {
             write(headers);
@@ -216,6 +219,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         final HttpHeaders trailingHeaders = res.trailingHeaders();
 
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+            ReferenceCountUtil.safeRelease(content);
             write(headers);
         } else {
             write(headers);

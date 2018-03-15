@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 
 /**
  * A {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
@@ -40,13 +41,18 @@ public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
     private final int length;
 
     /**
-     * Construct a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
+     * Constructs a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
      * {@link ByteBufHttpData}, which must not be mutated anymore.
      */
     public ByteBufHttpData(ByteBuf buf, boolean endOfStream) {
-        this.buf = buf;
+        length = requireNonNull(buf, "buf").readableBytes();
+        if (length != 0) {
+            this.buf = buf;
+        } else {
+            buf.release();
+            this.buf = Unpooled.EMPTY_BUFFER;
+        }
         this.endOfStream = endOfStream;
-        length = buf.readableBytes();
     }
 
     @Override
