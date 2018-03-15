@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -209,6 +210,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         }
 
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+            ReferenceCountUtil.safeRelease(content);
             return new OneElementFixedHttpResponse(headers);
         } else if (!content.isEmpty()) {
             if (trailingHeaders.isEmpty()) {
