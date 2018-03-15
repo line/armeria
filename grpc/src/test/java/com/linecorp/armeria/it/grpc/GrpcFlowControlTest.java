@@ -23,7 +23,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -57,20 +59,30 @@ public class GrpcFlowControlTest {
     private static final int CAPPED_NUM_MESSAGES = 3;
 
     // Large enough payload to trigger flow control.
-    private static final Payload PAYLOAD =
-            Payload.newBuilder()
-                   .setBody(ByteString.copyFromUtf8(Strings.repeat("a", 5 * 1024 * 1024)))
-                   .build();
+    private static Payload PAYLOAD;
+    private static SimpleRequest REQUEST;
+    private static SimpleResponse RESPONSE;
 
-    private static final SimpleRequest REQUEST =
-            SimpleRequest.newBuilder()
-                         .setPayload(PAYLOAD)
+    @BeforeClass
+    public static void createMessages() {
+        PAYLOAD = Payload.newBuilder()
+                         .setBody(ByteString.copyFromUtf8(Strings.repeat("a", 5 * 1024 * 1024)))
                          .build();
+        REQUEST = SimpleRequest.newBuilder()
+                               .setPayload(PAYLOAD)
+                               .build();
+        RESPONSE = SimpleResponse.newBuilder()
+                                 .setPayload(PAYLOAD)
+                                 .build();
+    }
 
-    private static final SimpleResponse RESPONSE =
-            SimpleResponse.newBuilder()
-                          .setPayload(PAYLOAD)
-                          .build();
+    @AfterClass
+    public static void destroyMessages() {
+        // Dereference to reduce the memory pressure on the VM.
+        PAYLOAD = null;
+        REQUEST = null;
+        RESPONSE = null;
+    }
 
     static class FlowControlService extends FlowControlTestServiceImplBase {
         @Override
