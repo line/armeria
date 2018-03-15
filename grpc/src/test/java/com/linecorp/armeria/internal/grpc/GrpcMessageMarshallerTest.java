@@ -86,6 +86,7 @@ public class GrpcMessageMarshallerTest {
         SimpleRequest request = marshaller.deserializeRequest(new ByteBufOrStream(buf));
         assertThat(request).isEqualTo(GrpcTestUtil.REQUEST_MESSAGE);
         assertThat(buf.refCnt()).isEqualTo(1);
+        buf.release();
     }
 
     @Test
@@ -130,6 +131,7 @@ public class GrpcMessageMarshallerTest {
         SimpleResponse response = marshaller.deserializeResponse(new ByteBufOrStream(buf));
         assertThat(response).isEqualTo(GrpcTestUtil.RESPONSE_MESSAGE);
         assertThat(buf.refCnt()).isEqualTo(1);
+        buf.release();
     }
 
     @Test
