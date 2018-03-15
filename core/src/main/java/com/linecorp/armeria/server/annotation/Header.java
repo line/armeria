@@ -22,10 +22,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for mapping an HTTP request header onto a method parameter.
+ * Annotation for mapping an HTTP request header onto the following elements.
+ *
+ * <p>a method parameter
+ *
+ * <p>or, a field of a request bean (See: {@link RequestConverter} and {@link RequestConverterFunction})
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.PARAMETER)
+@Target({ ElementType.PARAMETER, ElementType.FIELD })
 public @interface Header {
 
     /**

@@ -66,6 +66,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
+import com.linecorp.armeria.server.annotation.JavaBeanRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
@@ -102,7 +103,8 @@ final class AnnotatedHttpServices {
      * A default {@link RequestConverterFunction} list.
      */
     private static final List<RequestConverterFunction> defaultRequestConverters =
-            ImmutableList.of(new JacksonRequestConverterFunction(),
+            ImmutableList.of(new JavaBeanRequestConverterFunction(),
+                             new JacksonRequestConverterFunction(),
                              new StringRequestConverterFunction(),
                              new ByteArrayRequestConverterFunction());
 
