@@ -91,7 +91,18 @@ public class GrpcServiceServerTest {
 
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
 
-    private static final AsciiString LARGE_PAYLOAD = AsciiString.of(Strings.repeat("a", MAX_MESSAGE_SIZE + 1));
+    private static AsciiString LARGE_PAYLOAD;
+
+    @BeforeClass
+    public static void createLargePayload() {
+        LARGE_PAYLOAD = AsciiString.of(Strings.repeat("a", MAX_MESSAGE_SIZE + 1));
+    }
+
+    @AfterClass
+    public static void destroyLargePayload() {
+        // Dereference to reduce the memory pressure on the VM.
+        LARGE_PAYLOAD = null;
+    }
 
     // Used to communicate completion to a test when it is not possible to return to the client.
     private static final AtomicReference<Boolean> COMPLETED = new AtomicReference<>();
