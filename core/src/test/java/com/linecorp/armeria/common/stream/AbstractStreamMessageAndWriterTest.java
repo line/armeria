@@ -107,10 +107,12 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
     @Test
     public void releaseWhenWritingToClosedStream_ByteBuf() {
         StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
-        final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
+        final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().retain();
         stream.close();
 
-        await().untilAsserted(() -> assertThat(stream.tryWrite(buf)).isFalse());
+        await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
+        assertThat(stream.tryWrite(buf)).isFalse();
+        assertThat(buf.refCnt()).isOne();
         assertThatThrownBy(() -> stream.write(buf)).isInstanceOf(IllegalStateException.class);
         assertThat(buf.refCnt()).isZero();
     }
@@ -118,10 +120,12 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
     @Test
     public void releaseWhenWritingToClosedStream_HttpData() {
         StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
+        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true).retain();
         stream.close();
 
-        await().untilAsserted(() -> assertThat(stream.tryWrite(data)).isFalse());
+        await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
+        assertThat(stream.tryWrite(data)).isFalse();
+        assertThat(data.refCnt()).isOne();
         assertThatThrownBy(() -> stream.write(data)).isInstanceOf(IllegalStateException.class);
         assertThat(data.refCnt()).isZero();
     }
