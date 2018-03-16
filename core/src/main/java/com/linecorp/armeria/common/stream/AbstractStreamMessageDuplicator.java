@@ -390,7 +390,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         void doClose() {
-            if (state == State.DUPLICABLE) {
+            if (state != State.CLOSED) {
                 state = State.CLOSED;
                 upstream.abort();
                 doCleanup();
@@ -401,6 +401,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final List<CompletableFuture<Void>> completionFutures =
                     new ArrayList<>(downstreamSubscriptions.size());
             downstreamSubscriptions.forEach(s -> {
+                s.abort();
                 final CompletableFuture<Void> future = s.completionFuture();
                 completionFutures.add(future);
             });

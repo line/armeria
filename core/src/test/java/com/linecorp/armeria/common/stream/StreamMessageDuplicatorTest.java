@@ -326,6 +326,10 @@ public class StreamMessageDuplicatorTest {
             assertThat(bufs[i].refCnt()).isOne();
         }
         duplicator.close();
+
+        for (int i = 25; i < 30; i++) {  // rest of them are cleared after calling duplicator.close()
+            assertThat(bufs[i].refCnt()).isZero();
+        }
     }
 
     @Test
