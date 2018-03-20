@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.core;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-
 import java.time.Duration;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -73,7 +71,7 @@ public class HttpServerBenchmark {
                 .build();
         server.start().join();
         ServerPort httpPort = server.activePorts().values().stream()
-                                    .filter(p1 -> p1.protocol() == HTTP).findAny()
+                                    .filter(ServerPort::hasHttp).findAny()
                                     .get();
         httpClient = Clients.newClient("none+" + protocol.uriText() + "://127.0.0.1:" +
                                        httpPort.localAddress().getPort() + "/",

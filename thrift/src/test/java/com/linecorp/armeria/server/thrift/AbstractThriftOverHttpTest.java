@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server.thrift;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -52,6 +50,7 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -123,7 +122,7 @@ public abstract class AbstractThriftOverHttpTest {
             sb.decorator(LoggingService.newDecorator());
 
             final Function<Service<HttpRequest, HttpResponse>,
-                           Service<HttpRequest, HttpResponse>> logCollectingDecorator =
+                    Service<HttpRequest, HttpResponse>> logCollectingDecorator =
                     s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -147,10 +146,10 @@ public abstract class AbstractThriftOverHttpTest {
         server.start().get();
 
         httpPort = server.activePorts().values().stream()
-                         .filter(p -> p.protocol() == HTTP).findAny().get()
+                         .filter(ServerPort::hasHttp).findAny().get()
                          .localAddress().getPort();
         httpsPort = server.activePorts().values().stream()
-                          .filter(p -> p.protocol() == HTTPS).findAny().get()
+                          .filter(ServerPort::hasHttps).findAny().get()
                           .localAddress().getPort();
     }
 
@@ -364,10 +363,10 @@ public abstract class AbstractThriftOverHttpTest {
 
     protected static String newUri(String scheme, String path) {
         switch (scheme) {
-        case "http":
-            return scheme + "://127.0.0.1:" + httpPort + path;
-        case "https":
-            return scheme + "://127.0.0.1:" + httpsPort + path;
+            case "http":
+                return scheme + "://127.0.0.1:" + httpPort + path;
+            case "https":
+                return scheme + "://127.0.0.1:" + httpsPort + path;
         }
 
         throw new Error();

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.junit.Assert.assertEquals;
 
 import java.net.InetAddress;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
@@ -89,7 +89,7 @@ public class HttpClientSniTest {
     public static void init() throws Exception {
         server.start().get();
         httpsPort = server.activePorts().values().stream()
-                          .filter(p -> p.protocol() == HTTPS).findAny().get().localAddress()
+                          .filter(ServerPort::hasHttps).findAny().get().localAddress()
                           .getPort();
         clientFactory = new ClientFactoryBuilder()
                 .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))

@@ -185,4 +185,10 @@ public interface ServiceRequestContext extends RequestContext {
      * @see ContentTooLargeException
      */
     void setMaxRequestLength(long maxRequestLength);
+
+    /**
+     * Returns the proxied addresses if the current {@link Request} is received through a proxy.
+     */
+    @Nullable
+    ProxiedAddresses proxiedAddresses();
 }

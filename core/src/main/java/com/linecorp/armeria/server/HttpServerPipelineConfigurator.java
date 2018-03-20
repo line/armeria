@@ -22,6 +22,9 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
@@ -34,6 +37,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.haproxy.HAProxyMessage;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
@@ -55,6 +61,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SniHandler;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 
@@ -63,16 +70,49 @@ import io.netty.util.DomainNameMapping;
  */
 final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
+    private static final Logger logger = LoggerFactory.getLogger(HttpServerPipelineConfigurator.class);
+
+    private static final int SSL_RECORD_HEADER_LENGTH = 5;
+
     private static final AsciiString SCHEME_HTTP = AsciiString.of("http");
     private static final AsciiString SCHEME_HTTPS = AsciiString.of("https");
 
     private static final int UPGRADE_REQUEST_MAX_LENGTH = 16384;
+
+    private static final byte[] PROXY_V1_MAGIC_BYTES = {
+            (byte) 'P',
+            (byte) 'R',
+            (byte) 'O',
+            (byte) 'X',
+            (byte) 'Y',
+            };
+
+    private static final byte[] PROXY_V2_MAGIC_BYTES = {
+            (byte) 0x0D,
+            (byte) 0x0A,
+            (byte) 0x0D,
+            (byte) 0x0A,
+            (byte) 0x00,
+            (byte) 0x0D,
+            (byte) 0x0A,
+            (byte) 0x51,
+            (byte) 0x55,
+            (byte) 0x49,
+            (byte) 0x54,
+            (byte) 0x0A
+    };
+
+    enum PortType {
+        TLS, CLEARTEXT, UNCERTAIN
+    }
 
     private final ServerConfig config;
     private final ServerPort port;
     @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
+
+    private final PortType portType;
 
     /**
      * Creates a new instance.
@@ -86,6 +126,28 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
+        portType = resolvePortType(port);
+    }
+
+    private static PortType resolvePortType(ServerPort port) {
+        int tls = 0;
+        int cleartext = 0;
+        for (final SessionProtocol p : port.protocols()) {
+            if (p != SessionProtocol.PROXY) {
+                if (p.isTls()) {
+                    tls++;
+                } else {
+                    cleartext++;
+                }
+            }
+        }
+        if (tls > 0 && cleartext > 0) {
+            return PortType.UNCERTAIN;
+        } else if (tls > 0) {
+            return PortType.TLS;
+        } else {
+            return PortType.CLEARTEXT;
+        }
     }
 
     @Override
@@ -94,21 +156,33 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingHandler.INSTANCE);
 
-        if (port.protocol().isTls()) {
-            assert sslContexts != null;
-            p.addLast(new SniHandler(sslContexts));
-            p.addLast(TrafficLoggingHandler.SERVER);
-            configureHttps(p);
+        if (port.hasProxy()) {
+            p.addLast(new ProtocolDetectionHandler(true, null));
         } else {
-            p.addLast(TrafficLoggingHandler.SERVER);
-            configureHttp(p);
+            configurePipeline(p, null);
         }
     }
 
-    private void configureHttp(ChannelPipeline p) {
+    private void configurePipeline(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
+        switch (portType) {
+            case TLS:
+                configureHttps(p, proxiedAddresses);
+                break;
+            case CLEARTEXT:
+                configureHttp(p, proxiedAddresses);
+                break;
+            case UNCERTAIN:
+                p.addLast(new ProtocolDetectionHandler(false, proxiedAddresses));
+                break;
+        }
+    }
+
+    private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
+        p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler());
         configureIdleTimeoutHandler(p);
-        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1C));
+        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+                                        SessionProtocol.H1C, proxiedAddresses));
     }
 
     private void configureIdleTimeoutHandler(ChannelPipeline p) {
@@ -117,8 +191,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
     }
 
-    private void configureHttps(ChannelPipeline p) {
-        p.addLast(new Http2OrHttpHandler());
+    private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
+        assert sslContexts != null;
+        p.addLast(new SniHandler(sslContexts));
+        p.addLast(TrafficLoggingHandler.SERVER);
+        p.addLast(new Http2OrHttpHandler(proxiedAddresses));
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline) {
@@ -146,10 +223,75 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         return handler;
     }
 
+    private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
+
+        private final boolean detectProxyProtocol;
+
+        @Nullable
+        private final ProxiedAddresses proxiedAddresses;
+
+        ProtocolDetectionHandler(boolean detectProxyProtocol,
+                                 @Nullable ProxiedAddresses proxiedAddresses) {
+            this.detectProxyProtocol = detectProxyProtocol;
+            this.proxiedAddresses = proxiedAddresses;
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            final int minLength = detectProxyProtocol ? PROXY_V2_MAGIC_BYTES.length
+                                                      : SSL_RECORD_HEADER_LENGTH;
+            if (in.readableBytes() < minLength) {
+                return;
+            }
+
+            final ChannelPipeline p = ctx.pipeline();
+            if (SslHandler.isEncrypted(in)) {
+                configureHttps(p, proxiedAddresses);
+            } else if (detectProxyProtocol &&
+                       (match(PROXY_V1_MAGIC_BYTES, in) || match(PROXY_V2_MAGIC_BYTES, in))) {
+                p.addLast(new HAProxyMessageDecoder(config.proxyProtocolMaxTlvSize()));
+                p.addLast(new ProxiedPipelineConfigurator());
+            } else {
+                configureHttp(p, proxiedAddresses);
+            }
+            p.remove(this);
+        }
+
+        private boolean match(byte[] prefix, ByteBuf buffer) {
+            final int idx = buffer.readerIndex();
+            for (int i = 0; i < prefix.length; i++) {
+                final byte b = buffer.getByte(idx + i);
+                if (b != prefix[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    private final class ProxiedPipelineConfigurator extends MessageToMessageDecoder<HAProxyMessage> {
+        @Override
+        protected void decode(ChannelHandlerContext ctx, HAProxyMessage msg, List<Object> out)
+                throws Exception {
+            logger.debug("PROXY message {}: {}:{} -> {}:{}",
+                         msg.protocolVersion().name(),
+                         msg.sourceAddress(), msg.sourcePort(),
+                         msg.destinationAddress(), msg.destinationPort());
+            final ChannelPipeline p = ctx.pipeline();
+            configurePipeline(p, ProxiedAddresses.of(msg.sourceAddress(), msg.sourcePort(),
+                                                     msg.destinationAddress(), msg.destinationPort()));
+            p.remove(this);
+        }
+    }
+
     private final class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
 
-        Http2OrHttpHandler() {
+        @Nullable
+        private final ProxiedAddresses proxiedAddresses;
+
+        Http2OrHttpHandler(@Nullable ProxiedAddresses proxiedAddresses) {
             super(ApplicationProtocolNames.HTTP_1_1);
+            this.proxiedAddresses = proxiedAddresses;
         }
 
         @Override
@@ -171,7 +313,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p));
             configureIdleTimeoutHandler(p);
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H2));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+                                            SessionProtocol.H2, proxiedAddresses));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -182,7 +325,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.defaultMaxHttp1ChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
             configureIdleTimeoutHandler(p);
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+                                            SessionProtocol.H1, proxiedAddresses));
         }
     }
 
