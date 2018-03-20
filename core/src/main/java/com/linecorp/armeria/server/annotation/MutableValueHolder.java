@@ -52,7 +52,7 @@ final class MutableValueHolder<T> {
      *
      * @param valueSupplier the function to compute a value
      *
-     * @return the current (existing or computed) value, or null if the computed value is null
+     * @return the current (existing or computed) value, or {@code null} if the computed value is {@code null}
      */
     public T computeIfAbsent(final Supplier<T> valueSupplier) {
         if (value == null) {

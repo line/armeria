@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.ClassRule;
@@ -133,10 +135,11 @@ public class AnnotatedHttpServiceRequestConverterTest {
             assertThat(bean1.userName).isNotNull();
             assertThat(bean1.age).isNotEqualTo(Integer.MIN_VALUE);
             assertThat(bean1.gender).isNotNull();
+            assertThat(bean1.permissions).isNotNull();
+            assertThat(bean1.clientName).isNotNull();
 
             assertThat(bean1.seqNum).isNotNull();
             assertThat(bean1.manager).isNotNull();
-            assertThat(bean1.permission).isNotNull();
 
             assertThat(bean1.notPopulatedStr).isNull();
             assertThat(bean1.notPopulatedInt).isEqualTo(0);
@@ -155,10 +158,11 @@ public class AnnotatedHttpServiceRequestConverterTest {
             assertThat(bean1.userName).isNotNull();
             assertThat(bean1.age).isNotEqualTo(Integer.MIN_VALUE);
             assertThat(bean1.gender).isNotNull();
+            assertThat(bean1.permissions).isNotNull();
+            assertThat(bean1.clientName).isNotNull();
 
             assertThat(bean1.seqNum).isNotNull();
             assertThat(bean1.manager).isNotNull();
-            assertThat(bean1.permission).isNotNull();
 
             assertThat(bean1.notPopulatedStr).isNull();
             assertThat(bean1.notPopulatedInt).isEqualTo(0);
@@ -225,8 +229,12 @@ public class AnnotatedHttpServiceRequestConverterTest {
         @Param("age")
         int age = Integer.MIN_VALUE;
 
-        @Param("gender")
         Gender gender;
+
+        List<String> permissions;
+
+        @Header("x-client-name")
+        String clientName;
 
         @JsonProperty
         public int getAge() {
@@ -238,9 +246,29 @@ public class AnnotatedHttpServiceRequestConverterTest {
             return gender;
         }
 
+        @Param("gender")
+        public void setGender(final Gender gender) {
+            this.gender = gender;
+        }
+
         @JsonProperty
         public String getUserName() {
             return userName;
+        }
+
+        @JsonProperty
+        public List<String> getPermissions() {
+            return permissions;
+        }
+
+        @Header("x-user-permission")
+        public void setPermissions(final String permissionStr) {
+            permissions = Arrays.asList(permissionStr.split(","));
+        }
+
+        @JsonProperty
+        public String getClientName() {
+            return clientName;
         }
     }
 
@@ -255,9 +283,6 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         @Param("manager")
         private Boolean manager;
-
-        @Header("x-user-permission")
-        private String permission;
 
         private String notPopulatedStr;
 
@@ -275,11 +300,6 @@ public class AnnotatedHttpServiceRequestConverterTest {
         @JsonProperty
         public boolean isManager() {
             return manager;
-        }
-
-        @JsonProperty
-        public String getPermission() {
-            return permission;
         }
     }
 
@@ -378,10 +398,11 @@ public class AnnotatedHttpServiceRequestConverterTest {
         RequestJavaBean1 expectedRequestBean = new RequestJavaBean1();
         expectedRequestBean.userName = "john";
         expectedRequestBean.age = 25;
-        expectedRequestBean.manager = true;
-        expectedRequestBean.seqNum = 1234L;
         expectedRequestBean.gender = MALE;
-        expectedRequestBean.permission = "permission1,permission2";
+        expectedRequestBean.permissions = Arrays.asList("permission1", "permission2");
+        expectedRequestBean.clientName = "TestClient";
+        expectedRequestBean.seqNum = 1234L;
+        expectedRequestBean.manager = true;
 
         String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
 
@@ -389,6 +410,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         HttpData formData = HttpData.ofAscii("age=25&manager=true&gender=male");
         HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/javabean/john/1234")
                                             .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                            .set(AsciiString.of("x-client-name"), "TestClient")
                                             .contentType(MediaType.FORM_DATA);
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
@@ -398,7 +420,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
         // Normal Request: GET + Query String
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
                                     "/2/default/javabean/john/1234?age=25&manager=true&gender=MALE")
-                                .set(AsciiString.of("x-user-permission"), "permission1,permission2");
+                                .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                .set(AsciiString.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
@@ -407,7 +430,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
         // Bad Request: age=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
                                     "/2/default/javabean/john/1234?age=badParam&manager=true&gender=male")
-                                .set(AsciiString.of("x-user-permission"), "permission1,permission2");
+                                .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                .set(AsciiString.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -415,7 +439,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
         // Bad Request: seqNum=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
                                     "/2/default/javabean/john/badParam?age=25&manager=true&gender=MALE")
-                                .set(AsciiString.of("x-user-permission"), "permission1,permission2");
+                                .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                .set(AsciiString.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -423,7 +448,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
         // Bad Request: gender=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
                                     "/2/default/javabean/john/1234?age=25&manager=true&gender=badParam")
-                                .set(AsciiString.of("x-user-permission"), "permission1,permission2");
+                                .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                .set(AsciiString.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);

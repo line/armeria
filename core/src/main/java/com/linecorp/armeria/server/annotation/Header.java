@@ -27,9 +27,11 @@ import java.lang.annotation.Target;
  * <p>a method parameter
  *
  * <p>or, a field of a request bean (See: {@link RequestConverter} and {@link RequestConverterFunction})
+ *
+ * <p>or, a setter method of a request bean (See: {@link RequestConverter} and {@link RequestConverterFunction})
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.PARAMETER, ElementType.FIELD })
+@Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD })
 public @interface Header {
 
     /**

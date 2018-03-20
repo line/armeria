@@ -106,7 +106,7 @@ public final class AnnotatedHttpServiceParamUtil {
     }
 
     /**
-     * Convert a HTTP Parameter String to proper data type.
+     * Converts a HTTP Parameter String to proper data type.
      *
      * @param value HTTP Parameter value
      * @param type expected data type
@@ -214,7 +214,7 @@ public final class AnnotatedHttpServiceParamUtil {
         private final Map<String, T> enumMap;
 
         /**
-         * Create an instance for the given Enum class.
+         * Creates an instance for the given Enum class.
          *
          * @param enumClass the Enum class this EnumConverter should work for
          */

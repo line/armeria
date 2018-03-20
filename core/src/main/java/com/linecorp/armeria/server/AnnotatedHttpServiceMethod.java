@@ -53,10 +53,10 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil;
 import com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.EnumConverter;
 import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.server.annotation.BeanRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.JavaBeanRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
@@ -512,7 +512,7 @@ final class AnnotatedHttpServiceMethod {
 
         static Parameter ofRequestObject(Class<?> type,
                                          @Nullable RequestConverterFunction requestConverterFunction) {
-            JavaBeanRequestConverterFunction.initFor(type);
+            BeanRequestConverterFunction.register(type);
 
             return new Parameter(ParameterType.REQUEST_OBJECT, true, false, type,
                                  null, null, requestConverterFunction);
