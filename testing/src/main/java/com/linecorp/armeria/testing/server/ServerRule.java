@@ -166,7 +166,7 @@ public abstract class ServerRule extends ExternalResource {
      */
     public int port(SessionProtocol protocol) {
         return server().activePorts().values().stream()
-                       .filter(p1 -> p1.protocol() == protocol).findAny()
+                       .filter(p1 -> p1.hasProtocol(protocol)).findAny()
                        .flatMap(p -> Optional.of(p.localAddress().getPort()))
                        .orElseThrow(() -> new IllegalStateException(protocol + " port not open"));
     }
@@ -189,7 +189,7 @@ public abstract class ServerRule extends ExternalResource {
         final Server server = this.server.get();
         return server != null &&
                server.activePorts().values().stream()
-                     .anyMatch(port -> port.protocol() == protocol);
+                     .anyMatch(port -> port.hasProtocol(protocol));
     }
 
     /**

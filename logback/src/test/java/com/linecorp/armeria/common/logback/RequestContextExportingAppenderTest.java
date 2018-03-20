@@ -424,7 +424,7 @@ public class RequestContextExportingAppenderTest {
 
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
                 serviceConfig, ch, NoopMeterRegistry.get(), SessionProtocol.H2, mappingCtx,
-                PathMappingResult.of(path, query, ImmutableMap.of()), req, newSslSession());
+                PathMappingResult.of(path, query, ImmutableMap.of()), req, newSslSession(), null);
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;

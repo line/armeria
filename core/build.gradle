@@ -20,7 +20,7 @@ dependencies {
     }
 
     // Netty
-    [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
+    [ 'netty-transport', 'netty-codec-http2', 'netty-codec-haproxy', 'netty-resolver-dns' ].each {
         compile "io.netty:$it"
     }
     compile "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-transport-native-unix-common']}:linux-x86_64"

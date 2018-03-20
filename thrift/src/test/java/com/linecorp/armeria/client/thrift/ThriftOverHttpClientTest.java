@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -68,6 +66,7 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -211,15 +210,15 @@ public class ThriftOverHttpClientTest {
     public static Collection<Object[]> parameters() throws Exception {
         List<Object[]> parameters = new ArrayList<>();
         for (SerializationFormat serializationFormat : ThriftSerializationFormats.values()) {
-            parameters.add(new Object[] { serializationFormat, "http",  false, true });
-            parameters.add(new Object[] { serializationFormat, "http",  false, false });
-            parameters.add(new Object[] { serializationFormat, "https", true,  false });
-            parameters.add(new Object[] { serializationFormat, "h1",    true,  false }); // HTTP/1 over TLS
-            parameters.add(new Object[] { serializationFormat, "h1c",   false, true  }); // HTTP/1 cleartext
-            parameters.add(new Object[] { serializationFormat, "h1c",   false, false });
-            parameters.add(new Object[] { serializationFormat, "h2",    true,  false }); // HTTP/2 over TLS
-            parameters.add(new Object[] { serializationFormat, "h2c",   false, true  }); // HTTP/2 cleartext
-            parameters.add(new Object[] { serializationFormat, "h2c",   false, false });
+            parameters.add(new Object[] { serializationFormat, "http", false, true });
+            parameters.add(new Object[] { serializationFormat, "http", false, false });
+            parameters.add(new Object[] { serializationFormat, "https", true, false });
+            parameters.add(new Object[] { serializationFormat, "h1", true, false }); // HTTP/1 over TLS
+            parameters.add(new Object[] { serializationFormat, "h1c", false, true }); // HTTP/1 cleartext
+            parameters.add(new Object[] { serializationFormat, "h1c", false, false });
+            parameters.add(new Object[] { serializationFormat, "h2", true, false }); // HTTP/2 over TLS
+            parameters.add(new Object[] { serializationFormat, "h2c", false, true }); // HTTP/2 cleartext
+            parameters.add(new Object[] { serializationFormat, "h2c", false, false });
         }
         return parameters;
     }
@@ -245,10 +244,10 @@ public class ThriftOverHttpClientTest {
         server.start().get();
 
         httpPort = server.activePorts().values().stream()
-                         .filter(p -> p.protocol() == HTTP).findAny().get().localAddress()
+                         .filter(ServerPort::hasHttp).findAny().get().localAddress()
                          .getPort();
         httpsPort = server.activePorts().values().stream()
-                          .filter(p -> p.protocol() == HTTPS).findAny().get().localAddress()
+                          .filter(ServerPort::hasHttps).findAny().get().localAddress()
                           .getPort();
 
         final Consumer<SslContextBuilder> sslContextCustomizer =

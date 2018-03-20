@@ -58,6 +58,9 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Nullable
     private final SSLSession sslSession;
 
+    @Nullable
+    private final ProxiedAddresses proxiedAddresses;
+
     private final DefaultRequestLog log;
     private final Logger logger;
 
@@ -86,7 +89,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Request request,
-            @Nullable SSLSession sslSession) {
+            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses) {
 
         super(meterRegistry, sessionProtocol,
               requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
@@ -98,6 +101,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.pathMappingContext = pathMappingContext;
         this.pathMappingResult = pathMappingResult;
         this.sslSession = sslSession;
+        this.proxiedAddresses = proxiedAddresses;
 
         log = new DefaultRequestLog(this);
         log.startRequest(ch, sessionProtocol, cfg.virtualHost().defaultHostname());
@@ -127,8 +131,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public ServiceRequestContext newDerivedContext(Request request) {
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
-                pathMappingResult, request, sslSession());
-        for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();) {
+                pathMappingResult, request, sslSession(), proxiedAddresses());
+        for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();/* noop */) {
             ctx.addAttr(i.next());
         }
         return ctx;
@@ -262,6 +266,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                     "maxRequestLength: " + maxRequestLength + " (expected: >= 0)");
         }
         this.maxRequestLength = maxRequestLength;
+    }
+
+    @Nullable
+    @Override
+    public ProxiedAddresses proxiedAddresses() {
+        return proxiedAddresses;
     }
 
     @Override

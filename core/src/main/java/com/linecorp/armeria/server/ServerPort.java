@@ -19,13 +19,19 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Set;
+import java.util.StringJoiner;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -36,25 +42,42 @@ public final class ServerPort implements Comparable<ServerPort> {
 
     private final InetSocketAddress localAddress;
     private final String localAddressString;
-    private final SessionProtocol protocol;
+    private final Set<SessionProtocol> protocols;
     private int hashCode;
+    private String protocolNames;
+
     @Nullable
     private String strVal;
 
     /**
      * Creates a new {@link ServerPort} that listens to the specified {@code port} of all available network
-     * interfaces using the specified {@link SessionProtocol}.
+     * interfaces using the specified {@link SessionProtocol}s.
      */
-    public ServerPort(int port, SessionProtocol protocol) {
-        this(new InetSocketAddress(port), protocol);
+    public ServerPort(int port, SessionProtocol... protocols) {
+        this(new InetSocketAddress(port), ImmutableSet.copyOf(requireNonNull(protocols, "protocols")));
     }
 
     /**
      * Creates a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
-     * {@link SessionProtocol}.
+     * {@link SessionProtocol}s.
      */
-    public ServerPort(InetSocketAddress localAddress, SessionProtocol protocol) {
+    public ServerPort(InetSocketAddress localAddress, SessionProtocol... protocols) {
+        this(localAddress, ImmutableSet.copyOf(requireNonNull(protocols, "protocols")));
+    }
 
+    /**
+     * Creates a new {@link ServerPort} that listens to the specified {@code port} of all available network
+     * interfaces using the specified {@link SessionProtocol}s.
+     */
+    public ServerPort(int port, Set<SessionProtocol> protocols) {
+        this(new InetSocketAddress(port), protocols);
+    }
+
+    /**
+     * Creates a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
+     * {@link SessionProtocol}s.
+     */
+    public ServerPort(InetSocketAddress localAddress, Set<SessionProtocol> protocols) {
         // Try to resolve the localAddress if not resolved yet.
         if (requireNonNull(localAddress, "localAddress").isUnresolved()) {
             try {
@@ -66,14 +89,18 @@ public final class ServerPort implements Comparable<ServerPort> {
             }
         }
 
-        requireNonNull(protocol, "protocol");
-        checkArgument(protocol == HTTP || protocol == HTTPS,
-                      "protocol: %s (expected: %s or %s)", protocol, HTTP, HTTPS);
-
+        requireNonNull(protocols, "protocols");
+        checkArgument(protocols.stream().allMatch(p -> p == HTTP || p == HTTPS || p == PROXY),
+                      "protocol: %s (expected: %s, %s or %s)", protocols, HTTP, HTTPS, PROXY);
         this.localAddress = localAddress;
-        this.protocol = protocol;
+        this.protocols = ImmutableSortedSet.copyOf(protocols);
 
-        localAddressString = localAddress.getAddress().getHostAddress() + ':' + localAddress.getPort();
+        final StringJoiner protocolNameJoiner = new StringJoiner("+");
+        this.protocols.forEach(p -> protocolNameJoiner.add(p.uriText()));
+        protocolNames = protocolNameJoiner.toString();
+
+        localAddressString = localAddress.getAddress().getHostAddress() + ':' +
+                             localAddress.getPort() + ':' + protocolNames;
     }
 
     /**
@@ -85,9 +112,62 @@ public final class ServerPort implements Comparable<ServerPort> {
 
     /**
      * Returns the {@link SessionProtocol} this {@link ServerPort} uses.
+     *
+     * @deprecated Use {@link #protocols()} instead.
      */
+    @Deprecated
     public SessionProtocol protocol() {
-        return protocol;
+        // TODO(hyangtack) Leave this for backward compatability. Remove it later.
+        return protocols.iterator().next();
+    }
+
+    /**
+     * Returns the {@link SessionProtocol}s this {@link ServerPort} uses.
+     */
+    public Set<SessionProtocol> protocols() {
+        return protocols;
+    }
+
+    /**
+     * Returns whether there is a {@link SessionProtocol} which is over TLS.
+     */
+    public boolean hasTls() {
+        return protocols.stream().anyMatch(SessionProtocol::isTls);
+    }
+
+    /**
+     * Returns whether the {@link SessionProtocol#HTTP} is in the list of {@link SessionProtocol}s.
+     */
+    public boolean hasHttp() {
+        return hasProtocol(HTTP);
+    }
+
+    /**
+     * Returns whether the {@link SessionProtocol#HTTPS} is in the list of {@link SessionProtocol}s.
+     */
+    public boolean hasHttps() {
+        return hasProtocol(HTTPS);
+    }
+
+    /**
+     * Returns whether the {@link SessionProtocol#PROXY} is in the list of {@link SessionProtocol}s.
+     */
+    public boolean hasProxy() {
+        return hasProtocol(PROXY);
+    }
+
+    /**
+     * Returns whether the specified {@code protocol} is in the list of {@link SessionProtocol}s.
+     */
+    public boolean hasProtocol(SessionProtocol protocol) {
+        return protocols.stream().anyMatch(p -> p == protocol);
+    }
+
+    /**
+     * Returns all protocol names which are concatenated with {@code +}.
+     */
+    public String protocolNames() {
+        return protocolNames;
     }
 
     @Override
@@ -133,21 +213,22 @@ public final class ServerPort implements Comparable<ServerPort> {
     public String toString() {
         String strVal = this.strVal;
         if (strVal == null) {
-            this.strVal = strVal = toString(getClass(), localAddress(), protocol());
+            this.strVal = strVal = toString(getClass(), localAddress(), protocols());
         }
 
         return strVal;
     }
 
-    static String toString(@Nullable Class<?> type, InetSocketAddress localAddress, SessionProtocol protocol) {
-        StringBuilder buf = new StringBuilder();
+    static String toString(@Nullable Class<?> type, InetSocketAddress localAddress,
+                           Set<SessionProtocol> protocols) {
+        final StringBuilder buf = new StringBuilder();
         if (type != null) {
             buf.append(type.getSimpleName());
         }
         buf.append('(');
         buf.append(localAddress);
         buf.append(", ");
-        buf.append(protocol);
+        buf.append(protocols);
         buf.append(')');
 
         return buf.toString();

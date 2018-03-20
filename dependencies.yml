@@ -129,6 +129,7 @@ io.micrometer:
 
 io.netty:
   netty-codec-http2: { version: &NETTY_VERSION '4.1.22.Final' }
+  netty-codec-haproxy: { version: *NETTY_VERSION }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport:
