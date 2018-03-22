@@ -1,82 +1,106 @@
 def libDir = "${buildscript.sourceFile.parentFile}"
 
 configure(projectsWithFlags('java')) {
-    // Add Thrift support if there is src/*/thrift
-    if (project.ext.hasSourceDirectory('thrift')) {
-        apply plugin: 'com.google.osdetector'
-        def thriftJsonEnabled = true
-        ext {
-            thriftVersion = '0.11'
-            thriftPath = null
-            disableThriftJson = { thriftJsonEnabled = false }
-        }
+    def thriftJsonEnabled = true
+    ext {
+        thriftVersion = null
+        thriftPath = null
+        disableThriftJson = { thriftJsonEnabled = false }
+    }
 
-        // TODO(anuraaga): Consider replacing with https://github.com/yodle/griddle
-        project.sourceSets.all { sourceSet ->
-            def scope = sourceSet.name
-            def inputDir = "${projectDir}/src/${scope}/thrift"
+    // TODO(anuraaga): Consider replacing with https://github.com/yodle/griddle
+    project.sourceSets.all { sourceSet ->
+        def scope = sourceSet.name
+        // Create the task assuming the source directory exists
+        // so that subprojects can refer to the task.
+        def task = project.tasks.create([
+                name: sourceSet.getTaskName('compile', 'thrift'),
+                group: 'Build',
+                description: "Compiles the ${sourceSet.name} .thrift files."
+        ])
+
+        // Use afterEvaluate to give subprojects a chance to override the properties.
+        project.afterEvaluate {
+            def srcDirs = project.findProperty(sourceSet.getTaskName('', 'thriftSrcDirs'))
+            if (srcDirs == null) {
+                def defaultSrcDir = "${projectDir}/src/${scope}/thrift"
+                if (!project.file(defaultSrcDir).isDirectory()) {
+                    // Remove the compile*Thrift task which turned out to be unnecessary.
+                    project.tasks.remove(task)
+                    return
+                }
+                srcDirs = [defaultSrcDir]
+            }
+            if (!(srcDirs instanceof Iterable) || srcDirs instanceof CharSequence) {
+                srcDirs = [srcDirs]
+            }
+
+            apply plugin: 'com.google.osdetector'
+            def includeDirs = project.findProperty(sourceSet.getTaskName('', 'thriftIncludeDirs'))?: []
+            if (!(includeDirs instanceof Iterable) || includeDirs instanceof CharSequence) {
+                includeDirs = [includeDirs]
+            }
             def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
             def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
+            task.configure {
+                srcDirs.each { inputs.dir it }
+                includeDirs.each { inputs.dir it }
+                outputs.dir javaOutputDir
+                outputs.dir jsonOutputDir
+                project.sourceSets[scope].java.srcDir javaOutputDir
+                project.sourceSets[scope].resources.srcDir jsonOutputDir
 
-            if (project.file(inputDir).isDirectory()) {
-                def task = project.tasks.create([
-                        name: sourceSet.getTaskName('compile', 'thrift'),
-                        group: 'Build',
-                        description: "Compiles the ${sourceSet.name} .thrift files."
-                ])
+                doLast {
+                    def actualThriftPath
+                    if (project.findProperty('thriftPath') != null) {
+                        actualThriftPath = project.findProperty('thriftPath')
+                    } else {
+                        actualThriftPath =
+                                "${libDir}/thrift" +
+                                "/${project.findProperty('thriftVersion')?: '0.11'}" +
+                                "/thrift.${osdetector.classifier}"
+                    }
 
-                task.configure {
-                    inputs.dir inputDir
-                    outputs.dir javaOutputDir
-                    outputs.dir jsonOutputDir
-                    project.sourceSets[scope].java.srcDir javaOutputDir
-                    project.sourceSets[scope].resources.srcDir jsonOutputDir
-
-                    doLast {
-                        def actualThriftPath
-                        if (project.ext.thriftPath != null) {
-                            actualThriftPath = project.ext.thriftPath
-                        } else {
-                            actualThriftPath = "${libDir}/thrift/${project.ext.thriftVersion}/thrift.${osdetector.classifier}"
-                        }
-
-                        project.fileTree(inputDir) {
+                    srcDirs.each { srcDir ->
+                        project.fileTree(srcDir) {
                             include '**/*.thrift'
                         }.each { sourceFile ->
                             logger.info("Using ${actualThriftPath} to generate Java sources from ${sourceFile}")
                             project.mkdir(javaOutputDir)
                             project.exec {
-                                commandLine actualThriftPath,
-                                        '-gen', 'java',
-                                        '-out', javaOutputDir,
-                                        '-I', "${sourceFile.parentFile.absolutePath}",
-                                        sourceFile.absolutePath
+                                commandLine actualThriftPath
+                                args '-gen', 'java', '-out', javaOutputDir
+                                includeDirs.each {
+                                    args '-I', it
+                                }
+                                args sourceFile.absolutePath
                             }
                             if (thriftJsonEnabled) {
                                 logger.info("Using ${actualThriftPath} to generate JSON from ${sourceFile}")
                                 def outDir = "${jsonOutputDir}/META-INF/armeria/thrift"
                                 project.mkdir(outDir)
                                 project.exec {
-                                    commandLine actualThriftPath,
-                                            '-gen', 'json',
-                                            '-out', outDir,
-                                            '-I', "${sourceFile.parentFile.absolutePath}",
-                                            sourceFile.absolutePath
+                                    commandLine actualThriftPath
+                                    args '-gen', 'json', '-out', outDir
+                                    includeDirs.each {
+                                        args '-I', it
+                                    }
+                                    args sourceFile.absolutePath
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                def processResourcesTask = tasks.findByName(sourceSet.getTaskName('process', 'resources'))
-                if (processResourcesTask != null) {
-                    processResourcesTask.dependsOn(task)
-                }
+            def processResourcesTask = tasks.findByName(sourceSet.getTaskName('process', 'resources'))
+            if (processResourcesTask != null) {
+                processResourcesTask.dependsOn(task)
+            }
 
-                def compileTask = tasks.findByName(sourceSet.getCompileTaskName('java'))
-                if (compileTask != null) {
-                    compileTask.dependsOn(task)
-                }
+            def compileTask = tasks.findByName(sourceSet.getCompileTaskName('java'))
+            if (compileTask != null) {
+                compileTask.dependsOn(task)
             }
         }
     }
