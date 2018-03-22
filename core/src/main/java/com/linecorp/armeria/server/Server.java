@@ -249,7 +249,7 @@ public final class Server implements AutoCloseable {
                                                        config().blockingTaskExecutor());
             }
 
-            for (ServerPort p: ports) {
+            for (final ServerPort p: ports) {
                 start(p).addListener(new ServerPortStartListener(remainingPorts, future, p));
             }
         } catch (Throwable t) {
@@ -627,7 +627,7 @@ public final class Server implements AutoCloseable {
                   .addListener((ChannelFutureListener) future -> serverChannels.remove(future.channel()));
 
                 final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
-                final ServerPort actualPort = new ServerPort(localAddress, port.protocol());
+                final ServerPort actualPort = new ServerPort(localAddress, port.protocols());
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
@@ -643,10 +643,10 @@ public final class Server implements AutoCloseable {
                 if (localAddress.getAddress().isAnyLocalAddress() ||
                     localAddress.getAddress().isLoopbackAddress()) {
                     logger.info("Serving {} at {} - {}://127.0.0.1:{}/",
-                                port.protocol().name(), localAddress,
-                                port.protocol().uriText(), localAddress.getPort());
+                                port.protocolNames(), localAddress,
+                                port.protocolNames(), localAddress.getPort());
                 } else {
-                    logger.info("Serving {} at {}", port.protocol().name(), localAddress);
+                    logger.info("Serving {} at {}", port.protocolNames(), localAddress);
                 }
 
                 if (remainingPorts.decrementAndGet() == 0) {
@@ -665,7 +665,7 @@ public final class Server implements AutoCloseable {
 
         // e.g. 'armeria-boss-http-*:8080'
         //      'armeria-boss-http-127.0.0.1:8443'
-        return "armeria-boss-" + port.protocol().uriText() + '-' + localHostName + ':' + localAddr.getPort();
+        return "armeria-boss-" + port.protocolNames() + '-' + localHostName + ':' + localAddr.getPort();
     }
 
     private static void completeFuture(CompletableFuture<Void> future) {

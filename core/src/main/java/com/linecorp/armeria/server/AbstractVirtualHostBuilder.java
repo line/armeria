@@ -345,7 +345,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      */
     public B annotatedService(Object service, Object... exceptionHandlersAndConverters) {
         return annotatedService("/", service, Function.identity(),
-                                ImmutableList.copyOf(exceptionHandlersAndConverters));
+                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                    "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -359,7 +360,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
                               Function<Service<HttpRequest, HttpResponse>,
                                       ? extends Service<HttpRequest, HttpResponse>> decorator,
                               Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, decorator, exceptionHandlersAndConverters);
+        return annotatedService("/", service, decorator,
+                                requireNonNull(exceptionHandlersAndConverters,
+                                               "exceptionHandlersAndConverters"));
     }
 
     /**
@@ -379,7 +382,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     public B annotatedService(String pathPrefix, Object service,
                               Object... exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, Function.identity(),
-                                ImmutableList.copyOf(exceptionHandlersAndConverters));
+                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                    "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -394,7 +398,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
                                       ? extends Service<HttpRequest, HttpResponse>> decorator,
                               Object... exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, decorator,
-                                ImmutableList.copyOf(exceptionHandlersAndConverters));
+                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                    "exceptionHandlersAndConverters")));
     }
 
     /**

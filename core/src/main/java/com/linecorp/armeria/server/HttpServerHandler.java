@@ -151,8 +151,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
+
     @Nullable
     private HttpObjectEncoder responseEncoder;
+
+    @Nullable
+    private final ProxiedAddresses proxiedAddresses;
 
     private int unfinishedRequests;
     private boolean isReading;
@@ -163,7 +167,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
-                      SessionProtocol protocol) {
+                      SessionProtocol protocol,
+                      @Nullable ProxiedAddresses proxiedAddresses) {
 
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
@@ -174,6 +179,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (protocol == H1 || protocol == H1C) {
             responseEncoder = new Http1ObjectEncoder(true, protocol.isTls());
         }
+
+        this.proxiedAddresses = proxiedAddresses;
 
         unfinishedResponses = new IdentityHashMap<>();
         accessLogWriter = config.accessLogWriter();
@@ -315,7 +322,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceCfg.server().meterRegistry(),
-                protocol, mappingCtx, mappingResult, req, getSSLSession(channel));
+                protocol, mappingCtx, mappingResult, req, getSSLSession(channel), proxiedAddresses);
 
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
