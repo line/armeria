@@ -106,7 +106,7 @@ public final class AnnotatedHttpServiceParamUtil {
     }
 
     /**
-     * Converts a HTTP Parameter String to proper data type.
+     * Converts an HTTP Parameter String to proper data type.
      *
      * @param value HTTP Parameter value
      * @param type expected data type

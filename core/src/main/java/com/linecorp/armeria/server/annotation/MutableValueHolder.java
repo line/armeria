@@ -17,19 +17,22 @@ package com.linecorp.armeria.server.annotation;
 
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 /**
  * Mutable object value holder.
  *
  * @param <T> Type of value.
  */
 final class MutableValueHolder<T> {
+    @Nullable
     private T value;
 
-    private MutableValueHolder(final T value) {
+    private MutableValueHolder(@Nullable final T value) {
         this.value = value;
     }
 
-    public static <T> MutableValueHolder<T> of(final T value) {
+    public static <T> MutableValueHolder<T> of(@Nullable final T value) {
         return new MutableValueHolder<>(value);
     }
 
@@ -37,11 +40,12 @@ final class MutableValueHolder<T> {
         return of(null);
     }
 
+    @Nullable
     public T getValue() {
         return value;
     }
 
-    public void setValue(final T value) {
+    public void setValue(@Nullable final T value) {
         this.value = value;
     }
 
@@ -54,6 +58,7 @@ final class MutableValueHolder<T> {
      *
      * @return the current (existing or computed) value, or {@code null} if the computed value is {@code null}
      */
+    @Nullable
     public T computeIfAbsent(final Supplier<T> valueSupplier) {
         if (value == null) {
             value = valueSupplier.get();

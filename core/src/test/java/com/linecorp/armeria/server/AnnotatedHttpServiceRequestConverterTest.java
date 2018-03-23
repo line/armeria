@@ -17,8 +17,10 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.AnnotatedHttpServiceRequestConverterTest.Gender.MALE;
+import static com.linecorp.armeria.server.annotation.BeanRequestConverterFunction.register;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -70,6 +72,17 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
     };
 
+    private static void expectError(final Runnable testTask,
+                                    final String... expectedErrorMessages) {
+        try {
+            testTask.run();
+
+            fail("Should fail here, but not.");
+        } catch (final Exception e) {
+            assertThat(expectedErrorMessages).contains(e.getMessage());
+        }
+    }
+
     @ResponseConverter(UnformattedStringConverterFunction.class)
     @RequestConverter(TestRequestConverter1.class)
     public static class MyDecorationService1 {
@@ -103,12 +116,67 @@ public class AnnotatedHttpServiceRequestConverterTest {
     @ResponseConverter(ByteArrayConverterFunction.class)
     @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyDecorationService2 {
+
+        @Post("/default/bean1/{userName}/{seqNum}")
+        public String defaultBean1ForPost(@RequestObject RequestBean1 bean1)
+                throws JsonProcessingException {
+            assertThat(bean1).isNotNull();
+            bean1.validate();
+            return new ObjectMapper().writeValueAsString(bean1);
+        }
+
+        @Get("/default/bean1/{userName}/{seqNum}")
+        public String defaultBean1ForGet(@RequestObject RequestBean1 bean1)
+                throws JsonProcessingException {
+            assertThat(bean1).isNotNull();
+            bean1.validate();
+            return new ObjectMapper().writeValueAsString(bean1);
+        }
+
+        @Post("/default/bean2/{userName}/{serialNo}")
+        public String defaultBean2ForPost(@RequestObject RequestBean2 bean2)
+                throws JsonProcessingException {
+            assertThat(bean2).isNotNull();
+            bean2.validate();
+            return new ObjectMapper().writeValueAsString(bean2);
+        }
+
+        @Get("/default/bean2/{userName}")
+        public String defaultBean2ForGet(@RequestObject RequestBean2 bean2)
+                throws JsonProcessingException {
+            assertThat(bean2).isNotNull();
+            bean2.validate();
+            return new ObjectMapper().writeValueAsString(bean2);
+        }
+
+        @Post("/default/bean3/{userName}/{departmentNo}")
+        public String defaultBean3ForPost(@RequestObject RequestBean3 bean3)
+                throws JsonProcessingException {
+            assertThat(bean3).isNotNull();
+            bean3.validate();
+            return new ObjectMapper().writeValueAsString(bean3);
+        }
+
+        @Get("/default/bean3/{userName}")
+        public String defaultBean3ForGet(@RequestObject RequestBean3 bean3)
+                throws JsonProcessingException {
+            assertThat(bean3).isNotNull();
+            bean3.validate();
+            return new ObjectMapper().writeValueAsString(bean3);
+        }
+
         @Post("/default/json")
         public String defaultJson(@RequestObject RequestJsonObj1 obj1,
                                   @RequestObject RequestJsonObj2 obj2) {
             assertThat(obj1).isNotNull();
             assertThat(obj2).isNotNull();
             return obj2.strVal();
+        }
+
+        @Post("/default/invalidJson")
+        public String invalidJson(@RequestObject JsonNode node) {
+            // Should never reach here because we are sending invalid JSON.
+            throw new Error();
         }
 
         @Post("/default/binary")
@@ -125,58 +193,6 @@ public class AnnotatedHttpServiceRequestConverterTest {
         public String defaultText(@RequestObject String obj1) {
             assertThat(obj1).isNotNull();
             return obj1;
-        }
-
-        @Post("/default/javabean/{userName}/{seqNum}")
-        public String defaultJavaBeanForPost(@RequestObject RequestJavaBean1 bean1)
-                throws JsonProcessingException {
-            assertThat(bean1).isNotNull();
-
-            assertThat(bean1.userName).isNotNull();
-            assertThat(bean1.age).isNotEqualTo(Integer.MIN_VALUE);
-            assertThat(bean1.gender).isNotNull();
-            assertThat(bean1.permissions).isNotNull();
-            assertThat(bean1.clientName).isNotNull();
-
-            assertThat(bean1.seqNum).isNotNull();
-            assertThat(bean1.manager).isNotNull();
-
-            assertThat(bean1.notPopulatedStr).isNull();
-            assertThat(bean1.notPopulatedInt).isEqualTo(0);
-            assertThat(bean1.notPopulatedLong).isNull();
-            assertThat(bean1.notPopulatedBoolean).isNull();
-
-            final ObjectMapper mapper = new ObjectMapper();
-            return mapper.writeValueAsString(bean1);
-        }
-
-        @Get("/default/javabean/{userName}/{seqNum}")
-        public String defaultJavaBeanForGet(@RequestObject RequestJavaBean1 bean1)
-                throws JsonProcessingException {
-            assertThat(bean1).isNotNull();
-
-            assertThat(bean1.userName).isNotNull();
-            assertThat(bean1.age).isNotEqualTo(Integer.MIN_VALUE);
-            assertThat(bean1.gender).isNotNull();
-            assertThat(bean1.permissions).isNotNull();
-            assertThat(bean1.clientName).isNotNull();
-
-            assertThat(bean1.seqNum).isNotNull();
-            assertThat(bean1.manager).isNotNull();
-
-            assertThat(bean1.notPopulatedStr).isNull();
-            assertThat(bean1.notPopulatedInt).isEqualTo(0);
-            assertThat(bean1.notPopulatedLong).isNull();
-            assertThat(bean1.notPopulatedBoolean).isNull();
-
-            final ObjectMapper mapper = new ObjectMapper();
-            return mapper.writeValueAsString(bean1);
-        }
-
-        @Post("/default/invalidJson")
-        public String invalidJson(@RequestObject JsonNode node) {
-            // Should never reach here because we are sending invalid JSON.
-            throw new Error();
         }
     }
 
@@ -222,19 +238,27 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
     }
 
-    abstract static class AbstractRequestJavaBean {
+    abstract static class AbstractRequestBean {
+        // test case: field with annotation
         @Param("userName")
         String userName;
 
-        @Param("age")
         int age = Integer.MIN_VALUE;
 
         Gender gender;
 
         List<String> permissions;
 
-        @Header("x-client-name")
         String clientName;
+
+        // test case: method parameters with annotation
+        public void initParams(@Header("x-client-name") final String clientName,
+                               @Header("x-user-permission") final String permissionStr,
+                               @Param("age") final int age) {
+            this.clientName = clientName;
+            this.permissions = Arrays.asList(permissionStr.split(","));
+            this.age = age;
+        }
 
         @JsonProperty
         public int getAge() {
@@ -246,6 +270,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
             return gender;
         }
 
+        // test case: method with annotation
         @Param("gender")
         public void setGender(final Gender gender) {
             this.gender = gender;
@@ -261,14 +286,17 @@ public class AnnotatedHttpServiceRequestConverterTest {
             return permissions;
         }
 
-        @Header("x-user-permission")
-        public void setPermissions(final String permissionStr) {
-            permissions = Arrays.asList(permissionStr.split(","));
-        }
-
         @JsonProperty
         public String getClientName() {
             return clientName;
+        }
+
+        public void validate() {
+            assertThat(userName).isNotNull();
+            assertThat(age).isNotEqualTo(Integer.MIN_VALUE);
+            assertThat(gender).isNotNull();
+            assertThat(permissions).isNotNull();
+            assertThat(clientName).isNotNull();
         }
     }
 
@@ -277,10 +305,13 @@ public class AnnotatedHttpServiceRequestConverterTest {
         FEMALE
     }
 
-    static class RequestJavaBean1 extends AbstractRequestJavaBean {
+    // test case: default constructor(with no args)
+    static class RequestBean1 extends AbstractRequestBean {
+        // test case: field with annotation
         @Param("seqNum")
         private Long seqNum;
 
+        // test case: field with annotation
         @Param("manager")
         private Boolean manager;
 
@@ -300,6 +331,190 @@ public class AnnotatedHttpServiceRequestConverterTest {
         @JsonProperty
         public boolean isManager() {
             return manager;
+        }
+
+        @Override
+        public void validate() {
+            super.validate();
+
+            assertThat(seqNum).isNotNull();
+            assertThat(manager).isNotNull();
+
+            assertThat(notPopulatedStr).isNull();
+            assertThat(notPopulatedInt).isEqualTo(0);
+            assertThat(notPopulatedLong).isNull();
+            assertThat(notPopulatedBoolean).isNull();
+        }
+    }
+
+    static class RequestBean2 extends AbstractRequestBean {
+        // test case: field with annotation
+        @Param("serialNo")
+        private Long serialNo;
+
+        private String uid;
+
+        // test case: constructor args with annotations
+        RequestBean2(@Param("serialNo") Long serialNo,
+                     @Header("uid") String uid) {
+            this.serialNo = serialNo;
+            this.uid = uid;
+        }
+
+        @Override
+        public void validate() {
+            super.validate();
+
+            assertThat(serialNo).isNotNull();
+            assertThat(uid).isNotNull();
+        }
+    }
+
+    static class RequestBean3 extends AbstractRequestBean {
+        private int departmentNo = Integer.MIN_VALUE;
+
+        // test case: constructor with annotations
+        @Param("departmentNo")
+        RequestBean3(int departmentNo) {
+            this.departmentNo = departmentNo;
+        }
+
+        @Override
+        public void validate() {
+            super.validate();
+
+            assertThat(departmentNo).isNotEqualTo(Integer.MIN_VALUE);
+        }
+    }
+
+    // error test case: more than 1 annotated constructors
+    static class BadRequestBeanMoreThanOnConstructor01 {
+        private String param1;
+        private int header2;
+
+        // constructor1: with annotation
+        @Param("param1")
+        BadRequestBeanMoreThanOnConstructor01(String param1) {
+            this.param1 = param1;
+        }
+
+        // constructor2: with annotation
+        @Header("header2")
+        BadRequestBeanMoreThanOnConstructor01(int header2) {
+            this.header2 = header2;
+        }
+    }
+
+    // error test case: more than 1 annotated constructors
+    static class BadRequestBeanMoreThanOnConstructor02 {
+        private String param1;
+        private int header2;
+
+        // constructor1: param with annotation
+        BadRequestBeanMoreThanOnConstructor02(@Param("param1") String param1) {
+            this.param1 = param1;
+        }
+
+        // constructor2: param with annotation
+        BadRequestBeanMoreThanOnConstructor02(@Header("header2") int header2) {
+            this.header2 = header2;
+        }
+    }
+
+    // error test case: more than 1 annotated constructors
+    static class BadRequestBeanMoreThanOnConstructor03 {
+        private String param1;
+        private int header2;
+
+        // constructor1: with annotation
+        @Param("param1")
+        BadRequestBeanMoreThanOnConstructor03(String param1) {
+            this.param1 = param1;
+        }
+
+        // constructor2: param with annotation
+        BadRequestBeanMoreThanOnConstructor03(@Header("header2") int header2) {
+            this.header2 = header2;
+        }
+    }
+
+    // error test case: annotated used both on constructor and parameter
+    static class BadRequestBeanAnnotationInConstructorParam {
+        private int header2;
+
+        @Header("header2")
+        BadRequestBeanAnnotationInConstructorParam(@Param("header2") int header2) {
+            this.header2 = header2;
+        }
+    }
+
+    // error test case: annotated used both on method and parameter
+    static class BadRequestBeanAnnotationInMethodParam {
+        private int header2;
+
+        @Header("header2")
+        void setHeader2(@Param("header2") int header2) {
+            this.header2 = header2;
+        }
+    }
+
+    // error test case: more than 1 parameters for annotated constructor
+    static class BadRequestBeanMoreThanOneConstructorParam {
+        private String param1;
+        private int header2;
+
+        @Header("header2")
+        BadRequestBeanMoreThanOneConstructorParam(String param1, int header2) {
+            this.param1 = param1;
+            this.header2 = header2;
+        }
+    }
+
+    // error test case: more than 1 parameters for annotated method
+    static class BadRequestBeanMoreThanOneMethodParam {
+        private String param1;
+        private int header2;
+
+        @Header("header2")
+        void initParams(String param1, int header2) {
+            this.param1 = param1;
+            this.header2 = header2;
+        }
+    }
+
+    // error test case: some constructor parameters are not annotated
+    static class BadRequestBeanSomeConstructorParamWithoutAnnotation {
+        private String param1;
+        private String param2;
+        private int header1;
+        private int header2;
+
+        BadRequestBeanSomeConstructorParamWithoutAnnotation(@Param("param1") String param1,
+                                                            String param2,
+                                                            @Header("header1") int header1,
+                                                            int header2) {
+            this.param1 = param1;
+            this.param2 = param2;
+            this.header1 = header1;
+            this.header2 = header2;
+        }
+    }
+
+    // error test case: some method parameters are not annotated
+    static class BadRequestBeanSomeMethodParamWithoutAnnotation {
+        private String param1;
+        private String param2;
+        private int header1;
+        private int header2;
+
+        void initParams(@Param("param1") String param1,
+                        String param2,
+                        @Header("header1") int header1,
+                        int header2) {
+            this.param1 = param1;
+            this.param2 = param2;
+            this.header1 = header1;
+            this.header2 = header2;
         }
     }
 
@@ -389,13 +604,14 @@ public class AnnotatedHttpServiceRequestConverterTest {
     }
 
     @Test
-    public void testDefaultRequestConverter_javaBean() throws Exception {
+    public void testDefaultRequestConverter_bean1() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/"));
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpMessage response;
 
-        RequestJavaBean1 expectedRequestBean = new RequestJavaBean1();
+        // test for RequestBean1
+        RequestBean1 expectedRequestBean = new RequestBean1();
         expectedRequestBean.userName = "john";
         expectedRequestBean.age = 25;
         expectedRequestBean.gender = MALE;
@@ -408,7 +624,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         // Normal Request: POST + Form Data
         HttpData formData = HttpData.ofAscii("age=25&manager=true&gender=male");
-        HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/javabean/john/1234")
+        HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean1/john/1234")
                                             .set(AsciiString.of("x-user-permission"), "permission1,permission2")
                                             .set(AsciiString.of("x-client-name"), "TestClient")
                                             .contentType(MediaType.FORM_DATA);
@@ -419,7 +635,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         // Normal Request: GET + Query String
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/javabean/john/1234?age=25&manager=true&gender=MALE")
+                                    "/2/default/bean1/john/1234?age=25&manager=true&gender=MALE")
                                 .set(AsciiString.of("x-user-permission"), "permission1,permission2")
                                 .set(AsciiString.of("x-client-name"), "TestClient");
 
@@ -429,7 +645,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         // Bad Request: age=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/javabean/john/1234?age=badParam&manager=true&gender=male")
+                                    "/2/default/bean1/john/1234?age=badParam&manager=true&gender=male")
                                 .set(AsciiString.of("x-user-permission"), "permission1,permission2")
                                 .set(AsciiString.of("x-client-name"), "TestClient");
 
@@ -438,7 +654,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         // Bad Request: seqNum=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/javabean/john/badParam?age=25&manager=true&gender=MALE")
+                                    "/2/default/bean1/john/badParam?age=25&manager=true&gender=MALE")
                                 .set(AsciiString.of("x-user-permission"), "permission1,permission2")
                                 .set(AsciiString.of("x-client-name"), "TestClient");
 
@@ -447,12 +663,169 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         // Bad Request: gender=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/javabean/john/1234?age=25&manager=true&gender=badParam")
+                                    "/2/default/bean1/john/1234?age=25&manager=true&gender=badParam")
                                 .set(AsciiString.of("x-user-permission"), "permission1,permission2")
                                 .set(AsciiString.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    public void testDefaultRequestConverter_bean2() throws Exception {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final ObjectMapper mapper = new ObjectMapper();
+
+        AggregatedHttpMessage response;
+
+        // test for RequestBean2
+        RequestBean2 expectedRequestBean = new RequestBean2(98765L, "abcd-efgh");
+        expectedRequestBean.userName = "john";
+        expectedRequestBean.age = 25;
+        expectedRequestBean.gender = MALE;
+        expectedRequestBean.permissions = Arrays.asList("permission1", "permission2");
+        expectedRequestBean.clientName = "TestClient";
+
+        String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
+
+        // Normal Request: POST + Form Data
+        HttpData formData = HttpData.ofAscii("age=25&gender=male");
+        HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean2/john/98765")
+                                            .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                            .set(AsciiString.of("x-client-name"), "TestClient")
+                                            .set(AsciiString.of("uid"), "abcd-efgh")
+                                            .contentType(MediaType.FORM_DATA);
+
+        response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+
+        // Normal Request: GET + Query String
+        reqHeaders = HttpHeaders.of(HttpMethod.GET,
+                                    "/2/default/bean2/john?age=25&gender=MALE&serialNo=98765")
+                                .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                .set(AsciiString.of("x-client-name"), "TestClient")
+                                .set(AsciiString.of("uid"), "abcd-efgh");
+
+        response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+    }
+
+    @Test
+    public void testDefaultRequestConverter_bean3() throws Exception {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final ObjectMapper mapper = new ObjectMapper();
+
+        AggregatedHttpMessage response;
+
+        // test for RequestBean3
+        RequestBean3 expectedRequestBean = new RequestBean3(3349);
+        expectedRequestBean.userName = "john";
+        expectedRequestBean.age = 25;
+        expectedRequestBean.gender = MALE;
+        expectedRequestBean.permissions = Arrays.asList("permission1", "permission2");
+        expectedRequestBean.clientName = "TestClient";
+
+        String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
+
+        // Normal Request: POST + Form Data
+        HttpData formData = HttpData.ofAscii("age=25&gender=male");
+        HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean3/john/3349")
+                                            .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                            .set(AsciiString.of("x-client-name"), "TestClient")
+                                            .contentType(MediaType.FORM_DATA);
+
+        response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+
+        // Normal Request: GET + Query String
+        reqHeaders = HttpHeaders.of(HttpMethod.GET,
+                                    "/2/default/bean3/john?age=25&gender=MALE&departmentNo=3349")
+                                .set(AsciiString.of("x-user-permission"), "permission1,permission2")
+                                .set(AsciiString.of("x-client-name"), "TestClient");
+
+        response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+    }
+
+    @Test
+    public void testDefaultRequestConverter_beanDefineError() throws Exception {
+        // error: more than 1 annotated constructors
+        expectError(
+                () -> register(BadRequestBeanMoreThanOnConstructor01.class),
+                "There are more than 1 annotated constructors in class '" +
+                BadRequestBeanMoreThanOnConstructor01.class.getCanonicalName() + "'."
+        );
+
+        expectError(
+                () -> register(BadRequestBeanMoreThanOnConstructor02.class),
+                "There are more than 1 annotated constructors in class '" +
+                BadRequestBeanMoreThanOnConstructor02.class.getCanonicalName() + "'."
+        );
+
+        expectError(
+                () -> register(BadRequestBeanMoreThanOnConstructor03.class),
+                "There are more than 1 annotated constructors in class '" +
+                BadRequestBeanMoreThanOnConstructor03.class.getCanonicalName() + "'."
+        );
+
+        // error: annotation used in constructor param
+        String errorMsg01 = "Annotation should not be used on parameter 'header2' of '" +
+                            BadRequestBeanAnnotationInConstructorParam.class.getCanonicalName() + "." +
+                            BadRequestBeanAnnotationInConstructorParam.class.getName() + "'.";
+        String errorMsg02 = "Annotation should not be used on parameter 'arg0' of '" +
+                            BadRequestBeanAnnotationInConstructorParam.class.getCanonicalName() + "." +
+                            BadRequestBeanAnnotationInConstructorParam.class.getName() + "'.";
+        expectError(
+                () -> register(BadRequestBeanAnnotationInConstructorParam.class),
+                errorMsg01, errorMsg02
+        );
+
+        // error: annotation used in method param
+        errorMsg01 = "Annotation should not be used on parameter 'header2' of '" +
+                     BadRequestBeanAnnotationInMethodParam.class.getCanonicalName() + ".setHeader2" + "'.";
+        errorMsg02 = "Annotation should not be used on parameter 'arg0' of '" +
+                     BadRequestBeanAnnotationInMethodParam.class.getCanonicalName() + ".setHeader2" + "'.";
+
+        expectError(
+                () -> register(BadRequestBeanAnnotationInMethodParam.class),
+                errorMsg01, errorMsg02
+        );
+
+        // error: more than one params for annotated constructor
+        expectError(
+                () -> register(BadRequestBeanMoreThanOneConstructorParam.class),
+                "There should be only 1 parameter for '" +
+                BadRequestBeanMoreThanOneConstructorParam.class.getCanonicalName() + "." +
+                BadRequestBeanMoreThanOneConstructorParam.class.getName() + "'."
+        );
+
+        // error: more than one params for annotated method
+        expectError(
+                () -> register(BadRequestBeanMoreThanOneMethodParam.class),
+                "There should be only 1 parameter for '" +
+                BadRequestBeanMoreThanOneMethodParam.class.getCanonicalName() + ".initParams" + "'."
+        );
+
+        // error: some constructor params not annotated
+        expectError(
+                () -> register(BadRequestBeanSomeConstructorParamWithoutAnnotation.class),
+                "There are 4 parameter(s) for '" +
+                BadRequestBeanSomeConstructorParamWithoutAnnotation.class.getCanonicalName() + "." +
+                BadRequestBeanSomeConstructorParamWithoutAnnotation.class.getName() +
+                "', but only 2 of them are annotated."
+        );
+
+        // error: some method params not annotated
+        expectError(
+                () -> register(BadRequestBeanSomeMethodParamWithoutAnnotation.class),
+                "There are 4 parameter(s) for '" +
+                BadRequestBeanSomeMethodParamWithoutAnnotation.class.getCanonicalName() + ".initParams" +
+                "', but only 2 of them are annotated."
+        );
     }
 
     @Test
