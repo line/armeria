@@ -32,8 +32,7 @@ import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
  */
 @Configuration
 @ConditionalOnClass(name = "io.micrometer.spring.autoconfigure.MetricsAutoConfiguration")
-public class ArmeriaMeterBindersConfiguration {
-
+public class ArmeriaSpringBoot1MeterBindersConfiguration {
     // JvmMemoryMetrics, LogbackMetrics, ProcessorMetrics and UptimeMetrics are registered automatically by
     // MeterBindersConfiguration.
 
