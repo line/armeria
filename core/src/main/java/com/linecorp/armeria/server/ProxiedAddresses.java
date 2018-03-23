@@ -16,39 +16,53 @@
 
 package com.linecorp.armeria.server;
 
-import java.net.InetSocketAddress;
+import static java.util.Objects.requireNonNull;
+
 import java.net.SocketAddress;
+
+import com.google.common.base.MoreObjects;
 
 /**
  * An interface to provide source and destination addresses delivered from a proxy server.
  */
-public interface ProxiedAddresses {
+public final class ProxiedAddresses {
 
     /**
-     * Creates an {@link InetProxiedAddress} instance.
+     * Creates a new instance.
      */
-    static InetProxiedAddress of(String sourceAddress, int sourcePort,
-                                 String destinationAddress, int destinationPort) {
-        return new InetProxiedAddress(
-                InetSocketAddress.createUnresolved(sourceAddress, sourcePort),
-                InetSocketAddress.createUnresolved(destinationAddress, destinationPort));
+    public static ProxiedAddresses of(SocketAddress sourceAddress, SocketAddress destinationAddress) {
+        return new ProxiedAddresses(sourceAddress, destinationAddress);
     }
 
-    /**
-     * Creates an {@link InetProxiedAddress} instance.
-     */
-    static InetProxiedAddress of(InetSocketAddress sourceAddress,
-                                 InetSocketAddress destinationAddress) {
-        return new InetProxiedAddress(sourceAddress, destinationAddress);
+    private final SocketAddress sourceAddress;
+    private final SocketAddress destinationAddress;
+
+    private ProxiedAddresses(SocketAddress sourceAddress, SocketAddress destinationAddress) {
+        this.sourceAddress = requireNonNull(sourceAddress, "sourceAddress");
+        this.destinationAddress = requireNonNull(destinationAddress, "destinationAddress");
     }
 
     /**
      * Returns the source address of the proxied request.
      */
-    <A extends SocketAddress> A sourceAddress();
+    @SuppressWarnings("unchecked")
+    public <A extends SocketAddress> A sourceAddress() {
+        return (A) sourceAddress;
+    }
 
     /**
      * Returns the destination address of the proxied request.
      */
-    <A extends SocketAddress> A destinationAddress();
+    @SuppressWarnings("unchecked")
+    public <A extends SocketAddress> A destinationAddress() {
+        return (A) destinationAddress;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("sourceAddress", sourceAddress)
+                          .add("destinationAddress", destinationAddress)
+                          .toString();
+    }
 }

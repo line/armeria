@@ -46,12 +46,15 @@ public class ProxyProtocolEnabledServerTest {
 
     private static final TrustManager[] trustAllCerts = {
             new X509TrustManager() {
+                @Override
                 public X509Certificate[] getAcceptedIssuers() {
                     return new X509Certificate[0];
                 }
 
+                @Override
                 public void checkClientTrusted(X509Certificate[] certs, String authType) {}
 
+                @Override
                 public void checkServerTrusted(X509Certificate[] certs, String authType) {}
             }
     };
@@ -60,13 +63,15 @@ public class ProxyProtocolEnabledServerTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(0).https(0).haproxy(0);
+            sb.http(0).https(0).proxyProtocol(0);
             sb.tlsSelfSigned();
             sb.service("/", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    final InetSocketAddress src = ctx.proxiedAddresses().sourceAddress();
-                    final InetSocketAddress dst = ctx.proxiedAddresses().destinationAddress();
+                    final ProxiedAddresses proxyAddresses = ctx.proxiedAddresses();
+                    assert proxyAddresses != null;
+                    final InetSocketAddress src = proxyAddresses.sourceAddress();
+                    final InetSocketAddress dst = proxyAddresses.destinationAddress();
                     return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                                            String.format("%s:%d -> %s:%d\n",
                                                          src.getHostString(), src.getPort(),
@@ -127,13 +132,13 @@ public class ProxyProtocolEnabledServerTest {
                 return "";
             }
         };
-        assertThat(new ServerBuilder().tlsSelfSigned().https(0).http(0).haproxy(0)
+        assertThat(new ServerBuilder().tlsSelfSigned().https(0).http(0).proxyProtocol(0)
                                       .annotatedService(service).build()).isNotNull();
-        assertThat(new ServerBuilder().tlsSelfSigned().https(0).haproxy(0)
+        assertThat(new ServerBuilder().tlsSelfSigned().https(0).proxyProtocol(0)
                                       .annotatedService(service).build()).isNotNull();
-        assertThat(new ServerBuilder().http(0).haproxy(0)
+        assertThat(new ServerBuilder().http(0).proxyProtocol(0)
                                       .annotatedService(service).build()).isNotNull();
-        assertThatThrownBy(() -> new ServerBuilder().haproxy(0).annotatedService(service).build())
+        assertThatThrownBy(() -> new ServerBuilder().proxyProtocol(0).annotatedService(service).build())
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

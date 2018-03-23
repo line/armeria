@@ -44,7 +44,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 @RunWith(Parameterized.class)
 public class PortUnificationServerTest {
 
-    private static ClientFactory clientFactory =
+    private static final ClientFactory clientFactory =
             new ClientFactoryBuilder().sslContextCustomizer(
                     b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
 
@@ -52,7 +52,7 @@ public class PortUnificationServerTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(0).https(0).haproxy(0);
+            sb.http(0).https(0).proxyProtocol(0);
             sb.tlsSelfSigned();
             sb.service("/", new AbstractHttpService() {
                 @Override

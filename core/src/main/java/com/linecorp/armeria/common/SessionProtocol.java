@@ -54,7 +54,7 @@ public enum SessionProtocol {
      */
     H2C("h2c", false, true, 80),
     /**
-     * PROXY - cleartext.
+     * <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> - v1 or v2.
      */
     PROXY("proxy", false, false, 0);
 

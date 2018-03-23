@@ -17,6 +17,10 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.SessionProtocol.H1;
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
+import static com.linecorp.armeria.common.SessionProtocol.H2;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
@@ -44,7 +48,6 @@ public final class ServerPort implements Comparable<ServerPort> {
     private final String localAddressString;
     private final Set<SessionProtocol> protocols;
     private int hashCode;
-    private String protocolNames;
 
     @Nullable
     private String strVal;
@@ -97,10 +100,9 @@ public final class ServerPort implements Comparable<ServerPort> {
 
         final StringJoiner protocolNameJoiner = new StringJoiner("+");
         this.protocols.forEach(p -> protocolNameJoiner.add(p.uriText()));
-        protocolNames = protocolNameJoiner.toString();
 
         localAddressString = localAddress.getAddress().getHostAddress() + ':' +
-                             localAddress.getPort() + ':' + protocolNames;
+                             localAddress.getPort() + ':' + protocolNameJoiner;
     }
 
     /**
@@ -113,11 +115,10 @@ public final class ServerPort implements Comparable<ServerPort> {
     /**
      * Returns the {@link SessionProtocol} this {@link ServerPort} uses.
      *
-     * @deprecated Use {@link #protocols()} instead.
+     * @deprecated Use {@link #protocols()}.
      */
     @Deprecated
     public SessionProtocol protocol() {
-        // TODO(hyangtack) Leave this for backward compatability. Remove it later.
         return protocols.iterator().next();
     }
 
@@ -136,23 +137,25 @@ public final class ServerPort implements Comparable<ServerPort> {
     }
 
     /**
-     * Returns whether the {@link SessionProtocol#HTTP} is in the list of {@link SessionProtocol}s.
+     * Returns whether the {@link SessionProtocol#HTTP}, {@link SessionProtocol#H1C} or
+     * {@link SessionProtocol#H2C} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasHttp() {
-        return hasProtocol(HTTP);
+        return hasProtocol(HTTP) || hasProtocol(H1C) || hasProtocol(H2C);
     }
 
     /**
-     * Returns whether the {@link SessionProtocol#HTTPS} is in the list of {@link SessionProtocol}s.
+     * Returns whether the {@link SessionProtocol#HTTPS}, {@link SessionProtocol#H1} or
+     * {@link SessionProtocol#H2} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasHttps() {
-        return hasProtocol(HTTPS);
+        return hasProtocol(HTTPS) || hasProtocol(H1) || hasProtocol(H2);
     }
 
     /**
      * Returns whether the {@link SessionProtocol#PROXY} is in the list of {@link SessionProtocol}s.
      */
-    public boolean hasProxy() {
+    public boolean hasProxyProtocol() {
         return hasProtocol(PROXY);
     }
 
@@ -161,13 +164,6 @@ public final class ServerPort implements Comparable<ServerPort> {
      */
     public boolean hasProtocol(SessionProtocol protocol) {
         return protocols.stream().anyMatch(p -> p == protocol);
-    }
-
-    /**
-     * Returns all protocol names which are concatenated with {@code +}.
-     */
-    public String protocolNames() {
-        return protocolNames;
     }
 
     @Override
@@ -195,8 +191,8 @@ public final class ServerPort implements Comparable<ServerPort> {
             return false;
         }
 
-        ServerPort that = (ServerPort) obj;
-        int hashCode = this.hashCode;
+        final ServerPort that = (ServerPort) obj;
+        final int hashCode = this.hashCode;
         if (hashCode != 0 && that.hashCode != 0 && hashCode != that.hashCode) {
             return false;
         }

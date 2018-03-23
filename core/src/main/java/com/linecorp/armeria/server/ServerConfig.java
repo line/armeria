@@ -143,7 +143,7 @@ public final class ServerConfig {
 
         this.ports = Collections.unmodifiableList(portsCopy);
 
-        if (this.ports.stream().anyMatch(ServerPort::hasProxy)) {
+        if (this.ports.stream().anyMatch(ServerPort::hasProxyProtocol)) {
             this.proxyProtocolMaxTlvSize = proxyProtocolMaxTlvSize;
         } else {
             this.proxyProtocolMaxTlvSize = 0;

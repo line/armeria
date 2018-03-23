@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -44,6 +45,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
@@ -381,7 +383,7 @@ public final class Server implements AutoCloseable {
         }
 
         // Close all server sockets.
-        Set<Channel> serverChannels = ImmutableSet.copyOf(this.serverChannels);
+        final Set<Channel> serverChannels = ImmutableSet.copyOf(this.serverChannels);
         ChannelUtil.close(serverChannels).whenComplete((unused1, unused2) -> {
             // All server ports have been closed.
             primaryActivePort = null;
@@ -640,13 +642,15 @@ public final class Server implements AutoCloseable {
                     primaryActivePort = actualPort;
                 }
 
-                if (localAddress.getAddress().isAnyLocalAddress() ||
-                    localAddress.getAddress().isLoopbackAddress()) {
-                    logger.info("Serving {} at {} - {}://127.0.0.1:{}/",
-                                port.protocolNames(), localAddress,
-                                port.protocolNames(), localAddress.getPort());
-                } else {
-                    logger.info("Serving {} at {}", port.protocolNames(), localAddress);
+                if (logger.isInfoEnabled()) {
+                    if (localAddress.getAddress().isAnyLocalAddress() ||
+                        localAddress.getAddress().isLoopbackAddress()) {
+                        port.protocols().forEach(p -> logger.info(
+                                "Serving {} at {} - {}://127.0.0.1:{}/",
+                                p.name(), localAddress, p.uriText(), localAddress.getPort()));
+                    } else {
+                        logger.info("Serving {} at {}", Joiner.on('+').join(port.protocols()), localAddress);
+                    }
                 }
 
                 if (remainingPorts.decrementAndGet() == 0) {
@@ -665,7 +669,10 @@ public final class Server implements AutoCloseable {
 
         // e.g. 'armeria-boss-http-*:8080'
         //      'armeria-boss-http-127.0.0.1:8443'
-        return "armeria-boss-" + port.protocolNames() + '-' + localHostName + ':' + localAddr.getPort();
+        //      'armeria-boss-proxy+http+https-127.0.0.1:8443'
+        final StringJoiner joiner = new StringJoiner("+");
+        port.protocols().forEach(p -> joiner.add(p.uriText()));
+        return "armeria-boss-" + joiner + '-' + localHostName + ':' + localAddr.getPort();
     }
 
     private static void completeFuture(CompletableFuture<Void> future) {

@@ -16,9 +16,16 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
+import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -80,39 +87,19 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private static final int UPGRADE_REQUEST_MAX_LENGTH = 16384;
 
     private static final byte[] PROXY_V1_MAGIC_BYTES = {
-            (byte) 'P',
-            (byte) 'R',
-            (byte) 'O',
-            (byte) 'X',
-            (byte) 'Y',
-            };
-
-    private static final byte[] PROXY_V2_MAGIC_BYTES = {
-            (byte) 0x0D,
-            (byte) 0x0A,
-            (byte) 0x0D,
-            (byte) 0x0A,
-            (byte) 0x00,
-            (byte) 0x0D,
-            (byte) 0x0A,
-            (byte) 0x51,
-            (byte) 0x55,
-            (byte) 0x49,
-            (byte) 0x54,
-            (byte) 0x0A
+            (byte) 'P', (byte) 'R', (byte) 'O', (byte) 'X', (byte) 'Y'
     };
 
-    enum PortType {
-        TLS, CLEARTEXT, UNCERTAIN
-    }
+    private static final byte[] PROXY_V2_MAGIC_BYTES = {
+            (byte) 0x0D, (byte) 0x0A, (byte) 0x0D, (byte) 0x0A, (byte) 0x00, (byte) 0x0D, (byte) 0x0A,
+            (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
+    };
 
     private final ServerConfig config;
     private final ServerPort port;
     @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
-
-    private final PortType portType;
 
     /**
      * Creates a new instance.
@@ -126,28 +113,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
-        portType = resolvePortType(port);
-    }
-
-    private static PortType resolvePortType(ServerPort port) {
-        int tls = 0;
-        int cleartext = 0;
-        for (final SessionProtocol p : port.protocols()) {
-            if (p != SessionProtocol.PROXY) {
-                if (p.isTls()) {
-                    tls++;
-                } else {
-                    cleartext++;
-                }
-            }
-        }
-        if (tls > 0 && cleartext > 0) {
-            return PortType.UNCERTAIN;
-        } else if (tls > 0) {
-            return PortType.TLS;
-        } else {
-            return PortType.CLEARTEXT;
-        }
     }
 
     @Override
@@ -155,26 +120,28 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingHandler.INSTANCE);
-
-        if (port.hasProxy()) {
-            p.addLast(new ProtocolDetectionHandler(true, null));
-        } else {
-            configurePipeline(p, null);
-        }
+        configurePipeline(p, port.protocols(), null);
     }
 
-    private void configurePipeline(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        switch (portType) {
-            case TLS:
-                configureHttps(p, proxiedAddresses);
-                break;
-            case CLEARTEXT:
-                configureHttp(p, proxiedAddresses);
-                break;
-            case UNCERTAIN:
-                p.addLast(new ProtocolDetectionHandler(false, proxiedAddresses));
-                break;
+    private void configurePipeline(ChannelPipeline p, Set<SessionProtocol> protocols,
+                                   @Nullable ProxiedAddresses proxiedAddresses) {
+        if (protocols.size() == 1) {
+            switch (protocols.iterator().next()) {
+                case HTTP:
+                    configureHttp(p, proxiedAddresses);
+                    break;
+                case HTTPS:
+                    configureHttps(p, proxiedAddresses);
+                    break;
+                default:
+                    // Should never reach here.
+                    throw new Error();
+            }
+            return;
         }
+
+        // More than one protocol were specified. Detect the protocol.
+        p.addLast(new ProtocolDetectionHandler(protocols, proxiedAddresses));
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
@@ -225,34 +192,99 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
 
-        private final boolean detectProxyProtocol;
-
+        private final EnumSet<SessionProtocol> candidates;
+        @Nullable
+        private final EnumSet<SessionProtocol> nextCandidates;
         @Nullable
         private final ProxiedAddresses proxiedAddresses;
 
-        ProtocolDetectionHandler(boolean detectProxyProtocol,
-                                 @Nullable ProxiedAddresses proxiedAddresses) {
-            this.detectProxyProtocol = detectProxyProtocol;
+        ProtocolDetectionHandler(Set<SessionProtocol> protocols, @Nullable ProxiedAddresses proxiedAddresses) {
+            candidates = EnumSet.copyOf(protocols);
+            if (protocols.contains(PROXY)) {
+                // NB: We copy from 'candidates' rather than from 'protocols'
+                //     because it is faster to copy from an EnumSet into an EnumSet.
+                nextCandidates = EnumSet.copyOf(candidates);
+                nextCandidates.remove(PROXY);
+            } else {
+                nextCandidates = null;
+            }
             this.proxiedAddresses = proxiedAddresses;
         }
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            final int minLength = detectProxyProtocol ? PROXY_V2_MAGIC_BYTES.length
-                                                      : SSL_RECORD_HEADER_LENGTH;
-            if (in.readableBytes() < minLength) {
-                return;
+            final int readableBytes = in.readableBytes();
+            SessionProtocol detected = null;
+            for (final Iterator<SessionProtocol> i = candidates.iterator(); i.hasNext();/* noop */) {
+                final SessionProtocol protocol = i.next();
+                switch (protocol) {
+                    case HTTPS:
+                        if (readableBytes < SSL_RECORD_HEADER_LENGTH) {
+                            break;
+                        }
+
+                        if (SslHandler.isEncrypted(in)) {
+                            detected = HTTPS;
+                            break;
+                        }
+
+                        // Certainly not HTTPS.
+                        i.remove();
+                        break;
+                    case PROXY:
+                        // It's obvious that the magic bytes are longer in PROXY v2, but just in case.
+                        assert PROXY_V1_MAGIC_BYTES.length < PROXY_V2_MAGIC_BYTES.length;
+
+                        if (readableBytes < PROXY_V1_MAGIC_BYTES.length) {
+                            break;
+                        }
+
+                        if (match(PROXY_V1_MAGIC_BYTES, in)) {
+                            detected = PROXY;
+                            break;
+                        }
+
+                        if (readableBytes < PROXY_V2_MAGIC_BYTES.length) {
+                            break;
+                        }
+
+                        if (match(PROXY_V2_MAGIC_BYTES, in)) {
+                            detected = PROXY;
+                            break;
+                        }
+
+                        // Certainly not PROXY protocol.
+                        i.remove();
+                        break;
+                }
             }
 
             final ChannelPipeline p = ctx.pipeline();
-            if (SslHandler.isEncrypted(in)) {
-                configureHttps(p, proxiedAddresses);
-            } else if (detectProxyProtocol &&
-                       (match(PROXY_V1_MAGIC_BYTES, in) || match(PROXY_V2_MAGIC_BYTES, in))) {
-                p.addLast(new HAProxyMessageDecoder(config.proxyProtocolMaxTlvSize()));
-                p.addLast(new ProxiedPipelineConfigurator());
-            } else {
-                configureHttp(p, proxiedAddresses);
+            if (detected == null) {
+                if (candidates.size() == 1) {
+                    // There's only one candidate left - HTTP.
+                    detected = HTTP;
+                } else {
+                    // No protocol was detected and there are more than one candidate left.
+                    return;
+                }
+            }
+
+            switch (detected) {
+                case HTTP:
+                    configureHttp(p, proxiedAddresses);
+                    break;
+                case HTTPS:
+                    configureHttps(p, proxiedAddresses);
+                    break;
+                case PROXY:
+                    assert nextCandidates != null;
+                    p.addLast(new HAProxyMessageDecoder(config.proxyProtocolMaxTlvSize()));
+                    p.addLast(new ProxiedPipelineConfigurator(nextCandidates));
+                    break;
+                default:
+                    // Never reaches here.
+                    throw new Error();
             }
             p.remove(this);
         }
@@ -270,16 +302,28 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private final class ProxiedPipelineConfigurator extends MessageToMessageDecoder<HAProxyMessage> {
+
+        private final EnumSet<SessionProtocol> nextCandidates;
+
+        ProxiedPipelineConfigurator(EnumSet<SessionProtocol> nextCandidates) {
+            this.nextCandidates = nextCandidates;
+        }
+
         @Override
         protected void decode(ChannelHandlerContext ctx, HAProxyMessage msg, List<Object> out)
                 throws Exception {
-            logger.debug("PROXY message {}: {}:{} -> {}:{}",
-                         msg.protocolVersion().name(),
-                         msg.sourceAddress(), msg.sourcePort(),
-                         msg.destinationAddress(), msg.destinationPort());
+            if (logger.isDebugEnabled()) {
+                logger.debug("PROXY message {}: {}:{} -> {}:{} (next: {})",
+                             msg.protocolVersion().name(),
+                             msg.sourceAddress(), msg.sourcePort(),
+                             msg.destinationAddress(), msg.destinationPort(),
+                             nextCandidates);
+            }
             final ChannelPipeline p = ctx.pipeline();
-            configurePipeline(p, ProxiedAddresses.of(msg.sourceAddress(), msg.sourcePort(),
-                                                     msg.destinationAddress(), msg.destinationPort()));
+            final ProxiedAddresses proxiedAddresses = ProxiedAddresses.of(
+                    InetSocketAddress.createUnresolved(msg.sourceAddress(), msg.sourcePort()),
+                    InetSocketAddress.createUnresolved(msg.destinationAddress(), msg.destinationPort()));
+            configurePipeline(p, nextCandidates, proxiedAddresses);
             p.remove(this);
         }
     }

@@ -198,28 +198,28 @@ public final class ServerBuilder {
     }
 
     /**
-     * Adds an HAProxy port that listens on all available network interfaces. It should be specified with
-     * HTTP(S) port.
+     * Adds a <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> port
+     * that listens on all available network interfaces. It should be specified with HTTP(S) port.
      *
-     * @param port the HAProxy port number.
+     * @param port the PROXY protocol port number.
      *
      * @see #https(InetSocketAddress)
      * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
-    public ServerBuilder haproxy(int port) {
+    public ServerBuilder proxyProtocol(int port) {
         return port(new ServerPort(port, PROXY));
     }
 
     /**
-     * Adds an HAProxy port that listens to the specified {@code localAddress}. It should be specified with
-     * HTTP(S) port.
+     * Adds a <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> port
+     * that listens to the specified {@code localAddress}. It should be specified with HTTP(S) port.
      *
      * @param localAddress the local address to bind
      *
      * @see #http(int)
      * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
-    public ServerBuilder haproxy(InetSocketAddress localAddress) {
+    public ServerBuilder proxyProtocol(InetSocketAddress localAddress) {
         return port(new ServerPort(requireNonNull(localAddress, "localAddress"), PROXY));
     }
 
@@ -489,7 +489,12 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the maximum size of additional data for PROXY protocol.
+     * Sets the maximum size of additional data for PROXY protocol. The default value of this property is
+     * {@value #PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE}.
+     *
+     * <p><b>Note:</b> limiting TLV size only affects processing of v2, binary headers. Also, as allowed by
+     * the 1.5 spec, TLV data is currently ignored. For maximum performance, it would be best to configure
+     * your upstream proxy host to <b>NOT</b> send TLV data and set this property to {@code 0}.
      */
     public ServerBuilder proxyProtocolMaxTlvSize(int proxyProtocolMaxTlvSize) {
         this.proxyProtocolMaxTlvSize = proxyProtocolMaxTlvSize;
@@ -933,8 +938,8 @@ public final class ServerBuilder {
 
         this.ports.forEach(
                 port -> checkArgument(port.protocols().stream().anyMatch(p -> p != PROXY),
-                                      "session protocol: %s (expected: at least one %s or %s)",
-                                      port.protocolNames(), HTTP, HTTPS));
+                                      "session protocols: %s (expected: at least one %s or %s)",
+                                      port.protocols(), HTTP, HTTPS));
 
         if (defaultSslContext == null) {
             sslContexts = null;
