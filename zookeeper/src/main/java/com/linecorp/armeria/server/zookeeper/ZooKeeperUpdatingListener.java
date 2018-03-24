@@ -48,48 +48,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
      */
     public static ZooKeeperUpdatingListener of(String zkConnectionStr, String zNodePath) {
-        return new ZooKeeperUpdatingListenerBuilder()
-                .connect(zkConnectionStr)
-                .node(zNodePath)
-                .build();
-    }
-
-    /**
-     * Creates a ZooKeeper server listener, used for register server into ZooKeeper.
-     *
-     * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
-     * {@link ZooKeeperUpdatingListenerBuilder} instead.
-     *
-     * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will registered)
-     * @param sessionTimeout  session timeout
-     */
-    public static ZooKeeperUpdatingListener of(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        return new ZooKeeperUpdatingListenerBuilder()
-                .connect(zkConnectionStr)
-                .node(zNodePath)
-                .sessionTimeout(sessionTimeout)
-                .build();
-    }
-
-    /**
-     * Creates a ZooKeeper server listener, used for register server into ZooKeeper.
-     *
-     * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
-     * {@link ZooKeeperUpdatingListenerBuilder} instead.
-     *
-     * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will registered)
-     * @param sessionTimeout  session timeout
-     * @param endpoint        the endpoint of the server being registered
-     */
-    public static ZooKeeperUpdatingListener of(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                               Endpoint endpoint) {
-        return new ZooKeeperUpdatingListenerBuilder()
-                .connect(zkConnectionStr)
-                .node(zNodePath)
-                .sessionTimeout(sessionTimeout)
-                .endpoint(endpoint)
+        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath)
                 .build();
     }
 
@@ -100,7 +59,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     private Endpoint endpoint;
 
     ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec,
-                                      Endpoint endpoint) {
+                              Endpoint endpoint) {
         this.client = requireNonNull(client, "client");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.nodeValueCodec = requireNonNull(nodeValueCodec);
@@ -110,7 +69,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     /**
      * A ZooKeeper server listener, used for register server into ZooKeeper.
      *
-     * @deprecated Use {@link #of(String, String, int, Endpoint)} instead.
+     * @deprecated Use {@link ZooKeeperUpdatingListenerBuilder}.
      *
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
@@ -135,7 +94,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     /**
      * A ZooKeeper server listener, used for register server into ZooKeeper.
      *
-     * @deprecated Use {@link #of(String, String, int)} instead.
+     * @deprecated Use {@link ZooKeeperUpdatingListenerBuilder}.
      *
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will registered)

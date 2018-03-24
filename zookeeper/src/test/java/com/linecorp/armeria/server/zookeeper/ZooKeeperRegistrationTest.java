@@ -47,7 +47,6 @@ import zookeeperjunit.ZooKeeperAssert;
 public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAssert, OptionAssert {
 
     private List<Server> servers;
-    private List<ServerListener> listeners;
 
     @Before
     public void startServers() {
@@ -58,9 +57,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
                                                .service("/", new EchoService())
                                                .build();
             ServerListener listener;
-            listener = new ZooKeeperUpdatingListenerBuilder()
-                    .connect(instance().connectString().get())
-                    .node(zNode)
+            listener = new ZooKeeperUpdatingListenerBuilder(instance().connectString().get(), zNode)
                     .sessionTimeout(sessionTimeout)
                     .endpoint(endpoint)
                     .build();

@@ -23,6 +23,8 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
@@ -35,6 +37,9 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
  * zNode changes.
  */
 public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
+
+    private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
+
     private final NodeValueCodec nodeValueCodec;
     private final PathChildrenCache pathChildrenCache;
 
@@ -73,10 +78,10 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         pathChildrenCache.getListenable().addListener((c, event) -> {
             switch (event.getType()) {
                 case CHILD_ADDED:
-                    addEndpoint(nodeValueCodec.decode(event.getData().getData()));
+                    addEndpoint(this.nodeValueCodec.decode(event.getData().getData()));
                     break;
                 case CHILD_REMOVED:
-                    removeEndpoint(nodeValueCodec.decode(event.getData().getData()));
+                    removeEndpoint(this.nodeValueCodec.decode(event.getData().getData()));
                     break;
                 default:
                     break;
@@ -94,6 +99,7 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         try {
             pathChildrenCache.close();
         } catch (IOException e) {
+            logger.warn("Failed to close PathChildrenCache: {}", e);
             throw new IllegalStateException(e);
         }
     }

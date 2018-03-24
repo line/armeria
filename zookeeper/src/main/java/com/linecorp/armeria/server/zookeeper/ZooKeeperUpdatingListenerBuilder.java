@@ -23,8 +23,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 
-import com.google.common.base.Strings;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.server.ServerListener;
@@ -33,11 +31,9 @@ import com.linecorp.armeria.server.ServerListener;
  * Builds a new {@link ServerListener}, which registers the server to the zookeeper instance.
  * <h2>Example</h2>
  * <pre>{@code
- * ServerListener register = new ZooKeeperUpdatingListenerBuilder()
- * // Zookeeper Connection String
- * .connect("myZooKeeperHost:2181")
- * // Zookeeper Node to use
- * .node("/myProductionEndpoints")
+ * ServerListener register =
+ * // Zookeeper Connection String and Zookeeper Node to use
+ * new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
  * // Session Timeout
  * .sessionTimeOut(10000)
  * // NodeValueCodec
@@ -48,16 +44,13 @@ import com.linecorp.armeria.server.ServerListener;
  * server.serverListener(register);
  * }</pre>
  *
- * <p>You can also specify the {@link CuratorFramework} instance to use. In this case, {@link #connect(String)},
+ * <p>You can also specify the {@link CuratorFramework} instance to use. In this case,
  * {@link #connectTimeout(int)} and {@link #sessionTimeout(int)} will be ignored.
  *
  * <h2>Example</h2>
  * <pre>{@code
- * ServerListener register = new ZooKeeperUpdatingListenerBuilder()
- * // CuratorFramework
- * .client(curatorFramework)
- * // Zookeeper Node to use
- * .node("/myProductionEndpoints")
+ * // CuratorFramework instance and Zookeeper Node to use
+ * ServerListener register = new ZooKeeperUpdatingListenerBuilder(curatorFramework, "/myProductionEndpoints")
  * // NodeValueCodec
  * .nodeValueCodec(NodeValueCodec.DEFAULT)
  * .build();
@@ -79,39 +72,27 @@ public final class ZooKeeperUpdatingListenerBuilder {
     private NodeValueCodec nodeValueCodec = NodeValueCodec.DEFAULT;
 
     /**
-     * Sets the {@link CuratorFramework} instance to use.
+     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode.
      *
      * @param client the curator framework instance.
      */
-    public ZooKeeperUpdatingListenerBuilder client(CuratorFramework client) {
-        checkArgument(isNullOrEmpty(connect), String.format("connect is already set: %s", connect));
+    public ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String node) {
         this.client = requireNonNull(client, "client");
-        return this;
-    }
-
-    /**
-     * Sets the zookeeper connection string.
-     *
-     * <p>Ignored when {@link CuratorFramework} is set. (see: {@link #client})
-     *
-     * @param connect the zookeeper connection string.
-     */
-    public ZooKeeperUpdatingListenerBuilder connect(String connect) {
-        checkArgument(client == null, "client is already set");
-        checkArgument(!isNullOrEmpty(connect), "connect");
-        this.connect = connect;
-        return this;
-    }
-
-    /**
-     * Sets the zookeeper node to register.
-     *
-     * @param node the zookeeper node to register.
-     */
-    public ZooKeeperUpdatingListenerBuilder node(String node) {
         checkArgument(!isNullOrEmpty(node), "node");
         this.node = node;
-        return this;
+    }
+
+    /**
+     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a Zookeeper Connection String and a zNode.
+     *
+     * @param connect the zookeeper connection string.
+     * @param node the zookeeper node to register.
+     */
+    public ZooKeeperUpdatingListenerBuilder(String connect, String node) {
+        checkArgument(!isNullOrEmpty(connect), "connect");
+        checkArgument(!isNullOrEmpty(node), "node");
+        this.connect = connect;
+        this.node = node;
     }
 
     /**
@@ -166,7 +147,6 @@ public final class ZooKeeperUpdatingListenerBuilder {
      */
     public ZooKeeperUpdatingListener build() {
         if (client == null) {
-            checkArgument(!Strings.isNullOrEmpty(connect), "connect");
             ExponentialBackoffRetry retryPolicy = new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT, 3);
             client = CuratorFrameworkFactory.builder()
                                             .connectString(connect)
@@ -175,7 +155,6 @@ public final class ZooKeeperUpdatingListenerBuilder {
                                             .sessionTimeoutMs(sessionTimeout)
                                             .build();
         }
-        checkArgument(!isNullOrEmpty(node), "node");
 
         return new ZooKeeperUpdatingListener(client, node, nodeValueCodec, endpoint);
     }

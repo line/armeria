@@ -68,12 +68,10 @@ Use `ZooKeeperUpdatingListenerBuilder`_ to register your server to a ZooKeeper c
     import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListenerBuilder;
 
     // This constructor will use server's default host name, port and weight.
-    // Use the other constructors to override the defaults.
-    ServerListener listener = new ZooKeeperUpdatingListenerBuilder()
-            // Zookeeper Connection String
-            .connect("myZooKeeperHost:2181")
-            // Zookeeper Node to use
-            .node("/myProductionEndpoints")
+    // Use `nodeValueCodec` method to override the defaults.
+    ServerListener listener =
+            // Zookeeper Connection String and Zookeeper Node to use
+            new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
             // Session Timeout
             .sessionTimeout(10000)
             .build();
@@ -81,7 +79,27 @@ Use `ZooKeeperUpdatingListenerBuilder`_ to register your server to a ZooKeeper c
     server.start();
     ...
 
-When your server starts up, the `ServerListener`_ instance will register the server automatically to the
+You can use `CuratorFramework`_ instance instead of Zookeeper Connection String. In this case, you can use the
+`CuratorFramework`_ instance for the other purposes.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.ServerListener;
+    import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListenerBuilder;
+    import org.apache.curator.framework.CuratorFramework;
+
+    CuratorFramework client = ...
+    ServerListener listener =
+            // CuratorFramework instance
+            new ZooKeeperUpdatingListenerBuilder(client, "/myProductionEndpoints")
+            // Server's default host name, port and weight
+            .nodeValueCodec(NodeValueCodec.DEFAULT)
+            .build();
+    server.addListener(listener);
+    server.start();
+    ...
+
+When your server starts up, `ZooKeeperUpdatingListener`_ will register the server automatically to the
 specified zNode as a member of the cluster. Each server will represent itself as `an EPHEMERAL node`_, which
 means when a server stops or a network partition between your server and ZooKeeper cluster occurs, the node of
 the server that became unreachable will be deleted automatically by ZooKeeper. As a result, the clients that
