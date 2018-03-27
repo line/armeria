@@ -144,13 +144,13 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     @Ignore
     @Override
-    public void exchangeMetadataUnaryCall() throws Exception {
+    public void exchangeMetadataUnaryCall() {
         // Disable Metadata tests, which armeria does not support.
     }
 
     @Ignore
     @Override
-    public void exchangeMetadataStreamingCall() throws Exception {
+    public void exchangeMetadataStreamingCall() {
         // Disable Metadata tests, which armeria does not support.
     }
 
@@ -184,17 +184,17 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     // HTTP1, which has no concept of graceful shutdown, and HTTP2).
     @Ignore
     @Override
-    public void gracefulShutdown() throws Exception {}
+    public void gracefulShutdown() {}
 
     @Ignore
     @Override
-    public void customMetadata() throws Exception {
+    public void customMetadata() {
         // Disable Metadata tests, which armeria does not support.
     }
 
     @Ignore
     @Override
-    public void statusCodeAndMessage() throws Exception {
+    public void statusCodeAndMessage() {
         // TODO(trustin): Unignore once gRPC upgrades to a newer version of Mockito.
     }
 }
