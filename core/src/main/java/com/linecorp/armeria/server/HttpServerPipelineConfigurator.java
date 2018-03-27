@@ -32,6 +32,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Iterables;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
@@ -126,7 +128,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configurePipeline(ChannelPipeline p, Set<SessionProtocol> protocols,
                                    @Nullable ProxiedAddresses proxiedAddresses) {
         if (protocols.size() == 1) {
-            switch (protocols.iterator().next()) {
+            switch (Iterables.getFirst(protocols, null)) {
                 case HTTP:
                     configureHttp(p, proxiedAddresses);
                     break;
@@ -194,19 +196,17 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private final EnumSet<SessionProtocol> candidates;
         @Nullable
-        private final EnumSet<SessionProtocol> nextCandidates;
+        private final EnumSet<SessionProtocol> proxiedCandidates;
         @Nullable
         private final ProxiedAddresses proxiedAddresses;
 
         ProtocolDetectionHandler(Set<SessionProtocol> protocols, @Nullable ProxiedAddresses proxiedAddresses) {
             candidates = EnumSet.copyOf(protocols);
             if (protocols.contains(PROXY)) {
-                // NB: We copy from 'candidates' rather than from 'protocols'
-                //     because it is faster to copy from an EnumSet into an EnumSet.
-                nextCandidates = EnumSet.copyOf(candidates);
-                nextCandidates.remove(PROXY);
+                proxiedCandidates = EnumSet.copyOf(candidates);
+                proxiedCandidates.remove(PROXY);
             } else {
-                nextCandidates = null;
+                proxiedCandidates = null;
             }
             this.proxiedAddresses = proxiedAddresses;
         }
@@ -259,7 +259,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 }
             }
 
-            final ChannelPipeline p = ctx.pipeline();
             if (detected == null) {
                 if (candidates.size() == 1) {
                     // There's only one candidate left - HTTP.
@@ -270,6 +269,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 }
             }
 
+            final ChannelPipeline p = ctx.pipeline();
             switch (detected) {
                 case HTTP:
                     configureHttp(p, proxiedAddresses);
@@ -278,9 +278,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     configureHttps(p, proxiedAddresses);
                     break;
                 case PROXY:
-                    assert nextCandidates != null;
+                    assert proxiedCandidates != null;
                     p.addLast(new HAProxyMessageDecoder(config.proxyProtocolMaxTlvSize()));
-                    p.addLast(new ProxiedPipelineConfigurator(nextCandidates));
+                    p.addLast(new ProxiedPipelineConfigurator(proxiedCandidates));
                     break;
                 default:
                     // Never reaches here.
@@ -303,10 +303,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private final class ProxiedPipelineConfigurator extends MessageToMessageDecoder<HAProxyMessage> {
 
-        private final EnumSet<SessionProtocol> nextCandidates;
+        private final EnumSet<SessionProtocol> proxiedCandidates;
 
-        ProxiedPipelineConfigurator(EnumSet<SessionProtocol> nextCandidates) {
-            this.nextCandidates = nextCandidates;
+        ProxiedPipelineConfigurator(EnumSet<SessionProtocol> proxiedCandidates) {
+            this.proxiedCandidates = proxiedCandidates;
         }
 
         @Override
@@ -317,13 +317,13 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                              msg.protocolVersion().name(),
                              msg.sourceAddress(), msg.sourcePort(),
                              msg.destinationAddress(), msg.destinationPort(),
-                             nextCandidates);
+                             proxiedCandidates);
             }
             final ChannelPipeline p = ctx.pipeline();
             final ProxiedAddresses proxiedAddresses = ProxiedAddresses.of(
                     InetSocketAddress.createUnresolved(msg.sourceAddress(), msg.sourcePort()),
                     InetSocketAddress.createUnresolved(msg.destinationAddress(), msg.destinationPort()));
-            configurePipeline(p, nextCandidates, proxiedAddresses);
+            configurePipeline(p, proxiedCandidates, proxiedAddresses);
             p.remove(this);
         }
     }

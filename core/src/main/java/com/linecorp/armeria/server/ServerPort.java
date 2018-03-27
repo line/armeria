@@ -30,12 +30,12 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Set;
-import java.util.StringJoiner;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 public final class ServerPort implements Comparable<ServerPort> {
 
     private final InetSocketAddress localAddress;
-    private final String localAddressString;
+    private final String comparisonStr;
     private final Set<SessionProtocol> protocols;
     private int hashCode;
 
@@ -93,16 +93,16 @@ public final class ServerPort implements Comparable<ServerPort> {
         }
 
         requireNonNull(protocols, "protocols");
-        checkArgument(protocols.stream().allMatch(p -> p == HTTP || p == HTTPS || p == PROXY),
-                      "protocol: %s (expected: %s, %s or %s)", protocols, HTTP, HTTPS, PROXY);
         this.localAddress = localAddress;
-        this.protocols = ImmutableSortedSet.copyOf(protocols);
+        this.protocols = Sets.immutableEnumSet(protocols);
 
-        final StringJoiner protocolNameJoiner = new StringJoiner("+");
-        this.protocols.forEach(p -> protocolNameJoiner.add(p.uriText()));
+        checkArgument(!this.protocols.isEmpty(),
+                      "protocols: %s (must not be empty)", this.protocols);
+        checkArgument(this.protocols.stream().allMatch(p -> p == HTTP || p == HTTPS || p == PROXY),
+                      "protocols: %s (expected: %s, %s or %s)", this.protocols, HTTP, HTTPS, PROXY);
 
-        localAddressString = localAddress.getAddress().getHostAddress() + ':' +
-                             localAddress.getPort() + ':' + protocolNameJoiner;
+        comparisonStr = localAddress.getAddress().getHostAddress() + '/' +
+                        localAddress.getPort() + '/' + protocols;
     }
 
     /**
@@ -119,7 +119,7 @@ public final class ServerPort implements Comparable<ServerPort> {
      */
     @Deprecated
     public SessionProtocol protocol() {
-        return protocols.iterator().next();
+        return Iterables.getFirst(protocols, null);
     }
 
     /**
@@ -163,14 +163,14 @@ public final class ServerPort implements Comparable<ServerPort> {
      * Returns whether the specified {@code protocol} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasProtocol(SessionProtocol protocol) {
-        return protocols.stream().anyMatch(p -> p == protocol);
+        return protocols.contains(requireNonNull(protocol, "protocol"));
     }
 
     @Override
     public int hashCode() {
         int hashCode = this.hashCode;
         if (hashCode == 0) {
-            hashCode = localAddressString.hashCode();
+            hashCode = comparisonStr.hashCode();
             if (hashCode == 0) {
                 hashCode = 1;
             }
@@ -197,12 +197,12 @@ public final class ServerPort implements Comparable<ServerPort> {
             return false;
         }
 
-        return localAddressString.equals(that.localAddressString);
+        return comparisonStr.equals(that.comparisonStr);
     }
 
     @Override
     public int compareTo(ServerPort o) {
-        return localAddressString.compareTo(o.localAddressString);
+        return comparisonStr.compareTo(o.comparisonStr);
     }
 
     @Override

@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -39,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -49,6 +49,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -670,9 +671,10 @@ public final class Server implements AutoCloseable {
         // e.g. 'armeria-boss-http-*:8080'
         //      'armeria-boss-http-127.0.0.1:8443'
         //      'armeria-boss-proxy+http+https-127.0.0.1:8443'
-        final StringJoiner joiner = new StringJoiner("+");
-        port.protocols().forEach(p -> joiner.add(p.uriText()));
-        return "armeria-boss-" + joiner + '-' + localHostName + ':' + localAddr.getPort();
+        final String protocolNames = port.protocols().stream()
+                                         .map(SessionProtocol::uriText)
+                                         .collect(Collectors.joining("+"));
+        return "armeria-boss-" + protocolNames + '-' + localHostName + ':' + localAddr.getPort();
     }
 
     private static void completeFuture(CompletableFuture<Void> future) {

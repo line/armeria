@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
@@ -138,13 +139,14 @@ public final class ServerBuilder {
     private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
     private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
     private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
+    private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
+    private boolean usePortUnification;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
     private Consumer<RequestLog> accessLogWriter = AccessLogWriters.disabled();
-    private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
 
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -199,7 +201,7 @@ public final class ServerBuilder {
 
     /**
      * Adds a <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> port
-     * that listens on all available network interfaces. It should be specified with HTTP(S) port.
+     * that listens on all available network interfaces. It should be specified along with HTTP(S) port.
      *
      * @param port the PROXY protocol port number.
      *
@@ -212,7 +214,7 @@ public final class ServerBuilder {
 
     /**
      * Adds a <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> port
-     * that listens to the specified {@code localAddress}. It should be specified with HTTP(S) port.
+     * that listens to the specified {@code localAddress}. It should be specified along with HTTP(S) port.
      *
      * @param localAddress the local address to bind
      *
@@ -285,11 +287,43 @@ public final class ServerBuilder {
                         new ImmutableSet.Builder<SessionProtocol>().addAll(p.protocols())
                                                                    .addAll(port.protocols())
                                                                    .build();
+                if (!usePortUnification) {
+                    final int numProtocols = protocols.size() - (protocols.contains(PROXY) ? 1 : 0);
+                    if (numProtocols > 1) {
+                        throw new IllegalArgumentException(
+                                "cannot bind multiple protocols " + protocols +
+                                " on " + p.localAddress() + ". " +
+                                "Call " + ServerBuilder.class.getSimpleName() + ".usePortUnification() " +
+                                "if you really want to serve multiple protocols in a single port.");
+                    }
+                }
                 ports.set(i, new ServerPort(p.localAddress(), protocols));
                 return this;
             }
         }
         ports.add(port);
+        return this;
+    }
+
+    /**
+     * Enables port unification which allows serving both HTTP and HTTPS on the same TCP/IP port.
+     * For example:
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * sb.usePortUnification();
+     * sb.http(8443);
+     * sb.https(8443);
+     * }</pre>
+     *
+     * <p>Note that you do not have to call this method to enable PROXY protocol:
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * sb.proxyProtocol(8443);
+     * sb.https(8443); // No need to call usePortUnification()
+     * }</pre>
+     */
+    public ServerBuilder usePortUnification() {
+        usePortUnification = true;
         return this;
     }
 
@@ -497,6 +531,8 @@ public final class ServerBuilder {
      * your upstream proxy host to <b>NOT</b> send TLV data and set this property to {@code 0}.
      */
     public ServerBuilder proxyProtocolMaxTlvSize(int proxyProtocolMaxTlvSize) {
+        checkArgument(proxyProtocolMaxTlvSize >= 0,
+                      "proxyProtocolMaxTlvSize: %s (expected: >= 0)", proxyProtocolMaxTlvSize);
         this.proxyProtocolMaxTlvSize = proxyProtocolMaxTlvSize;
         return this;
     }
@@ -937,9 +973,9 @@ public final class ServerBuilder {
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
 
         this.ports.forEach(
-                port -> checkArgument(port.protocols().stream().anyMatch(p -> p != PROXY),
-                                      "session protocols: %s (expected: at least one %s or %s)",
-                                      port.protocols(), HTTP, HTTPS));
+                port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
+                                   "protocols: %s (expected: at least one %s or %s)",
+                                   port.protocols(), HTTP, HTTPS));
 
         if (defaultSslContext == null) {
             sslContexts = null;

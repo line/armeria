@@ -52,6 +52,7 @@ public class PortUnificationServerTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.usePortUnification();
             sb.http(0).https(0).proxyProtocol(0);
             sb.tlsSelfSigned();
             sb.service("/", new AbstractHttpService() {

@@ -63,6 +63,7 @@ public class ProxyProtocolEnabledServerTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.usePortUnification();
             sb.http(0).https(0).proxyProtocol(0);
             sb.tlsSelfSigned();
             sb.service("/", new AbstractHttpService() {
@@ -132,14 +133,15 @@ public class ProxyProtocolEnabledServerTest {
                 return "";
             }
         };
-        assertThat(new ServerBuilder().tlsSelfSigned().https(0).http(0).proxyProtocol(0)
+        assertThat(new ServerBuilder().tlsSelfSigned().usePortUnification().https(0).http(0).proxyProtocol(0)
                                       .annotatedService(service).build()).isNotNull();
         assertThat(new ServerBuilder().tlsSelfSigned().https(0).proxyProtocol(0)
                                       .annotatedService(service).build()).isNotNull();
         assertThat(new ServerBuilder().http(0).proxyProtocol(0)
                                       .annotatedService(service).build()).isNotNull();
-        assertThatThrownBy(() -> new ServerBuilder().proxyProtocol(0).annotatedService(service).build())
-                .isInstanceOf(IllegalArgumentException.class);
+
+        final ServerBuilder sb = new ServerBuilder().proxyProtocol(0).annotatedService(service);
+        assertThatThrownBy(sb::build).isInstanceOf(IllegalStateException.class);
     }
 
     private static void checkResponse(BufferedReader reader) throws IOException {
