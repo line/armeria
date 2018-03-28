@@ -25,15 +25,15 @@ import org.apache.tomcat.util.buf.ByteChunk;
 
 import com.linecorp.armeria.common.HttpData;
 
-class Tomcat85OutputBuffer implements OutputBuffer {
+class Tomcat90OutputBuffer implements OutputBuffer {
     private final Queue<HttpData> data;
     private long bytesWritten;
 
-    Tomcat85OutputBuffer(Queue<HttpData> data) {
+    Tomcat90OutputBuffer(Queue<HttpData> data) {
         this.data = data;
     }
 
-    @Override
+    // Required by Tomcat 8.5
     public int doWrite(ByteChunk chunk) {
         final int start = chunk.getStart();
         final int end = chunk.getEnd();

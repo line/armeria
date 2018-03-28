@@ -28,6 +28,8 @@ includeWithFlags ':zookeeper',                  'java', 'publish', 'relocate'
 includeWithFlags ':benchmarks',       'java'
 includeWithFlags ':it',               'java', 'relocate'
 includeWithFlags ':testing-internal', 'java', 'relocate'
+// No need to publish for Tomcat 8.5 because it's ABI-compatible with Tomcat 9.0
+includeWithFlags ':tomcat8.5',        'java', 'relocate'
 
 // Site generation project
 includeWithFlags ':site'

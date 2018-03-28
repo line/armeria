@@ -31,7 +31,7 @@ import org.apache.tomcat.util.net.SSLHostConfig;
  * A {@link ProtocolHandler} for Tomcat 8.5 and above.
  * Do not use; loaded and instantiated by Tomcat via reflection.
  */
-public final class Tomcat85ProtocolHandler implements ProtocolHandler {
+public final class Tomcat90ProtocolHandler implements ProtocolHandler {
 
     private static final AtomicInteger nextId = new AtomicInteger();
 

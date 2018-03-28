@@ -19,6 +19,9 @@ package com.linecorp.armeria.server.tomcat;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -39,6 +42,8 @@ import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.util.ServerInfo;
 import org.apache.coyote.Adapter;
+import org.apache.coyote.InputBuffer;
+import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.Request;
 import org.apache.coyote.Response;
 import org.apache.tomcat.util.buf.ByteChunk;
@@ -83,19 +88,32 @@ public final class TomcatService implements HttpService {
     private static final Set<LifecycleState> TOMCAT_START_STATES = Sets.immutableEnumSet(
             LifecycleState.STARTED, LifecycleState.STARTING, LifecycleState.STARTING_PREP);
 
-    static final TomcatHandler TOMCAT_HANDLER;
+    private static final MethodHandle INPUT_BUFFER_CONSTRUCTOR;
+    private static final MethodHandle OUTPUT_BUFFER_CONSTRUCTOR;
+    static final Class<?> PROTOCOL_HANDLER_CLASS;
 
     static {
         final String prefix = TomcatService.class.getPackage().getName() + '.';
         final ClassLoader classLoader = TomcatService.class.getClassLoader();
-        final Class<?> handlerClass;
+        final Class<?> inputBufferClass;
+        final Class<?> outputBufferClass;
+        final Class<?> protocolHandlerClass;
         try {
             if (TomcatVersion.major() < 8 || TomcatVersion.major() == 8 && TomcatVersion.minor() < 5) {
-                handlerClass = Class.forName(prefix + "Tomcat80Handler", true, classLoader);
+                inputBufferClass = Class.forName(prefix + "Tomcat80InputBuffer", true, classLoader);
+                outputBufferClass = Class.forName(prefix + "Tomcat80OutputBuffer", true, classLoader);
+                protocolHandlerClass = Class.forName(prefix + "Tomcat80ProtocolHandler", true, classLoader);
             } else {
-                handlerClass = Class.forName(prefix + "Tomcat85Handler", true, classLoader);
+                inputBufferClass = Class.forName(prefix + "Tomcat90InputBuffer", true, classLoader);
+                outputBufferClass = Class.forName(prefix + "Tomcat90OutputBuffer", true, classLoader);
+                protocolHandlerClass = Class.forName(prefix + "Tomcat90ProtocolHandler", true, classLoader);
             }
-            TOMCAT_HANDLER = (TomcatHandler) handlerClass.getDeclaredConstructor().newInstance();
+
+            INPUT_BUFFER_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                    inputBufferClass, MethodType.methodType(void.class, HttpData.class));
+            OUTPUT_BUFFER_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                    outputBufferClass, MethodType.methodType(void.class, Queue.class));
+            PROTOCOL_HANDLER_CLASS = protocolHandlerClass;
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(
                     "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
@@ -296,6 +314,7 @@ public final class TomcatService implements HttpService {
     }
 
     void start() throws Exception {
+        assert hostname != null;
         started = false;
         connector = connectorFactory.apply(hostname);
         final Service service = connector.getService();
@@ -303,11 +322,7 @@ public final class TomcatService implements HttpService {
             return;
         }
 
-        final Engine engine = TomcatUtil.engine(service);
-        if (engine == null) {
-            return;
-        }
-
+        final Engine engine = TomcatUtil.engine(service, hostname);
         final String engineName = engine.getName();
         if (engineName == null) {
             return;
@@ -381,7 +396,7 @@ public final class TomcatService implements HttpService {
                 coyoteRes.setRequest(coyoteReq);
 
                 final Queue<HttpData> data = new ArrayDeque<>();
-                coyoteRes.setOutputBuffer(TOMCAT_HANDLER.outputBuffer(data));
+                coyoteRes.setOutputBuffer((OutputBuffer) OUTPUT_BUFFER_CONSTRUCTOR.invoke(data));
 
                 ctx.blockingTaskExecutor().execute(() -> {
                     if (!res.isOpen()) {
@@ -414,7 +429,7 @@ public final class TomcatService implements HttpService {
     }
 
     @Nullable
-    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage req) {
+    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage req) throws Throwable {
         final String mappedPath = ctx.mappedPath();
         final Request coyoteReq = new Request();
 
@@ -467,7 +482,7 @@ public final class TomcatService implements HttpService {
 
         // Set the content.
         final HttpData content = req.content();
-        coyoteReq.setInputBuffer(TOMCAT_HANDLER.inputBuffer(content));
+        coyoteReq.setInputBuffer((InputBuffer) INPUT_BUFFER_CONSTRUCTOR.invoke(content));
 
         return coyoteReq;
     }
