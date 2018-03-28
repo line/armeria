@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.server.annotation.BeanRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
@@ -102,7 +103,8 @@ final class AnnotatedHttpServices {
      * A default {@link RequestConverterFunction} list.
      */
     private static final List<RequestConverterFunction> defaultRequestConverters =
-            ImmutableList.of(new JacksonRequestConverterFunction(),
+            ImmutableList.of(new BeanRequestConverterFunction(),
+                             new JacksonRequestConverterFunction(),
                              new StringRequestConverterFunction(),
                              new ByteArrayRequestConverterFunction());
 

@@ -17,22 +17,20 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
+import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.aggregationAvailable;
+import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.httpParametersOf;
+import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.validateAndNormalizeSupportedType;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -40,7 +38,6 @@ import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -49,12 +46,14 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil;
+import com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.EnumConverter;
 import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.server.annotation.BeanRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Header;
@@ -63,8 +62,6 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
-import io.netty.handler.codec.http.HttpConstants;
-import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.AsciiString;
 
 /**
@@ -358,7 +355,7 @@ final class AnnotatedHttpServiceMethod {
                     break;
                 case PARAM:
                     if (httpParameters == null) {
-                        httpParameters = httpParametersOf(ctx, req, message);
+                        httpParameters = httpParametersOf(ctx, req.headers(), message);
                     }
                     value = httpParameterValue(httpParameters, entry);
                     values[i] = convertParameter(value, entry);
@@ -378,7 +375,7 @@ final class AnnotatedHttpServiceMethod {
                         values[i] = message;
                     } else if (entry.type() == HttpParameters.class) {
                         if (httpParameters == null) {
-                            httpParameters = httpParametersOf(ctx, req, message);
+                            httpParameters = httpParametersOf(ctx, req.headers(), message);
                         }
                         values[i] = httpParameters;
                     }
@@ -426,51 +423,6 @@ final class AnnotatedHttpServiceMethod {
     }
 
     /**
-     * Returns a map of parameters decoded from a request.
-     *
-     * <p>Usually one of a query string of a URI or URL-encoded form data is specified in the request.
-     * If both of them exist though, they would be decoded and merged into a parameter map.</p>
-     *
-     * <p>Names and values of the parameters would be decoded as UTF-8 character set.</p>
-     * @see QueryStringDecoder#QueryStringDecoder(String, boolean)
-     * @see HttpConstants#DEFAULT_CHARSET
-     */
-    private static HttpParameters httpParametersOf(ServiceRequestContext ctx, HttpRequest req,
-                                                   @Nullable AggregatedHttpMessage message) {
-        try {
-            Map<String, List<String>> parameters = null;
-            final String query = ctx.query();
-            if (query != null) {
-                parameters = new QueryStringDecoder(query, false).parameters();
-            }
-            if (AggregationStrategy.aggregationAvailable(req)) {
-                assert message != null;
-                final String body = message.content().toStringAscii();
-                if (!body.isEmpty()) {
-                    final Map<String, List<String>> p =
-                            new QueryStringDecoder(body, false).parameters();
-                    if (parameters == null) {
-                        parameters = p;
-                    } else if (p != null) {
-                        parameters.putAll(p);
-                    }
-                }
-            }
-
-            if (parameters == null || parameters.isEmpty()) {
-                return EMPTY_PARAMETERS;
-            }
-
-            return HttpParameters.copyOf(parameters);
-        } catch (Exception e) {
-            // If we failed to decode the query string, we ignore the exception raised here.
-            // A missing parameter might be checked when invoking the annotated method.
-            logger.debug("Failed to decode query string: {}", e);
-            return EMPTY_PARAMETERS;
-        }
-    }
-
-    /**
      * Returns the value of the specified parameter name.
      */
     @Nullable
@@ -495,13 +447,10 @@ final class AnnotatedHttpServiceMethod {
 
     @Nullable
     private static Object convertParameter(@Nullable String value, Parameter entry) {
-        Object converted = null;
-        if (value != null) {
-            converted = entry.isEnum() ? entry.getEnumElement(value)
-                                       : stringToType(value, entry.type());
-        }
-
-        return entry.isOptionalWrapped() ? Optional.ofNullable(converted) : converted;
+        return AnnotatedHttpServiceParamUtil.convertParameter(value,
+                                                              entry.type,
+                                                              entry.enumConverter,
+                                                              entry.isOptionalWrapped());
     }
 
     @Nullable
@@ -514,78 +463,6 @@ final class AnnotatedHttpServiceMethod {
         }
 
         return entryDefaultValue(entry);
-    }
-
-    /**
-     * Converts the given {@code str} to {@code T} type object. e.g., "42" -> 42.
-     *
-     * @throws IllegalArgumentException if {@code str} can't be deserialized to {@code T} type object.
-     */
-    @SuppressWarnings("unchecked")
-    private static <T> T stringToType(String str, Class<T> clazz) {
-        try {
-            if (clazz == Byte.TYPE) {
-                return (T) Byte.valueOf(str);
-            } else if (clazz == Short.TYPE) {
-                return (T) Short.valueOf(str);
-            } else if (clazz == Boolean.TYPE) {
-                return (T) Boolean.valueOf(str);
-            } else if (clazz == Integer.TYPE) {
-                return (T) Integer.valueOf(str);
-            } else if (clazz == Long.TYPE) {
-                return (T) Long.valueOf(str);
-            } else if (clazz == Float.TYPE) {
-                return (T) Float.valueOf(str);
-            } else if (clazz == Double.TYPE) {
-                return (T) Double.valueOf(str);
-            } else if (clazz == String.class) {
-                return (T) str;
-            }
-        } catch (NumberFormatException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    "Can't convert '" + str + "' to type '" + clazz.getSimpleName() + "'.", e);
-        }
-
-        throw new IllegalArgumentException(
-                "Type '" + clazz.getSimpleName() + "' can't be converted.");
-    }
-
-    /**
-     * Validates whether the specified {@link Class} is supported. Throws {@link IllegalArgumentException} if
-     * it is not supported.
-     */
-    private static Class<?> validateAndNormalizeSupportedType(Class<?> clazz) {
-        if (clazz == Byte.TYPE || clazz == Byte.class) {
-            return Byte.TYPE;
-        }
-        if (clazz == Short.TYPE || clazz == Short.class) {
-            return Short.TYPE;
-        }
-        if (clazz == Boolean.TYPE || clazz == Boolean.class) {
-            return Boolean.TYPE;
-        }
-        if (clazz == Integer.TYPE || clazz == Integer.class) {
-            return Integer.TYPE;
-        }
-        if (clazz == Long.TYPE || clazz == Long.class) {
-            return Long.TYPE;
-        }
-        if (clazz == Float.TYPE || clazz == Float.class) {
-            return Float.TYPE;
-        }
-        if (clazz == Double.TYPE || clazz == Double.class) {
-            return Double.TYPE;
-        }
-        if (clazz.isEnum()) {
-            return clazz;
-        }
-        if (clazz == String.class) {
-            return String.class;
-        }
-
-        throw new IllegalArgumentException("Parameter type '" + clazz.getName() + "' is not supported.");
     }
 
     /**
@@ -635,6 +512,8 @@ final class AnnotatedHttpServiceMethod {
 
         static Parameter ofRequestObject(Class<?> type,
                                          @Nullable RequestConverterFunction requestConverterFunction) {
+            BeanRequestConverterFunction.register(type);
+
             return new Parameter(ParameterType.REQUEST_OBJECT, true, false, type,
                                  null, null, requestConverterFunction);
         }
@@ -649,9 +528,9 @@ final class AnnotatedHttpServiceMethod {
         private final String defaultValue;
         @Nullable
         private final RequestConverterFunction requestConverterFunction;
-        private final boolean isCaseSensitiveEnum;
+
         @Nullable
-        private final Map<String, ? extends Enum<?>> enumMap;
+        private final EnumConverter<?> enumConverter;
 
         Parameter(ParameterType parameterType,
                   boolean isRequired, boolean isOptionalWrapped, Class<?> type,
@@ -666,38 +545,10 @@ final class AnnotatedHttpServiceMethod {
             this.requestConverterFunction = requestConverterFunction;
 
             if (type.isEnum()) {
-                final Set<? extends Enum<?>> enumInstances = EnumSet.allOf(type.asSubclass(Enum.class));
-                final Map<String, ? extends Enum<?>> lowerCaseEnumMap = enumInstances.stream().collect(
-                        toImmutableMap(e -> Ascii.toLowerCase(e.name()), Function.identity(), (e1, e2) -> e1));
-                if (enumInstances.size() != lowerCaseEnumMap.size()) {
-                    enumMap = enumInstances.stream().collect(toImmutableMap(Enum::name, Function.identity()));
-                    isCaseSensitiveEnum = true;
-                } else {
-                    enumMap = lowerCaseEnumMap;
-                    isCaseSensitiveEnum = false;
-                }
+                enumConverter = new EnumConverter<>(type.asSubclass(Enum.class));
             } else {
-                enumMap = null;
-                isCaseSensitiveEnum = false;
+                enumConverter = null;
             }
-        }
-
-        <T> T getEnumElement(String str) {
-            assert enumMap != null;
-            final Object o = enumMap.get(isCaseSensitiveEnum ? str : Ascii.toLowerCase(str));
-
-            if (o == null) {
-                throw new IllegalArgumentException("unknown enum value: " + str + " (expected: " +
-                                                   enumMap.values() + ')');
-            }
-
-            @SuppressWarnings("unchecked")
-            final T result = (T) o;
-            return result;
-        }
-
-        boolean isEnum() {
-            return type.isEnum();
         }
 
         ParameterType parameterType() {
@@ -752,18 +603,9 @@ final class AnnotatedHttpServiceMethod {
                 case ALWAYS:
                     return true;
                 case FOR_FORM_DATA:
-                    return aggregationAvailable(req);
+                    return aggregationAvailable(req.headers());
             }
             return false;
-        }
-
-        /**
-         * Whether the request is available to be aggregated.
-         */
-        static boolean aggregationAvailable(HttpRequest req) {
-            final MediaType contentType = req.headers().contentType();
-            // We aggregate request stream messages for the media type of form data currently.
-            return contentType != null && MediaType.FORM_DATA.type().equals(contentType.type());
         }
 
         /**
