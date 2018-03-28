@@ -72,7 +72,7 @@ public final class ServerPort implements Comparable<ServerPort> {
      * Creates a new {@link ServerPort} that listens to the specified {@code port} of all available network
      * interfaces using the specified {@link SessionProtocol}s.
      */
-    public ServerPort(int port, Set<SessionProtocol> protocols) {
+    public ServerPort(int port, Iterable<SessionProtocol> protocols) {
         this(new InetSocketAddress(port), protocols);
     }
 
@@ -80,7 +80,7 @@ public final class ServerPort implements Comparable<ServerPort> {
      * Creates a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
      * {@link SessionProtocol}s.
      */
-    public ServerPort(InetSocketAddress localAddress, Set<SessionProtocol> protocols) {
+    public ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols) {
         // Try to resolve the localAddress if not resolved yet.
         if (requireNonNull(localAddress, "localAddress").isUnresolved()) {
             try {
@@ -98,8 +98,11 @@ public final class ServerPort implements Comparable<ServerPort> {
 
         checkArgument(!this.protocols.isEmpty(),
                       "protocols: %s (must not be empty)", this.protocols);
+        checkArgument(this.protocols.contains(HTTP) || this.protocols.contains(HTTPS),
+                      "protocols: %s (must contain HTTP or HTTPS)", this.protocols);
         checkArgument(this.protocols.stream().allMatch(p -> p == HTTP || p == HTTPS || p == PROXY),
-                      "protocols: %s (expected: %s, %s or %s)", this.protocols, HTTP, HTTPS, PROXY);
+                      "protocols: %s (must not contains other than %s, %s or %s)",
+                      this.protocols, HTTP, HTTPS, PROXY);
 
         comparisonStr = localAddress.getAddress().getHostAddress() + '/' +
                         localAddress.getPort() + '/' + protocols;

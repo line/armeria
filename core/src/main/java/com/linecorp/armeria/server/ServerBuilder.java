@@ -32,7 +32,6 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -42,7 +41,6 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -140,7 +138,6 @@ public final class ServerBuilder {
     private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
     private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
-    private boolean usePortUnification;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
@@ -200,32 +197,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Adds a <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> port
-     * that listens on all available network interfaces. It should be specified along with HTTP(S) port.
-     *
-     * @param port the PROXY protocol port number.
-     *
-     * @see #https(InetSocketAddress)
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
-     */
-    public ServerBuilder proxyProtocol(int port) {
-        return port(new ServerPort(port, PROXY));
-    }
-
-    /**
-     * Adds a <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> port
-     * that listens to the specified {@code localAddress}. It should be specified along with HTTP(S) port.
-     *
-     * @param localAddress the local address to bind
-     *
-     * @see #http(int)
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
-     */
-    public ServerBuilder proxyProtocol(InetSocketAddress localAddress) {
-        return port(new ServerPort(requireNonNull(localAddress, "localAddress"), PROXY));
-    }
-
-    /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
      * interfaces using the specified protocol.
      *
@@ -239,14 +210,44 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
-     * interfaces using the specified {@link SessionProtocol}.
+     * interfaces using the specified {@link SessionProtocol}s. Specify multiple protocols to serve more than
+     * one protocol on the same port:
      *
-     * @deprecated Use {@link #http(int)} or {@link #https(int)}.
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * // Serve both HTTP and HTTPS at port 8080.
+     * sb.port(new InetSocketAddress(8080),
+     *         SessionProtocol.HTTP,
+     *         SessionProtocol.HTTPS);
+     * // Enable HTTPS with PROXY protocol support at port 8443.
+     * sb.port(new InetSocketAddress(8443),
+     *         SessionProtocol.PROXY,
+     *         SessionProtocol.HTTPS);
+     * }</pre>
      */
-    @Deprecated
-    public ServerBuilder port(int port, SessionProtocol protocol) {
-        return port(new ServerPort(port, protocol));
+    public ServerBuilder port(int port, SessionProtocol... protocols) {
+        return port(new ServerPort(port, protocols));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
+     * interfaces using the specified {@link SessionProtocol}s. Specify multiple protocols to serve more than
+     * one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * // Serve both HTTP and HTTPS at port 8080.
+     * sb.port(new InetSocketAddress(8080),
+     *         SessionProtocol.HTTP,
+     *         SessionProtocol.HTTPS);
+     * // Enable HTTPS with PROXY protocol support at port 8443.
+     * sb.port(new InetSocketAddress(8443),
+     *         SessionProtocol.PROXY,
+     *         SessionProtocol.HTTPS);
+     * }</pre>
+     */
+    public ServerBuilder port(int port, Iterable<SessionProtocol> protocols) {
+        return port(new ServerPort(port, protocols));
     }
 
     /**
@@ -254,7 +255,6 @@ public final class ServerBuilder {
      * protocol.
      *
      * @deprecated Use {@link #http(InetSocketAddress)} or {@link #https(InetSocketAddress)}.
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
     @Deprecated
     public ServerBuilder port(InetSocketAddress localAddress, String protocol) {
@@ -263,14 +263,42 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
-     * {@link SessionProtocol}.
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
      *
-     * @deprecated Use {@link #http(InetSocketAddress)} or {@link #https(InetSocketAddress)}.
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * // Serve both HTTP and HTTPS at port 8080.
+     * sb.port(new InetSocketAddress(8080),
+     *         SessionProtocol.HTTP,
+     *         SessionProtocol.HTTPS);
+     * // Enable HTTPS with PROXY protocol support at port 8443.
+     * sb.port(new InetSocketAddress(8443),
+     *         SessionProtocol.PROXY,
+     *         SessionProtocol.HTTPS);
+     * }</pre>
      */
-    @Deprecated
-    public ServerBuilder port(InetSocketAddress localAddress, SessionProtocol protocol) {
-        return port(new ServerPort(localAddress, protocol));
+    public ServerBuilder port(InetSocketAddress localAddress, SessionProtocol... protocols) {
+        return port(new ServerPort(localAddress, protocols));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * // Serve both HTTP and HTTPS at port 8080.
+     * sb.port(new InetSocketAddress(8080),
+     *         SessionProtocol.HTTP,
+     *         SessionProtocol.HTTPS);
+     * // Enable HTTPS with PROXY protocol support at port 8443.
+     * sb.port(new InetSocketAddress(8443),
+     *         SessionProtocol.PROXY,
+     *         SessionProtocol.HTTPS);
+     * }</pre>
+     */
+    public ServerBuilder port(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols) {
+        return port(new ServerPort(localAddress, protocols));
     }
 
     /**
@@ -280,50 +308,11 @@ public final class ServerBuilder {
      */
     public ServerBuilder port(ServerPort port) {
         requireNonNull(port, "port");
-        for (int i = 0; i < ports.size(); i++) {
-            final ServerPort p = ports.get(i);
-            if (p.localAddress().equals(port.localAddress())) {
-                final Set<SessionProtocol> protocols =
-                        new ImmutableSet.Builder<SessionProtocol>().addAll(p.protocols())
-                                                                   .addAll(port.protocols())
-                                                                   .build();
-                if (!usePortUnification) {
-                    final int numProtocols = protocols.size() - (protocols.contains(PROXY) ? 1 : 0);
-                    if (numProtocols > 1) {
-                        throw new IllegalArgumentException(
-                                "cannot bind multiple protocols " + protocols +
-                                " on " + p.localAddress() + ". " +
-                                "Call " + ServerBuilder.class.getSimpleName() + ".usePortUnification() " +
-                                "if you really want to serve multiple protocols in a single port.");
-                    }
-                }
-                ports.set(i, new ServerPort(p.localAddress(), protocols));
-                return this;
-            }
+        if (port.localAddress().getPort() != 0) {
+            ports.forEach(p -> checkArgument(!p.localAddress().equals(port.localAddress()),
+                                             "duplicate local address: %s", port.localAddress()));
         }
         ports.add(port);
-        return this;
-    }
-
-    /**
-     * Enables port unification which allows serving both HTTP and HTTPS on the same TCP/IP port.
-     * For example:
-     * <pre>{@code
-     * ServerBuilder sb = new ServerBuilder();
-     * sb.usePortUnification();
-     * sb.http(8443);
-     * sb.https(8443);
-     * }</pre>
-     *
-     * <p>Note that you do not have to call this method to enable PROXY protocol:
-     * <pre>{@code
-     * ServerBuilder sb = new ServerBuilder();
-     * sb.proxyProtocol(8443);
-     * sb.https(8443); // No need to call usePortUnification()
-     * }</pre>
-     */
-    public ServerBuilder usePortUnification() {
-        usePortUnification = true;
         return this;
     }
 
@@ -1051,8 +1040,8 @@ public final class ServerBuilder {
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
-                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix, accessLogWriter,
-                proxyProtocolMaxTlvSize);
+                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix, accessLogWriter
+        );
     }
 }

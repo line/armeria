@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collection;
@@ -52,8 +55,7 @@ public class PortUnificationServerTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.usePortUnification();
-            sb.http(0).https(0).proxyProtocol(0);
+            sb.port(0, PROXY, HTTP, HTTPS);
             sb.tlsSelfSigned();
             sb.service("/", new AbstractHttpService() {
                 @Override
@@ -74,6 +76,11 @@ public class PortUnificationServerTest {
 
     public PortUnificationServerTest(String scheme) {
         this.scheme = scheme;
+    }
+
+    @Test
+    public void httpAndHttpsUsesSamePort() {
+        assertThat(server.httpPort()).isEqualTo(server.httpsPort());
     }
 
     @Test

@@ -23,40 +23,15 @@ import org.junit.Test;
 public class ServerBuilderTest {
 
     @Test
-    public void portUnificationDisabled() {
+    public void duplicatePort() {
         final ServerBuilder sb = new ServerBuilder();
         sb.http(8080);
-        assertPortUnificationFailure(() -> sb.https(8080));
-        // PROXY should be OK.
-        sb.proxyProtocol(8080);
-
-        // Try to add PROXY first.
-        final ServerBuilder sb2 = new ServerBuilder();
-        sb2.proxyProtocol(8080);
-        sb2.https(8080);
-        assertPortUnificationFailure(() -> sb2.http(8080));
+        assertDuplicatePort(() -> sb.https(8080));
     }
 
-    @Test
-    public void portUnificationEnabled() {
-        final ServerBuilder sb = new ServerBuilder();
-        sb.usePortUnification();
-        sb.http(8080);
-        sb.https(8080);
-        sb.proxyProtocol(8080);
-    }
-
-    private static void assertPortUnificationFailure(ThrowingCallable callable) {
+    private static void assertDuplicatePort(ThrowingCallable callable) {
         assertThatThrownBy(callable)
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("usePortUnification()");
-    }
-
-    @Test
-    public void proxyWithoutAnyOtherProtocols() {
-        final ServerBuilder sb = new ServerBuilder();
-        sb.proxyProtocol(8080);
-        assertThatThrownBy(sb::build).isInstanceOf(IllegalStateException.class)
-                                     .hasMessageContaining("proxy");
+                .hasMessageContaining("duplicate");
     }
 }

@@ -172,9 +172,13 @@ If your Armeria server is behind a load balancer such as `HAProxy <https://www.h
 
 .. code-block:: java
 
+    import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+    import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+    import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+
     ServerBuilder sb = new ServerBuilder();
-    sb.proxyProtocol(8080);
-    sb.http(8080);
+    sb.port(8080, PROXY, HTTP);
+    sb.port(8443, PROXY, HTTPS);
     ...
 
 

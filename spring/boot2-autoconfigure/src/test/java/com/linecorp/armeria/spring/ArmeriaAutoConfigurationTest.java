@@ -161,9 +161,8 @@ public class ArmeriaAutoConfigurationTest {
     @Test
     public void testPortConfiguration() throws Exception {
         final Collection<ServerPort> ports = server.activePorts().values();
-        // IP address 127.0.0.1 and 0.0.0.0 would be merged into a single port.
-        assertThat(ports.stream().filter(ServerPort::hasHttp)).hasSize(2);
-        assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(1);
+        assertThat(ports.stream().filter(ServerPort::hasHttp)).hasSize(3);
+        assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isLoopbackAddress())).hasSize(1);
     }
 

@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -63,8 +65,8 @@ public class ProxyProtocolEnabledServerTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.usePortUnification();
-            sb.http(0).https(0).proxyProtocol(0);
+            sb.port(0, PROXY, HTTP);
+            sb.port(0, PROXY, HTTPS);
             sb.tlsSelfSigned();
             sb.service("/", new AbstractHttpService() {
                 @Override
@@ -84,7 +86,7 @@ public class ProxyProtocolEnabledServerTest {
 
     @Test
     public void http() throws Exception {
-        try (Socket sock = new Socket("127.0.0.1", server.httpsPort())) {
+        try (Socket sock = new Socket("127.0.0.1", server.httpPort())) {
             final PrintWriter writer = new PrintWriter(sock.getOutputStream());
             writer.print("PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n");
             writer.print("GET / HTTP/1.1\r\n\r\n");
@@ -133,15 +135,12 @@ public class ProxyProtocolEnabledServerTest {
                 return "";
             }
         };
-        assertThat(new ServerBuilder().tlsSelfSigned().usePortUnification().https(0).http(0).proxyProtocol(0)
+        assertThat(new ServerBuilder().tlsSelfSigned().port(0, PROXY, HTTP, HTTPS)
                                       .annotatedService(service).build()).isNotNull();
-        assertThat(new ServerBuilder().tlsSelfSigned().https(0).proxyProtocol(0)
+        assertThat(new ServerBuilder().tlsSelfSigned().port(0, PROXY, HTTPS)
                                       .annotatedService(service).build()).isNotNull();
-        assertThat(new ServerBuilder().http(0).proxyProtocol(0)
+        assertThat(new ServerBuilder().port(0, PROXY, HTTP)
                                       .annotatedService(service).build()).isNotNull();
-
-        final ServerBuilder sb = new ServerBuilder().proxyProtocol(0).annotatedService(service);
-        assertThatThrownBy(sb::build).isInstanceOf(IllegalStateException.class);
     }
 
     private static void checkResponse(BufferedReader reader) throws IOException {
