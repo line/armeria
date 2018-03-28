@@ -101,7 +101,7 @@ public final class ServerPort implements Comparable<ServerPort> {
         checkArgument(this.protocols.contains(HTTP) || this.protocols.contains(HTTPS),
                       "protocols: %s (must contain HTTP or HTTPS)", this.protocols);
         checkArgument(this.protocols.stream().allMatch(p -> p == HTTP || p == HTTPS || p == PROXY),
-                      "protocols: %s (must not contains other than %s, %s or %s)",
+                      "protocols: %s (must not contain other than %s, %s or %s)",
                       this.protocols, HTTP, HTTPS, PROXY);
 
         comparisonStr = localAddress.getAddress().getHostAddress() + '/' +

@@ -216,11 +216,11 @@ public final class ServerBuilder {
      * <pre>{@code
      * ServerBuilder sb = new ServerBuilder();
      * // Serve both HTTP and HTTPS at port 8080.
-     * sb.port(new InetSocketAddress(8080),
+     * sb.port(8080,
      *         SessionProtocol.HTTP,
      *         SessionProtocol.HTTPS);
      * // Enable HTTPS with PROXY protocol support at port 8443.
-     * sb.port(new InetSocketAddress(8443),
+     * sb.port(8443,
      *         SessionProtocol.PROXY,
      *         SessionProtocol.HTTPS);
      * }</pre>
@@ -237,13 +237,13 @@ public final class ServerBuilder {
      * <pre>{@code
      * ServerBuilder sb = new ServerBuilder();
      * // Serve both HTTP and HTTPS at port 8080.
-     * sb.port(new InetSocketAddress(8080),
-     *         SessionProtocol.HTTP,
-     *         SessionProtocol.HTTPS);
+     * sb.port(8080,
+     *         Arrays.asList(SessionProtocol.HTTP,
+     *                       SessionProtocol.HTTPS));
      * // Enable HTTPS with PROXY protocol support at port 8443.
-     * sb.port(new InetSocketAddress(8443),
-     *         SessionProtocol.PROXY,
-     *         SessionProtocol.HTTPS);
+     * sb.port(8443,
+     *         Arrays.asList(SessionProtocol.PROXY,
+     *                       SessionProtocol.HTTPS));
      * }</pre>
      */
     public ServerBuilder port(int port, Iterable<SessionProtocol> protocols) {
@@ -289,12 +289,12 @@ public final class ServerBuilder {
      * ServerBuilder sb = new ServerBuilder();
      * // Serve both HTTP and HTTPS at port 8080.
      * sb.port(new InetSocketAddress(8080),
-     *         SessionProtocol.HTTP,
-     *         SessionProtocol.HTTPS);
+     *         Arrays.asList(SessionProtocol.HTTP,
+     *                       SessionProtocol.HTTPS));
      * // Enable HTTPS with PROXY protocol support at port 8443.
      * sb.port(new InetSocketAddress(8443),
-     *         SessionProtocol.PROXY,
-     *         SessionProtocol.HTTPS);
+     *         Arrays.asList(SessionProtocol.PROXY,
+     *                       SessionProtocol.HTTPS));
      * }</pre>
      */
     public ServerBuilder port(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols) {
