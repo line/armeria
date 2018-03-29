@@ -39,13 +39,13 @@ import com.linecorp.armeria.server.ServerListenerAdapter;
 public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     /**
-     * Creates a ZooKeeper server listener, used for register server into ZooKeeper.
+     * Creates a ZooKeeper server listener, which registers server into ZooKeeper.
      *
      * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
      * {@link ZooKeeperUpdatingListenerBuilder} instead.
      *
      * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will registered)
+     * @param zNodePath       ZooKeeper node path(under which this server will be registered)
      */
     public static ZooKeeperUpdatingListener of(String zkConnectionStr, String zNodePath) {
         return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath)
@@ -59,7 +59,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     private Endpoint endpoint;
 
     ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec,
-                              Endpoint endpoint) {
+                              @Nullable Endpoint endpoint) {
         this.client = requireNonNull(client, "client");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.nodeValueCodec = requireNonNull(nodeValueCodec);
@@ -67,12 +67,12 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     /**
-     * A ZooKeeper server listener, used for register server into ZooKeeper.
+     * A ZooKeeper server listener, which registers server into ZooKeeper.
      *
      * @deprecated Use {@link ZooKeeperUpdatingListenerBuilder}.
      *
      * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will registered)
+     * @param zNodePath       ZooKeeper node path(under which this server will be registered)
      * @param sessionTimeout  session timeout
      * @param endpoint        the endpoint of the server being registered
      */
@@ -82,22 +82,22 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         checkArgument(!Strings.isNullOrEmpty(zkConnectionStr), "zkConnectionStr");
         ExponentialBackoffRetry retryPolicy = new ExponentialBackoffRetry(1000, 3);
         client = CuratorFrameworkFactory.builder()
-                .connectString(zkConnectionStr)
-                .retryPolicy(retryPolicy)
-                .sessionTimeoutMs(sessionTimeout)
-                .build();
+                                        .connectString(zkConnectionStr)
+                                        .retryPolicy(retryPolicy)
+                                        .sessionTimeoutMs(sessionTimeout)
+                                        .build();
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.nodeValueCodec = NodeValueCodec.DEFAULT;
         this.endpoint = endpoint;
     }
 
     /**
-     * A ZooKeeper server listener, used for register server into ZooKeeper.
+     * A ZooKeeper server listener, which registers server into ZooKeeper.
      *
      * @deprecated Use {@link ZooKeeperUpdatingListenerBuilder}.
      *
      * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will registered)
+     * @param zNodePath       ZooKeeper node path(under which this server will be registered)
      * @param sessionTimeout  session timeout
      */
     @Deprecated
@@ -110,17 +110,17 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         if (endpoint == null) {
             assert server.activePort().isPresent();
             endpoint = Endpoint.of(server.defaultHostname(),
-                    server.activePort().get()
-                            .localAddress().getPort());
+                                   server.activePort().get()
+                                         .localAddress().getPort());
         }
         client.start();
         String key = endpoint.host() + '_' + endpoint.port();
         byte[] value = nodeValueCodec.encode(endpoint);
         try {
             client.create()
-                    .creatingParentsIfNeeded()
-                    .withMode(CreateMode.EPHEMERAL)
-                    .forPath(zNodePath + '/' + key, value);
+                  .creatingParentsIfNeeded()
+                  .withMode(CreateMode.EPHEMERAL)
+                  .forPath(zNodePath + '/' + key, value);
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
