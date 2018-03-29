@@ -278,7 +278,7 @@ public class GrpcServiceServerTest {
     @BeforeClass
     public static void setUpChannel() {
         channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
-                                       .usePlaintext(true)
+                                       .usePlaintext()
                                        .build();
     }
 
@@ -417,7 +417,7 @@ public class GrpcServiceServerTest {
                                      .decompressorRegistry(
                                              DecompressorRegistry.emptyInstance()
                                                                  .with(Codec.Identity.NONE, false))
-                                     .usePlaintext(true)
+                                     .usePlaintext()
                                      .build();
         UnitTestServiceBlockingStub client = UnitTestServiceGrpc.newBlockingStub(nonDecompressingChannel);
         assertThat(client.staticUnaryCallSetsMessageCompression(REQUEST_MESSAGE))

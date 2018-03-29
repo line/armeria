@@ -84,7 +84,7 @@ public abstract class SimpleBenchmarkBase {
     public void start() throws Exception {
         setUp();
         okhttpChannel = OkHttpChannelBuilder.forAddress("127.0.0.1", port())
-                                            .usePlaintext(true)
+                                            .usePlaintext()
                                             .directExecutor()
                                             .build();
         githubApiOkhttpClient = GithubServiceGrpc.newBlockingStub(okhttpChannel);
