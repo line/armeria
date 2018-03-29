@@ -121,9 +121,12 @@ allprojects {
                 }
 
                 def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
+                def tmpPackageListFile = new File(javadocCacheDir, "${name}/${javadocUrlSha1}/package-list.tmp")
                 def packageListFile = new File(javadocCacheDir, "${name}/${javadocUrlSha1}/package-list")
-                if (!packageListFile.exists() && !offlineJavadoc) {
+
+                if ((!packageListFile.exists() || packageListFile.length() == 0) && !offlineJavadoc) {
                     packageListFile.parentFile.mkdirs()
+                    packageListFile.delete()
                     def packageListUrl = new URL("${javadocUrl}package-list")
                     logger.lifecycle("Downloading: ${packageListUrl}")
                     try {
@@ -136,8 +139,10 @@ allprojects {
                         conn.setRequestProperty('Pragma', 'no-cache')
                         conn.setRequestProperty('User-Agent', "Gradle/${gradle.gradleVersion} (${project.group}:${project.ext.artifactId})")
                         conn.setUseCaches(false);
-                        packageListFile.withOutputStream { it << conn.inputStream }
+                        tmpPackageListFile.withOutputStream { it << conn.inputStream }
+                        tmpPackageListFile.renameTo(packageListFile);
                     } catch (e) {
+                        tmpPackageListFile.delete()
                         throw new GradleScriptException("${e}", e)
                     }
                 }
