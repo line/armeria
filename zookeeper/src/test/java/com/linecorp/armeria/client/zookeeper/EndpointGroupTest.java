@@ -43,7 +43,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     private ZooKeeperEndpointGroup endpointGroup;
 
     @Before
-    public void connectZk() throws Throwable {
+    public void connectZk() {
         //crate endpoint group and initialize node value
         setNodeChild(sampleEndpoints);
         try {
@@ -68,14 +68,13 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     }
 
     @Test
-    public void testGetEndpointGroup() throws InterruptedException {
-        //wait until initialized
-        Thread.sleep(1000);
+    public void testGetEndpointGroup() {
+        await().until(() -> endpointGroup != null);
         assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints);
     }
 
     @Test
-    public void testUpdateEndpointGroup() throws Throwable {
+    public void testUpdateEndpointGroup() {
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001).withWeight(2),
                                                  Endpoint.of("127.0.0.1", 8002).withWeight(3));
         //add two more node
