@@ -222,9 +222,9 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '8.5.28'
+    version: &TOMCAT_VERSION '9.0.6'
     javadocs:
-    - https://tomcat.apache.org/tomcat-8.5-doc/api/
+    - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
