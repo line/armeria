@@ -103,6 +103,9 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * @param timeout the connect timeout.
      */
     public ZooKeeperUpdatingListenerBuilder connectTimeout(int timeout) {
+        if (client != null) {
+            throw new IllegalStateException("client is already set");
+        }
         checkArgument(timeout > 0, "timeout: %s (expected: > 0)", timeout);
         this.connectTimeout = timeout;
         return this;
@@ -116,6 +119,9 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * @param timeout the session timeout.
      */
     public ZooKeeperUpdatingListenerBuilder sessionTimeout(int timeout) {
+        if (client != null) {
+            throw new IllegalStateException("client is already set");
+        }
         checkArgument(timeout > 0, "timeout: %s (expected: > 0)", timeout);
         this.sessionTimeout = timeout;
         return this;
@@ -142,8 +148,8 @@ public final class ZooKeeperUpdatingListenerBuilder {
     }
 
     /**
-     * Returns a newly-created {@link ServerListener} instance that registers the server to zookeeper
-     * when the server starts.
+     * Returns a newly-created {@link ZooKeeperUpdatingListener} instance that registers the server to
+     * zookeeper when the server starts.
      */
     public ZooKeeperUpdatingListener build() {
         if (client == null) {
