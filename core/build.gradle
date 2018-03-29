@@ -54,5 +54,7 @@ if (project.hasFlags('coverage')) {
 
 tasks.trimShadedJar.configure {
     keep "class !com.linecorp.armeria.internal.shaded.**,com.linecorp.armeria.** { *; }"
-    keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }" // To make the unsafe field access work.
+    // Do not optimize the dependencies that access some fields via sun.misc.Unsafe or reflection only.
+    keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }"
+    keep "class com.linecorp.armeria.internal.shaded.jctools.** { *; }"
 }

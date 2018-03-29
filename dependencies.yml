@@ -6,7 +6,7 @@ ch.qos.logback:
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.4'
+    version: &JACKSON_VERSION '2.9.5'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
@@ -28,14 +28,14 @@ com.github.ben-manes.caffeine:
       to: com.linecorp.armeria.internal.shaded.caffeine
 
 com.github.jengelman.gradle.plugins:
-  shadow: { version: '2.0.2' }
+  shadow: { version: '2.0.3' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '24.0-jre'
+    version: &GUAVA_VERSION '24.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -56,7 +56,7 @@ com.google.guava:
 
 com.google.protobuf:
   protoc: { version: '3.5.1-1' }
-  protobuf-gradle-plugin: { version: '0.8.3' }
+  protobuf-gradle-plugin: { version: '0.8.5' }
 
 com.puppycrawl.tools:
   checkstyle: { version: '8.8' }
@@ -70,14 +70,14 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.3.0'
+    version: &RETROFIT2_VERSION '2.4.0'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   adapter-java8: { version: *RETROFIT2_VERSION }
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 gradle.plugin.net.davidecavestro:
-  gradle-jxr-plugin: { version: 0.2.1 }
+  gradle-jxr-plugin: { version: '0.2.1' }
 
 io.dropwizard.metrics:
   metrics-core:
@@ -88,7 +88,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.10.0'
+    version: &GRPC_VERSION '1.11.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -112,17 +112,17 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.1'
+    version: &MICROMETER_VERSION '1.0.2'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.2/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.2/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.2/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -138,7 +138,7 @@ io.netty:
     - https://netty.io/4.1/api/
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.7.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.8.Final' }
 
 io.prometheus:
   simpleclient_common:
@@ -147,10 +147,13 @@ io.prometheus:
     - http://prometheus.github.io/client_java/
 
 io.zipkin.brave:
-  brave: { version: &BRAVE_VERSION '4.17.2' }
+  brave:
+    version: &BRAVE_VERSION '4.18.2'
+    javadocs:
+    - https://static.javadoc.io/io.zipkin.brave/brave/4.18.2/
 
 io.zipkin.java:
-  zipkin: { version: &ZIPKIN_VERSION '2.5.1' }
+  zipkin: { version: &ZIPKIN_VERSION '2.7.0' }
 
 it.unimi.dsi:
   fastutil:
@@ -204,7 +207,7 @@ org.apache.httpcomponents:
 
 org.apache.kafka:
   kafka-clients:
-    version: '1.0.1'
+    version: '1.1.0'
     javadocs:
     - https://kafka.apache.org/0100/javadoc/
 
@@ -249,7 +252,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.8.v20171121' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.9.v20180320' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
@@ -269,20 +272,20 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.8.Final' }
+  hibernate-validator: { version: '6.0.9.Final' }
 
 org.javassist:
   javassist: { version: '3.22.0-GA' }
 
 org.jctools:
   jctools-core:
-    version: '2.1.1'
+    version: '2.1.2'
     relocations:
     - from: org.jctools
       to: com.linecorp.armeria.internal.shaded.jctools
 
 org.mockito:
-  mockito-core: { version: '2.15.0' }
+  mockito-core: { version: '2.17.0' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.7' }
