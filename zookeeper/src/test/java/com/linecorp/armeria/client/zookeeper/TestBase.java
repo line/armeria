@@ -19,15 +19,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -69,18 +64,6 @@ public class TestBase {
     @AfterClass
     public static void stop() throws Throwable {
         zkInstance.stop().ready(duration);
-    }
-
-    protected static List<KeeperState> takeAllStates(BlockingQueue<KeeperState> queue) throws Exception {
-        final List<KeeperState> actualStates = new ArrayList<>();
-        for (;;) {
-            final KeeperState state = queue.poll(3, TimeUnit.SECONDS);
-            if (state == null) {
-                break;
-            }
-            actualStates.add(state);
-        }
-        return actualStates;
     }
 
     private static int[] unusedPorts(int numPorts) {
