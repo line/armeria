@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -66,6 +68,9 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                   NodeValueCodec nodeValueCodec) {
+        checkArgument(!isNullOrEmpty(zNodePath), "zNodePath");
+        checkArgument(sessionTimeout > 0, "sessionTimeout: %s (expected: > 0)",
+                      sessionTimeout);
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         ExponentialBackoffRetry retryPolicy = new ExponentialBackoffRetry(1000, 3);
         CuratorFramework client = CuratorFrameworkFactory.builder()
@@ -73,6 +78,37 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
                                                          .retryPolicy(retryPolicy)
                                                          .sessionTimeoutMs(sessionTimeout)
                                                          .build();
+        client.start();
+        pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
+        pathChildrenCache.getListenable().addListener((c, event) -> {
+            switch (event.getType()) {
+                case CHILD_ADDED:
+                    addEndpoint(this.nodeValueCodec.decode(event.getData().getData()));
+                    break;
+                case CHILD_REMOVED:
+                    removeEndpoint(this.nodeValueCodec.decode(event.getData().getData()));
+                    break;
+                default:
+                    break;
+            }
+        });
+        try {
+            pathChildrenCache.start();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
+     * node value using {@link NodeValueCodec}.
+     * @param client the curator framework instance.
+     * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
+     * @param nodeValueCodec  the nodeValueCodec
+     */
+    public ZooKeeperEndpointGroup(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec) {
+        checkArgument(!isNullOrEmpty(zNodePath), "zNodePath");
+        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         client.start();
         pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
         pathChildrenCache.getListenable().addListener((c, event) -> {
