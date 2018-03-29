@@ -22,13 +22,13 @@ import javax.annotation.Nullable;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
 
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.internal.zookeeper.Constants;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 
@@ -80,10 +80,9 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                      Endpoint endpoint) {
         checkArgument(!Strings.isNullOrEmpty(zkConnectionStr), "zkConnectionStr");
-        ExponentialBackoffRetry retryPolicy = new ExponentialBackoffRetry(1000, 3);
         client = CuratorFrameworkFactory.builder()
                                         .connectString(zkConnectionStr)
-                                        .retryPolicy(retryPolicy)
+                                        .retryPolicy(Constants.DEFAULT_RETRY_POLICY)
                                         .sessionTimeoutMs(sessionTimeout)
                                         .build();
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");

@@ -24,7 +24,6 @@ import java.io.IOException;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +31,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.internal.zookeeper.Constants;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -72,10 +72,9 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         checkArgument(sessionTimeout > 0, "sessionTimeout: %s (expected: > 0)",
                       sessionTimeout);
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        ExponentialBackoffRetry retryPolicy = new ExponentialBackoffRetry(1000, 3);
         CuratorFramework client = CuratorFrameworkFactory.builder()
                                                          .connectString(zkConnectionStr)
-                                                         .retryPolicy(retryPolicy)
+                                                         .retryPolicy(Constants.DEFAULT_RETRY_POLICY)
                                                          .sessionTimeoutMs(sessionTimeout)
                                                          .build();
         client.start();

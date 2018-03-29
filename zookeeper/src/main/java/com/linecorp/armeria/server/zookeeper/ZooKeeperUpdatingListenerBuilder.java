@@ -21,10 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.internal.zookeeper.Constants;
 import com.linecorp.armeria.server.ServerListener;
 
 /**
@@ -60,14 +60,11 @@ import com.linecorp.armeria.server.ServerListener;
  * }</pre>
  * */
 public final class ZooKeeperUpdatingListenerBuilder {
-    private static final int DEFAULT_CONNECT_TIMEOUT = 1000;
-    private static final int DEFAULT_SESSION_TIMEOUT = 10000;
-
     private CuratorFramework client;
     private String connect;
     private String node;
-    private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
-    private int sessionTimeout = DEFAULT_SESSION_TIMEOUT;
+    private int connectTimeout = Constants.DEFAULT_CONNECT_TIMEOUT;
+    private int sessionTimeout = Constants.DEFAULT_SESSION_TIMEOUT;
     private Endpoint endpoint;
     private NodeValueCodec nodeValueCodec = NodeValueCodec.DEFAULT;
 
@@ -153,10 +150,9 @@ public final class ZooKeeperUpdatingListenerBuilder {
      */
     public ZooKeeperUpdatingListener build() {
         if (client == null) {
-            ExponentialBackoffRetry retryPolicy = new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT, 3);
             client = CuratorFrameworkFactory.builder()
                                             .connectString(connect)
-                                            .retryPolicy(retryPolicy)
+                                            .retryPolicy(Constants.DEFAULT_RETRY_POLICY)
                                             .connectionTimeoutMs(connectTimeout)
                                             .sessionTimeoutMs(sessionTimeout)
                                             .build();
