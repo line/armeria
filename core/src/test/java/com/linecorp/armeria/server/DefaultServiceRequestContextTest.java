@@ -47,7 +47,8 @@ public class DefaultServiceRequestContextTest {
         final ServiceRequestContext originalCtx = new DefaultServiceRequestContext(
                 virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),
                 SessionProtocol.H2,
-                mappingCtx, PathMappingResult.of("/foo", null, ImmutableMap.of()), mock(Request.class), null);
+                mappingCtx, PathMappingResult.of("/foo", null, ImmutableMap.of()),
+                mock(Request.class), null, null);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");

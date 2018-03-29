@@ -38,15 +38,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -249,7 +252,7 @@ public final class Server implements AutoCloseable {
                                                        config().blockingTaskExecutor());
             }
 
-            for (ServerPort p: ports) {
+            for (final ServerPort p: ports) {
                 start(p).addListener(new ServerPortStartListener(remainingPorts, future, p));
             }
         } catch (Throwable t) {
@@ -381,7 +384,7 @@ public final class Server implements AutoCloseable {
         }
 
         // Close all server sockets.
-        Set<Channel> serverChannels = ImmutableSet.copyOf(this.serverChannels);
+        final Set<Channel> serverChannels = ImmutableSet.copyOf(this.serverChannels);
         ChannelUtil.close(serverChannels).whenComplete((unused1, unused2) -> {
             // All server ports have been closed.
             primaryActivePort = null;
@@ -627,7 +630,7 @@ public final class Server implements AutoCloseable {
                   .addListener((ChannelFutureListener) future -> serverChannels.remove(future.channel()));
 
                 final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
-                final ServerPort actualPort = new ServerPort(localAddress, port.protocol());
+                final ServerPort actualPort = new ServerPort(localAddress, port.protocols());
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
@@ -640,13 +643,15 @@ public final class Server implements AutoCloseable {
                     primaryActivePort = actualPort;
                 }
 
-                if (localAddress.getAddress().isAnyLocalAddress() ||
-                    localAddress.getAddress().isLoopbackAddress()) {
-                    logger.info("Serving {} at {} - {}://127.0.0.1:{}/",
-                                port.protocol().name(), localAddress,
-                                port.protocol().uriText(), localAddress.getPort());
-                } else {
-                    logger.info("Serving {} at {}", port.protocol().name(), localAddress);
+                if (logger.isInfoEnabled()) {
+                    if (localAddress.getAddress().isAnyLocalAddress() ||
+                        localAddress.getAddress().isLoopbackAddress()) {
+                        port.protocols().forEach(p -> logger.info(
+                                "Serving {} at {} - {}://127.0.0.1:{}/",
+                                p.name(), localAddress, p.uriText(), localAddress.getPort()));
+                    } else {
+                        logger.info("Serving {} at {}", Joiner.on('+').join(port.protocols()), localAddress);
+                    }
                 }
 
                 if (remainingPorts.decrementAndGet() == 0) {
@@ -665,7 +670,11 @@ public final class Server implements AutoCloseable {
 
         // e.g. 'armeria-boss-http-*:8080'
         //      'armeria-boss-http-127.0.0.1:8443'
-        return "armeria-boss-" + port.protocol().uriText() + '-' + localHostName + ':' + localAddr.getPort();
+        //      'armeria-boss-proxy+http+https-127.0.0.1:8443'
+        final String protocolNames = port.protocols().stream()
+                                         .map(SessionProtocol::uriText)
+                                         .collect(Collectors.joining("+"));
+        return "armeria-boss-" + protocolNames + '-' + localHostName + ':' + localAddr.getPort();
     }
 
     private static void completeFuture(CompletableFuture<Void> future) {

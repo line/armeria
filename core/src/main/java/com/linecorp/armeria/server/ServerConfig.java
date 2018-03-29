@@ -77,6 +77,8 @@ public final class ServerConfig {
 
     private final Consumer<RequestLog> accessLogWriter;
 
+    private final int proxyProtocolMaxTlvSize;
+
     @Nullable
     private String strVal;
 
@@ -89,7 +91,7 @@ public final class ServerConfig {
             int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
-            Consumer<RequestLog> accessLogWriter) {
+            Consumer<RequestLog> accessLogWriter, int proxyProtocolMaxTlvSize) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -140,6 +142,12 @@ public final class ServerConfig {
         }
 
         this.ports = Collections.unmodifiableList(portsCopy);
+
+        if (this.ports.stream().anyMatch(ServerPort::hasProxyProtocol)) {
+            this.proxyProtocolMaxTlvSize = proxyProtocolMaxTlvSize;
+        } else {
+            this.proxyProtocolMaxTlvSize = 0;
+        }
 
         // Set virtual host definitions and initialize their domain name mapping.
         final DomainNameMappingBuilder<VirtualHost> mappingBuilder =
@@ -430,6 +438,14 @@ public final class ServerConfig {
         return accessLogWriter;
     }
 
+    /**
+     * Returns the maximum size of additional data (TLV, Tag-Length-Value). It is only used when
+     * PROXY protocol is enabled on the server port.
+     */
+    public int proxyProtocolMaxTlvSize() {
+        return proxyProtocolMaxTlvSize;
+    }
+
     @Override
     public String toString() {
         String strVal = this.strVal;
@@ -440,8 +456,9 @@ public final class ServerConfig {
                     maxNumConnections(), idleTimeoutMillis(),
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
                     defaultMaxHttp1InitialLineLength(), defaultMaxHttp1HeaderSize(), defaultMaxHttp1ChunkSize(),
-                    gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(), accessLogWriter());
+                    proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
+                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(), accessLogWriter()
+            );
         }
 
         return strVal;
@@ -453,7 +470,7 @@ public final class ServerConfig {
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis, long defaultRequestTimeoutMillis,
             long defaultMaxRequestLength, long defaultMaxHttp1InitialLineLength,
-            long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize,
+            long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
             Consumer<RequestLog> accessLogWriter) {
@@ -466,8 +483,8 @@ public final class ServerConfig {
         buf.append("(ports: [");
 
         boolean hasPorts = false;
-        for (ServerPort p : ports) {
-            buf.append(ServerPort.toString(null, p.localAddress(), p.protocol()));
+        for (final ServerPort p : ports) {
+            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols()));
             buf.append(", ");
             hasPorts = true;
         }
@@ -518,6 +535,8 @@ public final class ServerConfig {
         buf.append(defaultMaxHttp1HeaderSize);
         buf.append("B, defaultMaxHttp1ChunkSize: ");
         buf.append(defaultMaxHttp1ChunkSize);
+        buf.append("B, proxyProtocolMaxTlvSize: ");
+        buf.append(proxyProtocolMaxTlvSize);
         buf.append("B, gracefulShutdownQuietPeriod: ");
         buf.append(gracefulShutdownQuietPeriod);
         buf.append(", gracefulShutdownTimeout: ");

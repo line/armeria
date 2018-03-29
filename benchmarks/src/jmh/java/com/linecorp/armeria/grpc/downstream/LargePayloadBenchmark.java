@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.grpc.downstream;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-
 import java.util.concurrent.CountDownLatch;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -100,7 +98,7 @@ public class LargePayloadBenchmark {
                 .build();
         server.start().join();
         ServerPort httpPort = server.activePorts().values().stream()
-                                    .filter(p1 -> p1.protocol() == HTTP).findAny()
+                                    .filter(ServerPort::hasHttp).findAny()
                                     .get();
         final String url = "gproto+http://127.0.0.1:" + httpPort.localAddress().getPort() + "/";
         binaryProxyClient = Clients.newClient(url, BinaryProxyStub.class);

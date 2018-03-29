@@ -162,6 +162,41 @@ You can also add an HTTPS port with your certificate and its private key files:
       .tls(new File("certificate.crt"), new File("private.key"), "myPassphrase");
     ...
 
+
+PROXY protocol
+--------------
+
+Armeria supports both text (v1) and binary (v2) versions of `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt/>`_.
+If your server is behind a load balancer such as `HAProxy <https://www.haproxy.org/>`_ and
+`AWS ELB <https://aws.amazon.com/elasticloadbalancing/>`_, you could consider enabling the PROXY protocol:
+
+.. code-block:: java
+
+    import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+    import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+    import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+
+    ServerBuilder sb = new ServerBuilder();
+    sb.port(8080, PROXY, HTTP);
+    sb.port(8443, PROXY, HTTPS);
+    ...
+
+
+Serving HTTP and HTTPS on the same port
+---------------------------------------
+
+For whatever reason, you may have to serve both HTTP and HTTPS on the same port. Armeria is one of the few
+implementations that supports port unification:
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+    sb.port(8888, HTTP, HTTPS);
+    // Enable PROXY protocol, too.
+    sb.port(9999, PROXY, HTTP, HTTPS);
+    ...
+
+
 Virtual hosts
 -------------
 

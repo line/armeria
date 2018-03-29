@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.grpc.downstream;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
@@ -41,7 +39,7 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
     @Override
     protected int port() {
         ServerPort httpPort = server.activePorts().values().stream()
-                                    .filter(p1 -> p1.protocol() == HTTP).findAny()
+                                    .filter(ServerPort::hasHttp).findAny()
                                     .get();
         return httpPort.localAddress().getPort();
     }
