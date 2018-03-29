@@ -26,4 +26,6 @@ public final class Constants {
 
     public static final ExponentialBackoffRetry
             DEFAULT_RETRY_POLICY = new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT, 3);
+
+    private Constants() {}
 }
