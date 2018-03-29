@@ -133,4 +133,10 @@ public class ServiceRequestContextWrapper
     public void setMaxRequestLength(long maxRequestLength) {
         delegate().setMaxRequestLength(maxRequestLength);
     }
+
+    @Nullable
+    @Override
+    public ProxiedAddresses proxiedAddresses() {
+        return delegate().proxiedAddresses();
+    }
 }

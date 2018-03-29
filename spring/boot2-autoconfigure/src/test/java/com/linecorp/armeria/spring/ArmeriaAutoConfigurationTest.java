@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
@@ -162,7 +161,7 @@ public class ArmeriaAutoConfigurationTest {
     @Test
     public void testPortConfiguration() throws Exception {
         final Collection<ServerPort> ports = server.activePorts().values();
-        assertThat(ports.stream().filter(p -> p.protocol() == SessionProtocol.HTTP)).hasSize(3);
+        assertThat(ports.stream().filter(ServerPort::hasHttp)).hasSize(3);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isLoopbackAddress())).hasSize(1);
     }

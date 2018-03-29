@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
 import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
@@ -114,6 +117,7 @@ public final class ServerBuilder {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
+    private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<ServerListener> serverListeners = new ArrayList<>();
@@ -133,6 +137,7 @@ public final class ServerBuilder {
     private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
     private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
     private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
+    private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
@@ -152,8 +157,7 @@ public final class ServerBuilder {
      * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
     public ServerBuilder http(int port) {
-        ports.add(new ServerPort(port, HTTP));
-        return this;
+        return port(new ServerPort(port, HTTP));
     }
 
     /**
@@ -165,8 +169,7 @@ public final class ServerBuilder {
      * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
     public ServerBuilder http(InetSocketAddress localAddress) {
-        ports.add(new ServerPort(requireNonNull(localAddress, "localAddress"), HTTP));
-        return this;
+        return port(new ServerPort(requireNonNull(localAddress, "localAddress"), HTTP));
     }
 
     /**
@@ -178,8 +181,7 @@ public final class ServerBuilder {
      * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
     public ServerBuilder https(int port) {
-        ports.add(new ServerPort(port, HTTPS));
-        return this;
+        return port(new ServerPort(port, HTTPS));
     }
 
     /**
@@ -191,8 +193,7 @@ public final class ServerBuilder {
      * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
     public ServerBuilder https(InetSocketAddress localAddress) {
-        ports.add(new ServerPort(requireNonNull(localAddress, "localAddress"), HTTPS));
-        return this;
+        return port(new ServerPort(requireNonNull(localAddress, "localAddress"), HTTPS));
     }
 
     /**
@@ -209,15 +210,44 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
-     * interfaces using the specified {@link SessionProtocol}.
+     * interfaces using the specified {@link SessionProtocol}s. Specify multiple protocols to serve more than
+     * one protocol on the same port:
      *
-     * @deprecated Use {@link #http(int)} or {@link #https(int)}.
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * // Serve both HTTP and HTTPS at port 8080.
+     * sb.port(8080,
+     *         SessionProtocol.HTTP,
+     *         SessionProtocol.HTTPS);
+     * // Enable HTTPS with PROXY protocol support at port 8443.
+     * sb.port(8443,
+     *         SessionProtocol.PROXY,
+     *         SessionProtocol.HTTPS);
+     * }</pre>
      */
-    @Deprecated
-    public ServerBuilder port(int port, SessionProtocol protocol) {
-        ports.add(new ServerPort(port, protocol));
-        return this;
+    public ServerBuilder port(int port, SessionProtocol... protocols) {
+        return port(new ServerPort(port, protocols));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
+     * interfaces using the specified {@link SessionProtocol}s. Specify multiple protocols to serve more than
+     * one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * // Serve both HTTP and HTTPS at port 8080.
+     * sb.port(8080,
+     *         Arrays.asList(SessionProtocol.HTTP,
+     *                       SessionProtocol.HTTPS));
+     * // Enable HTTPS with PROXY protocol support at port 8443.
+     * sb.port(8443,
+     *         Arrays.asList(SessionProtocol.PROXY,
+     *                       SessionProtocol.HTTPS));
+     * }</pre>
+     */
+    public ServerBuilder port(int port, Iterable<SessionProtocol> protocols) {
+        return port(new ServerPort(port, protocols));
     }
 
     /**
@@ -225,7 +255,6 @@ public final class ServerBuilder {
      * protocol.
      *
      * @deprecated Use {@link #http(InetSocketAddress)} or {@link #https(InetSocketAddress)}.
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
     @Deprecated
     public ServerBuilder port(InetSocketAddress localAddress, String protocol) {
@@ -234,15 +263,42 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
-     * {@link SessionProtocol}.
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
      *
-     * @deprecated Use {@link #http(InetSocketAddress)} or {@link #https(InetSocketAddress)}.
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * // Serve both HTTP and HTTPS at port 8080.
+     * sb.port(new InetSocketAddress(8080),
+     *         SessionProtocol.HTTP,
+     *         SessionProtocol.HTTPS);
+     * // Enable HTTPS with PROXY protocol support at port 8443.
+     * sb.port(new InetSocketAddress(8443),
+     *         SessionProtocol.PROXY,
+     *         SessionProtocol.HTTPS);
+     * }</pre>
      */
-    @Deprecated
-    public ServerBuilder port(InetSocketAddress localAddress, SessionProtocol protocol) {
-        ports.add(new ServerPort(localAddress, protocol));
-        return this;
+    public ServerBuilder port(InetSocketAddress localAddress, SessionProtocol... protocols) {
+        return port(new ServerPort(localAddress, protocols));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * // Serve both HTTP and HTTPS at port 8080.
+     * sb.port(new InetSocketAddress(8080),
+     *         Arrays.asList(SessionProtocol.HTTP,
+     *                       SessionProtocol.HTTPS));
+     * // Enable HTTPS with PROXY protocol support at port 8443.
+     * sb.port(new InetSocketAddress(8443),
+     *         Arrays.asList(SessionProtocol.PROXY,
+     *                       SessionProtocol.HTTPS));
+     * }</pre>
+     */
+    public ServerBuilder port(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols) {
+        return port(new ServerPort(localAddress, protocols));
     }
 
     /**
@@ -251,7 +307,12 @@ public final class ServerBuilder {
      * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
     public ServerBuilder port(ServerPort port) {
-        ports.add(requireNonNull(port, "port"));
+        requireNonNull(port, "port");
+        if (port.localAddress().getPort() != 0) {
+            ports.forEach(p -> checkArgument(!p.localAddress().equals(port.localAddress()),
+                                             "duplicate local address: %s", port.localAddress()));
+        }
+        ports.add(port);
         return this;
     }
 
@@ -447,6 +508,21 @@ public final class ServerBuilder {
     @SuppressWarnings("unchecked")
     public ServerBuilder accessLogWriter(Consumer<? super RequestLog> accessLogWriter) {
         this.accessLogWriter = (Consumer<RequestLog>) requireNonNull(accessLogWriter, "accessLogWriter");
+        return this;
+    }
+
+    /**
+     * Sets the maximum size of additional data for PROXY protocol. The default value of this property is
+     * {@value #PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE}.
+     *
+     * <p><b>Note:</b> limiting TLV size only affects processing of v2, binary headers. Also, as allowed by
+     * the 1.5 spec, TLV data is currently ignored. For maximum performance, it would be best to configure
+     * your upstream proxy host to <b>NOT</b> send TLV data and set this property to {@code 0}.
+     */
+    public ServerBuilder proxyProtocolMaxTlvSize(int proxyProtocolMaxTlvSize) {
+        checkArgument(proxyProtocolMaxTlvSize >= 0,
+                      "proxyProtocolMaxTlvSize: %s (expected: >= 0)", proxyProtocolMaxTlvSize);
+        this.proxyProtocolMaxTlvSize = proxyProtocolMaxTlvSize;
         return this;
     }
 
@@ -674,7 +750,9 @@ public final class ServerBuilder {
      */
     public ServerBuilder annotatedService(Object service,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, Function.identity(), exceptionHandlersAndConverters);
+        return annotatedService("/", service, Function.identity(),
+                                requireNonNull(exceptionHandlersAndConverters,
+                                               "exceptionHandlersAndConverters"));
     }
 
     /**
@@ -688,7 +766,9 @@ public final class ServerBuilder {
                                           Function<Service<HttpRequest, HttpResponse>,
                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, decorator, exceptionHandlersAndConverters);
+        return annotatedService("/", service, decorator,
+                                requireNonNull(exceptionHandlersAndConverters,
+                                               "exceptionHandlersAndConverters"));
     }
 
     /**
@@ -708,7 +788,8 @@ public final class ServerBuilder {
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Object... exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, Function.identity(),
-                                exceptionHandlersAndConverters);
+                                requireNonNull(exceptionHandlersAndConverters,
+                                               "exceptionHandlersAndConverters"));
     }
 
     /**
@@ -724,7 +805,8 @@ public final class ServerBuilder {
                                           Object... exceptionHandlersAndConverters) {
 
         return annotatedService(pathPrefix, service, decorator,
-                                ImmutableList.copyOf(exceptionHandlersAndConverters));
+                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                    "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -879,12 +961,17 @@ public final class ServerBuilder {
         final DomainNameMapping<SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
 
+        this.ports.forEach(
+                port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
+                                   "protocols: %s (expected: at least one %s or %s)",
+                                   port.protocols(), HTTP, HTTPS));
+
         if (defaultSslContext == null) {
             sslContexts = null;
             if (!this.ports.isEmpty()) {
                 ports = ImmutableList.copyOf(this.ports);
-                for (ServerPort p : ports) {
-                    if (p.protocol().isTls()) {
+                for (final ServerPort p : ports) {
+                    if (p.hasTls()) {
                         throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
                     }
                 }
@@ -895,7 +982,7 @@ public final class ServerBuilder {
             if (!this.ports.isEmpty()) {
                 ports = ImmutableList.copyOf(this.ports);
             } else {
-                ports = ImmutableList.of(new ServerPort(0, HTTPS));
+                ports = ImmutableList.of(new ServerPort(0, HTTP, HTTPS));
             }
 
             final DomainNameMappingBuilder<SslContext>
@@ -915,7 +1002,8 @@ public final class ServerBuilder {
                 idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
-                meterRegistry, serviceLoggerPrefix, accessLogWriter), sslContexts);
+                meterRegistry, serviceLoggerPrefix, accessLogWriter,
+                proxyProtocolMaxTlvSize), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
@@ -952,7 +1040,8 @@ public final class ServerBuilder {
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
-                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix, accessLogWriter);
+                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix, accessLogWriter
+        );
     }
 }

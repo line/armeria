@@ -16,11 +16,23 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
+import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
@@ -34,6 +46,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.haproxy.HAProxyMessage;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
@@ -55,6 +70,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SniHandler;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 
@@ -63,10 +79,23 @@ import io.netty.util.DomainNameMapping;
  */
 final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
+    private static final Logger logger = LoggerFactory.getLogger(HttpServerPipelineConfigurator.class);
+
+    private static final int SSL_RECORD_HEADER_LENGTH = 5;
+
     private static final AsciiString SCHEME_HTTP = AsciiString.of("http");
     private static final AsciiString SCHEME_HTTPS = AsciiString.of("https");
 
     private static final int UPGRADE_REQUEST_MAX_LENGTH = 16384;
+
+    private static final byte[] PROXY_V1_MAGIC_BYTES = {
+            (byte) 'P', (byte) 'R', (byte) 'O', (byte) 'X', (byte) 'Y'
+    };
+
+    private static final byte[] PROXY_V2_MAGIC_BYTES = {
+            (byte) 0x0D, (byte) 0x0A, (byte) 0x0D, (byte) 0x0A, (byte) 0x00, (byte) 0x0D, (byte) 0x0A,
+            (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
+    };
 
     private final ServerConfig config;
     private final ServerPort port;
@@ -93,22 +122,36 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingHandler.INSTANCE);
-
-        if (port.protocol().isTls()) {
-            assert sslContexts != null;
-            p.addLast(new SniHandler(sslContexts));
-            p.addLast(TrafficLoggingHandler.SERVER);
-            configureHttps(p);
-        } else {
-            p.addLast(TrafficLoggingHandler.SERVER);
-            configureHttp(p);
-        }
+        configurePipeline(p, port.protocols(), null);
     }
 
-    private void configureHttp(ChannelPipeline p) {
+    private void configurePipeline(ChannelPipeline p, Set<SessionProtocol> protocols,
+                                   @Nullable ProxiedAddresses proxiedAddresses) {
+        if (protocols.size() == 1) {
+            switch (Iterables.getFirst(protocols, null)) {
+                case HTTP:
+                    configureHttp(p, proxiedAddresses);
+                    break;
+                case HTTPS:
+                    configureHttps(p, proxiedAddresses);
+                    break;
+                default:
+                    // Should never reach here.
+                    throw new Error();
+            }
+            return;
+        }
+
+        // More than one protocol were specified. Detect the protocol.
+        p.addLast(new ProtocolDetectionHandler(protocols, proxiedAddresses));
+    }
+
+    private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
+        p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler());
         configureIdleTimeoutHandler(p);
-        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1C));
+        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+                                        SessionProtocol.H1C, proxiedAddresses));
     }
 
     private void configureIdleTimeoutHandler(ChannelPipeline p) {
@@ -117,8 +160,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
     }
 
-    private void configureHttps(ChannelPipeline p) {
-        p.addLast(new Http2OrHttpHandler());
+    private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
+        assert sslContexts != null;
+        p.addLast(new SniHandler(sslContexts));
+        p.addLast(TrafficLoggingHandler.SERVER);
+        p.addLast(new Http2OrHttpHandler(proxiedAddresses));
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline) {
@@ -146,10 +192,150 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         return handler;
     }
 
+    private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
+
+        private final EnumSet<SessionProtocol> candidates;
+        @Nullable
+        private final EnumSet<SessionProtocol> proxiedCandidates;
+        @Nullable
+        private final ProxiedAddresses proxiedAddresses;
+
+        ProtocolDetectionHandler(Set<SessionProtocol> protocols, @Nullable ProxiedAddresses proxiedAddresses) {
+            candidates = EnumSet.copyOf(protocols);
+            if (protocols.contains(PROXY)) {
+                proxiedCandidates = EnumSet.copyOf(candidates);
+                proxiedCandidates.remove(PROXY);
+            } else {
+                proxiedCandidates = null;
+            }
+            this.proxiedAddresses = proxiedAddresses;
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            final int readableBytes = in.readableBytes();
+            SessionProtocol detected = null;
+            for (final Iterator<SessionProtocol> i = candidates.iterator(); i.hasNext();/* noop */) {
+                final SessionProtocol protocol = i.next();
+                switch (protocol) {
+                    case HTTPS:
+                        if (readableBytes < SSL_RECORD_HEADER_LENGTH) {
+                            break;
+                        }
+
+                        if (SslHandler.isEncrypted(in)) {
+                            detected = HTTPS;
+                            break;
+                        }
+
+                        // Certainly not HTTPS.
+                        i.remove();
+                        break;
+                    case PROXY:
+                        // It's obvious that the magic bytes are longer in PROXY v2, but just in case.
+                        assert PROXY_V1_MAGIC_BYTES.length < PROXY_V2_MAGIC_BYTES.length;
+
+                        if (readableBytes < PROXY_V1_MAGIC_BYTES.length) {
+                            break;
+                        }
+
+                        if (match(PROXY_V1_MAGIC_BYTES, in)) {
+                            detected = PROXY;
+                            break;
+                        }
+
+                        if (readableBytes < PROXY_V2_MAGIC_BYTES.length) {
+                            break;
+                        }
+
+                        if (match(PROXY_V2_MAGIC_BYTES, in)) {
+                            detected = PROXY;
+                            break;
+                        }
+
+                        // Certainly not PROXY protocol.
+                        i.remove();
+                        break;
+                }
+            }
+
+            if (detected == null) {
+                if (candidates.size() == 1) {
+                    // There's only one candidate left - HTTP.
+                    detected = HTTP;
+                } else {
+                    // No protocol was detected and there are more than one candidate left.
+                    return;
+                }
+            }
+
+            final ChannelPipeline p = ctx.pipeline();
+            switch (detected) {
+                case HTTP:
+                    configureHttp(p, proxiedAddresses);
+                    break;
+                case HTTPS:
+                    configureHttps(p, proxiedAddresses);
+                    break;
+                case PROXY:
+                    assert proxiedCandidates != null;
+                    p.addLast(new HAProxyMessageDecoder(config.proxyProtocolMaxTlvSize()));
+                    p.addLast(new ProxiedPipelineConfigurator(proxiedCandidates));
+                    break;
+                default:
+                    // Never reaches here.
+                    throw new Error();
+            }
+            p.remove(this);
+        }
+
+        private boolean match(byte[] prefix, ByteBuf buffer) {
+            final int idx = buffer.readerIndex();
+            for (int i = 0; i < prefix.length; i++) {
+                final byte b = buffer.getByte(idx + i);
+                if (b != prefix[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    private final class ProxiedPipelineConfigurator extends MessageToMessageDecoder<HAProxyMessage> {
+
+        private final EnumSet<SessionProtocol> proxiedCandidates;
+
+        ProxiedPipelineConfigurator(EnumSet<SessionProtocol> proxiedCandidates) {
+            this.proxiedCandidates = proxiedCandidates;
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, HAProxyMessage msg, List<Object> out)
+                throws Exception {
+            if (logger.isDebugEnabled()) {
+                logger.debug("PROXY message {}: {}:{} -> {}:{} (next: {})",
+                             msg.protocolVersion().name(),
+                             msg.sourceAddress(), msg.sourcePort(),
+                             msg.destinationAddress(), msg.destinationPort(),
+                             proxiedCandidates);
+            }
+            final ChannelPipeline p = ctx.pipeline();
+            final ProxiedAddresses proxiedAddresses = ProxiedAddresses.of(
+                    InetSocketAddress.createUnresolved(msg.sourceAddress(), msg.sourcePort()),
+                    InetSocketAddress.createUnresolved(msg.destinationAddress(), msg.destinationPort()));
+            configurePipeline(p, proxiedCandidates, proxiedAddresses);
+            p.remove(this);
+        }
+    }
+
     private final class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
 
-        Http2OrHttpHandler() {
+        @Nullable
+        private final ProxiedAddresses proxiedAddresses;
+
+        Http2OrHttpHandler(@Nullable ProxiedAddresses proxiedAddresses) {
             super(ApplicationProtocolNames.HTTP_1_1);
+            this.proxiedAddresses = proxiedAddresses;
         }
 
         @Override
@@ -171,7 +357,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p));
             configureIdleTimeoutHandler(p);
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H2));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+                                            SessionProtocol.H2, proxiedAddresses));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -182,7 +369,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.defaultMaxHttp1ChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
             configureIdleTimeoutHandler(p);
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+                                            SessionProtocol.H1, proxiedAddresses));
         }
     }
 

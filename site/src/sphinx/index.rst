@@ -39,6 +39,9 @@ HTTP/2
 - Supports HTTP/2 on both TLS and cleartext connections
 - Supports protocol upgrade via both `HTTP/2 connection preface`_ and `traditional HTTP/1 upgrade request`_
 - Fully compatible with existing HTTP/1 servers
+- Integrated `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>`_ support for
+  interoperability with load balancers such as `HAProxy <https://www.haproxy.org/>`_ and
+  `AWS ELB <https://aws.amazon.com/elasticloadbalancing/>`_.
 
 Integration with gRPC and Thrift
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.file;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
@@ -50,6 +49,7 @@ import com.google.common.io.Resources;
 import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.handler.codec.DateFormatter;
@@ -100,7 +100,7 @@ public class HttpFileServiceTest {
         server.start().get();
 
         httpPort = server.activePorts().values().stream()
-                         .filter(p -> p.protocol() == HTTP).findAny().get().localAddress().getPort();
+                         .filter(ServerPort::hasHttp).findAny().get().localAddress().getPort();
     }
 
     @AfterClass
@@ -147,7 +147,7 @@ public class HttpFileServiceTest {
 
             // Confirm file service paths are cached when cache is enabled.
             assertThat(PathAndQuery.cachedPaths())
-                                           .contains("/foo.txt");
+                    .contains("/foo.txt");
         }
     }
 
@@ -197,7 +197,7 @@ public class HttpFileServiceTest {
 
                 // Confirm path not cached when cache disabled.
                 assertThat(PathAndQuery.cachedPaths())
-                                               .doesNotContain("/compressed/foo.txt");
+                        .doesNotContain("/compressed/foo.txt");
             }
         }
     }
@@ -327,7 +327,7 @@ public class HttpFileServiceTest {
         if (expectedContentType != null) {
             assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isTrue();
             assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue())
-                      .startsWith(expectedContentType);
+                    .startsWith(expectedContentType);
         } else {
             assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isFalse();
         }
