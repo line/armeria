@@ -20,15 +20,15 @@ dependencies {
 
 // Use the sources from 'armeria-tomcat' as well as ours.
 // NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
-//     below are added to two projects and having a source directory with two output directories will confuse
-//     the IDE.
+//     below are added to more than one project and having a source dir with more than one output dir will
+//     confuse the IDE.
 tasks.compileJava.source "${rootProject.projectDir}/tomcat/src/main/java"
-tasks.compileJava.exclude '**/Tomcat85*'
+tasks.compileJava.exclude '**/Tomcat90*'
 tasks.processResources.from "${rootProject.projectDir}/tomcat/src/main/resources"
 tasks.compileTestJava.source "${rootProject.projectDir}/tomcat/src/test/java"
 tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources"
 tasks.sourceJar.from "${rootProject.projectDir}/tomcat/src/main/java"
 tasks.sourceJar.from "${rootProject.projectDir}/tomcat/src/main/resources"
-tasks.sourceJar.exclude '**/Tomcat85*'
+tasks.sourceJar.exclude '**/Tomcat90*'
 tasks.javadoc.source "${rootProject.projectDir}/tomcat/src/main/java"
-tasks.javadoc.exclude '**/Tomcat85*'
+tasks.javadoc.exclude '**/Tomcat90*'

@@ -51,12 +51,13 @@ public class UnmanagedTomcatServiceTest {
                                         "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-1");
 
             tomcatWithWebApp.addWebapp("", WebAppContainerTest.webAppRoot().getAbsolutePath());
-            TomcatUtil.engine(tomcatWithWebApp.getService()).setName("tomcatWithWebApp");
+            TomcatUtil.engine(tomcatWithWebApp.getService(), "foo").setName("tomcatWithWebApp");
 
             tomcatWithoutWebApp = new Tomcat();
             tomcatWithoutWebApp.setPort(0);
             tomcatWithoutWebApp.setBaseDir("build" + File.separatorChar +
                                            "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-2");
+            assertThat(TomcatUtil.engine(tomcatWithoutWebApp.getService(), "bar")).isNotNull();
 
             // Start the Tomcats.
             tomcatWithWebApp.start();

@@ -24,15 +24,15 @@ import org.apache.tomcat.util.net.ApplicationBufferHandler;
 
 import com.linecorp.armeria.common.HttpData;
 
-class Tomcat85InputBuffer implements InputBuffer {
+class Tomcat90InputBuffer implements InputBuffer {
     private final HttpData content;
     private boolean read;
 
-    Tomcat85InputBuffer(HttpData content) {
+    Tomcat90InputBuffer(HttpData content) {
         this.content = content;
     }
 
-    @Override
+    // Required for 8.5.
     public int doRead(ByteChunk chunk) {
         if (!isNeedToRead()) {
             // Read only once.

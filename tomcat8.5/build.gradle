@@ -1,0 +1,21 @@
+dependencyManagement {
+    // Override Tomcat versions.
+    dependencies {
+        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.29') {
+            entry 'tomcat-embed-core'
+            entry 'tomcat-embed-jasper'
+            entry 'tomcat-embed-el'
+        }
+    }
+}
+
+dependencies {
+    testCompile project(':tomcat')
+}
+
+// Use the test sources from 'armeria-tomcat'
+// NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
+//     below are added to more than one project and having a source dir with more than one output dir will
+//     confuse the IDE.
+tasks.compileTestJava.source "${rootProject.projectDir}/tomcat/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources"

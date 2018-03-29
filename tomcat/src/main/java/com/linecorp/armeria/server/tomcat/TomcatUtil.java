@@ -25,12 +25,12 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipFile;
 
-import javax.annotation.Nullable;
-
 import org.apache.catalina.Container;
 import org.apache.catalina.Engine;
 import org.apache.catalina.LifecycleListener;
 import org.apache.catalina.Service;
+import org.apache.catalina.core.StandardEngine;
+import org.apache.catalina.realm.NullRealm;
 import org.apache.catalina.startup.Constants;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.startup.Tomcat.DefaultWebXmlListener;
@@ -74,17 +74,32 @@ final class TomcatUtil {
     }
 
     /**
-     * The return type of {@link Service#getContainer()} has been changed from {@link Container} to
+     * Returns the {@link Engine} of the specified Tomcat {@link Service}. If the {@link Service} has no
+     * {@link Engine} set, a new {@link Engine} will be created and set.
+     *
+     * <p>The return type of {@link Service#getContainer()} has been changed from {@link Container} to
      * {@link Engine} since 8.5. Calling it directly will cause {@link NoSuchMethodError}.
      */
-    @Nullable
-    static Engine engine(Service service) {
+    static Engine engine(Service service, String hostname) {
+        final Engine engine;
         try {
             final Method m = Service.class.getDeclaredMethod("getContainer");
-            return (Engine) m.invoke(service);
+            engine = (Engine) m.invoke(service);
         } catch (Exception e) {
             throw new Error("failed to invoke Service.getContainer()", e);
         }
+
+        if (engine != null) {
+            return engine;
+        }
+
+        // Create a new engine.
+        final Engine newEngine = new StandardEngine();
+        newEngine.setName("Tomcat");
+        newEngine.setDefaultHost(hostname);
+        newEngine.setRealm(new NullRealm());
+        service.setContainer(newEngine);
+        return newEngine;
     }
 
     static boolean isZip(Path path) {
