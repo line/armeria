@@ -10,7 +10,6 @@ buildscript {
 configure(projectsWithFlags('java')) {
     // Add protobuf/gRPC support if there is src/*/proto
     if (project.ext.hasSourceDirectory('proto')) {
-        apply plugin: 'com.google.osdetector'
         apply plugin: com.google.protobuf.gradle.ProtobufPlugin
 
         protobuf {

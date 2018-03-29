@@ -35,7 +35,6 @@ configure(projectsWithFlags('java')) {
                 srcDirs = [srcDirs]
             }
 
-            apply plugin: 'com.google.osdetector'
             def includeDirs = project.findProperty(sourceSet.getTaskName('', 'thriftIncludeDirs'))?: []
             if (!(includeDirs instanceof Iterable) || includeDirs instanceof CharSequence) {
                 includeDirs = [includeDirs]
@@ -58,7 +57,7 @@ configure(projectsWithFlags('java')) {
                         actualThriftPath =
                                 "${libDir}/thrift" +
                                 "/${project.findProperty('thriftVersion')?: '0.11'}" +
-                                "/thrift.${osdetector.classifier}"
+                                "/thrift.${rootProject.osdetector.classifier}"
                     }
 
                     srcDirs.each { srcDir ->
