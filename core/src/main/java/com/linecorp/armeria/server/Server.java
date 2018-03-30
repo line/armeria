@@ -204,7 +204,7 @@ public final class Server implements AutoCloseable {
         final MeterRegistry meterRegistry = config().meterRegistry();
         meterRegistry.gauge("armeria.server.pendingResponses", gracefulShutdownSupport,
                             GracefulShutdownSupport::pendingResponses);
-        meterRegistry.gauge("armeria.server.numConnections", connectionLimitingHandler,
+        meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
                             ConnectionLimitingHandler::numConnections);
     }
 
