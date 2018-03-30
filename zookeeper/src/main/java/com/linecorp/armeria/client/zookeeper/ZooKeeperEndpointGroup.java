@@ -43,6 +43,8 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
 
     private final NodeValueCodec nodeValueCodec;
+    private final boolean internalClient;
+    private final CuratorFramework client;
     private final PathChildrenCache pathChildrenCache;
 
     /**
@@ -72,11 +74,12 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         checkArgument(sessionTimeout > 0, "sessionTimeout: %s (expected: > 0)",
                       sessionTimeout);
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        CuratorFramework client = CuratorFrameworkFactory.builder()
-                                                         .connectString(zkConnectionStr)
-                                                         .retryPolicy(Constants.DEFAULT_RETRY_POLICY)
-                                                         .sessionTimeoutMs(sessionTimeout)
-                                                         .build();
+        this.internalClient = true;
+        this.client = CuratorFrameworkFactory.builder()
+                                             .connectString(zkConnectionStr)
+                                             .retryPolicy(Constants.DEFAULT_RETRY_POLICY)
+                                             .sessionTimeoutMs(sessionTimeout)
+                                             .build();
         client.start();
         pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
         pathChildrenCache.getListenable().addListener((c, event) -> {
@@ -108,6 +111,8 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     public ZooKeeperEndpointGroup(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec) {
         checkArgument(!isNullOrEmpty(zNodePath), "zNodePath");
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
+        this.internalClient = false;
+        this.client = requireNonNull(client);
         client.start();
         pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
         pathChildrenCache.getListenable().addListener((c, event) -> {
@@ -133,6 +138,9 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     public void close() {
         try {
             pathChildrenCache.close();
+            if (internalClient) {
+                client.close();
+            }
         } catch (IOException e) {
             logger.warn("Failed to close PathChildrenCache: {}", e);
             throw new IllegalStateException(e);

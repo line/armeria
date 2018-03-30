@@ -57,13 +57,15 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     private final NodeValueCodec nodeValueCodec;
     @Nullable
     private Endpoint endpoint;
+    private final boolean internalClient;
 
     ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec,
-                              @Nullable Endpoint endpoint) {
+                              @Nullable Endpoint endpoint, boolean internalClient) {
         this.client = requireNonNull(client, "client");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.nodeValueCodec = requireNonNull(nodeValueCodec);
         this.endpoint = endpoint;
+        this.internalClient = internalClient;
     }
 
     /**
@@ -88,6 +90,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.nodeValueCodec = NodeValueCodec.DEFAULT;
         this.endpoint = endpoint;
+        this.internalClient = true;
     }
 
     /**
@@ -127,6 +130,8 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     @Override
     public void serverStopping(Server server) {
-        client.close();
+        if (internalClient) {
+            client.close();
+        }
     }
 }

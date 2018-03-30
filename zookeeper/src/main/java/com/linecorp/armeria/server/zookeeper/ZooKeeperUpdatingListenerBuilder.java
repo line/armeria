@@ -149,6 +149,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * zookeeper when the server starts.
      */
     public ZooKeeperUpdatingListener build() {
+        boolean internalClient = false;
         if (client == null) {
             client = CuratorFrameworkFactory.builder()
                                             .connectString(connect)
@@ -156,8 +157,9 @@ public final class ZooKeeperUpdatingListenerBuilder {
                                             .connectionTimeoutMs(connectTimeout)
                                             .sessionTimeoutMs(sessionTimeout)
                                             .build();
+            internalClient = true;
         }
 
-        return new ZooKeeperUpdatingListener(client, node, nodeValueCodec, endpoint);
+        return new ZooKeeperUpdatingListener(client, node, nodeValueCodec, endpoint, internalClient);
     }
 }
