@@ -157,12 +157,12 @@ public class GrpcClientTest {
     }
 
     @Test(timeout = 10000)
-    public void emptyUnary() throws Exception {
+    public void emptyUnary() {
         assertThat(blockingStub.emptyCall(EMPTY)).isEqualTo(EMPTY);
     }
 
     @Test(timeout = 10000)
-    public void largeUnary() throws Exception {
+    public void largeUnary() {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setResponseSize(314159)
@@ -546,7 +546,7 @@ public class GrpcClientTest {
     }
 
     @Test(timeout = 30000)
-    public void veryLargeRequest() throws Exception {
+    public void veryLargeRequest() {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setPayload(Payload.newBuilder()
@@ -565,7 +565,7 @@ public class GrpcClientTest {
     }
 
     @Test(timeout = 30000)
-    public void veryLargeResponse() throws Exception {
+    public void veryLargeResponse() {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setResponseSize(unaryPayloadLength())
@@ -581,7 +581,7 @@ public class GrpcClientTest {
     }
 
     @Test(timeout = 10000)
-    public void exchangeHeadersUnaryCall() throws Exception {
+    public void exchangeHeadersUnaryCall() {
         TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
@@ -723,7 +723,7 @@ public class GrpcClientTest {
     // doesn't seem worth investigating too hard on this one.
     @Ignore
     @Test(timeout = 10000)
-    public void deadlineInPast() throws Exception {
+    public void deadlineInPast() {
         // Test once with idle channel and once with active channel
         TestServiceGrpc.TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
@@ -809,7 +809,7 @@ public class GrpcClientTest {
     }
 
     @Test(timeout = 10000)
-    public void statusCodeAndMessage() throws Exception {
+    public void statusCodeAndMessage() {
         int errorCode = 2;
         String errorMessage = "test status message";
         EchoStatus responseStatus = EchoStatus.newBuilder()
