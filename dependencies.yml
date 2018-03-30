@@ -169,7 +169,10 @@ javax.validation:
   validation-api: { version: '2.0.1.Final' }
 
 junit:
-  junit: { version: '4.12' }
+  junit:
+    version: '4.12'
+    javadocs:
+    - https://junit.org/junit4/javadoc/4.12/
 
 kr.motd.gradle:
   sphinx-gradle-plugin: { version: '1.1.0' }
