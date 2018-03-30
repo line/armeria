@@ -135,7 +135,7 @@ public final class Flags {
                    DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE,
                    value -> value >= 0);
 
-    private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
+    private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
@@ -372,8 +372,8 @@ public final class Flags {
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp2Preface(boolean)} option.
      * Note that this value has effect only if a user did not specify it.
      *
-     * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=true} JVM option to enable it.
+     * <p>This flag is enabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=false} JVM option to disable it.
      */
     public static boolean defaultUseHttp2Preface() {
         return DEFAULT_USE_HTTP2_PREFACE;
