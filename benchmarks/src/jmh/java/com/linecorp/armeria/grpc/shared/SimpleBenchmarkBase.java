@@ -78,7 +78,7 @@ public abstract class SimpleBenchmarkBase {
     private GithubServiceFutureStub githubApiOkhttpFutureClient;
 
     @Param
-    private ClientType clientType;
+    protected ClientType clientType;
 
     @Setup
     public void start() throws Exception {

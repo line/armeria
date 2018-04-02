@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.grpc.downstream;
 
+import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceFutureStub;
+import com.linecorp.armeria.grpc.shared.ClientType;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
 import com.linecorp.armeria.grpc.shared.SimpleBenchmarkBase;
 import com.linecorp.armeria.server.Server;
@@ -30,6 +32,8 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 @State(Scope.Benchmark)
+@Fork(jvmArgsAppend = { "-Dcom.linecorp.armeria.cachedHeaders=:authority,:scheme,:method,accept-encoding," +
+                        "content-type,:path,user-agent,grpc-accept-encoding,te"})
 public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     private Server server;
@@ -70,11 +74,13 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
         server.stop().join();
     }
 
-    // public static void main(String[] args) throws Exception {
-    //     DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
-    //     benchmark.start();
-    //     System.out.println(benchmark.simple());
-    //     System.out.println(benchmark.empty());
-    //     benchmark.stop();
-    // }
+//    public static void main(String[] args) throws Exception {
+//         DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
+//         benchmark.clientType = ClientType.NORMAL;
+//         benchmark.start();
+//         for (long i = 0; i < Long.MAX_VALUE; i++) {
+//             benchmark.empty();
+//         }
+//         benchmark.stop();
+//     }
 }
