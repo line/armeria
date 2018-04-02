@@ -23,7 +23,6 @@ import org.openjdk.jmh.annotations.State;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceFutureStub;
-import com.linecorp.armeria.grpc.shared.ClientType;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
 import com.linecorp.armeria.grpc.shared.SimpleBenchmarkBase;
 import com.linecorp.armeria.server.Server;
@@ -74,13 +73,12 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
         server.stop().join();
     }
 
-//    public static void main(String[] args) throws Exception {
-//         DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
-//         benchmark.clientType = ClientType.NORMAL;
-//         benchmark.start();
-//         for (long i = 0; i < Long.MAX_VALUE; i++) {
-//             benchmark.empty();
-//         }
-//         benchmark.stop();
-//     }
+    // public static void main(String[] args) throws Exception {
+    //      DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
+    //      benchmark.start();
+    //      for (long i = 0; i < Long.MAX_VALUE; i++) {
+    //          benchmark.empty();
+    //      }
+    //      benchmark.stop();
+    // }
 }
