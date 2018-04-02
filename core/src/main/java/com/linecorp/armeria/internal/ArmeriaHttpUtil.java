@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.internal;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
 import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -44,14 +45,18 @@ import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.StringJoiner;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -159,6 +164,16 @@ public final class ArmeriaHttpUtil {
 
     private static final Splitter COOKIE_SPLITTER = Splitter.on(';').trimResults().omitEmptyStrings();
     private static final String COOKIE_SEPARATOR = "; ";
+
+    @Nullable
+    private static final LoadingCache<AsciiString, String> HEADER_VALUE_CACHE =
+            Flags.headerValueCacheSpec().map(ArmeriaHttpUtil::buildCache).orElse(null);
+    private static final Set<AsciiString> CACHED_HEADERS = Flags.cachedHeaders().stream().map(AsciiString::of)
+                                                                .collect(toImmutableSet());
+
+    private static LoadingCache<AsciiString, String> buildCache(String spec) {
+        return Caffeine.from(spec).build(AsciiString::toString);
+    }
 
     /**
      * Concatenates two path strings.
@@ -271,7 +286,7 @@ public final class ArmeriaHttpUtil {
                 }
                 COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
             } else {
-                converted.add(name, value.toString());
+                converted.add(name, convertHeaderValue(name, value));
             }
         }
 
@@ -370,7 +385,7 @@ public final class ArmeriaHttpUtil {
                 }
                 COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
             } else {
-                out.add(aName, value.toString());
+                out.add(aName, convertHeaderValue(aName, value));
             }
         }
 
@@ -592,6 +607,18 @@ public final class ArmeriaHttpUtil {
         if (!isTrailer) {
             HttpUtil.setKeepAlive(outputHeaders, httpVersion, true);
         }
+    }
+
+    private static String convertHeaderValue(AsciiString name, CharSequence value) {
+        if (!(value instanceof AsciiString)) {
+            return value.toString();
+        }
+        if (HEADER_VALUE_CACHE != null && CACHED_HEADERS.contains(name)) {
+            String converted = HEADER_VALUE_CACHE.get((AsciiString) value);
+            assert converted != null; // loader does not return null.
+            return converted;
+        }
+        return value.toString();
     }
 
     private static final class CharSequenceMap

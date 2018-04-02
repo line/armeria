@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.grpc.downstream;
 
+import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
@@ -30,6 +31,8 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 @State(Scope.Benchmark)
+@Fork(jvmArgsAppend = { "-Dcom.linecorp.armeria.cachedHeaders=:authority,:scheme,:method,accept-encoding," +
+                        "content-type,:path,user-agent,grpc-accept-encoding,te"})
 public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     private Server server;
@@ -71,10 +74,11 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
     }
 
     // public static void main(String[] args) throws Exception {
-    //     DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
-    //     benchmark.start();
-    //     System.out.println(benchmark.simple());
-    //     System.out.println(benchmark.empty());
-    //     benchmark.stop();
+    //      DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
+    //      benchmark.start();
+    //      for (long i = 0; i < Long.MAX_VALUE; i++) {
+    //          benchmark.empty();
+    //      }
+    //      benchmark.stop();
     // }
 }
