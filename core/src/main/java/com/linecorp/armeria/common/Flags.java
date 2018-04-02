@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
@@ -31,6 +32,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -49,6 +52,8 @@ import io.netty.handler.ssl.OpenSsl;
 public final class Flags {
 
     private static final Logger logger = LoggerFactory.getLogger(Flags.class);
+
+    private static final Splitter CSV_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private static final String PREFIX = "com.linecorp.armeria.";
 
@@ -168,6 +173,16 @@ public final class Flags {
     private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
     private static final Optional<String> PARSED_PATH_CACHE_SPEC =
             caffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
+
+    private static final String DEFAULT_HEADER_VALUE_CACHE_SPEC = "maximumSize=4096";
+    private static final Optional<String> HEADER_VALUE_CACHE_SPEC =
+            caffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
+
+    private static final String DEFAULT_CACHED_HEADERS =
+            ":authority,:scheme,:method,accept-encoding,content-type";
+    private static final List<String> CACHED_HEADERS =
+            CSV_SPLITTER.splitToList(getNormalized(
+                    "cachedHeaders", DEFAULT_CACHED_HEADERS, CharMatcher.ascii()::matchesAllOf));
 
     static {
         if (!Epoll.isAvailable()) {
@@ -439,6 +454,30 @@ public final class Flags {
      */
     public static Optional<String> parsedPathCacheSpec() {
         return PARSED_PATH_CACHE_SPEC;
+    }
+
+    /**
+     * Returns the value of the {@code headerValueCache} parameter. It would be used to create a Caffeine
+     * {@link Cache} instance using {@link Caffeine#from(String)} mapping raw HTTP ascii header values to
+     * {@link String}.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_HEADER_VALUE_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.headerValueCache=<spec>} JVM option to override the default value.
+     * Also, specify {@code -Dcom.linecorp.armeria.headerValueCache=off} JVM option to disable it.
+     */
+    public static Optional<String> headerValueCacheSpec() {
+        return HEADER_VALUE_CACHE_SPEC;
+    }
+
+    /**
+     * Returns the value of the {@code cachedHeaders} parameter which contains a comma-separated list of
+     * headers whose values are cached using {@code headerValueCache}.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_CACHED_HEADERS}. Specify the
+     * {@code -Dcom.linecorp.armeria.cachedHeaders=<csv>} JVM option to override the default value.
+     */
+    public static List<String> cachedHeaders() {
+        return CACHED_HEADERS;
     }
 
     /**
