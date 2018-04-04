@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.zookeeper.Constants;
+import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -50,10 +50,11 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
      * node value using {@link NodeValueCodec}.
+     *
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
-     * @param sessionTimeout  Zookeeper session timeout in milliseconds
+     * @param sessionTimeout  ZooKeeper session timeout in milliseconds
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
         this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT);
@@ -62,22 +63,23 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
      * node value using {@link NodeValueCodec}.
+     *
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
-     * @param sessionTimeout  Zookeeper session timeout in milliseconds
-     * @param nodeValueCodec  the nodeValueCodec
+     * @param sessionTimeout  ZooKeeper session timeout in milliseconds
+     * @param nodeValueCodec  the {@link NodeValueCodec}
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                   NodeValueCodec nodeValueCodec) {
         checkArgument(!isNullOrEmpty(zNodePath), "zNodePath");
-        checkArgument(sessionTimeout > 0, "sessionTimeout: %s (expected: > 0)",
+        checkArgument(sessionTimeout > 0, "sessionTimeoutMillis: %s (expected: > 0)",
                       sessionTimeout);
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         this.internalClient = true;
         this.client = CuratorFrameworkFactory.builder()
                                              .connectString(zkConnectionStr)
-                                             .retryPolicy(Constants.DEFAULT_RETRY_POLICY)
+                                             .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
                                              .sessionTimeoutMs(sessionTimeout)
                                              .build();
         client.start();
@@ -97,6 +99,9 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         try {
             pathChildrenCache.start();
         } catch (Exception e) {
+            if (internalClient) {
+                client.close();
+            }
             throw new IllegalStateException(e);
         }
     }
@@ -104,9 +109,10 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
      * node value using {@link NodeValueCodec}.
-     * @param client the curator framework instance.
+     *
+     * @param client          the {@link CuratorFramework} instance
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
-     * @param nodeValueCodec  the nodeValueCodec
+     * @param nodeValueCodec  the {@link NodeValueCodec}
      */
     public ZooKeeperEndpointGroup(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec) {
         checkArgument(!isNullOrEmpty(zNodePath), "zNodePath");
@@ -130,6 +136,9 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         try {
             pathChildrenCache.start();
         } catch (Exception e) {
+            if (internalClient) {
+                client.close();
+            }
             throw new IllegalStateException(e);
         }
     }
@@ -138,12 +147,16 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     public void close() {
         try {
             pathChildrenCache.close();
-            if (internalClient) {
-                client.close();
-            }
         } catch (IOException e) {
-            logger.warn("Failed to close PathChildrenCache: {}", e);
-            throw new IllegalStateException(e);
+            logger.warn("Failed to close PathChildrenCache: ", e);
+        } finally {
+            if (internalClient) {
+                try {
+                    client.close();
+                } catch (Exception e) {
+                    logger.warn("Failed to close CuratorFramework:", e);
+                }
+            }
         }
     }
 }

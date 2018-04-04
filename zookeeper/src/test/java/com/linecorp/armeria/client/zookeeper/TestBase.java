@@ -40,7 +40,7 @@ import zookeeperjunit.ZKInstance;
 public class TestBase {
     protected static final Logger logger = LoggerFactory.getLogger(EndpointGroupTest.class);
     protected static final String zNode = "/testEndPoints";
-    protected static final int sessionTimeout = 20000;
+    protected static final int sessionTimeoutMillis = 20000;
     protected static final Set<Endpoint> sampleEndpoints;
 
     static {

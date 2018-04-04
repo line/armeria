@@ -56,9 +56,9 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
             Server server = new ServerBuilder().http(endpoint.port())
                                                .service("/", new EchoService())
                                                .build();
-            ServerListener listener;
-            listener = new ZooKeeperUpdatingListenerBuilder(instance().connectString().get(), zNode)
-                    .sessionTimeout(sessionTimeout)
+            ServerListener listener = new ZooKeeperUpdatingListenerBuilder(instance().connectString().get(),
+                                                                           zNode)
+                    .sessionTimeoutMillis(sessionTimeoutMillis)
                     .endpoint(endpoint)
                     .build();
             server.addListener(listener);
@@ -111,7 +111,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
                         }
                     }
 
-                    assertThat(removed).isEqualTo(1);
+                    assertThat(removed).isOne();
                     assertThat(remaining).isEqualTo(sampleEndpoints.size() - 1);
                 }
             } catch (Throwable throwable) {

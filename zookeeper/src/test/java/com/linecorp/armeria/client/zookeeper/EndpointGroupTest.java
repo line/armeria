@@ -48,7 +48,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
         setNodeChild(sampleEndpoints);
         try {
             endpointGroup = new ZooKeeperEndpointGroup(
-                    instance().connectString().get(), zNode, sessionTimeout);
+                    instance().connectString().get(), zNode, sessionTimeoutMillis);
         } catch (IllegalStateException e) {
             fail();
         }

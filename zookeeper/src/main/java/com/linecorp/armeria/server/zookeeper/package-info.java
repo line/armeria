@@ -14,11 +14,11 @@
  * under the License.
  */
 /**
- * Provides automatic server registration and service discovery feature with Zookeeper.
+ * Provides automatic server registration and service discovery feature with ZooKeeper.
  *
- * <p>The {@link com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener} instance automatically
- * registers the server to a Zookeeper cluster. The registered Zookeeper node is EPHEMERAL, so when server
- * stops or a network partition occurs, the underlying Zookeeper session will be closed, and the node will be
+ * <p>A {@link com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener} automatically
+ * registers the server to a ZooKeeper cluster. The registered ZooKeeper node is EPHEMERAL, so when server
+ * stops or a network partition occurs, the underlying ZooKeeper session will be closed, and the node will be
  * automatically removed. As a result, the clients that use a
  * {@link com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup} will be notified, and they will update
  * their endpoint list automatically so that they do not attempt to connect to the unreachable servers.

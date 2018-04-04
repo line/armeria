@@ -16,118 +16,157 @@
 package com.linecorp.armeria.server.zookeeper;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
+
+import java.time.Duration;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.zookeeper.Constants;
+import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
 import com.linecorp.armeria.server.ServerListener;
 
 /**
- * Builds a new {@link ServerListener}, which registers the server to the zookeeper instance.
+ * Builds a new {@link ServerListener}, which registers the server to the ZooKeeper instance.
  * <h2>Example</h2>
  * <pre>{@code
- * ServerListener register =
- * // Zookeeper Connection String and Zookeeper Node to use
+ * ZooKeeperUpdatingListener register =
+ * // ZooKeeper connection string and the path of a ZooKeeper node to use
  * new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
- * // Session Timeout
- * .sessionTimeOut(10000)
- * // NodeValueCodec
+ * .sessionTimeoutMillis(10000)
  * .nodeValueCodec(NodeValueCodec.DEFAULT)
  * .build();
  * // Set to `Server`.
  * Server server = ...
- * server.serverListener(register);
+ * server.addListener(register);
  * }</pre>
  *
  * <p>You can also specify the {@link CuratorFramework} instance to use. In this case,
- * {@link #connectTimeout(int)} and {@link #sessionTimeout(int)} will be ignored.
+ * invoking {@link #connectTimeout(Duration)}, {@link #connectTimeoutMillis(long)},
+ * {@link #sessionTimeout(Duration)} or {@link #sessionTimeoutMillis(long)} will raise a
+ * {@link IllegalStateException}.
  *
  * <h2>Example</h2>
  * <pre>{@code
- * // CuratorFramework instance and Zookeeper Node to use
- * ServerListener register = new ZooKeeperUpdatingListenerBuilder(curatorFramework, "/myProductionEndpoints")
- * // NodeValueCodec
+ * ZooKeeperUpdatingListener register =
+ * // CuratorFramework instance and ZooKeeper Node to use
+ * new ZooKeeperUpdatingListenerBuilder(curatorFramework, "/myProductionEndpoints")
  * .nodeValueCodec(NodeValueCodec.DEFAULT)
  * .build();
  * // Set to `Server`.
  * Server server = ...
- * server.serverListener(register);
+ * server.addListener(register);
  * }</pre>
  * */
 public final class ZooKeeperUpdatingListenerBuilder {
     private CuratorFramework client;
-    private String connect;
-    private String node;
-    private int connectTimeout = Constants.DEFAULT_CONNECT_TIMEOUT;
-    private int sessionTimeout = Constants.DEFAULT_SESSION_TIMEOUT;
+    private String connectionStr;
+    private String zNodePath;
+    private int connectTimeoutMillis = ZooKeeperDefaults.DEFAULT_CONNECT_TIMEOUT_MS;
+    private int sessionTimeoutMillis = ZooKeeperDefaults.DEFAULT_SESSION_TIMEOUT_MS;
     private Endpoint endpoint;
     private NodeValueCodec nodeValueCodec = NodeValueCodec.DEFAULT;
 
     /**
-     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode.
+     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
+     * path.
      *
-     * @param client the curator framework instance.
+     * @param client the curator framework instance
+     * @param zNodePath the ZooKeeper node to register
      */
-    public ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String node) {
+    public ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath) {
         this.client = requireNonNull(client, "client");
-        checkArgument(!isNullOrEmpty(node), "node");
-        this.node = node;
+        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
     }
 
     /**
-     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a Zookeeper Connection String and a zNode.
+     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
      *
-     * @param connect the zookeeper connection string.
-     * @param node the zookeeper node to register.
+     * @param connectionStr the ZooKeeper connection string
+     * @param zNodePath the ZooKeeper node to register
      */
-    public ZooKeeperUpdatingListenerBuilder(String connect, String node) {
-        checkArgument(!isNullOrEmpty(connect), "connect");
-        checkArgument(!isNullOrEmpty(node), "node");
-        this.connect = connect;
-        this.node = node;
+    public ZooKeeperUpdatingListenerBuilder(String connectionStr, String zNodePath) {
+        this.connectionStr = requireNonNull(connectionStr, "connectionStr");
+        checkArgument(!this.connectionStr.isEmpty(), "connectionStr can't be empty");
+        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
+    }
+
+    /**
+     * Sets the connect timeout.
+     *
+     * @param connectTimeout the connect timeout
+     *
+     * @throws IllegalStateException if this builder is constructed with
+     *                               {@link #ZooKeeperUpdatingListenerBuilder(CuratorFramework, String)}
+     */
+    public ZooKeeperUpdatingListenerBuilder connectTimeout(Duration connectTimeout) {
+        requireNonNull(connectTimeout, "connectTimeout");
+        checkArgument(!connectTimeout.isZero() && !connectTimeout.isNegative(),
+                      "connectTimeout: %s (expected: > 0)", connectTimeout);
+        return connectTimeoutMillis(connectTimeout.toMillis());
     }
 
     /**
      * Sets the connect timeout (in ms). (default: 1000)
      *
-     * <p>Ignored when {@link CuratorFramework} is set. (see: {@link #client})
+     * @param connectTimeoutMillis the connect timeout
      *
-     * @param timeout the connect timeout.
+     * @throws IllegalStateException if this builder is constructed with
+     *                               {@link #ZooKeeperUpdatingListenerBuilder(CuratorFramework, String)}
      */
-    public ZooKeeperUpdatingListenerBuilder connectTimeout(int timeout) {
+    public ZooKeeperUpdatingListenerBuilder connectTimeoutMillis(long connectTimeoutMillis) {
+        checkArgument(connectTimeoutMillis > 0,
+                      "connectTimeoutMillis: %s (expected: > 0)", connectTimeoutMillis);
         if (client != null) {
             throw new IllegalStateException("client is already set");
         }
-        checkArgument(timeout > 0, "timeout: %s (expected: > 0)", timeout);
-        this.connectTimeout = timeout;
+        this.connectTimeoutMillis = (int) Math.min(Math.max(connectTimeoutMillis, Integer.MIN_VALUE),
+                                                   Integer.MAX_VALUE);
         return this;
+    }
+
+    /**
+     * Sets the session timeout.
+     *
+     * @param sessionTimeout the session timeout
+     *
+     * @throws IllegalStateException if this builder is constructed with
+     *                               {@link #ZooKeeperUpdatingListenerBuilder(CuratorFramework, String)}
+     */
+    public ZooKeeperUpdatingListenerBuilder sessionTimeout(Duration sessionTimeout) {
+        requireNonNull(sessionTimeout, "sessionTimeout");
+        checkArgument(!sessionTimeout.isZero() && !sessionTimeout.isNegative(),
+                      "sessionTimeout: %s (expected: > 0)", sessionTimeout);
+        return sessionTimeoutMillis(sessionTimeout.toMillis());
     }
 
     /**
      * Sets the session timeout (in ms). (default: 10000)
      *
-     * <p>Ignored when {@link CuratorFramework} is set. (see: {@link #client})
+     * @param sessionTimeoutMillis the session timeout
      *
-     * @param timeout the session timeout.
+     * @throws IllegalStateException if this builder is constructed with
+     *                               {@link #ZooKeeperUpdatingListenerBuilder(CuratorFramework, String)}
      */
-    public ZooKeeperUpdatingListenerBuilder sessionTimeout(int timeout) {
+    public ZooKeeperUpdatingListenerBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
+        checkArgument(sessionTimeoutMillis > 0,
+                      "sessionTimeoutMillis: %s (expected: > 0)", sessionTimeoutMillis);
         if (client != null) {
             throw new IllegalStateException("client is already set");
         }
-        checkArgument(timeout > 0, "timeout: %s (expected: > 0)", timeout);
-        this.sessionTimeout = timeout;
+        this.sessionTimeoutMillis = (int) Math.min(Math.max(sessionTimeoutMillis, Integer.MIN_VALUE),
+                                                   Integer.MAX_VALUE);
         return this;
     }
 
     /**
      * Sets the {@link Endpoint} to register.
      *
-     * @param endpoint the {@link Endpoint} to register.
+     * @param endpoint the {@link Endpoint} to register
      */
     public ZooKeeperUpdatingListenerBuilder endpoint(Endpoint endpoint) {
         this.endpoint = requireNonNull(endpoint, "endpoint");
@@ -135,31 +174,33 @@ public final class ZooKeeperUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the {@link NodeValueCodec} to encode or decode zookeeper data.
+     * Sets the {@link NodeValueCodec} to encode or decode ZooKeeper data.
      *
-     * @param nodeValueCodec the {@link NodeValueCodec} instance to use.
+     * @param nodeValueCodec the {@link NodeValueCodec} instance to use
      */
     public ZooKeeperUpdatingListenerBuilder nodeValueCodec(NodeValueCodec nodeValueCodec) {
-        this.nodeValueCodec = requireNonNull(nodeValueCodec, "requireNonNull");
+        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         return this;
     }
 
     /**
      * Returns a newly-created {@link ZooKeeperUpdatingListener} instance that registers the server to
-     * zookeeper when the server starts.
+     * ZooKeeper when the server starts.
      */
     public ZooKeeperUpdatingListener build() {
-        boolean internalClient = false;
+        final boolean internalClient;
         if (client == null) {
             client = CuratorFrameworkFactory.builder()
-                                            .connectString(connect)
-                                            .retryPolicy(Constants.DEFAULT_RETRY_POLICY)
-                                            .connectionTimeoutMs(connectTimeout)
-                                            .sessionTimeoutMs(sessionTimeout)
+                                            .connectString(connectionStr)
+                                            .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
+                                            .connectionTimeoutMs(connectTimeoutMillis)
+                                            .sessionTimeoutMs(sessionTimeoutMillis)
                                             .build();
             internalClient = true;
+        } else {
+            internalClient = false;
         }
 
-        return new ZooKeeperUpdatingListener(client, node, nodeValueCodec, endpoint, internalClient);
+        return new ZooKeeperUpdatingListener(client, zNodePath, nodeValueCodec, endpoint, internalClient);
     }
 }

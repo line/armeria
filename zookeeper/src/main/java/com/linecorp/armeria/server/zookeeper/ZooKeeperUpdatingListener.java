@@ -28,7 +28,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.zookeeper.Constants;
+import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 
@@ -48,8 +48,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * @param zNodePath       ZooKeeper node path(under which this server will be registered)
      */
     public static ZooKeeperUpdatingListener of(String zkConnectionStr, String zNodePath) {
-        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath)
-                .build();
+        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath).build();
     }
 
     private final CuratorFramework client;
@@ -57,15 +56,15 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     private final NodeValueCodec nodeValueCodec;
     @Nullable
     private Endpoint endpoint;
-    private final boolean internalClient;
+    private final boolean closeClientOnStop;
 
     ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec,
-                              @Nullable Endpoint endpoint, boolean internalClient) {
+                              @Nullable Endpoint endpoint, boolean closeClientOnStop) {
         this.client = requireNonNull(client, "client");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        this.nodeValueCodec = requireNonNull(nodeValueCodec);
+        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         this.endpoint = endpoint;
-        this.internalClient = internalClient;
+        this.closeClientOnStop = closeClientOnStop;
     }
 
     /**
@@ -84,13 +83,13 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         checkArgument(!Strings.isNullOrEmpty(zkConnectionStr), "zkConnectionStr");
         client = CuratorFrameworkFactory.builder()
                                         .connectString(zkConnectionStr)
-                                        .retryPolicy(Constants.DEFAULT_RETRY_POLICY)
+                                        .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
                                         .sessionTimeoutMs(sessionTimeout)
                                         .build();
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.nodeValueCodec = NodeValueCodec.DEFAULT;
         this.endpoint = endpoint;
-        this.internalClient = true;
+        this.closeClientOnStop = true;
     }
 
     /**
@@ -130,7 +129,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     @Override
     public void serverStopping(Server server) {
-        if (internalClient) {
+        if (closeClientOnStop) {
             client.close();
         }
     }
