@@ -55,6 +55,12 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             AtomicIntegerFieldUpdater.newUpdater(
                     DeferredStreamMessage.class, "subscribedToDelegate");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<DeferredStreamMessage>
+            abortPendingUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(
+                    DeferredStreamMessage.class, "abortPending");
+
     @Nullable
     @SuppressWarnings("unused") // Updated only via delegateUpdater
     private volatile StreamMessage<T> delegate;
@@ -73,7 +79,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     // Only accessed from subscription's executor.
     private long pendingDemand;
 
-    private volatile boolean abortPending;
+    private volatile int abortPending; // 0 - false, 1 - true
 
     // Only accessed from subscription's executor.
     private boolean cancelPending;
@@ -91,7 +97,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             throw new IllegalStateException("delegate set already");
         }
 
-        if (abortPending) {
+        if (abortPending != 0) {
             delegate.abort();
         }
 
@@ -199,9 +205,14 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             try {
                 delegateSubscription.cancel();
             } finally {
-                final SubscriptionImpl subscription = this.subscription;
-                assert subscription != null;
-                subscription.clearSubscriber();
+                // Clear the subscriber when we become sure that the delegate will not produce events anymore.
+                final StreamMessage<T> delegate = this.delegate;
+                assert delegate != null;
+                if (delegate.isComplete()) {
+                    subscription.clearSubscriber();
+                } else {
+                    delegate.completionFuture().whenComplete((u1, u2) -> subscription.clearSubscriber());
+                }
             }
         } else {
             cancelPending = true;
@@ -250,7 +261,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public void abort() {
-        abortPending = true;
+        if (!abortPendingUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
                 this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false);
