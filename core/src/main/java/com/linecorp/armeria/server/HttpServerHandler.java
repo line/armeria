@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -197,16 +198,37 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        super.channelUnregistered(ctx);
-        unfinishedResponses.keySet().forEach(StreamMessage::abort);
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        // Give the unfinished streaming responses a chance to close themselves before we abort them,
+        // so that successful responses are not aborted due to a race condition like the following:
+        //
+        // 1) A publisher of a response stream sends the complete response
+        //    but does not call StreamWriter.close() just yet.
+        // 2) An HTTP/1 client receives the complete response and closes the connection, which is totally fine.
+        // 3) The response stream is aborted once the server detects the disconnection.
+        // 4) The publisher calls StreamWriter.close() but it's aborted already.
+        //
+        // To reduce the chance of such situation, we wait a little bit before aborting unfinished responses.
+
+        switch (protocol) {
+            case H1C:
+            case H1:
+                // XXX(trustin): How much time is 'a little bit'?
+                ctx.channel().eventLoop().schedule(this::cleanup, 1, TimeUnit.SECONDS);
+                break;
+            default:
+                // HTTP/2 is unaffected by this issue because a client is expected to wait for a frame with
+                // endOfStream set.
+                cleanup();
+        }
     }
 
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    private void cleanup() {
         if (responseEncoder != null) {
             responseEncoder.close();
         }
+
+        unfinishedResponses.keySet().forEach(StreamMessage::abort);
     }
 
     @Override
@@ -373,17 +395,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
             })).exceptionally(CompletionActions::log);
 
-            res.completionFuture().handle(voidFunction((ret, cause) -> {
+            res.completionFuture().handleAsync(voidFunction((ret, cause) -> {
                 req.abort();
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
-                eventLoop.execute(() -> {
-                    gracefulShutdownSupport.dec();
-                    unfinishedResponses.remove(res);
-                    if (--unfinishedRequests == 0 && handledLastRequest) {
-                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
-                    }
-                });
-            })).exceptionally(CompletionActions::log);
+                gracefulShutdownSupport.dec();
+                unfinishedResponses.remove(res);
+                if (--unfinishedRequests == 0 && handledLastRequest) {
+                    ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                }
+            }), eventLoop).exceptionally(CompletionActions::log);
 
             assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =

@@ -406,16 +406,17 @@ public final class TomcatService implements HttpService {
                     try {
                         coyoteAdapter.service(coyoteReq, coyoteRes);
                         final HttpHeaders headers = convertResponse(coyoteRes);
-                        res.write(headers);
-                        for (;;) {
-                            final HttpData d = data.poll();
-                            if (d == null || !res.tryWrite(d)) {
-                                break;
+                        if (res.tryWrite(headers)) {
+                            for (;;) {
+                                final HttpData d = data.poll();
+                                if (d == null || !res.tryWrite(d)) {
+                                    break;
+                                }
                             }
                         }
-                        res.close();
                     } catch (Throwable t) {
                         logger.warn("{} Failed to produce a response:", ctx, t);
+                    } finally {
                         res.close();
                     }
                 });
