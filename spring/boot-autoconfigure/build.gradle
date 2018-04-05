@@ -19,14 +19,16 @@ dependencies {
 // NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
 //     below are added to two projects and having a source directory with two output directories will confuse
 //     the IDE.
-def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot2/autoconfigure"
+def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot2-autoconfigure"
 tasks.compileJava.source "${autoconfigureProjectDir}/src/main/java"
 tasks.processResources.from "${autoconfigureProjectDir}/src/main/resources"
-tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java"
+tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java", "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
 tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/java"
 tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/resources"
 tasks.javadoc.source "${autoconfigureProjectDir}/src/main/java"
+
+tasks.compileTestJava.dependsOn(project(':spring:boot2-autoconfigure').tasks.findByName('compileTestThrift'))
 
 // Disable checkstyle because it's checked by 'armeria-spring-boot2-autoconfigure'
 tasks.checkstyleMain.onlyIf { false }
