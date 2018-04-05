@@ -113,7 +113,20 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         assertThat(stream.tryWrite(buf)).isFalse();
         assertThat(buf.refCnt()).isOne();
-        assertThatThrownBy(() -> stream.write(buf)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> stream.write(buf)).isInstanceOf(ClosedPublisherException.class);
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
+    public void releaseWhenWritingToClosedStream_ByteBuf_Supplier() {
+        StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
+        final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().retain();
+        stream.close();
+
+        await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
+        assertThat(stream.tryWrite(() -> buf)).isFalse();
+        assertThat(buf.refCnt()).isOne();
+        assertThatThrownBy(() -> stream.write(() -> buf)).isInstanceOf(ClosedPublisherException.class);
         assertThat(buf.refCnt()).isZero();
     }
 
@@ -126,7 +139,20 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         assertThat(stream.tryWrite(data)).isFalse();
         assertThat(data.refCnt()).isOne();
-        assertThatThrownBy(() -> stream.write(data)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> stream.write(data)).isInstanceOf(ClosedPublisherException.class);
+        assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    public void releaseWhenWritingToClosedStream_HttpData_Supplier() {
+        StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
+        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true).retain();
+        stream.close();
+
+        await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
+        assertThat(stream.tryWrite(() -> data)).isFalse();
+        assertThat(data.refCnt()).isOne();
+        assertThatThrownBy(() -> stream.write(() -> data)).isInstanceOf(ClosedPublisherException.class);
         assertThat(data.refCnt()).isZero();
     }
 }
