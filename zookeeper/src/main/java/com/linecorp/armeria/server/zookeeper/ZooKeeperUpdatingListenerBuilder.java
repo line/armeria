@@ -30,7 +30,7 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
 
 /**
  * Builds a new {@link ZooKeeperUpdatingListener}, which registers the server to a ZooKeeper cluster.
- * <h2>Example</h2>
+ * <h2>Examples</h2>
  * <pre>{@code
  * ZooKeeperUpdatingListener listener =
  *     new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
@@ -45,7 +45,7 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
  * invoking {@link #connectTimeout(Duration)}, {@link #connectTimeoutMillis(long)},
  * {@link #sessionTimeout(Duration)} or {@link #sessionTimeoutMillis(long)} will raise a
  * {@link IllegalStateException}.
- * <h2>Example</h2>
+ *
  * <pre>{@code
  * ZooKeeperUpdatingListener listener =
  *     new ZooKeeperUpdatingListenerBuilder(curatorFramework, "/myProductionEndpoints")
