@@ -417,7 +417,7 @@ public final class THttpService extends AbstractHttpService {
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
-        req.aggregateWithPooledObjects(ctx).handle(voidFunction((aReq, cause) -> {
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 responseFuture.complete(
                         HttpResponse.of(

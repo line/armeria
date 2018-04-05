@@ -385,17 +385,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link HttpResponse#aggregate()}.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(RequestContext ctx) {
-        requireNonNull(ctx, "ctx");
-        return aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
-    }
-
-    /**
-     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
-     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link HttpResponse#aggregate()}.
-     */
     default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");

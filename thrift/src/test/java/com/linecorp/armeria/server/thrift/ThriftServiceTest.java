@@ -140,7 +140,7 @@ public class ThriftServiceTest {
 
     @AfterClass
     public static void closeLoop() {
-        eventLoop.shutdownGracefully().syncUninterruptibly();
+        eventLoop.shutdownGracefully();
     }
 
     @Before

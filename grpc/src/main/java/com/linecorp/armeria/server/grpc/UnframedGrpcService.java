@@ -152,7 +152,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregateWithPooledObjects(ctx).whenComplete(
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).whenComplete(
                 (clientRequest, t) -> {
                     if (t != null) {
                         responseFuture.completeExceptionally(t);
