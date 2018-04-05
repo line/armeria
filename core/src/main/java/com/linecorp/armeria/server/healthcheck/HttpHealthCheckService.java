@@ -154,12 +154,12 @@ public class HttpHealthCheckService extends AbstractHttpService {
 
     final class ServerHealthUpdater extends ServerListenerAdapter {
         @Override
-        public void serverStarted(Server server) throws Exception {
+        public void serverStarted(Server server) {
             serverHealth.setHealthy(true);
         }
 
         @Override
-        public void serverStopping(Server server) throws Exception {
+        public void serverStopping(Server server) {
             serverHealth.setHealthy(false);
         }
     }
