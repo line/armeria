@@ -19,6 +19,7 @@
 .. _@ResponseConverter: apidocs/index.html?com/linecorp/armeria/server/annotation/ResponseConverter.html
 .. _@Trace: apidocs/index.html?com/linecorp/armeria/server/annotation/Trace.html
 .. _AggregatedHttpMessage: apidocs/index.html?com/linecorp/armeria/common/AggregatedHttpMessage.html
+.. _BeanRequestConverterFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/BeanRequestConverterFunction.html
 .. _ByteArrayRequestConverterFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/ByteArrayRequestConverterFunction.html
 .. _DecoratingServiceFunction: apidocs/index.html?com/linecorp/armeria/server/DecoratingServiceFunction.html
 .. _ExceptionHandlerFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/ExceptionHandlerFunction.html
@@ -256,6 +257,8 @@ form. After that, Armeria will inject the decoded value into the parameter.
         }
     }
 
+.. _header-injection:
+
 Getting an HTTP header
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -413,10 +416,11 @@ which are annotated with `@RequestObject`_.
         }
     }
 
-Armeria also provides built-in request converters such as, JacksonRequestConverterFunction_ for JSON
-documents, StringRequestConverterFunction_ for text contents and ByteArrayRequestConverterFunction_
-for binary contents. They will be applied after your request converters by default, so you can use these
-built-in converters by just putting `@RequestObject`_ annotation on the parameters which you want to convert.
+Armeria also provides built-in request converters such as, BeanRequestConverterFunction_ for Java Beans,
+JacksonRequestConverterFunction_ for JSON documents, StringRequestConverterFunction_ for text contents
+and ByteArrayRequestConverterFunction_ for binary contents. They will be applied after your request converters
+by default, so you can use these built-in converters by just putting `@RequestObject`_ annotation on the
+parameters which you want to convert.
 
 In some cases, `@RequestObject`_ annotation may have a request converter as its value.
 Assume that you have a Java class named ``MyRequest`` that it is usually able to be converted by
@@ -433,6 +437,55 @@ converting ``MyRequest``.
         public HttpResponse hello(
             @RequestObject(MySpecialRequestConverter.class) MyRequest myRequest) { ... }
     }
+
+
+Injecting value of parameters and HTTP headers into a Java object
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+BeanRequestConverterFunction_ is a built-in request converter for Java object. You can use it by putting
+`@RequestObject`_ annotation on the parameters which you want to convert.
+
+.. code-block:: java
+
+    public class MyAnnotatedServiceClass {
+        @Post("/hello")
+        public HttpResponse hello(@RequestObject MyRequestObject myRequestObject) { ... }
+    }
+
+Besides the annotated service class, you also need to create ``MyRequestObject`` and put `@Param`_ or
+`@Header`_ annotations on any of the following elements, to inject the path parameters, HTTP parameters
+or HTTP headers:
+
+- Fields
+- Constructors with only one parameter
+- Methods with only one parameter
+- Constructor parameters
+- Method parameters
+
+
+.. code-block:: java
+
+    public class MyRequestObject {
+        @Param("name") // This field will be injected by value of parameter "name".
+        private String name;
+
+        @Header("age") // This field will be injected by value of HTTP header "age".
+        private int age;
+
+        @Param("address") // You can annotate a single parameter method with @Param or @Header.
+        public void setAddress(String address) { ... }
+
+        @Header("id") // You can annotate a single parameter constructor with @Param or @Header.
+        public MyRequestObject(long id) { ... }
+
+        // You can annotate all parameters of method or constructor with @Param or @Header.
+        public void init(@Header("permissions") String permissions, @Param("client-id") int clientId)
+    }
+
+The usage of `@Param`_ or `@Header`_ annotations on Java object elements is much like using them on the
+parameters of service method.
+Please refer to :ref:`parameter-injection`, and :ref:`header-injection` for more information.
+
 
 Converting a Java object to an HTTP response
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
