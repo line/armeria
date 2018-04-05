@@ -24,8 +24,8 @@ public final class ZooKeeperDefaults {
     public static final int DEFAULT_CONNECT_TIMEOUT_MS = 1000;
     public static final int DEFAULT_SESSION_TIMEOUT_MS = 10000;
 
-    public static final ExponentialBackoffRetry DEFAULT_RETRY_POLICY
-            = new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT_MS, 3);
+    public static final ExponentialBackoffRetry DEFAULT_RETRY_POLICY =
+            new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT_MS, 3);
 
     private ZooKeeperDefaults() {}
 }

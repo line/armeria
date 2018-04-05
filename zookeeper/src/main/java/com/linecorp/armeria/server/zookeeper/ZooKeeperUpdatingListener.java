@@ -107,7 +107,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     @Override
-    public void serverStarted(Server server) {
+    public void serverStarted(Server server) throws Exception {
         if (endpoint == null) {
             assert server.activePort().isPresent();
             endpoint = Endpoint.of(server.defaultHostname(),
@@ -117,14 +117,10 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         client.start();
         String key = endpoint.host() + '_' + endpoint.port();
         byte[] value = nodeValueCodec.encode(endpoint);
-        try {
-            client.create()
-                  .creatingParentsIfNeeded()
-                  .withMode(CreateMode.EPHEMERAL)
-                  .forPath(zNodePath + '/' + key, value);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
+        client.create()
+              .creatingParentsIfNeeded()
+              .withMode(CreateMode.EPHEMERAL)
+              .forPath(zNodePath + '/' + key, value);
     }
 
     @Override

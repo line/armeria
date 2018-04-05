@@ -14,7 +14,8 @@
  * under the License.
  */
 /**
- * Provides automatic server registration and service discovery feature with ZooKeeper.
+ /**
+ * Provides Automatic service registration and discovery with <a href="https://zookeeper.apache.org/">ZooKeeper</a>.
  *
  * <p>A {@link com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener} automatically
  * registers the server to a ZooKeeper cluster. The registered ZooKeeper node is EPHEMERAL, so when server

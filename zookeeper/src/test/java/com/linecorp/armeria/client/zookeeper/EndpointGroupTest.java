@@ -69,8 +69,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
 
     @Test
     public void testGetEndpointGroup() {
-        await().until(() -> endpointGroup != null);
-        assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints);
+        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));
     }
 
     @Test

@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.zookeeper;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -72,7 +71,8 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                   NodeValueCodec nodeValueCodec) {
-        checkArgument(!isNullOrEmpty(zNodePath), "zNodePath");
+        requireNonNull(zNodePath, "zNodePath");
+        checkArgument(!zNodePath.isEmpty(), "zNodePath can't be empty");
         checkArgument(sessionTimeout > 0, "sessionTimeoutMillis: %s (expected: > 0)",
                       sessionTimeout);
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
@@ -83,26 +83,17 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
                                              .sessionTimeoutMs(sessionTimeout)
                                              .build();
         client.start();
-        pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
-        pathChildrenCache.getListenable().addListener((c, event) -> {
-            switch (event.getType()) {
-                case CHILD_ADDED:
-                    addEndpoint(this.nodeValueCodec.decode(event.getData().getData()));
-                    break;
-                case CHILD_REMOVED:
-                    removeEndpoint(this.nodeValueCodec.decode(event.getData().getData()));
-                    break;
-                default:
-                    break;
-            }
-        });
+        boolean success = false;
         try {
+            pathChildrenCache = pathChildrenCache(zNodePath);
             pathChildrenCache.start();
+            success = true;
         } catch (Exception e) {
-            if (internalClient) {
+            throw new IllegalStateException(e);
+        } finally {
+            if (!success) {
                 client.close();
             }
-            throw new IllegalStateException(e);
         }
     }
 
@@ -115,12 +106,22 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      * @param nodeValueCodec  the {@link NodeValueCodec}
      */
     public ZooKeeperEndpointGroup(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec) {
-        checkArgument(!isNullOrEmpty(zNodePath), "zNodePath");
+        requireNonNull(zNodePath, "zNodePath");
+        checkArgument(!zNodePath.isEmpty(), "zNodePath can't be empty");
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         this.internalClient = false;
-        this.client = requireNonNull(client);
+        this.client = requireNonNull(client, "client");
         client.start();
-        pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
+        try {
+            pathChildrenCache = pathChildrenCache(zNodePath);
+            pathChildrenCache.start();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private PathChildrenCache pathChildrenCache(String zNodePath) {
+        PathChildrenCache pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
         pathChildrenCache.getListenable().addListener((c, event) -> {
             switch (event.getType()) {
                 case CHILD_ADDED:
@@ -133,14 +134,7 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
                     break;
             }
         });
-        try {
-            pathChildrenCache.start();
-        } catch (Exception e) {
-            if (internalClient) {
-                client.close();
-            }
-            throw new IllegalStateException(e);
-        }
+        return pathChildrenCache;
     }
 
     @Override
@@ -148,7 +142,7 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         try {
             pathChildrenCache.close();
         } catch (IOException e) {
-            logger.warn("Failed to close PathChildrenCache: ", e);
+            logger.warn("Failed to close PathChildrenCache:", e);
         } finally {
             if (internalClient) {
                 try {
