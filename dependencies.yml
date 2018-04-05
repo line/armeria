@@ -59,7 +59,7 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.5' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.8' }
+  checkstyle: { version: '8.9' }
 
 com.spotify:
   completable-futures:
@@ -112,7 +112,7 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.2'
+    version: &MICROMETER_VERSION '1.0.3'
     javadocs:
     - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.2/
   micrometer-registry-prometheus:
@@ -128,7 +128,7 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.22.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.23.Final' }
   netty-codec-haproxy: { version: *NETTY_VERSION }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
@@ -246,7 +246,7 @@ org.awaitility:
   awaitility: { version: '3.1.0' }
 
 org.checkerframework:
-  checker-compat-qual: { version: '2.4.0' }
+  checker-compat-qual: { version: '2.5.0' }
 
 org.curioswitch.curiostack:
   protobuf-jackson: { version: '0.1.1' }
