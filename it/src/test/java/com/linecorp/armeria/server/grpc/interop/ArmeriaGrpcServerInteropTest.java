@@ -87,7 +87,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
             sb.serverListener(new ServerListenerAdapter() {
                 @Override
-                public void serverStopped(Server server) throws Exception {
+                public void serverStopped(Server server) {
                     executor.shutdown();
                     ssc.delete();
                 }
