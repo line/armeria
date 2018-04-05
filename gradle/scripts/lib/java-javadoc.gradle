@@ -1,7 +1,9 @@
 import java.security.MessageDigest
 
+def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
 def javadocCacheDir = new File(gradle.gradleUserHomeDir, 'caches/package-lists')
 def defaultStylesheetFile = new File(buildscript.sourceFile.parentFile, 'java-javadoc.css')
+def visitedUrls = new HashSet<String>()
 
 task cleanJavadocCache(type: Delete, group: 'Build', description: 'Deletes the javadoc cache directory.') {
     delete javadocCacheDir
@@ -119,12 +121,19 @@ allprojects {
                     javadocUrl += '/'
                 }
 
+                if (!visitedUrls.add(javadocUrl)) {
+                    return
+                }
+
                 def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
+                def tmpPackageListFile = new File(javadocCacheDir, "${name}/${javadocUrlSha1}/package-list.tmp")
                 def packageListFile = new File(javadocCacheDir, "${name}/${javadocUrlSha1}/package-list")
-                if (!packageListFile.exists()) {
+
+                if ((!packageListFile.exists() || packageListFile.length() == 0) && !offlineJavadoc) {
                     packageListFile.parentFile.mkdirs()
+                    packageListFile.delete()
                     def packageListUrl = new URL("${javadocUrl}package-list")
-                    logger.lifecycle("Downloading: ${packageListUrl}")
+                    logger.lifecycle("Download ${packageListUrl}")
                     try {
                         // Set some fake headers for the web sites who blocks a URLConnection.
                         def conn = packageListUrl.openConnection() as HttpURLConnection
@@ -134,14 +143,29 @@ allprojects {
                         conn.setRequestProperty("Cache-Control", 'no-cache')
                         conn.setRequestProperty('Pragma', 'no-cache')
                         conn.setRequestProperty('User-Agent', "Gradle/${gradle.gradleVersion} (${project.group}:${project.ext.artifactId})")
-                        conn.setUseCaches(false);
-                        packageListFile.withOutputStream { it << conn.inputStream }
+                        conn.setUseCaches(false)
+
+                        if (conn.responseCode == 200) {
+                            tmpPackageListFile.withOutputStream { it << conn.inputStream }
+                            if (tmpPackageListFile.length() == 0) {
+                                tmpPackageListFile.delete()
+                            } else {
+                                tmpPackageListFile.renameTo(packageListFile);
+                            }
+                        } else {
+                            logger.log(LogLevel.WARN, "Download failed: ${conn.responseCode} ${conn.responseMessage}")
+                        }
+
+                        conn.disconnect()
                     } catch (e) {
+                        tmpPackageListFile.delete()
                         throw new GradleScriptException("${e}", e)
                     }
                 }
 
-                linksOffline javadocUrl, "${packageListFile.parentFile}"
+                if (packageListFile.exists()) {
+                    linksOffline javadocUrl, "${packageListFile.parentFile}"
+                }
             }
 
             addOfflineLink('java9', 'https://docs.oracle.com/javase/9/docs/api/')

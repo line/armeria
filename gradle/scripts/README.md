@@ -272,12 +272,12 @@ configure(projectsWithFlags('java')) {
 }
 ```
 
-If you added the snippet above to `build.gradle`, `./gradlew` will show the 
+If you added the snippet above to `build.gradle`, `./gradlew` will show the
 following output:
 
 ```
 $ ./gradlew
-> Configure project : 
+> Configure project :
 Project ':' has flags: []
 Project ':bar' has flags: [java]
 Project ':foo' has flags: [java, publish]
@@ -353,6 +353,9 @@ When a project has a `java` flag:
       - https://developers.google.com/protocol-buffers/docs/reference/java/
   ```
 
+  If you are in an environment with restricted network access, you can specify
+  `-PofflineJavadoc` option to disable the downloads.
+
 - The `.proto` files under `src/*/proto` will be compiled into Java code with
   [protobuf-gradle-plugin](https://github.com/google/protobuf-gradle-plugin).
 
@@ -364,13 +367,24 @@ When a project has a `java` flag:
 
 - The `.thrift` files under `src/*/thrift` will be compiled into Java code.
 
-  - Thrift compiler 0.10 will be used by default. Override `thriftVersion`
+  - Thrift compiler 0.11 will be used by default. Override `thriftVersion`
     property if you prefer 0.9:
 
     ```groovy
     ext {
         thriftVersion = '0.9'
         disableThriftJson() // Because Thrift 0.9 does not support JSON target
+    }
+    ```
+
+  - You can also override the source and include directories:
+
+    ```groovy
+    ext {
+        thriftSrcDirs = ["$projectDir/src/main/foo"]
+        thriftIncludeDirs = ["$projectDir/src/main/foo-include"]
+        testThriftSrcDirs = ["$projectDir/src/test/bar"]
+        testThriftIncludeDirs = ["$projectDir/src/test/bar-include"]
     }
     ```
 
