@@ -37,7 +37,7 @@ public class HttpHeadersTest {
         assertThat(headers.get(of("HEADER3"))).isEqualTo("VALUE3");
 
         assertThat(headers.names())
-                  .containsExactlyInAnyOrder(of("header1"), of("header2"), of("header3"));
+                .containsExactlyInAnyOrder(of("header1"), of("header2"), of("header3"));
     }
 
     @Test
@@ -47,5 +47,27 @@ public class HttpHeadersTest {
 
         assertThatThrownBy(() -> HttpHeaders.of(AsciiString.of(""), "value1"))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void contentType() {
+        final HttpHeaders headers = HttpHeaders.of();
+        headers.contentType(MediaType.ANY_TYPE);
+        assertThat(headers.contentType()).isSameAs(MediaType.ANY_TYPE);
+
+        headers.contentType(MediaType.ANY_APPLICATION_TYPE);
+        assertThat(headers.contentType()).isSameAs(MediaType.ANY_APPLICATION_TYPE);
+        assertThat(headers.get(HttpHeaderNames.CONTENT_TYPE))
+                .isEqualTo(MediaType.ANY_APPLICATION_TYPE.toString());
+
+        headers.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE);
+        assertThat(headers.contentType()).isSameAs(MediaType.ANY_TEXT_TYPE);
+        assertThat(headers.get(HttpHeaderNames.CONTENT_TYPE))
+                .isEqualTo(MediaType.ANY_TEXT_TYPE.toString());
+
+        headers.set(HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_AUDIO_TYPE.toString());
+        assertThat(headers.contentType()).isSameAs(MediaType.ANY_AUDIO_TYPE);
+        assertThat(headers.get(HttpHeaderNames.CONTENT_TYPE))
+                .isEqualTo(MediaType.ANY_AUDIO_TYPE.toString());
     }
 }

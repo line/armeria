@@ -187,13 +187,12 @@ public final class DefaultHttpHeaders
     @Override
     public MediaType contentType() {
         final MediaType contentType = this.contentType;
-        if (contentType != null) {
-            return contentType;
-        }
-
         final String contentTypeString = get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeString == null) {
             return null;
+        }
+        if (contentType != null && contentType.toString().equals(contentTypeString)) {
+            return contentType;
         }
 
         try {
