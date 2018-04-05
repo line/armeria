@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -344,7 +345,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
-        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future);
+        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         completionFuture().whenComplete(aggregator);
         subscribe(aggregator);
         return future;
@@ -355,10 +356,43 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * the trailing headers of the request is received fully.
      */
     default CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
+        requireNonNull(executor, "executor");
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
-        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future);
+        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         completionFuture().whenCompleteAsync(aggregator, executor);
         subscribe(aggregator, executor);
+        return future;
+    }
+
+    /**
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
+     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
+     * use {@link HttpResponse#aggregate()}.
+     */
+    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+        requireNonNull(alloc, "alloc");
+        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
+        completionFuture().whenComplete(aggregator);
+        subscribe(aggregator, true);
+        return future;
+    }
+
+    /**
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
+     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
+     * use {@link HttpResponse#aggregate()}.
+     */
+    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(
+            EventExecutor executor, ByteBufAllocator alloc) {
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
+        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
+        completionFuture().whenCompleteAsync(aggregator, executor);
+        subscribe(aggregator, executor, true);
         return future;
     }
 }

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.thrift;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
@@ -39,8 +38,6 @@ import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +73,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 
 /**
  * A {@link Service} that handles a Thrift call.
@@ -91,9 +89,6 @@ public final class THttpService extends AbstractHttpService {
     private static final String ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE =
             "Thrift protocol specified in Accept header must match " +
             "the one specified in the content-type header";
-
-    private static final Map<SerializationFormat, ThreadLocalTProtocol> FORMAT_TO_THREAD_LOCAL_INPUT_PROTOCOL =
-            createFormatToThreadLocalTProtocolMap();
 
     /**
      * Creates a new {@link THttpService} with the specified service implementation, supporting all thrift
@@ -422,7 +417,7 @@ public final class THttpService extends AbstractHttpService {
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
-        req.aggregate().handle(voidFunction((aReq, cause) -> {
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 responseFuture.complete(
                         HttpResponse.of(
@@ -479,12 +474,17 @@ public final class THttpService extends AbstractHttpService {
     private void decodeAndInvoke(
             ServiceRequestContext ctx, AggregatedHttpMessage req,
             SerializationFormat serializationFormat, CompletableFuture<HttpResponse> httpRes) {
-
-        final TProtocol inProto = FORMAT_TO_THREAD_LOCAL_INPUT_PROTOCOL.get(serializationFormat).get();
-        inProto.reset();
-        final TMemoryInputTransport inTransport = (TMemoryInputTransport) inProto.getTransport();
         final HttpData content = req.content();
-        inTransport.reset(content.array(), content.offset(), content.length());
+        final ByteBuf buf;
+        if (content instanceof ByteBufHolder) {
+            buf = ((ByteBufHolder) content).content();
+        } else {
+            buf = ctx.alloc().buffer(content.length());
+            buf.writeBytes(content.array(), content.offset(), content.length());
+        }
+
+        final TByteBufTransport inTransport = new TByteBufTransport(buf);
+        final TProtocol inProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(inTransport);
 
         final int seqId;
         final ThriftFunction f;
@@ -560,7 +560,7 @@ public final class THttpService extends AbstractHttpService {
                 return;
             }
         } finally {
-            inTransport.clear();
+            buf.release();
             ctx.logBuilder().requestContent(null, null);
         }
 
@@ -756,26 +756,6 @@ public final class THttpService extends AbstractHttpService {
             if (!success) {
                 buf.release();
             }
-        }
-    }
-
-    private static Map<SerializationFormat, ThreadLocalTProtocol> createFormatToThreadLocalTProtocolMap() {
-        return ThriftSerializationFormats.values().stream().collect(
-                toImmutableMap(Function.identity(),
-                               f -> new ThreadLocalTProtocol(ThriftProtocolFactories.get(f))));
-    }
-
-    private static final class ThreadLocalTProtocol extends ThreadLocal<TProtocol> {
-
-        private final TProtocolFactory protoFactory;
-
-        private ThreadLocalTProtocol(TProtocolFactory protoFactory) {
-            this.protoFactory = protoFactory;
-        }
-
-        @Override
-        protected TProtocol initialValue() {
-            return protoFactory.getProtocol(new TMemoryInputTransport());
         }
     }
 }
