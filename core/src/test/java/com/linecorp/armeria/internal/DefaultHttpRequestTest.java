@@ -46,21 +46,29 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
+import io.netty.buffer.PooledByteBufAllocator;
+
 @RunWith(Parameterized.class)
 public class DefaultHttpRequestTest {
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
-    @Parameters(name = "{index}: executorSpecified={0}")
-    public static Collection<Boolean> parameters() {
-        return ImmutableList.of(true, false);
+    @Parameters(name = "{index}: executorSpecified={0}, withPooledObjects={1}")
+    public static Collection<Boolean[]> parameters() {
+        return ImmutableList.of(
+                new Boolean[] { true, true },
+                new Boolean[] { true, false },
+                new Boolean[] { false, true },
+                new Boolean[] { false, false });
     }
 
     private final boolean executorSpecified;
+    private final boolean withPooledObjects;
 
-    public DefaultHttpRequestTest(boolean executorSpecified) {
+    public DefaultHttpRequestTest(boolean executorSpecified, boolean withPooledObjects) {
         this.executorSpecified = executorSpecified;
+        this.withPooledObjects = withPooledObjects;
     }
 
     /**
@@ -74,9 +82,18 @@ public class DefaultHttpRequestTest {
 
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
-            future = req.aggregate(CommonPools.workerGroup().next());
+            if (withPooledObjects) {
+                future = req.aggregateWithPooledObjects(
+                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
+            } else {
+                future = req.aggregate(CommonPools.workerGroup().next());
+            }
         } else {
-            future = req.aggregate();
+            if (withPooledObjects) {
+                future = req.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
+            } else {
+                future = req.aggregate();
+            }
         }
 
         final AtomicReference<Thread> callbackThread = new AtomicReference<>();

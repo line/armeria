@@ -52,6 +52,7 @@ import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 
 /**
  * A {@link SimpleDecoratingService} which allows {@link GrpcService} to serve requests without the framing
@@ -151,17 +152,15 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture);
-        req.aggregate().whenCompleteAsync(
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).whenComplete(
                 (clientRequest, t) -> {
                     if (t != null) {
                         responseFuture.completeExceptionally(t);
                     } else {
                         frameAndServe(ctx, grpcHeaders, clientRequest, responseFuture);
                     }
-                },
-                ctx.eventLoop());
-        return res;
+                });
+        return HttpResponse.from(responseFuture);
     }
 
     private void frameAndServe(
@@ -173,11 +172,16 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
             final HttpData content = clientRequest.content();
-            final ByteBuf message = ctx.alloc().buffer(content.length());
+            final ByteBuf message;
+            if (content instanceof ByteBufHolder) {
+                message = ((ByteBufHolder) content).content();
+            } else {
+                message = ctx.alloc().buffer(content.length());
+                message.writeBytes(content.array(), content.offset(), content.length());
+            }
             final HttpData frame;
             boolean success = false;
             try {
-                message.writeBytes(content.array(), content.offset(), content.length());
                 frame = framer.writePayload(message);
                 success = true;
             } finally {

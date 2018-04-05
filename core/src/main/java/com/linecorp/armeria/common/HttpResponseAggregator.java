@@ -26,6 +26,8 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import io.netty.buffer.ByteBufAllocator;
+
 final class HttpResponseAggregator extends HttpMessageAggregator {
 
     enum State {
@@ -41,8 +43,9 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
     private HttpHeaders trailingHeaders;
     private State state = State.WAIT_NON_INFORMATIONAL;
 
-    HttpResponseAggregator(CompletableFuture<AggregatedHttpMessage> future) {
-        super(future);
+    HttpResponseAggregator(CompletableFuture<AggregatedHttpMessage> future,
+                           @Nullable ByteBufAllocator alloc) {
+        super(future, alloc);
         trailingHeaders = HttpHeaders.EMPTY_HEADERS;
     }
 

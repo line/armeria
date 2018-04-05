@@ -26,18 +26,28 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.util.ReferenceCountUtil;
 
 abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
 
     private final CompletableFuture<AggregatedHttpMessage> future;
     private final List<HttpData> contentList = new ArrayList<>();
+    // ByteBufAllocator is only provided when pooled objects are requested.
+    @Nullable
+    private final ByteBufAllocator alloc;
     private int contentLength;
     @Nullable
     private Subscription subscription;
 
-    protected HttpMessageAggregator(CompletableFuture<AggregatedHttpMessage> future) {
+    HttpMessageAggregator(CompletableFuture<AggregatedHttpMessage> future,
+                          @Nullable ByteBufAllocator alloc) {
         this.future = future;
+        this.alloc = alloc;
     }
 
     @Override
@@ -109,14 +119,32 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
         if (contentLength == 0) {
             content = HttpData.EMPTY_DATA;
         } else {
-            final byte[] merged = new byte[contentLength];
-            for (int i = 0, offset = 0; i < contentList.size(); i++) {
-                final HttpData data = contentList.set(i, null);
-                final int dataLength = data.length();
-                System.arraycopy(data.array(), data.offset(), merged, offset, dataLength);
-                offset += dataLength;
+            if (alloc != null) {
+                final ByteBuf merged = alloc.buffer(contentLength);
+                for (int i = 0; i < contentList.size(); i++) {
+                    final HttpData data = contentList.set(i, null);
+                    if (data instanceof ByteBufHolder) {
+                        ByteBufHolder byteBufData = (ByteBufHolder) data;
+                        try {
+                            merged.writeBytes(byteBufData.content());
+                        } finally {
+                            byteBufData.release();
+                        }
+                    } else {
+                        merged.writeBytes(data.array(), data.offset(), data.length());
+                    }
+                }
+                content = new ByteBufHttpData(merged, true);
+            } else {
+                final byte[] merged = new byte[contentLength];
+                for (int i = 0, offset = 0; i < contentList.size(); i++) {
+                    final HttpData data = contentList.set(i, null);
+                    final int dataLength = data.length();
+                    System.arraycopy(data.array(), data.offset(), merged, offset, dataLength);
+                    offset += dataLength;
+                }
+                content = HttpData.of(merged);
             }
-            content = HttpData.of(merged);
         }
 
         try {
@@ -127,6 +155,7 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
     }
 
     private void fail(Throwable cause) {
+        contentList.forEach(ReferenceCountUtil::safeRelease);
         contentList.clear();
         onFailure();
         future.completeExceptionally(cause);

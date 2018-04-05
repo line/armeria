@@ -18,13 +18,18 @@ package com.linecorp.armeria.common;
 
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
+import io.netty.buffer.ByteBufAllocator;
+
 final class HttpRequestAggregator extends HttpMessageAggregator {
 
     private final HttpRequest request;
     private HttpHeaders trailingHeaders;
 
-    HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpMessage> future) {
-        super(future);
+    HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpMessage> future,
+                          @Nullable ByteBufAllocator alloc) {
+        super(future, alloc);
         this.request = request;
         trailingHeaders = HttpHeaders.EMPTY_HEADERS;
     }
