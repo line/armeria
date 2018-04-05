@@ -27,6 +27,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -98,6 +99,7 @@ public class TomcatServiceTest extends WebAppContainerTest {
                         .startsWith("application/java");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
                         .isEqualTo("1361");
+                EntityUtils.consume(res.getEntity());
             }
         }
     }
@@ -111,6 +113,7 @@ public class TomcatServiceTest extends WebAppContainerTest {
                         .startsWith("application/java");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
                         .isEqualTo("1361");
+                EntityUtils.consume(res.getEntity());
             }
         }
     }
