@@ -282,16 +282,17 @@ public final class JettyService implements HttpService {
             }
 
             final HttpHeaders headers = toResponseHeaders(transport);
-            res.write(headers);
-            for (;;) {
-                final HttpData data = out.poll();
-                if (data == null || !res.tryWrite(data)) {
-                    break;
+            if (res.tryWrite(headers)) {
+                for (;;) {
+                    final HttpData data = out.poll();
+                    if (data == null || !res.tryWrite(data)) {
+                        break;
+                    }
                 }
             }
-            res.close();
         } catch (Throwable t) {
             logger.warn("{} Failed to produce a response:", ctx, t);
+        } finally {
             res.close();
         }
     }

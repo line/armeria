@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -36,6 +37,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 
 import io.netty.channel.Channel;
@@ -209,7 +212,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 return;
         }
 
-        write(o, endOfStream, true);
+        write(o, endOfStream);
     }
 
     @Override
@@ -232,6 +235,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             failAndRespond(cause,
                            AggregatedHttpMessage.of(((HttpStatusException) cause).httpStatus()),
                            Http2Error.CANCEL);
+        } else if (cause instanceof AbortedStreamException) {
+            // One of the two cases:
+            // - Client closed the connection too early.
+            // - Response publisher aborted the stream.
+            failAndReset((AbortedStreamException) cause);
         } else {
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",
                         ctx.channel(), service(), cause);
@@ -254,26 +262,29 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         if (state != State.DONE) {
-            write(HttpData.EMPTY_DATA, true, true);
+            write(HttpData.EMPTY_DATA, true);
         }
     }
 
-    private void write(HttpObject o, boolean endOfStream, boolean flush) {
+    private void write(HttpObject o, boolean endOfStream) {
         final Channel ch = ctx.channel();
         if (endOfStream) {
             setDone();
         }
 
-        ch.eventLoop().execute(() -> write0(o, endOfStream, flush));
+        ch.eventLoop().execute(() -> write0(o, endOfStream));
     }
 
-    private void write0(HttpObject o, boolean endOfStream, boolean flush) {
+    private void write0(HttpObject o, boolean endOfStream) {
         final ChannelFuture future;
+        final boolean wroteEmptyData;
         if (o instanceof HttpData) {
             final HttpData data = (HttpData) o;
+            wroteEmptyData = data.isEmpty();
             future = responseEncoder.writeData(ctx, req.id(), req.streamId(), data, endOfStream);
             logBuilder().increaseResponseLength(data.length());
         } else if (o instanceof HttpHeaders) {
+            wroteEmptyData = false;
             future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
         } else {
             // Should never reach here because we did validation in onNext().
@@ -281,10 +292,24 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         future.addListener((ChannelFuture f) -> {
+            final boolean isSuccess;
+            if (f.isSuccess()) {
+                isSuccess = true;
+            } else {
+                // If 1) the last chunk we attempted to send was empty,
+                //    2) the connection has been closed,
+                //    3) and the protocol is HTTP/1,
+                // it is very likely that a client closed the connection after receiving the complete content,
+                // which is not really a problem.
+                isSuccess = endOfStream && wroteEmptyData &&
+                            f.cause() instanceof ClosedChannelException &&
+                            responseEncoder instanceof Http1ObjectEncoder;
+            }
+
             // Write an access log if:
             // - every message has been sent successfully.
             // - any write operation is failed with a cause.
-            if (f.isSuccess()) {
+            if (isSuccess) {
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
                     accessLogWriter.accept(reqCtx.log());
@@ -304,18 +329,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
         });
 
-        if (flush) {
-            ctx.flush();
-        }
-
-        if (state == State.DONE) {
-            subscription.cancel();
-        }
+        ctx.flush();
     }
 
-    private void setDone() {
+    private State setDone() {
         cancelTimeout();
-        state = State.DONE;
+        final State oldState = this.state;
+        this.state = State.DONE;
+        return oldState;
     }
 
     private void failAndRespond(Throwable cause, AggregatedHttpMessage message, Http2Error error) {
@@ -325,15 +346,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         logBuilder().responseHeaders(headers);
         logBuilder().increaseResponseLength(content.length());
 
-        final State state = this.state; // Keep the state before calling fail() because it updates state.
-        setDone();
+        final State oldState = setDone();
         subscription.cancel();
 
         final int id = req.id();
         final int streamId = req.streamId();
 
         final ChannelFuture future;
-        if (wroteNothing(state)) {
+        if (wroteNothing(oldState)) {
             // Did not write anything yet; we can send an error response instead of resetting the stream.
             if (content.isEmpty()) {
                 future = responseEncoder.writeHeaders(ctx, id, streamId, headers, true);
@@ -346,7 +366,21 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             future = responseEncoder.writeReset(ctx, id, streamId, error);
         }
 
-        if (state != State.DONE) {
+        addCallbackAndFlush(cause, oldState, future);
+    }
+
+    private void failAndReset(AbortedStreamException cause) {
+        final State oldState = setDone();
+        subscription.cancel();
+
+        final ChannelFuture future =
+                responseEncoder.writeReset(ctx, req.id(), req.streamId(), Http2Error.CANCEL);
+
+        addCallbackAndFlush(cause, oldState, future);
+    }
+
+    private void addCallbackAndFlush(Throwable cause, State oldState, ChannelFuture future) {
+        if (oldState != State.DONE) {
             future.addListener(unused -> {
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
