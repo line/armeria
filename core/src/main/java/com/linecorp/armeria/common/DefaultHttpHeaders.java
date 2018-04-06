@@ -22,6 +22,8 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Ascii;
+
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.netty.handler.codec.DefaultHeaders;
@@ -186,14 +188,14 @@ public final class DefaultHttpHeaders
     @Nullable
     @Override
     public MediaType contentType() {
-        final MediaType contentType = this.contentType;
-        if (contentType != null) {
-            return contentType;
-        }
-
         final String contentTypeString = get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeString == null) {
             return null;
+        }
+
+        final MediaType contentType = this.contentType;
+        if (contentType != null && Ascii.equalsIgnoreCase(contentType.toString(), contentTypeString.trim())) {
+            return contentType;
         }
 
         try {
