@@ -16,6 +16,11 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
+import static com.linecorp.armeria.common.MediaType.ANY_APPLICATION_TYPE;
+import static com.linecorp.armeria.common.MediaType.ANY_AUDIO_TYPE;
+import static com.linecorp.armeria.common.MediaType.ANY_TEXT_TYPE;
+import static com.linecorp.armeria.common.MediaType.ANY_TYPE;
 import static io.netty.util.AsciiString.of;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -52,22 +57,21 @@ public class HttpHeadersTest {
     @Test
     public void contentType() {
         final HttpHeaders headers = HttpHeaders.of();
-        headers.contentType(MediaType.ANY_TYPE);
-        assertThat(headers.contentType()).isSameAs(MediaType.ANY_TYPE);
 
-        headers.contentType(MediaType.ANY_APPLICATION_TYPE);
-        assertThat(headers.contentType()).isSameAs(MediaType.ANY_APPLICATION_TYPE);
-        assertThat(headers.get(HttpHeaderNames.CONTENT_TYPE))
-                .isEqualTo(MediaType.ANY_APPLICATION_TYPE.toString());
+        headers.contentType(ANY_TYPE);
+        assertThat(headers.contentType()).isSameAs(ANY_TYPE);
+        assertThat(headers.get(CONTENT_TYPE)).isEqualTo(ANY_TYPE.toString());
 
-        headers.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE);
-        assertThat(headers.contentType()).isSameAs(MediaType.ANY_TEXT_TYPE);
-        assertThat(headers.get(HttpHeaderNames.CONTENT_TYPE))
-                .isEqualTo(MediaType.ANY_TEXT_TYPE.toString());
+        headers.contentType(ANY_APPLICATION_TYPE);
+        assertThat(headers.contentType()).isSameAs(ANY_APPLICATION_TYPE);
+        assertThat(headers.get(CONTENT_TYPE)).isEqualTo(ANY_APPLICATION_TYPE.toString());
 
-        headers.set(HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_AUDIO_TYPE.toString());
-        assertThat(headers.contentType()).isSameAs(MediaType.ANY_AUDIO_TYPE);
-        assertThat(headers.get(HttpHeaderNames.CONTENT_TYPE))
-                .isEqualTo(MediaType.ANY_AUDIO_TYPE.toString());
+        headers.setObject(CONTENT_TYPE, ANY_TEXT_TYPE);
+        assertThat(headers.contentType()).isSameAs(ANY_TEXT_TYPE);
+        assertThat(headers.get(CONTENT_TYPE)).isEqualTo(ANY_TEXT_TYPE.toString());
+
+        headers.set(CONTENT_TYPE, ANY_AUDIO_TYPE.toString());
+        assertThat(headers.contentType()).isSameAs(ANY_AUDIO_TYPE);
+        assertThat(headers.get(CONTENT_TYPE)).isEqualTo(ANY_AUDIO_TYPE.toString());
     }
 }
