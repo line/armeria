@@ -191,7 +191,7 @@ net.javacrumbs.json-unit:
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
-  proguard-gradle: { version: '6.0.1' }
+  proguard-gradle: { version: '6.0.2' }
 
 org.apache.hbase:
   hbase-shaded-client:
@@ -322,7 +322,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.0.0.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.0.1.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
