@@ -9,8 +9,8 @@ buildscript {
     dependencies {
         // These should be the only dependencies that need hard-coded versions.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE'
-        classpath 'org.yaml:snakeyaml:1.19'
+        classpath 'io.spring.gradle:dependency-management-plugin:1.0.5.RELEASE'
+        classpath 'org.yaml:snakeyaml:1.20'
     }
 }
 
