@@ -24,6 +24,8 @@ import java.time.Duration;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 
+import com.google.common.primitives.Ints;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
@@ -43,7 +45,7 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
  *
  * <p>You can also specify the {@link CuratorFramework} instance to use. In this case,
  * invoking {@link #connectTimeout(Duration)}, {@link #connectTimeoutMillis(long)},
- * {@link #sessionTimeout(Duration)} or {@link #sessionTimeoutMillis(long)} will raise a
+ * {@link #sessionTimeout(Duration)} or {@link #sessionTimeoutMillis(long)} will raise an
  * {@link IllegalStateException}.
  *
  * <pre>{@code
@@ -112,7 +114,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the connect timeout (in ms). (default: 1000)
+     * Sets the connect timeout (in ms). (default: {@value ZooKeeperDefaults#DEFAULT_CONNECT_TIMEOUT_MS})
      *
      * @param connectTimeoutMillis the connect timeout
      *
@@ -123,7 +125,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
         ensureInternalClient();
         checkArgument(connectTimeoutMillis > 0,
                       "connectTimeoutMillis: %s (expected: > 0)", connectTimeoutMillis);
-        this.connectTimeoutMillis = (int) Math.min(connectTimeoutMillis, Integer.MAX_VALUE);
+        this.connectTimeoutMillis = Ints.saturatedCast(connectTimeoutMillis);
         return this;
     }
 
@@ -143,7 +145,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the session timeout (in ms). (default: 10000)
+     * Sets the session timeout (in ms). (default: {@value ZooKeeperDefaults#DEFAULT_SESSION_TIMEOUT_MS})
      *
      * @param sessionTimeoutMillis the session timeout
      *
@@ -154,7 +156,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
         ensureInternalClient();
         checkArgument(sessionTimeoutMillis > 0,
                       "sessionTimeoutMillis: %s (expected: > 0)", sessionTimeoutMillis);
-        this.sessionTimeoutMillis = (int) Math.min(sessionTimeoutMillis, Integer.MAX_VALUE);
+        this.sessionTimeoutMillis = Ints.saturatedCast(sessionTimeoutMillis);
         return this;
     }
 

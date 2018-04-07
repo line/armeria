@@ -71,6 +71,8 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                   NodeValueCodec nodeValueCodec) {
+        requireNonNull(zkConnectionStr, "zkConnectionStr");
+        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty");
         requireNonNull(zNodePath, "zNodePath");
         checkArgument(!zNodePath.isEmpty(), "zNodePath can't be empty");
         checkArgument(sessionTimeout > 0, "sessionTimeoutMillis: %s (expected: > 0)",
@@ -121,14 +123,14 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     }
 
     private PathChildrenCache pathChildrenCache(String zNodePath) {
-        PathChildrenCache pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
+        final PathChildrenCache pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
         pathChildrenCache.getListenable().addListener((c, event) -> {
             switch (event.getType()) {
                 case CHILD_ADDED:
-                    addEndpoint(this.nodeValueCodec.decode(event.getData().getData()));
+                    addEndpoint(nodeValueCodec.decode(event.getData().getData()));
                     break;
                 case CHILD_REMOVED:
-                    removeEndpoint(this.nodeValueCodec.decode(event.getData().getData()));
+                    removeEndpoint(nodeValueCodec.decode(event.getData().getData()));
                     break;
                 default:
                     break;

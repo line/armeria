@@ -70,9 +70,7 @@ Use `ZooKeeperUpdatingListenerBuilder`_ to register your server to a ZooKeeper c
     // This constructor will use server's default host name, port and weight.
     // Use `nodeValueCodec` method to override the defaults.
     ZookeeperUpdatingListener listener =
-            // Zookeeper Connection String and Zookeeper Node to use
             new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
-            // Session Timeout
             .sessionTimeout(10000)
             .build();
     server.addListener(listener);
@@ -89,9 +87,7 @@ You can use an existing `CuratorFramework`_ instance instead of Zookeeper connec
 
     CuratorFramework client = ...
     ZookeeperUpdatingListener listener =
-            // CuratorFramework instance
             new ZooKeeperUpdatingListenerBuilder(client, "/myProductionEndpoints")
-            // Server's default host name, port and weight
             .nodeValueCodec(NodeValueCodec.DEFAULT)
             .build();
     server.addListener(listener);

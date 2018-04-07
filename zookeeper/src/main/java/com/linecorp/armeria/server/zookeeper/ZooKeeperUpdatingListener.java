@@ -24,8 +24,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.zookeeper.CreateMode;
 
-import com.google.common.base.Strings;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
@@ -79,8 +77,9 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      */
     @Deprecated
     public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                     Endpoint endpoint) {
-        checkArgument(!Strings.isNullOrEmpty(zkConnectionStr), "zkConnectionStr");
+                                     @Nullable Endpoint endpoint) {
+        requireNonNull(zkConnectionStr, "zkConnectionStr");
+        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty");
         client = CuratorFrameworkFactory.builder()
                                         .connectString(zkConnectionStr)
                                         .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
@@ -115,8 +114,8 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
                                          .localAddress().getPort());
         }
         client.start();
-        String key = endpoint.host() + '_' + endpoint.port();
-        byte[] value = nodeValueCodec.encode(endpoint);
+        final String key = endpoint.host() + '_' + endpoint.port();
+        final byte[] value = nodeValueCodec.encode(endpoint);
         client.create()
               .creatingParentsIfNeeded()
               .withMode(CreateMode.EPHEMERAL)
