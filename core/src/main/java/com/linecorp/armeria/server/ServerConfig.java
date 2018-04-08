@@ -68,6 +68,7 @@ public final class ServerConfig {
 
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
+    private final Duration gracefulShutdownSchedulePeriod;
 
     private final ExecutorService blockingTaskExecutor;
 
@@ -90,6 +91,7 @@ public final class ServerConfig {
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
+            Duration gracefulShutdownSchedulePeriod,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
             Consumer<RequestLog> accessLogWriter, int proxyProtocolMaxTlvSize) {
 
@@ -114,6 +116,8 @@ public final class ServerConfig {
                 gracefulShutdownQuietPeriod), "gracefulShutdownQuietPeriod");
         this.gracefulShutdownTimeout = validateNonNegative(requireNonNull(
                 gracefulShutdownTimeout), "gracefulShutdownTimeout");
+        this.gracefulShutdownSchedulePeriod = validatePositive(
+                requireNonNull(gracefulShutdownSchedulePeriod), "gracefulShutdownSchedulePeriod");
         validateGreaterThanOrEqual(gracefulShutdownTimeout, "gracefulShutdownTimeout",
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
@@ -219,6 +223,13 @@ public final class ServerConfig {
     static Duration validateNonNegative(Duration duration, String fieldName) {
         if (duration.isNegative()) {
             throw new IllegalArgumentException(fieldName + ": " + duration + " (expected: >= 0)");
+        }
+        return duration;
+    }
+
+    static Duration validatePositive(Duration duration, String fieldName) {
+        if (duration.isNegative() || duration.isZero()) {
+            throw new IllegalArgumentException(fieldName + ": " + duration + " (expected: > 0)");
         }
         return duration;
     }
@@ -405,6 +416,14 @@ public final class ServerConfig {
      */
     public Duration gracefulShutdownTimeout() {
         return gracefulShutdownTimeout;
+    }
+
+    /**
+     * Returns the amount of time to periodically wait until the server to have completed processing requests
+     * after calling {@link Server#stop()} for requests to go away before actually shutting down.
+     */
+    public Duration gracefulShutdownSchedulePeriod() {
+        return gracefulShutdownSchedulePeriod;
     }
 
     /**
