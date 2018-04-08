@@ -15,25 +15,22 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
+import java.io.IOException;
 
-import org.apache.zookeeper.Watcher.Event.KeeperState;
-import org.apache.zookeeper.ZooKeeper;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperConnector;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
+import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -41,16 +38,22 @@ import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
  * zNode changes.
  */
 public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
+
+    private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
+
     private final NodeValueCodec nodeValueCodec;
-    private final ZooKeeperConnector zooKeeperConnector;
+    private final boolean internalClient;
+    private final CuratorFramework client;
+    private final PathChildrenCache pathChildrenCache;
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
      * node value using {@link NodeValueCodec}.
+     *
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
-     * @param sessionTimeout  Zookeeper session timeout in milliseconds
+     * @param sessionTimeout  ZooKeeper session timeout in milliseconds
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
         this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT);
@@ -59,66 +62,97 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
      * node value using {@link NodeValueCodec}.
+     *
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
-     * @param sessionTimeout  Zookeeper session timeout in milliseconds
-     * @param nodeValueCodec  the nodeValueCodec
+     * @param sessionTimeout  ZooKeeper session timeout in milliseconds
+     * @param nodeValueCodec  the {@link NodeValueCodec}
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                   NodeValueCodec nodeValueCodec) {
-        zooKeeperConnector = new ZooKeeperConnector(zkConnectionStr, zNodePath, sessionTimeout,
-                                                    createListener());
+        requireNonNull(zkConnectionStr, "zkConnectionStr");
+        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty");
+        requireNonNull(zNodePath, "zNodePath");
+        checkArgument(!zNodePath.isEmpty(), "zNodePath can't be empty");
+        checkArgument(sessionTimeout > 0, "sessionTimeoutMillis: %s (expected: > 0)",
+                      sessionTimeout);
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        zooKeeperConnector.connect();
+        this.internalClient = true;
+        this.client = CuratorFrameworkFactory.builder()
+                                             .connectString(zkConnectionStr)
+                                             .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
+                                             .sessionTimeoutMs(sessionTimeout)
+                                             .build();
+        client.start();
+        boolean success = false;
+        try {
+            pathChildrenCache = pathChildrenCache(zNodePath);
+            pathChildrenCache.start();
+            success = true;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        } finally {
+            if (!success) {
+                client.close();
+            }
+        }
+    }
+
+    /**
+     * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
+     * node value using {@link NodeValueCodec}.
+     *
+     * @param client          the {@link CuratorFramework} instance
+     * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
+     * @param nodeValueCodec  the {@link NodeValueCodec}
+     */
+    public ZooKeeperEndpointGroup(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec) {
+        requireNonNull(zNodePath, "zNodePath");
+        checkArgument(!zNodePath.isEmpty(), "zNodePath can't be empty");
+        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
+        this.internalClient = false;
+        this.client = requireNonNull(client, "client");
+        client.start();
+        try {
+            pathChildrenCache = pathChildrenCache(zNodePath);
+            pathChildrenCache.start();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private PathChildrenCache pathChildrenCache(String zNodePath) {
+        final PathChildrenCache pathChildrenCache = new PathChildrenCache(client, zNodePath, true);
+        pathChildrenCache.getListenable().addListener((c, event) -> {
+            switch (event.getType()) {
+                case CHILD_ADDED:
+                    addEndpoint(nodeValueCodec.decode(event.getData().getData()));
+                    break;
+                case CHILD_REMOVED:
+                    removeEndpoint(nodeValueCodec.decode(event.getData().getData()));
+                    break;
+                default:
+                    break;
+            }
+        });
+        return pathChildrenCache;
     }
 
     @Override
     public void close() {
-        zooKeeperConnector.close(true);
-    }
-
-    /**
-     * Create a {@link ZooKeeperListener} listens specific ZooKeeper events.
-     * @return  {@link ZooKeeperListener}
-     */
-    private ZooKeeperListener createListener() {
-        return new ZooKeeperListener() {
-            @Override
-            public void nodeChildChange(Map<String, String> newChildrenValue) {
-                final List<Endpoint> newData = newChildrenValue.values().stream()
-                                                               .map(nodeValueCodec::decode)
-                                                               .filter(Objects::nonNull)
-                                                               .collect(toImmutableList());
-                final List<Endpoint> prevData = endpoints();
-                if (!prevData.equals(newData)) {
-                    setEndpoints(newData);
+        try {
+            pathChildrenCache.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close PathChildrenCache:", e);
+        } finally {
+            if (internalClient) {
+                try {
+                    client.close();
+                } catch (Exception e) {
+                    logger.warn("Failed to close CuratorFramework:", e);
                 }
             }
-
-            @Override
-            public void nodeValueChange(String newValue) {
-                //ignore value change event
-            }
-
-            @Override
-            public void connected() {
-            }
-        };
-    }
-
-    @VisibleForTesting
-    void enableStateRecording() {
-        zooKeeperConnector.enableStateRecording();
-    }
-
-    @VisibleForTesting
-    ZooKeeper underlyingClient() {
-        return zooKeeperConnector.underlyingClient();
-    }
-
-    @VisibleForTesting
-    BlockingQueue<KeeperState> stateQueue() {
-        return zooKeeperConnector.stateQueue();
+        }
     }
 }

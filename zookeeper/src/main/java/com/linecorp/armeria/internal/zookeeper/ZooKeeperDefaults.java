@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,28 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.zookeeper;
+package com.linecorp.armeria.internal.zookeeper;
 
-import java.util.Map;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 
 /**
- * A ZooKeeper listener.
+ * ZooKeeper related constant values.
  */
-public interface ZooKeeperListener {
-    /**
-     * notify when node's children value changed.
-     * @param newChildrenValue new children values
-     */
-    void nodeChildChange(Map<String, String> newChildrenValue);
+public final class ZooKeeperDefaults {
+    public static final int DEFAULT_CONNECT_TIMEOUT_MS = 1000;
+    public static final int DEFAULT_SESSION_TIMEOUT_MS = 10000;
 
-    /**
-     * notify when a node value changed.
-     * @param newValue new node value
-     */
-    void nodeValueChange(String newValue);
+    public static final ExponentialBackoffRetry DEFAULT_RETRY_POLICY =
+            new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT_MS, 3);
 
-    /**
-     * notify when ZooKeeper connection established.
-     */
-    void connected();
+    private ZooKeeperDefaults() {}
 }

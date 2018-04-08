@@ -193,6 +193,14 @@ net.javacrumbs.json-unit:
 net.sf.proguard:
   proguard-gradle: { version: '6.0.2' }
 
+org.apache.curator:
+  curator-recipes:
+    version: '4.0.1'
+    javadocs:
+    - https://static.javadoc.io/org.apache.curator/curator-recipes/4.0.1/
+    exclusions:
+    - org.apache.zookeeper:zookeeper
+
 org.apache.hbase:
   hbase-shaded-client:
     version: '1.2.6'

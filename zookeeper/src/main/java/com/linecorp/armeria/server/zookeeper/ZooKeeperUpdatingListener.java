@@ -15,13 +15,18 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.zookeeper.CreateMode;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 
@@ -30,68 +35,97 @@ import com.linecorp.armeria.server.ServerListenerAdapter;
  * into the ZooKeeper.
  */
 public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
-    private final String zkConnectionStr;
-    private final String zNodePath;
-    private final int sessionTimeout;
-    @Nullable
-    private Endpoint endpoint;
-    @Nullable
-    private ZooKeeperRegistration connector;
 
     /**
-     * A ZooKeeper server listener, used for register server into ZooKeeper.
+     * Creates a ZooKeeper server listener, which registers server into ZooKeeper.
+     *
+     * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
+     * {@link ZooKeeperUpdatingListenerBuilder} instead.
+     *
      * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will registered)
+     * @param zNodePath       ZooKeeper node path(under which this server will be registered)
+     */
+    public static ZooKeeperUpdatingListener of(String zkConnectionStr, String zNodePath) {
+        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath).build();
+    }
+
+    private final CuratorFramework client;
+    private final String zNodePath;
+    private final NodeValueCodec nodeValueCodec;
+    @Nullable
+    private Endpoint endpoint;
+    private final boolean closeClientOnStop;
+
+    ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec,
+                              @Nullable Endpoint endpoint, boolean closeClientOnStop) {
+        this.client = requireNonNull(client, "client");
+        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
+        this.endpoint = endpoint;
+        this.closeClientOnStop = closeClientOnStop;
+    }
+
+    /**
+     * A ZooKeeper server listener, which registers server into ZooKeeper.
+     *
+     * @deprecated Use {@link ZooKeeperUpdatingListenerBuilder}.
+     *
+     * @param zkConnectionStr ZooKeeper connection string
+     * @param zNodePath       ZooKeeper node path(under which this server will be registered)
      * @param sessionTimeout  session timeout
      * @param endpoint        the endpoint of the server being registered
      */
+    @Deprecated
     public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                     Endpoint endpoint) {
-        this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
+                                     @Nullable Endpoint endpoint) {
+        requireNonNull(zkConnectionStr, "zkConnectionStr");
+        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty");
+        client = CuratorFrameworkFactory.builder()
+                                        .connectString(zkConnectionStr)
+                                        .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
+                                        .sessionTimeoutMs(sessionTimeout)
+                                        .build();
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        this.endpoint = requireNonNull(endpoint, "endpoint");
-        this.sessionTimeout = sessionTimeout;
+        this.nodeValueCodec = NodeValueCodec.DEFAULT;
+        this.endpoint = endpoint;
+        this.closeClientOnStop = true;
     }
 
     /**
-     * A ZooKeeper server listener, used for register server into ZooKeeper.
+     * A ZooKeeper server listener, which registers server into ZooKeeper.
+     *
+     * @deprecated Use {@link ZooKeeperUpdatingListenerBuilder}.
+     *
      * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will registered)
+     * @param zNodePath       ZooKeeper node path(under which this server will be registered)
      * @param sessionTimeout  session timeout
      */
+    @Deprecated
     public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
-        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        this.sessionTimeout = sessionTimeout;
+        this(zkConnectionStr, zNodePath, sessionTimeout, null);
     }
 
     @Override
-    public void serverStarted(Server server) {
+    public void serverStarted(Server server) throws Exception {
         if (endpoint == null) {
             assert server.activePort().isPresent();
             endpoint = Endpoint.of(server.defaultHostname(),
                                    server.activePort().get()
                                          .localAddress().getPort());
         }
-        connector = new ZooKeeperRegistration(zkConnectionStr, zNodePath, sessionTimeout, endpoint);
+        client.start();
+        final String key = endpoint.host() + '_' + endpoint.port();
+        final byte[] value = nodeValueCodec.encode(endpoint);
+        client.create()
+              .creatingParentsIfNeeded()
+              .withMode(CreateMode.EPHEMERAL)
+              .forPath(zNodePath + '/' + key, value);
     }
 
     @Override
     public void serverStopping(Server server) {
-        if (connector != null) {
-            connector.close(true);
+        if (closeClientOnStop) {
+            client.close();
         }
-    }
-
-    @Nullable
-    @VisibleForTesting
-    ZooKeeperRegistration getConnector() {
-        return connector;
-    }
-
-    @Nullable
-    @VisibleForTesting
-    Endpoint getEndpoint() {
-        return endpoint;
     }
 }

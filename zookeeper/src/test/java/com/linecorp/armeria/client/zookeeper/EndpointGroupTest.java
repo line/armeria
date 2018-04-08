@@ -19,15 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.fail;
 
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooKeeper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,7 +33,6 @@ import com.google.common.collect.ImmutableSet.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 
 import junitextensions.OptionAssert;
 import zookeeperjunit.CloseableZooKeeper;
@@ -48,17 +43,15 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     private ZooKeeperEndpointGroup endpointGroup;
 
     @Before
-    public void connectZk() throws Throwable {
+    public void connectZk() {
         //crate endpoint group and initialize node value
         setNodeChild(sampleEndpoints);
         try {
             endpointGroup = new ZooKeeperEndpointGroup(
-                    instance().connectString().get(), zNode, sessionTimeout);
-        } catch (ZooKeeperException e) {
+                    instance().connectString().get(), zNode, sessionTimeoutMillis);
+        } catch (IllegalStateException e) {
             fail();
         }
-        //enable state recording
-        endpointGroup.enableStateRecording();
     }
 
     @After
@@ -76,11 +69,11 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
 
     @Test
     public void testGetEndpointGroup() {
-        assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints);
+        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));
     }
 
     @Test
-    public void testUpdateEndpointGroup() throws Throwable {
+    public void testUpdateEndpointGroup() {
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001).withWeight(2),
                                                  Endpoint.of("127.0.0.1", 8002).withWeight(3));
         //add two more node
@@ -97,51 +90,6 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
 
         final Set<Endpoint> finalExpected = expected;
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(finalExpected));
-    }
-
-    @Test
-    public void testConnectionRecovery() throws Exception {
-        ZooKeeper zkHandler1 = endpointGroup.underlyingClient();
-        CountDownLatch latch = new CountDownLatch(1);
-        ZooKeeper zkHandler2;
-        //create a new handler with the same sessionId and password
-        zkHandler2 = new ZooKeeper(instance().connectString().get(), sessionTimeout, event -> {
-            if (event.getState() == KeeperState.SyncConnected) {
-                latch.countDown();
-            }
-        }, zkHandler1.getSessionId(), zkHandler1.getSessionPasswd());
-        latch.await();
-        //once connected, close the new handler to cause the original handler session expire
-        zkHandler2.close();
-
-        // Ensure the state transition went as expected.
-        final List<KeeperState> actualStates = takeAllStates(endpointGroup.stateQueue());
-        int i = 0;
-
-        // Expect the initial disconnection events.
-        int numDisconnected = 0;
-        for (; i < actualStates.size(); i++) {
-            if (actualStates.get(i) != KeeperState.Disconnected) {
-                break;
-            }
-            numDisconnected++;
-        }
-        assertThat(numDisconnected).isGreaterThan(0);
-
-        assertThat(actualStates.get(i++)).isEqualTo(KeeperState.Expired);
-        assertThat(actualStates.get(i++)).isEqualTo(KeeperState.SyncConnected);
-
-        // Expect the last disconnection events.
-        numDisconnected = 0;
-        for (; i < actualStates.size(); i++) {
-            if (actualStates.get(i) != KeeperState.Disconnected) {
-                break;
-            }
-            numDisconnected++;
-        }
-        assertThat(numDisconnected).isGreaterThan(0);
-
-        testGetEndpointGroup();
     }
 
     private void setNodeValue(byte[] nodeValue) throws Throwable {

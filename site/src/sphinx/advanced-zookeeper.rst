@@ -6,7 +6,7 @@
 .. _`EndpointGroup`: apidocs/index.html?com/linecorp/armeria/client/EndpointGroup.html
 .. _`EndpointGroupRegistry`: apidocs/index.html?com/linecorp/armeria/client/EndpointGroupRegistry.html
 .. _`ZooKeeperEndpointGroup`: apidocs/index.html?com/linecorp/armeria/client/zookeeper/ZooKeeperEndpointGroup.html
-.. _`ZooKeeperUpdatingListener`: apidocs/index.html?com/linecorp/armeria/server/zookeeper/ZooKeeperUpdatingListener.html
+.. _`ZooKeeperUpdatingListenerBuilder`: apidocs/index.html?com/linecorp/armeria/server/zookeeper/ZooKeeperUpdatingListenerBuilder.html
 
 .. _advanced-zookeeper:
 
@@ -60,19 +60,36 @@ For more information, please refer to the API documentation of the `com.linecorp
 Automatic service registration
 ------------------------------
 
-Use `ZooKeeperUpdatingListener`_ to register your server to a ZooKeeper cluster:
+Use `ZooKeeperUpdatingListenerBuilder`_ to register your server to a ZooKeeper cluster:
 
 .. code-block:: java
 
     import com.linecorp.armeria.server.ServerListener;
-    import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener;
+    import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListenerBuilder;
 
     // This constructor will use server's default host name, port and weight.
-    // Use the other constructors to override the defaults.
-    ServerListener listener = new ZooKeeperUpdatingListener(
-            /* zkConnectionStr */ "myZooKeeperHost:2181",
-            /* zNode           */ "/myProductionEndpoints",
-            /* sessionTimeout  */ 10000);
+    // Use `nodeValueCodec` method to override the defaults.
+    ZookeeperUpdatingListener listener =
+            new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
+            .sessionTimeout(10000)
+            .build();
+    server.addListener(listener);
+    server.start();
+    ...
+
+You can use an existing `CuratorFramework`_ instance instead of Zookeeper connection string.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.ServerListener;
+    import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListenerBuilder;
+    import org.apache.curator.framework.CuratorFramework;
+
+    CuratorFramework client = ...
+    ZookeeperUpdatingListener listener =
+            new ZooKeeperUpdatingListenerBuilder(client, "/myProductionEndpoints")
+            .nodeValueCodec(NodeValueCodec.DEFAULT)
+            .build();
     server.addListener(listener);
     server.start();
     ...
