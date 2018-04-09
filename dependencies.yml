@@ -257,7 +257,7 @@ org.checkerframework:
   checker-compat-qual: { version: '2.5.0' }
 
 org.curioswitch.curiostack:
-  protobuf-jackson: { version: '0.1.1' }
+  protobuf-jackson: { version: '0.2.0' }
 
 org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
