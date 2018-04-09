@@ -28,8 +28,9 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+
+import io.netty.util.AsciiString;
 
 /**
  * Extracts {@link OAuth1aToken} from {@link HttpHeaders}, in order to be used by
@@ -41,10 +42,16 @@ final class OAuth1aTokenExtractor implements Function<HttpHeaders, OAuth1aToken>
     private static final Pattern AUTHORIZATION_HEADER_PATTERN = Pattern.compile(
             "\\s*(?i)oauth\\s+(?<parameters>\\S+)\\s*");
 
+    private final AsciiString header;
+
+    OAuth1aTokenExtractor(AsciiString header) {
+        this.header = header;
+    }
+
     @Nullable
     @Override
     public OAuth1aToken apply(HttpHeaders headers) {
-        final String authorization = headers.get(HttpHeaderNames.AUTHORIZATION);
+        final String authorization = headers.get(header);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;
         }

@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
 
+import io.netty.util.AsciiString;
+
 /**
  * Builds a new {@link HttpAuthService}.
  */
@@ -57,26 +59,64 @@ public final class HttpAuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer}.
      */
     public HttpAuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer) {
-        authorizers.add(
-                tokenAuthorizer(AuthTokenExtractors.BASIC, requireNonNull(authorizer, "authorizer")));
-        return this;
+        return addTokenAuthorizer(AuthTokenExtractors.BASIC,
+                                  requireNonNull(authorizer, "authorizer"));
+    }
+
+    /**
+     * Adds an HTTP basic {@link Authorizer} for the given {@code header}.
+     */
+    public HttpAuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer, AsciiString header) {
+        return addTokenAuthorizer(new BasicTokenExtractor(requireNonNull(header, "header")),
+                                  requireNonNull(authorizer, "authorizer"));
     }
 
     /**
      * Adds an OAuth1a {@link Authorizer}.
      */
     public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer) {
-        authorizers.add(
-                tokenAuthorizer(AuthTokenExtractors.OAUTH1A, requireNonNull(authorizer, "authorizer")));
-        return this;
+        return addTokenAuthorizer(AuthTokenExtractors.OAUTH1A,
+                                  requireNonNull(authorizer, "authorizer"));
+    }
+
+    /**
+     * Adds an OAuth1a {@link Authorizer} for the given {@code header}.
+     */
+    public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer, AsciiString header) {
+        return addTokenAuthorizer(new OAuth1aTokenExtractor(requireNonNull(header, "header")),
+                                  requireNonNull(authorizer, "authorizer"));
     }
 
     /**
      * Adds an OAuth2 {@link Authorizer}.
      */
     public HttpAuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer) {
-        authorizers.add(
-                tokenAuthorizer(AuthTokenExtractors.OAUTH2, requireNonNull(authorizer, "authorizer")));
+        return addTokenAuthorizer(AuthTokenExtractors.OAUTH2, requireNonNull(authorizer, "authorizer"));
+    }
+
+    /**
+     * Adds an OAuth2 {@link Authorizer} for the given {@code header}.
+     */
+    public HttpAuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer, AsciiString header) {
+        return addTokenAuthorizer(new OAuth2TokenExtractor(requireNonNull(header, "header")),
+                                  requireNonNull(authorizer, "authorizer"));
+    }
+
+    /**
+     * Adds a token-based {@link Authorizer}.
+     */
+    public <T> HttpAuthServiceBuilder addTokenAuthorizer(
+            Function<HttpHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
+        requireNonNull(tokenExtractor, "tokenExtractor");
+        requireNonNull(authorizer, "authorizer");
+        final Authorizer<HttpRequest> requestAuthorizer = (ctx, req) -> {
+            T token = tokenExtractor.apply(req.headers());
+            if (token == null) {
+                return CompletableFuture.completedFuture(false);
+            }
+            return authorizer.authorize(ctx, token);
+        };
+        authorizers.add(requestAuthorizer);
         return this;
     }
 
@@ -93,16 +133,5 @@ public final class HttpAuthServiceBuilder {
      */
     public Function<Service<HttpRequest, HttpResponse>, HttpAuthService> newDecorator() {
         return HttpAuthService.newDecorator(authorizers);
-    }
-
-    private static <T> Authorizer<HttpRequest> tokenAuthorizer(
-            Function<HttpHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
-        return (ctx, req) -> {
-            T token = tokenExtractor.apply(req.headers());
-            if (token == null) {
-                return CompletableFuture.completedFuture(false);
-            }
-            return authorizer.authorize(ctx, token);
-        };
     }
 }
