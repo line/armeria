@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.auth;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 
 /**
@@ -28,17 +29,20 @@ public final class AuthTokenExtractors {
     /**
      * A {@link BasicToken} extractor function instance.
      */
-    public static final Function<HttpHeaders, BasicToken> BASIC = new BasicTokenExtractor();
+    public static final Function<HttpHeaders, BasicToken> BASIC =
+            new BasicTokenExtractor(HttpHeaderNames.AUTHORIZATION);
 
     /**
      * An {@link OAuth1aToken} extractor function instance.
      */
-    public static final Function<HttpHeaders, OAuth1aToken> OAUTH1A = new OAuth1aTokenExtractor();
+    public static final Function<HttpHeaders, OAuth1aToken> OAUTH1A =
+            new OAuth1aTokenExtractor(HttpHeaderNames.AUTHORIZATION);
 
     /**
      * An {@link OAuth2Token} extractor function instance.
      */
-    public static final Function<HttpHeaders, OAuth2Token> OAUTH2 = new OAuth2TokenExtractor();
+    public static final Function<HttpHeaders, OAuth2Token> OAUTH2 =
+            new OAuth2TokenExtractor(HttpHeaderNames.AUTHORIZATION);
 
     private AuthTokenExtractors() {}
 }

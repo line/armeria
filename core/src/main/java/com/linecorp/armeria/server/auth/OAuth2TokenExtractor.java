@@ -27,8 +27,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+
+import io.netty.util.AsciiString;
 
 /**
  * Extracts {@link OAuth2Token} from {@link HttpHeaders}, in order to be used by {@link HttpAuthServiceBuilder}.
@@ -39,10 +40,16 @@ final class OAuth2TokenExtractor implements Function<HttpHeaders, OAuth2Token> {
     private static final Pattern AUTHORIZATION_HEADER_PATTERN = Pattern.compile(
             "\\s*(?i)bearer\\s+(?<accessToken>\\S+)\\s*");
 
+    private final AsciiString header;
+
+    OAuth2TokenExtractor(AsciiString header) {
+        this.header = header;
+    }
+
     @Nullable
     @Override
     public OAuth2Token apply(HttpHeaders headers) {
-        final String authorization = headers.get(HttpHeaderNames.AUTHORIZATION);
+        final String authorization = headers.get(header);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;
         }

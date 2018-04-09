@@ -30,8 +30,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+
+import io.netty.util.AsciiString;
 
 /**
  * Extracts {@link BasicToken} from {@link HttpHeaders}, in order to be used by {@link HttpAuthServiceBuilder}.
@@ -44,10 +45,16 @@ final class BasicTokenExtractor implements Function<HttpHeaders, BasicToken> {
             "\\s*(?i)basic\\s+(?<encoded>\\S+)\\s*");
     private static final Decoder BASE64_DECODER = Base64.getDecoder();
 
+    private final AsciiString header;
+
+    BasicTokenExtractor(AsciiString header) {
+        this.header = header;
+    }
+
     @Nullable
     @Override
     public BasicToken apply(HttpHeaders headers) {
-        final String authorization = headers.get(HttpHeaderNames.AUTHORIZATION);
+        final String authorization = headers.get(header);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;
         }
