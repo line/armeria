@@ -83,7 +83,7 @@ public final class HttpAuthServiceBuilder {
      * Adds an OAuth1a {@link Authorizer} for the given {@code header}.
      */
     public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer, AsciiString header) {
-        return addTokenAuthorizer(new OAuth1aTokenExtractor(header),
+        return addTokenAuthorizer(new OAuth1aTokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
 
