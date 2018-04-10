@@ -49,7 +49,7 @@ configure(projectsWithFlags('java')) {
                 project.sourceSets[scope].java.srcDir javaOutputDir
                 project.sourceSets[scope].resources.srcDir jsonOutputDir
 
-                doLast {
+                doFirst {
                     def actualThriftPath
                     if (project.findProperty('thriftPath') != null) {
                         actualThriftPath = project.findProperty('thriftPath')
