@@ -115,60 +115,101 @@ allprojects {
             } catch (ignored) {}
 
             // External Javadoc links, cached under '~/.gradle/caches/package-lists'
+            def downloadListFile = { File listFile, URL listUrl ->
+                // Do not attempt to download more than once.
+                if (!visitedUrls.add(listUrl.toString())) {
+                    return
+                }
+
+                def success = false
+                def tmpListFile = new File("${listFile}.tmp")
+
+                listFile.parentFile.mkdirs()
+                listFile.delete()
+
+                logger.lifecycle("Download ${listUrl}")
+
+                try {
+                    // Set some fake headers for the web sites who blocks a URLConnection.
+                    def conn = listUrl.openConnection() as HttpURLConnection
+                    conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    conn.setRequestProperty('Accept-Encoding', 'identity')
+                    conn.setRequestProperty("Accept-Language", 'en-US,en;q=0.5')
+                    conn.setRequestProperty("Cache-Control", 'no-cache')
+                    conn.setRequestProperty('Pragma', 'no-cache')
+                    conn.setRequestProperty('User-Agent', "Gradle/${gradle.gradleVersion} (${project.group}:${project.ext.artifactId})")
+                    conn.setUseCaches(false)
+
+                    if (conn.responseCode == 200) {
+                        tmpListFile.withOutputStream { it << conn.inputStream }
+                        if (tmpListFile.length() == 0) {
+                            tmpListFile.delete()
+                        } else {
+                            success = tmpListFile.renameTo(listFile);
+                        }
+                    } else {
+                        logger.log(LogLevel.WARN, "Download failed: ${conn.responseCode} ${conn.responseMessage}")
+                    }
+
+                    conn.disconnect()
+                } catch (e) {
+                    tmpListFile.delete()
+                    throw new GradleScriptException("${e}", e)
+                }
+
+                return success
+            }
+
             def addOfflineLink = { name, url ->
+                if (offlineJavadoc) {
+                    return
+                }
+
                 def javadocUrl = "${url}"
                 if (!javadocUrl.endsWith('/')) {
                     javadocUrl += '/'
                 }
 
-                if (!visitedUrls.add(javadocUrl)) {
-                    return
+                def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
+                def listFileDir = new File(javadocCacheDir, "${name}/${javadocUrlSha1}")
+                def packageListFile = new File(listFileDir, 'package-list')
+                def elementListFile = new File(listFileDir, 'element-list')
+
+                if (packageListFile.exists() && packageListFile.length() == 0) {
+                    packageListFile.delete()
+                }
+                if (elementListFile.exists() && elementListFile.length() == 0) {
+                    elementListFile.delete()
                 }
 
-                def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
-                def tmpPackageListFile = new File(javadocCacheDir, "${name}/${javadocUrlSha1}/package-list.tmp")
-                def packageListFile = new File(javadocCacheDir, "${name}/${javadocUrlSha1}/package-list")
-
-                if ((!packageListFile.exists() || packageListFile.length() == 0) && !offlineJavadoc) {
-                    packageListFile.parentFile.mkdirs()
-                    packageListFile.delete()
-                    def packageListUrl = new URL("${javadocUrl}package-list")
-                    logger.lifecycle("Download ${packageListUrl}")
-                    try {
-                        // Set some fake headers for the web sites who blocks a URLConnection.
-                        def conn = packageListUrl.openConnection() as HttpURLConnection
-                        conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                        conn.setRequestProperty('Accept-Encoding', 'identity')
-                        conn.setRequestProperty("Accept-Language", 'en-US,en;q=0.5')
-                        conn.setRequestProperty("Cache-Control", 'no-cache')
-                        conn.setRequestProperty('Pragma', 'no-cache')
-                        conn.setRequestProperty('User-Agent', "Gradle/${gradle.gradleVersion} (${project.group}:${project.ext.artifactId})")
-                        conn.setUseCaches(false)
-
-                        if (conn.responseCode == 200) {
-                            tmpPackageListFile.withOutputStream { it << conn.inputStream }
-                            if (tmpPackageListFile.length() == 0) {
-                                tmpPackageListFile.delete()
-                            } else {
-                                tmpPackageListFile.renameTo(packageListFile);
+                def success = true
+                if (!packageListFile.exists()) {
+                    if (!downloadListFile(packageListFile, new URL("${javadocUrl}package-list"))) {
+                        // Failed to download package-list, try element-list.
+                        if (downloadListFile(elementListFile, new URL("${javadocUrl}element-list"))) {
+                            // package-list does not exist, but element-list exists.
+                            // No problem. We can generate package-list from element-list.
+                            def tmpPackageListFile = new File("${packageListFile}.tmp")
+                            tmpPackageListFile.withWriter('utf-8') { out ->
+                                // Find only the lines with a package name.
+                                elementListFile.filterLine(out, 'utf-8') { line ->
+                                    def packageNamePattern = /^\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*(?:\.\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)*$/
+                                    return line.matches(packageNamePattern)
+                                }
                             }
+                            success = tmpPackageListFile.renameTo(packageListFile)
                         } else {
-                            logger.log(LogLevel.WARN, "Download failed: ${conn.responseCode} ${conn.responseMessage}")
+                            success = false
                         }
-
-                        conn.disconnect()
-                    } catch (e) {
-                        tmpPackageListFile.delete()
-                        throw new GradleScriptException("${e}", e)
                     }
                 }
 
-                if (packageListFile.exists()) {
-                    linksOffline javadocUrl, "${packageListFile.parentFile}"
+                if (success) {
+                    linksOffline javadocUrl, "${listFileDir}"
                 }
             }
 
-            addOfflineLink('java9', 'https://docs.oracle.com/javase/9/docs/api/')
+            addOfflineLink('java10', 'https://docs.oracle.com/javase/10/docs/api/')
 
             project.ext.javadocLinks.each {
                 addOfflineLink("${it['groupId']}/${it['artifactId']}/${it['version']}", it['url'])
