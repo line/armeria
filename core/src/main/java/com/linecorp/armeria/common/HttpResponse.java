@@ -111,6 +111,50 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response of OK status with the content as UTF_8 and closes the stream.
+     *
+     * @param content the content of the response
+     */
+    static HttpResponse of(String content) {
+        return of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, content);
+    }
+
+    /**
+     * Creates a new HTTP response of OK status with the content as UTF_8 and closes the stream.
+     * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
+     * {@linkplain Locale#ENGLISH English locale}.
+     *
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    static HttpResponse of(String format, Object... args) {
+        return of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, format, args);
+    }
+
+    /**
+     * Creates a new HTTP response of OK status with the content and closes the stream.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
+    static HttpResponse of(MediaType mediaType, String content) {
+        return of(HttpStatus.OK, mediaType, content);
+    }
+
+    /**
+     * Creates a new HTTP response of OK status with the content and closes the stream.
+     * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
+     * {@linkplain Locale#ENGLISH English locale}.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    static HttpResponse of(MediaType mediaType, String format, Object... args) {
+        return of(HttpStatus.OK, mediaType, format, args);
+    }
+
+    /**
      * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
      * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
      * {@linkplain Locale#ENGLISH English locale}.
