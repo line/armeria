@@ -7,6 +7,7 @@
 .. _protobuf-gradle-plugin: https://github.com/google/protobuf-gradle-plugin
 .. _Protobuf-JSON: https://developers.google.com/protocol-buffers/docs/proto3#json
 .. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
+.. _ServiceWithPathMappings: apidocs/index.html?com/linecorp/armeria/server/ServiceWithPathMappings.html
 .. _the gRPC-Java README: https://github.com/grpc/grpc-java/blob/master/README.md#download
 
 .. _server-grpc:
@@ -82,16 +83,16 @@ a GrpcServiceBuilder_ and add it to the ServerBuilder_:
 
     ServerBuilder sb = new ServerBuilder();
     ...
-    sb.serviceUnder("/",
-                    new GrpcServiceBuilder().addService(new MyHelloService())
-                                            .build());
+    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+                                       .build());
     ...
     Server server = sb.build();
     server.start();
 
-Note that we bound the GrpcService_ under ``/``, which is the catch-all path mapping. This is required for
-compatibility with the official gRPC client. If you are going to add non-gRPC services as well, make sure
-they are added *before* the GrpcService_ so that it does not take precedence.
+.. note::
+
+    We bound the GrpcService_ without specifying any path mappings. It is because GrpcService_ implements
+    ServiceWithPathMappings_, which dynamically provides path mappings by itself.
 
 ``gRPC-Web``
 ------------
@@ -104,10 +105,9 @@ GrpcServiceBuilder_. It is usually convenient to just pass GrpcSerializationForm
 
     ServerBuilder sb = new ServerBuilder();
     ...
-    sb.serviceUnder("/",
-                    new GrpcServiceBuilder().addService(new MyHelloService())
-                                            .supportedSerializationFormats(GrpcSerializationFormats.values())
-                                            .build());
+    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+                                       .supportedSerializationFormats(GrpcSerializationFormats.values())
+                                       .build());
     ...
     Server server = sb.build();
     server.start();
@@ -127,10 +127,9 @@ supports both binary protobuf and Protobuf-JSON_, either legacy protobuf or JSON
 
     ServerBuilder sb = new ServerBuilder();
     ...
-    sb.serviceUnder("/",
-                    new GrpcServiceBuilder().addService(new MyHelloService())
-                                            .enableUnframedRequests(true)
-                                            .build());
+    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+                                       .enableUnframedRequests(true)
+                                       .build());
     ...
     Server server = sb.build();
     server.start();
