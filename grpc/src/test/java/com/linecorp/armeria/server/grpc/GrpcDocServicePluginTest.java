@@ -20,7 +20,9 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.junit.Test;
@@ -29,7 +31,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.ReconnectInfo;
@@ -41,9 +44,13 @@ import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
+import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
+import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EnumInfo;
@@ -57,8 +64,6 @@ import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 
-import io.netty.util.AsciiString;
-
 public class GrpcDocServicePluginTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
@@ -69,29 +74,46 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void services() throws Exception {
-        ServiceConfig testService = new ServiceConfig(
+        final VirtualHost vhost = new VirtualHostBuilder().build();
+        final Set<ServiceConfig> serviceCfgs = new HashSet<>();
+
+        // The case where a GrpcService is added to ServerBuilder without a prefix.
+        final ServiceWithPathMappings<HttpRequest, HttpResponse> prefixlessService =
+                new GrpcServiceBuilder().addService(mock(TestServiceImplBase.class)).build();
+        prefixlessService.pathMappings().forEach(
+                mapping -> serviceCfgs.add(new ServiceConfig(vhost, mapping, prefixlessService)));
+
+        // The case where a GrpcService is added to ServerBuilder with a prefix.
+        serviceCfgs.add(new ServiceConfig(
                 new VirtualHostBuilder().build(),
                 PathMapping.ofPrefix("/test"),
-                new GrpcServiceBuilder().addService(mock(TestServiceImplBase.class)).build());
+                new GrpcServiceBuilder().addService(mock(UnitTestServiceImplBase.class)).build()));
 
-        HttpHeaders testExampleHeaders = HttpHeaders.of(AsciiString.of("test"), "service");
-
-        ServiceConfig reconnectService = new ServiceConfig(
+        // Another GrpcService with a different prefix.
+        serviceCfgs.add(new ServiceConfig(
                 new VirtualHostBuilder().build(),
                 PathMapping.ofPrefix("/reconnect"),
-                new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build());
+                new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build()));
 
-        HttpHeaders reconnectExampleHeaders = HttpHeaders.of(AsciiString.of("reconnect"), "never");
-
-        ServiceSpecification specification = generator.generateSpecification(
-                ImmutableSet.of(testService, reconnectService));
-
+        // Make sure all services and their endpoints exist in the specification.
+        ServiceSpecification specification = generator.generateSpecification(serviceCfgs);
         Map<String, ServiceInfo> services = specification
                 .services()
                 .stream()
                 .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
+                                              UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME);
+
+        services.get(TestServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
+            assertThat(e.path()).isEqualTo("/armeria.grpc.testing.TestService/" + m.name());
+        }));
+        services.get(UnitTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
+            assertThat(e.path()).isEqualTo("/test/armeria.grpc.testing.UnitTestService/" + m.name());
+        }));
+        services.get(ReconnectServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
+            assertThat(e.path()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" + m.name());
+        }));
     }
 
     @Test
