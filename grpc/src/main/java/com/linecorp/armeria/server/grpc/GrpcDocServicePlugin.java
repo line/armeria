@@ -146,23 +146,28 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                             return new ServiceEntryBuilder(serviceDescriptor);
                         });
             }
-            serviceConfig.pathMapping().prefix().ifPresent(
-                    path -> {
-                        for (ServerServiceDefinition service : grpcService.services()) {
-                            final String serviceName = service.getServiceDescriptor().getName();
-                            map.get(serviceName).endpoint(
-                                    new EndpointInfo(
-                                            serviceConfig.virtualHost().hostnamePattern(),
-                                            // Only the URL prefix, each method is served at a different path.
-                                            path + serviceName + '/',
-                                            "",
-                                            // No default mime type for gRPC, so just pick arbitrarily for now.
-                                            // TODO(anuraag): Consider allowing default mime type to be null.
-                                            Iterables.getFirst(supportedMediaTypes,
-                                                               GrpcSerializationFormats.PROTO.mediaType()),
-                                            supportedMediaTypes));
-                        }
-                    });
+
+            final String pathPrefix;
+            if (serviceConfig.pathMapping().prefix().isPresent()) {
+                pathPrefix = serviceConfig.pathMapping().prefix().get();
+            } else {
+                pathPrefix = "/";
+            }
+
+            for (ServerServiceDefinition service : grpcService.services()) {
+                final String serviceName = service.getServiceDescriptor().getName();
+                map.get(serviceName).endpoint(
+                        new EndpointInfo(
+                                serviceConfig.virtualHost().hostnamePattern(),
+                                // Only the URL prefix, each method is served at a different path.
+                                pathPrefix + serviceName + '/',
+                                "",
+                                // No default mime type for gRPC, so just pick arbitrarily for now.
+                                // TODO(anuraag): Consider allowing default mime type to be null.
+                                Iterables.getFirst(supportedMediaTypes,
+                                                   GrpcSerializationFormats.PROTO.mediaType()),
+                                supportedMediaTypes));
+            }
         }
         return generate(map.values().stream()
                            .map(ServiceEntryBuilder::build)
