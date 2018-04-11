@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -23,22 +25,26 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import javax.annotation.Nullable;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.util.Exceptions;
 
+import junitextensions.OptionAssert;
+import zookeeperjunit.CloseableZooKeeper;
 import zookeeperjunit.ZKFactory;
 import zookeeperjunit.ZKInstance;
+import zookeeperjunit.ZooKeeperAssert;
 
-public class TestBase {
-    protected static final Logger logger = LoggerFactory.getLogger(EndpointGroupTest.class);
+public class ZooKeeperTestBase implements ZooKeeperAssert, OptionAssert {
+
     protected static final String zNode = "/testEndPoints";
     protected static final int sessionTimeoutMillis = 20000;
     protected static final Set<Endpoint> sampleEndpoints;
@@ -53,6 +59,8 @@ public class TestBase {
     private static final Duration duration = Duration.ofSeconds(10);
     @ClassRule
     public static final TemporaryFolder ROOT_FOLDER = new TemporaryFolder();
+
+    @Nullable
     private static ZKInstance zkInstance;
 
     @BeforeClass
@@ -63,7 +71,10 @@ public class TestBase {
 
     @AfterClass
     public static void stop() throws Throwable {
-        zkInstance.stop().ready(duration);
+        if (zkInstance != null) {
+            zkInstance.stop().ready(duration);
+            zkInstance = null;
+        }
     }
 
     private static int[] unusedPorts(int numPorts) {
@@ -86,7 +97,24 @@ public class TestBase {
         return ports;
     }
 
+    @Override
     public ZKInstance instance() {
+        checkState(zkInstance != null, "ZKInstance not ready");
         return zkInstance;
+    }
+
+    @Override
+    public CloseableZooKeeper connection() {
+        // Try up to three times to reduce flakiness.
+        Throwable lastCause = null;
+        for (int i = 0; i < 3; i++) {
+            try {
+                return ZooKeeperAssert.super.connection();
+            } catch (Throwable t) {
+                lastCause = t;
+            }
+        }
+
+        return Exceptions.throwUnsafely(lastCause);
     }
 }
