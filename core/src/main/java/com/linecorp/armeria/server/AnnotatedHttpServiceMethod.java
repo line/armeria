@@ -19,6 +19,8 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.aggregationAvailable;
+import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.findHeaderName;
+import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.findParamName;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.httpParametersOf;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.validateAndNormalizeSupportedType;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
@@ -56,7 +58,6 @@ import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.annotation.BeanRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
@@ -247,26 +248,26 @@ final class AnnotatedHttpServiceMethod {
         boolean hasRequestMessage = false;
         final ImmutableList.Builder<Parameter> entries = ImmutableList.builder();
         for (java.lang.reflect.Parameter parameterInfo : method.getParameters()) {
-            final Param param = parameterInfo.getAnnotation(Param.class);
+            final String param = findParamName(parameterInfo);
             if (param != null) {
-                if (pathParams.contains(param.value())) {
+                if (pathParams.contains(param)) {
                     if (parameterInfo.getAnnotation(Default.class) != null ||
                         parameterInfo.getType() == Optional.class) {
                         throw new IllegalArgumentException(
-                                "Path variable '" + param.value() + "' should not be an optional.");
+                                "Path variable '" + param + "' should not be an optional.");
                     }
                     entries.add(Parameter.ofPathParam(
-                            validateAndNormalizeSupportedType(parameterInfo.getType()), param.value()));
+                            validateAndNormalizeSupportedType(parameterInfo.getType()), param));
                 } else {
                     entries.add(createOptionalSupportedParam(
-                            parameterInfo, ParameterType.PARAM, param.value()));
+                            parameterInfo, ParameterType.PARAM, param));
                 }
                 continue;
             }
 
-            final Header header = parameterInfo.getAnnotation(Header.class);
+            final String header = findHeaderName(parameterInfo);
             if (header != null) {
-                entries.add(createOptionalSupportedParam(parameterInfo, ParameterType.HEADER, header.value()));
+                entries.add(createOptionalSupportedParam(parameterInfo, ParameterType.HEADER, header));
                 continue;
             }
 

@@ -180,6 +180,46 @@ one of the following supported types:
 - ``String``
 - ``Enum``
 
+Note that you can omit the value of `@Param`_ if you compiled your code with ``-parameters`` javac option.
+In this case the variable name is used as the value.
+
+.. code-block:: java
+
+    public class MyAnnotatedServiceClass {
+        @Get("/hello/{name}")
+        public HttpResponse hello1(@Param String name) { ... }
+    }
+
+.. note::
+
+    You can configure your build tool to add ``-parameters`` javac option as follows.
+
+    .. code-block:: groovy
+
+        // Gradle:
+        tasks.withType(JavaCompile) {
+            options.compilerArgs += '-parameters'
+        }
+
+    .. code-block:: xml
+
+        <!-- Maven -->
+        <project>
+          <build>
+            <pluigins>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                  <compilerArgs>
+                    <arg>-parameters</arg>
+                  </compilerArgs>
+                </configuration>
+              </plugin>
+            </plugins>
+          </build>
+        </project>
+
 Injecting a parameter as an ``Enum`` type
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -275,6 +315,19 @@ annotated with `@Header`_ can also be specified as one of the built-in types as 
 
         @Post("/hello2")
         public HttpResponse hello2(@Header("Content-Length") long contentLength) { ... }
+    }
+
+Note that you can omit the value of `@Header`_  if you compiled your code with ``-parameters`` javac option.
+Read :ref:`parameter-injection` for more information.
+In this case the variable name is used as the value, but it will be converted to hyphen-separated lowercase
+string to be suitable for general HTTP header names. e.g. a variable name ``contentLength`` or
+``content_length`` will be converted to ``content-length`` as the value of `@Header`_.
+
+.. code-block:: java
+
+    public class MyAnnotatedServiceClass {
+        @Post("/hello2")
+        public HttpResponse hello2(@Header long contentLength) { ... }
     }
 
 Other classes automatically injected
@@ -466,11 +519,18 @@ or HTTP headers:
 .. code-block:: java
 
     public class MyRequestObject {
-        @Param("name") // This field will be injected by value of parameter "name".
+        @Param("name") // This field will be injected by the value of parameter "name".
         private String name;
 
-        @Header("age") // This field will be injected by value of HTTP header "age".
+        @Header("age") // This field will be injected by the value of HTTP header "age".
         private int age;
+
+        // You can omit the value of @Param or @Header if you compiled your code with ``-parameters`` javac option.
+        @Param         // This field will be injected by the value of parameter "gender".
+        private String gender;
+
+        @Header        // This field will be injected by the value of HTTP header "accept-language".
+        private String acceptLanguage;
 
         @Param("address") // You can annotate a single parameter method with @Param or @Header.
         public void setAddress(String address) { ... }
