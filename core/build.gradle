@@ -31,6 +31,9 @@ dependencies {
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'
     testCompile 'org.reactivestreams:reactive-streams-tck'
+
+    // Bouncy Castle
+    compile 'org.bouncycastle:bcprov-jdk15on'
 }
 
 // Run the test cases based on reactive-streams-tck
