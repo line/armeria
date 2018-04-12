@@ -253,6 +253,13 @@ org.assertj:
 org.awaitility:
   awaitility: { version: '3.1.0' }
 
+org.bouncycastle:
+  bcprov-jdk15on:
+    version: '1.59'
+    relocations:
+    - from: org.bouncycastle
+      to: com.linecorp.armeria.internal.shaded.bouncycastle
+
 org.checkerframework:
   checker-compat-qual: { version: '2.5.0' }
 

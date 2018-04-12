@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -188,13 +189,39 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * {@code keyFile} and {@code keyPassword}.
      */
     public B tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
-        final SslContextBuilder builder = SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword);
+        if (!keyCertChainFile.exists()) {
+            throw new SSLException("non-existent certificate chain file: " + keyCertChainFile);
+        }
+        if (!keyCertChainFile.canRead()) {
+            throw new SSLException("cannot read certificate chain file: " + keyCertChainFile);
+        }
+        if (!keyFile.exists()) {
+            throw new SSLException("non-existent key file: " + keyFile);
+        }
+        if (!keyFile.canRead()) {
+            throw new SSLException("cannot read key file: " + keyFile);
+        }
 
-        builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
-        builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
-        builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
+        final SslContext sslCtx;
 
-        tls(builder.build());
+        try {
+            sslCtx = BouncyCastleKeyFactoryProvider.call(() -> {
+                final SslContextBuilder builder =
+                        SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword);
+
+                builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
+                builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+                builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
+
+                return builder.build();
+            });
+        } catch (RuntimeException | SSLException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SSLException("failed to configure TLS: " + e, e);
+        }
+
+        tls(sslCtx);
         return self();
     }
 
