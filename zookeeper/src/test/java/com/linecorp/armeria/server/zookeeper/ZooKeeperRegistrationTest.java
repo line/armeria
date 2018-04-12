@@ -16,17 +16,20 @@
 package com.linecorp.armeria.server.zookeeper;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.zookeeper.TestBase;
+import com.linecorp.armeria.client.zookeeper.ZooKeeperTestBase;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -40,12 +43,11 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import junitextensions.OptionAssert;
 import zookeeperjunit.CloseableZooKeeper;
-import zookeeperjunit.ZooKeeperAssert;
 
-public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAssert, OptionAssert {
+public class ZooKeeperRegistrationTest extends ZooKeeperTestBase {
 
+    @Nullable
     private List<Server> servers;
 
     @Before
@@ -53,11 +55,11 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         servers = new ArrayList<>();
 
         for (Endpoint endpoint : sampleEndpoints) {
-            Server server = new ServerBuilder().http(endpoint.port())
-                                               .service("/", new EchoService())
-                                               .build();
-            ServerListener listener = new ZooKeeperUpdatingListenerBuilder(instance().connectString().get(),
-                                                                           zNode)
+            final Server server = new ServerBuilder().http(endpoint.port())
+                                                     .service("/", new EchoService())
+                                                     .build();
+            final ServerListener listener = new ZooKeeperUpdatingListenerBuilder(
+                    instance().connectString().get(), zNode)
                     .sessionTimeoutMillis(sessionTimeoutMillis)
                     .endpoint(endpoint)
                     .build();
@@ -74,16 +76,17 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         }
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 30000)
     public void testServerNodeCreateAndDelete() {
         //all servers start and with zNode created
-        sampleEndpoints.forEach(
-                endpoint -> assertExists(zNode + '/' + endpoint.host() + '_' + endpoint.port()));
-        try (CloseableZooKeeper zkClient = connection()) {
+        await().untilAsserted(() -> sampleEndpoints.forEach(
+                endpoint -> assertExists(zNode + '/' + endpoint.host() + '_' + endpoint.port())));
+
+        try (CloseableZooKeeper zk = connection()) {
             try {
                 sampleEndpoints.forEach(endpoint -> {
                     try {
-                        assertThat(NodeValueCodec.DEFAULT.decode(zkClient.getData(
+                        assertThat(NodeValueCodec.DEFAULT.decode(zk.getData(
                                 zNode + '/' + endpoint.host() + '_' + endpoint.port()).get()))
                                 .isEqualTo(endpoint);
                     } catch (Throwable throwable) {
@@ -100,8 +103,8 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
 
                     for (Endpoint endpoint : sampleEndpoints) {
                         try {
-                            String key = zNode + '/' + endpoint.host() + '_' + endpoint.port();
-                            if (zkClient.exists(key).get()) {
+                            final String key = zNode + '/' + endpoint.host() + '_' + endpoint.port();
+                            if (zk.exists(key).get()) {
                                 remaining++;
                             } else {
                                 removed++;
