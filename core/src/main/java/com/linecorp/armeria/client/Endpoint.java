@@ -19,12 +19,14 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Comparator;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ComparisonChain;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
@@ -43,7 +45,10 @@ import io.netty.util.NetUtil;
  * in the authority part of a URI. It can be resolved into a host endpoint with
  * {@link #resolve(ClientRequestContext)}.
  */
-public final class Endpoint {
+public final class Endpoint implements Comparable<Endpoint> {
+
+    private static final Comparator<String> IP_ADDR_COMPARATOR =
+            Comparator.nullsFirst(Comparator.naturalOrder());
 
     private static final int DEFAULT_WEIGHT = 1000;
 
@@ -393,7 +398,7 @@ public final class Endpoint {
     }
 
     private static void validateWeight(int weight) {
-        checkArgument(weight > 0, "weight: %s (expected: > 0)", weight);
+        checkArgument(weight >= 0, "weight: %s (expected: >= 0)", weight);
     }
 
     @Override
@@ -427,6 +432,27 @@ public final class Endpoint {
     @Override
     public int hashCode() {
         return (authority().hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+    }
+
+    @Override
+    public int compareTo(Endpoint that) {
+        if (isGroup()) {
+            if (that.isGroup()) {
+                return groupName().compareTo(that.groupName());
+            } else {
+                return -1;
+            }
+        } else {
+            if (that.isGroup()) {
+                return 1;
+            } else {
+                return ComparisonChain.start()
+                                      .compare(host(), that.host())
+                                      .compare(ipAddr, that.ipAddr, IP_ADDR_COMPARATOR)
+                                      .compare(port, that.port)
+                                      .result();
+            }
+        }
     }
 
     @Override

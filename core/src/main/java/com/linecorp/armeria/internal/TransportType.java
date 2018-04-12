@@ -23,6 +23,7 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.Flags;
 
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.epoll.EpollDatagramChannel;
@@ -113,6 +114,29 @@ public enum TransportType {
             }
         }
         throw unsupportedEventLoopType(eventLoopGroup);
+    }
+
+    /**
+     * Returns whether the specified {@link EventLoop} supports any {@link TransportType}.
+     */
+    public static boolean isSupported(EventLoop eventLoop) {
+        final EventLoopGroup parent = eventLoop.parent();
+        if (parent == null) {
+            return false;
+        }
+        return isSupported(parent);
+    }
+
+    /**
+     * Returns whether the specified {@link EventLoopGroup} supports any {@link TransportType}.
+     */
+    public static boolean isSupported(EventLoopGroup eventLoopGroup) {
+        for (TransportType type : values()) {
+            if (type.eventLoopGroupClass.isAssignableFrom(eventLoopGroup.getClass())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

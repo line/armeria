@@ -16,221 +16,113 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-
-import java.net.InetSocketAddress;
-import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.AddressedEnvelope;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
-import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.DnsResponseCode;
-import io.netty.handler.codec.dns.DnsSection;
-import io.netty.resolver.dns.DnsNameResolver;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 
 /**
- * {@link DynamicEndpointGroup} which resolves targets using DNS SRV queries. This is useful for environments
- * where service discovery is handled using DNS - for example, Kubernetes uses SkyDNS for service discovery.
- *
- * <p>DNS response handling is mostly copied from Netty's {@code io.netty.resolver.dns.DnsNameResolverContext}
- * with the following changes.
- *
- * <ul>
- *   <li>Uses SRV record queries</li>
- *   <li>Does not support DNS redirect answers</li>
- *   <li>Does not support querying multiple name servers</li>
- * </ul>
+ * {@link DynamicEndpointGroup} which resolves targets using DNS
+ * <a href="https://en.wikipedia.org/wiki/SRV_record">SRV records</a>. This is useful for environments
+ * where service discovery is handled using DNS, e.g.
+ * <a href="https://github.com/kubernetes/dns/blob/master/docs/specification.md">Kubernetes DNS-based service
+ * discovery</a>.
  */
-public class DnsServiceEndpointGroup extends DynamicEndpointGroup {
+public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
 
     /**
-     * Creates a {@link DnsServiceEndpointGroup} with an unspecified port that schedules queries on a random
-     * {@link EventLoop} from {@link CommonPools#workerGroup()} every 1 second.
+     * Creates a {@link DnsServiceEndpointGroup} that schedules queries on a random {@link EventLoop} from
+     * {@link CommonPools#workerGroup()}.
      *
      * @param hostname the hostname to query DNS queries for.
      */
     public static DnsServiceEndpointGroup of(String hostname) {
-        return of(hostname, CommonPools.workerGroup().next());
+        return new DnsServiceEndpointGroupBuilder(hostname).build();
     }
 
-    /**
-     * Creates a {@link DnsServiceEndpointGroup} that queries every 1 second.
-     *
-     * @param hostname the hostname to query DNS queries for.
-     * @param eventLoop the {@link EventLoop} to schedule DNS queries on.
-     */
-    public static DnsServiceEndpointGroup of(String hostname, EventLoop eventLoop) {
-        return of(hostname, eventLoop, Duration.ofSeconds(1));
+    DnsServiceEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
+                            DnsServerAddressStreamProvider serverAddressStreamProvider,
+                            Backoff backoff, String hostname) {
+        super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
+              ImmutableList.of(new DefaultDnsQuestion(hostname, DnsRecordType.SRV)),
+              unused -> {});
+        start();
     }
 
-    /**
-     * Creates a {@link DnsServiceEndpointGroup}.
-     *
-     * @param hostname the hostname to query DNS queries for.
-     * @param eventLoop the {@link EventLoop} to schedule DNS queries on.
-     * @param queryInterval the {@link Duration} to query DNS at.
-     */
-    public static DnsServiceEndpointGroup of(String hostname, EventLoop eventLoop, Duration queryInterval) {
-        return new DnsServiceEndpointGroup(hostname, DnsEndpointGroupUtil.createResolverForEventLoop(eventLoop),
-                                           eventLoop, queryInterval);
-    }
-
-    private static final Logger logger = LoggerFactory.getLogger(DnsServiceEndpointGroup.class);
-
-    private final String hostname;
-    private final DnsNameResolver resolver;
-    private final EventLoop eventLoop;
-    private final Duration queryInterval;
-
-    @Nullable
-    private ScheduledFuture<?> scheduledFuture;
-
-    @VisibleForTesting
-    DnsServiceEndpointGroup(String hostname, DnsNameResolver resolver, EventLoop eventLoop,
-                            Duration queryInterval) {
-        this.hostname = requireNonNull(hostname, "hostname");
-        this.resolver = requireNonNull(resolver, "resolver");
-        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        this.queryInterval = requireNonNull(queryInterval, "queryInterval");
-    }
-
-    /**
-     * Starts polling for service updates.
-     */
-    public void start() {
-        checkState(scheduledFuture == null, "already started");
-        scheduledFuture = eventLoop.scheduleAtFixedRate(this::query, 0, queryInterval.getSeconds(),
-                                                        TimeUnit.SECONDS);
-    }
-
-    /**
-     * Stops polling for service updates.
-     */
     @Override
-    public void close() {
-        if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
-        }
-    }
-
-    @VisibleForTesting
-    void query() {
-        final DnsQuestion question = new DefaultDnsQuestion(hostname, DnsRecordType.SRV);
-        final CompletableFuture<List<Endpoint>> promise = new CompletableFuture<>();
-        resolver.query(question).addListener(
-                (Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) -> {
-                    if (future.cause() != null) {
-                        logger.warn("Error resolving a domain name: {}", hostname, future.cause());
-                        return;
-                    }
-                    onResponse(question, future.getNow(), promise);
-                });
-        promise.thenAccept(newEndpoints -> {
-            List<Endpoint> endpoints = endpoints();
-            if (!endpoints.equals(newEndpoints)) {
-                setEndpoints(newEndpoints);
-            }
-        });
-    }
-
-    private void onResponse(
-            DnsQuestion question,
-            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
-            CompletableFuture<List<Endpoint>> promise) {
-        try {
-            final DnsResponse res = envelope.content();
-            final DnsResponseCode code = res.code();
-            if (code == DnsResponseCode.NOERROR) {
-                decodeResponse(question, envelope, promise);
-                return;
-            }
-
-            if (code != DnsResponseCode.NXDOMAIN) {
-                logger.warn(
-                        "Name lookup failed on configured name server for hostname: {} - querying other " +
-                        "name servers is not supported.", hostname);
-            } else {
-                logger.warn("No records found for hostname: {}. Is it registered in DNS?", hostname);
-            }
-            promise.complete(ImmutableList.of());
-        } finally {
-            ReferenceCountUtil.safeRelease(envelope);
-        }
-    }
-
-    private void decodeResponse(
-            DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
-            CompletableFuture<List<Endpoint>> promise) {
-        final DnsResponse response = envelope.content();
-        final int answerCount = response.count(DnsSection.ANSWER);
-
-        ImmutableList.Builder<Endpoint> resolvedEndpoints = ImmutableList.builder();
-        for (int i = 0; i < answerCount; i++) {
-            final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
-            final DnsRecordType type = r.type();
-            if (type != DnsRecordType.SRV) {
+    ImmutableSortedSet<Endpoint> onDnsRecords(List<DnsRecord> records, int ttl) throws Exception {
+        final ImmutableSortedSet.Builder<Endpoint> builder = ImmutableSortedSet.naturalOrder();
+        for (DnsRecord r : records) {
+            if (!(r instanceof DnsRawRecord) || r.type() != DnsRecordType.SRV) {
                 continue;
             }
 
-            final String questionName = Ascii.toLowerCase(question.name());
-            final String recordName = Ascii.toLowerCase(r.name());
-
-            // Make sure the record is for the questioned domain.
-            if (!recordName.equals(questionName)) {
+            final ByteBuf content = ((ByteBufHolder) r).content();
+            if (content.readableBytes() <= 6) { // Too few bytes
+                warnInvalidSrvRecord(content);
                 continue;
             }
 
-            final Endpoint resolved = decodeSrvEndpoint(r);
-            if (resolved == null) {
+            content.markReaderIndex();
+            content.skipBytes(2);  // priority unused
+            final int weight = content.readUnsignedShort();
+            final int port = content.readUnsignedShort();
+
+            final Endpoint endpoint;
+            try {
+                final String target = stripTrailingDot(DefaultDnsRecordDecoder.decodeName(content));
+                endpoint = port > 0 ? Endpoint.of(target, port) : Endpoint.of(target);
+            } catch (Exception e) {
+                content.resetReaderIndex();
+                warnInvalidSrvRecord(content);
                 continue;
             }
-            resolvedEndpoints.add(resolved);
-            // Note that we do not break from the loop here, so we decode all SRV records.
+
+            builder.add(endpoint.withWeight(weight));
         }
 
-        promise.complete(resolvedEndpoints.build());
+        final ImmutableSortedSet<Endpoint> endpoints = builder.build();
+        if (logger().isDebugEnabled()) {
+            logger().debug("{} Resolved: {} (TTL: {})",
+                           logPrefix(),
+                           endpoints.stream()
+                                    .map(e -> e.authority() + '/' + e.weight())
+                                    .collect(Collectors.joining(", ")),
+                           ttl);
+        }
+
+        return endpoints;
     }
 
-    @Nullable
-    private Endpoint decodeSrvEndpoint(DnsRecord record) {
-        if (!(record instanceof DnsRawRecord)) {
-            return null;
+    private void warnInvalidSrvRecord(ByteBuf content) {
+        if (logger().isWarnEnabled()) {
+            logger().warn("{} Skipping invalid SRV record: {}",
+                          logPrefix(), ByteBufUtil.hexDump(content));
         }
-        final ByteBuf recordContent = ((ByteBufHolder) record).content();
-        recordContent.readShort();  // priority unused
-        int weight = recordContent.readShort();
-        int port = recordContent.readUnsignedShort();
-        String target = DefaultDnsRecordDecoder.decodeName(recordContent);
-        // Last character always a '.'
-        target = target.substring(0, target.length() - 1);
-        return Endpoint.of(target, port).withWeight(weight);
+    }
+
+    private static String stripTrailingDot(String name) {
+        if (name.endsWith(".")) {
+            return name.substring(0, name.length() - 1);
+        } else {
+            return name;
+        }
     }
 }

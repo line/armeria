@@ -141,6 +141,8 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     public void close() {
+        super.close();
+
         try {
             pathChildrenCache.close();
         } catch (IOException e) {
