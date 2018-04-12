@@ -67,15 +67,14 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     sb.http(8080);
 
     // Add a simple 'Hello, world!' service.
-    sb.service("/", (ctx, res) -> HttpResponse.of(
-            HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, world!"));
+    sb.service("/", (ctx, res) -> HttpResponse.of("Hello, world!"));
 
     // Using path variables:
     sb.service("/greet/{name}", new AbstractHttpService() {
         @Override
         protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             String name = ctx.pathParam("name");
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+            return HttpResponse.of("Hello, %s!", name);
         }
     }.decorate(LoggingService.newDecorator())); // Enable logging
 
@@ -83,7 +82,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     sb.annotatedService(new Object() {
         @Get("/greet2/:name") // `:name` style is also available
         public HttpResponse greet(@Param("name") String name) {
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+            return HttpResponse.of("Hello, %s!", name);
         }
     });
 
@@ -91,14 +90,14 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     sb.serviceUnder("/greet3", (ctx, req) -> {
         String path = ctx.mappedPath();  // Get the path without the prefix ('/greet3')
         String name = path.substring(1); // Strip the leading slash ('/')
-        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+        return HttpResponse.of("Hello, %s!", name);
     });
 
     // Using an annotated service object:
     sb.annotatedService(new Object() {
         @Get("regex:^/greet4/(?<name>.*)$")
         public HttpResponse greet(@Param("name") String name) {
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+            return HttpResponse.of("Hello, %s!", name);
         }
     });
 
@@ -108,7 +107,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
         public HttpResponse greet(@Param("name") String name,
                                   @Param("title") @Default("Mr.") String title) {
             // "Mr." is used by default if there is no title parameter in the request.
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s %s!", title, name);
+            return HttpResponse.of("Hello, %s %s!", title, name);
         }
     });
 
@@ -116,8 +115,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     sb.annotatedService(new Object() {
         @Get("/greet6")
         public HttpResponse greet(HttpParameters parameters) {
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!",
-                                   parameters.get("name"));
+            return HttpResponse.of("Hello, %s!", parameters.get("name"));
         }
     });
 
