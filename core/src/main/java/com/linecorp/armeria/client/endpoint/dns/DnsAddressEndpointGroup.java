@@ -66,7 +66,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
      * @param port     the port of the {@link Endpoint}s
      */
     public static DnsAddressEndpointGroup of(String hostname, int port) {
-        return new DnsAddressEndpointGroupBuilder(hostname, port).build();
+        return new DnsAddressEndpointGroupBuilder(hostname).port(port).build();
     }
 
     private final String hostname;

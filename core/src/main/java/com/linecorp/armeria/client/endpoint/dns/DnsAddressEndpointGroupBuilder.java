@@ -29,14 +29,12 @@ import io.netty.util.NetUtil;
 public final class DnsAddressEndpointGroupBuilder
         extends DnsEndpointGroupBuilder<DnsAddressEndpointGroupBuilder> {
 
-    private final int port;
+    private int port;
     private boolean ipV4Enabled = true;
     private boolean ipV6Enabled = NetUtil.isIpV4StackPreferred();
 
     /**
      * Creates a new instance that builds a {@link DnsAddressEndpointGroup} for the specified {@code hostname}.
-     * The port number of the {@link Endpoint}s will remain unspecified and the protocol-dependent default
-     * port number will be chosen automatically, e.g. 80 or 443.
      */
     public DnsAddressEndpointGroupBuilder(String hostname) {
         super(hostname);
@@ -44,13 +42,14 @@ public final class DnsAddressEndpointGroupBuilder
     }
 
     /**
-     * Creates a new instance that builds a {@link DnsAddressEndpointGroup} for the specified {@code hostname}.
-     * The port number of the {@link Endpoint}s are set to the specified {@code port}.
+     * Sets the port number of the {@link Endpoint}s created by {@link DnsAddressEndpointGroup}.
+     * By default, the port number of the {@link Endpoint}s will remain unspecified and the protocol-dependent
+     * default port number will be chosen automatically, e.g. 80 or 443.
      */
-    public DnsAddressEndpointGroupBuilder(String hostname, int port) {
-        super(hostname);
+    public DnsAddressEndpointGroupBuilder port(int port) {
         checkArgument(port > 0 && port <= 65535, "port: %s (expected: 1...65535)", port);
         this.port = port;
+        return this;
     }
 
     ResolvedAddressTypes resolvedAddressTypes() {
@@ -75,7 +74,7 @@ public final class DnsAddressEndpointGroupBuilder
      */
     public DnsAddressEndpointGroupBuilder ipV4Enabled(boolean ipV4Enabled) {
         this.ipV4Enabled = ipV4Enabled;
-        return self();
+        return this;
     }
 
     /**
@@ -85,7 +84,7 @@ public final class DnsAddressEndpointGroupBuilder
      */
     public DnsAddressEndpointGroupBuilder ipV6Enabled(boolean ipV6Enabled) {
         this.ipV6Enabled = ipV6Enabled;
-        return self();
+        return this;
     }
 
     /**

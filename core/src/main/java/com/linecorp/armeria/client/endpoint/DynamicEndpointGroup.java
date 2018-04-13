@@ -18,7 +18,12 @@ package com.linecorp.armeria.client.endpoint;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -49,9 +54,30 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
 
     /**
      * Waits until the initial {@link Endpoint}s are ready.
+     *
+     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
      */
-    public List<Endpoint> awaitInitialEndpoints() {
-        return initialEndpointsFuture.join();
+    public List<Endpoint> awaitInitialEndpoints() throws InterruptedException {
+        try {
+            return initialEndpointsFuture.get();
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.getCause());
+        }
+    }
+
+    /**
+     * Waits until the initial {@link Endpoint}s are ready, with timeout.
+     *
+     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
+     * @throws TimeoutException if the initial {@link Endpoint}s are not set until timeout
+     */
+    public List<Endpoint> awaitInitialEndpoints(long timeout, TimeUnit unit)
+            throws InterruptedException, TimeoutException {
+        try {
+            return initialEndpointsFuture.get(timeout, unit);
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.getCause());
+        }
     }
 
     /**
@@ -114,8 +140,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     @Override
     public void close() {
         if (!initialEndpointsFuture.isDone()) {
-            initialEndpointsFuture.completeExceptionally(new IllegalStateException(
-                    getClass() + " has stopped before retrieving the initial endpoint list."));
+            initialEndpointsFuture.cancel(true);
         }
     }
 }

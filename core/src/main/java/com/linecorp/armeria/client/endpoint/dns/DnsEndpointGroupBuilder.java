@@ -35,7 +35,7 @@ import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
 
-abstract class DnsEndpointGroupBuilder<T extends DnsEndpointGroupBuilder<T>> {
+abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
 
     private final String hostname;
     @Nullable
@@ -55,8 +55,8 @@ abstract class DnsEndpointGroupBuilder<T extends DnsEndpointGroupBuilder<T>> {
      * Returns {@code this}.
      */
     @SuppressWarnings("unchecked")
-    final T self() {
-        return (T) this;
+    private B self() {
+        return (B) this;
     }
 
     final String hostname() {
@@ -74,7 +74,7 @@ abstract class DnsEndpointGroupBuilder<T extends DnsEndpointGroupBuilder<T>> {
     /**
      * Sets the {@link EventLoop} to use for sending DNS queries.
      */
-    public final T eventLoop(EventLoop eventLoop) {
+    public final B eventLoop(EventLoop eventLoop) {
         requireNonNull(eventLoop, "eventLoop");
         checkArgument(TransportType.isSupported(eventLoop),
                       "unsupported event loop type: %s", eventLoop);
@@ -98,7 +98,7 @@ abstract class DnsEndpointGroupBuilder<T extends DnsEndpointGroupBuilder<T>> {
      * {@code minTtl} and {@code maxTtl} are {@code 1} and {@link Integer#MAX_VALUE}, which practically tells
      * to respect the server TTL.
      */
-    public final T ttl(int minTtl, int maxTtl) {
+    public final B ttl(int minTtl, int maxTtl) {
         checkArgument(minTtl > 0 && minTtl <= maxTtl,
                       "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
         this.minTtl = minTtl;
@@ -113,14 +113,14 @@ abstract class DnsEndpointGroupBuilder<T extends DnsEndpointGroupBuilder<T>> {
     /**
      * Sets the DNS server addresses to send queries to. Operating system default is used by default.
      */
-    public final T serverAddresses(InetSocketAddress... serverAddresses) {
+    public final B serverAddresses(InetSocketAddress... serverAddresses) {
         return serverAddresses(ImmutableList.copyOf(requireNonNull(serverAddresses, "serverAddresses")));
     }
 
     /**
      * Sets the DNS server addresses to send queries to. Operating system default is used by default.
      */
-    public final T serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
+    public final B serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
         requireNonNull(serverAddresses, "serverAddresses");
         final DnsServerAddresses addrs = DnsServerAddresses.sequential(serverAddresses);
         serverAddressStreamProvider = hostname -> addrs.stream();
@@ -136,7 +136,7 @@ abstract class DnsEndpointGroupBuilder<T extends DnsEndpointGroupBuilder<T>> {
      * server sent an error response. {@code Backoff.exponential(1000, 32000).withJitter(0.2)} is used by
      * default.
      */
-    public final T backoff(Backoff backoff) {
+    public final B backoff(Backoff backoff) {
         this.backoff = requireNonNull(backoff, "backoff");
         return self();
     }

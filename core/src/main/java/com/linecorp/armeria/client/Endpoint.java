@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.collect.ComparisonChain;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
@@ -47,8 +46,10 @@ import io.netty.util.NetUtil;
  */
 public final class Endpoint implements Comparable<Endpoint> {
 
-    private static final Comparator<String> IP_ADDR_COMPARATOR =
-            Comparator.nullsFirst(Comparator.naturalOrder());
+    private static final Comparator<Endpoint> NON_GROUP_COMPARATOR =
+            Comparator.comparing(Endpoint::host)
+                      .thenComparing(e -> e.ipAddr, Comparator.nullsFirst(Comparator.naturalOrder()))
+                      .thenComparing(e -> e.port);
 
     private static final int DEFAULT_WEIGHT = 1000;
 
@@ -446,11 +447,7 @@ public final class Endpoint implements Comparable<Endpoint> {
             if (that.isGroup()) {
                 return 1;
             } else {
-                return ComparisonChain.start()
-                                      .compare(host(), that.host())
-                                      .compare(ipAddr, that.ipAddr, IP_ADDR_COMPARATOR)
-                                      .compare(port, that.port)
-                                      .result();
+                return NON_GROUP_COMPARATOR.compare(this, that);
             }
         }
     }

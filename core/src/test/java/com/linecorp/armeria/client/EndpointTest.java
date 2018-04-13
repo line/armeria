@@ -90,6 +90,7 @@ public class EndpointTest {
         assertThat(foo.withWeight(750).weight()).isEqualTo(750);
         assertThat(foo.withWeight(500)).isSameAs(foo);
 
+        foo.withWeight(0);
         assertThatThrownBy(() -> foo.withWeight(-1)).isInstanceOf(IllegalArgumentException.class);
     }
 

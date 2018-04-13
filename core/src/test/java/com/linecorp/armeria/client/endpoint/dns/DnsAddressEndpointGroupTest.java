@@ -55,7 +55,8 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))
                                          .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("foo.com", 8080)
+            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("foo.com")
+                    .port(8080)
                     .serverAddresses(server.addr())
                     .ipV4Enabled(true)
                     .ipV6Enabled(false)
@@ -76,7 +77,8 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newAddressRecord("bar.com.",
                                                                              "2404:6800:4004:806::2013"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("bar.com", 8080)
+            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("bar.com")
+                    .port(8080)
                     .serverAddresses(server.addr())
                     .ipV4Enabled(false)
                     .ipV6Enabled(true)
@@ -98,7 +100,8 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("baz.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("baz.com", 8080)
+            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("baz.com")
+                    .port(8080)
                     .serverAddresses(server.addr())
                     .ipV4Enabled(true)
                     .ipV6Enabled(true)
@@ -123,7 +126,8 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newCnameRecord("a.com.", "b.com."))
                                          .addRecord(ANSWER, newAddressRecord("b.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("a.com", 8080)
+            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("a.com")
+                    .port(8080)
                     .serverAddresses(server.addr())
                     .ipV4Enabled(true)
                     .ipV6Enabled(true)
@@ -144,7 +148,8 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("foo.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("foo.com", 8080)
+            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("foo.com")
+                    .port(8080)
                     .serverAddresses(server.addr())
                     .ipV4Enabled(true)
                     .ipV6Enabled(true)
@@ -165,7 +170,8 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newMappedAddressRecord("bar.com.", "1.1.1.1"))
                                          .addRecord(ANSWER, newMappedAddressRecord("bar.com.", "1.1.1.3"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("bar.com", 8080)
+            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("bar.com")
+                    .port(8080)
                     .serverAddresses(server.addr())
                     .ipV4Enabled(false)
                     .ipV6Enabled(true)
