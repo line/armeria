@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.CommonPools;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DnsQuestion;
@@ -127,18 +126,12 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             // Skip invalid records.
             if (type == DnsRecordType.A) {
                 if (contentLen != 4) {
-                    if (logger().isWarnEnabled()) {
-                        logger().warn("{} Skipping invalid A record: {}",
-                                      logPrefix(), ByteBufUtil.hexDump(content));
-                    }
+                    warnInvalidRecord(DnsRecordType.A, content);
                     continue;
                 }
             } else if (type == DnsRecordType.AAAA) {
                 if (contentLen != 16) {
-                    if (logger().isWarnEnabled()) {
-                        logger().warn("{} Skipping invalid AAAA record: {}",
-                                      logPrefix(), ByteBufUtil.hexDump(content));
-                    }
+                    warnInvalidRecord(DnsRecordType.AAAA, content);
                     continue;
                 }
             } else {

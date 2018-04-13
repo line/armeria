@@ -37,9 +37,12 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.internal.TransportType;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
@@ -220,6 +223,17 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
+        }
+    }
+
+    /**
+     * Logs a warning message about an invalid record.
+     */
+    final void warnInvalidRecord(DnsRecordType type, ByteBuf content) {
+        if (logger().isWarnEnabled()) {
+            final String dump = ByteBufUtil.hexDump(content);
+            logger().warn("{} Skipping invalid {} record: {}",
+                          logPrefix(), type.name(), dump.isEmpty() ? "<empty>" : dump);
         }
     }
 }
