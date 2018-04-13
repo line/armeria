@@ -1,11 +1,14 @@
 .. _@ConsumeType: apidocs/index.html?com/linecorp/armeria/server/annotation/ConsumeType.html
 .. _@Decorator: apidocs/index.html?com/linecorp/armeria/server/annotation/Decorator.html
+.. _@Decorators: apidocs/index.html?com/linecorp/armeria/server/annotation/Decorators.html
+.. _@DecoratorFactory: apidocs/index.html?com/linecorp/armeria/server/annotation/DecoratorFactory.html
 .. _@Default: apidocs/index.html?com/linecorp/armeria/server/annotation/Default.html
 .. _@Delete: apidocs/index.html?com/linecorp/armeria/server/annotation/Delete.html
 .. _@ExceptionHandler: apidocs/index.html?com/linecorp/armeria/server/annotation/ExceptionHandler.html
 .. _@Get: apidocs/index.html?com/linecorp/armeria/server/annotation/Get.html
 .. _@Head: apidocs/index.html?com/linecorp/armeria/server/annotation/Head.html
 .. _@Header: apidocs/index.html?com/linecorp/armeria/server/annotation/Header.html
+.. _@LoggingDecorator: apidocs/index.html?com/linecorp/armeria/server/annotation/decorator/LoggingDecorator.html
 .. _@Options: apidocs/index.html?com/linecorp/armeria/server/annotation/Options.html
 .. _@Order: apidocs/index.html?com/linecorp/armeria/server/annotation/Order.html
 .. _@Param: apidocs/index.html?com/linecorp/armeria/server/annotation/Param.html
@@ -22,6 +25,7 @@
 .. _BeanRequestConverterFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/BeanRequestConverterFunction.html
 .. _ByteArrayRequestConverterFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/ByteArrayRequestConverterFunction.html
 .. _DecoratingServiceFunction: apidocs/index.html?com/linecorp/armeria/server/DecoratingServiceFunction.html
+.. _DecoratorFactoryFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/DecoratorFactoryFunction.html
 .. _ExceptionHandlerFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/ExceptionHandlerFunction.html
 .. _HttpParameters: apidocs/index.html?com/linecorp/armeria/common/HttpParameters.html
 .. _HttpRequest: apidocs/index.html?com/linecorp/armeria/common/HttpRequest.html
@@ -29,6 +33,7 @@
 .. _HttpResponseException: apidocs/index.html?com/linecorp/armeria/server/HttpResponseException.html
 .. _HttpStatusException: apidocs/index.html?com/linecorp/armeria/server/HttpStatusException.html
 .. _JacksonRequestConverterFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/JacksonRequestConverterFunction.html
+.. _LoggingService: apidocs/index.html?com/linecorp/armeria/server/logging/LoggingService.html
 .. _PathMapping: apidocs/index.html?com/linecorp/armeria/server/PathMapping.html
 .. _Request: apidocs/index.html?com/linecorp/armeria/common/Request.html
 .. _RequestContext: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
@@ -698,6 +703,71 @@ method will handle the request.
         public HttpResponse hello() { ... }
     }
 
+Decorating an annotated service with a custom decorator annotation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As you read earlier, you can write your own decorator with DecoratingServiceFunction_ interface. If your
+decorator does not require any parameter, that is fine. However, what if your decorator requires a parameter?
+In this case, you can create your own decorator annotation. Let's see the following custom decorator
+annotation which applies LoggingService_ to an annotated service.
+
+.. note::
+
+    This example is actually just a copy of what Armeria provides out of the box. In reality,
+    you could just use `@LoggingDecorator`_, without writing your own one.
+
+.. code-block:: java
+
+    @DecoratorFactory(LoggingDecoratorFactoryFunction.class)
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    public @interface LoggingDecorator {
+
+        // Specify parameters for your decorator like below.
+        LogLevel requestLogLevel() default LogLevel.TRACE;
+
+        LogLevel successfulResponseLogLevel() default LogLevel.TRACE;
+
+        LogLevel failureResponseLogLevel() default LogLevel.WARN;
+
+        float samplingRate() default 1.0f;
+
+        // A special parameter in order to specify the order of a decorator.
+        int order() default 0;
+    }
+
+    public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
+        @Override
+        public Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> newDecorator(LoggingDecorator parameter) {
+            return new LoggingServiceBuilder()
+                    .requestLogLevel(parameter.requestLogLevel())
+                    .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
+                    .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                    .samplingRate(parameter.samplingRate())
+                    .newDecorator();
+        }
+    }
+
+You can see `@DecoratorFactory`_ annotation at the first line of the example. It specifies a factory class
+which implements DecoratorFactoryFunction_ interface. The factory will create an instance of LoggingService_
+with parameters which you specified on the class or method like below.
+
+.. code-block:: java
+
+    public class MyAnnotatedServiceClass {
+        @LoggingDecorator(requestLogLevel = LogLevel.INFO)
+        @Get("/hello1")
+        public HttpResponse hello1() { ... }
+
+        @LoggingDecorator(requestLogLevel = LogLevel.DEBUG, samplingRate = 0.05)
+        @Get("/hello2")
+        public HttpResponse hello2() { ... }
+    }
+
+Evaluation order of decorators
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Note that the evaluation order of the decorators is slightly different from that of the converters and exception
 handlers. As you read in :ref:`configure-using-serverbuilder`, both the converters and exception
 handlers are applied in the order of method-level ones, class-level ones and global ones. Unlike them,
@@ -721,6 +791,75 @@ class-level decorators and method-level decorators.
 
     sb.annotatedService(new MyAnnotatedServiceClass(),
                         new MyGlobalDecorator1());      // order 1
+
+The first rule is as explained before. However, if your own decorator annotations and `@Decorator`_ annotations
+are specified in a mixed order like below, you need to clearly specify their order using ``order()`` attribute
+of the annotation. In the following example, you cannot make sure in what order they decorate the service
+because Java collects repeatable annotations like `@Decorator`_ as a single container annotation like
+`@Decorators`_ so it does not know the specified order between `@Decorator`_ and `@LoggingDecorator`_.
+
+.. code-block:: java
+
+    public class MyAnnotatedServiceClass {
+
+        @Get("/hello")
+        @Decorator(MyMethodDecorator1.class)
+        @LoggingDecorator
+        @Decorator(MyMethodDecorator2.class)
+        public HttpResponse hello() { ... }
+    }
+
+``order()`` attribute makes them in order. It will work only for class-level and method-level decorators.
+The default value of ``order()`` attribute is ``0`` and the decorators are sorted in an ascending order of
+``order()`` value.
+
+.. code-block:: java
+
+    public class MyAnnotatedServiceClass {
+
+        @Get("/hello")
+        @Decorator(value = MyMethodDecorator1.class, order = 1)
+        @LoggingDecorator(order = 2)
+        @Decorator(value = MyMethodDecorator2.class, order = 3)
+        public HttpResponse hello() { ... }
+    }
+
+    // Global-level decorators will not be affected by 'order'.
+    sb.annotatedService(new MyAnnotatedServiceClass(),
+                        new MyGlobalDecorator1());
+
+Even if you want to make a method-level decorator execute first, you can adjust decorator's order as follows.
+
+.. code-block:: java
+
+    @LoggingDecorator
+    public class MyAnnotatedServiceClass {
+
+        // @LoggingDecorator -> MyMethodDecorator1
+        @Get("/hello1")
+        @Decorator(MyMethodDecorator1.class)
+        public HttpResponse hello1() { ... }
+
+        // MyMethodDecorator1 -> @LoggingDecorator
+        @Get("/hello2")
+        @Decorator(value = MyMethodDecorator1.class, order = -1)
+        public HttpResponse hello2() { ... }
+    }
+
+As you read before, you can write your own decorator annotation like `@LoggingDecorator`_.
+Because the order of decorator evaluation depends on the value of an ``order()`` attribute,
+it is recommended to add an ``order()`` attribute to a custom decorator annotation:
+
+.. code-block:: java
+
+    public @interface MyDecoratorAnnotation {
+
+        // Define your attributes.
+        int myAttr1();
+
+        // A special parameter in order to specify the order of a decorator.
+        int order() default 0;
+    }
 
 
 .. _media_type_nego:

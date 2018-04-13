@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,8 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server.annotation.decorator;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
@@ -22,24 +21,30 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.server.annotation.Decorator;
+import com.linecorp.armeria.server.annotation.DecoratorFactory;
+import com.linecorp.armeria.server.throttling.ThrottlingHttpService;
+import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 
 /**
- * Specifies a {@link DecoratingServiceFunction} class which handles an {@link HttpRequest} before invoking
- * an annotated service method.
+ * A {@link ThrottlingHttpService} decorator for annotated HTTP services.
  */
-@Repeatable(Decorators.class)
+@DecoratorFactory(RateLimitingDecoratorFactoryFunction.class)
+@Repeatable(RateLimitingDecorators.class)
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface Decorator {
+public @interface RateLimitingDecorator {
 
     /**
-     * {@link DecoratingServiceFunction} implementation type. The specified class must have an accessible
-     * default constructor.
+     * The number of requests per one second that the configured {@link ThrottlingStrategy} accepts.
      */
-    Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>> value();
+    double value() default Double.MAX_VALUE;
+
+    /**
+     * The name of the configured {@link ThrottlingStrategy}.
+     */
+    String name() default DefaultValues.UNSPECIFIED;
 
     /**
      * The order of decoration, where a {@link Decorator} of lower value will be applied first.
