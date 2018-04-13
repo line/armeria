@@ -24,6 +24,7 @@ import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
 import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
+import static com.linecorp.armeria.server.ServerConfig.validatePositive;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -116,6 +117,7 @@ public final class ServerBuilder {
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
+    private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_SCHEDULE_PERIOD = Duration.ofMillis(100);
     private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
 
@@ -140,6 +142,7 @@ public final class ServerBuilder {
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
+    private Duration gracefulShutdownSchedulePeriod = DEFAULT_GRACEFUL_SHUTDOWN_SCHEDULE_PERIOD;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
@@ -438,8 +441,7 @@ public final class ServerBuilder {
      *     shuts down even if there is a stuck request.
      */
     public ServerBuilder gracefulShutdownTimeout(long quietPeriodMillis, long timeoutMillis) {
-        return gracefulShutdownTimeout(
-                Duration.ofMillis(quietPeriodMillis), Duration.ofMillis(timeoutMillis));
+        return gracefulShutdownTimeout(Duration.ofMillis(quietPeriodMillis), Duration.ofMillis(timeoutMillis));
     }
 
     /**
@@ -461,6 +463,18 @@ public final class ServerBuilder {
         gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
         ServerConfig.validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
                                                 gracefulShutdownQuietPeriod, "timeout");
+        return this;
+    }
+
+    /**
+     * Sets the amount of time to periodically wait until the server to have completed processing requests after
+     * calling {@link Server#stop()} for requests to go away before actually shutting down.
+     *
+     * @param schedule the number of milliseconds to periodically wait until the server to have completed
+     *                 processing requests.
+     */
+    public ServerBuilder gracefulShutdownSchedulePeriod(Duration schedule) {
+        gracefulShutdownSchedulePeriod = validatePositive(schedule, "schedule");
         return this;
     }
 
@@ -1001,7 +1015,8 @@ public final class ServerBuilder {
                 workerGroup, shutdownWorkerGroupOnStop, maxNumConnections,
                 idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
-                gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
+                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                gracefulShutdownSchedulePeriod, blockingTaskExecutor,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter,
                 proxyProtocolMaxTlvSize), sslContexts);
 

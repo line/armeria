@@ -347,12 +347,13 @@ public final class Server implements AutoCloseable {
         final ScheduledExecutorService gracefulShutdownExecutor = Executors.newSingleThreadScheduledExecutor(
                 r -> new Thread(r, "armeria-shutdown-0x" + Integer.toHexString(hashCode())));
 
-        // Check every 100 ms for the server to have completed processing requests.
+        // Check every `gracefulShutdownSchedulePeriod` milliseconds for the server to have completed
+        // processing requests.
         final ScheduledFuture<?> quietPeriodFuture = gracefulShutdownExecutor.scheduleAtFixedRate(() -> {
             if (gracefulShutdownSupport.completedQuietPeriod()) {
                 stop1(future, gracefulShutdownExecutor);
             }
-        }, 0, 100, TimeUnit.MILLISECONDS);
+        }, 0, config.gracefulShutdownSchedulePeriod().toMillis(), TimeUnit.MILLISECONDS);
 
         // Make sure the event loop stops after the timeout, regardless of what
         // the GracefulShutdownSupport says.
