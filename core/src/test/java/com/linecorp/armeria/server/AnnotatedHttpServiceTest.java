@@ -63,7 +63,6 @@ import com.linecorp.armeria.server.TestConverters.TypedNumberConverterFunction;
 import com.linecorp.armeria.server.TestConverters.TypedStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
-import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Order;
@@ -427,8 +426,8 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/param/default1")
         public String paramDefault1(RequestContext ctx,
-                                    @Param("username") @Default("hello") String username,
-                                    @Param("password") @Default("world") Optional<String> password,
+                                    @Param(name = "username", defaultValue = "hello") String username,
+                                    @Param(name = "password", defaultValue = "world") Optional<String> password,
                                     @Param("extra") Optional<String> extra,
                                     @Param("number") Optional<Integer> number) {
             // "extra" might be null because there is no default value specified.
@@ -440,7 +439,7 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/param/default2")
         public String paramDefault2(RequestContext ctx,
-                                    @Param("username") @Default("hello") String username,
+                                    @Param(name = "username", defaultValue = "hello") String username,
                                     @Param("password") String password) {
             validateContext(ctx);
             return username + "/" + password;
@@ -577,8 +576,9 @@ public class AnnotatedHttpServiceTest {
 
         @Get("/headerDefault")
         public String headerDefault(RequestContext ctx,
-                                    @Header("username") @Default("hello") String username,
-                                    @Header("password") @Default("world") Optional<String> password,
+                                    @Header(name = "username", defaultValue = "hello") String username,
+                                    @Header(name = "password", defaultValue = "world")
+                                                    Optional<String> password,
                                     @Header("extra") Optional<String> extra,
                                     @Header("number") Optional<Integer> number) {
             validateContext(ctx);
@@ -588,8 +588,9 @@ public class AnnotatedHttpServiceTest {
 
         @Get("/headerWithParam")
         public String headerWithParam(RequestContext ctx,
-                                      @Header("username") @Default("hello") String username,
-                                      @Header("password") @Default("world") Optional<String> password,
+                                      @Header(name = "username", defaultValue = "hello") String username,
+                                      @Header(name = "password", defaultValue = "world")
+                                                      Optional<String> password,
                                       @Param("extra") Optional<String> extra,
                                       @Param("number") int number) {
             validateContext(ctx);
@@ -599,7 +600,7 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/headerWithoutValue")
         public String headerWithoutValue(RequestContext ctx,
-                                         @Header("username") @Default("hello") String username,
+                                         @Header(name = "username", defaultValue = "hello") String username,
                                          @Header("password") String password) {
             validateContext(ctx);
             return username + "/" + password;

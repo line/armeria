@@ -20,7 +20,8 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.Header;
+import com.linecorp.armeria.server.annotation.Param;
 
 /**
  * Holds the default values used in annotation attributes.
@@ -30,7 +31,8 @@ public final class DefaultValues {
     /**
      * A string constant defining unspecified values from users.
      *
-     * @see Default#value()
+     * @see Param#defaultValue()
+     * @see Header#defaultValue()
      */
     public static final String UNSPECIFIED = "\n\t\t\n\t\t\n\000\001\002\n\t\t\t\t\n";
 

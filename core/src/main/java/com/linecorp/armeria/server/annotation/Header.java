@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import static com.linecorp.armeria.internal.DefaultValues.UNSPECIFIED;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import com.linecorp.armeria.common.annotation.AliasFor;
 
 /**
  * Annotation for mapping an HTTP request header onto the following elements.
@@ -41,9 +45,26 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR })
 public @interface Header {
+    /**
+     * Alias for {@link #name}.
+     * <p>Intended to be used instead of {@link #name} when {@link #defaultValue}
+     * is not declared &mdash; for example: {@code @Header("x-type")} instead of
+     * {@code @Header(name = "x-type")}.
+     */
+    @AliasFor("name")
+    String value() default UNSPECIFIED;
 
     /**
      * The name of the HTTP request header to bind to.
+     * @see #value
      */
-    String value();
+    @AliasFor("value")
+    String name() default UNSPECIFIED;
+
+    /**
+     * The default value to use as a fallback when the HTTP request header is not provided or has an empty value.
+     * When {@link #defaultValue} is not specified, {@code null} value would be set if the HTTP request header
+     * is not present in the request.
+     */
+    String defaultValue() default UNSPECIFIED;
 }

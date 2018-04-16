@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import static com.linecorp.armeria.internal.DefaultValues.UNSPECIFIED;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import com.linecorp.armeria.common.annotation.AliasFor;
 
 /**
  * Annotation for mapping a parameter of a request onto the following elements.
@@ -41,11 +45,31 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR })
 public @interface Param {
+    /**
+     * Alias for {@link #name}.
+     * <p>Intended to be used instead of {@link #name} when {@link #defaultValue}
+     * is not declared &mdash; for example: {@code @Param("userName")} instead of
+     * {@code @Param(name = "userName")}.
+     */
+    @AliasFor("name")
+    String value() default UNSPECIFIED;
 
     /**
      * The name of the request parameter to bind to.
      * The path variable, the parameter name in a query string or a URL-encoded form data,
      * or the name of a multipart.
+     * @see #value
      */
-    String value();
+    @AliasFor("value")
+    String name() default UNSPECIFIED;
+
+    /**
+     * The default value to use as a fallback when the request parameter is not provided or has an empty value.
+     * When {@link #defaultValue} is not specified, {@code null}
+     * value would be set if the parameter is not present in the request.
+     *
+     * {@link #defaultValue} is not allowed for a path variable. If a user uses {@link #defaultValue} on a path
+     * variable, {@link IllegalArgumentException} would be raised.
+     */
+    String defaultValue() default UNSPECIFIED;
 }
