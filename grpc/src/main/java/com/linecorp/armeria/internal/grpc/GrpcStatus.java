@@ -13,12 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+/*
+ * Copyright 2014, gRPC Authors All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package com.linecorp.armeria.internal.grpc;
 
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -65,6 +81,45 @@ public final class GrpcStatus {
             return Status.DEADLINE_EXCEEDED.withCause(t);
         }
         return s;
+    }
+
+    /**
+     * Maps HTTP error response status codes to transport codes, as defined in <a
+     * href="https://github.com/grpc/grpc/blob/master/doc/http-grpc-status-mapping.md">
+     * http-grpc-status-mapping.md</a>. Never returns a status for which {@code status.isOk()} is
+     * {@code true}.
+     *
+     * <p>Copied from <a href="https://github.com/grpc/grpc-java/blob/master/core/src/main/java/io/grpc/internal/GrpcUtil.java">
+     * GrpcUtil.java</a>
+     */
+    public static Status httpStatusToGrpcStatus(int httpStatusCode) {
+        return httpStatusToGrpcCode(httpStatusCode).toStatus()
+                                                   .withDescription("HTTP status code " + httpStatusCode);
+    }
+
+    private static Status.Code httpStatusToGrpcCode(int httpStatusCode) {
+        if (httpStatusCode >= 100 && httpStatusCode < 200) {
+            // 1xx. These headers should have been ignored.
+            return Status.Code.INTERNAL;
+        }
+        switch (httpStatusCode) {
+            case HttpURLConnection.HTTP_BAD_REQUEST:  // 400
+            case 431: // Request Header Fields Too Large
+                return Status.Code.INTERNAL;
+            case HttpURLConnection.HTTP_UNAUTHORIZED:  // 401
+                return Status.Code.UNAUTHENTICATED;
+            case HttpURLConnection.HTTP_FORBIDDEN:  // 403
+                return Status.Code.PERMISSION_DENIED;
+            case HttpURLConnection.HTTP_NOT_FOUND:  // 404
+                return Status.Code.UNIMPLEMENTED;
+            case 429:  // Too Many Requests
+            case HttpURLConnection.HTTP_BAD_GATEWAY:  // 502
+            case HttpURLConnection.HTTP_UNAVAILABLE:  // 503
+            case HttpURLConnection.HTTP_GATEWAY_TIMEOUT:  // 504
+                return Status.Code.UNAVAILABLE;
+            default:
+                return Status.Code.UNKNOWN;
+        }
     }
 
     private GrpcStatus() {}

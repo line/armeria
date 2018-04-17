@@ -30,6 +30,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
@@ -95,6 +96,19 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
             // and client though as everything else is identical.
             HttpHeaders headers = (HttpHeaders) obj;
+
+            if (headers.status() == null) {
+                transportStatusListener.transportReportStatus(
+                        Status.INTERNAL.withDescription("No HTTP status returned."));
+                return;
+            }
+
+            if (!headers.status().equals(HttpStatus.OK)) {
+                transportStatusListener.transportReportStatus(
+                        GrpcStatus.httpStatusToGrpcStatus(headers.status().code()));
+                return;
+            }
+
             String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
             if (grpcStatus != null) {
                 Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
