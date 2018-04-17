@@ -56,6 +56,8 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
 
     private volatile boolean cancelled;
 
+    private boolean sawLeadingHeaders;
+
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
                             ArmeriaMessageDeframer deframer,
                             TransportStatusListener transportStatusListener) {
@@ -97,16 +99,19 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             // and client though as everything else is identical.
             HttpHeaders headers = (HttpHeaders) obj;
 
-            if (headers.status() == null) {
-                transportStatusListener.transportReportStatus(
-                        Status.INTERNAL.withDescription("No HTTP status returned."));
-                return;
-            }
+            if (!sawLeadingHeaders) {
+                sawLeadingHeaders = true;
+                if (headers.status() == null) {
+                    transportStatusListener.transportReportStatus(
+                            Status.INTERNAL.withDescription("No HTTP status returned."));
+                    return;
+                }
 
-            if (!headers.status().equals(HttpStatus.OK)) {
-                transportStatusListener.transportReportStatus(
-                        GrpcStatus.httpStatusToGrpcStatus(headers.status().code()));
-                return;
+                if (!headers.status().equals(HttpStatus.OK)) {
+                    transportStatusListener.transportReportStatus(
+                            GrpcStatus.httpStatusToGrpcStatus(headers.status().code()));
+                    return;
+                }
             }
 
             String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
