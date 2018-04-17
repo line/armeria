@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.annotation;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.convertParameter;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.httpParametersOf;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.validateAndNormalizeSupportedType;
+import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
 
@@ -381,9 +382,9 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
             }
 
             if (annotation instanceof Param) {
-                return new HttpParamValueRetriever(type, ((Param) annotation).value());
+                return new HttpParamValueRetriever(type, (Param) annotation);
             } else if (annotation instanceof Header) {
-                return new HttpHeaderValueRetriever(type, ((Header) annotation).value());
+                return new HttpHeaderValueRetriever(type, (Header) annotation);
             } else {
                 throw new IllegalArgumentException(
                         String.format("Unsupported Annotation: %1$s",
@@ -420,10 +421,12 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
 
         private static final class HttpParamValueRetriever extends ParamValueRetriever {
             private final String paramName;
+            private final String defaultValue;
 
-            private HttpParamValueRetriever(final Class<?> type, final String paramName) {
+            private HttpParamValueRetriever(final Class<?> type, final Param param) {
                 super(type);
-                this.paramName = paramName;
+                paramName = param.name();
+                defaultValue = getSpecifiedValue(param.defaultValue()).orElse(null);
             }
 
             @Override
@@ -438,21 +441,33 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
                             ).get(paramName);
                 }
 
+                if (paramValueStr == null) {
+                    paramValueStr = defaultValue;
+                }
+
                 return paramValueStr;
             }
         }
 
         private static final class HttpHeaderValueRetriever extends ParamValueRetriever {
             private final String headerName;
+            private final String defaultValue;
 
-            private HttpHeaderValueRetriever(final Class<?> type, final String headerName) {
+            private HttpHeaderValueRetriever(final Class<?> type, final Header header) {
                 super(type);
-                this.headerName = headerName;
+                headerName = header.name();
+                defaultValue = getSpecifiedValue(header.defaultValue()).orElse(null);
             }
 
             @Override
             protected String getParamStrValue(final RequestConvertContext context) {
-                return context.request.headers().get(AsciiString.of(headerName));
+                String headerValue = context.request.headers().get(AsciiString.of(headerName));
+
+                if (headerValue == null) {
+                    headerValue = defaultValue;
+                }
+
+                return headerValue;
             }
         }
     }

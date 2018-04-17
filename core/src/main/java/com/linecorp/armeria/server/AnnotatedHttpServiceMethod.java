@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.aggreg
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.httpParametersOf;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.validateAndNormalizeSupportedType;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
+import static com.linecorp.armeria.internal.DefaultValues.isUnspecified;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
@@ -52,9 +53,9 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil;
 import com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.EnumConverter;
+import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.annotation.BeanRequestConverterFunction;
-import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -250,7 +251,7 @@ final class AnnotatedHttpServiceMethod {
             final Param param = parameterInfo.getAnnotation(Param.class);
             if (param != null) {
                 if (pathParams.contains(param.value())) {
-                    if (parameterInfo.getAnnotation(Default.class) != null ||
+                    if (DefaultValues.isSpecified(param.defaultValue()) ||
                         parameterInfo.getType() == Optional.class) {
                         throw new IllegalArgumentException(
                                 "Path variable '" + param.value() + "' should not be an optional.");
@@ -258,15 +259,20 @@ final class AnnotatedHttpServiceMethod {
                     entries.add(Parameter.ofPathParam(
                             validateAndNormalizeSupportedType(parameterInfo.getType()), param.value()));
                 } else {
-                    entries.add(createOptionalSupportedParam(
-                            parameterInfo, ParameterType.PARAM, param.value()));
+                    entries.add(
+                            createOptionalSupportedParam(parameterInfo, ParameterType.PARAM,
+                                                         param.name(), param.defaultValue())
+                    );
                 }
                 continue;
             }
 
             final Header header = parameterInfo.getAnnotation(Header.class);
             if (header != null) {
-                entries.add(createOptionalSupportedParam(parameterInfo, ParameterType.HEADER, header.value()));
+                entries.add(
+                        createOptionalSupportedParam(parameterInfo, ParameterType.HEADER,
+                                                     header.name(), header.defaultValue())
+                );
                 continue;
             }
 
@@ -313,12 +319,13 @@ final class AnnotatedHttpServiceMethod {
      * parameter type is {@link Optional}, its actual argument's type is used.
      */
     private static Parameter createOptionalSupportedParam(java.lang.reflect.Parameter parameterInfo,
-                                                          ParameterType paramType, String paramValue) {
-        final Default aDefault = parameterInfo.getAnnotation(Default.class);
+                                                          ParameterType paramType,
+                                                          String paramName,
+                                                          String defaultValue) {
         final boolean isOptionalType = parameterInfo.getType() == Optional.class;
 
         // Set the default value to null if it was not specified.
-        final String defaultValue = aDefault != null ? getSpecifiedValue(aDefault.value()).get() : null;
+        final String specifiedDefaultValue = getSpecifiedValue(defaultValue).orElse(null);
         final Class<?> type;
         if (isOptionalType) {
             try {
@@ -331,8 +338,8 @@ final class AnnotatedHttpServiceMethod {
             type = parameterInfo.getType();
         }
 
-        return new Parameter(paramType, !isOptionalType && aDefault == null, isOptionalType,
-                             validateAndNormalizeSupportedType(type), paramValue, defaultValue, null);
+        return new Parameter(paramType, !isOptionalType && isUnspecified(defaultValue), isOptionalType,
+                             validateAndNormalizeSupportedType(type), paramName, specifiedDefaultValue, null);
     }
 
     /**
