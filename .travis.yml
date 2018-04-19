@@ -17,6 +17,7 @@ cache:
   - "$HOME/.gradle/caches/jars-3"
   - "$HOME/.gradle/caches/modules-2"
   - "$HOME/.gradle/caches/package-lists"
+  - "$HOME/.gradle/caches/sphinx-binary"
   - "$HOME/.jdk"
 env:
   global:
