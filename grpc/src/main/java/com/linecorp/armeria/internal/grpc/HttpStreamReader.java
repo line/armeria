@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
@@ -100,12 +101,19 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             HttpHeaders headers = (HttpHeaders) obj;
 
             if (!sawLeadingHeaders) {
-                sawLeadingHeaders = true;
                 if (headers.status() == null) {
+                    // Not allowed to have empty leading headers, kill the stream hard.
                     transportStatusListener.transportReportStatus(
-                            Status.INTERNAL.withDescription("No HTTP status returned."));
+                            Status.INTERNAL.withDescription("Missing HTTP status code"));
                     return;
                 }
+
+                if (headers.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                    // Skip informational headers.
+                    return;
+                }
+
+                sawLeadingHeaders = true;
 
                 if (!headers.status().equals(HttpStatus.OK)) {
                     transportStatusListener.transportReportStatus(
