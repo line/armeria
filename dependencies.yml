@@ -175,7 +175,7 @@ junit:
     - https://junit.org/junit4/javadoc/4.12/
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '1.1.0' }
+  sphinx-gradle-plugin: { version: '2.0.2' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.

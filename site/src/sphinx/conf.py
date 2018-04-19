@@ -65,7 +65,6 @@ add_function_parentheses = True
 pygments_style = 'tango'
 master_doc = 'index'
 
-sys.path.append(os.path.abspath('_themes'))
 html_theme = 'sphinx_rtd_theme'
 html_theme_path = ['_themes']
 html_short_title = project_short
