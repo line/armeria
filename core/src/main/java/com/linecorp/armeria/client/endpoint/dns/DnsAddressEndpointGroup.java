@@ -98,8 +98,8 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             case IPV6_ONLY:
             case IPV4_PREFERRED:
             case IPV6_PREFERRED:
-            builder.add(new DefaultDnsQuestion(hostname, DnsRecordType.AAAA));
-            break;
+                builder.add(new DefaultDnsQuestion(hostname, DnsRecordType.AAAA));
+                break;
         }
         return builder.build();
     }
@@ -138,7 +138,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
                 continue;
             }
 
-            // Convert the content into an IP address into an endpoint.
+            // Convert the content into an IP address and then into an endpoint.
             final String ipAddr;
             final byte[] addrBytes = new byte[contentLen];
             content.getBytes(content.readerIndex(), addrBytes);

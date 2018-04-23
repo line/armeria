@@ -40,7 +40,6 @@ public final class DnsAddressEndpointGroupBuilder
      */
     public DnsAddressEndpointGroupBuilder(String hostname) {
         super(hostname);
-        port = 0;
     }
 
     /**
