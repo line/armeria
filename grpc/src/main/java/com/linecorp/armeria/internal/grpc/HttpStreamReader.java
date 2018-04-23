@@ -30,6 +30,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
@@ -54,6 +56,8 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
     private int deferredInitialMessageRequest;
 
     private volatile boolean cancelled;
+
+    private boolean sawLeadingHeaders;
 
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
                             ArmeriaMessageDeframer deframer,
@@ -95,6 +99,29 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
             // and client though as everything else is identical.
             HttpHeaders headers = (HttpHeaders) obj;
+
+            if (!sawLeadingHeaders) {
+                if (headers.status() == null) {
+                    // Not allowed to have empty leading headers, kill the stream hard.
+                    transportStatusListener.transportReportStatus(
+                            Status.INTERNAL.withDescription("Missing HTTP status code"));
+                    return;
+                }
+
+                if (headers.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                    // Skip informational headers.
+                    return;
+                }
+
+                sawLeadingHeaders = true;
+
+                if (!headers.status().equals(HttpStatus.OK)) {
+                    transportStatusListener.transportReportStatus(
+                            GrpcStatus.httpStatusToGrpcStatus(headers.status().code()));
+                    return;
+                }
+            }
+
             String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
             if (grpcStatus != null) {
                 Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));

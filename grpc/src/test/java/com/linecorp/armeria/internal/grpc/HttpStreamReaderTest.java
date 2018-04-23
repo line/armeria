@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.grpc;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -159,5 +160,17 @@ public class HttpStreamReaderTest {
         reader.onSubscribe(subscription);
         reader.cancel();
         verify(subscription).cancel();
+    }
+
+    @Test
+    public void httpNotOk() {
+        reader.onSubscribe(subscription);
+        verifyZeroInteractions(subscription);
+        reader.onNext(HttpHeaders.of(HttpStatus.UNAUTHORIZED));
+        verifyZeroInteractions(subscription);
+        verifyZeroInteractions(deframer);
+
+        verify(transportStatusListener).transportReportStatus(
+                argThat(s -> s.getCode().equals(Status.UNAUTHENTICATED.getCode())));
     }
 }
