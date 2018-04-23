@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -110,7 +110,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
         final boolean hasLoopbackARecords =
                 records.stream()
                        .filter(r -> r instanceof DnsRawRecord)
-                       .map(r -> (DnsRawRecord) r)
+                       .map(DnsRawRecord.class::cast)
                        .anyMatch(r -> r.type() == DnsRecordType.A &&
                                      r.content().getByte(r.content().readerIndex()) == 127);
 
