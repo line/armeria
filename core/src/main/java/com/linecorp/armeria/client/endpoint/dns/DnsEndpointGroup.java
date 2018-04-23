@@ -46,7 +46,6 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.resolver.dns.DnsNameResolverException;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -139,6 +138,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
             final FutureListener<List<DnsRecord>> listener = new FutureListener<List<DnsRecord>>() {
                 private final List<DnsRecord> records = new ArrayList<>();
                 private int remaining = numQuestions;
+                @Nullable
                 private List<Throwable> causes;
 
                 @Override
@@ -158,7 +158,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
                             aggregatedPromise.setSuccess(records);
                         } else {
                             final Throwable aggregatedCause;
-                            if (causes != null) {
+                            if (causes == null) {
                                 aggregatedCause =
                                         new EndpointGroupException("empty result returned by DNS server");
                             } else {
@@ -194,7 +194,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         if (!future.isSuccess()) {
             // Failed. Try again with the delay given by Backoff.
             final long delayMillis = backoff.nextDelayMillis(attemptsSoFar);
-            logger.warn("{} DNS query failed; retrying in {} ms:", logPrefix, delayMillis, future.cause());
+            logger.warn("{} DNS query failed; retrying in {} ms (attempts so far: {}):",
+                        logPrefix, delayMillis, attemptsSoFar, future.cause());
             scheduledFuture = eventLoop.schedule(this::sendQueries, delayMillis, TimeUnit.MILLISECONDS);
             return;
         }

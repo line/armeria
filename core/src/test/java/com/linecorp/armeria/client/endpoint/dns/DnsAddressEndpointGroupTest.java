@@ -242,13 +242,13 @@ public class DnsAddressEndpointGroupTest {
     }
 
     @Test
-    public void backoffWithPartialResponse() throws Exception {
+    public void backoffOnEmptyResponse() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
-                // Respond A record only.
-                new DefaultDnsQuestion("backoff.com.", A),
-                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("backoff.com", "1.1.1.1"))
+                // Respond with empty records.
+                new DefaultDnsQuestion("empty.com.", A), new DefaultDnsResponse(0),
+                new DefaultDnsQuestion("empty.com.", AAAA), new DefaultDnsResponse(0)
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("backoff.com")
+            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("empty.com")
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .backoff(Backoff.fixed(500))
@@ -259,13 +259,33 @@ public class DnsAddressEndpointGroupTest {
 
                 // Start to respond correctly.
                 server.setResponses(ImmutableMap.of(
-                        new DefaultDnsQuestion("backoff.com.", A),
-                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("backoff.com", "1.1.1.1")),
-                        new DefaultDnsQuestion("backoff.com.", AAAA),
-                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("backoff.com", "::1"))));
+                        new DefaultDnsQuestion("empty.com.", A),
+                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("empty.com", "1.1.1.1")),
+                        new DefaultDnsQuestion("empty.com.", AAAA),
+                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("empty.com", "::1"))));
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
-                        Endpoint.of("backoff.com").withIpAddr("1.1.1.1"),
-                        Endpoint.of("backoff.com").withIpAddr("::1"));
+                        Endpoint.of("empty.com").withIpAddr("1.1.1.1"),
+                        Endpoint.of("empty.com").withIpAddr("::1"));
+            }
+        }
+    }
+
+    @Test
+    public void partialResponse() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                // Respond A record only.
+                // Respond with NXDOMAIN for AAAA.
+                new DefaultDnsQuestion("partial.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("partial.com", "1.1.1.1"))
+        ))) {
+            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("partial.com")
+                    .serverAddresses(server.addr())
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .backoff(Backoff.fixed(500))
+                    .build()) {
+
+                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                        Endpoint.of("partial.com").withIpAddr("1.1.1.1"));
             }
         }
     }
