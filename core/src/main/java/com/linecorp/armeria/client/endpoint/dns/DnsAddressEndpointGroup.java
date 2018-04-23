@@ -91,7 +91,17 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
         start();
     }
 
-    private static List<DnsQuestion> newQuestions(String hostname, ResolvedAddressTypes resolvedAddressTypes) {
+    private static List<DnsQuestion> newQuestions(
+            String hostname, @Nullable ResolvedAddressTypes resolvedAddressTypes) {
+
+        if (resolvedAddressTypes == null) {
+            if (NetUtil.isIpV4StackPreferred()) {
+                resolvedAddressTypes = ResolvedAddressTypes.IPV4_ONLY;
+            } else {
+                resolvedAddressTypes = ResolvedAddressTypes.IPV4_PREFERRED;
+            }
+        }
+
         final ImmutableList.Builder<DnsQuestion> builder = ImmutableList.builder();
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
