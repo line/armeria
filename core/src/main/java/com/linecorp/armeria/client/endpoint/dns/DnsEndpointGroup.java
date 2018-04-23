@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.internal.TransportType;
 
@@ -45,6 +46,7 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsNameResolverException;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -137,28 +139,36 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
             final FutureListener<List<DnsRecord>> listener = new FutureListener<List<DnsRecord>>() {
                 private final List<DnsRecord> records = new ArrayList<>();
                 private int remaining = numQuestions;
+                private List<Throwable> causes;
 
                 @Override
                 public void operationComplete(Future<List<DnsRecord>> future) throws Exception {
                     if (future.isSuccess()) {
                         final List<DnsRecord> records = future.getNow();
-                        if (aggregatedPromise.isDone()) {
-                            // parentFuture has been notified already, which means the previous query has
-                            // failed; discard the records since it's not useful anymore.
-                            records.forEach(ReferenceCountUtil::safeRelease);
-                        } else {
-                            this.records.addAll(records);
-                            if (--remaining == 0) {
-                                aggregatedPromise.setSuccess(this.records);
-                            }
-                        }
-                    } else if (!aggregatedPromise.isDone()) {
-                        // Discard the records received so far.
-                        records.forEach(ReferenceCountUtil::safeRelease);
-                        records.clear();
-                        aggregatedPromise.setFailure(future.cause());
+                        this.records.addAll(records);
                     } else {
-                        // More than one query have failed.
+                        if (causes == null) {
+                            causes = new ArrayList<>(numQuestions);
+                        }
+                        causes.add(future.cause());
+                    }
+
+                    if (--remaining == 0) {
+                        if (!records.isEmpty()) {
+                            aggregatedPromise.setSuccess(records);
+                        } else {
+                            final Throwable aggregatedCause;
+                            if (causes != null) {
+                                aggregatedCause =
+                                        new EndpointGroupException("empty result returned by DNS server");
+                            } else {
+                                aggregatedCause = new EndpointGroupException("failed to receive DNS records");
+                                for (Throwable c : causes) {
+                                    aggregatedCause.addSuppressed(c);
+                                }
+                            }
+                            aggregatedPromise.setFailure(aggregatedCause);
+                        }
                     }
                 }
             };
