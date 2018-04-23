@@ -17,10 +17,13 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import javax.annotation.Nullable;
+
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.Endpoint;
 
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.util.NetUtil;
 
 /**
  * Builds a new {@link DnsAddressEndpointGroup} that sources its {@link Endpoint} list from the {@code A} or
@@ -30,8 +33,8 @@ public final class DnsAddressEndpointGroupBuilder
         extends DnsEndpointGroupBuilder<DnsAddressEndpointGroupBuilder> {
 
     private int port;
-    private boolean ipV4Enabled = true;
-    private boolean ipV6Enabled = NetUtil.isIpV4StackPreferred();
+    @Nullable
+    private ResolvedAddressTypes resolvedAddressTypes;
 
     /**
      * Creates a new instance that builds a {@link DnsAddressEndpointGroup} for the specified {@code hostname}.
@@ -53,38 +56,9 @@ public final class DnsAddressEndpointGroupBuilder
         return this;
     }
 
-    ResolvedAddressTypes resolvedAddressTypes() {
-        if (ipV4Enabled) {
-            if (ipV6Enabled) {
-                return ResolvedAddressTypes.IPV4_PREFERRED;
-            } else {
-                return ResolvedAddressTypes.IPV4_ONLY;
-            }
-        } else {
-            if (ipV6Enabled) {
-                return ResolvedAddressTypes.IPV6_ONLY;
-            } else {
-                throw new IllegalStateException("You cannot disable both IPv4 and IPv6.");
-            }
-        }
-    }
-
-    /**
-     * Sets whether IPv4 addresses are enabled. If enabled, {@code A} records are retrieved from DNS servers
-     * and IPv4 addresses will be included in {@link Endpoint}s. IPv4 addresses are enabled by default.
-     */
-    public DnsAddressEndpointGroupBuilder ipV4Enabled(boolean ipV4Enabled) {
-        this.ipV4Enabled = ipV4Enabled;
-        return this;
-    }
-
-    /**
-     * Sets whether IPv6 addresses are enabled. If enabled, {@code AAAA} records are retrieved from DNS servers
-     * and IPv6 address will be included in {@link Endpoint}s. IPv6 addresses are enabled by default unless
-     * you specified {@code -Djava.net.preferIPv4Stack=true} JVM option.
-     */
-    public DnsAddressEndpointGroupBuilder ipV6Enabled(boolean ipV6Enabled) {
-        this.ipV6Enabled = ipV6Enabled;
+    @VisibleForTesting
+    DnsAddressEndpointGroupBuilder resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes) {
+        this.resolvedAddressTypes = resolvedAddressTypes;
         return this;
     }
 
@@ -94,6 +68,6 @@ public final class DnsAddressEndpointGroupBuilder
     public DnsAddressEndpointGroup build() {
         return new DnsAddressEndpointGroup(eventLoop(), minTtl(), maxTtl(),
                                            serverAddressStreamProvider(), backoff(),
-                                           resolvedAddressTypes(), hostname(), port);
+                                           resolvedAddressTypes, hostname(), port);
     }
 }

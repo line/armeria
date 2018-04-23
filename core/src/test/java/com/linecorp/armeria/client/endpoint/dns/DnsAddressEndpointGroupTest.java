@@ -41,6 +41,7 @@ import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
 
 public class DnsAddressEndpointGroupTest {
@@ -58,8 +59,7 @@ public class DnsAddressEndpointGroupTest {
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("foo.com")
                     .port(8080)
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(true)
-                    .ipV6Enabled(false)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
@@ -80,8 +80,7 @@ public class DnsAddressEndpointGroupTest {
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("bar.com")
                     .port(8080)
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(false)
-                    .ipV6Enabled(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
                     .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
@@ -103,8 +102,7 @@ public class DnsAddressEndpointGroupTest {
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("baz.com")
                     .port(8080)
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(true)
-                    .ipV6Enabled(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
@@ -129,8 +127,7 @@ public class DnsAddressEndpointGroupTest {
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("a.com")
                     .port(8080)
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(true)
-                    .ipV6Enabled(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
@@ -151,8 +148,7 @@ public class DnsAddressEndpointGroupTest {
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("foo.com")
                     .port(8080)
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(true)
-                    .ipV6Enabled(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
@@ -173,8 +169,7 @@ public class DnsAddressEndpointGroupTest {
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("bar.com")
                     .port(8080)
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(false)
-                    .ipV6Enabled(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
                     .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
@@ -193,8 +188,7 @@ public class DnsAddressEndpointGroupTest {
         ))) {
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("no-port.com")
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(true)
-                    .ipV6Enabled(false)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
@@ -208,8 +202,7 @@ public class DnsAddressEndpointGroupTest {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of())) { // Respond nothing.
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("backoff.com")
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(true)
-                    .ipV6Enabled(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .backoff(Backoff.fixed(500))
                     .build()) {
 
@@ -238,8 +231,7 @@ public class DnsAddressEndpointGroupTest {
         ))) {
             try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("backoff.com")
                     .serverAddresses(server.addr())
-                    .ipV4Enabled(true)
-                    .ipV6Enabled(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .backoff(Backoff.fixed(500))
                     .build()) {
 

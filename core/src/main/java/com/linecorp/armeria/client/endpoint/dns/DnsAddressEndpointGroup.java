@@ -19,6 +19,8 @@ package com.linecorp.armeria.client.endpoint.dns;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
@@ -73,12 +75,16 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
 
     DnsAddressEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
                             DnsServerAddressStreamProvider serverAddressStreamProvider,
-                            Backoff backoff, ResolvedAddressTypes resolvedAddressTypes,
+                            Backoff backoff, @Nullable ResolvedAddressTypes resolvedAddressTypes,
                             String hostname, int port) {
 
         super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
               newQuestions(hostname, resolvedAddressTypes),
-              resolverBuilder -> resolverBuilder.resolvedAddressTypes(resolvedAddressTypes));
+              resolverBuilder -> {
+                  if (resolvedAddressTypes != null) {
+                      resolverBuilder.resolvedAddressTypes(resolvedAddressTypes);
+                  }
+              });
 
         this.hostname = hostname;
         this.port = port;
@@ -144,7 +150,6 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             content.getBytes(content.readerIndex(), addrBytes);
 
             if (contentLen == 16) {
-                // 'result' contains both A and AAAA records.
                 // Convert some IPv6 addresses into IPv4 addresses to remove duplicate endpoints.
                 if (addrBytes[0] == 0x00 && addrBytes[1] == 0x00 &&
                     addrBytes[2] == 0x00 && addrBytes[3] == 0x00 &&

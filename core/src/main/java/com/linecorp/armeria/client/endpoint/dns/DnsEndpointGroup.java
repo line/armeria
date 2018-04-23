@@ -199,9 +199,9 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
 
         try {
             setEndpoints(onDnsRecords(records, effectiveTtl));
-            scheduledFuture = eventLoop.schedule(this::sendQueries, effectiveTtl, TimeUnit.SECONDS);
         } catch (Throwable t) {
             logger.warn("{} Failed to process the DNS query result: {}", logPrefix, records, t);
+        } finally {
             records.forEach(ReferenceCountUtil::safeRelease);
             scheduledFuture = eventLoop.schedule(this::sendQueries, effectiveTtl, TimeUnit.SECONDS);
         }

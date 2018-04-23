@@ -53,11 +53,15 @@ public class DnsEndpointGroupBuilderTest {
         assertThat(builder().minTtl()).isOne();
         assertThat(builder().maxTtl()).isEqualTo(Integer.MAX_VALUE);
         final Builder builderWithCustomTtl = builder().ttl(10, 20);
+
         assertThat(builderWithCustomTtl.minTtl()).isEqualTo(10);
         assertThat(builderWithCustomTtl.maxTtl()).isEqualTo(20);
         assertThatThrownBy(() -> builder().ttl(0, 10)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> builder().ttl(20, 10)).isInstanceOf(IllegalArgumentException.class);
-        builder().ttl(1, 1);
+
+        final Builder builderWithSameCustomTtl = builder().ttl(1, 1);
+        assertThat(builderWithSameCustomTtl.minTtl()).isOne();
+        assertThat(builderWithSameCustomTtl.maxTtl()).isOne();
     }
 
     @Test
