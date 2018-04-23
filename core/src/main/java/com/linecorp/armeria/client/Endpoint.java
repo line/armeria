@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Comparator;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
@@ -43,7 +44,12 @@ import io.netty.util.NetUtil;
  * in the authority part of a URI. It can be resolved into a host endpoint with
  * {@link #resolve(ClientRequestContext)}.
  */
-public final class Endpoint {
+public final class Endpoint implements Comparable<Endpoint> {
+
+    private static final Comparator<Endpoint> NON_GROUP_COMPARATOR =
+            Comparator.comparing(Endpoint::host)
+                      .thenComparing(e -> e.ipAddr, Comparator.nullsFirst(Comparator.naturalOrder()))
+                      .thenComparing(e -> e.port);
 
     private static final int DEFAULT_WEIGHT = 1000;
 
@@ -393,7 +399,7 @@ public final class Endpoint {
     }
 
     private static void validateWeight(int weight) {
-        checkArgument(weight > 0, "weight: %s (expected: > 0)", weight);
+        checkArgument(weight >= 0, "weight: %s (expected: >= 0)", weight);
     }
 
     @Override
@@ -427,6 +433,23 @@ public final class Endpoint {
     @Override
     public int hashCode() {
         return (authority().hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+    }
+
+    @Override
+    public int compareTo(Endpoint that) {
+        if (isGroup()) {
+            if (that.isGroup()) {
+                return groupName().compareTo(that.groupName());
+            } else {
+                return -1;
+            }
+        } else {
+            if (that.isGroup()) {
+                return 1;
+            } else {
+                return NON_GROUP_COMPARATOR.compare(this, that);
+            }
+        }
     }
 
     @Override

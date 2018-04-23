@@ -90,6 +90,7 @@ public class EndpointTest {
         assertThat(foo.withWeight(750).weight()).isEqualTo(750);
         assertThat(foo.withWeight(500)).isSameAs(foo);
 
+        foo.withWeight(0);
         assertThatThrownBy(() -> foo.withWeight(-1)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -247,7 +248,7 @@ public class EndpointTest {
         assertThat(Endpoint.of("a", 80).withIpAddr("::1").hashCode()).isNotZero();
         assertThat(Endpoint.ofGroup("a").hashCode()).isNotZero();
 
-        // Weight not part of comparison
+        // Weight is not part of comparison.
         final int hash = Endpoint.of("a", 80).withWeight(500).hashCode();
         assertThat(Endpoint.of("a", 80).withWeight(750).hashCode()).isEqualTo(hash);
     }
@@ -257,5 +258,31 @@ public class EndpointTest {
         assertThat(Endpoint.of("a").toString()).isNotNull();
         assertThat(Endpoint.of("a", 80).toString()).isNotNull();
         assertThat(Endpoint.of("a").withIpAddr("::1").toString()).isNotNull();
+    }
+
+    @Test
+    public void comparison() {
+        assertThat(Endpoint.ofGroup("a")).isEqualByComparingTo(Endpoint.ofGroup("a"));
+        assertThat(Endpoint.ofGroup("a")).isLessThan(Endpoint.ofGroup("b"));
+        assertThat(Endpoint.ofGroup("a")).isLessThan(Endpoint.of("a"));
+
+        assertThat(Endpoint.of("a")).isEqualByComparingTo(Endpoint.of("a"));
+        assertThat(Endpoint.of("a")).isLessThan(Endpoint.of("b"));
+        assertThat(Endpoint.of("a")).isLessThan(Endpoint.of("a", 8080));
+        assertThat(Endpoint.of("a")).isLessThan(Endpoint.of("a").withIpAddr("1.1.1.1"));
+        assertThat(Endpoint.of("a")).isGreaterThan(Endpoint.ofGroup("a"));
+
+        assertThat(Endpoint.of("a", 8080)).isEqualByComparingTo(Endpoint.of("a", 8080));
+        assertThat(Endpoint.of("a", 8080)).isGreaterThan(Endpoint.of("a"));
+        assertThat(Endpoint.of("a", 8080)).isLessThan(Endpoint.of("a", 8081));
+
+        assertThat(Endpoint.of("a").withIpAddr("1.1.1.1"))
+                .isEqualByComparingTo(Endpoint.of("a").withIpAddr("1.1.1.1"));
+        assertThat(Endpoint.of("a").withIpAddr("1.1.1.1")).isGreaterThan(Endpoint.of("a"));
+        assertThat(Endpoint.of("a").withIpAddr("1.1.1.1"))
+                .isLessThan(Endpoint.of("a").withIpAddr("1.1.1.2"));
+
+        // Weight is not part of comparison.
+        assertThat(Endpoint.of("a").withWeight(1)).isEqualByComparingTo(Endpoint.of("a").withWeight(2));
     }
 }
