@@ -128,7 +128,7 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.23.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.24.Final' }
   netty-codec-haproxy: { version: *NETTY_VERSION }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
@@ -148,12 +148,12 @@ io.prometheus:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '4.18.2'
+    version: &BRAVE_VERSION '4.19.1'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/4.18.2/
+    - https://static.javadoc.io/io.zipkin.brave/brave/4.19.1/
 
 io.zipkin.java:
-  zipkin: { version: &ZIPKIN_VERSION '2.7.0' }
+  zipkin: { version: &ZIPKIN_VERSION '2.7.1' }
 
 it.unimi.dsi:
   fastutil:
@@ -175,7 +175,7 @@ junit:
     - https://junit.org/junit4/javadoc/4.12/
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.0.2' }
+  sphinx-gradle-plugin: { version: '2.1.1' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -185,6 +185,11 @@ log4j:
 
 me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.5' }
+
+# TODO(trustin): Remove this once protobuf-jackson works with Byte Buddy 1.8.4+.
+net.bytebuddy:
+  byte-buddy: { version: &BYTE_BUDDY_VERSION '1.8.3' }
+  byte-buddy-agent: { version: *BYTE_BUDDY_VERSION }
 
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '1.28.2' }
@@ -233,7 +238,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.6'
+    version: &TOMCAT_VERSION '9.0.7'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -303,7 +308,7 @@ org.jctools:
       to: com.linecorp.armeria.internal.shaded.jctools
 
 org.mockito:
-  mockito-core: { version: '2.17.0' }
+  mockito-core: { version: '2.18.3' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.7' }
