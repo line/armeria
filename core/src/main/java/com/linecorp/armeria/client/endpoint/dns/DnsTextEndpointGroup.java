@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.endpoint.dns;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
@@ -31,37 +32,39 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
-import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 
 /**
- * {@link DynamicEndpointGroup} which resolves targets using DNS
- * <a href="https://en.wikipedia.org/wiki/SRV_record">SRV records</a>. This is useful for environments
- * where service discovery is handled using DNS, e.g.
- * <a href="https://github.com/kubernetes/dns/blob/master/docs/specification.md">Kubernetes DNS-based service
- * discovery</a>.
+ * {@link DynamicEndpointGroup} which resolves targets using DNS {@code TXT} records. This is useful for
+ * environments where service discovery is handled using DNS.
  */
-public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
+public final class DnsTextEndpointGroup extends DnsEndpointGroup {
 
     /**
-     * Creates a {@link DnsServiceEndpointGroup} that schedules queries on a random {@link EventLoop} from
+     * Creates a {@link DnsTextEndpointGroup} that schedules queries on a random {@link EventLoop} from
      * {@link CommonPools#workerGroup()}.
      *
-     * @param hostname the hostname to query DNS queries for.
+     * @param hostname the hostname to query DNS queries for
+     * @param mapping the {@link Function} that maps the content of a {@code TXT} record into
+     *                an {@link Endpoint}. The {@link Function} is expected to return {@code null}
+     *                if the record contains unsupported content.
      */
-    public static DnsServiceEndpointGroup of(String hostname) {
-        return new DnsServiceEndpointGroupBuilder(hostname).build();
+    public static DnsTextEndpointGroup of(String hostname, Function<byte[], Endpoint> mapping) {
+        return new DnsTextEndpointGroupBuilder(hostname, mapping).build();
     }
 
-    DnsServiceEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
-                            DnsServerAddressStreamProvider serverAddressStreamProvider,
-                            Backoff backoff, String hostname) {
+    private final Function<byte[], Endpoint> mapping;
+
+    DnsTextEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
+                         DnsServerAddressStreamProvider serverAddressStreamProvider,
+                         Backoff backoff, String hostname, Function<byte[], Endpoint> mapping) {
         super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
-              ImmutableList.of(new DefaultDnsQuestion(hostname, DnsRecordType.SRV)),
+              ImmutableList.of(new DefaultDnsQuestion(hostname, DnsRecordType.TXT)),
               unused -> {});
+        this.mapping = mapping;
         start();
     }
 
@@ -69,52 +72,57 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
     ImmutableSortedSet<Endpoint> onDnsRecords(List<DnsRecord> records, int ttl) throws Exception {
         final ImmutableSortedSet.Builder<Endpoint> builder = ImmutableSortedSet.naturalOrder();
         for (DnsRecord r : records) {
-            if (!(r instanceof DnsRawRecord) || r.type() != DnsRecordType.SRV) {
+            if (!(r instanceof DnsRawRecord) || r.type() != DnsRecordType.TXT) {
                 continue;
             }
 
             final ByteBuf content = ((ByteBufHolder) r).content();
-            if (content.readableBytes() <= 6) { // Too few bytes
-                warnInvalidRecord(DnsRecordType.SRV, content);
+            if (!content.isReadable()) { // Missing length octet
+                warnInvalidRecord(DnsRecordType.TXT, content);
                 continue;
             }
 
             content.markReaderIndex();
-            content.skipBytes(2);  // priority unused
-            final int weight = content.readUnsignedShort();
-            final int port = content.readUnsignedShort();
-
-            final Endpoint endpoint;
-            try {
-                final String target = stripTrailingDot(DefaultDnsRecordDecoder.decodeName(content));
-                endpoint = port > 0 ? Endpoint.of(target, port) : Endpoint.of(target);
-            } catch (Exception e) {
-                content.resetReaderIndex();
-                warnInvalidRecord(DnsRecordType.SRV, content);
+            final int txtLen = content.readUnsignedByte();
+            if (txtLen == 0) { // Empty content
                 continue;
             }
 
-            builder.add(endpoint.withWeight(weight));
+            if (content.readableBytes() != txtLen) { // Mismatching number of octets
+                content.resetReaderIndex();
+                warnInvalidRecord(DnsRecordType.TXT, content);
+                continue;
+            }
+
+            final byte[] txt = new byte[txtLen];
+            content.readBytes(txt);
+
+            final Endpoint endpoint;
+            try {
+                endpoint = mapping.apply(txt);
+            } catch (Exception e) {
+                content.resetReaderIndex();
+                warnInvalidRecord(DnsRecordType.TXT, content);
+                continue;
+            }
+
+            if (endpoint != null) {
+                if (endpoint.isGroup()) {
+                    logger().warn("{} Ignoring group endpoint: {}", logPrefix(), endpoint);
+                } else {
+                    builder.add(endpoint);
+                }
+            }
         }
 
         final ImmutableSortedSet<Endpoint> endpoints = builder.build();
         if (logger().isDebugEnabled()) {
             logger().debug("{} Resolved: {} (TTL: {})",
                            logPrefix(),
-                           endpoints.stream()
-                                    .map(e -> e.authority() + '/' + e.weight())
-                                    .collect(Collectors.joining(", ")),
+                           endpoints.stream().map(Object::toString).collect(Collectors.joining(", ")),
                            ttl);
         }
 
         return endpoints;
-    }
-
-    private static String stripTrailingDot(String name) {
-        if (name.endsWith(".")) {
-            return name.substring(0, name.length() - 1);
-        } else {
-            return name;
-        }
     }
 }

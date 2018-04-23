@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,150 +16,198 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.Objects.requireNonNull;
-
-import java.net.InetAddress;
-import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
-import io.netty.resolver.NameResolver;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsRawRecord;
+import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
+import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.util.NetUtil;
 
 /**
- * {@link DynamicEndpointGroup} which resolves targets using DNS address queries (A and AAAA). This is useful
- * for environments where service discovery is handled using DNS - for example, Kubernetes uses SkyDNS for
- * service discovery.
+ * {@link DynamicEndpointGroup} which resolves targets using DNS address queries ({@code A} and {@code AAAA}).
+ * This is useful for environments where service discovery is handled using DNS, e.g.
+ * <a href="https://github.com/kubernetes/dns/blob/master/docs/specification.md">Kubernetes DNS-based service
+ * discovery</a>.
  */
-public class DnsAddressEndpointGroup extends DynamicEndpointGroup {
+public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
 
     /**
      * Creates a {@link DnsAddressEndpointGroup} with an unspecified port that schedules queries on a random
-     * {@link EventLoop} from {@link CommonPools#workerGroup()} every 1 second.
+     * {@link EventLoop} from {@link CommonPools#workerGroup()}.
      *
-     * @param hostname the hostname to query DNS queries for.
+     * @param hostname the hostname to query DNS queries for
      */
     public static DnsAddressEndpointGroup of(String hostname) {
-        return of(hostname, 0);
+        return new DnsAddressEndpointGroupBuilder(hostname).build();
     }
 
     /**
      * Creates a {@link DnsAddressEndpointGroup} that schedules queries on a random {@link EventLoop} from
-     * {@link CommonPools#workerGroup()} every 1 second.
+     * {@link CommonPools#workerGroup()}.
      *
-     * @param hostname the hostname to query DNS queries for.
-     * @param defaultPort the port to use when the DNS answer does not contain one. {@code 0} indicates an
-     *     unspecified port, meaning the port will use a protocol-specific well-defined port number
-     *     (e.g., 80, 443).
+     * @param hostname the hostname to query DNS queries for
+     * @param port     the port of the {@link Endpoint}s
      */
-    public static DnsAddressEndpointGroup of(String hostname, int defaultPort) {
-        return of(hostname, defaultPort, CommonPools.workerGroup().next());
+    public static DnsAddressEndpointGroup of(String hostname, int port) {
+        return new DnsAddressEndpointGroupBuilder(hostname).port(port).build();
     }
-
-    /**
-     * Creates a {@link DnsAddressEndpointGroup} that queries every 1 second.
-     *
-     * @param hostname the hostname to query DNS queries for.
-     * @param defaultPort the port to use when the DNS answer does not contain one. {@code 0} indicates an
-     *     unspecified port, meaning the port will use a protocol-specific well-defined port number
-     *     (e.g., 80, 443).
-     * @param eventLoop the {@link EventLoop} to schedule DNS queries on.
-     */
-    public static DnsAddressEndpointGroup of(String hostname, int defaultPort, EventLoop eventLoop) {
-        return of(hostname, defaultPort, eventLoop, Duration.ofSeconds(1));
-    }
-
-    /**
-     * Creates a {@link DnsAddressEndpointGroup}.
-     *
-     * @param hostname the hostname to query DNS queries for.
-     * @param defaultPort the port to use when the DNS answer does not contain one. {@code 0} indicates an
-     *     unspecified port, meaning the port will use a protocol-specific well-defined port number
-     *     (e.g., 80, 443).
-     * @param eventLoop the {@link EventLoop} to schedule DNS queries on.
-     * @param queryInterval the {@link Duration} to query DNS at.
-     */
-    public static DnsAddressEndpointGroup of(String hostname, int defaultPort, EventLoop eventLoop,
-                                             Duration queryInterval) {
-        return new DnsAddressEndpointGroup(hostname, defaultPort,
-                                           DnsEndpointGroupUtil.createResolverForEventLoop(eventLoop),
-                                           eventLoop, queryInterval);
-    }
-
-    private static final Logger logger = LoggerFactory.getLogger(DnsAddressEndpointGroup.class);
 
     private final String hostname;
-    private final int defaultPort;
-    private final NameResolver<InetAddress> resolver;
-    private final EventLoop eventLoop;
-    private final Duration queryInterval;
+    private final int port;
 
-    @Nullable
-    private ScheduledFuture<?> scheduledFuture;
+    DnsAddressEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
+                            DnsServerAddressStreamProvider serverAddressStreamProvider,
+                            Backoff backoff, @Nullable ResolvedAddressTypes resolvedAddressTypes,
+                            String hostname, int port) {
 
-    @VisibleForTesting
-    DnsAddressEndpointGroup(String hostname, int defaultPort, NameResolver<InetAddress> resolver,
-                            EventLoop eventLoop, Duration queryInterval) {
-        checkArgument(defaultPort >= 0 && defaultPort <= 65535, "defaultPort must be between 0 and 65535");
-        this.hostname = requireNonNull(hostname, "hostname");
-        this.defaultPort = defaultPort;
-        this.resolver = requireNonNull(resolver, "resolver");
-        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        this.queryInterval = requireNonNull(queryInterval, "queryInterval");
+        super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
+              newQuestions(hostname, resolvedAddressTypes),
+              resolverBuilder -> {
+                  if (resolvedAddressTypes != null) {
+                      resolverBuilder.resolvedAddressTypes(resolvedAddressTypes);
+                  }
+              });
+
+        this.hostname = hostname;
+        this.port = port;
+        start();
     }
 
-    /**
-     * Starts polling for service updates.
-     */
-    public void start() {
-        checkState(scheduledFuture == null, "already started");
-        scheduledFuture = eventLoop.scheduleAtFixedRate(this::query, 0, queryInterval.getSeconds(),
-                                                        TimeUnit.SECONDS);
-    }
+    private static List<DnsQuestion> newQuestions(
+            String hostname, @Nullable ResolvedAddressTypes resolvedAddressTypes) {
 
-    /**
-     * Stops polling for service updates.
-     */
-    @Override
-    public void close() {
-        if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
+        if (resolvedAddressTypes == null) {
+            if (NetUtil.isIpV4StackPreferred()) {
+                resolvedAddressTypes = ResolvedAddressTypes.IPV4_ONLY;
+            } else {
+                resolvedAddressTypes = ResolvedAddressTypes.IPV4_PREFERRED;
+            }
         }
+
+        final ImmutableList.Builder<DnsQuestion> builder = ImmutableList.builder();
+        switch (resolvedAddressTypes) {
+            case IPV4_ONLY:
+            case IPV4_PREFERRED:
+            case IPV6_PREFERRED:
+                builder.add(new DefaultDnsQuestion(hostname, DnsRecordType.A));
+                break;
+        }
+        switch (resolvedAddressTypes) {
+            case IPV6_ONLY:
+            case IPV4_PREFERRED:
+            case IPV6_PREFERRED:
+                builder.add(new DefaultDnsQuestion(hostname, DnsRecordType.AAAA));
+                break;
+        }
+        return builder.build();
     }
 
-    @VisibleForTesting
-    void query() {
-        resolver.resolveAll(hostname).addListener(
-                (Future<List<InetAddress>> future) -> {
-                    if (future.cause() != null) {
-                        logger.warn("Error resolving a domain name: {}", hostname, future.cause());
-                        return;
+    @Override
+    ImmutableSortedSet<Endpoint> onDnsRecords(List<DnsRecord> records, int ttl) throws Exception {
+        final ImmutableSortedSet.Builder<Endpoint> builder = ImmutableSortedSet.naturalOrder();
+        final boolean hasLoopbackARecords =
+                records.stream()
+                       .filter(r -> r instanceof DnsRawRecord)
+                       .map(DnsRawRecord.class::cast)
+                       .anyMatch(r -> r.type() == DnsRecordType.A &&
+                                     r.content().getByte(r.content().readerIndex()) == 127);
+
+        for (DnsRecord r : records) {
+            if (!(r instanceof DnsRawRecord)) {
+                continue;
+            }
+
+            final DnsRecordType type = r.type();
+            final ByteBuf content = ((ByteBufHolder) r).content();
+            final int contentLen = content.readableBytes();
+
+            // Skip invalid records.
+            if (type == DnsRecordType.A) {
+                if (contentLen != 4) {
+                    warnInvalidRecord(DnsRecordType.A, content);
+                    continue;
+                }
+            } else if (type == DnsRecordType.AAAA) {
+                if (contentLen != 16) {
+                    warnInvalidRecord(DnsRecordType.AAAA, content);
+                    continue;
+                }
+            } else {
+                continue;
+            }
+
+            // Convert the content into an IP address and then into an endpoint.
+            final String ipAddr;
+            final byte[] addrBytes = new byte[contentLen];
+            content.getBytes(content.readerIndex(), addrBytes);
+
+            if (contentLen == 16) {
+                // Convert some IPv6 addresses into IPv4 addresses to remove duplicate endpoints.
+                if (addrBytes[0] == 0x00 && addrBytes[1] == 0x00 &&
+                    addrBytes[2] == 0x00 && addrBytes[3] == 0x00 &&
+                    addrBytes[4] == 0x00 && addrBytes[5] == 0x00 &&
+                    addrBytes[6] == 0x00 && addrBytes[7] == 0x00 &&
+                    addrBytes[8] == 0x00 && addrBytes[9] == 0x00) {
+
+                    if (addrBytes[10] == 0x00 && addrBytes[11] == 0x00) {
+                        if (addrBytes[12] == 0x00 && addrBytes[13] == 0x00 &&
+                            addrBytes[14] == 0x00 && addrBytes[15] == 0x01) {
+                            // Loopback address (::1)
+                            if (hasLoopbackARecords) {
+                                // Contains an IPv4 loopback address already; skip.
+                                continue;
+                            } else {
+                                ipAddr = "::1";
+                            }
+                        } else {
+                            // IPv4-compatible address.
+                            ipAddr = NetUtil.bytesToIpAddress(addrBytes, 12, 4);
+                        }
+                    } else if (addrBytes[10] == -1 && addrBytes[11] == -1) {
+                        // IPv4-mapped address.
+                        ipAddr = NetUtil.bytesToIpAddress(addrBytes, 12, 4);
+                    } else {
+                        ipAddr = NetUtil.bytesToIpAddress(addrBytes);
                     }
-                    List<Endpoint> endpoints =
-                            future.getNow().stream()
-                                  .map(InetAddress::getHostAddress)
-                                  .map(ip -> defaultPort != 0 ? Endpoint.of(ip, defaultPort) : Endpoint.of(ip))
-                                  .collect(toImmutableList());
-                    List<Endpoint> currentEndpoints = endpoints();
-                    if (!endpoints.equals(currentEndpoints)) {
-                        setEndpoints(endpoints);
-                    }
-                });
+                } else {
+                    ipAddr = NetUtil.bytesToIpAddress(addrBytes);
+                }
+            } else {
+                ipAddr = NetUtil.bytesToIpAddress(addrBytes);
+            }
+
+            final Endpoint endpoint = port != 0 ? Endpoint.of(hostname, port) : Endpoint.of(hostname);
+            builder.add(endpoint.withIpAddr(ipAddr));
+        }
+
+        final ImmutableSortedSet<Endpoint> endpoints = builder.build();
+        if (logger().isDebugEnabled()) {
+            logger().debug("{} Resolved: {} (TTL: {})",
+                           logPrefix(),
+                           endpoints.stream()
+                                    .map(Endpoint::ipAddr)
+                                    .collect(Collectors.joining(", ")),
+                           ttl);
+        }
+
+        return endpoints;
     }
 }

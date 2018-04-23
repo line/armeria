@@ -18,6 +18,12 @@ package com.linecorp.armeria.client.endpoint;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -32,6 +38,7 @@ import com.linecorp.armeria.common.util.AbstractListenable;
 public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
     private volatile List<Endpoint> endpoints = ImmutableList.of();
     private final Lock endpointsLock = new ReentrantLock();
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new CompletableFuture<>();
 
     @Override
     public final List<Endpoint> endpoints() {
@@ -39,46 +46,101 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     }
 
     /**
+     * Returns the {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.
+     */
+    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+        return initialEndpointsFuture;
+    }
+
+    /**
+     * Waits until the initial {@link Endpoint}s are ready.
+     *
+     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
+     */
+    public List<Endpoint> awaitInitialEndpoints() throws InterruptedException {
+        try {
+            return initialEndpointsFuture.get();
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.getCause());
+        }
+    }
+
+    /**
+     * Waits until the initial {@link Endpoint}s are ready, with timeout.
+     *
+     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
+     * @throws TimeoutException if the initial {@link Endpoint}s are not set until timeout
+     */
+    public List<Endpoint> awaitInitialEndpoints(long timeout, TimeUnit unit)
+            throws InterruptedException, TimeoutException {
+        try {
+            return initialEndpointsFuture.get(timeout, unit);
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.getCause());
+        }
+    }
+
+    /**
      * Adds the specified {@link Endpoint} to current {@link Endpoint} list.
      */
     protected final void addEndpoint(Endpoint e) {
+        final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
             final ImmutableList.Builder<Endpoint> newEndpointsBuilder = ImmutableList.builder();
             newEndpointsBuilder.addAll(endpoints);
             newEndpointsBuilder.add(e);
-            endpoints = newEndpointsBuilder.build();
-            notifyListeners(endpoints);
+            endpoints = newEndpoints = newEndpointsBuilder.build();
         } finally {
             endpointsLock.unlock();
         }
+
+        notifyListeners(newEndpoints);
+        completeInitialEndpointsFuture(newEndpoints);
     }
 
     /**
      * Removes the specified {@link Endpoint} from current {@link Endpoint} list.
      */
     protected final void removeEndpoint(Endpoint e) {
+        final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
-            endpoints = endpoints.stream()
-                                 .filter(endpoint -> !endpoint.equals(e))
-                                 .collect(toImmutableList());
-            notifyListeners(endpoints);
+            endpoints = newEndpoints = endpoints.stream()
+                                                .filter(endpoint -> !endpoint.equals(e))
+                                                .collect(toImmutableList());
         } finally {
             endpointsLock.unlock();
         }
+        notifyListeners(newEndpoints);
     }
 
     /**
      * Sets the specified {@link Endpoint}s as current {@link Endpoint} list.
      */
     protected final void setEndpoints(Iterable<Endpoint> endpoints) {
+        final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
-            this.endpoints = ImmutableList.copyOf(endpoints);
-            notifyListeners(this.endpoints);
+            this.endpoints = newEndpoints = ImmutableList.copyOf(endpoints);
         } finally {
             endpointsLock.unlock();
+        }
+
+        notifyListeners(newEndpoints);
+        completeInitialEndpointsFuture(newEndpoints);
+    }
+
+    private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
+        if (!endpoints.isEmpty() && !initialEndpointsFuture.isDone()) {
+            initialEndpointsFuture.complete(endpoints);
+        }
+    }
+
+    @Override
+    public void close() {
+        if (!initialEndpointsFuture.isDone()) {
+            initialEndpointsFuture.cancel(true);
         }
     }
 }
