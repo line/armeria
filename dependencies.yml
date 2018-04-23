@@ -186,11 +186,6 @@ log4j:
 me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.5' }
 
-# TODO(trustin): Remove this once protobuf-jackson works with Byte Buddy 1.8.4+.
-net.bytebuddy:
-  byte-buddy: { version: &BYTE_BUDDY_VERSION '1.8.3' }
-  byte-buddy-agent: { version: *BYTE_BUDDY_VERSION }
-
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '1.28.2' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
@@ -269,7 +264,7 @@ org.checkerframework:
   checker-compat-qual: { version: '2.5.0' }
 
 org.curioswitch.curiostack:
-  protobuf-jackson: { version: '0.2.0' }
+  protobuf-jackson: { version: '0.2.1' }
 
 org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
