@@ -36,6 +36,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
@@ -180,6 +181,7 @@ interface AccessLogComponent {
                 case REQUEST_TIMESTAMP:
                     return dateTimeFormatter.format(ZonedDateTime.ofInstant(
                             Instant.ofEpochMilli(log.requestStartTimeMillis()), defaultZoneId));
+
                 case REQUEST_LINE:
                     final StringBuilder requestLine = new StringBuilder();
 
@@ -188,12 +190,13 @@ interface AccessLogComponent {
                                .append(' ')
                                .append(headers.path());
 
-                    final Object requestContent = log.requestContent();
-                    if (requestContent instanceof RpcRequest) {
-                        requestLine.append('#')
-                                   .append(((RpcRequest) requestContent).method());
+                    if (log.isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+                        final Object requestContent = log.requestContent();
+                        if (requestContent instanceof RpcRequest) {
+                            requestLine.append('#')
+                                       .append(((RpcRequest) requestContent).method());
+                        }
                     }
-
                     requestLine.append(' ')
                                .append(firstNonNull(log.sessionProtocol(),
                                                     log.context().sessionProtocol()).uriText());
