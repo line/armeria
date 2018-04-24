@@ -1,12 +1,14 @@
 .. _`an EPHEMERAL node`: https://zookeeper.apache.org/doc/r3.4.10/zookeeperOver.html#Nodes+and+ephemeral+nodes
 .. _`Apache ZooKeeper`: https://zookeeper.apache.org/
-.. _`com.linecorp.armeria.client.zookeeper`: apidocs/index.html?com/linecorp/armeria/client/zookeeper/package-summary.html
-.. _`com.linecorp.armeria.server.zookeeper`: apidocs/index.html?com/linecorp/armeria/server/zookeeper/package-summary.html
-.. _`Endpoints`: apidocs/index.html?com/linecorp/armeria/client/Endpoint.html
-.. _`EndpointGroup`: apidocs/index.html?com/linecorp/armeria/client/EndpointGroup.html
-.. _`EndpointGroupRegistry`: apidocs/index.html?com/linecorp/armeria/client/EndpointGroupRegistry.html
-.. _`ZooKeeperEndpointGroup`: apidocs/index.html?com/linecorp/armeria/client/zookeeper/ZooKeeperEndpointGroup.html
-.. _`ZooKeeperUpdatingListenerBuilder`: apidocs/index.html?com/linecorp/armeria/server/zookeeper/ZooKeeperUpdatingListenerBuilder.html
+.. _com.linecorp.armeria.client.zookeeper: apidocs/index.html?com/linecorp/armeria/client/zookeeper/package-summary.html
+.. _com.linecorp.armeria.server.zookeeper: apidocs/index.html?com/linecorp/armeria/server/zookeeper/package-summary.html
+.. _CuratorFramework: https://curator.apache.org/apidocs/org/apache/curator/framework/CuratorFramework.html
+.. _Endpoints: apidocs/index.html?com/linecorp/armeria/client/Endpoint.html
+.. _EndpointGroup: apidocs/index.html?com/linecorp/armeria/client/EndpointGroup.html
+.. _EndpointGroupRegistry: apidocs/index.html?com/linecorp/armeria/client/endpoint/EndpointGroupRegistry.html
+.. _ZooKeeperEndpointGroup: apidocs/index.html?com/linecorp/armeria/client/zookeeper/ZooKeeperEndpointGroup.html
+.. _ZooKeeperUpdatingListener: apidocs/index.html?com/linecorp/armeria/server/zookeeper/ZooKeeperUpdatingListener.html
+.. _ZooKeeperUpdatingListenerBuilder: apidocs/index.html?com/linecorp/armeria/server/zookeeper/ZooKeeperUpdatingListenerBuilder.html
 
 .. _advanced-zookeeper:
 
