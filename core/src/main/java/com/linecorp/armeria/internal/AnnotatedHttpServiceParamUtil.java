@@ -15,9 +15,14 @@
  */
 package com.linecorp.armeria.internal;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
+import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
+import java.lang.reflect.Parameter;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -30,13 +35,17 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.base.CaseFormat;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Header;
+import com.linecorp.armeria.server.annotation.Param;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -119,8 +128,7 @@ public final class AnnotatedHttpServiceParamUtil {
     public static Object convertParameter(@Nullable String value,
                                           Class<?> type,
                                           EnumConverter<?> enumConverter,
-                                          boolean optionalWrapped
-    ) {
+                                          boolean optionalWrapped) {
         Object converted = null;
         if (value != null) {
             converted = type.isEnum() ? enumConverter.getEnumElement(value)
@@ -206,6 +214,131 @@ public final class AnnotatedHttpServiceParamUtil {
 
         throw new IllegalArgumentException(
                 "Type '" + clazz.getSimpleName() + "' can't be converted.");
+    }
+
+    /**
+     * Returns the value of the {@link Param} annotation which is specified on the {@code element} if
+     * the value is not blank. If the value is blank, it returns the name of the specified
+     * {@code element} object which is an instance of {@link Parameter} or {@link Field}.
+     */
+    @Nullable
+    public static String findParamName(AnnotatedElement element) {
+        return findParamName(element, element);
+    }
+
+    /**
+     * Returns the value of the {@link Param} annotation which is specified on the {@code element} if
+     * the value is not blank. If the value is blank, it returns the name of the specified
+     * {@code nameRetrievalTarget} object which is an instance of {@link Parameter} or {@link Field}.
+     */
+    @Nullable
+    public static String findParamName(AnnotatedElement element, Object nameRetrievalTarget) {
+        requireNonNull(element, "element");
+        requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
+        final Param param = element.getAnnotation(Param.class);
+        if (param == null) {
+            return null;
+        }
+
+        final String value = param.value();
+        if (DefaultValues.isSpecified(value)) {
+            checkArgument(!value.isEmpty(), "value is empty");
+            return value;
+        }
+        return getName(nameRetrievalTarget);
+    }
+
+    /**
+     * Returns the value of the {@link Header} annotation which is specified on the {@code element} if
+     * the value is not blank. If the value is blank, it returns the name of the specified
+     * {@code element} object which is an instance of {@link Parameter} or {@link Field}.
+     *
+     * <p>Note that the name of the specified {@code element} will be converted as
+     * {@link CaseFormat#LOWER_HYPHEN} that the string elements are separated with one hyphen({@code -})
+     * character. The value of the {@link Header} annotation will not be converted because it is clearly
+     * specified by a user.
+     */
+    @Nullable
+    public static String findHeaderName(AnnotatedElement element) {
+        return findHeaderName(element, element);
+    }
+
+    /**
+     * Returns the value of the {@link Header} annotation which is specified on the {@code element} if
+     * the value is not blank. If the value is blank, it returns the name of the specified
+     * {@code nameRetrievalTarget} object which is an instance of {@link Parameter} or {@link Field}.
+     *
+     * <p>Note that the name of the specified {@code nameRetrievalTarget} will be converted as
+     * {@link CaseFormat#LOWER_HYPHEN} that the string elements are separated with one hyphen({@code -})
+     * character. The value of the {@link Header} annotation will not be converted because it is clearly
+     * specified by a user.
+     */
+    @Nullable
+    public static String findHeaderName(AnnotatedElement element, Object nameRetrievalTarget) {
+        requireNonNull(element, "element");
+        requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
+        final Header header = element.getAnnotation(Header.class);
+        if (header == null) {
+            return null;
+        }
+
+        final String value = header.value();
+        if (DefaultValues.isSpecified(value)) {
+            checkArgument(!value.isEmpty(), "value is empty");
+            return value;
+        }
+        return toHeaderName(getName(nameRetrievalTarget));
+    }
+
+    /**
+     * Returns whether the specified {@code element} is annotated with a {@link Param} or {@link Header}.
+     */
+    public static boolean hasParamOrHeader(AnnotatedElement element) {
+        return element.isAnnotationPresent(Param.class) ||
+               element.isAnnotationPresent(Header.class);
+    }
+
+    private static String getName(Object element) {
+        if (element instanceof Parameter) {
+            final Parameter parameter = (Parameter) element;
+            if (!parameter.isNamePresent()) {
+                throw new IllegalArgumentException(
+                        "cannot obtain the name of the parameter or field automatically. " +
+                        "Please make sure you compiled your code with '-parameters' option. " +
+                        "If not, you need to specify parameter and header names with @" +
+                        Param.class.getName() + " and @" + Header.class.getName() + '.');
+            }
+            return parameter.getName();
+        }
+        if (element instanceof Field) {
+            return ((Field) element).getName();
+        }
+        throw new IllegalArgumentException("cannot find the name: " + element.getClass().getName());
+    }
+
+    @VisibleForTesting
+    static String toHeaderName(String name) {
+        requireNonNull(name, "name");
+        checkArgument(!name.isEmpty(), "name is empty");
+
+        final String upperCased = Ascii.toUpperCase(name);
+        if (name.equals(upperCased)) {
+            return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_HYPHEN, name);
+        }
+        final String lowerCased = Ascii.toLowerCase(name);
+        if (name.equals(lowerCased)) {
+            return CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_HYPHEN, name);
+        }
+        // Ensure that the name does not contain '_'.
+        // If it contains '_', we give up to make it lower hyphen case. Just converting it to lower case.
+        if (name.indexOf('_') >= 0) {
+            return lowerCased;
+        }
+        if (Ascii.isUpperCase(name.charAt(0))) {
+            return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, name);
+        } else {
+            return CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_HYPHEN, name);
+        }
     }
 
     public static class EnumConverter<T extends Enum<T>> {

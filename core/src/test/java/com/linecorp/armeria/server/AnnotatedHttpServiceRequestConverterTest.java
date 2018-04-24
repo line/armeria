@@ -20,12 +20,14 @@ import static com.linecorp.armeria.server.AnnotatedHttpServiceRequestConverterTe
 import static com.linecorp.armeria.server.annotation.BeanRequestConverterFunction.register;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -65,27 +67,16 @@ public class AnnotatedHttpServiceRequestConverterTest {
     public static final ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/1", new MyDecorationService1(),
+            sb.annotatedService("/1", new MyService1(),
                                 LoggingService.newDecorator());
-            sb.annotatedService("/2", new MyDecorationService2(),
+            sb.annotatedService("/2", new MyService2(),
                                 LoggingService.newDecorator());
         }
     };
 
-    private static void expectError(final Runnable testTask,
-                                    final String... expectedErrorMessages) {
-        try {
-            testTask.run();
-
-            fail("Should fail here, but not.");
-        } catch (final Exception e) {
-            assertThat(expectedErrorMessages).contains(e.getMessage());
-        }
-    }
-
     @ResponseConverter(UnformattedStringConverterFunction.class)
     @RequestConverter(TestRequestConverter1.class)
-    public static class MyDecorationService1 {
+    public static class MyService1 {
 
         @Post("/convert1")
         public String convert1(@RequestObject RequestJsonObj1 obj1) {
@@ -115,14 +106,15 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @ResponseConverter(ByteArrayConverterFunction.class)
     @ResponseConverter(UnformattedStringConverterFunction.class)
-    public static class MyDecorationService2 {
+    public static class MyService2 {
+        private final ObjectMapper mapper = new ObjectMapper();
 
         @Post("/default/bean1/{userName}/{seqNum}")
         public String defaultBean1ForPost(@RequestObject RequestBean1 bean1)
                 throws JsonProcessingException {
             assertThat(bean1).isNotNull();
             bean1.validate();
-            return new ObjectMapper().writeValueAsString(bean1);
+            return mapper.writeValueAsString(bean1);
         }
 
         @Get("/default/bean1/{userName}/{seqNum}")
@@ -130,7 +122,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                 throws JsonProcessingException {
             assertThat(bean1).isNotNull();
             bean1.validate();
-            return new ObjectMapper().writeValueAsString(bean1);
+            return mapper.writeValueAsString(bean1);
         }
 
         @Post("/default/bean2/{userName}/{serialNo}")
@@ -138,7 +130,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                 throws JsonProcessingException {
             assertThat(bean2).isNotNull();
             bean2.validate();
-            return new ObjectMapper().writeValueAsString(bean2);
+            return mapper.writeValueAsString(bean2);
         }
 
         @Get("/default/bean2/{userName}")
@@ -146,7 +138,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                 throws JsonProcessingException {
             assertThat(bean2).isNotNull();
             bean2.validate();
-            return new ObjectMapper().writeValueAsString(bean2);
+            return mapper.writeValueAsString(bean2);
         }
 
         @Post("/default/bean3/{userName}/{departmentNo}")
@@ -154,7 +146,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                 throws JsonProcessingException {
             assertThat(bean3).isNotNull();
             bean3.validate();
-            return new ObjectMapper().writeValueAsString(bean3);
+            return mapper.writeValueAsString(bean3);
         }
 
         @Get("/default/bean3/{userName}")
@@ -162,7 +154,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                 throws JsonProcessingException {
             assertThat(bean3).isNotNull();
             bean3.validate();
-            return new ObjectMapper().writeValueAsString(bean3);
+            return mapper.writeValueAsString(bean3);
         }
 
         @Post("/default/json")
@@ -240,24 +232,28 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     abstract static class AbstractRequestBean {
         // test case: field with annotation
-        @Param("userName")
+        @Nullable
+        @Param
         String userName;
 
         int age = Integer.MIN_VALUE;
 
+        @Nullable
         Gender gender;
 
+        @Nullable
         List<String> permissions;
 
+        @Nullable
         String clientName;
 
         // test case: method parameters with annotation
-        public void initParams(@Header("x-client-name") final String clientName,
-                               @Header("x-user-permission") final String permissionStr,
-                               @Param("age") final int age) {
-            this.clientName = clientName;
-            this.permissions = Arrays.asList(permissionStr.split(","));
+        public void initParams(@Param("age") final int age,
+                               @Header("x-client-name") final String clientName,
+                               @Header final String xUserPermission) {
             this.age = age;
+            this.clientName = clientName;
+            permissions = Arrays.asList(xUserPermission.split(","));
         }
 
         @JsonProperty
@@ -271,7 +267,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         // test case: method with annotation
-        @Param("gender")
+        @Param
         public void setGender(final Gender gender) {
             this.gender = gender;
         }
@@ -308,19 +304,24 @@ public class AnnotatedHttpServiceRequestConverterTest {
     // test case: default constructor(with no args)
     static class RequestBean1 extends AbstractRequestBean {
         // test case: field with annotation
+        @Nullable
         @Param("seqNum")
         private Long seqNum;
 
         // test case: field with annotation
+        @Nullable
         @Param("manager")
         private Boolean manager;
 
+        @Nullable
         private String notPopulatedStr;
 
         private int notPopulatedInt;
 
+        @Nullable
         private Long notPopulatedLong;
 
+        @Nullable
         private Boolean notPopulatedBoolean;
 
         @JsonProperty
@@ -350,9 +351,9 @@ public class AnnotatedHttpServiceRequestConverterTest {
     static class RequestBean2 extends AbstractRequestBean {
         // test case: field with annotation
         @Param("serialNo")
-        private Long serialNo;
+        private final Long serialNo;
 
-        private String uid;
+        private final String uid;
 
         // test case: constructor args with annotations
         RequestBean2(@Param("serialNo") Long serialNo,
@@ -440,7 +441,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     // error test case: annotated used both on constructor and parameter
     static class BadRequestBeanAnnotationInConstructorParam {
-        private int header2;
+        private final int header2;
 
         @Header("header2")
         BadRequestBeanAnnotationInConstructorParam(@Param("header2") int header2) {
@@ -460,8 +461,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     // error test case: more than 1 parameters for annotated constructor
     static class BadRequestBeanMoreThanOneConstructorParam {
-        private String param1;
-        private int header2;
+        private final String param1;
+        private final int header2;
 
         @Header("header2")
         BadRequestBeanMoreThanOneConstructorParam(String param1, int header2) {
@@ -472,6 +473,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     // error test case: more than 1 parameters for annotated method
     static class BadRequestBeanMoreThanOneMethodParam {
+        @Nullable
         private String param1;
         private int header2;
 
@@ -484,10 +486,10 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     // error test case: some constructor parameters are not annotated
     static class BadRequestBeanSomeConstructorParamWithoutAnnotation {
-        private String param1;
-        private String param2;
-        private int header1;
-        private int header2;
+        private final String param1;
+        private final String param2;
+        private final int header1;
+        private final int header2;
 
         BadRequestBeanSomeConstructorParamWithoutAnnotation(@Param("param1") String param1,
                                                             String param2,
@@ -502,7 +504,9 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     // error test case: some method parameters are not annotated
     static class BadRequestBeanSomeMethodParamWithoutAnnotation {
+        @Nullable
         private String param1;
+        @Nullable
         private String param2;
         private int header1;
         private int header2;
@@ -754,78 +758,49 @@ public class AnnotatedHttpServiceRequestConverterTest {
     @Test
     public void testDefaultRequestConverter_beanDefineError() throws Exception {
         // error: more than 1 annotated constructors
-        expectError(
-                () -> register(BadRequestBeanMoreThanOnConstructor01.class),
-                "There are more than 1 annotated constructors in class '" +
-                BadRequestBeanMoreThanOnConstructor01.class.getCanonicalName() + "'."
-        );
-
-        expectError(
-                () -> register(BadRequestBeanMoreThanOnConstructor02.class),
-                "There are more than 1 annotated constructors in class '" +
-                BadRequestBeanMoreThanOnConstructor02.class.getCanonicalName() + "'."
-        );
-
-        expectError(
-                () -> register(BadRequestBeanMoreThanOnConstructor03.class),
-                "There are more than 1 annotated constructors in class '" +
-                BadRequestBeanMoreThanOnConstructor03.class.getCanonicalName() + "'."
-        );
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor01.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("too many annotated constructors");
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor02.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("too many annotated constructors");
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor03.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("too many annotated constructors");
 
         // error: annotation used in constructor param
-        String errorMsg01 = "Annotation should not be used on parameter 'header2' of '" +
-                            BadRequestBeanAnnotationInConstructorParam.class.getCanonicalName() + "." +
-                            BadRequestBeanAnnotationInConstructorParam.class.getName() + "'.";
-        String errorMsg02 = "Annotation should not be used on parameter 'arg0' of '" +
-                            BadRequestBeanAnnotationInConstructorParam.class.getCanonicalName() + "." +
-                            BadRequestBeanAnnotationInConstructorParam.class.getName() + "'.";
-        expectError(
-                () -> register(BadRequestBeanAnnotationInConstructorParam.class),
-                errorMsg01, errorMsg02
-        );
+        assertThatThrownBy(() -> register(BadRequestBeanAnnotationInConstructorParam.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("no @Param and @Header annotations are allowed");
 
         // error: annotation used in method param
-        errorMsg01 = "Annotation should not be used on parameter 'header2' of '" +
-                     BadRequestBeanAnnotationInMethodParam.class.getCanonicalName() + ".setHeader2" + "'.";
-        errorMsg02 = "Annotation should not be used on parameter 'arg0' of '" +
-                     BadRequestBeanAnnotationInMethodParam.class.getCanonicalName() + ".setHeader2" + "'.";
-
-        expectError(
-                () -> register(BadRequestBeanAnnotationInMethodParam.class),
-                errorMsg01, errorMsg02
-        );
+        assertThatThrownBy(() -> register(BadRequestBeanAnnotationInMethodParam.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("no @Param and @Header annotations are allowed");
 
         // error: more than one params for annotated constructor
-        expectError(
-                () -> register(BadRequestBeanMoreThanOneConstructorParam.class),
-                "There should be only 1 parameter for '" +
-                BadRequestBeanMoreThanOneConstructorParam.class.getCanonicalName() + "." +
-                BadRequestBeanMoreThanOneConstructorParam.class.getName() + "'."
-        );
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOneConstructorParam.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("the number of parameters")
+                .hasMessageContaining("(expected: 1)");
 
         // error: more than one params for annotated method
-        expectError(
-                () -> register(BadRequestBeanMoreThanOneMethodParam.class),
-                "There should be only 1 parameter for '" +
-                BadRequestBeanMoreThanOneMethodParam.class.getCanonicalName() + ".initParams" + "'."
-        );
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOneMethodParam.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("the number of parameters")
+                .hasMessageContaining("(expected: 1)");
 
         // error: some constructor params not annotated
-        expectError(
-                () -> register(BadRequestBeanSomeConstructorParamWithoutAnnotation.class),
-                "There are 4 parameter(s) for '" +
-                BadRequestBeanSomeConstructorParamWithoutAnnotation.class.getCanonicalName() + "." +
-                BadRequestBeanSomeConstructorParamWithoutAnnotation.class.getName() +
-                "', but only 2 of them are annotated."
-        );
+        assertThatThrownBy(() -> register(BadRequestBeanSomeConstructorParamWithoutAnnotation.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("every parameter of")
+                .hasMessageContaining("should be annotated with one of");
 
         // error: some method params not annotated
-        expectError(
-                () -> register(BadRequestBeanSomeMethodParamWithoutAnnotation.class),
-                "There are 4 parameter(s) for '" +
-                BadRequestBeanSomeMethodParamWithoutAnnotation.class.getCanonicalName() + ".initParams" +
-                "', but only 2 of them are annotated."
-        );
+        assertThatThrownBy(() -> register(BadRequestBeanSomeMethodParamWithoutAnnotation.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("every parameter of")
+                .hasMessageContaining("should be annotated with one of");
     }
 
     @Test

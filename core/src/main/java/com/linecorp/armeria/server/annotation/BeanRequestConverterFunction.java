@@ -16,12 +16,15 @@
 package com.linecorp.armeria.server.annotation;
 
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.convertParameter;
+import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.findHeaderName;
+import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.findParamName;
+import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.hasParamOrHeader;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.httpParametersOf;
 import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.validateAndNormalizeSupportedType;
+import static java.util.Collections.singletonList;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
@@ -32,17 +35,21 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import org.reflections.ReflectionUtils;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpParameters;
+import com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil;
 import com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.EnumConverter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -79,7 +86,7 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
             return;
         }
 
-        final BeanParamInfo beanParamInfo = BeanParamInfo.buildFrom(expectedResultType);
+        final BeanParamInfo beanParamInfo = BeanParamInfo.from(expectedResultType);
         if (beanParamInfo == null) {
             ignoredResultTypeCache.put(expectedResultType, true);
         } else {
@@ -94,7 +101,13 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
     }
 
     private static String getMemberFullName(final Member member) {
-        return member.getDeclaringClass().getCanonicalName() + '.' + member.getName();
+        return member.getDeclaringClass().getSimpleName() + '.' + member.getName();
+    }
+
+    private static String toString(Object[] objects) {
+        final StringJoiner joiner = new StringJoiner(",", "(", ")");
+        Arrays.stream(objects).forEach(o -> joiner.add(o.toString()));
+        return joiner.toString();
     }
 
     @Override
@@ -102,16 +115,13 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
                                  final AggregatedHttpMessage request,
                                  final Class<?> expectedResultType) throws Exception {
         final BeanParamInfo beanParamInfo = beanParamInfoCache.get(expectedResultType);
-
         if (beanParamInfo == null) {
             // no BeanParamInfo for this result type, we should not handle it
             return RequestConverterFunction.fallthrough();
         }
 
         final MutableValueHolder<HttpParameters> httpParams = MutableValueHolder.ofEmpty();
-
         final RequestConvertContext context = new RequestConvertContext(ctx, request, httpParams);
-
         return beanParamInfo.buildBean(context);
     }
 
@@ -145,46 +155,30 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
             this.paramSetterList = paramSetterList;
         }
 
-        private static BeanParamInfo buildFrom(final Class<?> beanType) {
+        @Nullable
+        private static BeanParamInfo from(final Class<?> beanType) {
             final List<AbstractParamSetter> paramSetterList = new ArrayList<>();
 
             getAllFields(beanType).forEach(
-                    field -> addIfNotNull(paramSetterList, FieldParamSetter.buildFrom(field))
-            );
-
+                    field -> addIfNotNull(paramSetterList, FieldParamSetter.from(field)));
             getAllMethods(beanType).forEach(
-                    method -> addIfNotNull(paramSetterList, MethodParamSetter.buildFrom(method))
-            );
+                    method -> addIfNotNull(paramSetterList, MethodParamSetter.from(method)));
 
-            final ConstructorInfo constructorInfo = ConstructorInfo.buildFrom(beanType);
+            final ConstructorInfo constructorInfo = ConstructorInfo.from(beanType);
             if (constructorInfo == null) {
-                // there is no annotated constructor or default constructor
-
-                // we should not handle this beanType
+                // No annotated constructor or default constructor. Skip this.
                 return null;
             }
-
-            if (constructorInfo.getParameterCount() == 0) {
-                // there is no arg for constructor
-
-                if (paramSetterList.isEmpty()) {
-                    // there is no annotated field or method
-
-                    // we should not handle this beanType
-                    return null;
-                }
+            if (constructorInfo.getParameterCount() == 0 && paramSetterList.isEmpty()) {
+                // No arg constructor exists but there is no annotated field or method. Skip this.
+                return null;
             }
-
             return new BeanParamInfo(constructorInfo, paramSetterList);
         }
 
         private Object buildBean(final RequestConvertContext context) {
             context.targetBean = constructorInfo.createInstance(context);
-
-            paramSetterList.forEach(
-                    paramSetter -> paramSetter.setParamValue(context)
-            );
-
+            paramSetterList.forEach(paramSetter -> paramSetter.setParamValue(context));
             return context.targetBean;
         }
     }
@@ -202,14 +196,14 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
             this.constructor.setAccessible(true);
         }
 
-        private static ConstructorInfo buildFrom(final Class<?> beanType) {
+        private static ConstructorInfo from(final Class<?> beanType) {
             final List<ConstructorInfo> constructorList = new ArrayList<>();
 
             final MutableValueHolder<ConstructorInfo> defaultConstructor = MutableValueHolder.ofEmpty();
 
             ReflectionUtils.getConstructors(beanType).forEach(
                     constructor -> {
-                        final ConstructorInfo constructorInfo = buildFrom(constructor);
+                        final ConstructorInfo constructorInfo = from(constructor);
                         if (constructorInfo != null) {
                             if (constructorInfo.getParameterCount() == 0) {
                                 // default constructor, with no args
@@ -223,30 +217,28 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
             );
 
             if (constructorList.isEmpty()) {
-                // there is no annotated constructor, use default constructor
+                // No annotated constructor. Use default constructor.
                 return defaultConstructor.getValue();
-            } else if (constructorList.size() == 1) {
-                // there is only 1 annotated constructor, use it
-                return constructorList.get(0);
-            } else {
-                // there are more than 1 annotated constructors, we don't know to use which one
-                throw new IllegalArgumentException(
-                        String.format("There are more than 1 annotated constructors in class '%1$s'.",
-                                      beanType.getCanonicalName())
-                );
             }
+            if (constructorList.size() == 1) {
+                // Only 1 annotated constructor.
+                return constructorList.get(0);
+            }
+            // More than 1 annotated constructors. We don't know which one to use.
+            throw new IllegalArgumentException(
+                    "too many annotated constructors in " + beanType.getSimpleName() +
+                    ": " + constructorList.size() + " (expected: 0 or 1)");
         }
 
-        private static ConstructorInfo buildFrom(final Constructor<?> constructor) {
-            final ParamArrayValueRetriever retriever = ParamArrayValueRetriever.buildFrom(constructor);
+        @Nullable
+        private static ConstructorInfo from(final Constructor<?> constructor) {
+            final ParamArrayValueRetriever retriever = ParamArrayValueRetriever.from(constructor);
             if (retriever != null) {
                 return new ConstructorInfo(constructor, retriever);
             }
-
             if (constructor.getParameterCount() == 0) {
-                return new ConstructorInfo(constructor, ParamArrayValueRetriever.ofEmpty());
+                return new ConstructorInfo(constructor, ParamArrayValueRetriever.NO_PARAMETERS);
             }
-
             return null;
         }
 
@@ -256,14 +248,12 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
 
         private Object createInstance(final RequestConvertContext context) {
             final Object[] initArgs = paramArrayValueRetriever.getParamValues(context);
-
             try {
                 return constructor.newInstance(initArgs);
             } catch (final Exception e) {
                 throw new IllegalArgumentException(
-                        String.format("Can't invoke constructor '%1$s' with initArgs: %2$s",
-                                      getMemberFullName(constructor), Arrays.toString(initArgs)),
-                        e);
+                        "cannot invoke constructor: " + getMemberFullName(constructor) +
+                        BeanRequestConverterFunction.toString(initArgs), e);
             }
         }
     }
@@ -280,31 +270,24 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
                                  final ParamValueRetriever paramValueRetriever) {
             this.field = field;
             this.paramValueRetriever = paramValueRetriever;
-
             this.field.setAccessible(true);
         }
 
-        private static FieldParamSetter buildFrom(final Field field) {
-            final ParamValueRetriever retriever = ParamValueRetriever.buildFrom(field);
-
-            if (retriever != null) {
-                return new FieldParamSetter(field, retriever);
-            }
-
-            return null;
+        @Nullable
+        private static FieldParamSetter from(final Field field) {
+            final ParamValueRetriever retriever = ParamValueRetriever.of(field.getType(), field);
+            return retriever != null ? new FieldParamSetter(field, retriever)
+                                     : null;
         }
 
         @Override
         protected void setParamValue(final RequestConvertContext context) {
             final Object paramValue = paramValueRetriever.getParamValue(context);
-
             try {
                 field.set(context.targetBean, paramValue);
             } catch (final Exception e) {
                 throw new IllegalArgumentException(
-                        String.format("Can't set field '%1$s' with value: %2$s",
-                                      getMemberFullName(field), paramValue),
-                        e);
+                        "cannot set '" + paramValue + "' to: " + getMemberFullName(field), e);
             }
         }
     }
@@ -321,27 +304,22 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
             this.method.setAccessible(true);
         }
 
-        private static MethodParamSetter buildFrom(final Method method) {
-            final ParamArrayValueRetriever retriever = ParamArrayValueRetriever.buildFrom(method);
-
-            if (retriever != null) {
-                return new MethodParamSetter(method, retriever);
-            }
-
-            return null;
+        @Nullable
+        private static MethodParamSetter from(final Method method) {
+            final ParamArrayValueRetriever retriever = ParamArrayValueRetriever.from(method);
+            return retriever != null ? new MethodParamSetter(method, retriever)
+                                     : null;
         }
 
         @Override
         protected void setParamValue(final RequestConvertContext context) {
             final Object[] paramValues = paramArrayValueRetriever.getParamValues(context);
-
             try {
                 method.invoke(context.targetBean, paramValues);
             } catch (final Exception e) {
                 throw new IllegalArgumentException(
-                        String.format("Can't invoke method '%1$s' with params: %2$s",
-                                      getMemberFullName(method), Arrays.toString(paramValues)),
-                        e);
+                        "cannot invoke method: " + getMemberFullName(method) +
+                        BeanRequestConverterFunction.toString(paramValues), e);
             }
         }
     }
@@ -361,61 +339,32 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
             }
         }
 
-        private static ParamValueRetriever buildFrom(final Parameter methodParam) {
-            return buildFrom(methodParam.getType(), methodParam);
+        @Nullable
+        private static ParamValueRetriever of(Class<?> type, AnnotatedElement element) {
+            return of(type, element, element);
         }
 
-        private static ParamValueRetriever buildFrom(final Field field) {
-            return buildFrom(field.getType(), field);
-        }
-
-        private static ParamValueRetriever buildFrom(final Class<?> type, final AnnotatedElement element) {
-            final Annotation annotation = getParamsAnnotation(element);
-
-            return buildFrom(type, annotation);
-        }
-
-        private static ParamValueRetriever buildFrom(final Class<?> type, final Annotation annotation) {
-            if (annotation == null) {
-                return null;
-            }
-
-            if (annotation instanceof Param) {
-                return new HttpParamValueRetriever(type, ((Param) annotation).value());
-            } else if (annotation instanceof Header) {
-                return new HttpHeaderValueRetriever(type, ((Header) annotation).value());
-            } else {
-                throw new IllegalArgumentException(
-                        String.format("Unsupported Annotation: %1$s",
-                                      annotation.getClass().getCanonicalName())
-                );
-            }
-        }
-
-        private static Annotation getParamsAnnotation(final AnnotatedElement element) {
-            final Param param = element.getAnnotation(Param.class);
+        @Nullable
+        private static ParamValueRetriever of(Class<?> type, AnnotatedElement element,
+                                              Object nameRetrievalTarget) {
+            final String param = findParamName(element, nameRetrievalTarget);
             if (param != null) {
-                return param;
+                return new HttpParamValueRetriever(type, param);
             }
-
-            final Header header = element.getAnnotation(Header.class);
+            final String header = findHeaderName(element, nameRetrievalTarget);
             if (header != null) {
-                return header;
+                return new HttpHeaderValueRetriever(type, header);
             }
-
             return null;
         }
 
         protected abstract String getParamStrValue(RequestConvertContext context);
 
+        @Nullable
         private Object getParamValue(final RequestConvertContext context) {
             final String strValue = getParamStrValue(context);
-
-            if (strValue == null) {
-                return null;
-            }
-
-            return convertParameter(strValue, type, enumConverter, false);
+            return strValue != null ? convertParameter(strValue, type, enumConverter, false)
+                                    : null;
         }
 
         private static final class HttpParamValueRetriever extends ParamValueRetriever {
@@ -430,14 +379,11 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
             protected String getParamStrValue(final RequestConvertContext context) {
                 String paramValueStr = context.ctx.pathParam(paramName);
                 if (paramValueStr == null) {
-                    paramValueStr =
-                            context.httpParams.computeIfAbsent(
-                                    () -> httpParametersOf(context.ctx,
-                                                           context.request.headers(),
-                                                           context.request)
-                            ).get(paramName);
+                    paramValueStr = context.httpParams.computeIfAbsent(
+                            () -> httpParametersOf(context.ctx,
+                                                   context.request.headers(),
+                                                   context.request)).get(paramName);
                 }
-
                 return paramValueStr;
             }
         }
@@ -458,77 +404,60 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
     }
 
     private static final class ParamArrayValueRetriever {
+        static final ParamArrayValueRetriever NO_PARAMETERS = new ParamArrayValueRetriever(ImmutableList.of());
+
         private final List<ParamValueRetriever> retrieverList;
 
         private ParamArrayValueRetriever(final List<ParamValueRetriever> retrieverList) {
             this.retrieverList = retrieverList;
         }
 
-        private static ParamArrayValueRetriever of(final ParamValueRetriever... retrievers) {
-            return new ParamArrayValueRetriever(Arrays.asList(retrievers));
-        }
-
-        private static ParamArrayValueRetriever ofEmpty() {
-            return of();
-        }
-
-        private static void checkNoParamAnnotations(final Executable element,
-                                                    final Parameter[] elementParams) {
-            for (final Parameter parameter : elementParams) {
-                if (ParamValueRetriever.getParamsAnnotation(parameter) != null) {
-                    throw new IllegalArgumentException(
-                            String.format("Annotation should not be used on parameter '%1$s' of '%2$s'.",
-                                          parameter.getName(), getMemberFullName(element))
-                    );
-                }
+        @Nullable
+        private static ParamArrayValueRetriever from(final Executable element) {
+            if (hasParamOrHeader(element)) {
+                return fromAnnotatedMethodOrConstructor(element);
+            } else {
+                return fromAnnotatedParameters(element);
             }
         }
 
-        private static ParamArrayValueRetriever buildFrom(final Executable element) {
-            final Annotation annotation = ParamValueRetriever.getParamsAnnotation(element);
+        private static ParamArrayValueRetriever fromAnnotatedMethodOrConstructor(Executable element) {
             final Parameter[] elementParams = element.getParameters();
 
-            if (annotation != null) {
-                // if there is annotation on this method/constructor
-
-                // there should be only one parameter
-                if (elementParams.length != 1) {
-                    throw new IllegalArgumentException(
-                            String.format(
-                                    "There should be only 1 parameter for '%1$s'.",
-                                    getMemberFullName(element))
-                    );
-                }
-
-                // parameter should have no annotation
-                checkNoParamAnnotations(element, elementParams);
-
-                final Class<?> type = elementParams[0].getType();
-                final ParamValueRetriever retriever = ParamValueRetriever.buildFrom(type, annotation);
-
-                return of(retriever);
+            if (elementParams.length != 1) {
+                throw new IllegalArgumentException("the number of parameters of " + getMemberFullName(element) +
+                                                   ": " + elementParams.length + " (expected: 1)");
             }
+            if (Arrays.stream(elementParams).anyMatch(AnnotatedHttpServiceParamUtil::hasParamOrHeader)) {
+                throw new IllegalArgumentException(
+                        "no @" + Param.class.getSimpleName() + " and @" + Header.class.getSimpleName() +
+                        " annotations are allowed in the parameter of " + getMemberFullName(element));
+            }
+            return new ParamArrayValueRetriever(singletonList(
+                    ParamValueRetriever.of(elementParams[0].getType(), element, elementParams[0])));
+        }
 
-            // build retrievers by annotations on each parameters
-            final List<ParamValueRetriever> retrieverList = Arrays.stream(elementParams)
-                                                                  .map(ParamValueRetriever::buildFrom)
-                                                                  .filter(Objects::nonNull)
-                                                                  .collect(Collectors.toList());
-            if (retrieverList.isEmpty()) {
-                // there is no annotation on params of this method/constructor
+        @Nullable
+        private static ParamArrayValueRetriever fromAnnotatedParameters(Executable element) {
+            final Parameter[] elementParams = element.getParameters();
+            final long annotatedParameterCount = Arrays.stream(elementParams)
+                                                       .filter(AnnotatedHttpServiceParamUtil::hasParamOrHeader)
+                                                       .count();
+            if (annotatedParameterCount == 0) {
                 return null;
             }
 
-            // check if every params has annotation
-            if (elementParams.length != retrieverList.size()) {
+            if (annotatedParameterCount != elementParams.length) {
                 throw new IllegalArgumentException(
-                        String.format(
-                                "There are %1$d parameter(s) for '%2$s', but only %3$d of them are annotated.",
-                                elementParams.length, getMemberFullName(element), retrieverList.size())
-                );
+                        "every parameter of " + getMemberFullName(element) +
+                        " should be annotated with one of @" + Param.class.getSimpleName() +
+                        " or @" + Header.class.getSimpleName());
             }
 
-            return new ParamArrayValueRetriever(retrieverList);
+            final List<ParamValueRetriever> retrievers = Arrays.stream(elementParams)
+                                                               .map(p -> ParamValueRetriever.of(p.getType(), p))
+                                                               .collect(Collectors.toList());
+            return new ParamArrayValueRetriever(retrievers);
         }
 
         private Object[] getParamValues(final RequestConvertContext context) {
