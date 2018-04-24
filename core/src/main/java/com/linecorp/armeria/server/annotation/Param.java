@@ -21,6 +21,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.internal.DefaultValues;
+
 /**
  * Annotation for mapping a parameter of a request onto the following elements.
  *
@@ -47,5 +49,5 @@ public @interface Param {
      * The path variable, the parameter name in a query string or a URL-encoded form data,
      * or the name of a multipart.
      */
-    String value();
+    String value() default DefaultValues.UNSPECIFIED;
 }

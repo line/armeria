@@ -136,14 +136,14 @@ public class AnnotatedHttpServiceTest {
         // Case 1: returns Integer type and handled by builder-default Integer -> HttpResponse converter.
         @Get
         @Path("/int/:var")
-        public int returnInt(@Param("var") int var) {
+        public int returnInt(@Param int var) {
             return var;
         }
 
         // Case 2: returns Long type and handled by class-default Number -> HttpResponse converter.
         @Post
         @Path("/long/{var}")
-        public CompletionStage<Long> returnLong(@Param("var") long var) {
+        public CompletionStage<Long> returnLong(@Param long var) {
             return CompletableFuture.supplyAsync(() -> var);
         }
 
@@ -151,20 +151,20 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/string/:var")
         @ResponseConverter(NaiveStringConverterFunction.class)
-        public CompletionStage<String> returnString(@Param("var") String var) {
+        public CompletionStage<String> returnString(@Param String var) {
             return CompletableFuture.supplyAsync(() -> var);
         }
 
         // Asynchronously returns Integer type and handled by builder-default Integer -> HttpResponse converter.
         @Get
         @Path("/int-async/:var")
-        public CompletableFuture<Integer> returnIntAsync(@Param("var") int var) {
+        public CompletableFuture<Integer> returnIntAsync(@Param int var) {
             return CompletableFuture.completedFuture(var).thenApply(n -> n + 1);
         }
 
         @Get
         @Path("/path/ctx/async/:var")
-        public static CompletableFuture<String> returnPathCtxAsync(@Param("var") int var,
+        public static CompletableFuture<String> returnPathCtxAsync(@Param int var,
                                                                    ServiceRequestContext ctx,
                                                                    Request req) {
             validateContextAndRequest(ctx, req);
@@ -173,7 +173,7 @@ public class AnnotatedHttpServiceTest {
 
         @Get
         @Path("/path/req/async/:var")
-        public static CompletableFuture<String> returnPathReqAsync(@Param("var") int var,
+        public static CompletableFuture<String> returnPathReqAsync(@Param int var,
                                                                    HttpRequest req,
                                                                    ServiceRequestContext ctx) {
             validateContextAndRequest(ctx, req);
@@ -182,7 +182,7 @@ public class AnnotatedHttpServiceTest {
 
         @Get
         @Path("/path/ctx/sync/:var")
-        public static String returnPathCtxSync(@Param("var") int var,
+        public static String returnPathCtxSync(@Param int var,
                                                RequestContext ctx,
                                                Request req) {
             validateContextAndRequest(ctx, req);
@@ -191,7 +191,7 @@ public class AnnotatedHttpServiceTest {
 
         @Get
         @Path("/path/req/sync/:var")
-        public static String returnPathReqSync(@Param("var") int var,
+        public static String returnPathReqSync(@Param int var,
                                                HttpRequest req,
                                                RequestContext ctx) {
             validateContextAndRequest(ctx, req);
@@ -201,14 +201,14 @@ public class AnnotatedHttpServiceTest {
         // Throws an exception synchronously
         @Get
         @Path("/exception/:var")
-        public int exception(@Param("var") int var) {
+        public int exception(@Param int var) {
             throw new AnticipatedException("bad var!");
         }
 
         // Throws an exception asynchronously
         @Get
         @Path("/exception-async/:var")
-        public CompletableFuture<Integer> exceptionAsync(@Param("var") int var) {
+        public CompletableFuture<Integer> exceptionAsync(@Param int var) {
             CompletableFuture<Integer> future = new CompletableFuture<>();
             future.completeExceptionally(new AnticipatedException("bad var!"));
             return future;
@@ -563,7 +563,7 @@ public class AnnotatedHttpServiceTest {
     public static class MyAnnotatedService11 {
 
         @Get("/aHeader")
-        public String aHeader(@Header("if-match") String ifMatch) {
+        public String aHeader(@Header String ifMatch) {
             if ("737060cd8c284d8af7ad3082f209582d".equalsIgnoreCase(ifMatch)) {
                 return "matched";
             }
@@ -571,16 +571,16 @@ public class AnnotatedHttpServiceTest {
         }
 
         @Post("/customHeader")
-        public String customHeader(@Header("a-name") String name) {
-            return name + " is awesome";
+        public String customHeader(@Header String aName) {
+            return aName + " is awesome";
         }
 
         @Get("/headerDefault")
         public String headerDefault(RequestContext ctx,
-                                    @Header("username") @Default("hello") String username,
-                                    @Header("password") @Default("world") Optional<String> password,
-                                    @Header("extra") Optional<String> extra,
-                                    @Header("number") Optional<Integer> number) {
+                                    @Header @Default("hello") String username,
+                                    @Header @Default("world") Optional<String> password,
+                                    @Header Optional<String> extra,
+                                    @Header Optional<Integer> number) {
             validateContext(ctx);
             return username + "/" + password.get() + "/" + extra.orElse("(null)") +
                    (number.isPresent() ? "/" + number.get() : "");
