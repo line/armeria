@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.annotation;
 
 import java.lang.annotation.ElementType;
@@ -22,13 +21,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * The containing annotation type for {@link Decorator}.
+ * Specifies a {@link DecoratorFactoryFunction} class which is a factory to create a decorator.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface Decorators {
+@Target(ElementType.ANNOTATION_TYPE)
+public @interface DecoratorFactory {
+
     /**
-     * An array of {@link Decorator}s.
+     * {@link DecoratorFactoryFunction} implementation type.
      */
-    Decorator[] value();
+    Class<? extends DecoratorFactoryFunction<?>> value();
 }

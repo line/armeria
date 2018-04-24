@@ -32,11 +32,12 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
-import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class AnnotatedHttpServiceDecorationTest {
@@ -45,14 +46,10 @@ public class AnnotatedHttpServiceDecorationTest {
     public static final ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/1", new MyDecorationService1(),
-                                LoggingService.newDecorator());
-            sb.annotatedService("/2", new MyDecorationService2(),
-                                LoggingService.newDecorator());
-            sb.annotatedService("/3", new MyDecorationService3(),
-                                LoggingService.newDecorator());
-            sb.annotatedService("/4", new MyDecorationService4(),
-                                LoggingService.newDecorator());
+            sb.annotatedService("/1", new MyDecorationService1());
+            sb.annotatedService("/2", new MyDecorationService2());
+            sb.annotatedService("/3", new MyDecorationService3());
+            sb.annotatedService("/4", new MyDecorationService4());
         }
     };
 
@@ -64,6 +61,7 @@ public class AnnotatedHttpServiceDecorationTest {
         }
     };
 
+    @LoggingDecorator(requestLogLevel = LogLevel.INFO, successfulResponseLogLevel = LogLevel.INFO)
     @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyDecorationService1 {
 
@@ -90,6 +88,7 @@ public class AnnotatedHttpServiceDecorationTest {
         }
     }
 
+    @LoggingDecorator
     @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyDecorationService2 extends MyDecorationService1 {
 
@@ -109,6 +108,7 @@ public class AnnotatedHttpServiceDecorationTest {
         }
     }
 
+    @LoggingDecorator
     @ResponseConverter(UnformattedStringConverterFunction.class)
     @Decorator(AlwaysTooManyRequestsDecorator.class)
     public static class MyDecorationService3 {
@@ -121,6 +121,7 @@ public class AnnotatedHttpServiceDecorationTest {
         }
     }
 
+    @LoggingDecorator
     @ResponseConverter(UnformattedStringConverterFunction.class)
     @Decorator(FallThroughDecorator.class)
     public static class MyDecorationService4 {

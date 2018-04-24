@@ -1,11 +1,14 @@
 .. _@ConsumeType: apidocs/index.html?com/linecorp/armeria/server/annotation/ConsumeType.html
 .. _@Decorator: apidocs/index.html?com/linecorp/armeria/server/annotation/Decorator.html
+.. _@Decorators: apidocs/index.html?com/linecorp/armeria/server/annotation/Decorators.html
+.. _@DecoratorFactory: apidocs/index.html?com/linecorp/armeria/server/annotation/DecoratorFactory.html
 .. _@Default: apidocs/index.html?com/linecorp/armeria/server/annotation/Default.html
 .. _@Delete: apidocs/index.html?com/linecorp/armeria/server/annotation/Delete.html
 .. _@ExceptionHandler: apidocs/index.html?com/linecorp/armeria/server/annotation/ExceptionHandler.html
 .. _@Get: apidocs/index.html?com/linecorp/armeria/server/annotation/Get.html
 .. _@Head: apidocs/index.html?com/linecorp/armeria/server/annotation/Head.html
 .. _@Header: apidocs/index.html?com/linecorp/armeria/server/annotation/Header.html
+.. _@LoggingDecorator: apidocs/index.html?com/linecorp/armeria/server/annotation/decorator/LoggingDecorator.html
 .. _@Options: apidocs/index.html?com/linecorp/armeria/server/annotation/Options.html
 .. _@Order: apidocs/index.html?com/linecorp/armeria/server/annotation/Order.html
 .. _@Param: apidocs/index.html?com/linecorp/armeria/server/annotation/Param.html
@@ -22,6 +25,7 @@
 .. _BeanRequestConverterFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/BeanRequestConverterFunction.html
 .. _ByteArrayRequestConverterFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/ByteArrayRequestConverterFunction.html
 .. _DecoratingServiceFunction: apidocs/index.html?com/linecorp/armeria/server/DecoratingServiceFunction.html
+.. _DecoratorFactoryFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/DecoratorFactoryFunction.html
 .. _ExceptionHandlerFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/ExceptionHandlerFunction.html
 .. _HttpParameters: apidocs/index.html?com/linecorp/armeria/common/HttpParameters.html
 .. _HttpRequest: apidocs/index.html?com/linecorp/armeria/common/HttpRequest.html
@@ -29,6 +33,7 @@
 .. _HttpResponseException: apidocs/index.html?com/linecorp/armeria/server/HttpResponseException.html
 .. _HttpStatusException: apidocs/index.html?com/linecorp/armeria/server/HttpStatusException.html
 .. _JacksonRequestConverterFunction: apidocs/index.html?com/linecorp/armeria/server/annotation/JacksonRequestConverterFunction.html
+.. _LoggingService: apidocs/index.html?com/linecorp/armeria/server/logging/LoggingService.html
 .. _PathMapping: apidocs/index.html?com/linecorp/armeria/server/PathMapping.html
 .. _Request: apidocs/index.html?com/linecorp/armeria/common/Request.html
 .. _RequestContext: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
@@ -81,7 +86,7 @@ To handle an HTTP request with a service method, you can annotate your service m
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Get("/hello")
         public HttpResponse hello() { ... }
     }
@@ -117,7 +122,7 @@ Please refer to :ref:`parameter-injection` for more information about `@Param`_.
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello/{name}")
         public HttpResponse pathvar(@Param("name") String name) { ... }
@@ -135,7 +140,7 @@ and use the HTTP method annotations without a path to map multiple HTTP methods,
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Get
         @Post
         @Put
@@ -153,7 +158,7 @@ Let's see the example in the above section again.
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello/{name}")
         public HttpResponse pathvar(@Param("name") String name) { ... }
@@ -185,7 +190,7 @@ In this case the variable name is used as the value.
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Get("/hello/{name}")
         public HttpResponse hello1(@Param String name) { ... }
     }
@@ -242,7 +247,7 @@ Otherwise, case-sensitive exact match will be performed.
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello1/{there}")
         public HttpResponse hello1(@Param("there") CaseInsensitive there) {
@@ -268,7 +273,7 @@ annotation or ``Optional<?>`` class, e.g. ``hello2`` and ``hello3`` methods belo
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello1")
         public HttpResponse hello1(@Param("name") String name) { ... }
@@ -289,7 +294,7 @@ form. After that, Armeria will inject the decoded value into the parameter.
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Post("/hello4")
         public HttpResponse hello4(@Param("name") String name) {
             // 'x-www-form-urlencoded' request will be aggregated. The other requests may get
@@ -308,7 +313,7 @@ annotated with `@Header`_ can also be specified as one of the built-in types as 
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello1")
         public HttpResponse hello1(@Header("Authorization") String auth) { ... }
@@ -325,7 +330,7 @@ string to be suitable for general HTTP header names. e.g. a variable name ``cont
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Post("/hello2")
         public HttpResponse hello2(@Header long contentLength) { ... }
     }
@@ -344,7 +349,7 @@ The following classes are automatically injected when you specify them on the pa
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello1")
         public HttpResponse hello1(ServiceRequestContext ctx, HttpRequest req) {
@@ -396,7 +401,7 @@ You can annotate at class level to catch an exception from every method in your 
 .. code-block:: java
 
     @ExceptionHandler(MyExceptionHandler.class)
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Get("/hello")
         public HttpResponse hello() { ... }
     }
@@ -405,7 +410,7 @@ You can also annotate at method level to catch an exception from a single method
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Get("/hello")
         @ExceptionHandler(MyExceptionHandler.class)
         public HttpResponse hello() { ... }
@@ -452,7 +457,7 @@ which are annotated with `@RequestObject`_.
 .. code-block:: java
 
     @RequestConverter(MyRequestConverter.class)
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Post("/hello")
         public HttpResponse hello(@RequestObject MyObject myObject) {
@@ -485,7 +490,7 @@ converting ``MyRequest``.
 .. code-block:: java
 
     @RequestConverter(MyDefaultRequestConverter.class)
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Post("/hello")
         public HttpResponse hello(
             @RequestObject(MySpecialRequestConverter.class) MyRequest myRequest) { ... }
@@ -500,7 +505,7 @@ BeanRequestConverterFunction_ is a built-in request converter for Java object. Y
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Post("/hello")
         public HttpResponse hello(@RequestObject MyRequestObject myRequestObject) { ... }
     }
@@ -578,7 +583,7 @@ You can annotate your service method and class as follows.
 .. code-block:: java
 
     @ResponseConverter(MyResponseConverter.class)
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Post("/hello")
         public MyObject hello() {
@@ -620,7 +625,7 @@ Using ServerBuilder_ to configure converters and exception handlers
 You can specify converters and exception handlers using ServerBuilder_, without using the annotations
 explained in the previous sections::
 
-    sb.annotatedService(new MyAnnotatedServiceClass(),
+    sb.annotatedService(new MyAnnotatedService(),
                         new MyExceptionHandler(), new MyRequestConverter(), new MyResponseConverter());
 
 Also, they have a different method signature for conversion and exception handling so you can even write them
@@ -645,7 +650,7 @@ in a single class and add it to your ServerBuilder_ at once, e.g.
 
     // ...
 
-    sb.annotatedService(new MyAnnotatedServiceClass(), new MyAllInOneHandler());
+    sb.annotatedService(new MyAnnotatedService(), new MyAllInOneHandler());
 
 When you specify exception handlers in a mixed manner like below, they will be evaluated in the following
 order commented. It is also the same as the evaluation order of the converters.
@@ -654,7 +659,7 @@ order commented. It is also the same as the evaluation order of the converters.
 
     @ExceptionHandler(MyClassExceptionHandler3.class)           // order 3
     @ExceptionHandler(MyClassExceptionHandler4.class)           // order 4
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Get("/hello")
         @ExceptionHandler(MyMethodExceptionHandler1.class)      // order 1
         @ExceptionHandler(MyMethodExceptionHandler2.class)      // order 2
@@ -663,7 +668,7 @@ order commented. It is also the same as the evaluation order of the converters.
 
     // ...
 
-    sb.annotatedService(new MyAnnotatedServiceClass(),
+    sb.annotatedService(new MyAnnotatedService(),
                         new MyGlobalExceptionHandler5(),        // order 5
                         new MyGlobalExceptionHandler6());       // order 6
 
@@ -692,11 +697,76 @@ method will handle the request.
 .. code-block:: java
 
     @Decorator(MyDecorator.class)
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
         @Decorator(AnotherDecorator.class)
         @Get("/hello")
         public HttpResponse hello() { ... }
     }
+
+Decorating an annotated service with a custom decorator annotation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As you read earlier, you can write your own decorator with DecoratingServiceFunction_ interface. If your
+decorator does not require any parameter, that is fine. However, what if your decorator requires a parameter?
+In this case, you can create your own decorator annotation. Let's see the following custom decorator
+annotation which applies LoggingService_ to an annotated service.
+
+.. note::
+
+    This example is actually just a copy of what Armeria provides out of the box. In reality,
+    you could just use `@LoggingDecorator`_, without writing your own one.
+
+.. code-block:: java
+
+    @DecoratorFactory(LoggingDecoratorFactoryFunction.class)
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    public @interface LoggingDecorator {
+
+        // Specify parameters for your decorator like below.
+        LogLevel requestLogLevel() default LogLevel.TRACE;
+
+        LogLevel successfulResponseLogLevel() default LogLevel.TRACE;
+
+        LogLevel failureResponseLogLevel() default LogLevel.WARN;
+
+        float samplingRate() default 1.0f;
+
+        // A special parameter in order to specify the order of a decorator.
+        int order() default 0;
+    }
+
+    public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
+        @Override
+        public Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> newDecorator(LoggingDecorator parameter) {
+            return new LoggingServiceBuilder()
+                    .requestLogLevel(parameter.requestLogLevel())
+                    .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
+                    .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                    .samplingRate(parameter.samplingRate())
+                    .newDecorator();
+        }
+    }
+
+You can see `@DecoratorFactory`_ annotation at the first line of the example. It specifies a factory class
+which implements DecoratorFactoryFunction_ interface. The factory will create an instance of LoggingService_
+with parameters which you specified on the class or method like below.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+        @LoggingDecorator(requestLogLevel = LogLevel.INFO)
+        @Get("/hello1")
+        public HttpResponse hello1() { ... }
+
+        @LoggingDecorator(requestLogLevel = LogLevel.DEBUG, samplingRate = 0.05)
+        @Get("/hello2")
+        public HttpResponse hello2() { ... }
+    }
+
+Evaluation order of decorators
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Note that the evaluation order of the decorators is slightly different from that of the converters and exception
 handlers. As you read in :ref:`configure-using-serverbuilder`, both the converters and exception
@@ -709,7 +779,7 @@ class-level decorators and method-level decorators.
 
     @Decorator(MyClassDecorator2.class)                 // order 2
     @Decorator(MyClassDecorator3.class)                 // order 3
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello")
         @Decorator(MyMethodDecorator4.class)            // order 4
@@ -719,8 +789,86 @@ class-level decorators and method-level decorators.
 
     // ...
 
-    sb.annotatedService(new MyAnnotatedServiceClass(),
+    sb.annotatedService(new MyAnnotatedService(),
                         new MyGlobalDecorator1());      // order 1
+
+The first rule is as explained before. However, if your own decorator annotations and `@Decorator`_ annotations
+are specified in a mixed order like below, you need to clearly specify their order using ``order()`` attribute
+of the annotation. In the following example, you cannot make sure in what order they decorate the service
+because Java collects repeatable annotations like `@Decorator`_ into a single container annotation like
+`@Decorators`_ so it does not know the specified order between `@Decorator`_ and `@LoggingDecorator`_.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        @Get("/hello")
+        @Decorator(MyMethodDecorator1.class)
+        @LoggingDecorator
+        @Decorator(MyMethodDecorator2.class)
+        public HttpResponse hello() { ... }
+    }
+
+To enforce the evaluation order of decorators, you can use ``order()`` attribute. Lower the order value is,
+earlier the decorator will be executed. The default value of ``order()`` attribute is ``0``.
+The ``order()`` attribute is applicable only to class-level and method-level decorators.
+
+With the following example, the ``hello()`` will be executed with the following order:
+
+1. ``MyGlobalDecorator1``
+2. ``MyMethodDecorator1``
+3. ``LoggingDecorator``
+4. ``MyMethodDecorator2``
+5. ``MyAnnotatedService.hello()``
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        @Get("/hello")
+        @Decorator(value = MyMethodDecorator1.class, order = 1)
+        @LoggingDecorator(order = 2)
+        @Decorator(value = MyMethodDecorator2.class, order = 3)
+        public HttpResponse hello() { ... }
+    }
+
+    // Global-level decorators will not be affected by 'order'.
+    sb.annotatedService(new MyAnnotatedService(),
+                        new MyGlobalDecorator1());
+
+Note that you can even make a method-level decorator executed before a class-level decorator
+by adjusting the ``order()`` attribute:
+
+.. code-block:: java
+
+    @LoggingDecorator
+    public class MyAnnotatedService {
+
+        // LoggingDecorator -> MyMethodDecorator1 -> hello1()
+        @Get("/hello1")
+        @Decorator(MyMethodDecorator1.class)
+        public HttpResponse hello1() { ... }
+
+        // MyMethodDecorator1 -> LoggingDecorator -> hello2()
+        @Get("/hello2")
+        @Decorator(value = MyMethodDecorator1.class, order = -1)
+        public HttpResponse hello2() { ... }
+    }
+
+If you built a custom decorator annotation like `@LoggingDecorator`_, it is recommended to
+add an ``order()`` attribute so that the user of the custom annotation is able to adjust
+the order value of the decorator:
+
+.. code-block:: java
+
+    public @interface MyDecoratorAnnotation {
+
+        // Define your attributes.
+        int myAttr1();
+
+        // A special parameter in order to specify the order of a decorator.
+        int order() default 0;
+    }
 
 
 .. _media_type_nego:
@@ -734,7 +882,7 @@ multiple service methods for the same path and the same HTTP method as follows.
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello")
         public HttpResponse hello1() {
@@ -757,7 +905,7 @@ to your client request.
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Get("/hello")
         @ProduceType("text/plain")
@@ -801,7 +949,7 @@ In this example, it would also make the same effect to annotate ``helloJson()`` 
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Order(-1)
         @Get("/hello")
@@ -825,7 +973,7 @@ You can annotate them with `@ConsumeType`_ annotation.
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Post("/hello")
         @ConsumeType("text/plain")
@@ -864,7 +1012,7 @@ as follows. ``helloCatchAll()`` method would accept every request except for the
 
 .. code-block:: java
 
-    public class MyAnnotatedServiceClass {
+    public class MyAnnotatedService {
 
         @Post("/hello")
         public HttpResponse helloCatchAll(AggregatedHttpMessage message) {

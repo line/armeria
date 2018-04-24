@@ -40,7 +40,7 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
     /**
      * Creates a new strategy with specified name.
      *
-     * @param requestPerSecond a number of requests per one second this {@link ThrottlingStrategy} accepts.
+     * @param requestPerSecond the number of requests per one second this {@link ThrottlingStrategy} accepts.
      */
     public RateLimitingThrottlingStrategy(double requestPerSecond, @Nullable String name) {
         super(name);
@@ -51,7 +51,7 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
     /**
      * Creates a new strategy.
      *
-     * @param requestPerSecond a number of requests per one second this {@link ThrottlingStrategy} accepts.
+     * @param requestPerSecond the number of requests per one second this {@link ThrottlingStrategy} accepts.
      */
     public RateLimitingThrottlingStrategy(double requestPerSecond) {
         this(requestPerSecond, null);

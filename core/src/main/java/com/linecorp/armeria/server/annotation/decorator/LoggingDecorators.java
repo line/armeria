@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,8 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server.annotation.decorator;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -22,13 +21,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * The containing annotation type for {@link Decorator}.
+ * The containing annotation type for {@link LoggingDecorator}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface Decorators {
+public @interface LoggingDecorators {
     /**
-     * An array of {@link Decorator}s.
+     * An array of {@link LoggingDecorator}s.
      */
-    Decorator[] value();
+    LoggingDecorator[] value();
 }
