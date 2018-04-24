@@ -28,7 +28,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -324,8 +323,8 @@ final class AnnotatedHttpServices {
 
         Function<Service<HttpRequest, HttpResponse>,
                 ? extends Service<HttpRequest, HttpResponse>> decorator = null;
-        Collections.reverse(decorators);
-        for (final DecoratorAndOrder d : decorators) {
+        for (int i = decorators.size() - 1; i >= 0; i--) {
+            final DecoratorAndOrder d = decorators.get(i);
             decorator = decorator == null ? d.decorator()
                                           : decorator.andThen(d.decorator());
         }

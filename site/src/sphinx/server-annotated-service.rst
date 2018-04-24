@@ -795,7 +795,7 @@ class-level decorators and method-level decorators.
 The first rule is as explained before. However, if your own decorator annotations and `@Decorator`_ annotations
 are specified in a mixed order like below, you need to clearly specify their order using ``order()`` attribute
 of the annotation. In the following example, you cannot make sure in what order they decorate the service
-because Java collects repeatable annotations like `@Decorator`_ as a single container annotation like
+because Java collects repeatable annotations like `@Decorator`_ into a single container annotation like
 `@Decorators`_ so it does not know the specified order between `@Decorator`_ and `@LoggingDecorator`_.
 
 .. code-block:: java
