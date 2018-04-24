@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.AsciiString;
@@ -180,10 +181,23 @@ interface AccessLogComponent {
                     return dateTimeFormatter.format(ZonedDateTime.ofInstant(
                             Instant.ofEpochMilli(log.requestStartTimeMillis()), defaultZoneId));
                 case REQUEST_LINE:
+                    final StringBuilder requestLine = new StringBuilder();
+
                     final HttpHeaders headers = log.requestHeaders();
-                    return headers.method().name() + ' ' +
-                           headers.path() + ' ' +
-                           firstNonNull(log.sessionProtocol(), log.context().sessionProtocol()).uriText();
+                    requestLine.append(headers.method().name())
+                               .append(' ')
+                               .append(headers.path());
+
+                    final Object requestContent = log.requestContent();
+                    if (requestContent instanceof RpcRequest) {
+                        requestLine.append('#')
+                                   .append(((RpcRequest) requestContent).method());
+                    }
+
+                    requestLine.append(' ')
+                               .append(firstNonNull(log.sessionProtocol(),
+                                                    log.context().sessionProtocol()).uriText());
+                    return requestLine.toString();
 
                 case RESPONSE_STATUS_CODE:
                     return log.responseHeaders().status().code();
