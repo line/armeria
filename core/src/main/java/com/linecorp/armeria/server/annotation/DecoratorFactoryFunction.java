@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,22 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.annotation;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.Annotation;
+import java.util.function.Function;
+
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.Service;
 
 /**
- * The containing annotation type for {@link Decorator}.
+ * A decorator factory which is used for a user-defined decorator annotation.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface Decorators {
+@FunctionalInterface
+public interface DecoratorFactoryFunction<T extends Annotation> {
+
     /**
-     * An array of {@link Decorator}s.
+     * Creates a new decorator with the specified {@code parameter}.
      */
-    Decorator[] value();
+    Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> newDecorator(T parameter);
 }

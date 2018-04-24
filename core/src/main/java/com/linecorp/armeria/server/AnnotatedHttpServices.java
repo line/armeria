@@ -61,6 +61,9 @@ import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Decorator;
+import com.linecorp.armeria.server.annotation.DecoratorFactory;
+import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
+import com.linecorp.armeria.server.annotation.Decorators;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -310,42 +313,126 @@ final class AnnotatedHttpServices {
     }
 
     /**
-     * Returns a decorator chain which is specified by {@link Decorator} annotations.
+     * Returns a decorator chain which is specified by {@link Decorator} annotations and user-defined
+     * decorator annotations.
      */
     private static Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> decorator(Method method, Class<?> clazz) {
 
-        // Class-level decorators are applied before method-level decorators.
-        final Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> decorator =
-                decorator(clazz.getAnnotationsByType(Decorator.class),
-                          decorator(method.getAnnotationsByType(Decorator.class), null));
+        final List<DecoratorAndOrder> decorators = collectDecorators(clazz, method);
 
+        Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> decorator = null;
+        for (int i = decorators.size() - 1; i >= 0; i--) {
+            final DecoratorAndOrder d = decorators.get(i);
+            decorator = decorator == null ? d.decorator()
+                                          : decorator.andThen(d.decorator());
+        }
         return decorator == null ? Function.identity() : decorator;
     }
 
     /**
-     * Returns a decorator chain which is specified by {@link Decorator} annotations.
+     * Returns a decorator list which is specified by {@link Decorator} annotations and user-defined
+     * decorator annotations.
      */
-    @Nullable
-    private static Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> decorator(
-            Decorator[] decorators,
-            @Nullable Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        if (decorators.length == 0) {
-            return decorator;
+    @VisibleForTesting
+    static List<DecoratorAndOrder> collectDecorators(Class<?> clazz, Method method) {
+        final List<DecoratorAndOrder> decorators = new ArrayList<>();
+
+        // Class-level decorators are applied before method-level decorators.
+        collectDecorators(decorators, clazz.getAnnotations());
+        collectDecorators(decorators, method.getAnnotations());
+
+        // Sort decorators by "order" attribute values.
+        decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
+
+        return decorators;
+    }
+
+    /**
+     * Adds decorators to the specified {@code list}. Decorators which are annotated with {@link Decorator}
+     * and user-defined decorators will be collected.
+     */
+    @SuppressWarnings("unchecked")
+    private static void collectDecorators(List<DecoratorAndOrder> list, Annotation[] annotations) {
+        if (annotations.length == 0) {
+            return;
         }
 
-        // Respect the order of decorators which is specified by a user. The first one is first applied.
-        for (int i = decorators.length - 1; i >= 0; i--) {
-            if (decorator == null) {
-                decorator = newDecorator(decorators[i]);
-            } else {
-                decorator = decorator.andThen(newDecorator(decorators[i]));
+        // Respect the order of decorators which is specified by a user. The first one is first applied
+        // for most of the cases. But if @Decorator and user-defined decorators are specified in a mixed order,
+        // the specified order and the applied order can be different. To overcome this problem, we introduce
+        // "order" attribute to @Decorator annotation to sort decorators. If a user-defined decorator
+        // annotation has "order" attribute, it will be also used for sorting.
+        for (final Annotation annotation : annotations) {
+            if (annotation instanceof Decorator) {
+                final Decorator d = (Decorator) annotation;
+                list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
+                continue;
+            }
+
+            if (annotation instanceof Decorators) {
+                final Decorator[] decorators = ((Decorators) annotation).value();
+                for (final Decorator d : decorators) {
+                    list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
+                }
+                continue;
+            }
+
+            DecoratorAndOrder udd = userDefinedDecorator(annotation);
+            if (udd != null) {
+                list.add(udd);
+                continue;
+            }
+
+            // If user-defined decorators are repeatable and they are specified more than once.
+            try {
+                final Annotation[] decorators = (Annotation[]) annotation.annotationType()
+                                                                         .getMethod("value")
+                                                                         .invoke(annotation);
+                for (final Annotation decorator : decorators) {
+                    udd = userDefinedDecorator(decorator);
+                    if (udd == null) {
+                        break;
+                    }
+                    list.add(udd);
+                }
+            } catch (Throwable ignore) {
+                // The annotation may be a container of a decorator or may be not, so we just ignore
+                // any exception from this clause.
             }
         }
-        return decorator;
+    }
+
+    /**
+     * Returns a decorator with its order if the specified {@code annotation} is one of the user-defined
+     * decorator annotation.
+     */
+    @Nullable
+    private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
+        // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
+        final DecoratorFactory d = annotation.annotationType().getAnnotation(DecoratorFactory.class);
+        if (d == null) {
+            return null;
+        }
+
+        // In case of user-defined decorator, we need to create a new decorator from its factory.
+        @SuppressWarnings("unchecked")
+        final DecoratorFactoryFunction<Annotation> factory = getInstance(d, DecoratorFactoryFunction.class);
+        assert factory != null;
+
+        // If the annotation has "order" attribute, we can use it when sorting decorators.
+        int order = 0;
+        try {
+            final Object value = annotation.annotationType().getMethod("order").invoke(annotation);
+            if (value instanceof Integer) {
+                order = (Integer) value;
+            }
+        } catch (Throwable ignore) {
+            // A user-defined decorator may not have an 'order' attribute.
+            // If it does not exist, '0' is used by default.
+        }
+        return new DecoratorAndOrder(annotation, factory.newDecorator(annotation), order);
     }
 
     /**
@@ -649,6 +736,40 @@ final class AnnotatedHttpServices {
             }
 
             return ExceptionHandlerFunction.DEFAULT.handleException(ctx, req, cause);
+        }
+    }
+
+    /**
+     * An internal class to hold a decorator with its order.
+     */
+    @VisibleForTesting
+    static class DecoratorAndOrder {
+        // Keep the specified annotation for testing purpose.
+        private final Annotation annotation;
+        private final Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> decorator;
+        private final int order;
+
+        DecoratorAndOrder(Annotation annotation,
+                          Function<Service<HttpRequest, HttpResponse>,
+                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                          int order) {
+            this.annotation = annotation;
+            this.decorator = decorator;
+            this.order = order;
+        }
+
+        Annotation annotation() {
+            return annotation;
+        }
+
+        Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> decorator() {
+            return decorator;
+        }
+
+        int order() {
+            return order;
         }
     }
 }
