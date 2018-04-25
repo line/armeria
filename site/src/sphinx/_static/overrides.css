@@ -248,3 +248,29 @@ p, .rst-content li {
 .plantuml {
   text-align: center;
 }
+
+/* Armeria branding begins. */
+.wy-nav-top, .wy-side-nav-search {
+  background-color: #3a3a3a;
+}
+
+.wy-side-nav-search input[type="text"] {
+  border-color: #3a3a3a;
+}
+
+.wy-nav-side {
+  background-color: #f8f8f8;
+}
+
+.wy-menu-vertical a {
+  color: #666666;
+}
+
+.wy-menu-vertical a:active, .wy-menu-vertical a:hover {
+  background-color: #d6d6d6;
+}
+
+.wy-menu-vertical li.current a {
+  border-right-width: 0px;
+}
+/* Armeria branding ends. */
