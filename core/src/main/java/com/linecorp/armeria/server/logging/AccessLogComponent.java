@@ -180,6 +180,7 @@ interface AccessLogComponent {
                 case REQUEST_TIMESTAMP:
                     return dateTimeFormatter.format(ZonedDateTime.ofInstant(
                             Instant.ofEpochMilli(log.requestStartTimeMillis()), defaultZoneId));
+
                 case REQUEST_LINE:
                     final StringBuilder requestLine = new StringBuilder();
 
