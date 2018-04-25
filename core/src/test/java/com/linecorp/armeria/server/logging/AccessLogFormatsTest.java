@@ -34,6 +34,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
@@ -218,6 +220,39 @@ public class AccessLogFormatsTest {
                 "%{com.linecorp.armeria.server.logging.AccessLogFormatsTest$Attr#KEY}j");
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo("LINE");
+    }
+
+    @Test
+    public void requestLogAvailabilityException() {
+        final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2\" 200 1024";
+
+        final DummyRequestContext ctx = new DummyRequestContext();
+        final DefaultRequestLog log = spy(new DefaultRequestLog(ctx));
+
+        // AccessLogger#format will be called after response is finished.
+        log.addListener(l -> assertThat(AccessLogger.format(AccessLogFormats.COMMON, l))
+                .endsWith(expectedLogMessage), RequestLogAvailability.COMPLETE);
+
+        ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
+
+        log.startRequest(channel, SessionProtocol.H2, "www.example.com");
+        log.requestHeaders(HttpHeaders.of(HttpMethod.GET, "/armeria/log")
+                                      .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
+                                      .add(HttpHeaderNames.REFERER, "http://log.example.com")
+                                      .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
+
+        // RequestLogAvailabilityException will be raised inside AccessLogger#format before injecting each
+        // component to RequestLog. So we cannot get the expected log message here.
+        assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
+        log.requestContent(new DefaultRpcRequest(Object.class, "rpcMethod"), null);
+        assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
+        log.endRequest();
+        assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
+        log.responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
+        log.responseLength(1024);
+        assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
+        log.endResponse();
     }
 
     private class DummyRequestContext extends NonWrappingRequestContext {
