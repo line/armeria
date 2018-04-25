@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
@@ -312,7 +313,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             if (isSuccess) {
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
-                    accessLogWriter.accept(reqCtx.log());
+                    reqCtx.log().addListener(accessLogWriter::accept, RequestLogAvailability.COMPLETE);
                 }
                 if (state != State.DONE) {
                     subscription.request(1);
@@ -324,7 +325,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 setDone();
                 logBuilder().endResponse(f.cause());
                 subscription.cancel();
-                accessLogWriter.accept(reqCtx.log());
+                reqCtx.log().addListener(accessLogWriter::accept, RequestLogAvailability.COMPLETE);
             }
             HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
         });
@@ -385,7 +386,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
                     logBuilder().endResponse(cause);
-                    accessLogWriter.accept(reqCtx.log());
+                    reqCtx.log().addListener(accessLogWriter::accept, RequestLogAvailability.COMPLETE);
                 }
             });
         }
