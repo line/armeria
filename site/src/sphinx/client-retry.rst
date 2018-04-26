@@ -9,7 +9,7 @@
 .. _LoggingClient: apidocs/index.html?com/linecorp/armeria/client/logging/LoggingClient.html
 .. _ResponseTimeoutException: apidocs/index.html?com/linecorp/armeria/client/ResponseTimeoutException.html
 
-.. _advanced-retry:
+.. _client-retry:
 
 Automatic retry
 ===============
