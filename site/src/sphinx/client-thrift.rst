@@ -1,9 +1,5 @@
 .. _AsyncMethodCallback: https://github.com/apache/thrift/blob/bd964c7f3460c308161cb6eb90583874a7d8d848/lib/java/src/org/apache/thrift/async/AsyncMethodCallback.java#L22
-.. _Clients: apidocs/index.html?com/linecorp/armeria/client/Clients.html
-.. _ClientBuilder: apidocs/index.html?com/linecorp/armeria/client/ClientBuilder.html
 .. _CompletableFuture: https://docs.oracle.com/javase/8/docs/api/index.html?java/util/concurrent/CompletableFuture.html
-.. _LoggingClient: apidocs/index.html?com/linecorp/armeria/client/logging/LoggingClient.html
-.. _ThriftCompletableFuture: apidocs/index.html?com/linecorp/armeria/common/thrift/ThriftCompletableFuture.html
 
 .. _client-thrift:
 
@@ -63,10 +59,10 @@ the following:
     // You can also wait until the call is finished.
     String reply = future.get();
 
-The example above introduces a new class called ThriftCompletableFuture_. It is a subtype of Java 8
+The example above introduces a new class called :api:`ThriftCompletableFuture`. It is a subtype of Java 8
 CompletableFuture_ that implements Thrift AsyncMethodCallback_. Once passed as a callback of an asynchronous
-Thrift call, ThriftCompletableFuture_ will complete itself when the reply is received or the call fails.
-You'll find it way more convenient to consume the reply than AsyncMethodCallback_ thanks to the rich set
+Thrift call, :api:`ThriftCompletableFuture` will complete itself when the reply is received or the call
+fails. You'll find it way more convenient to consume the reply than AsyncMethodCallback_ thanks to the rich set
 of methods provided by CompletableFuture_.
 
 You can also use the builder pattern for client construction:
@@ -84,9 +80,9 @@ You can also use the builder pattern for client construction:
     String greeting = helloService.hello("Armerian World");
     assert greeting.equals("Hello, Armerian World!");
 
-As you might have noticed already, we decorated the client using LoggingClient_, which logs all requests
-and responses. You might be interested in decorating a client using other decorators, for example to gather
-metrics. Please also refer to `ClientBuilder`_ for more configuration options.
+As you might have noticed already, we decorated the client using :api:`LoggingClient`, which logs all
+requests and responses. You might be interested in decorating a client using other decorators, for example
+to gather metrics. Please also refer to :api:`ClientBuilder` for more configuration options.
 
 See also
 --------

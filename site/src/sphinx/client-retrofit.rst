@@ -1,6 +1,4 @@
 .. _`an API gateway`: http://microservices.io/patterns/apigateway.html
-.. _`ArmeriaRetrofit`: apidocs/index.html?com/linecorp/armeria/client/retrofit2/ArmeriaRetrofit.html
-.. _`com.linecorp.armeria.client.retrofit2`: apidocs/index.html?com/linecorp/armeria/client/retrofit2/package-summary.html
 .. _`Netty`: https://netty.io/
 .. _`OkHttp`: https://square.github.io/okhttp/
 .. _`Retrofit`: https://square.github.io/retrofit/
@@ -13,15 +11,13 @@ Retrofit integration
 `Retrofit`_ is a library that simplifies the access to RESTful services by turning an HTTP API into a Java
 interface.
 
-Armeria provides a class called `ArmeriaRetrofit`_ that replaces the networking engine of `Retrofit`_ from
-`OkHttp`_ to Armeria. By doing so, you get the following benefits:
+Armeria provides a builder class called :api:`ArmeriaRetrofitBuilder` that builds an alternative
+``Retrofit`` implementation that replaces the networking engine of from `OkHttp`_ to Armeria. By doing so,
+you get the following benefits:
 
 - Better performance, thanks to `Netty`_ and its JNI-based I/O and TLS implementation
 - Leverage other advanced features of Armeria, such as client-side load-balancing and service discovery
 - Cleartext HTTP/2 support, as known as ``h2c``
-
-The integration is done by creating an ``HttpClient`` that connects to the desired endpoint and passing it to
-``ArmeriaRetrofit.builder()`` to construct the Armeria-based ``Retrofit`` implementation:
 
 .. code-block:: java
 
@@ -50,4 +46,5 @@ The integration is done by creating an ``HttpClient`` that connects to the desir
     MyService service = retrofit.create(MyService.class);
     UserInfo userInfo = service.getUserInfo("foo").get();
 
-For more information, please refer to the API documentation of the `com.linecorp.armeria.client.retrofit2`_ package.
+For more information, please refer to the API documentation of the
+:api:`com.linecorp.armeria.client.retrofit2` package.

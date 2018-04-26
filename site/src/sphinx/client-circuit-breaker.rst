@@ -1,8 +1,6 @@
-.. _com.linecorp.armeria.client.circuitbreaker: apidocs/index.html?com/linecorp/armeria/client/circuitbreaker/package-summary.html
-
 .. _client-circuit-breaker:
 
 Circuit breakers
 ================
 
-TBW - See `com.linecorp.armeria.client.circuitbreaker`_.
+TBW - See :api:`com.linecorp.armeria.client.circuitbreaker`.

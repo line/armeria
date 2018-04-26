@@ -32,7 +32,6 @@ task javadoc(type: Javadoc,
 
     destinationDir = project.file("${project.buildDir}/site/apidocs")
 
-
     aggregatedProjects.each { source it.sourceSets.main.java.srcDirs }
     classpath = aggregatedProjects.inject(project.files()) { ConfigurableFileCollection result, project ->
         result.from(project.sourceSets.main.compileClasspath)
@@ -136,6 +135,7 @@ task test(group: 'Verification',
     }
 }
 
+tasks.sphinx.dependsOn tasks.javadoc
 tasks.site {
     group = 'Documentation'
     description = 'Generates the project web site.'
@@ -143,13 +143,9 @@ tasks.site {
     dependsOn javadoc
 }
 
-tasks.assemble {
-    dependsOn tasks.site
+tasks.assemble.dependsOn tasks.site
+tasks.check.dependsOn tasks.test
+tasks.build {
+  dependsOn tasks.assemble
+  dependsOn tasks.check
 }
-
-tasks.check {
-    dependsOn tasks.test
-}
-
-tasks.build.dependsOn tasks.assemble
-tasks.build.dependsOn tasks.check

@@ -1,9 +1,6 @@
-.. _Clients: apidocs/index.html?com/linecorp/armeria/client/Clients.html
-.. _ClientBuilder: apidocs/index.html?com/linecorp/armeria/client/ClientBuilder.html
 .. _CompletableFuture: https://docs.oracle.com/javase/8/docs/api/index.html?java/util/concurrent/CompletableFuture.html
 .. _Futures: https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/Futures.html
 .. _ListenableFuture: https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/ListenableFuture.html
-.. _LoggingClient: apidocs/index.html?com/linecorp/armeria/client/logging/LoggingClient.html
 .. _gRPC: https://grpc.io/
 .. _futures-extra: https://github.com/spotify/futures-extra
 
@@ -156,9 +153,9 @@ You can also use the builder pattern for client construction:
     HelloReply reply = helloService.hello(request);
     assert reply.getMessage().equals("Hello, Armerian World!");
 
-As you might have noticed already, we decorated the client using LoggingClient_, which logs all requests
-and responses. You might be interested in decorating a client using other decorators, for example to gather
-metrics. Please also refer to `ClientBuilder`_ for more configuration options.
+As you might have noticed already, we decorated the client using :api:`LoggingClient`, which logs all
+requests and responses. You might be interested in decorating a client using other decorators, for example
+to gather metrics. Please also refer to :api:`ClientBuilder` for more configuration options.
 
 See also
 --------

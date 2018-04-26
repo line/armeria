@@ -1,8 +1,3 @@
-.. _`RequestLog`: apidocs/index.html?com/linecorp/armeria/common/logging/RequestLog.html
-.. _`RequestLogAvailability`: apidocs/index.html?com/linecorp/armeria/common/logging/RequestLogAvailability.html
-.. _`RequestContext`: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
-.. _`RetryingClient`: apidocs/index.html?com/linecorp/armeria/client/retry/RetryingClient.html
-
 .. _advanced-structured-logging:
 
 Structured logging
@@ -13,7 +8,7 @@ retrieving the information collected during request life cycle in a machine-frie
 
 What properties can be retrieved?
 ---------------------------------
-`RequestLog`_ provides all the properties you can retrieve:
+:api:`RequestLog` provides all the properties you can retrieve:
 
 +----------------------------------------------------------------------------------------------------+
 | Request properties                                                                                 |
@@ -94,9 +89,9 @@ To get notified when a certain set of properties are available, you can add a li
         }
     }
 
-Note that `RequestLogAvailability`_ is specified when adding a listener. `RequestLogAvailability`_ is an enum
-that is used to express which `RequestLog`_ properties you are interested in. ``COMPLETE`` will make your
-listener invoked when all properties are available.
+Note that :api:`RequestLogAvailability` is specified when adding a listener.
+:api:`RequestLogAvailability` is an enum that is used to express which :api:`RequestLog` properties
+you are interested in. ``COMPLETE`` will make your listener invoked when all properties are available.
 
 Set ``serializationFormat`` and ``requestContent`` early if possible
 --------------------------------------------------------------------
@@ -159,8 +154,8 @@ Nested log
 ----------
 
 When you retry a failed attempt, you might want to record the result of each attempt and to group them under
-a single RequestLog_. A RequestLog_ can contain more than one child RequestLog_ to support this sort of
-use cases.
+a single :api:`RequestLog`. A :api:`RequestLog` can contain more than one child :api:`RequestLog`
+to support this sort of use cases.
 
 .. code-block:: java
 
@@ -168,16 +163,16 @@ use cases.
 
     RequestLogBuilder.addChild(RequestLog);
 
-If the added RequestLog_ is the first child, the request-side log of the `RequestLog`_ will be propagated to the
-parent log. You can add as many child logs as you want, but the rest of logs would not effect.
-If you want to fill the response-side log of the parent log, please invoke:
+If the added :api:`RequestLog` is the first child, the request-side log of the :api:`RequestLog` will
+be propagated to the parent log. You can add as many child logs as you want, but the rest of logs would not
+be affected. If you want to fill the response-side log of the parent log, please invoke:
 
 .. code-block:: java
 
     RequestLogBuilder.endResponseWithLastChild();
 
 This will propagate the response-side log of the last added child to the parent log. The following diagram
-illustrates how a RequestLog_ with child logs looks like:
+illustrates how a :api:`RequestLog` with child logs looks like:
 
 .. uml::
 
@@ -230,5 +225,5 @@ You can retrieve the child logs using ``RequestLog.children()``.
         }
     }, RequestLogAvailability.COMPLETE);
 
-`RetryingClient`_ is a good example that leverages this feature.
+:api:`RetryingClient` is a good example that leverages this feature.
 See :ref:`retry-with-logging` for more information.
