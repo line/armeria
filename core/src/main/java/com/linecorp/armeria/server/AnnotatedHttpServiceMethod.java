@@ -28,6 +28,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -264,7 +266,7 @@ final class AnnotatedHttpServiceMethod {
                     entries.add(Parameter.ofPathParam(
                             validateAndNormalizeSupportedType(parameterInfo.getType()), param));
                 } else {
-                    entries.add(createOptionalSupportedParam(
+                    entries.add(createHttpComponentParameter(
                             parameterInfo, ParameterType.PARAM, param));
                 }
                 continue;
@@ -272,7 +274,7 @@ final class AnnotatedHttpServiceMethod {
 
             final String header = findHeaderName(parameterInfo);
             if (header != null) {
-                entries.add(createOptionalSupportedParam(parameterInfo, ParameterType.HEADER, header));
+                entries.add(createHttpComponentParameter(parameterInfo, ParameterType.HEADER, header));
                 continue;
             }
 
@@ -318,27 +320,65 @@ final class AnnotatedHttpServiceMethod {
      * Creates a {@link Parameter} instance which describes a parameter of the annotated method. If the
      * parameter type is {@link Optional}, its actual argument's type is used.
      */
-    private static Parameter createOptionalSupportedParam(java.lang.reflect.Parameter parameterInfo,
+    private static Parameter createHttpComponentParameter(java.lang.reflect.Parameter parameterInfo,
                                                           ParameterType paramType, String paramValue) {
-        final Default aDefault = parameterInfo.getAnnotation(Default.class);
-        final boolean isOptionalType = parameterInfo.getType() == Optional.class;
+        assert paramType == ParameterType.PARAM ||
+               paramType == ParameterType.HEADER;
 
+        final Default aDefault = parameterInfo.getAnnotation(Default.class);
         // Set the default value to null if it was not specified.
         final String defaultValue = aDefault != null ? getSpecifiedValue(aDefault.value()).get() : null;
+
         final Class<?> type;
-        if (isOptionalType) {
+        final Class<?> wrapperType;
+
+        final Type parameterizedType = parameterInfo.getParameterizedType();
+        if (parameterizedType instanceof ParameterizedType) {
             try {
-                type = (Class<?>) ((ParameterizedType) parameterInfo.getParameterizedType())
-                        .getActualTypeArguments()[0];
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Invalid optional parameter: " + parameterInfo.getName(), e);
+                type = (Class<?>) ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
+                wrapperType = validateWrapperAndElementType(paramType, parameterInfo.getType(), type);
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException("Invalid optional parameter: " + parameterInfo.getName(),
+                                                   cause);
             }
         } else {
             type = parameterInfo.getType();
+            wrapperType = null;
         }
 
-        return new Parameter(paramType, !isOptionalType && aDefault == null, isOptionalType,
-                             validateAndNormalizeSupportedType(type), paramValue, defaultValue, null);
+        final boolean isRequired = wrapperType != Optional.class && aDefault == null;
+        return new Parameter(paramType, isRequired,
+                             validateAndNormalizeSupportedType(type), wrapperType,
+                             paramValue, defaultValue, null);
+    }
+
+    private static Class<?> validateWrapperAndElementType(ParameterType paramType,
+                                                          Class<?> clazz, Class<?> elementClazz) {
+        assert paramType == ParameterType.PARAM ||
+               paramType == ParameterType.HEADER;
+
+        if (clazz == Optional.class) {
+            return Optional.class;
+        }
+
+        // A list of string is supported only for HTTP headers.
+        if (paramType == ParameterType.HEADER && elementClazz == String.class) {
+            if (clazz == List.class) {
+                return ArrayList.class;
+            }
+            if (List.class.isAssignableFrom(clazz)) {
+                try {
+                    // Only if there is a default constructor.
+                    clazz.getConstructor();
+                    return clazz;
+                } catch (Throwable cause) {
+                    throw new IllegalArgumentException("Unsupported type: " + clazz.getName() +
+                                                       '<' + String.class.getName() + '>', cause);
+                }
+            }
+        }
+        throw new IllegalArgumentException("Unsupported type: " + clazz.getName() +
+                                           '<' + elementClazz.getName() + '>');
     }
 
     /**
@@ -363,12 +403,10 @@ final class AnnotatedHttpServiceMethod {
                     if (httpParameters == null) {
                         httpParameters = httpParametersOf(ctx, req.headers(), message);
                     }
-                    value = httpParameterValue(httpParameters, entry);
-                    values[i] = convertParameter(value, entry);
+                    values[i] = httpParameterValue(httpParameters, entry);
                     break;
                 case HEADER:
-                    value = httpHeaderValue(entry, req);
-                    values[i] = convertParameter(value, entry);
+                    values[i] = httpHeaderValue(entry, req);
                     break;
                 case PREDEFINED_TYPE:
                     if (entry.type() == RequestContext.class ||
@@ -432,13 +470,11 @@ final class AnnotatedHttpServiceMethod {
      * Returns the value of the specified parameter name.
      */
     @Nullable
-    private static String httpParameterValue(HttpParameters httpParameters, Parameter entry) {
+    private static Object httpParameterValue(HttpParameters httpParameters, Parameter entry) {
+        // The first decoded value.
         final String value = httpParameters.get(entry.name());
-        if (value != null) {
-            // The first decoded value.
-            return value;
-        }
-        return entryDefaultValue(entry);
+        return convertParameter(value != null ? value
+                                              : entryDefaultValue(entry), entry);
     }
 
     @Nullable
@@ -454,21 +490,42 @@ final class AnnotatedHttpServiceMethod {
     @Nullable
     private static Object convertParameter(@Nullable String value, Parameter entry) {
         return AnnotatedHttpServiceParamUtil.convertParameter(value,
-                                                              entry.type,
-                                                              entry.enumConverter,
+                                                              entry.type(),
+                                                              entry.enumConverter(),
                                                               entry.isOptionalWrapped());
     }
 
     @Nullable
-    private static String httpHeaderValue(Parameter entry, HttpRequest req) {
+    private static Object httpHeaderValue(Parameter entry, HttpRequest req) {
         final String name = entry.name();
         assert name != null;
-        final String value = req.headers().get(AsciiString.of(name));
-        if (value != null) {
-            return value;
+
+        final Class<?> wrapperType = entry.wrapperType();
+        if (wrapperType != null && List.class.isAssignableFrom(wrapperType)) {
+            assert entry.type() == String.class;
+            try {
+                @SuppressWarnings("unchecked")
+                final List<String> list = (List<String>) wrapperType.newInstance();
+
+                // We do not call convertParameter() here because the element type is String.
+                final List<String> values = req.headers().getAll(AsciiString.of(name));
+                if (values != null || !values.isEmpty()) {
+                    list.addAll(values);
+                } else {
+                    final String defaultValue = entryDefaultValue(entry);
+                    if (defaultValue != null) {
+                        list.add(defaultValue);
+                    }
+                }
+                return values;
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException("Cannot get the value of an HTTP header: " + name, cause);
+            }
         }
 
-        return entryDefaultValue(entry);
+        final String value = req.headers().get(AsciiString.of(name));
+        return convertParameter(value != null ? value
+                                              : entryDefaultValue(entry), entry);
     }
 
     /**
@@ -507,12 +564,12 @@ final class AnnotatedHttpServiceMethod {
     private static final class Parameter {
 
         static Parameter ofPathParam(Class<?> type, String name) {
-            return new Parameter(ParameterType.PATH_PARAM, true, false, type,
+            return new Parameter(ParameterType.PATH_PARAM, true, type, null,
                                  name, null, null);
         }
 
         static Parameter ofPredefinedType(Class<?> type) {
-            return new Parameter(ParameterType.PREDEFINED_TYPE, true, false, type,
+            return new Parameter(ParameterType.PREDEFINED_TYPE, true, type, null,
                                  null, null, null);
         }
 
@@ -520,7 +577,7 @@ final class AnnotatedHttpServiceMethod {
                                          @Nullable RequestConverterFunction requestConverterFunction) {
             BeanRequestConverterFunction.register(type);
 
-            return new Parameter(ParameterType.REQUEST_OBJECT, true, false, type,
+            return new Parameter(ParameterType.REQUEST_OBJECT, true, type, null,
                                  null, null, requestConverterFunction);
         }
 
@@ -528,6 +585,8 @@ final class AnnotatedHttpServiceMethod {
         private final boolean isRequired;
         private final boolean isOptionalWrapped;
         private final Class<?> type;
+        @Nullable
+        private final Class<?> wrapperType;
         @Nullable
         private final String name;
         @Nullable
@@ -539,17 +598,18 @@ final class AnnotatedHttpServiceMethod {
         private final EnumConverter<?> enumConverter;
 
         Parameter(ParameterType parameterType,
-                  boolean isRequired, boolean isOptionalWrapped, Class<?> type,
+                  boolean isRequired, Class<?> type, @Nullable Class<?> wrapperType,
                   @Nullable String name, @Nullable String defaultValue,
                   @Nullable RequestConverterFunction requestConverterFunction) {
             this.parameterType = parameterType;
             this.isRequired = isRequired;
-            this.isOptionalWrapped = isOptionalWrapped;
             this.type = requireNonNull(type, "type");
+            this.wrapperType = wrapperType;
             this.name = name;
             this.defaultValue = defaultValue;
             this.requestConverterFunction = requestConverterFunction;
 
+            isOptionalWrapped = wrapperType == Optional.class;
             if (type.isEnum()) {
                 enumConverter = new EnumConverter<>(type.asSubclass(Enum.class));
             } else {
@@ -574,6 +634,11 @@ final class AnnotatedHttpServiceMethod {
         }
 
         @Nullable
+        Class<?> wrapperType() {
+            return wrapperType;
+        }
+
+        @Nullable
         String name() {
             return name;
         }
@@ -590,6 +655,11 @@ final class AnnotatedHttpServiceMethod {
         @Nullable
         RequestConverterFunction requestConverterFunction() {
             return requestConverterFunction;
+        }
+
+        @Nullable
+        EnumConverter<?> enumConverter() {
+            return enumConverter;
         }
     }
 

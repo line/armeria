@@ -157,22 +157,24 @@ public final class BeanRequestConverterFunction implements RequestConverterFunct
 
         @Nullable
         private static BeanParamInfo from(final Class<?> beanType) {
-            final List<AbstractParamSetter> paramSetterList = new ArrayList<>();
-
-            getAllFields(beanType).forEach(
-                    field -> addIfNotNull(paramSetterList, FieldParamSetter.from(field)));
-            getAllMethods(beanType).forEach(
-                    method -> addIfNotNull(paramSetterList, MethodParamSetter.from(method)));
 
             final ConstructorInfo constructorInfo = ConstructorInfo.from(beanType);
             if (constructorInfo == null) {
                 // No annotated constructor or default constructor. Skip this.
                 return null;
             }
+
+            final List<AbstractParamSetter> paramSetterList = new ArrayList<>();
+            getAllFields(beanType).forEach(
+                    field -> addIfNotNull(paramSetterList, FieldParamSetter.from(field)));
+            getAllMethods(beanType).forEach(
+                    method -> addIfNotNull(paramSetterList, MethodParamSetter.from(method)));
+
             if (constructorInfo.getParameterCount() == 0 && paramSetterList.isEmpty()) {
                 // No arg constructor exists but there is no annotated field or method. Skip this.
                 return null;
             }
+
             return new BeanParamInfo(constructorInfo, paramSetterList);
         }
 

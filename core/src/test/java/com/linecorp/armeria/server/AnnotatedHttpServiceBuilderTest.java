@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +31,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Param;
@@ -118,6 +121,21 @@ public class AnnotatedHttpServiceBuilderTest {
                                                  }
                                              },
                                              LoggingService.newDecorator());
+
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/")
+            public Object root(@Header("a") List<String> a) {
+                return null;
+            }
+        });
+
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/")
+            public Object root(@Header("a") ArrayList<String> a,
+                               @Header("a") LinkedList<String> b) {
+                return null;
+            }
+        });
     }
 
     @Test
@@ -193,6 +211,28 @@ public class AnnotatedHttpServiceBuilderTest {
                 return null;
             }
         })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public Object root(@Header("name") List<Object> name) {
+                return null;
+            }
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public Object root(@Header("name") NoDefaultConstructorList<String> name) {
+                return null;
+            }
+        })).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static class NoDefaultConstructorList<E> extends ArrayList<E> {
+        private static final long serialVersionUID = -4221936122807956661L;
+
+        NoDefaultConstructorList(int initialCapacity) {
+            super(initialCapacity);
+        }
     }
 
     private static class DummyExceptionHandler implements ExceptionHandlerFunction {

@@ -40,6 +40,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
+import org.assertj.core.util.Strings;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -590,8 +591,8 @@ public class AnnotatedHttpServiceTest {
         }
 
         @Post("/customHeader")
-        public String customHeader(@Header String aName) {
-            return aName + " is awesome";
+        public String customHeader(@Header List<String> aName) {
+            return Strings.join(aName).with(":") + " is awesome";
         }
 
         @Get("/headerDefault")
@@ -819,6 +820,11 @@ public class AnnotatedHttpServiceTest {
             request = post("/11/customHeader");
             request.setHeader("a-name", "minwoox");
             testBody(hc, request, "minwoox is awesome");
+
+            request = post("/11/customHeader");
+            request.addHeader("a-name", "minwoox");
+            request.addHeader("a-name", "giraffe");
+            testBody(hc, request, "minwoox:giraffe is awesome");
 
             request = get("/11/headerDefault");
             testBody(hc, request, "hello/world/(null)");
