@@ -1,6 +1,6 @@
 .. _com.linecorp.armeria.client.circuitbreaker: apidocs/index.html?com/linecorp/armeria/client/circuitbreaker/package-summary.html
 
-.. _advanced-circuitbreaker:
+.. _client-circuit-breaker:
 
 Circuit breakers
 ================
