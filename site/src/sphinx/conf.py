@@ -52,10 +52,12 @@ for groupId in dependencies.keys():
 rst_epilog += '\n'
 
 needs_sphinx = '1.0'
+sys.path.append(os.path.abspath('_extensions'))
 extensions = ['sphinx.ext.autodoc', 
               'sphinxcontrib.httpdomain', 
               'sphinxcontrib.inlinesyntaxhighlight',
-              'sphinxcontrib.plantuml']
+              'sphinxcontrib.plantuml',
+              'api']
 templates_path = ['_templates']
 source_suffix = '.rst'
 source_encoding = 'utf-8-sig'

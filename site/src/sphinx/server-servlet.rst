@@ -1,10 +1,5 @@
 .. _Apache Tomcat: https://tomcat.apache.org/
 .. _Jetty: https://www.eclipse.org/jetty/
-.. _JettyService: apidocs/index.html?com/linecorp/armeria/server/jetty/JettyService.html
-.. _JettyServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/jetty/JettyServiceBuilder.html
-.. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
-.. _TomcatService: apidocs/index.html?com/linecorp/armeria/server/tomcat/TomcatService.html
-.. _TomcatServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/tomcat/TomcatServiceBuilder.html
 
 .. _server-servlet:
 
@@ -20,7 +15,7 @@ connection. All HTTP requests and responses go through Armeria. As a result, you
 Embedding Apache Tomcat
 -----------------------
 
-Add a TomcatService_ to a ServerBuilder_:
+Add a :api:`TomcatService` to a :api:`ServerBuilder`:
 
 .. code-block:: java
 
@@ -35,7 +30,8 @@ Add a TomcatService_ to a ServerBuilder_:
     sb.serviceUnder("/tomcat/api/rest/v1/",
                     TomcatService.forFileSystem("/var/lib/webapps/old_api.war"));
 
-For more information, please refer to the API documentation of TomcatService_ and TomcatServiceBuilder_.
+For more information, please refer to the API documentation of :api:`TomcatService` and
+:api:`TomcatServiceBuilder`.
 
 Embedding Jetty
 ---------------
@@ -77,4 +73,5 @@ Unlike Apache Tomcat, you need more dependencies and bootstrap code due to its m
         return handler;
     }
 
-For more information, please refer to the API documentation of JettyService_ and JettyServiceBuilder_.
+For more information, please refer to the API documentation of :api:`JettyService` and
+:api:`JettyServiceBuilder`.

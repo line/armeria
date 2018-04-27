@@ -1,20 +1,15 @@
-.. _DocService: apidocs/index.html?com/linecorp/armeria/server/docs/DocService.html
-.. _DocServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/docs/DocServiceBuilder.html
-.. _Server: apidocs/index.html?com/linecorp/armeria/server/Server.html
-.. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
-
 .. _server-docservice:
 
 Browsing and invoking services with ``DocService``
 ==================================================
 
-DocService_ is a single-page web application which provides the following useful features:
+:api:`DocService` is a single-page web application which provides the following useful features:
 
 - Browsing the list of services and operations available in the server
 - Invoking a service operation from a web form
 - Creating a permalink for the invocation you've made
 
-First, add DocService_ to the ServerBuilder_:
+First, add :api:`DocService` to the :api:`ServerBuilder`:
 
 .. code-block:: java
 
@@ -27,8 +22,8 @@ First, add DocService_ to the ServerBuilder_:
     Server server = sb.build();
     server.start().join();
 
-DocService_ will scan for the supported services when the Server_ starts up. Open http://127.0.0.1:8080/docs/
-in your web browser and you'll see the following screen:
+:api:`DocService` will scan for the supported services when the :api:`Server` starts up.
+Open http://127.0.0.1:8080/docs/ in your web browser and you'll see the following screen:
 
 .. image:: _images/docservice_1.png
 
@@ -39,9 +34,9 @@ the exceptions which may be thrown:
 
 .. image:: _images/docservice_2.png
 
-As you may have noticed, the 'description' column is empty. DocService_ can even show the docstrings you put
-into your ``.thrift`` or ``.proto`` files with a little bit of build configuration. We will visit this later
-in this document.
+As you may have noticed, the 'description' column is empty. :api:`DocService` can even show the docstrings
+you put into your ``.thrift`` or ``.proto`` files with a little bit of build configuration. We will visit this
+later in this document.
 
 Debug form
 ----------
@@ -84,7 +79,7 @@ Example requests and headers
 ----------------------------
 
 You can specify the example requests and HTTP headers which will be used as the default value of the debug form
-when building a DocService_ with a DocServiceBuilder_:
+when building a :api:`DocService` with a :api:`DocServiceBuilder`:
 
 .. code-block:: java
 
@@ -99,8 +94,8 @@ when building a DocService_ with a DocServiceBuilder_:
             .build());
     ...
 
-By adding examples to DocService_, your users will be able to play with the services you wrote without a hassle
-and thus will understand them sooner and better.
+By adding examples to :api:`DocService`, your users will be able to play with the services you wrote
+without a hassle and thus will understand them sooner and better.
 
 Adding docstrings
 -----------------

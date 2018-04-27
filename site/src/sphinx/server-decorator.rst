@@ -1,8 +1,4 @@
-.. _DecoratingService: apidocs/index.html?com/linecorp/armeria/server/DecoratingService.html
-.. _DecoratingServiceFunction: apidocs/index.html?com/linecorp/armeria/server/DecoratingServiceFunction.html
 .. _separating concerns: https://en.wikipedia.org/wiki/Separation_of_concerns
-.. _Service: apidocs/index.html?com/linecorp/armeria/server/Service.html
-.. _SimpleDecoratingService: apidocs/index.html?com/linecorp/armeria/server/SimpleDecoratingService.html
 .. _the decorator pattern: https://en.wikipedia.org/wiki/Decorator_pattern
 
 .. _server-decorator:
@@ -10,22 +6,23 @@
 Decorating a service
 ====================
 
-A 'decorating service' (or a 'decorator') is a Service_ that wraps another Service_ to intercept an incoming
-request or an outgoing response. As its name says, it is an implementation of `the decorator pattern`_.
-Service decoration takes a crucial role in Armeria. A lot of core features such as logging, metrics and
-distributed tracing are implemented as decorators and you will also find it useful when `separating concerns`_.
+A 'decorating service' (or a 'decorator') is a :api:`Service` that wraps another :api:`Service`
+to intercept an incoming request or an outgoing response. As its name says, it is an implementation of
+`the decorator pattern`_. Service decoration takes a crucial role in Armeria. A lot of core features
+such as logging, metrics and distributed tracing are implemented as decorators and you will also find it
+useful when `separating concerns`_.
 
 There are basically three ways to write a decorating service:
 
-- Implementing DecoratingServiceFunction_
-- Extending SimpleDecoratingService_
-- Extending DecoratingService_
+- Implementing :api:`DecoratingServiceFunction`
+- Extending :api:`SimpleDecoratingService`
+- Extending :api:`DecoratingService`
 
-Implementing DecoratingServiceFunction_
----------------------------------------
+Implementing ``DecoratingServiceFunction``
+------------------------------------------
 
-DecoratingServiceFunction_ is a functional interface that greatly simplifies the implementation of a decorating
-service. It enables you to write a decorating service with a single lambda expression:
+:api:`DecoratingServiceFunction` is a functional interface that greatly simplifies the implementation of
+a decorating service. It enables you to write a decorating service with a single lambda expression:
 
 .. code-block:: java
 
@@ -46,11 +43,11 @@ service. It enables you to write a decorating service with a single lambda expre
                         return delegate.serve(ctx, req);
                     });
 
-Extending SimpleDecoratingService_
-----------------------------------
+Extending ``SimpleDecoratingService``
+-------------------------------------
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
-SimpleDecoratingService_ :
+:api:`SimpleDecoratingService` :
 
 .. code-block:: java
 
@@ -78,11 +75,11 @@ SimpleDecoratingService_ :
     // Using reflection:
     sb.serviceUnder("/web", service.decorate(AuthService.class));
 
-Extending DecoratingService_
-----------------------------
+Extending ``DecoratingService``
+-------------------------------
 
 So far, we only demonstrated the case where a decorating service does not transform the type of the request and
-response. You can do that as well, of course, using DecoratingService_:
+response. You can do that as well, of course, using :api:`DecoratingService`:
 
 .. code-block:: java
 
@@ -110,8 +107,8 @@ response. You can do that as well, of course, using DecoratingService_:
 Unwrapping decoration
 ---------------------
 
-Once a Service_ is decorated, the type of the service is not that of the original Service_ anymore.
-Therefore, you cannot simply down-cast it to access the method exposed by the original Service_.
+Once a :api:`Service` is decorated, the type of the service is not that of the original :api:`Service`
+anymore. Therefore, you cannot simply down-cast it to access the method exposed by the original :api:`Service`.
 Instead, you need to 'unwrap' the decorator using the ``Service.as()`` method:
 
 .. code-block:: java
@@ -124,8 +121,8 @@ Instead, you need to 'unwrap' the decorator using the ``Service.as()`` method:
     assert decoratedService.as(MyDecoratedService.class).get() == decoratedService;
     assert !decoratedService.as(SomeOtherService.class).isPresent();
 
-``as()`` is especially useful when you are looking for the Service_ instances that implements a certain type
-from a server:
+``as()`` is especially useful when you are looking for the :api:`Service` instances that implements
+a certain type from a server:
 
 .. code-block:: java
 

@@ -1,7 +1,4 @@
-.. _DecoratingClientFunction: apidocs/index.html?com/linecorp/armeria/client/DecoratingClientFunction.html
 .. _separating concerns: https://en.wikipedia.org/wiki/Separation_of_concerns
-.. _Client: apidocs/index.html?com/linecorp/armeria/client/Client.html
-.. _SimpleDecoratingClient: apidocs/index.html?com/linecorp/armeria/client/SimpleDecoratingClient.html
 .. _the decorator pattern: https://en.wikipedia.org/wiki/Decorator_pattern
 
 .. _client-decorator:
@@ -16,15 +13,15 @@ distributed tracing are implemented as decorators and you will also find it usef
 
 There are basically two ways to write a decorating client:
 
-- Implementing DecoratingClientFunction_
-- Extending SimpleDecoratingClient_
+- Implementing :api:`DecoratingClientFunction`
+- Extending :api:`SimpleDecoratingClient`
 
 
-Implementing DecoratingClientFunction_
---------------------------------------
+Implementing ``DecoratingClientFunction``
+-----------------------------------------
 
-DecoratingClientFunction_ is a functional interface that greatly simplifies the implementation of a decorating
-client. It enables you to write a decorating client with a single lambda expression:
+:api:`DecoratingClientFunction` is a functional interface that greatly simplifies the implementation of a
+decorating client. It enables you to write a decorating client with a single lambda expression:
 
 .. code-block:: java
 
@@ -41,11 +38,11 @@ client. It enables you to write a decorating client with a single lambda express
 
     MyService.Iface client = cb.build(MyService.Iface.class);
 
-Extending SimpleDecoratingClient_
----------------------------------
+Extending ``SimpleDecoratingClient``
+------------------------------------
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
-SimpleDecoratingClient_ :
+:api:`SimpleDecoratingClient`:
 
 .. code-block:: java
 

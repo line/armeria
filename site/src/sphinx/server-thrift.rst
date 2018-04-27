@@ -1,6 +1,4 @@
 .. _`Calling a Thrift service`: client-thrift.html
-.. _`ServerBuilder`: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
-.. _`THttpService`: apidocs/index.html?com/linecorp/armeria/server/thrift/THttpService.html
 .. _`TMultiplexedProcessor`: https://github.com/apache/thrift/blob/400b346db2510fffa06c0ced11105e3618ce5367/lib/java/src/org/apache/thrift/TMultiplexedProcessor.java#L28
 
 .. _server-thrift:
@@ -63,8 +61,8 @@ although it is easier to implement the synchronous ``Iface`` interface:
 ``THttpService``
 ----------------
 
-Once you've finished the implementation of the interface, you need to wrap it with a `THttpService`_ and add it
-to the `ServerBuilder`_:
+Once you've finished the implementation of the interface, you need to wrap it with a :api:`THttpService`
+and add it to the :api:`ServerBuilder`:
 
 .. code-block:: java
 
@@ -78,8 +76,8 @@ to the `ServerBuilder`_:
 Serialization formats
 ---------------------
 
-`THttpService`_ supports four Thrift serialization formats: TBINARY, TCOMPACT, TJSON and TTEXT. It chooses
-the serialization format based on the value of the ``content-type`` HTTP header.
+:api:`THttpService` supports four Thrift serialization formats: TBINARY, TCOMPACT, TJSON and TTEXT.
+It chooses the serialization format based on the value of the ``content-type`` HTTP header.
 
 +--------------------------------------------------+----------------------------------------+
 | Header value                                     | Serialization format                   |
@@ -101,14 +99,14 @@ the serialization format based on the value of the ``content-type`` HTTP header.
 +--------------------------------------------------+----------------------------------------+
 
 To change the default serialization format from TBINARY to something else, specify it when creating a
-`THttpService`_:
+:api:`THttpService`:
 
 .. code-block:: java
 
     import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 
     ServerBuilder sb = new ServerBuilder();
-    // Use TCOMACT as the default serialization format.
+    // Use TCOMPACT as the default serialization format.
     sb.service("/hello", THttpService.of(new MyHelloService(),
                                          ThriftSerializationFormats.COMPACT));
 
@@ -130,7 +128,7 @@ You can also choose the list of allowed serialization formats:
 Service multiplexing
 --------------------
 
-`THttpService`_ supports service multiplexing fully compatible with Apache Thrift `TMultiplexedProcessor`_.
+:api:`THttpService` supports service multiplexing fully compatible with Apache Thrift `TMultiplexedProcessor`_.
 
 .. code-block:: java
 

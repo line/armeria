@@ -1,15 +1,11 @@
 .. _`a name-based virtual host`: https://en.wikipedia.org/wiki/Virtual_hosting#Name-based
-.. _LoggingService: apidocs/index.html?com/linecorp/armeria/server/logging/LoggingService.html
-.. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
-.. _VirtualHost: apidocs/index.html?com/linecorp/armeria/server/VirtualHost.html
-.. _VirtualHostBuilder: apidocs/index.html?com/linecorp/armeria/server/VirtualHostBuilder.html
 
 .. _server-basics:
 
 Server basics
 =============
 
-To start a server, you need to build it first. Use `ServerBuilder`_:
+To start a server, you need to build it first. Use :api:`ServerBuilder`:
 
 .. code-block:: java
 
@@ -139,11 +135,11 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     future.join();
 
 As described in the example, ``service()`` and ``serviceUnder()`` perform an exact match and a prefix match
-on a request path respectively. `ServerBuilder`_ also provides advanced path mapping such as regex and glob
-pattern matching.
+on a request path respectively. :api:`ServerBuilder` also provides advanced path mapping such as regex and
+glob pattern matching.
 
-Also, we decorated the second service using LoggingService_, which logs all requests and responses. You might
-be interested in decorating a service using other decorators, for example to gather metrics.
+Also, we decorated the second service using :api:`LoggingService`, which logs all requests and responses.
+You might be interested in decorating a service using other decorators, for example to gather metrics.
 
 You can also use an arbitrary object that's annotated by the ``@Path`` annotation using ``annotatedService()``.
 
