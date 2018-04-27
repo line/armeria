@@ -1,6 +1,3 @@
-.. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
-.. _`RequestLog`: apidocs/index.html?com/linecorp/armeria/common/logging/RequestLog.html
-
 .. _server-access-log:
 
 Writing an access log
@@ -92,7 +89,7 @@ Customizing a log format
 ------------------------
 
 Access logging is disabled by default. If you want to enable it, you need to specify an access log writer
-using `ServerBuilder`_. You may use one of the pre-defined log formats.
+using :api:`ServerBuilder`. You may use one of the pre-defined log formats.
 
 .. code-block:: java
 
@@ -170,7 +167,7 @@ the condition.
 Customizing an access log writer
 --------------------------------
 
-You can specify your own log writer which implements Consumer<`RequestLog`_ >.
+You can specify your own log writer which implements a ``Consumer`` of :api:`RequestLog`.
 
 .. code-block:: java
 

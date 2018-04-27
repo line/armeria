@@ -179,6 +179,11 @@ samp::before, samp::after {
   content: "";
 }
 
+/* Do not add color to the literals in a hyperlink. */
+a .highlight * {
+  color: inherit !important;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
 }

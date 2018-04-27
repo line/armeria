@@ -1,15 +1,12 @@
 .. _`Logback`: https://logback.qos.ch/
-.. _`RequestContextExportingAppender`: apidocs/index.html?com/linecorp/armeria/common/logback/RequestContextExportingAppender.html
-.. _`BuiltInProperty`: apidocs/index.html?com/linecorp/armeria/common/logback/BuiltInProperty.html
-.. _`RequestContext`: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
 .. _`MDC`: https://logback.qos.ch/manual/mdc.html
 
 .. _advanced-logging:
 
 Logging contextual information
 ==============================
-With Armeria's `Logback`_ integration, you can log the properties of the `RequestContext`_ of the
-request being handled. `RequestContextExportingAppender`_ is a Logback appender that exports the properties
+With Armeria's `Logback`_ integration, you can log the properties of the :api:`RequestContext` of the
+request being handled. :api:`RequestContextExportingAppender` is a Logback appender that exports the properties
 of the current ``RequestContext`` to `MDC`_ (mapped diagnostic context).
 
 For example, the following configuration:
@@ -61,12 +58,12 @@ will define an appender called ``RCEA`` which exports the following:
 ... to the `MDC`_ property map and forwards the log message to the appender ``CONSOLE``, as defined in the
 ``<appender-ref />`` element.
 
-There are three types of properties you can export using `RequestContextExportingAppender`_.
+There are three types of properties you can export using :api:`RequestContextExportingAppender`.
 
 Built-in properties
 -------------------
 A built-in property is a common property available for most requests. See the complete list of the built-in
-properties and their MDC keys at `BuiltInProperty`_.
+properties and their MDC keys at :api:`BuiltInProperty`.
 
 HTTP request and response headers
 ---------------------------------
@@ -79,9 +76,9 @@ request and response. The MDC key of the exported header is ``"req.http_headers.
 
 Custom attributes
 -----------------
-A user can attach an arbitrary custom attribute to a ``RequestContext`` by using
+A user can attach an arbitrary custom attribute to a :api:`RequestContext` by using
 ``RequestContext.attr(...).set(...)`` to store the information associated with the request being handled.
-`RequestContextExportingAppender`_ can export such attributes to the `MDC`_ property map as well.
+:api:`RequestContextExportingAppender` can export such attributes to the `MDC`_ property map as well.
 
 Unlike other property types, you need to specify the full name of an attribute as well as its alias.
 For example, if you want to export an attribute ``com.example.Foo#ATTR_BAR`` with the alias ``bar``, you need to add
@@ -90,8 +87,8 @@ access the attribute value is ``attrs.bar``, which follows the form of ``attrs.<
 
 Using an alternative string converter for a custom attribute
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-By default, `RequestContextExportingAppender`_ uses ``Object.toString()`` to convert an attribute value into
-an `MDC`_ value. If you want an alternative string representation of an attribute value, you can define
+By default, :api:`RequestContextExportingAppender` uses ``Object.toString()`` to convert an attribute value
+into an `MDC`_ value. If you want an alternative string representation of an attribute value, you can define
 a ``Function`` class with a public no-args constructor that transforms an attribute value into a ``String``:
 
 .. code-block:: java

@@ -17,6 +17,7 @@
 
 Welcome to Armeria
 ==================
+
 *Armeria* is an open-source asynchronous `HTTP/2`_ RPC/REST client/server library built on top of `Java 8`_,
 `Netty`_, `Thrift`_ and `gRPC`_. Its primary goal is to help engineers build high-performance asynchronous
 microservices that use HTTP/2 as a session layer protocol.
