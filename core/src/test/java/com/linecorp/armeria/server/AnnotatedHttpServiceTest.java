@@ -72,6 +72,7 @@ import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -218,6 +219,24 @@ public class AnnotatedHttpServiceTest {
         @Get("/warn/:var")
         public String warn() {
             return "warn";
+        }
+
+        @Get("/void/204")
+        public void void204() {}
+
+        @Get("/void/200")
+        @ResponseConverter(VoidTo200ResponseConverter.class)
+        public void void200() {}
+    }
+
+    static class VoidTo200ResponseConverter implements ResponseConverterFunction {
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result)
+                throws Exception {
+            if (result == null) {
+                return HttpResponse.of(HttpStatus.OK);
+            }
+            return ResponseConverterFunction.fallthrough();
         }
     }
 
@@ -418,8 +437,8 @@ public class AnnotatedHttpServiceTest {
 
         @Get("/param/enum2")
         public String paramEnum2(RequestContext ctx,
-                                @Param("type") UserType type,
-                                @Param("level") UserLevel level) {
+                                 @Param("type") UserType type,
+                                 @Param("level") UserLevel level) {
             validateContext(ctx);
             return type + "/" + level;
         }
@@ -818,6 +837,14 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    @Test
+    public void testReturnVoid() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testStatusCode(hc, get("/1/void/204"), 204);
+            testBodyAndContentType(hc, get("/1/void/200"), "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
+        }
+    }
+
     private enum UserLevel {
         LV1,
         LV2
@@ -871,7 +898,7 @@ public class AnnotatedHttpServiceTest {
         if (body != null) {
             if (encoding != null) {
                 assertThat(EntityUtils.toString(res.getEntity(), encoding))
-                          .isEqualTo(body);
+                        .isEqualTo(body);
             } else {
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(body);
             }
