@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -214,9 +215,13 @@ final class AnnotatedHttpServiceMethod {
                 }
             }
         }
+        // There is no response converter which is able to convert 'null' result to a response.
+        // In this case, we deal the result as '204 No Content' instead of '500 Internal Server Error'.
+        if (result == null) {
+            return HttpResponse.of(HttpStatus.NO_CONTENT);
+        }
         throw new IllegalStateException(
-                "No response converter exists for a result: " +
-                result != null ? result.getClass().getSimpleName() : "(null)");
+                "No response converter exists for a result: " + result.getClass().getSimpleName());
     }
 
     /**
