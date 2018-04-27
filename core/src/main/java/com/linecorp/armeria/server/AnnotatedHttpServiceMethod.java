@@ -221,8 +221,7 @@ final class AnnotatedHttpServiceMethod {
             return HttpResponse.of(HttpStatus.NO_CONTENT);
         }
         throw new IllegalStateException(
-                "No response converter exists for a result: " +
-                (result != null ? result.getClass().getSimpleName() : "(null)"));
+                "No response converter exists for a result: " + result.getClass().getSimpleName());
     }
 
     /**
