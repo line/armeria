@@ -30,6 +30,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -322,8 +324,8 @@ final class AnnotatedHttpServiceMethod {
      */
     private static Parameter createHttpComponentParameter(java.lang.reflect.Parameter parameterInfo,
                                                           ParameterType paramType, String paramValue) {
-        assert paramType == ParameterType.PARAM ||
-               paramType == ParameterType.HEADER;
+        assert paramType == ParameterType.PARAM || paramType == ParameterType.HEADER
+                : String.valueOf(paramType);
 
         final Default aDefault = parameterInfo.getAnnotation(Default.class);
         // Set the default value to null if it was not specified.
@@ -354,8 +356,8 @@ final class AnnotatedHttpServiceMethod {
 
     private static Class<?> validateWrapperAndElementType(ParameterType paramType,
                                                           Class<?> clazz, Class<?> elementClazz) {
-        assert paramType == ParameterType.PARAM ||
-               paramType == ParameterType.HEADER;
+        assert paramType == ParameterType.PARAM || paramType == ParameterType.HEADER
+                : String.valueOf(paramType);
 
         if (clazz == Optional.class) {
             return Optional.class;
@@ -363,10 +365,13 @@ final class AnnotatedHttpServiceMethod {
 
         // A list of string is supported only for HTTP headers.
         if (paramType == ParameterType.HEADER && elementClazz == String.class) {
-            if (clazz == List.class) {
+            if (clazz == Iterable.class || clazz == List.class) {
                 return ArrayList.class;
             }
-            if (List.class.isAssignableFrom(clazz)) {
+            if (clazz == Set.class) {
+                return LinkedHashSet.class;
+            }
+            if (List.class.isAssignableFrom(clazz) || Set.class.isAssignableFrom(clazz)) {
                 try {
                     // Only if there is a default constructor.
                     clazz.getConstructor();
@@ -501,23 +506,24 @@ final class AnnotatedHttpServiceMethod {
         assert name != null;
 
         final Class<?> wrapperType = entry.wrapperType();
-        if (wrapperType != null && List.class.isAssignableFrom(wrapperType)) {
-            assert entry.type() == String.class;
+        if (wrapperType != null &&
+            (List.class.isAssignableFrom(wrapperType) || Set.class.isAssignableFrom(wrapperType))) {
+            assert entry.type() == String.class : entry.type().getName();
             try {
                 @SuppressWarnings("unchecked")
-                final List<String> list = (List<String>) wrapperType.newInstance();
+                final Collection<String> value = (Collection<String>) wrapperType.newInstance();
 
                 // We do not call convertParameter() here because the element type is String.
-                final List<String> values = req.headers().getAll(AsciiString.of(name));
-                if (values != null || !values.isEmpty()) {
-                    list.addAll(values);
+                final List<String> headerValues = req.headers().getAll(AsciiString.of(name));
+                if (headerValues != null && !headerValues.isEmpty()) {
+                    value.addAll(headerValues);
                 } else {
                     final String defaultValue = entryDefaultValue(entry);
                     if (defaultValue != null) {
-                        list.add(defaultValue);
+                        value.add(defaultValue);
                     }
                 }
-                return values;
+                return value;
             } catch (Throwable cause) {
                 throw new IllegalArgumentException("Cannot get the value of an HTTP header: " + name, cause);
             }
