@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
+import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -446,9 +447,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
 
-        final List<AnnotatedHttpService> entries =
-                AnnotatedHttpServices.build(pathPrefix, service, exceptionHandlersAndConverters);
-        entries.forEach(e -> service(e.pathMapping(), decorator.apply(e.decorator().apply(e))));
+        final List<AnnotatedHttpServiceElement> elements =
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
+        elements.forEach(e -> service(e.pathMapping(), decorator.apply(e.decorator().apply(e.service()))));
         return self();
     }
 

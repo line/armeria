@@ -242,6 +242,23 @@ as the value of parameter ``name``. If there is no parameter named ``name`` in t
         }
     }
 
+If multiple parameters exist with the same name in a query string, they can be injected as a ``List<?>``
+or ``Set<?>`` type, e.g. ``/hello1?number=1&number=2&number=3``. You can use :api:`@Default` annotation
+or ``Optional<?>`` class here, too.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+        @Get("/hello1")
+        public HttpResponse hello1(@Param("number") List<Integer> numbers) { ... }
+
+        @Get("/hello2")
+        public HttpResponse hello2(@Param("number") @Default("1") List<Integer> numbers) { ... }
+
+        @Get("/hello3")
+        public HttpResponse hello3(@Param("number") Optional<List<Integer>> numbers) { ... }
+    }
+
 If an HTTP POST request with a ``Content-Type: x-www-form-urlencoded`` is received and no :api:`@Param`
 value appears in the path pattern, Armeria will aggregate the received request and decode its body as
 a URL-encoded form. After that, Armeria will inject the decoded value into the parameter.
@@ -263,7 +280,8 @@ Getting an HTTP header
 
 Armeria also provides :api:`@Header` annotation to inject an HTTP header value into a parameter.
 The parameter annotated with :api:`@Header` can also be specified as one of the built-in types as follows.
-:api:`@Default` and ``Optional<?>`` are also supported.
+:api:`@Default` and ``Optional<?>`` are also supported. :api:`@Header` annotation also supports
+``List<?>`` or ``Set<?>`` as its type because HTTP headers can be added several times with the same name.
 
 .. code-block:: java
 
@@ -274,6 +292,12 @@ The parameter annotated with :api:`@Header` can also be specified as one of the 
 
         @Post("/hello2")
         public HttpResponse hello2(@Header("Content-Length") long contentLength) { ... }
+
+        @Post("/hello3")
+        public HttpResponse hello3(@Header("Forwarded") List<String> forwarded) { ... }
+
+        @Post("/hello4")
+        public HttpResponse hello4(@Header("Forwarded") Optional<Set<String>> forwarded) { ... }
     }
 
 Note that you can omit the value of :api:`@Header` if you compiled your code with ``-parameters`` javac
@@ -429,8 +453,8 @@ which are annotated with :api:`@RequestObject`.
         }
     }
 
-Armeria also provides built-in request converters such as, :api:`BeanRequestConverterFunction`
-for Java Beans, :api:`JacksonRequestConverterFunction` for JSON documents, :api:`StringRequestConverterFunction`
+Armeria also provides built-in request converters such as, a request converter for Java Beans,
+:api:`JacksonRequestConverterFunction` for JSON documents, :api:`StringRequestConverterFunction`
 for text contents and :api:`ByteArrayRequestConverterFunction` for binary contents. They will be applied
 after your request converters by default, so you can use these built-in converters by just putting
 :api:`@RequestObject` annotation on the parameters which you want to convert.
@@ -455,7 +479,7 @@ converting ``MyRequest``.
 Injecting value of parameters and HTTP headers into a Java object
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-:api:`BeanRequestConverterFunction` is a built-in request converter for Java object. You can use it by
+There is a built-in request converter for Java object. You can use it by
 putting :api:`@RequestObject` annotation on the parameters which you want to convert.
 
 .. code-block:: java
@@ -485,6 +509,9 @@ or HTTP headers:
         @Header("age") // This field will be injected by the value of HTTP header "age".
         private int age;
 
+        @RequestObject // This field will be injected by another request converter.
+        private MyAnotherRequestObject obj;
+
         // You can omit the value of @Param or @Header if you compiled your code with ``-parameters`` javac option.
         @Param         // This field will be injected by the value of parameter "gender".
         private String gender;
@@ -496,14 +523,17 @@ or HTTP headers:
         public void setAddress(String address) { ... }
 
         @Header("id") // You can annotate a single parameter constructor with @Param or @Header.
+        @Default("0")
         public MyRequestObject(long id) { ... }
 
         // You can annotate all parameters of method or constructor with @Param or @Header.
-        public void init(@Header("permissions") String permissions, @Param("client-id") int clientId)
+        public void init(@Header("permissions") String permissions,
+                         @Param("client-id") @Default("0") int clientId)
     }
 
 The usage of :api:`@Param` or :api:`@Header` annotations on Java object elements is much like
-using them on the parameters of service method.
+using them on the parameters of a service method because even you can use :api:`@Default` and
+:api:`@RequestObject` annotations defined there.
 Please refer to :ref:`parameter-injection`, and :ref:`header-injection` for more information.
 
 

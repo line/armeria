@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
  * @see RequestConverter
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.PARAMETER)
+@Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR })
 public @interface RequestObject {
 
     /**
