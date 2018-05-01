@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
@@ -28,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -73,15 +76,21 @@ public interface MeterIdPrefixFunction {
                 methodName = MoreObjects.firstNonNull(log.method().name(), "__UNKNOWN_METHOD__");
             }
 
+            final List<Tag> tags = new ArrayList<>(4); // method, hostNamePattern, pathMapping, status
+            tags.add(Tag.of("method", methodName));
+
             if (ctx instanceof ServiceRequestContext) {
                 final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                return new MeterIdPrefix(name,
-                                         "hostnamePattern", sCtx.virtualHost().hostnamePattern(),
-                                         "pathMapping", sCtx.pathMapping().meterTag(),
-                                         "method", methodName);
-            } else {
-                return new MeterIdPrefix(name, "method", methodName);
+                tags.add(Tag.of("hostnamePattern", sCtx.virtualHost().hostnamePattern()));
+                tags.add(Tag.of("pathMapping", sCtx.pathMapping().meterTag()));
             }
+
+            if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS) &&
+                log.status() != null) {
+                tags.add(Tag.of("status", String.valueOf(log.statusCode())));
+            }
+
+            return new MeterIdPrefix(name, tags);
         };
     }
 
