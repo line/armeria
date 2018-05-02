@@ -32,6 +32,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -40,11 +42,13 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -82,7 +86,8 @@ public class ArmeriaAutoConfigurationTest {
                     .setServiceName("annotatedService")
                     .setService(new AnnotatedService())
                     .setPathPrefix("/annotated")
-                    .setDecorator(LoggingService.newDecorator());
+                    .setDecorator(LoggingService.newDecorator())
+                    .setExceptionHandlers(ImmutableList.of(new IllegalArgumentExceptionHandler()));
         }
 
         @Bean
@@ -105,10 +110,27 @@ public class ArmeriaAutoConfigurationTest {
         }
     }
 
+    public static class IllegalArgumentExceptionHandler implements ExceptionHandlerFunction {
+
+        @Override
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+            if (cause instanceof IllegalArgumentException) {
+                return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "exception");
+            }
+            return ExceptionHandlerFunction.fallthrough();
+        }
+    }
+
     public static class AnnotatedService {
         @Get("/get")
         public AggregatedHttpMessage get() {
             return AggregatedHttpMessage.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "annotated");
+        }
+
+        // Handles by AnnotatedServiceRegistrationBean#exceptionHandlers
+        @Get("/get/2")
+        public AggregatedHttpMessage getV2() {
+            throw new IllegalArgumentException();
         }
     }
 
@@ -140,6 +162,11 @@ public class ArmeriaAutoConfigurationTest {
         AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.content().toStringUtf8()).isEqualTo("annotated");
+
+        response = client.get("/annotated/get/2");
+        msg = response.aggregate().get();
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.content().toStringUtf8()).isEqualTo("exception");
     }
 
     @Test

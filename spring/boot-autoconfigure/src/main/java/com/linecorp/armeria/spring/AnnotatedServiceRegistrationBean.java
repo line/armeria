@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.spring;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.function.Function;
 
 import javax.validation.constraints.NotNull;
@@ -22,6 +24,7 @@ import javax.validation.constraints.NotNull;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 
 /**
  * A bean with information for registering an annotated service object. It enables dropwizard
@@ -33,7 +36,8 @@ import com.linecorp.armeria.server.Service;
  * >             .setServiceName("myAnnotatedService")
  * >             .setPathPrefix("/my_service")
  * >             .setService(new MyAnnotatedService())
- * >             .setDecorator(LoggingService.newDecorator());
+ * >             .setDecorator(LoggingService.newDecorator())
+ * >             .setExceptionHandlers(ImmutableList.of(new MyExceptionHandler()));
  * > }
  * }</pre>
  */
@@ -63,6 +67,12 @@ public class AnnotatedServiceRegistrationBean {
     @NotNull
     private Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
+
+    /**
+     * The exception handlers of the annotated service object.
+     */
+    @NotNull
+    private Collection<? extends ExceptionHandlerFunction> exceptionHandlers = new ArrayList<>();
 
     /**
      * Returns the annotated service object registered to this bean.
@@ -128,6 +138,16 @@ public class AnnotatedServiceRegistrationBean {
             @NotNull Function<Service<HttpRequest, HttpResponse>,
                               ? extends Service<HttpRequest, HttpResponse>> decorator) {
         this.decorator = decorator;
+        return this;
+    }
+
+    public Collection<? extends ExceptionHandlerFunction> getExceptionHandlers() {
+        return exceptionHandlers;
+    }
+
+    public AnnotatedServiceRegistrationBean setExceptionHandlers(
+            @NotNull Collection<? extends ExceptionHandlerFunction> exceptionHandlers) {
+        this.exceptionHandlers = exceptionHandlers;
         return this;
     }
 }

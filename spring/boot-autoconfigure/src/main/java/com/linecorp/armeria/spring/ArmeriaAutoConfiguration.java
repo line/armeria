@@ -49,6 +49,7 @@ import com.codahale.metrics.json.MetricsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -168,7 +169,12 @@ public class ArmeriaAutoConfiguration {
                 decorator = decorator.andThen(MetricCollectingService.newDecorator(
                         meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
-            server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator);
+            ImmutableList.Builder<Object> exceptionHandlersAndConverters = ImmutableList.builder();
+            if (bean.getExceptionHandlers().isEmpty()) {
+                exceptionHandlersAndConverters.addAll(bean.getExceptionHandlers());
+            }
+            server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator,
+                                    exceptionHandlersAndConverters.build());
         }));
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getHealthCheckPath())) {
