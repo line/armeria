@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.internal.metric;
 
-import static com.linecorp.armeria.common.metric.MoreMeters.summaryWithDefaultQuantiles;
-import static com.linecorp.armeria.common.metric.MoreMeters.timerWithDefaultQuantiles;
+import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSummary;
+import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -163,15 +163,15 @@ public final class RequestMetricSupport {
             success = parent.counter(requests, idPrefix.tags("result", "success"));
             failure = parent.counter(requests, idPrefix.tags("result", "failure"));
 
-            requestDuration = timerWithDefaultQuantiles(
+            requestDuration = newTimer(
                     parent, idPrefix.name("requestDuration"), idPrefix.tags());
-            requestLength = summaryWithDefaultQuantiles(
+            requestLength = newDistributionSummary(
                     parent, idPrefix.name("requestLength"), idPrefix.tags());
-            responseDuration = timerWithDefaultQuantiles(
+            responseDuration = newTimer(
                     parent, idPrefix.name("responseDuration"), idPrefix.tags());
-            responseLength = summaryWithDefaultQuantiles(
+            responseLength = newDistributionSummary(
                     parent, idPrefix.name("responseLength"), idPrefix.tags());
-            totalDuration = timerWithDefaultQuantiles(
+            totalDuration = newTimer(
                     parent, idPrefix.name("totalDuration"), idPrefix.tags());
         }
 
