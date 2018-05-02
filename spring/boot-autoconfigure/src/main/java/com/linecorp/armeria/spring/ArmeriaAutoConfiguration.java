@@ -169,12 +169,14 @@ public class ArmeriaAutoConfiguration {
                 decorator = decorator.andThen(MetricCollectingService.newDecorator(
                         meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
-            ImmutableList.Builder<Object> exceptionHandlersAndConverters = ImmutableList.builder();
-            if (bean.getExceptionHandlers().isEmpty()) {
-                exceptionHandlersAndConverters.addAll(bean.getExceptionHandlers());
-            }
+            ImmutableList<Object> exceptionHandlersAndConverters =
+                    ImmutableList.builder()
+                                 .addAll(bean.getExceptionHandlers())
+                                 .addAll(bean.getRequestConverters())
+                                 .addAll(bean.getResponseConverters())
+                                 .build();
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator,
-                                    exceptionHandlersAndConverters.build());
+                                    exceptionHandlersAndConverters);
         }));
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getHealthCheckPath())) {

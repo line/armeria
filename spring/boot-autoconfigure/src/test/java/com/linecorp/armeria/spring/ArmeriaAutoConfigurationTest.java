@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Collection;
 import java.util.Collections;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.junit.Test;
@@ -37,6 +38,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -50,6 +52,8 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
@@ -87,7 +91,9 @@ public class ArmeriaAutoConfigurationTest {
                     .setService(new AnnotatedService())
                     .setPathPrefix("/annotated")
                     .setDecorator(LoggingService.newDecorator())
-                    .setExceptionHandlers(ImmutableList.of(new IllegalArgumentExceptionHandler()));
+                    .setExceptionHandlers(ImmutableList.of(new IllegalArgumentExceptionHandler()))
+                    .setRequestConverters(ImmutableList.of(new StringRequestConverterFunction()))
+                    .setResponseConverters(ImmutableList.of(new StringResponseConverter()));
         }
 
         @Bean
@@ -118,6 +124,19 @@ public class ArmeriaAutoConfigurationTest {
                 return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "exception");
             }
             return ExceptionHandlerFunction.fallthrough();
+        }
+    }
+
+    public static class StringResponseConverter implements ResponseConverterFunction {
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result)
+                throws Exception {
+            if (result instanceof String) {
+                return HttpResponse.of(HttpStatus.OK,
+                                       MediaType.ANY_TEXT_TYPE,
+                                       HttpData.ofUtf8(result.toString()));
+            }
+            return ResponseConverterFunction.fallthrough();
         }
     }
 
