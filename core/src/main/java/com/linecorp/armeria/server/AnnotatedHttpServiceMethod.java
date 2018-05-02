@@ -338,11 +338,11 @@ final class AnnotatedHttpServiceMethod {
         if (parameterizedType instanceof ParameterizedType) {
             try {
                 type = (Class<?>) ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
-                wrapperType = validateWrapperAndElementType(paramType, parameterInfo.getType(), type);
             } catch (Throwable cause) {
                 throw new IllegalArgumentException("Invalid optional parameter: " + parameterInfo.getName(),
                                                    cause);
             }
+            wrapperType = validateWrapperAndElementType(paramType, parameterInfo.getType(), type);
         } else {
             type = parameterInfo.getType();
             wrapperType = null;
@@ -365,7 +365,7 @@ final class AnnotatedHttpServiceMethod {
 
         // A list of string is supported only for HTTP headers.
         if (paramType == ParameterType.HEADER && elementClazz == String.class) {
-            if (clazz == Iterable.class || clazz == List.class) {
+            if (clazz == Iterable.class || clazz == List.class || clazz == Collection.class) {
                 return ArrayList.class;
             }
             if (clazz == Set.class) {
