@@ -35,7 +35,7 @@ com.google.code.findbugs:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '24.1-jre'
+    version: &GUAVA_VERSION '25.0-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -59,7 +59,7 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.5' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.9' }
+  checkstyle: { version: '8.10' }
 
 com.spotify:
   completable-futures:
@@ -148,12 +148,12 @@ io.prometheus:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '4.19.1'
+    version: &BRAVE_VERSION '4.19.2'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/4.19.1/
+    - https://static.javadoc.io/io.zipkin.brave/brave/4.19.2/
 
 io.zipkin.java:
-  zipkin: { version: &ZIPKIN_VERSION '2.7.1' }
+  zipkin: { version: &ZIPKIN_VERSION '2.8.3' }
 
 it.unimi.dsi:
   fastutil:
@@ -175,7 +175,7 @@ junit:
     - https://junit.org/junit4/javadoc/4.12/
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.2.0' }
+  sphinx-gradle-plugin: { version: '2.2.2' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -241,7 +241,7 @@ org.apache.tomcat.embed:
 
 org.apache.zookeeper:
   zookeeper:
-    version: '3.4.11'
+    version: '3.4.12'
     exclusions:
     - jline:jline
     - log4j:log4j
@@ -261,7 +261,7 @@ org.bouncycastle:
       to: com.linecorp.armeria.internal.shaded.bouncycastle
 
 org.checkerframework:
-  checker-compat-qual: { version: '2.5.0' }
+  checker-compat-qual: { version: '2.5.1' }
 
 org.curioswitch.curiostack:
   protobuf-jackson: { version: '0.2.1' }
