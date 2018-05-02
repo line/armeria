@@ -143,9 +143,7 @@ public final class AnnotatedHttpServiceParamUtil {
      * it is not supported.
      *
      * @param clazz parameter type to be validated and normalized
-     *
      * @return normalized parameter type
-     *
      * @throws IllegalArgumentException if {@code clazz} is not a supported data type.
      */
     public static Class<?> validateAndNormalizeSupportedType(Class<?> clazz) {

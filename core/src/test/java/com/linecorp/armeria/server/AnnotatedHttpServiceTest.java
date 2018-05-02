@@ -22,8 +22,11 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -589,9 +592,24 @@ public class AnnotatedHttpServiceTest {
             return "unMatched";
         }
 
-        @Post("/customHeader")
-        public String customHeader(@Header String aName) {
-            return aName + " is awesome";
+        @Post("/customHeader1")
+        public String customHeader1(@Header List<String> aName) {
+            return String.join(":", aName) + " is awesome";
+        }
+
+        @Post("/customHeader2")
+        public String customHeader2(@Header Set<String> aName) {
+            return String.join(":", aName) + " is awesome";
+        }
+
+        @Post("/customHeader3")
+        public String customHeader3(@Header LinkedList<String> aName) {
+            return String.join(":", aName) + " is awesome";
+        }
+
+        @Post("/customHeader4")
+        public String customHeader3(@Header TreeSet<String> aName) {
+            return String.join(":", aName) + " is awesome";
         }
 
         @Get("/headerDefault")
@@ -816,9 +834,21 @@ public class AnnotatedHttpServiceTest {
             request.setHeader(org.apache.http.HttpHeaders.IF_MATCH, "737060cd8c284d8af7ad3082f209582d");
             testBody(hc, request, "matched");
 
-            request = post("/11/customHeader");
+            request = post("/11/customHeader1");
             request.setHeader("a-name", "minwoox");
             testBody(hc, request, "minwoox is awesome");
+
+            for (int i = 1; i < 4; i++) {
+                request = post("/11/customHeader" + i);
+                request.addHeader("a-name", "minwoox");
+                request.addHeader("a-name", "giraffe");
+                testBody(hc, request, "minwoox:giraffe is awesome");
+            }
+
+            request = post("/11/customHeader4");
+            request.addHeader("a-name", "minwoox");
+            request.addHeader("a-name", "giraffe");
+            testBody(hc, request, "giraffe:minwoox is awesome");
 
             request = get("/11/headerDefault");
             testBody(hc, request, "hello/world/(null)");
