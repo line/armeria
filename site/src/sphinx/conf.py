@@ -57,7 +57,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinxcontrib.httpdomain', 
               'sphinxcontrib.inlinesyntaxhighlight',
               'sphinxcontrib.plantuml',
-              'api']
+              'api', 'parsed_literal_highlight']
 templates_path = ['_templates']
 source_suffix = '.rst'
 source_encoding = 'utf-8-sig'
@@ -75,5 +75,8 @@ html_use_index = True
 html_show_sourcelink = False
 htmlhelp_basename = project_short
 
-# PlantUML options
+# sphinxcontrib-plantuml options
 plantuml = os.getenv('plantuml')
+
+# sphinxcontrib-inlinesyntaxhighlight options
+inline_highlight_literals = False
