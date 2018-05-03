@@ -578,7 +578,9 @@ Using ``ServerBuilder`` to configure converters and exception handlers
 ----------------------------------------------------------------------
 
 You can specify converters and exception handlers using :api:`ServerBuilder`, without using the annotations
-explained in the previous sections::
+explained in the previous sections:
+
+.. code-block:: java
 
     sb.annotatedService(new MyAnnotatedService(),
                         new MyExceptionHandler(), new MyRequestConverter(), new MyResponseConverter());
@@ -878,12 +880,16 @@ to your client request.
         }
     }
 
-A request like the following would get a text document::
+A request like the following would get a text document:
+
+.. code-block:: http
 
     GET /hello HTTP/1.1
     Accept: text/plain
 
-A request like the following would get a JSON object::
+A request like the following would get a JSON object:
+
+.. code-block:: http
 
     GET /hello HTTP/1.1
     Accept: application/json
@@ -944,7 +950,9 @@ You can annotate them with :api:`@ConsumeType` annotation.
         }
     }
 
-A request like the following would be handled by ``helloText()`` method::
+A request like the following would be handled by ``helloText()`` method:
+
+.. code-block:: http
 
     POST /hello HTTP/1.1
     Content-Type: text/plain
@@ -952,7 +960,9 @@ A request like the following would be handled by ``helloText()`` method::
 
     Armeria
 
-A request like the following would be handled by ``helloJson()`` method::
+A request like the following would be handled by ``helloJson()`` method:
+
+.. code-block:: http
 
     POST /hello HTTP/1.1
     Content-Type: application/json

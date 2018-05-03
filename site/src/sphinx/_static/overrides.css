@@ -166,7 +166,8 @@ code.literal, .rst-content code.literal {
 code::before, code::after,
 kbd::before, kbd::after,
 var::before, var::after,
-samp::before, samp::after {
+samp::before, samp::after,
+tt::before, tt::after {
   letter-spacing: -0.3em;
   content: "\00a0";
 }

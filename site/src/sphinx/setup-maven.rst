@@ -8,6 +8,7 @@ Setting up a project with Maven
 Armeria is distributed via `Maven Central Repository`_. Add the following dependency to your ``pom.xml``:
 
 .. parsed-literal::
+    :class: highlight-xml
 
     <project>
       ...
