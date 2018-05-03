@@ -6,6 +6,7 @@ Setting up a project with Gradle
 You might want to use the following  ``build.gradle`` as a starting point if you set up a new project:
 
 .. parsed-literal::
+    :class: highlight-groovy
 
     apply plugin: 'java'
     apply plugin: 'idea'
@@ -13,10 +14,6 @@ You might want to use the following  ``build.gradle`` as a starting point if you
 
     repositories {
         mavenCentral()
-    }
-
-    configurations {
-        javaAgent
     }
 
     dependencies {
