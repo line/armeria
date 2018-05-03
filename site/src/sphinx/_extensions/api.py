@@ -9,6 +9,14 @@ import re
 
 
 def api_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
+    return api_role_internal(False, role, rawtext, text, lineno, inliner, options, content)
+
+
+def apiplural_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
+    return api_role_internal(True, role, rawtext, text, lineno, inliner, options, content)
+
+
+def api_role_internal(plural, role, rawtext, text, lineno, inliner, options, content):
     set_classes(options)
 
     classes = ['code', 'api-reference']
@@ -16,7 +24,7 @@ def api_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
     if 'classes' in options:
         classes.extend(options['classes'])
 
-    node = nodes.literal(rawtext, text, classes=classes, api_reference=True)
+    node = nodes.literal(rawtext, text, classes=classes, api_reference=True, is_plural=plural)
     return [node], []
 
 
@@ -72,12 +80,18 @@ def api_visit_literal(self, node, next_visitor):
         text = '@' + text
 
     # Emit the tags.
-    self.body.append(self.starttag(node, 'a', suffix='',
-                                   CLASS='reference external javadoc',
-                                   HREF=uri) +
-                     self.starttag(node, 'code', suffix='',
-                                   CLASS='docutils literal javadoc') +
-                     text + '</code></a>')
+    self.body.append(self.starttag(node, 'code', suffix='', CLASS='docutils literal javadoc'))
+    self.body.append(self.starttag(node, 'a', suffix='', CLASS='reference external javadoc', HREF=uri))
+    self.body.append(text + '</a>')
+    # Append a plural suffix.
+    if node.attributes['is_plural']:
+        self.body.append(self.starttag(node, 'span', suffix='', CLASS='plural-suffix'))
+        if re.fullmatch(r'^.*(ch|s|sh|x|z)$', text):
+            self.body.append('es')
+        else:
+            self.body.append('s')
+        self.body.append('</span>')
+    self.body.append('</code>')
 
     raise nodes.SkipNode
 
@@ -88,6 +102,7 @@ def setup(app):
     # Register the 'javadoc' role.
     api_role.options = {'class': directives.class_option}
     register_canonical_role('api', api_role)
+    register_canonical_role('apiplural', apiplural_role)
 
     # Intercept the rendering of HTML literals.
     old_visitor = HTMLTranslator.visit_literal
