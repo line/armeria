@@ -255,6 +255,11 @@ p, .rst-content li {
   text-align: center;
 }
 
+/* Plural suffix inside code should not be monospaced. */
+code .plural-suffix {
+  font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
+}
+
 /* Armeria branding begins. */
 .wy-nav-top, .wy-side-nav-search {
   background-color: #3a3a3a;

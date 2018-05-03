@@ -6,20 +6,15 @@
 
 Service discovery with ZooKeeper
 ================================
-You can put the list of available endpoints into a zNode in `Apache ZooKeeper`_ cluster, as a node tree or
-as a node value, like the following:
+You can put the list of available :apiplural:`Endpoint` into a zNode in `Apache ZooKeeper`_ cluster
+as a node tree, like the following:
 
 .. code-block:: yaml
 
-    # (Recommended) When stored as a node tree:
     # Note: Only child node values are used. i.e. Child node names are ignored.
     - /myProductionEndpoints
       - /192.168.1.10_8080: 192.168.1.10:8080
       - /192.168.1.11_8080: 192.168.1.11:8080:100
-
-    # When stored as a node value:
-    - /myProductionEndpoints: 192.168.1.10:8080,192.168.1.11:8080:100
-
 
 In the examples above, ``192.168.1.10`` and other IP strings are your servers' IP addresses, ``8080`` is a
 service port number and ``100`` is a weight value. You can omit a weight value as it is optional.
@@ -62,17 +57,15 @@ Use :api:`ZooKeeperUpdatingListenerBuilder` to register your server to a ZooKeep
     import com.linecorp.armeria.server.ServerListener;
     import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListenerBuilder;
 
-    // This constructor will use server's default host name, port and weight.
-    // Use 'nodeValueCodec' method to override the defaults.
     ZookeeperUpdatingListener listener =
             new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
-            .sessionTimeout(10000)
-            .build();
+                    .sessionTimeout(10000)
+                    .build();
     server.addListener(listener);
     server.start();
     ...
 
-You can use an existing `CuratorFramework`_ instance instead of Zookeeper connection string.
+You can also use an existing `CuratorFramework`_ instance instead of ZooKeeper connection string:
 
 .. code-block:: java
 
@@ -83,8 +76,8 @@ You can use an existing `CuratorFramework`_ instance instead of Zookeeper connec
     CuratorFramework client = ...
     ZookeeperUpdatingListener listener =
             new ZooKeeperUpdatingListenerBuilder(client, "/myProductionEndpoints")
-            .nodeValueCodec(NodeValueCodec.DEFAULT)
-            .build();
+                    .nodeValueCodec(NodeValueCodec.DEFAULT)
+                    .build();
     server.addListener(listener);
     server.start();
     ...
