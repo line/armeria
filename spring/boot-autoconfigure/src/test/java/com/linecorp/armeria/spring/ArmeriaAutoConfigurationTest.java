@@ -38,7 +38,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -121,7 +120,7 @@ public class ArmeriaAutoConfigurationTest {
         @Override
         public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             if (cause instanceof IllegalArgumentException) {
-                return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "exception");
+                return HttpResponse.of("exception");
             }
             return ExceptionHandlerFunction.fallthrough();
         }
@@ -134,7 +133,7 @@ public class ArmeriaAutoConfigurationTest {
             if (result instanceof String) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.ANY_TEXT_TYPE,
-                                       HttpData.ofUtf8(result.toString()));
+                                       result.toString());
             }
             return ResponseConverterFunction.fallthrough();
         }

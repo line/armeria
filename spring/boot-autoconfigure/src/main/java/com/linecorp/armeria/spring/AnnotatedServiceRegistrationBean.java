@@ -41,9 +41,9 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * >             .setPathPrefix("/my_service")
  * >             .setService(new MyAnnotatedService())
  * >             .setDecorator(LoggingService.newDecorator())
- * >             .setExceptionHandlers(ImmutableList.of(new MyExceptionHandler()))
- * >             .setRequestConverters(ImmutableList.of(new MyRequestConverter()))
- * >             .setResponseConverters(ImmutableList.of(new MyResponseConverter()));
+ * >             .setExceptionHandlers(new MyExceptionHandler())
+ * >             .setRequestConverters(new MyRequestConverter())
+ * >             .setResponseConverters(new MyResponseConverter());
  * > }
  * }</pre>
  */
