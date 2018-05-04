@@ -21,6 +21,8 @@ import java.util.function.Function;
 
 import javax.validation.constraints.NotNull;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
@@ -168,9 +170,17 @@ public class AnnotatedServiceRegistrationBean {
      * Sets the exception handlers of the annotated service object.
      */
     public AnnotatedServiceRegistrationBean setExceptionHandlers(
-            @NotNull Collection<? extends ExceptionHandlerFunction> exceptionHandlers) {
+            Collection<? extends ExceptionHandlerFunction> exceptionHandlers) {
         this.exceptionHandlers = exceptionHandlers;
         return this;
+    }
+
+    /**
+     * Sets the exception handlers of the annotated service object.
+     */
+    public AnnotatedServiceRegistrationBean setExceptionHandlers(
+            ExceptionHandlerFunction... exceptionHandlers) {
+        return setExceptionHandlers(ImmutableList.copyOf(exceptionHandlers));
     }
 
     /**
@@ -190,6 +200,14 @@ public class AnnotatedServiceRegistrationBean {
     }
 
     /**
+     * Sets the request converters of the annotated service object.
+     */
+    public AnnotatedServiceRegistrationBean setRequestConverters(
+            RequestConverterFunction... requestConverters) {
+        return setRequestConverters(ImmutableList.copyOf(requestConverters));
+    }
+
+    /**
      * Returns the response converters of the annotated service object.
      */
     public Collection<? extends ResponseConverterFunction> getResponseConverters() {
@@ -203,5 +221,13 @@ public class AnnotatedServiceRegistrationBean {
             Collection<? extends ResponseConverterFunction> responseConverters) {
         this.responseConverters = responseConverters;
         return this;
+    }
+
+    /**
+     * Sets the response converters of the annotated service object.
+     */
+    public AnnotatedServiceRegistrationBean setResponseConverters(
+            ResponseConverterFunction... responseConverters) {
+        return setResponseConverters(ImmutableList.copyOf(responseConverters));
     }
 }
