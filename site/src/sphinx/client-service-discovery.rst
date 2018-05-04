@@ -166,7 +166,7 @@ be removed from the list.
     // Decorate the EndpointGroup with HttpHealthCheckedEndpointGroup
     // that sends HTTP health check requests to '/internal/l7check' every 10 seconds.
     HttpHealthCheckedEndpointGroup healthCheckedGroup =
-            new HttpHealthCheckedEndpointGroupBuilder(searchEngineGroup, "/internal/l7check")
+            new HttpHealthCheckedEndpointGroupBuilder(group, "/internal/l7check")
                     .protocol(SessionProtocol.HTTP)
                     .retryInterval(Duration.ofSeconds(10))
                     .build();
@@ -176,6 +176,11 @@ be removed from the list.
 
     // Register the health-checked group.
     EndpointGroupRegistry.register("my-group", healthCheckedGroup);
+
+.. note::
+
+    You can decorate *any* :api:`EndpointGroup` implementations with :api:`HttpHealthCheckedEndpointGroup`,
+    including what we will explain later in this page.
 
 
 DNS-based service discovery with ``DnsEndpointGroup``
