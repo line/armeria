@@ -32,6 +32,12 @@ import io.prometheus.client.CollectorRegistry;
 public final class PrometheusMeterRegistries {
 
     /**
+     * The default {@link PrometheusMeterRegistry} that uses {@link CollectorRegistry#defaultRegistry}.
+     */
+    public static final PrometheusMeterRegistry defaultRegistry =
+            newRegistry(CollectorRegistry.defaultRegistry);
+
+    /**
      * Returns a newly-created {@link PrometheusMeterRegistry} instance with a new {@link CollectorRegistry}.
      */
     public static PrometheusMeterRegistry newRegistry() {
