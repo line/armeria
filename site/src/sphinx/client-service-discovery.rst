@@ -4,7 +4,7 @@ Client-side load balancing and service discovery
 ================================================
 
 You can configure an Armeria client to distribute its requests to more than one server autonomously, unlike
-traditional server-side load balancing where the requests goes through a dedicated load balancer such as
+traditional server-side load balancing where the requests go through a dedicated load balancer such as
 `L4 and L7 switches <https://en.wikipedia.org/wiki/Multilayer_switch#Layer_4%E2%80%937_switch,_web_switch,_or_content_switch>`_.
 
 There are 4 elements involved in client-side load balancing in Armeria:
@@ -13,8 +13,8 @@ There are 4 elements involved in client-side load balancing in Armeria:
 - :api:`EndpointGroup` represents a set of :apiplural:`Endpoint`.
 - :api:`EndpointGroupRegistry` is a global registry of :apiplural:`EndpointGroup` where each
   :api:`EndpointGroup` is identified by its unique name.
-- A user specifies the target group name in a URI,
-  e.g. ``http://group:my_group/`` where ``my_group`` is the group name.
+- A user specifies the target group name in the authority part of a URI,
+  e.g. ``http://group:my_group/`` where ``my_group`` is the group name, prefixed with ``group:``.
 
 .. uml::
 
@@ -71,7 +71,7 @@ An :api:`EndpointGroup` becomes visible by a client such as :api:`HttpClient` on
 - An :api:`EndpointSelectionStrategy` that determines which :api:`Endpoint` is used for each request
 
   - Use ``EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN`` for weighted round robin.
-  - Use ``EndpointSelectionStrategy.ROUND_ROBIN`` for unweighted rounb robin.
+  - Use ``EndpointSelectionStrategy.ROUND_ROBIN`` for unweighted round robin.
   - Use :api:`StickyEndpointSelectionStrategy` if you want to pin the requests based on a criteria
     such as a request parameter value.
   - You can implement your own :api:`EndpointSelectionStrategy`.
@@ -109,7 +109,7 @@ Once an :api:`EndpointGroup` is registered, you can use its name in the authorit
     HttpClient client = HttpClient.of("https://group:search_engines/");
 
     // Send a GET request to each search engine.
-    List<CompletableFuture<? >> futures = new ArrayList<>();
+    List<CompletableFuture<?>> futures = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
         final HttpResponse res = client.get("/");
         final CompletableFuture<AggregatedHttpMessage> f = res.aggregate();
@@ -153,7 +153,7 @@ Removing unhealthy ``Endpoint`` with ``HttpHealthCheckedEndpointGroup``
 :apiplural:`Endpoint` from it so that a client has less chance of sending its requests to the unhealthy
 :apiplural:`Endpoint`. It determines the healthiness by sending so called 'health check request' to each
 :api:`Endpoint`, which is by default a simple ``GET`` request to a certain path. If an :api:`Endpoint`
-responds with non-200 status code or does not respond in time, it will be marked unhealthy and thus
+responds with non-200 status code or does not respond in time, it will be marked as unhealthy and thus
 be removed from the list.
 
 .. code-block:: java
@@ -168,7 +168,7 @@ be removed from the list.
     HttpHealthCheckedEndpointGroup healthCheckedGroup =
             new HttpHealthCheckedEndpointGroupBuilder(searchEngineGroup, "/internal/l7check")
                     .protocol(SessionProtocol.HTTP)
-                    .retryInternal(Duration.ofSeconds(10))
+                    .retryInterval(Duration.ofSeconds(10))
                     .build();
 
     // Wait until the initial health check is finished.
@@ -194,7 +194,7 @@ They refresh the :api:`Endpoint` list automatically, respecting TTL values, and 
 
     DnsAddressEndpointGroup group =
             new DnsAddressEndpointGroupBuilder("www.google.com")
-                    // Do not refresh more often than every 10 seconds and
+                    // Refresh more often than every 10 seconds and
                     // less often than every 60 seconds even if DNS server asks otherwise.
                     .ttl(/* minTtl */ 10, /* maxTtl */ 60)
                     .build();
