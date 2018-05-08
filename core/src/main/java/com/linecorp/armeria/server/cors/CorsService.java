@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.cors;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -57,7 +56,8 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
 
     private static final String ANY_ORIGIN = "*";
     private static final String NULL_ORIGIN = "null";
-    private static final Joiner HEADER_JOINER = Joiner.on(',');
+    private static final String DELIMITER = ",";
+    private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
 
     private final CorsConfig config;
 
@@ -261,15 +261,13 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
             return;
         }
 
-        headers.set(
-            HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, HEADER_JOINER.join(exposedHeaders));
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, HEADER_JOINER.join(exposedHeaders));
     }
 
     private void setCorsAllowMethods(final HttpHeaders headers) {
-        List<String> methods = config.allowedRequestMethods()
-                                     .stream().map(HttpMethod::name).collect(Collectors.toList());
-        headers.set(
-            HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, HEADER_JOINER.join(methods));
+        String methods = config.allowedRequestMethods()
+                                     .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, methods);
     }
 
     private void setCorsAllowHeaders(final HttpHeaders headers) {
@@ -278,8 +276,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
             return;
         }
 
-        headers.set(
-            HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, HEADER_JOINER.join(allowedHeaders));
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, HEADER_JOINER.join(allowedHeaders));
     }
 
     private void setCorsMaxAge(final HttpHeaders headers) {
