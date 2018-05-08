@@ -5,7 +5,7 @@ Browsing and invoking services with ``DocService``
 
 :api:`DocService` is a single-page web application which provides the following useful features:
 
-- Browsing the list of services and operations available in the server
+- Browsing the list of gRPC or Thrift services and operations available in the server
 - Invoking a service operation from a web form
 - Creating a permalink for the invocation you've made
 
@@ -15,10 +15,21 @@ First, add :api:`DocService` to the :api:`ServerBuilder`:
 
     ServerBuilder sb = new ServerBuilder();
     sb.http(8080);
-    // Add some RPC services.
-    sb.service("/hello", THttpService.of(new MyHelloService());
-    // Add DocService.
+
+    // Add a Thrift service which implements 'ThriftHelloService'.
+    sb.service("/hello", THttpService.of(new MyThriftHelloService()));
+
+    // Add a gRPC service which implements 'GrpcHelloService'.
+    // Unlike Thrift, you must enable gRPC-Web and unframed requests explicitly.
+    sb.service(new GrpcServiceBuilder().addService(new MyGrpcHelloService())
+                                       .supportedSerializationFormats(
+                                               GrpcSerializationFormats.values())
+                                       .enableUnframedRequests(true)
+                                       .build());
+
+    // Add a DocService which scans all Thrift and gRPC services added to the server.
     sb.serviceUnder("/docs", new DocService());
+
     Server server = sb.build();
     server.start().join();
 
@@ -60,7 +71,7 @@ The result pane right next to the text area you entered the JSON request will sh
 
 The current location of your web browser should be updated like the following:
 
-- ``http://127.0.0.1:8080/docs/#!method/com.example.thrift.HelloService/hello?args=%7B%22name%22%3A%22Armeria%22%7D``
+- ``http://127.0.0.1:8080/docs/#!method/com.example.ThriftHelloService/hello?args=%7B%22name%22%3A%22Armeria%22%7D``
 
 Imagine you build a request that reproduces the problem using the debug form and share the URL of the request
 with your colleagues. It's way more convenient than traditional workflow for replaying an RPC request.
@@ -89,8 +100,14 @@ when building a :api:`DocService` with a :api:`DocServiceBuilder`:
     ServerBuilder sb = new ServerBuilder();
     ...
     sb.serviceUnder("/docs", new DocServiceBuilder()
+            // HTTP headers for all services
             .exampleHttpHeaders(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"))
-            .exampleRequest(new HelloService.hello_args("Armeria"))
+            // Thrift example request for 'ThriftHelloService.hello()'
+            .exampleRequest(new ThriftHelloService.hello_args("Armeria"))
+            // gRPC example request for 'GrpcHelloService.Hello()'
+            .exampleRequestForMethod(GrpcHelloServiceGrpc.SERVICE_NAME,
+                                     "Hello", // Method name
+                                     HelloRequest.newBuilder().setName("Armeria").build())
             .build());
     ...
 
