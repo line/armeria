@@ -54,8 +54,8 @@ html, body, .wy-grid-for-nav {
   padding: 0;
 }
 
-.wy-menu.wy-menu-vertical .slack-invitation,
-.wy-menu.wy-menu-vertical .project-badges {
+.wy-menu .slack-invitation,
+.wy-menu .project-badges {
   padding: 0.4em 1.45em 0 1.45em;
   display: block;
   position: relative;
@@ -84,7 +84,7 @@ html, body, .wy-grid-for-nav {
   }
 }
 
-/* Move the right-side breadcrumb a little bit left so that it does not overlap with the Github fork ribbom. */
+/* Move the right-side breadcrumb a little bit left so that it does not overlap with the Github fork ribbon. */
 @media screen and (min-width: 769px) {
   .wy-breadcrumbs-aside {
     padding-right: 64px;
@@ -151,11 +151,13 @@ code.literal, .rst-content code.literal {
   white-space: pre-wrap;
 }
 
-/* Literals in vertical menu */
-.wy-menu-vertical li tt,
-.wy-menu-vertical li code {
+/* Literals in menu */
+.wy-menu tt,
+.wy-menu code {
   padding-left: 0;
   padding-right: 0;
+  background: inherit;
+  border-radius: 0;
   font-size: inherit;
   color: inherit;
   border: none;
@@ -172,11 +174,11 @@ tt::before, tt::after {
   content: "\00a0";
 }
 
-/* Do not add small padding around a literal in vertical menu. */
-.wy-menu-vertical li tt::before,
-.wy-menu-vertical li tt::after,
-.wy-menu-vertical li code::before,
-.wy-menu-vertical li code::after {
+/* Do not add small padding around a literal in menu. */
+.wy-menu tt::before,
+.wy-menu tt::after,
+.wy-menu code::before,
+.wy-menu code::after {
   content: "";
 }
 
@@ -189,9 +191,11 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
 }
 
-/* Use justify-align with hyphenation */
+/* Use justify-align and hyphenation. */
 p, .rst-content li {
   text-align: justify;
+}
+p, .rst-content li, .wy-menu li {
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
@@ -273,15 +277,15 @@ code .plural-suffix {
   background-color: #f8f8f8;
 }
 
-.wy-menu-vertical a {
+.wy-menu a {
   color: #666666;
 }
 
-.wy-menu-vertical a:active, .wy-menu-vertical a:hover {
+.wy-menu a:active, .wy-menu a:hover {
   background-color: #d6d6d6;
 }
 
-.wy-menu-vertical li.current a {
+.wy-menu li.current a {
   border-right-width: 0px;
 }
 /* Armeria branding ends. */

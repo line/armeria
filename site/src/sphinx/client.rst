@@ -14,3 +14,4 @@ Writing a client
     client-custom-http-headers
     client-retry
     client-circuit-breaker
+    client-service-discovery
