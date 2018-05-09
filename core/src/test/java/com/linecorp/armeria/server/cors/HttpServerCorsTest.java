@@ -108,10 +108,10 @@ public class HttpServerCorsTest {
     public void testCorsAccessControlHeaders() throws Exception {
         HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
         AggregatedHttpMessage response = client.execute(
-            HttpHeaders.of(HttpMethod.OPTIONS, "/cors")
-                .set(HttpHeaderNames.ACCEPT, "utf-8")
-                .set(HttpHeaderNames.ORIGIN, "http://example.com")
-                .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
+                HttpHeaders.of(HttpMethod.OPTIONS, "/cors")
+                        .set(HttpHeaderNames.ACCEPT, "utf-8")
+                        .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                        .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
@@ -124,17 +124,17 @@ public class HttpServerCorsTest {
     public void testCorsExposeHeaders() throws Exception {
         HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
         AggregatedHttpMessage response = client.execute(
-            HttpHeaders.of(HttpMethod.POST, "/cors")
-                .set(HttpHeaderNames.ACCEPT, "utf-8")
-                .set(HttpHeaderNames.ORIGIN, "http://example.com")
-                .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
+                HttpHeaders.of(HttpMethod.POST, "/cors")
+                        .set(HttpHeaderNames.ACCEPT, "utf-8")
+                        .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                        .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
         assertEquals(
             "allow_request_header", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
         assertEquals("expose_header_1,expose_header_2",
-            response.headers().get(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS));
+                response.headers().get(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS));
     }
 
     @Test

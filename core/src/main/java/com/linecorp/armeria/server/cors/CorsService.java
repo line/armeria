@@ -266,7 +266,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
 
     private void setCorsAllowMethods(final HttpHeaders headers) {
         String methods = config.allowedRequestMethods()
-                                     .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
+                .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, methods);
     }
 
