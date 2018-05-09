@@ -67,7 +67,6 @@ import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
-import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -143,13 +142,9 @@ public class ArmeriaAutoConfiguration {
 
             server.service(bean.getPath(), service);
             docServiceRequests.addAll(bean.getExampleRequests());
-            bean.getService().as(THttpService.class).ifPresent(
-                    beanService -> beanService.entries().forEach((serviceName, entry) -> {
-                        for (Class<?> iface : entry.interfaces()) {
-                            docServiceHeaders.put(iface.getEnclosingClass().getName(),
-                                                  bean.getExampleHeaders());
-                        }
-                    }));
+            ThriftServiceUtils.serviceNames(bean.getService())
+                              .forEach(serviceName -> docServiceHeaders.put(serviceName,
+                                                                            bean.getExampleHeaders()));
         }));
 
         httpServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
