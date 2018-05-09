@@ -66,7 +66,10 @@ public class HttpServerCorsTest {
                     return HttpResponse.of(HttpStatus.OK);
                 }
             }.decorate(CorsServiceBuilder.forOrigin("http://example.com")
-                                         .allowRequestMethods(HttpMethod.POST)
+                                         .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                                         .allowRequestHeaders(HttpHeaderNames.of("allow_request_header"))
+                                         .exposeHeaders(HttpHeaderNames.of("expose_header_1"),
+                                                        HttpHeaderNames.of("expose_header_2"))
                                          .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                                          .newDecorator()));
         }
@@ -98,6 +101,39 @@ public class HttpServerCorsTest {
 
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
+    @Test
+    public void testCorsAccessControlHeaders() throws Exception {
+        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.OPTIONS, "/cors")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
+
+        assertEquals(HttpStatus.OK, response.status());
+        assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+        assertEquals("GET,POST", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS));
+        assertEquals("allow_request_header",
+                     response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
+    }
+
+    @Test
+    public void testCorsExposeHeaders() throws Exception {
+        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.POST, "/cors")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
+
+        assertEquals(HttpStatus.OK, response.status());
+        assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+        assertEquals("allow_request_header",
+                     response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
+        assertEquals("expose_header_1,expose_header_2",
+                     response.headers().get(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS));
     }
 
     @Test
