@@ -27,6 +27,7 @@ allprojects {
             }
             </script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.3.0/highlightjs-line-numbers.min.js"></script>
             <script>
             // Trim and syntax-highlight the code snippets.
             function trimLines(lines) {
@@ -86,6 +87,7 @@ allprojects {
 
               if (hasHljs) {
                 hljs.highlightBlock(child);
+                hljs.lineNumbersBlock(child);
               }
             }
             </script>'''.readLines().stream()
