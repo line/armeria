@@ -57,15 +57,13 @@ extensions = ['sphinx.ext.autodoc',
               'sphinxcontrib.httpdomain', 
               'sphinxcontrib.inlinesyntaxhighlight',
               'sphinxcontrib.plantuml',
-              'api', 'parsed_literal_highlight']
+              'api', 'highlightjs']
 templates_path = ['_templates']
 source_suffix = '.rst'
 source_encoding = 'utf-8-sig'
 master_doc = 'index'
 exclude_trees = ['.build']
 add_function_parentheses = True
-pygments_style = 'tango'
-master_doc = 'index'
 
 html_theme = 'sphinx_rtd_theme'
 html_theme_path = ['_themes']
