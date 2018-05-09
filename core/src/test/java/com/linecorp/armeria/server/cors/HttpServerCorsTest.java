@@ -130,8 +130,8 @@ public class HttpServerCorsTest {
 
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertEquals(
-            "allow_request_header", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
+        assertEquals("allow_request_header",
+                     response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
         assertEquals("expose_header_1,expose_header_2",
                      response.headers().get(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS));
     }
