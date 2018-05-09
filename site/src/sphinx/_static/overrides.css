@@ -123,7 +123,7 @@ pre,
 .rst-content div[class*='highlight'] pre,
 .rst-content pre.literal-block {
   padding: 8px 12px 12px 12px;
-  font-size: 90%;
+  font-size: inherit;
   overflow-x: auto;
   overflow-y: hidden;
   color: inherit;
@@ -263,6 +263,32 @@ p, .rst-content li, .wy-menu li {
 code .plural-suffix {
   font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
 }
+
+/* highlightjs style begins */
+div.hljs {
+  background: inherit;
+}
+pre.hljs {
+  background: rgba(0, 0, 0, 0.01); /* 1% darker background */
+}
+td.hljs-ln-numbers {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+
+  text-align: right;
+  color: #ccc;
+  border-right: 1px solid #CCC;
+  vertical-align: top;
+  padding-right: 8px !important;
+}
+td.hljs-ln-code {
+  padding-left: 8px !important;
+}
+/* highlightjs style ends */
 
 /* Armeria branding begins. */
 .wy-nav-top, .wy-side-nav-search {
