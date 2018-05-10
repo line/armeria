@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -44,6 +45,7 @@ public class ThriftStructuredLog extends StructuredLog {
     @Nullable
     private final ThriftReply thriftReply;
 
+    @VisibleForTesting
     ThriftStructuredLog(long timestampMillis,
                         long responseTimeNanos,
                         long requestSize,
@@ -51,7 +53,7 @@ public class ThriftStructuredLog extends StructuredLog {
                         String thriftServiceName,
                         String thriftMethodName,
                         ThriftCall thriftCall,
-                        ThriftReply thriftReply) {
+                        @Nullable ThriftReply thriftReply) {
         super(timestampMillis, responseTimeNanos, requestSize, responseSize);
         this.thriftServiceName = thriftServiceName;
         this.thriftMethodName = thriftMethodName;

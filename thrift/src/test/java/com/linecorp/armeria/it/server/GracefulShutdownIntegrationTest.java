@@ -78,7 +78,7 @@ public class GracefulShutdownIntegrationTest {
 
         // Measure the time taken for stopping the server after handling a single request.
         server.start();
-        SleepService.Iface client = newClient();
+        final SleepService.Iface client = newClient();
         client.sleep(0);
         final long startTime = System.nanoTime();
         server.stop().join();
@@ -94,9 +94,9 @@ public class GracefulShutdownIntegrationTest {
         final long baselineNanos = baselineNanos();
         server.start();
 
-        SleepService.Iface client = newClient();
-        AtomicBoolean completed = new AtomicBoolean(false);
-        CountDownLatch latch = new CountDownLatch(1);
+        final SleepService.Iface client = newClient();
+        final AtomicBoolean completed = new AtomicBoolean(false);
+        final CountDownLatch latch = new CountDownLatch(1);
         CompletableFuture.runAsync(() -> {
             try {
                 latch.countDown();
@@ -125,10 +125,10 @@ public class GracefulShutdownIntegrationTest {
         final long baselineNanos = baselineNanos();
         server.start();
 
-        SleepService.Iface client = newClient();
-        AtomicBoolean completed = new AtomicBoolean(false);
-        CountDownLatch latch1 = new CountDownLatch(1);
-        CountDownLatch latch2 = new CountDownLatch(1);
+        final SleepService.Iface client = newClient();
+        final AtomicBoolean completed = new AtomicBoolean(false);
+        final CountDownLatch latch1 = new CountDownLatch(1);
+        final CountDownLatch latch2 = new CountDownLatch(1);
         CompletableFuture.runAsync(() -> {
             try {
                 latch1.countDown();
@@ -163,7 +163,7 @@ public class GracefulShutdownIntegrationTest {
         final Server server = GracefulShutdownIntegrationTest.server.start();
 
         // Keep sending a request after shutdown starts so that the hard limit is reached.
-        SleepService.Iface client = newClient();
+        final SleepService.Iface client = newClient();
         final CompletableFuture<Long> stopFuture = CompletableFuture.supplyAsync(() -> {
             final long startTime = System.nanoTime();
             server.stop().join();

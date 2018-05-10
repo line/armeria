@@ -448,7 +448,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
      */
     @Override
     public int compareTo(HttpStatus o) {
-        return code() - o.code();
+        return Integer.compare(code(), o.code());
     }
 
     @Override

@@ -140,14 +140,14 @@ public final class ClientOptions extends AbstractOptions {
     private static <T> ClientOptionValue<T> filterValue(ClientOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
 
-        ClientOption<?> option = optionValue.option();
-        T value = optionValue.value();
+        final ClientOption<?> option = optionValue.option();
+        final T value = optionValue.value();
 
         if (option == HTTP_HEADERS) {
             @SuppressWarnings("unchecked")
-            ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) option;
+            final ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) option;
             @SuppressWarnings("unchecked")
-            ClientOptionValue<T> castOptionValue =
+            final ClientOptionValue<T> castOptionValue =
                     (ClientOptionValue<T>) castOption.newValue(filterHttpHeaders((HttpHeaders) value));
             optionValue = castOptionValue;
         }
@@ -226,7 +226,6 @@ public final class ClientOptions extends AbstractOptions {
     /**
      * Returns the maximum allowed length of a server response.
      */
-    @SuppressWarnings("unchecked")
     public long defaultMaxResponseLength() {
         return getOrElse(DEFAULT_MAX_RESPONSE_LENGTH, Flags.defaultMaxResponseLength());
     }

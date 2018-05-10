@@ -138,8 +138,8 @@ public abstract class AbstractOptions {
     @SuppressWarnings("unchecked")
     protected final <O extends AbstractOption<V>, V> Optional<V> get0(AbstractOption<V> option) {
         @SuppressWarnings("rawtypes")
-        AbstractOptionValue<O, V> optionValue =
-                (AbstractOptionValue<O, V>) (AbstractOptionValue) valueMap.get(option);
+        final AbstractOptionValue<O, V> optionValue =
+                (AbstractOptionValue<O, V>) valueMap.get(option);
         return optionValue == null ? Optional.empty() : Optional.of(optionValue.value());
     }
 
@@ -150,7 +150,6 @@ public abstract class AbstractOptions {
      * @param <V> the type of the value
      * @return the value of the specified {@code option}. {@code defaultValue} if there's no such option.
      */
-    @SuppressWarnings("unchecked")
     protected final <O extends AbstractOption<V>, V> V getOrElse0(O option, V defaultValue) {
         return get0(option).orElse(defaultValue);
     }

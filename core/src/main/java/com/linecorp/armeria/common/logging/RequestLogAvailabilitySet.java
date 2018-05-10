@@ -37,6 +37,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
  */
 final class RequestLogAvailabilitySet extends AbstractSet<RequestLogAvailability> {
 
+    private static final RequestLogAvailability[] EMPTY_AVAILABILITIES = new RequestLogAvailability[0];
+
     private static final Int2ObjectMap<RequestLogAvailabilitySet> map = new Int2ObjectOpenHashMap<>();
 
     static {
@@ -77,7 +79,7 @@ final class RequestLogAvailabilitySet extends AbstractSet<RequestLogAvailability
                 values.add(v);
             }
         }
-        this.values = values.toArray(new RequestLogAvailability[values.size()]);
+        this.values = values.toArray(EMPTY_AVAILABILITIES);
     }
 
     @Override

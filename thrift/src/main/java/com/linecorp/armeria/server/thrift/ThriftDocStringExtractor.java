@@ -20,25 +20,22 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocStringExtractor;
 
 /**
  * {@link ThriftDocStringExtractor} is a DocString extractor for Thrift IDL JSON.
  *
- * <p>To include docstrings in {@link com.linecorp.armeria.server.docs.DocService} pages, use a recent
- * development version of the Thrift compiler (0.9.3 will not work) and compile your thrift files with 'json'
- * code generation and include the resulting json files in the classpath location
- * {@code META-INF/armeria/thrift}. The classpath location can be changed by setting the
- * {@code com.linecorp.armeria.thrift.jsonDir} system property.
+ * <p>To include docstrings in {@link DocService} pages, use the Thrift compiler version 0.10.0 or above
+ * (0.9.3 will not work) and compile your thrift files with 'json' code generation and include the resulting
+ * json files in the classpath location {@code META-INF/armeria/thrift}. The classpath location can be changed
+ * by setting the {@code com.linecorp.armeria.thrift.jsonDir} system property.
  */
 final class ThriftDocStringExtractor extends DocStringExtractor {
 
@@ -58,18 +55,9 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
         return filename.endsWith(".json");
     }
 
-    /**
-     * Gets the namespace key of names.
-     * @param names name list.
-     * @return merged key.
-     */
-    static String key(String... names) {
-        return Stream.of(names).filter(s -> !Strings.isNullOrEmpty(s)).collect(Collectors.joining(DELIM));
-    }
-
     @Override
     protected Map<String, String> getDocStringsFromFiles(Map<String, byte[]> files) {
-        ImmutableMap.Builder<String, String> docStrings = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, String> docStrings = ImmutableMap.builder();
         for (byte[] file : files.values()) {
             try {
                 final Map<String, Object> json = new ObjectMapper().readValue(file, JSON_VALUE_TYPE);
@@ -80,7 +68,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
                 json.forEach((key, children) -> {
                     if (children instanceof Collection) {
                         @SuppressWarnings("unchecked")
-                        Collection<Object> castChildren = (Collection<Object>) children;
+                        final Collection<Object> castChildren = (Collection<Object>) children;
                         castChildren.forEach(
                                 grandChild -> traverseChildren(docStrings, packageName, FQCN_DELIM,
                                                                grandChild));
@@ -100,7 +88,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
             final Map<String, Object> map = (Map<String, Object>) node;
             final String name = (String) map.get("name");
             final String doc = (String) map.get("doc");
-            String childPrefix;
+            final String childPrefix;
             if (name != null) {
                 childPrefix = MoreObjects.firstNonNull(prefix, "") + delimiter + name;
                 if (doc != null) {

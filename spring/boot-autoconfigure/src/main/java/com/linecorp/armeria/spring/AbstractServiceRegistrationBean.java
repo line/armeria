@@ -57,14 +57,14 @@ class AbstractServiceRegistrationBean<T, U> {
      * Returns the annotated service object registered to this bean.
      */
     @NotNull
-    public T getService() {
+    public final T getService() {
         return service;
     }
 
     /**
      * Registers an annotated service object.
      */
-    public U setService(@NotNull T service) {
+    public final U setService(@NotNull T service) {
         this.service = service;
         return self();
     }
@@ -73,14 +73,14 @@ class AbstractServiceRegistrationBean<T, U> {
      * Returns this service name to use in monitoring.
      */
     @NotNull
-    public String getServiceName() {
+    public final String getServiceName() {
         return serviceName;
     }
 
     /**
      * Sets service name to use in monitoring.
      */
-    public U setServiceName(@NotNull String serviceName) {
+    public final U setServiceName(@NotNull String serviceName) {
         this.serviceName = serviceName;
         return self();
     }
@@ -89,7 +89,7 @@ class AbstractServiceRegistrationBean<T, U> {
      * Returns the decorators of the annotated service object.
      */
     @NotNull
-    public List<Function<Service<HttpRequest, HttpResponse>,
+    public final List<Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>>> getDecorators() {
         return decorators;
     }
@@ -100,7 +100,7 @@ class AbstractServiceRegistrationBean<T, U> {
      * @deprecated Use {@link #setDecorators(Function[])} or {@link #setDecorators(List)} instead.
      */
     @Deprecated
-    public U setDecorator(
+    public final U setDecorator(
             Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
         return setDecorators(requireNonNull(decorator, "decorator"));
@@ -110,7 +110,8 @@ class AbstractServiceRegistrationBean<T, U> {
      * Sets the decorator of the annotated service object. {@code decorators} are applied to {@code service} in
      * order.
      */
-    public U setDecorators(
+    @SafeVarargs
+    public final U setDecorators(
             Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>... decorators) {
         return setDecorators(ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
@@ -120,7 +121,7 @@ class AbstractServiceRegistrationBean<T, U> {
      * Sets the decorators of the annotated service object. {@code decorators} are applied to {@code service} in
      * order.
      */
-    public U setDecorators(
+    public final U setDecorators(
             List<Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>> decorators) {
         this.decorators = requireNonNull(decorators, "decorators");

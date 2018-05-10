@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import org.apache.thrift.transport.TMemoryBuffer;
@@ -80,6 +81,7 @@ import io.netty.util.concurrent.Promise;
 final class THttp2Client extends TTransport {
 
     private final EventLoopGroup group = new NioEventLoopGroup(1);
+    @Nullable
     private final SslContext sslCtx;
     private final URI uri;
     private final String host;
@@ -131,12 +133,12 @@ final class THttp2Client extends TTransport {
             throw new IllegalArgumentException("unknown scheme: " + uri.getScheme());
         }
 
-        String host = uri.getHost();
+        final String host = uri.getHost();
         if (host == null) {
             throw new IllegalArgumentException("host not specified: " + uriStr);
         }
 
-        String path = uri.getPath();
+        final String path = uri.getPath();
         if (path == null) {
             throw new IllegalArgumentException("path not specified: " + uriStr);
         }
@@ -196,9 +198,9 @@ final class THttp2Client extends TTransport {
 
     @Override
     public void flush() throws TTransportException {
-        THttp2ClientInitializer initHandler = new THttp2ClientInitializer();
+        final THttp2ClientInitializer initHandler = new THttp2ClientInitializer();
 
-        Bootstrap b = new Bootstrap();
+        final Bootstrap b = new Bootstrap();
         b.group(group);
         b.channel(NioSocketChannel.class);
         b.handler(initHandler);
@@ -206,14 +208,14 @@ final class THttp2Client extends TTransport {
         Channel ch = null;
         try {
             ch = b.connect(host, port).syncUninterruptibly().channel();
-            THttp2ClientHandler handler = initHandler.clientHandler;
+            final THttp2ClientHandler handler = initHandler.clientHandler;
 
             // Wait until HTTP/2 upgrade is finished.
             assertTrue(handler.settingsPromise.await(5, TimeUnit.SECONDS));
             handler.settingsPromise.get();
 
             // Send a Thrift request.
-            FullHttpRequest request = new DefaultFullHttpRequest(
+            final FullHttpRequest request = new DefaultFullHttpRequest(
                     HttpVersion.HTTP_1_1, HttpMethod.POST, path,
                     Unpooled.wrappedBuffer(out.getArray(), 0, out.length()));
             request.headers().add(HttpHeaderNames.HOST, host);
@@ -223,7 +225,7 @@ final class THttp2Client extends TTransport {
 
             // Wait until the Thrift response is received.
             assertTrue(handler.responsePromise.await(5, TimeUnit.SECONDS));
-            ByteBuf response = handler.responsePromise.get();
+            final ByteBuf response = handler.responsePromise.get();
 
             // Pass the received Thrift response to the Thrift client.
             final byte[] array = new byte[response.readableBytes()];
@@ -263,8 +265,8 @@ final class THttp2Client extends TTransport {
                 p.addLast(connHandler);
                 configureEndOfPipeline(p);
             } else {
-                Http1ClientCodec sourceCodec = new Http1ClientCodec();
-                HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(
+                final Http1ClientCodec sourceCodec = new Http1ClientCodec();
+                final HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(
                         sourceCodec, new Http2ClientUpgradeCodec(connHandler), 65536);
 
                 p.addLast(sourceCodec, upgradeHandler, new UpgradeRequestHandler());
@@ -281,7 +283,7 @@ final class THttp2Client extends TTransport {
         private final class UpgradeRequestHandler extends ChannelInboundHandlerAdapter {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                DefaultFullHttpRequest upgradeRequest =
+                final DefaultFullHttpRequest upgradeRequest =
                         new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/");
                 ctx.writeAndFlush(upgradeRequest);
 
@@ -313,8 +315,8 @@ final class THttp2Client extends TTransport {
             }
 
             if (msg instanceof FullHttpResponse) {
-                FullHttpResponse res = (FullHttpResponse) msg;
-                Integer streamId = res.headers().getInt(
+                final FullHttpResponse res = (FullHttpResponse) msg;
+                final Integer streamId = res.headers().getInt(
                         HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
                 if (streamId == null) {
                     responsePromise.tryFailure(new AssertionError("message without stream ID: " + msg));

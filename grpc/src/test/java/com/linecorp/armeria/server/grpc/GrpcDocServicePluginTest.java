@@ -70,7 +70,7 @@ public class GrpcDocServicePluginTest {
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
                                                   .findServiceByName("TestService");
 
-    private GrpcDocServicePlugin generator = new GrpcDocServicePlugin();
+    private final GrpcDocServicePlugin generator = new GrpcDocServicePlugin();
 
     @Test
     public void services() throws Exception {
@@ -96,8 +96,8 @@ public class GrpcDocServicePluginTest {
                 new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build()));
 
         // Make sure all services and their endpoints exist in the specification.
-        ServiceSpecification specification = generator.generateSpecification(serviceCfgs);
-        Map<String, ServiceInfo> services = specification
+        final ServiceSpecification specification = generator.generateSpecification(serviceCfgs);
+        final Map<String, ServiceInfo> services = specification
                 .services()
                 .stream()
                 .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
@@ -118,7 +118,7 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void newEnumInfo() throws Exception {
-        EnumInfo enumInfo = generator.newEnumInfo(CompressionType.getDescriptor());
+        final EnumInfo enumInfo = generator.newEnumInfo(CompressionType.getDescriptor());
         assertThat(enumInfo).isEqualTo(new EnumInfo(
                 "armeria.grpc.testing.CompressionType",
                 ImmutableList.of(new EnumValueInfo("NONE"),
@@ -128,14 +128,14 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void newListInfo() throws Exception {
-        TypeSignature list = generator.newFieldTypeInfo(
+        final TypeSignature list = GrpcDocServicePlugin.newFieldTypeInfo(
                 ReconnectInfo.getDescriptor().findFieldByNumber(ReconnectInfo.BACKOFF_MS_FIELD_NUMBER));
         assertThat(list).isEqualTo(TypeSignature.ofContainer("repeated", GrpcDocServicePlugin.INT32));
     }
 
     @Test
     public void newMapInfo() throws Exception {
-        TypeSignature map = generator.newFieldTypeInfo(
+        final TypeSignature map = GrpcDocServicePlugin.newFieldTypeInfo(
                 StreamingOutputCallRequest.getDescriptor().findFieldByNumber(
                         StreamingOutputCallRequest.OPTIONS_FIELD_NUMBER));
         assertThat(map).isEqualTo(TypeSignature.ofMap(GrpcDocServicePlugin.STRING, GrpcDocServicePlugin.INT32));
@@ -143,7 +143,7 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void newMethodInfo() throws Exception {
-        MethodInfo methodInfo = generator.newMethodInfo(
+        final MethodInfo methodInfo = GrpcDocServicePlugin.newMethodInfo(
                 TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"),
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
@@ -177,7 +177,7 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void newServiceInfo() throws Exception {
-        ServiceInfo service = generator.newServiceInfo(
+        final ServiceInfo service = GrpcDocServicePlugin.newServiceInfo(
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
                         ImmutableList.of(
@@ -188,12 +188,12 @@ public class GrpcDocServicePluginTest {
                                                  GrpcSerializationFormats.JSON,
                                                  ImmutableSet.of(GrpcSerializationFormats.JSON)))));
 
-        Map<String, MethodInfo> functions = service
+        final Map<String, MethodInfo> functions = service
                 .methods()
                 .stream()
                 .collect(toImmutableMap(MethodInfo::name, Function.identity()));
         assertThat(functions).hasSize(8);
-        MethodInfo emptyCall = functions.get("EmptyCall");
+        final MethodInfo emptyCall = functions.get("EmptyCall");
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
                 .containsExactly(
@@ -217,7 +217,7 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void newStructInfo() throws Exception {
-        StructInfo structInfo = (StructInfo) generator.newStructInfo(TestMessage.getDescriptor());
+        final StructInfo structInfo = generator.newStructInfo(TestMessage.getDescriptor());
         assertThat(structInfo.name()).isEqualTo("armeria.grpc.testing.TestMessage");
         assertThat(structInfo.fields()).hasSize(18);
         assertThat(structInfo.fields().get(0).name()).isEqualTo("bool");

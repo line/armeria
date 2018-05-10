@@ -106,7 +106,7 @@ public final class EventCount {
         if (!(o instanceof EventCount)) {
             return false;
         }
-        EventCount that = (EventCount) o;
+        final EventCount that = (EventCount) o;
         return success == that.success && failure == that.failure;
     }
 }

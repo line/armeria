@@ -82,7 +82,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     protected HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing,
                                 @Nullable String remoteServiceName) {
         super(delegate);
-        this.tracer = tracing.tracer();
+        tracer = tracing.tracer();
         injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                           .injector(HttpHeaders::set);
         this.remoteServiceName = remoteServiceName;
@@ -90,7 +90,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        Span span = tracer.nextSpan();
+        final Span span = tracer.nextSpan();
         injector.inject(span.context(), req.headers());
         // For no-op spans, we only need to inject into headers and don't set any other attributes.
         if (span.isNoop()) {
@@ -116,7 +116,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
 
     private void setRemoteEndpoint(Span span, RequestLog log) {
 
-        SocketAddress remoteAddress = log.context().remoteAddress();
+        final SocketAddress remoteAddress = log.context().remoteAddress();
         final InetAddress address;
         if (remoteAddress instanceof InetSocketAddress) {
             address = ((InetSocketAddress) remoteAddress).getAddress();

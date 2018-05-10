@@ -63,7 +63,7 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
                         }
                     })
                     .setPathMapping(PathMapping.ofExact("/ok"))
-                    .setDecorator(LoggingService.newDecorator());
+                    .setDecorators(LoggingService.newDecorator());
         }
     }
 
@@ -77,11 +77,11 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
 
     @Test
     public void testHttpServiceRegistrationBean() throws Exception {
-        HttpClient client = HttpClient.of(newUrl("h1c"));
+        final HttpClient client = HttpClient.of(newUrl("h1c"));
 
-        HttpResponse response = client.get("/ok");
+        final HttpResponse response = client.get("/ok");
 
-        AggregatedHttpMessage msg = response.aggregate().get();
+        final AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.content().toStringUtf8()).isEqualTo("ok");
     }

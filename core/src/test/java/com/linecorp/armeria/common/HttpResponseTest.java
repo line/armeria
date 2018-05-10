@@ -25,8 +25,8 @@ public class HttpResponseTest {
     @Test
     public void ofWithPlainContent() {
         // Using non-ascii to test UTF-8 conversion
-        HttpResponse res = HttpResponse.of("Armeriaはいろんな使い方がアルメリア");
-        AggregatedHttpMessage message = res.aggregate().join();
+        final HttpResponse res = HttpResponse.of("Armeriaはいろんな使い方がアルメリア");
+        final AggregatedHttpMessage message = res.aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.OK);
         assertThat(message.content().toStringUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
@@ -35,9 +35,9 @@ public class HttpResponseTest {
     @Test
     public void ofWithPlainFormat() {
         // Using non-ascii to test UTF-8 conversion
-        HttpResponse res = HttpResponse.of(
+        final HttpResponse res = HttpResponse.of(
                 "%sはいろんな使い方が%s", "Armeria", "アルメリア");
-        AggregatedHttpMessage message = res.aggregate().join();
+        final AggregatedHttpMessage message = res.aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.OK);
         assertThat(message.content().toStringUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
@@ -46,9 +46,9 @@ public class HttpResponseTest {
     @Test
     public void ofWithContent() {
         // Using non-ascii to test UTF-8 conversion
-        HttpResponse res = HttpResponse.of(
+        final HttpResponse res = HttpResponse.of(
                 MediaType.PLAIN_TEXT_UTF_8, "Armeriaはいろんな使い方がアルメリア");
-        AggregatedHttpMessage message = res.aggregate().join();
+        final AggregatedHttpMessage message = res.aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.OK);
         assertThat(message.content().toStringUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
@@ -57,10 +57,10 @@ public class HttpResponseTest {
     @Test
     public void ofWithFormat() {
         // Using non-ascii to test UTF-8 conversion
-        HttpResponse res = HttpResponse.of(
+        final HttpResponse res = HttpResponse.of(
                 MediaType.PLAIN_TEXT_UTF_8,
                 "%sはいろんな使い方が%s", "Armeria", "アルメリア");
-        AggregatedHttpMessage message = res.aggregate().join();
+        final AggregatedHttpMessage message = res.aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.OK);
         assertThat(message.content().toStringUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");

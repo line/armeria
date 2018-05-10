@@ -111,7 +111,7 @@ enum AccessLogType {
     private static final Map<Character, AccessLogType> tokenToEnum;
 
     static {
-        ImmutableMap.Builder<Character, AccessLogType> builder = ImmutableMap.builder();
+        final ImmutableMap.Builder<Character, AccessLogType> builder = ImmutableMap.builder();
         for (AccessLogType k : AccessLogType.values()) {
             builder.put(k.token, k);
         }

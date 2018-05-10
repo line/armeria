@@ -90,6 +90,8 @@ public final class THttpService extends AbstractHttpService {
             "Thrift protocol specified in Accept header must match " +
             "the one specified in the content-type header";
 
+    private static final SerializationFormat[] EMPTY_FORMATS = new SerializationFormat[0];
+
     /**
      * Creates a new {@link THttpService} with the specified service implementation, supporting all thrift
      * protocols and defaulting to {@link ThriftSerializationFormats#BINARY TBinary} protocol when the client
@@ -349,7 +351,7 @@ public final class THttpService extends AbstractHttpService {
         final Set<SerializationFormat> set = new LinkedHashSet<>();
         set.add(defaultSerializationFormat);
         Iterables.addAll(set, otherAllowedSerializationFormats);
-        return set.toArray(new SerializationFormat[set.size()]);
+        return set.toArray(EMPTY_FORMATS);
     }
 
     private final Service<RpcRequest, RpcResponse> delegate;

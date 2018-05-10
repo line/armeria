@@ -122,7 +122,7 @@ public class ArmeriaHttpUtilTest {
 
     @Test
     public void setHttp2AuthorityWithoutUserInfo() {
-        HttpHeaders headers = new DefaultHttpHeaders();
+        final HttpHeaders headers = new DefaultHttpHeaders();
 
         setHttp2Authority("foo", headers);
         assertThat(headers.authority()).isEqualTo("foo");
@@ -130,7 +130,7 @@ public class ArmeriaHttpUtilTest {
 
     @Test
     public void setHttp2AuthorityWithUserInfo() {
-        HttpHeaders headers = new DefaultHttpHeaders();
+        final HttpHeaders headers = new DefaultHttpHeaders();
 
         setHttp2Authority("info@foo", headers);
         assertThat(headers.authority()).isEqualTo("foo");
@@ -141,7 +141,7 @@ public class ArmeriaHttpUtilTest {
 
     @Test
     public void setHttp2AuthorityNullOrEmpty() {
-        HttpHeaders headers = new DefaultHttpHeaders();
+        final HttpHeaders headers = new DefaultHttpHeaders();
 
         setHttp2Authority(null, headers);
         assertThat(headers.authority()).isNull();

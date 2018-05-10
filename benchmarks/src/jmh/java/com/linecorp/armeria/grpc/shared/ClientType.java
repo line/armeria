@@ -20,5 +20,5 @@ public enum ClientType {
     // The official client for the benchmark (armeria for downstream, grpc-netty for upstream).
     NORMAL,
     // The grpc-okhttp client.
-    OKHTTP;
+    OKHTTP
 }

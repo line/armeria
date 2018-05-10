@@ -111,7 +111,7 @@ public class ArmeriaMessageDeframerTest {
 
     @Test
     public void deframe_multipleFrames() throws Exception {
-        byte[] frameBytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+        final byte[] frameBytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
         deframer.request(1);
         deframer.deframe(HttpData.of(Arrays.copyOfRange(frameBytes, 0, 5)), false);
         verifyZeroInteractions(listener);
@@ -159,10 +159,10 @@ public class ArmeriaMessageDeframerTest {
     public void deframe_compressed() throws Exception {
         deframer.request(1);
         deframer.deframe(HttpData.of(GrpcTestUtil.compressedFrame(GrpcTestUtil.requestByteBuf())), false);
-        ArgumentCaptor<ByteBufOrStream> messageCaptor = ArgumentCaptor.forClass(ByteBufOrStream.class);
+        final ArgumentCaptor<ByteBufOrStream> messageCaptor = ArgumentCaptor.forClass(ByteBufOrStream.class);
         verify(listener).messageRead(messageCaptor.capture());
         verifyNoMoreInteractions(listener);
-        ByteBufOrStream message = messageCaptor.getValue();
+        final ByteBufOrStream message = messageCaptor.getValue();
         assertThat(message.stream()).isNotNull();
         final byte[] messageBytes;
         try (InputStream stream = message.stream()) {
@@ -173,12 +173,12 @@ public class ArmeriaMessageDeframerTest {
 
     @Test
     public void deframe_tooLargeUncompressed() throws Exception {
-        SimpleRequest request = SimpleRequest.newBuilder()
-                                             .setPayload(Payload.newBuilder()
+        final SimpleRequest request = SimpleRequest.newBuilder()
+                                                   .setPayload(Payload.newBuilder()
                                                                 .setBody(ByteString.copyFromUtf8(
                                                                         Strings.repeat("a", 1024))))
-                                             .build();
-        byte[] frame = GrpcTestUtil.uncompressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
+                                                   .build();
+        final byte[] frame = GrpcTestUtil.uncompressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
         assertThat(frame.length).isGreaterThan(1024);
         deframer.request(1);
         assertThatThrownBy(() -> deframer.deframe(HttpData.of(frame), false))
@@ -188,17 +188,17 @@ public class ArmeriaMessageDeframerTest {
     @Test
     public void deframe_tooLargeCompressed() throws Exception {
         // Simple repeated character compresses below the frame threshold but uncompresses above it.
-        SimpleRequest request =
+        final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setPayload(Payload.newBuilder()
                                                 .setBody(ByteString.copyFromUtf8(
                                                         Strings.repeat("a", 1024))))
                              .build();
-        byte[] frame = GrpcTestUtil.compressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
+        final byte[] frame = GrpcTestUtil.compressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
         assertThat(frame.length).isLessThan(1024);
         deframer.request(1);
         deframer.deframe(HttpData.of(frame), false);
-        ArgumentCaptor<ByteBufOrStream> messageCaptor = ArgumentCaptor.forClass(ByteBufOrStream.class);
+        final ArgumentCaptor<ByteBufOrStream> messageCaptor = ArgumentCaptor.forClass(ByteBufOrStream.class);
         verify(listener).messageRead(messageCaptor.capture());
         verifyNoMoreInteractions(listener);
         try (InputStream stream = messageCaptor.getValue().stream()) {
@@ -212,10 +212,10 @@ public class ArmeriaMessageDeframerTest {
     }
 
     private void verifyAndReleaseMessage(ByteBufOrStream message, int times) {
-        ArgumentCaptor<ByteBufOrStream> read = ArgumentCaptor.forClass(ByteBufOrStream.class);
+        final ArgumentCaptor<ByteBufOrStream> read = ArgumentCaptor.forClass(ByteBufOrStream.class);
         verify(listener, times(times)).messageRead(read.capture());
         for (int i = 0; i < times; i++) {
-            ByteBufOrStream val = read.getAllValues().get(i);
+            final ByteBufOrStream val = read.getAllValues().get(i);
             assertThat(val).isEqualTo(message);
             if (val.buf() != null) {
                 val.buf().release();

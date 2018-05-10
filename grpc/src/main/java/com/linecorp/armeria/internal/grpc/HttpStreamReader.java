@@ -22,8 +22,6 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -41,8 +39,6 @@ import io.grpc.Status;
  * A {@link Subscriber} to read HTTP messages and pass to gRPC business logic.
  */
 public class HttpStreamReader implements Subscriber<HttpObject> {
-
-    private static final Logger logger = LoggerFactory.getLogger(HttpStreamReader.class);
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
@@ -98,38 +94,39 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
         if (obj instanceof HttpHeaders) {
             // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
             // and client though as everything else is identical.
-            HttpHeaders headers = (HttpHeaders) obj;
+            final HttpHeaders headers = (HttpHeaders) obj;
 
             if (!sawLeadingHeaders) {
-                if (headers.status() == null) {
+                final HttpStatus status = headers.status();
+                if (status == null) {
                     // Not allowed to have empty leading headers, kill the stream hard.
                     transportStatusListener.transportReportStatus(
                             Status.INTERNAL.withDescription("Missing HTTP status code"));
                     return;
                 }
 
-                if (headers.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                     // Skip informational headers.
                     return;
                 }
 
                 sawLeadingHeaders = true;
 
-                if (!headers.status().equals(HttpStatus.OK)) {
+                if (!status.equals(HttpStatus.OK)) {
                     transportStatusListener.transportReportStatus(
-                            GrpcStatus.httpStatusToGrpcStatus(headers.status().code()));
+                            GrpcStatus.httpStatusToGrpcStatus(status.code()));
                     return;
                 }
             }
 
-            String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
+            final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
             if (grpcStatus != null) {
                 Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
                 if (status.getCode() == Status.OK.getCode()) {
                    // Successful response, finish delivering messages before returning the status.
                    closeDeframer();
                 }
-                String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
+                final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
                 if (grpcMessage != null) {
                     status = status.withDescription(grpcMessage);
                 }
@@ -138,9 +135,9 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             }
             // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
             // messages.
-            String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
+            final String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
             if (grpcEncoding != null) {
-                Decompressor decompressor = decompressorRegistry.lookupDecompressor(grpcEncoding);
+                final Decompressor decompressor = decompressorRegistry.lookupDecompressor(grpcEncoding);
                 if (decompressor == null) {
                     transportStatusListener.transportReportStatus(Status.INTERNAL.withDescription(
                             "Can't find decompressor for " + grpcEncoding));
@@ -151,7 +148,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             requestHttpFrame();
             return;
         }
-        HttpData data = (HttpData) obj;
+        final HttpData data = (HttpData) obj;
         try {
             deframer.deframe(data, false);
         } catch (Throwable cause) {

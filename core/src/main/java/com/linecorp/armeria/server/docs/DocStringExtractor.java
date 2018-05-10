@@ -71,7 +71,7 @@ public abstract class DocStringExtractor {
         if (configuration.getUrls() == null || configuration.getUrls().isEmpty()) {
             return Collections.emptyMap();
         }
-        Map<String, byte[]> files = new Reflections(configuration)
+        final Map<String, byte[]> files = new Reflections(configuration)
                 .getResources(this::acceptFile).stream()
                 .map(f -> {
                     try {

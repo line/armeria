@@ -69,7 +69,7 @@ final class DefaultNodeValueCodec implements NodeValueCodec {
 
     @Override
     public Set<Endpoint> decodeAll(String valueString) {
-        Set<Endpoint> endpoints = new HashSet<>();
+        final Set<Endpoint> endpoints = new HashSet<>();
         try {
             for (String segment : SEGMENT_DELIMITER.split(valueString)) {
                 endpoints.add(decode(segment));
@@ -86,7 +86,7 @@ final class DefaultNodeValueCodec implements NodeValueCodec {
     @Override
     public byte[] encodeAll(Iterable<Endpoint> endpoints) {
         requireNonNull(endpoints, "endpoints");
-        StringBuilder nodeValue = new StringBuilder();
+        final StringBuilder nodeValue = new StringBuilder();
         endpoints.forEach(endpoint -> nodeValue.append(endpoint.host()).append(fieldDelimiter).append(
                 endpoint.port()).append(fieldDelimiter).append(endpoint.weight()).append(segmentDelimiter));
         //delete the last unused segment delimiter

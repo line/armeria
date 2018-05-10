@@ -72,7 +72,6 @@ public class DefaultAttributeMap implements AttributeMap {
 
     // Initialize lazily to reduce memory consumption; updated by AtomicReferenceFieldUpdater above.
     @VisibleForTesting
-    @SuppressWarnings("UnusedDeclaration")
     volatile AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
     @SuppressWarnings("unchecked")

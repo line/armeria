@@ -24,7 +24,7 @@ import org.junit.Test;
 public class BackoffTest {
     @Test
     public void withoutDelay() throws Exception {
-        Backoff backoff = Backoff.withoutDelay();
+        final Backoff backoff = Backoff.withoutDelay();
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(0);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(0);
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(0);
@@ -32,7 +32,7 @@ public class BackoffTest {
 
     @Test
     public void fixed() throws Exception {
-        Backoff backoff = Backoff.fixed(100);
+        final Backoff backoff = Backoff.fixed(100);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(100);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(100);
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(100);
@@ -57,8 +57,8 @@ public class BackoffTest {
 
     @Test
     public void withJitter() throws Exception {
-        Random random = new Random(1);
-        Backoff backoff = Backoff.fixed(1000).withJitter(-0.3, 0.3, () -> random);
+        final Random random = new Random(1);
+        final Backoff backoff = Backoff.fixed(1000).withJitter(-0.3, 0.3, () -> random);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(1240);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(771);
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(803);
@@ -66,7 +66,7 @@ public class BackoffTest {
 
     @Test
     public void withMaxAttempts() throws Exception {
-        Backoff backoff = Backoff.fixed(100).withMaxAttempts(2);
+        final Backoff backoff = Backoff.fixed(100).withMaxAttempts(2);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(100);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(-1);
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(-1);

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -30,7 +32,7 @@ final class TestConverters {
 
     public static class NaiveIntConverterFunction implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
             if (result instanceof Integer) {
                 return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", result)));
             }
@@ -40,7 +42,7 @@ final class TestConverters {
 
     public static class NaiveStringConverterFunction implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
             if (result instanceof String) {
                 return httpResponse(HttpData.ofUtf8(String.format("String: %s", result)));
             }
@@ -50,9 +52,9 @@ final class TestConverters {
 
     public static class TypedNumberConverterFunction implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
             if (result instanceof Number) {
-                return httpResponse(HttpData.ofUtf8(String.format("Number[%d]", result)));
+                return httpResponse(HttpData.ofUtf8(String.format("Number[%s]", result)));
             }
             return ResponseConverterFunction.fallthrough();
         }
@@ -60,7 +62,7 @@ final class TestConverters {
 
     public static class TypedStringConverterFunction implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
             if (result instanceof String) {
                 return httpResponse(HttpData.ofUtf8(String.format("String[%s]", result)));
             }
@@ -70,7 +72,7 @@ final class TestConverters {
 
     public static class ByteArrayConverterFunction implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
             if (result instanceof byte[]) {
                 return httpResponse(HttpData.of((byte[]) result));
             }
@@ -80,31 +82,29 @@ final class TestConverters {
 
     public static class ByteArrayConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
             if (result instanceof byte[]) {
                 return httpResponse(HttpData.of((byte[]) result));
             }
-            throw new IllegalArgumentException("Cannot convert " + result.getClass().getName());
+            throw new IllegalArgumentException("Cannot convert " +
+                                               (result != null ? result.getClass().getName() : "null"));
         }
     }
 
     // Accepts everything.
     public static class UnformattedStringConverterFunction implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
-            return httpResponse(HttpData.ofUtf8(result != null ? result.toString()
-                                                               : "(null)"));
+        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
+            return httpResponse(HttpData.ofUtf8(result != null ? result.toString() : "(null)"));
         }
     }
 
     private static HttpResponse httpResponse(HttpData data) {
-        assert RequestContext.current() != null;
         final HttpResponseWriter res = HttpResponse.streaming();
         final long current = System.currentTimeMillis();
-        HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                 data.length())
-                                         .setTimeMillis(HttpHeaderNames.DATE, current);
+        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
+                                               .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
+                                               .setTimeMillis(HttpHeaderNames.DATE, current);
 
         final MediaType contentType =
                 ((ServiceRequestContext) RequestContext.current()).negotiatedProduceType();

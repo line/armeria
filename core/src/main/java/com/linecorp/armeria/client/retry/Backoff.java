@@ -101,8 +101,7 @@ public interface Backoff {
      * @param specification the specification used to create the {@link Backoff}
      */
     static Backoff of(String specification) {
-        BackoffSpec backoffSpec = BackoffSpec.parse(specification);
-        return backoffSpec.build();
+        return BackoffSpec.parse(specification).build();
     }
 
     /**

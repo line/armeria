@@ -614,7 +614,7 @@ public final class ArmeriaHttpUtil {
             return value.toString();
         }
         if (HEADER_VALUE_CACHE != null && CACHED_HEADERS.contains(name)) {
-            String converted = HEADER_VALUE_CACHE.get((AsciiString) value);
+            final String converted = HEADER_VALUE_CACHE.get((AsciiString) value);
             assert converted != null; // loader does not return null.
             return converted;
         }

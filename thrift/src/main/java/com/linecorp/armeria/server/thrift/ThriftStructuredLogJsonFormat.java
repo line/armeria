@@ -49,9 +49,9 @@ public final class ThriftStructuredLogJsonFormat {
      * in a good way.
      */
     public static ObjectMapper newObjectMapper(SimpleModule... userModules) {
-        ObjectMapper objectMapper = new ObjectMapper();
+        final ObjectMapper objectMapper = new ObjectMapper();
 
-        SimpleModule module = new SimpleModule();
+        final SimpleModule module = new SimpleModule();
         module.addSerializer(TMessage.class, new TMessageSerializer());
         module.addSerializer(TBase.class, new TBaseSerializer());
         module.addSerializer(TApplicationException.class, new TApplicationExceptionSerializer());
@@ -67,8 +67,8 @@ public final class ThriftStructuredLogJsonFormat {
     }
 
     private static String writeThriftObjectAsTText(Consumer<TProtocol> writer) {
-        TMemoryBuffer buffer = new TMemoryBuffer(1024);
-        TProtocol protocol = new TTextProtocol.Factory().getProtocol(buffer);
+        final TMemoryBuffer buffer = new TMemoryBuffer(1024);
+        final TProtocol protocol = new TTextProtocol.Factory().getProtocol(buffer);
         writer.accept(protocol);
         return new String(buffer.getArray(), 0, buffer.length());
     }

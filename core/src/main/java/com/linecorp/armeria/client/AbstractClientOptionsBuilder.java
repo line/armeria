@@ -234,7 +234,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
     ClientOptions buildOptions() {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
-        ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
+        final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
         optValArray[numOpts] = ClientOption.DECORATION.newValue(decoration.build());
         optValArray[numOpts + 1] = ClientOption.HTTP_HEADERS.newValue(httpHeaders);
 

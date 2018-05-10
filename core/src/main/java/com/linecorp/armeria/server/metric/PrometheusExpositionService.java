@@ -53,7 +53,7 @@ public class PrometheusExpositionService extends AbstractHttpService {
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(stream)) {
             TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
         }

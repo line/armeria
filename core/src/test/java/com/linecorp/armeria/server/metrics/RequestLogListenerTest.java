@@ -30,9 +30,9 @@ public class RequestLogListenerTest {
         // Given
         final int[] executeCounters = { 0 };
 
-        RequestLogListener consumer = log -> executeCounters[0]++;
+        final RequestLogListener consumer = log -> executeCounters[0]++;
 
-        RequestLogListener finalConsumer = consumer.andThen(consumer).andThen(consumer);
+        final RequestLogListener finalConsumer = consumer.andThen(consumer).andThen(consumer);
 
         // When
         finalConsumer.onRequestLog(mock(RequestLog.class));

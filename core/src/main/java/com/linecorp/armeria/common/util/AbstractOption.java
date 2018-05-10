@@ -25,7 +25,7 @@ import io.netty.util.AbstractConstant;
  * @see AbstractOptionValue
  * @see AbstractOptions
  */
-@SuppressWarnings({ "rawtypes", "UnusedDeclaration" })
+@SuppressWarnings("rawtypes")
 public abstract class AbstractOption<T> extends AbstractConstant {
 
     /**

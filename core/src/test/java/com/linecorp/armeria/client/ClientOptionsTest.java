@@ -28,12 +28,12 @@ public class ClientOptionsTest {
 
     @Test
     public void testSetHttpHeader() {
-        HttpHeaders httpHeader = HttpHeaders.of(AsciiString.of("x-user-defined"), "HEADER_VALUE");
+        final HttpHeaders httpHeader = HttpHeaders.of(AsciiString.of("x-user-defined"), "HEADER_VALUE");
 
-        ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
+        final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
         assertThat(options.get(ClientOption.HTTP_HEADERS)).contains(httpHeader);
 
-        ClientOptions options2 = ClientOptions.DEFAULT;
+        final ClientOptions options2 = ClientOptions.DEFAULT;
         assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.EMPTY_HEADERS);
     }
 

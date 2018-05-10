@@ -27,7 +27,6 @@ import com.linecorp.armeria.client.Endpoint;
 final class RoundRobinStrategy implements EndpointSelectionStrategy {
 
     @Override
-    @SuppressWarnings("unchecked")
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new RoundRobinSelector(endpointGroup);
     }
@@ -59,8 +58,8 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
         @Override
         public Endpoint select(ClientRequestContext ctx) {
 
-            List<Endpoint> endpoints = endpointGroup.endpoints();
-            int currentSequence = sequence.getAndIncrement();
+            final List<Endpoint> endpoints = endpointGroup.endpoints();
+            final int currentSequence = sequence.getAndIncrement();
 
             if (endpoints.isEmpty()) {
                 throw new EndpointGroupException(endpointGroup + " is empty");

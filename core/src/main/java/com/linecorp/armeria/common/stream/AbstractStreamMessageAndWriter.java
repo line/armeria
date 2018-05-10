@@ -20,6 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.ReferenceCountUtil;
@@ -35,8 +38,7 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
         OPEN,
         /**
          * {@link #close()} or {@link #close(Throwable)} has been called. Will enter {@link #CLEANUP} after
-         * {@link org.reactivestreams.Subscriber#onComplete()} or
-         * {@link org.reactivestreams.Subscriber#onError(Throwable)} is invoked.
+         * {@link Subscriber#onComplete()} or {@link Subscriber#onError(Throwable)} is invoked.
          */
         CLOSED,
         /**
@@ -44,10 +46,10 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
          * Enters this state when there's no chance of consumption by subscriber.
          * i.e. when any of the following methods are invoked:
          * <ul>
-         *   <li>{@link org.reactivestreams.Subscription#cancel()}</li>
+         *   <li>{@link Subscription#cancel()}</li>
          *   <li>{@link #abort()} (via {@link AbortingSubscriber})</li>
-         *   <li>{@link org.reactivestreams.Subscriber#onComplete()}</li>
-         *   <li>{@link org.reactivestreams.Subscriber#onError(Throwable)}</li>
+         *   <li>{@link Subscriber#onComplete()}</li>
+         *   <li>{@link Subscriber#onError(Throwable)}</li>
          * </ul>
          */
         CLEANUP

@@ -53,6 +53,7 @@ final class StringValueConverter implements ValueConverter<String> {
 
     @Nullable
     @Override
+    @SuppressWarnings("UseOfObsoleteDateTimeApi")
     public String convertObject(@Nullable Object value) {
         if (value == null) {
             return null;
@@ -150,6 +151,7 @@ final class StringValueConverter implements ValueConverter<String> {
 
     @Override
     public long convertToTimeMillis(String value) {
+        @SuppressWarnings("UseOfObsoleteDateTimeApi")
         final Date date = DateFormatter.parseHttpDate(value);
         if (date == null) {
             throw new IllegalArgumentException("not a date: " + value);

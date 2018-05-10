@@ -36,7 +36,7 @@ public final class SpanContextUtil {
                                     Tracer tracer) {
         ctx.onEnter(unused -> threadLocalSpan.set(tracer.withSpanInScope(span)));
         ctx.onExit(unused -> {
-            SpanInScope spanInScope = threadLocalSpan.get();
+            final SpanInScope spanInScope = threadLocalSpan.get();
             if (spanInScope != null) {
                 spanInScope.close();
                 threadLocalSpan.remove();

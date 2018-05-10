@@ -78,12 +78,12 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         checkArgument(sessionTimeout > 0, "sessionTimeoutMillis: %s (expected: > 0)",
                       sessionTimeout);
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        this.internalClient = true;
-        this.client = CuratorFrameworkFactory.builder()
-                                             .connectString(zkConnectionStr)
-                                             .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
-                                             .sessionTimeoutMs(sessionTimeout)
-                                             .build();
+        internalClient = true;
+        client = CuratorFrameworkFactory.builder()
+                                        .connectString(zkConnectionStr)
+                                        .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
+                                        .sessionTimeoutMs(sessionTimeout)
+                                        .build();
         client.start();
         boolean success = false;
         try {
@@ -111,7 +111,7 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         requireNonNull(zNodePath, "zNodePath");
         checkArgument(!zNodePath.isEmpty(), "zNodePath can't be empty");
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        this.internalClient = false;
+        internalClient = false;
         this.client = requireNonNull(client, "client");
         client.start();
         try {

@@ -35,7 +35,7 @@ public class FixedStreamMessageVerification extends StreamMessageVerification<Lo
 
     @Override
     public StreamMessage<Long> createAbortedPublisher(long elements) {
-        StreamMessage<Long> stream = createPublisher(elements);
+        final StreamMessage<Long> stream = createPublisher(elements);
         stream.abort();
         return stream;
     }

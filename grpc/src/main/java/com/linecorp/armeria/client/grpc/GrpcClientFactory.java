@@ -109,11 +109,11 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                                                clientType);
         }
 
-        Client<HttpRequest, HttpResponse> httpClient = newHttpClient(uri, scheme, options);
+        final Client<HttpRequest, HttpResponse> httpClient = newHttpClient(uri, scheme, options);
 
-        MessageMarshaller jsonMarshaller = GrpcSerializationFormats.isJson(serializationFormat) ?
-                                           GrpcJsonUtil.jsonMarshaller(stubMethods(stubClass)) : null;
-        ArmeriaChannel channel = new ArmeriaChannel(
+        final MessageMarshaller jsonMarshaller = GrpcSerializationFormats.isJson(serializationFormat) ?
+                                                 GrpcJsonUtil.jsonMarshaller(stubMethods(stubClass)) : null;
+        final ArmeriaChannel channel = new ArmeriaChannel(
                 new DefaultClientBuilderParams(this, uri, clientType, options),
                 httpClient,
                 meterRegistry(),
@@ -125,7 +125,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         try {
             // Verified createClientMethod.getReturnType == clientType
             @SuppressWarnings("unchecked")
-            T stub = (T) createClientMethod.invoke(null, channel);
+            final T stub = (T) createClientMethod.invoke(null, channel);
             return stub;
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new IllegalStateException("Could not create stub through reflection.", e);
@@ -137,7 +137,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         if (!(client instanceof AbstractStub)) {
             return Optional.empty();
         }
-        AbstractStub<?> stub = (AbstractStub<?>) client;
+        final AbstractStub<?> stub = (AbstractStub<?>) client;
         if (!(stub.getChannel() instanceof ArmeriaChannel)) {
             return Optional.empty();
         }
@@ -162,7 +162,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     private Client<HttpRequest, HttpResponse> newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
         try {
             @SuppressWarnings("unchecked")
-            Client<HttpRequest, HttpResponse> client = delegate().newClient(
+            final Client<HttpRequest, HttpResponse> client = delegate().newClient(
                     new URI(Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()).uriText(),
                             uri.getAuthority(), null, null, null),
                     Client.class,

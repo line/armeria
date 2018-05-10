@@ -75,7 +75,7 @@ public final class TimeoutHeaderUtil {
      * Serialize the given timeout to a {@link String}.
      */
     public static String toHeaderValue(long timeoutNanos) {
-        long cutoff = 100000000;
+        final long cutoff = 100000000;
         if (timeoutNanos < 0) {
             throw new IllegalArgumentException("Timeout too small");
         } else if (timeoutNanos < cutoff) {
@@ -97,10 +97,10 @@ public final class TimeoutHeaderUtil {
      * Parse the timeout from the {@link String}.
      */
     public static long fromHeaderValue(String serialized) {
-        checkArgument(serialized.length() > 0, "empty timeout");
+        checkArgument(!serialized.isEmpty(), "empty timeout");
         checkArgument(serialized.length() <= 9, "bad timeout format");
-        long value = Long.parseLong(serialized.substring(0, serialized.length() - 1));
-        char unit = serialized.charAt(serialized.length() - 1);
+        final long value = Long.parseLong(serialized.substring(0, serialized.length() - 1));
+        final char unit = serialized.charAt(serialized.length() - 1);
         switch (unit) {
             case 'n':
                 return TimeUnit.NANOSECONDS.toNanos(value);

@@ -98,7 +98,7 @@ final class HandlerRegistry {
         }
 
         HandlerRegistry build() {
-            ImmutableMap.Builder<String, ServerMethodDefinition<?, ?>> mapBuilder =
+            final ImmutableMap.Builder<String, ServerMethodDefinition<?, ?>> mapBuilder =
                     ImmutableMap.builder();
             for (ServerServiceDefinition service : services.values()) {
                 for (ServerMethodDefinition<?, ?> method : service.getMethods()) {

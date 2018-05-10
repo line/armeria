@@ -75,6 +75,9 @@ final class RequestContextExporter {
 
     private static final BaseEncoding lowerCasedBase16 = BaseEncoding.base16().lowerCase();
 
+    @SuppressWarnings("rawtypes")
+    private static final ExportEntry[] EMPTY_EXPORT_ENTRIES = new ExportEntry[0];
+
     private final BuiltInProperties builtIns;
     @Nullable
     private final ExportEntry<AttributeKey<?>>[] attrs;
@@ -93,19 +96,19 @@ final class RequestContextExporter {
         builtIns.forEach(this.builtIns::add);
 
         if (!attrs.isEmpty()) {
-            this.attrs = attrs.toArray(new ExportEntry[attrs.size()]);
+            this.attrs = attrs.toArray(EMPTY_EXPORT_ENTRIES);
         } else {
             this.attrs = null;
         }
 
         if (!httpReqHeaders.isEmpty()) {
-            this.httpReqHeaders = httpReqHeaders.toArray(new ExportEntry[httpReqHeaders.size()]);
+            this.httpReqHeaders = httpReqHeaders.toArray(EMPTY_EXPORT_ENTRIES);
         } else {
             this.httpReqHeaders = null;
         }
 
         if (!httpResHeaders.isEmpty()) {
-            this.httpResHeaders = httpResHeaders.toArray(new ExportEntry[httpResHeaders.size()]);
+            this.httpResHeaders = httpResHeaders.toArray(EMPTY_EXPORT_ENTRIES);
         } else {
             this.httpResHeaders = null;
         }

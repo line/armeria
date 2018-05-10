@@ -56,7 +56,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
+        final StringBuilder buf = new StringBuilder();
         buf.append("StaticEndpointGroup(");
         for (Endpoint endpoint : endpoints) {
             buf.append(endpoint).append(',');

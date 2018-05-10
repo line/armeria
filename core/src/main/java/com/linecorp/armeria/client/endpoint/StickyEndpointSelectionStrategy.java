@@ -98,8 +98,8 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
                 throw new EndpointGroupException(endpointGroup + " is empty");
             }
 
-            long key = requestContextHasher.applyAsLong(ctx);
-            int nearest = Hashing.consistentHash(key, endpoints.size());
+            final long key = requestContextHasher.applyAsLong(ctx);
+            final int nearest = Hashing.consistentHash(key, endpoints.size());
             return endpoints.get(nearest);
         }
     }

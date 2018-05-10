@@ -40,7 +40,7 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final void cleanupObjects() {
         while (fulfilled < objs.length) {
-            T obj = objs[fulfilled];
+            final T obj = objs[fulfilled];
             objs[fulfilled++] = null;
             try {
                 onRemoval(obj);

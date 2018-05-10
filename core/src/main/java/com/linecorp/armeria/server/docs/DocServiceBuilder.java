@@ -290,7 +290,7 @@ public final class DocServiceBuilder {
             guessed = true;
             final String s = serviceName.get();
             final String f = methodName.get();
-            Optional<String> serialized = plugin.serializeExampleRequest(s, f, exampleRequest);
+            final Optional<String> serialized = plugin.serializeExampleRequest(s, f, exampleRequest);
             if (serialized.isPresent()) {
                 return new String[] { s, f, serialized.get() };
             }

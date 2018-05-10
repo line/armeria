@@ -89,7 +89,7 @@ public class ArmeriaAutoConfigurationTest {
                     .setServiceName("annotatedService")
                     .setService(new AnnotatedService())
                     .setPathPrefix("/annotated")
-                    .setDecorator(LoggingService.newDecorator())
+                    .setDecorators(LoggingService.newDecorator())
                     .setExceptionHandlers(ImmutableList.of(new IllegalArgumentExceptionHandler()))
                     .setRequestConverters(ImmutableList.of(new StringRequestConverterFunction()))
                     .setResponseConverters(ImmutableList.of(new StringResponseConverter()));
@@ -162,18 +162,18 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testHttpServiceRegistrationBean() throws Exception {
-        HttpClient client = HttpClient.of(newUrl("h1c"));
+        final HttpClient client = HttpClient.of(newUrl("h1c"));
 
-        HttpResponse response = client.get("/ok");
+        final HttpResponse response = client.get("/ok");
 
-        AggregatedHttpMessage msg = response.aggregate().get();
+        final AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.content().toStringUtf8()).isEqualTo("ok");
     }
 
     @Test
     public void testAnnotatedServiceRegistrationBean() throws Exception {
-        HttpClient client = HttpClient.of(newUrl("h1c"));
+        final HttpClient client = HttpClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/annotated/get");
 
@@ -189,15 +189,15 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testThriftServiceRegistrationBean() throws Exception {
-        HelloService.Iface client = Clients.newClient(newUrl("tbinary+h1c") + "/thrift",
-                                                      HelloService.Iface.class);
+        final HelloService.Iface client = Clients.newClient(newUrl("tbinary+h1c") + "/thrift",
+                                                            HelloService.Iface.class);
 
         assertThat(client.hello("world")).isEqualTo("hello world");
 
-        HttpClient httpClient = HttpClient.of(newUrl("h1c"));
-        HttpResponse response = httpClient.get("/internal/docs/specification.json");
+        final HttpClient httpClient = HttpClient.of(newUrl("h1c"));
+        final HttpResponse response = httpClient.get("/internal/docs/specification.json");
 
-        AggregatedHttpMessage msg = response.aggregate().get();
+        final AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(msg.content().toStringUtf8())
                 .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");

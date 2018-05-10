@@ -100,7 +100,7 @@ public final class AnnotatedHttpServiceParamUtil {
         } catch (Exception e) {
             // If we failed to decode the query string, we ignore the exception raised here.
             // A missing parameter might be checked when invoking the annotated method.
-            logger.debug("Failed to decode query string: {}", e);
+            logger.debug("Failed to decode query string:", e);
             return EMPTY_PARAMETERS;
         }
     }

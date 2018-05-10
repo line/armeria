@@ -61,9 +61,9 @@ class ZlibStreamDecoder implements StreamDecoder {
 
     // Mostly copied from netty's HttpContentDecoder.
     private byte[] fetchDecoderOutput() {
-        CompositeByteBuf decoded = Unpooled.compositeBuffer();
+        final CompositeByteBuf decoded = Unpooled.compositeBuffer();
         for (;;) {
-            ByteBuf buf = decoder.readInbound();
+            final ByteBuf buf = decoder.readInbound();
             if (buf == null) {
                 break;
             }
@@ -73,7 +73,7 @@ class ZlibStreamDecoder implements StreamDecoder {
             }
             decoded.addComponent(true, buf);
         }
-        byte[] ret = ByteBufUtil.getBytes(decoded);
+        final byte[] ret = ByteBufUtil.getBytes(decoded);
         decoded.release();
         return ret;
     }

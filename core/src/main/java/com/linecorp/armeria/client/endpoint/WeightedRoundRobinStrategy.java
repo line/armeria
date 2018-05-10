@@ -64,7 +64,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
         @Override
         public Endpoint select(ClientRequestContext ctx) {
-            int currentSequence = sequence.getAndIncrement();
+            final int currentSequence = sequence.getAndIncrement();
             return endpointsAndWeights.selectEndpoint(currentSequence);
         }
 
@@ -79,7 +79,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 int maxWeight = Integer.MIN_VALUE;
                 int totalWeight = 0;
                 for (Endpoint endpoint : endpoints) {
-                    int weight = endpoint.weight();
+                    final int weight = endpoint.weight();
                     minWeight = Math.min(minWeight, weight);
                     maxWeight = Math.max(maxWeight, weight);
                     totalWeight += weight;
@@ -96,9 +96,9 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 }
 
                 if (weighted) {
-                    int[] weights = endpoints.stream()
-                                             .mapToInt(Endpoint::weight)
-                                             .toArray();
+                    final int[] weights = endpoints.stream()
+                                                   .mapToInt(Endpoint::weight)
+                                                   .toArray();
 
                     int mod = currentSequence % totalWeight;
                     for (int i = 0; i < maxWeight; i++) {

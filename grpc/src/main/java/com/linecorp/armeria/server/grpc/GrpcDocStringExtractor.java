@@ -36,18 +36,18 @@ import com.google.protobuf.DescriptorProtos.FileDescriptorProto;
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto;
 
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocStringExtractor;
 
 /**
  * A DocString extractor for gRPC proto compiled descriptors.
  *
- * <p>To include docstrings in {@link com.linecorp.armeria.server.docs.DocService} pages,
- * configure the protobuf compiler to generate a descriptor set with source info and all imports
- * included. Place the descriptor set in the classpath location {@code META-INF/armeria/grpc} and ensure
- * the file extension is '.dsc'. The classpath location can be changed by setting the
- * {@code com.linecorp.armeria.grpc.descriptorDir} system property.
+ * <p>To include docstrings in {@link DocService} pages, configure the protobuf compiler to generate
+ * a descriptor set with source info and all imports included. Place the descriptor set in the classpath
+ * location {@code META-INF/armeria/grpc} and ensure the file extension is '.dsc'. The classpath location
+ * can be changed by setting the {@code com.linecorp.armeria.grpc.descriptorDir} system property.
  *
- * <p>For example, to generate a descriptor set in gradle:
+ * <p>For example, to generate a descriptor set in Gradle:
  * <pre>{@code
  * protobuf {
  *     generateProtoTasks {
@@ -110,13 +110,13 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
         String fullNameSoFar = descriptor.getPackage();
         switch (path.get(0)) {
             case FileDescriptorProto.MESSAGE_TYPE_FIELD_NUMBER:
-                DescriptorProto message = descriptor.getMessageType(path.get(1));
+                final DescriptorProto message = descriptor.getMessageType(path.get(1));
                 return appendMessageToFullName(message, path, fullNameSoFar);
             case FileDescriptorProto.ENUM_TYPE_FIELD_NUMBER:
-                EnumDescriptorProto enumDescriptor = descriptor.getEnumType(path.get(1));
+                final EnumDescriptorProto enumDescriptor = descriptor.getEnumType(path.get(1));
                 return Optional.of(appendEnumToFullName(enumDescriptor, path, fullNameSoFar));
             case FileDescriptorProto.SERVICE_FIELD_NUMBER:
-                ServiceDescriptorProto serviceDescriptor = descriptor.getService(path.get(1));
+                final ServiceDescriptorProto serviceDescriptor = descriptor.getService(path.get(1));
                 fullNameSoFar = appendNameComponent(fullNameSoFar, serviceDescriptor.getName());
                 if (path.size() > 2) {
                     fullNameSoFar = appendFieldComponent(
@@ -132,13 +132,13 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
             DescriptorProto messageDescriptor, List<Integer> path, String fullNameSoFar) {
         switch (path.get(0)) {
             case DescriptorProto.NESTED_TYPE_FIELD_NUMBER:
-                DescriptorProto nestedMessage = messageDescriptor.getNestedType(path.get(1));
+                final DescriptorProto nestedMessage = messageDescriptor.getNestedType(path.get(1));
                 return appendMessageToFullName(nestedMessage, path, fullNameSoFar);
             case DescriptorProto.ENUM_TYPE_FIELD_NUMBER:
-                EnumDescriptorProto enumDescriptor = messageDescriptor.getEnumType(path.get(1));
+                final EnumDescriptorProto enumDescriptor = messageDescriptor.getEnumType(path.get(1));
                 return Optional.of(appendEnumToFullName(enumDescriptor, path, fullNameSoFar));
             case DescriptorProto.FIELD_FIELD_NUMBER:
-                FieldDescriptorProto fieldDescriptor = messageDescriptor.getField(path.get(1));
+                final FieldDescriptorProto fieldDescriptor = messageDescriptor.getField(path.get(1));
                 return Optional.of(appendFieldComponent(fullNameSoFar, fieldDescriptor.getName()));
             default:
                 return Optional.empty();
@@ -163,10 +163,10 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
     }
 
     private static String appendNameComponent(String nameSoFar, String component) {
-        return nameSoFar + "." + component;
+        return nameSoFar + '.' + component;
     }
 
     private static String appendFieldComponent(String nameSoFar, String component) {
-        return nameSoFar + "/" + component;
+        return nameSoFar + '/' + component;
     }
 }

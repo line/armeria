@@ -26,9 +26,7 @@ public class RequestLogAvailabilityException extends RuntimeException {
     /**
      * Creates a new instance.
      */
-    public RequestLogAvailabilityException() {
-        super();
-    }
+    public RequestLogAvailabilityException() {}
 
     /**
      * Creates a new instance with the specified {@code message}.

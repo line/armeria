@@ -56,7 +56,7 @@ import com.linecorp.armeria.testing.server.ServerRule;
 
 public class RetryingHttpClientTest {
 
-    private final int oneSecForRetryAfter = 1;
+    private static final int oneSecForRetryAfter = 1;
 
     private static ClientFactory clientFactory;
 
@@ -329,7 +329,7 @@ public class RetryingHttpClientTest {
 
     @Test
     public void retryAfterOneYear() {
-        long responseTimeoutMillis = 1000;
+        final long responseTimeoutMillis = 1000;
         final HttpClient client = retryingHttpClientOf(
                 responseTimeoutMillis, RetryStrategy.onServerErrorStatus());
 
@@ -344,7 +344,7 @@ public class RetryingHttpClientTest {
 
     @Test
     public void timeoutWhenServerSendServiceUnavailable() {
-        long responseTimeoutMillis = 1000;
+        final long responseTimeoutMillis = 1000;
         final HttpClient client = retryingHttpClientOf(
                 responseTimeoutMillis, RetryStrategy.onServerErrorStatus(Backoff.fixed(100)));
 
@@ -357,7 +357,7 @@ public class RetryingHttpClientTest {
 
     @Test
     public void consecutiveRequests() {
-        long responseTimeoutMillis = 500;
+        final long responseTimeoutMillis = 500;
         final HttpClient client = retryingHttpClientOf(
                 responseTimeoutMillis, RetryStrategy.onServerErrorStatus());
 
@@ -418,20 +418,21 @@ public class RetryingHttpClientTest {
 
     @Test
     public void retryOnResponseTimeout() {
-        RetryStrategy<HttpRequest, HttpResponse> strategy = new RetryStrategy<HttpRequest, HttpResponse>() {
-            final Backoff backoff = Backoff.fixed(100);
+        final RetryStrategy<HttpRequest, HttpResponse> strategy =
+                new RetryStrategy<HttpRequest, HttpResponse>() {
+                    final Backoff backoff = Backoff.fixed(100);
 
-            @Override
-            public CompletableFuture<Backoff> shouldRetry(HttpRequest request,
-                                                          HttpResponse response) {
-                return response.aggregate().handle((result, cause) -> {
-                    if (cause instanceof ResponseTimeoutException) {
-                        return backoff;
+                    @Override
+                    public CompletableFuture<Backoff> shouldRetry(HttpRequest request,
+                                                                  HttpResponse response) {
+                        return response.aggregate().handle((result, cause) -> {
+                            if (cause instanceof ResponseTimeoutException) {
+                                return backoff;
+                            }
+                            return null;
+                        });
                     }
-                    return null;
-                });
-            }
-        };
+                };
 
         final HttpClient client =
                 new HttpClientBuilder(server.uri("/"))
@@ -457,7 +458,7 @@ public class RetryingHttpClientTest {
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo((long) (1000 * 0.9));
     }
 
-    private BiFunction<HttpStatus, Throwable, Backoff> statusBasedBackoff() {
+    private static BiFunction<HttpStatus, Throwable, Backoff> statusBasedBackoff() {
         return new BiFunction<HttpStatus, Throwable, Backoff>() {
             private final Backoff backoffOn503 = Backoff.fixed(10).withMaxAttempts(2);
             private final Backoff backoffOn500 = Backoff.fixed(1000).withMaxAttempts(2);

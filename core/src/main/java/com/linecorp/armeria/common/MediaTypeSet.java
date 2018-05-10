@@ -55,6 +55,7 @@ import com.google.common.collect.Iterators;
 public final class MediaTypeSet extends AbstractSet<MediaType> {
 
     private static final String Q = "q";
+    private static final MediaType[] EMPTY_MEDIA_TYPES = new MediaType[0];
 
     private final MediaType[] mediaTypes;
 
@@ -83,7 +84,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
             mediaTypesCopy.add(mediaType);
         }
 
-        this.mediaTypes = mediaTypesCopy.toArray(new MediaType[mediaTypesCopy.size()]);
+        this.mediaTypes = mediaTypesCopy.toArray(EMPTY_MEDIA_TYPES);
     }
 
     @Override

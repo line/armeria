@@ -46,7 +46,7 @@ final class ExponentialBackoff extends AbstractBackoff {
     }
 
     private static long saturatedMultiply(long left, double right) {
-        double result = left * right;
+        final double result = left * right;
         return result >= Long.MAX_VALUE ? Long.MAX_VALUE : (long) result;
     }
 

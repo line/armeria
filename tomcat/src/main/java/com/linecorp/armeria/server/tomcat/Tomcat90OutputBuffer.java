@@ -53,7 +53,7 @@ class Tomcat90OutputBuffer implements OutputBuffer {
 
     @Override
     public int doWrite(ByteBuffer chunk) throws IOException {
-        int length = chunk.remaining();
+        final int length = chunk.remaining();
         if (length <= 0) {
             return 0;
         }

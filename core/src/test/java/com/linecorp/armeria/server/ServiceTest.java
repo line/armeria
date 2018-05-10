@@ -33,7 +33,7 @@ public class ServiceTest {
     public void lambdaExpressionDecorator() throws Exception {
         final FooService inner = new FooService();
         final Service<RpcRequest, RpcResponse> outer = inner.decorate((delegate, ctx, req) -> {
-            RpcRequest newReq = RpcRequest.of(req.serviceType(), "new_" + req.method(), req.params());
+            final RpcRequest newReq = RpcRequest.of(req.serviceType(), "new_" + req.method(), req.params());
             return delegate.serve(ctx, newReq);
         });
 

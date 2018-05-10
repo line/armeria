@@ -39,7 +39,7 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void propertiesWithoutDefaultPort() {
-        PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(PROPS, "serverA.hosts");
+        final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(PROPS, "serverA.hosts");
 
         assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                         Endpoint.parse("127.0.0.1:8081"),
@@ -48,8 +48,8 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void propertiesWithDefaultPort() {
-        PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(PROPS, "serverA.hosts", 80);
-        PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(PROPS, "serverB.hosts", 8080);
+        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(PROPS, "serverA.hosts", 80);
+        final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(PROPS, "serverB.hosts", 8080);
 
         assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                          Endpoint.parse("127.0.0.1:8081"),
@@ -60,7 +60,7 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void resourceWithoutDefaultPort() {
-        PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
+        final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
                 getClass().getClassLoader(), "server-list.properties", "serverA.hosts");
 
         assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
@@ -70,9 +70,9 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void resourceWithDefaultPort() {
-        PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
+        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
                 getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80);
-        PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
+        final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
                 getClass().getClassLoader(), "server-list.properties", "serverB.hosts", 8080);
 
         assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
@@ -84,7 +84,7 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void testWithPrefixThatEndsWithDot() {
-        PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
+        final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
                 getClass().getClassLoader(), "server-list.properties", "serverA.hosts.");
 
         assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),

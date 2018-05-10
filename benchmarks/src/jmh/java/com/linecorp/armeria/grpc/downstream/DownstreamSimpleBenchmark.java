@@ -31,8 +31,8 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 @State(Scope.Benchmark)
-@Fork(jvmArgsAppend = { "-Dcom.linecorp.armeria.cachedHeaders=:authority,:scheme,:method,accept-encoding," +
-                        "content-type,:path,user-agent,grpc-accept-encoding,te"})
+@Fork(jvmArgsAppend = "-Dcom.linecorp.armeria.cachedHeaders=:authority,:scheme,:method,accept-encoding," +
+                      "content-type,:path,user-agent,grpc-accept-encoding,te")
 public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     private Server server;
@@ -41,9 +41,9 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     @Override
     protected int port() {
-        ServerPort httpPort = server.activePorts().values().stream()
-                                    .filter(ServerPort::hasHttp).findAny()
-                                    .get();
+        final ServerPort httpPort = server.activePorts().values().stream()
+                                          .filter(ServerPort::hasHttp).findAny()
+                                          .get();
         return httpPort.localAddress().getPort();
     }
 
@@ -63,7 +63,7 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
                 .serviceUnder("/", new GrpcServiceBuilder().addService(new GithubApiService()).build())
                 .build();
         server.start().join();
-        final String url = "gproto+http://127.0.0.1:" + port() + "/";
+        final String url = "gproto+http://127.0.0.1:" + port() + '/';
         githubApiClient = Clients.newClient(url, GithubServiceBlockingStub.class);
         githubApiFutureClient = Clients.newClient(url, GithubServiceFutureStub.class);
     }

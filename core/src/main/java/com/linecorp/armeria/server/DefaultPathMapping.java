@@ -44,6 +44,8 @@ final class DefaultPathMapping extends AbstractPathMapping {
 
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
 
+    private static final String[] EMPTY_NAMES = new String[0];
+
     /**
      * The original path pattern specified in the constructor.
      */
@@ -124,7 +126,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
         this.pathPattern = pathPattern;
         pattern = Pattern.compile(patternJoiner.toString());
         skeleton = Optional.of(skeletonJoiner.toString());
-        paramNameArray = paramNames.toArray(new String[paramNames.size()]);
+        paramNameArray = paramNames.toArray(EMPTY_NAMES);
         this.paramNames = ImmutableSet.copyOf(paramNames);
 
         loggerName = loggerName(pathPattern);

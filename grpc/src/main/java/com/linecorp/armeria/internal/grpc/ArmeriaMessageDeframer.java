@@ -425,13 +425,13 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             }
         } else {
             assert unprocessed != null;
-            ByteBuf buf = unprocessed.readBytes(length);
+            final ByteBuf buf = unprocessed.readBytes(length);
             unprocessed.discardReadComponents();
             return buf;
         }
     }
 
-    private ByteBufOrStream getUncompressedBody(ByteBuf buf) {
+    private static ByteBufOrStream getUncompressedBody(ByteBuf buf) {
         return new ByteBufOrStream(buf);
     }
 

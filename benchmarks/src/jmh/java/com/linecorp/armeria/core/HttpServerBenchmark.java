@@ -65,16 +65,16 @@ public class HttpServerBenchmark {
     @Setup
     public void startServer() throws Exception {
         server = new ServerBuilder()
-                .service("/empty", ((ctx, req) -> HttpResponse.of(HttpStatus.OK)))
+                .service("/empty", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .defaultRequestTimeout(Duration.ZERO)
                 .meterRegistry(NoopMeterRegistry.get())
                 .build();
         server.start().join();
-        ServerPort httpPort = server.activePorts().values().stream()
-                                    .filter(ServerPort::hasHttp).findAny()
-                                    .get();
+        final ServerPort httpPort = server.activePorts().values().stream()
+                                          .filter(ServerPort::hasHttp).findAny()
+                                          .get();
         httpClient = Clients.newClient("none+" + protocol.uriText() + "://127.0.0.1:" +
-                                       httpPort.localAddress().getPort() + "/",
+                                       httpPort.localAddress().getPort() + '/',
                                        HttpClient.class);
     }
 

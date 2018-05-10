@@ -22,6 +22,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
+import javax.annotation.Nullable;
+
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -55,7 +57,7 @@ public class KafkaStructuredLoggingServiceTest {
             extends KafkaStructuredLoggingService<HttpRequest, HttpResponse, SimpleStructuredLog> {
         KafkaStructuredLoggingServiceExposed(
                 Producer<byte[], SimpleStructuredLog> producer,
-                KeySelector<SimpleStructuredLog> keySelector,
+                @Nullable KeySelector<SimpleStructuredLog> keySelector,
                 boolean needToCloseProducer) {
             super(mock(Service.class), log -> null, producer, TOPIC_NAME, keySelector, needToCloseProducer);
         }
@@ -69,30 +71,30 @@ public class KafkaStructuredLoggingServiceTest {
 
     @Test
     public void testServiceWithoutKeySelector() {
-        KafkaStructuredLoggingServiceExposed service =
+        final KafkaStructuredLoggingServiceExposed service =
                 new KafkaStructuredLoggingServiceExposed(producer, null, false);
 
-        SimpleStructuredLog log = new SimpleStructuredLog("kawamuray");
+        final SimpleStructuredLog log = new SimpleStructuredLog("kawamuray");
         service.writeLog(null, log);
 
         verify(producer, times(1)).send(captor.capture(), any(Callback.class));
 
-        ProducerRecord<byte[], SimpleStructuredLog> record = captor.getValue();
+        final ProducerRecord<byte[], SimpleStructuredLog> record = captor.getValue();
         assertThat(record.key()).isNull();
         assertThat(record.value()).isEqualTo(log);
     }
 
     @Test
     public void testWithKeySelector() {
-        KafkaStructuredLoggingServiceExposed service = new KafkaStructuredLoggingServiceExposed(
+        final KafkaStructuredLoggingServiceExposed service = new KafkaStructuredLoggingServiceExposed(
                 producer, (res, log) -> log.name.getBytes(), false);
 
-        SimpleStructuredLog log = new SimpleStructuredLog("kawamuray");
+        final SimpleStructuredLog log = new SimpleStructuredLog("kawamuray");
         service.writeLog(null, log);
 
         verify(producer, times(1)).send(captor.capture(), any(Callback.class));
 
-        ProducerRecord<byte[], SimpleStructuredLog> record = captor.getValue();
+        final ProducerRecord<byte[], SimpleStructuredLog> record = captor.getValue();
         assertThat(record.key()).isNotNull();
         assertThat(new String(record.key())).isEqualTo(log.name);
         assertThat(record.value()).isEqualTo(log);
@@ -100,7 +102,7 @@ public class KafkaStructuredLoggingServiceTest {
 
     @Test
     public void testCloseProducerWhenRequested() {
-        KafkaStructuredLoggingServiceExposed service =
+        final KafkaStructuredLoggingServiceExposed service =
                 new KafkaStructuredLoggingServiceExposed(producer, null, true);
 
         service.close();
@@ -109,7 +111,7 @@ public class KafkaStructuredLoggingServiceTest {
 
     @Test
     public void testDoNotCloseProducerWhenNotRequested() {
-        KafkaStructuredLoggingServiceExposed service =
+        final KafkaStructuredLoggingServiceExposed service =
                 new KafkaStructuredLoggingServiceExposed(producer, null, false);
 
         service.close();

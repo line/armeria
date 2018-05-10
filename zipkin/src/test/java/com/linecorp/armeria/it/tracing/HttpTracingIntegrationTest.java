@@ -99,8 +99,8 @@ public class HttpTracingIntegrationTest {
 
             sb.service("/zip", decorate("service/zip", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> {
-                        ThriftCompletableFuture<String> f1 = new ThriftCompletableFuture<>();
-                        ThriftCompletableFuture<String> f2 = new ThriftCompletableFuture<>();
+                        final ThriftCompletableFuture<String> f1 = new ThriftCompletableFuture<>();
+                        final ThriftCompletableFuture<String> f2 = new ThriftCompletableFuture<>();
                         quxClient.hello(name, f1);
                         quxClient.hello(name, f2);
                         CompletableFuture.allOf(f1, f2).whenComplete((aVoid, throwable) -> {
@@ -115,11 +115,11 @@ public class HttpTracingIntegrationTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
+                    final ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
                             Executors.newFixedThreadPool(2));
-                    CountDownLatch countDownLatch = new CountDownLatch(2);
+                    final CountDownLatch countDownLatch = new CountDownLatch(2);
 
-                    ListenableFuture<List<Object>> spanAware = allAsList(IntStream.range(1, 3).mapToObj(
+                    final ListenableFuture<List<Object>> spanAware = allAsList(IntStream.range(1, 3).mapToObj(
                             i -> executorService.submit(
                                     RequestContext.current().makeContextAware(() -> {
                                         brave.Span span = Tracing.currentTracer().nextSpan().start();
@@ -132,8 +132,8 @@ public class HttpTracingIntegrationTest {
                                         }
                                     }))).collect(toImmutableList()));
 
-                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    HttpResponse res = HttpResponse.from(responseFuture);
+                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    final HttpResponse res = HttpResponse.from(responseFuture);
                     transformAsync(spanAware,
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
                                            i -> executorService.submit(() -> {
@@ -301,8 +301,8 @@ public class HttpTracingIntegrationTest {
     @Test(timeout = 10000)
     public void testSpanInThreadPoolHasSameTraceId() throws Exception {
         poolHttpClient.get("pool").aggregate().get();
-        Span[] spans = spanReporter.take(5);
-        assertThat(Arrays.stream(spans).map(span -> span.traceId()).collect(toImmutableSet())).hasSize(3);
+        final Span[] spans = spanReporter.take(5);
+        assertThat(Arrays.stream(spans).map(Span::traceId).collect(toImmutableSet())).hasSize(3);
     }
 
     private static Span findSpan(Span[] spans, String serviceName) {
