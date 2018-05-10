@@ -106,16 +106,16 @@ public class DropwizardMetricsIntegrationTest {
 
         dropwizardRegistry.getMeters().keySet().forEach(System.out::println);
         assertThat(dropwizardRegistry.getMeters()
-                                     .get(clientMetricName("requests") + ".result:failure")
+                                     .get(clientMetricNameWithStatusAndResult("requests", 200, "failure"))
                                      .getCount()).isEqualTo(3L);
         assertThat(dropwizardRegistry.getMeters()
-                                     .get(serverMetricName("requests") + ".result:failure")
+                                     .get(serverMetricNameWithStatusAndResult("requests", 200, "failure"))
                                      .getCount()).isEqualTo(3L);
         assertThat(dropwizardRegistry.getMeters()
-                                     .get(clientMetricName("requests") + ".result:success")
+                                     .get(clientMetricNameWithStatusAndResult("requests", 200, "success"))
                                      .getCount()).isEqualTo(4L);
         assertThat(dropwizardRegistry.getMeters()
-                                     .get(serverMetricName("requests") + ".result:success")
+                                     .get(serverMetricNameWithStatusAndResult("requests", 200, "success"))
                                      .getCount()).isEqualTo(4L);
 
         assertTimer("requestDuration", 7);
@@ -134,10 +134,14 @@ public class DropwizardMetricsIntegrationTest {
     }
 
     private static void assertSummary(Map<String, ?> map, String property, int expectedCount) {
-        assertThat(((Counting) map.get(clientMetricName(property))).getCount()).isEqualTo(expectedCount);
-        assertThat(((Sampling) map.get(clientMetricName(property))).getSnapshot().getMean()).isPositive();
-        assertThat(((Counting) map.get(serverMetricName(property))).getCount()).isEqualTo(expectedCount);
-        assertThat(((Sampling) map.get(serverMetricName(property))).getSnapshot().getMean()).isPositive();
+        assertThat(((Counting) map.get(clientMetricNameWithStatus(property, 200))).getCount())
+                .isEqualTo(expectedCount);
+        assertThat(((Sampling) map.get(clientMetricNameWithStatus(property, 200))).getSnapshot().getMean())
+                .isPositive();
+        assertThat(((Counting) map.get(serverMetricNameWithStatus(property, 200))).getCount())
+                .isEqualTo(expectedCount);
+        assertThat(((Sampling) map.get(serverMetricNameWithStatus(property, 200))).getSnapshot().getMean())
+                .isPositive();
     }
 
     private static String serverMetricName(String property) {
@@ -145,9 +149,25 @@ public class DropwizardMetricsIntegrationTest {
                                    "hostnamePattern:*", "method:hello", "pathMapping:exact:/helloservice");
     }
 
+    private static String serverMetricNameWithStatus(String property, int status) {
+        return serverMetricName(property) + ".status:" + status;
+    }
+
+    private static String serverMetricNameWithStatusAndResult(String property, int status, String result) {
+        return serverMetricName(property) + ".result:" + result + ".status:" + status;
+    }
+
     private static String clientMetricName(String property) {
         return MetricRegistry.name("armeria", "client", "HelloService", property,
                                    "method:hello");
+    }
+
+    private static String clientMetricNameWithStatus(String prop, int status) {
+        return clientMetricName(prop) + ".status:" + status;
+    }
+
+    private static String clientMetricNameWithStatusAndResult(String prop, int status, String result) {
+        return clientMetricName(prop) + ".result:" + result + ".status:" + status;
     }
 
     private static void makeRequest(String name) {

@@ -392,6 +392,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     logBuilder.endRequest();
                 } else {
                     logBuilder.endRequest(cause);
+                    // NB: logBuilder.endResponse(cause) will be called by HttpResponseSubscriber below
                 }
             })).exceptionally(CompletionActions::log);
 
