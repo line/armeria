@@ -24,7 +24,10 @@ import javax.annotation.Nullable;
 import com.codahale.metrics.MetricRegistry;
 
 import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.core.instrument.config.MeterFilterReply;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.micrometer.core.instrument.distribution.pause.NoPauseDetector;
 import io.micrometer.core.instrument.dropwizard.DropwizardConfig;
@@ -123,6 +126,23 @@ public final class DropwizardMeterRegistries {
                 requireNonNull(registry, "registry"),
                 requireNonNull(nameMapper, "nameMapper"),
                 requireNonNull(clock, "clock")) {
+            {
+                // Do not add percentile or histogram value gauges to prevent Micrometer from creating
+                // too many gauges. Dropwizard has its own distribution statistic calculation mechanism
+                // although not perfect.
+                config().meterFilter(new MeterFilter() {
+                    @Override
+                    public MeterFilterReply accept(Meter.Id id) {
+                        if (id.getName().endsWith(".percentile") && id.getTag("phi") != null) {
+                            return MeterFilterReply.DENY;
+                        }
+                        if (id.getName().endsWith(".histogram") && id.getTag("le") != null) {
+                            return MeterFilterReply.DENY;
+                        }
+                        return MeterFilterReply.NEUTRAL;
+                    }
+                });
+            }
 
             @Override
             protected Double nullGaugeValue() {
