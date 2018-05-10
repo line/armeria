@@ -157,45 +157,45 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",pathMapping=\"exact:/foo\",status=\"200\",} 7.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_request_length_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",pathMapping=\"exact:/foo\",status=\"200\",} 7.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_response_length_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",pathMapping=\"exact:/foo\",status=\"200\",} 7.0"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
-                                 "{handler=\"Foo\",method=\"hello\",} 7.0"));
+                                 "{handler=\"Foo\",method=\"hello\",status=\"200\",} 7.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_request_length_count",
-                                 "{handler=\"Foo\",method=\"hello\",} 7.0"));
+                                 "{handler=\"Foo\",method=\"hello\",status=\"200\",} 7.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_response_length_count",
-                                 "{handler=\"Foo\",method=\"hello\",} 7.0"));
+                                 "{handler=\"Foo\",method=\"hello\",status=\"200\",} 7.0"));
 
         // Failure count
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",",
                                  "method=\"hello\",pathMapping=\"exact:/foo\",",
-                                 "result=\"failure\",} 3.0"));
+                                 "result=\"failure\",status=\"200\",} 3.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
-                                 "{handler=\"Foo\",method=\"hello\",result=\"failure\",} 3.0"));
+                                 "{handler=\"Foo\",method=\"hello\",result=\"failure\",status=\"200\",} 3.0"));
 
         // Success count
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",",
                                  "method=\"hello\",pathMapping=\"exact:/foo\",",
-                                 "result=\"success\",} 4.0"));
+                                 "result=\"success\",status=\"200\",} 4.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
-                                 "{handler=\"Foo\",method=\"hello\",result=\"success\",} 4.0"));
+                                 "{handler=\"Foo\",method=\"hello\",result=\"success\",status=\"200\",} 4.0"));
 
         // Active Requests 0
         assertThat(content).containsPattern(
@@ -244,35 +244,35 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",pathMapping=\"exact:/bar\",status=\"200\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_request_length_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",pathMapping=\"exact:/bar\",status=\"200\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_response_length_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",pathMapping=\"exact:/bar\",status=\"200\",} 1.0"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
-                                 "{handler=\"Bar\",method=\"hello\",} 1.0"));
+                                 "{handler=\"Bar\",method=\"hello\",status=\"200\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_request_length_count",
-                                 "{handler=\"Bar\",method=\"hello\",} 1.0"));
+                                 "{handler=\"Bar\",method=\"hello\",status=\"200\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_response_length_count",
-                                 "{handler=\"Bar\",method=\"hello\",} 1.0"));
+                                 "{handler=\"Bar\",method=\"hello\",status=\"200\",} 1.0"));
 
         // Success count
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",",
                                  "method=\"hello\",pathMapping=\"exact:/bar\",",
-                                 "result=\"success\",} 1.0"));
+                                 "result=\"success\",status=\"200\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
-                                 "{handler=\"Bar\",method=\"hello\",result=\"success\",} 1.0"));
+                                 "{handler=\"Bar\",method=\"hello\",result=\"success\",status=\"200\",} 1.0"));
 
         // Active Requests 0
         assertThat(content).containsPattern(

@@ -43,7 +43,7 @@ import io.netty.channel.EventLoop;
 public class RequestMetricSupportTest {
 
     @Test
-    public void http() {
+    public void httpSuccess() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), registry, SessionProtocol.H2C,
@@ -60,31 +60,50 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().requestLength(123);
 
         Map<String, Double> measurements = measureAll(registry);
-        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0)
-                                .containsEntry("foo.requestDuration#count{method=POST}", 0.0)
-                                .containsEntry("foo.requestDuration#totalTime{method=POST}", 0.0)
-                                .containsEntry("foo.requestLength#count{method=POST}", 0.0)
-                                .containsEntry("foo.requestLength#total{method=POST}", 0.0);
-
-        ctx.logBuilder().endRequest();
-        measurements = measureAll(registry);
-        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0)
-                                .containsEntry("foo.requestDuration#count{method=POST}", 1.0)
-                                .containsEntry("foo.requestLength#count{method=POST}", 1.0)
-                                .containsEntry("foo.requestLength#total{method=POST}", 123.0);
+        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0);
 
         ctx.logBuilder().responseHeaders(HttpHeaders.of(200));
         ctx.logBuilder().responseLength(456);
+
+        ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
 
         measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 0.0)
-                                .containsEntry("foo.requests#count{method=POST,result=success}", 1.0)
-                                .containsEntry("foo.requests#count{method=POST,result=failure}", 0.0)
-                                .containsEntry("foo.responseDuration#count{method=POST}", 1.0)
-                                .containsEntry("foo.responseLength#count{method=POST}", 1.0)
-                                .containsEntry("foo.responseLength#total{method=POST}", 456.0)
-                                .containsEntry("foo.totalDuration#count{method=POST}", 1.0);
+                                .containsEntry("foo.requests#count{method=POST,result=success,status=200}", 1.0)
+                                .containsEntry("foo.requests#count{method=POST,result=failure,status=200}", 0.0)
+                                .containsEntry("foo.responseDuration#count{method=POST,status=200}", 1.0)
+                                .containsEntry("foo.responseLength#count{method=POST,status=200}", 1.0)
+                                .containsEntry("foo.responseLength#total{method=POST,status=200}", 456.0)
+                                .containsEntry("foo.totalDuration#count{method=POST,status=200}", 1.0);
+    }
+
+    @Test
+    public void httpFailure() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx = new DefaultClientRequestContext(
+                mock(EventLoop.class), registry, SessionProtocol.H2C,
+                Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
+                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/foo"));
+
+        final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
+
+        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C, "example.com");
+        RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
+
+        ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        ctx.logBuilder().responseHeaders(HttpHeaders.of(500));
+        ctx.logBuilder().responseLength(456);
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+
+        Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 0.0)
+                                .containsEntry("foo.requests#count{method=POST,result=success,status=500}", 0.0)
+                                .containsEntry("foo.requests#count{method=POST,result=failure,status=500}", 1.0)
+                                .containsEntry("foo.responseDuration#count{method=POST,status=500}", 1.0)
+                                .containsEntry("foo.responseLength#count{method=POST,status=500}", 1.0)
+                                .containsEntry("foo.totalDuration#count{method=POST,status=500}", 1.0);
     }
 
     @Test

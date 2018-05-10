@@ -259,6 +259,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private void fail(Throwable cause) {
         setDone();
         logBuilder.endRequest(cause);
+        logBuilder.endResponse(cause);
         assert subscription != null;
         subscription.cancel();
     }
