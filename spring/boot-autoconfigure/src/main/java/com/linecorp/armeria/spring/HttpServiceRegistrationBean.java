@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.spring;
 
-import java.util.function.Function;
-
 import javax.validation.constraints.NotNull;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -25,7 +23,7 @@ import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 
 /**
- * A bean with information for registering a http service. It enables dropwizard
+ * A bean with information for registering a http service. It enables micrometer
  * monitoring of the service automatically.
  * <pre>{@code
  * > @Bean
@@ -34,52 +32,19 @@ import com.linecorp.armeria.server.Service;
  * >             .setServiceName("okService")
  * >             .setService(new OkService())
  * >             .setPathMapping(PathMapping.ofExact("/ok"))
- * >             .setDecorator(LoggingService.newDecorator());
+ * >             .setDecorators(LoggingService.newDecorator());
  * > }
  * }</pre>
  */
-public class HttpServiceRegistrationBean {
-
-    /**
-     * The http service to register.
-     */
-    @NotNull
-    private Service<HttpRequest, HttpResponse> service;
+public class HttpServiceRegistrationBean
+        extends
+        AbstractServiceRegistrationBean<Service<HttpRequest, HttpResponse>, HttpServiceRegistrationBean> {
 
     /**
      * The pathMapping for the http service. For example, {@code PathMapping.ofPrefix("/foobar")}.
      */
     @NotNull
     private PathMapping pathMapping;
-
-    /**
-     * A service name to use in monitoring.
-     */
-    @NotNull
-    private String serviceName;
-
-    /**
-     * The decorator of the HTTP service.
-     */
-    @NotNull
-    private Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
-
-    /**
-     * Returns the http {@link Service} registered to this bean.
-     */
-    @NotNull
-    public Service<HttpRequest, HttpResponse> getService() {
-        return service;
-    }
-
-    /**
-     * Register a http {@link Service}.
-     */
-    public HttpServiceRegistrationBean setService(@NotNull Service<HttpRequest, HttpResponse> service) {
-        this.service = service;
-        return this;
-    }
 
     /**
      * Returns the {@link PathMapping} that this service map to.
@@ -102,40 +67,5 @@ public class HttpServiceRegistrationBean {
      */
     public HttpServiceRegistrationBean setPathPattern(@NotNull String pathPattern) {
         return setPathMapping(PathMapping.of(pathPattern));
-    }
-
-    /**
-     * Returns this service name to use in monitoring.
-     */
-    @NotNull
-    public String getServiceName() {
-        return serviceName;
-    }
-
-    /**
-     * Sets service name to use in monitoring.
-     */
-    public HttpServiceRegistrationBean setServiceName(@NotNull String serviceName) {
-        this.serviceName = serviceName;
-        return this;
-    }
-
-    /**
-     * Returns the decorator of the HTTP service.
-     */
-    @NotNull
-    public Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> getDecorator() {
-        return decorator;
-    }
-
-    /**
-     * Sets the decorator of the HTTP service.
-     */
-    public HttpServiceRegistrationBean setDecorator(
-            @NotNull Function<Service<HttpRequest, HttpResponse>,
-                              ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        this.decorator = decorator;
-        return this;
     }
 }
