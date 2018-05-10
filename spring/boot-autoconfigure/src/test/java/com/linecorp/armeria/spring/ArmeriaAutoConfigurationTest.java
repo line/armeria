@@ -80,7 +80,7 @@ public class ArmeriaAutoConfigurationTest {
                     .setServiceName("okService")
                     .setService(new OkService())
                     .setPathMapping(PathMapping.ofExact("/ok"))
-                    .setDecorator(LoggingService.newDecorator());
+                    .setDecorators(ImmutableList.of(LoggingService.newDecorator()));
         }
 
         @Bean
@@ -101,7 +101,7 @@ public class ArmeriaAutoConfigurationTest {
                     .setServiceName("helloService")
                     .setService(THttpService.of((HelloService.Iface) name -> "hello " + name))
                     .setPath("/thrift")
-                    .setDecorator(LoggingService.newDecorator())
+                    .setDecorators(ImmutableList.of(LoggingService.newDecorator()))
                     .setExampleRequests(Collections.singleton(new hello_args("nameVal")))
                     .setExampleHeaders(Collections.singleton(HttpHeaders.of(
                             AsciiString.of("x-additional-header"), "headerVal")));

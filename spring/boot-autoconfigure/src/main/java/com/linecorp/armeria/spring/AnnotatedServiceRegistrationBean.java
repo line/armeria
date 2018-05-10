@@ -17,21 +17,17 @@ package com.linecorp.armeria.spring;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.function.Function;
 
 import javax.validation.constraints.NotNull;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * A bean with information for registering an annotated service object. It enables dropwizard
+ * A bean with information for registering an annotated service object. It enables micrometer
  * monitoring of the service automatically.
  * <pre>{@code
  * > @Bean
@@ -40,39 +36,21 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * >             .setServiceName("myAnnotatedService")
  * >             .setPathPrefix("/my_service")
  * >             .setService(new MyAnnotatedService())
- * >             .setDecorator(LoggingService.newDecorator())
+ * >             .setDecorators(LoggingService.newDecorator())
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
  * >             .setResponseConverters(new MyResponseConverter());
  * > }
  * }</pre>
  */
-public class AnnotatedServiceRegistrationBean {
-
-    /**
-     * The annotated service object to register.
-     */
-    @NotNull
-    private Object service;
+public class AnnotatedServiceRegistrationBean
+        extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean> {
 
     /**
      * The path prefix of the annotated service object.
      */
     @NotNull
     private String pathPrefix = "/";
-
-    /**
-     * A service name to use in monitoring.
-     */
-    @NotNull
-    private String serviceName;
-
-    /**
-     * The decorator of the annotated service object.
-     */
-    @NotNull
-    private Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
 
     /**
      * The exception handlers of the annotated service object.
@@ -93,22 +71,6 @@ public class AnnotatedServiceRegistrationBean {
     private Collection<? extends ResponseConverterFunction> responseConverters = new ArrayList<>();
 
     /**
-     * Returns the annotated service object registered to this bean.
-     */
-    @NotNull
-    public Object getService() {
-        return service;
-    }
-
-    /**
-     * Registers an annotated service object.
-     */
-    public AnnotatedServiceRegistrationBean setService(@NotNull Object service) {
-        this.service = service;
-        return this;
-    }
-
-    /**
      * Returns the path prefix.
      */
     @NotNull
@@ -121,41 +83,6 @@ public class AnnotatedServiceRegistrationBean {
      */
     public AnnotatedServiceRegistrationBean setPathPrefix(@NotNull String pathPrefix) {
         this.pathPrefix = pathPrefix;
-        return this;
-    }
-
-    /**
-     * Returns this service name to use in monitoring.
-     */
-    @NotNull
-    public String getServiceName() {
-        return serviceName;
-    }
-
-    /**
-     * Sets service name to use in monitoring.
-     */
-    public AnnotatedServiceRegistrationBean setServiceName(@NotNull String serviceName) {
-        this.serviceName = serviceName;
-        return this;
-    }
-
-    /**
-     * Returns the decorator of the annotated service object.
-     */
-    @NotNull
-    public Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> getDecorator() {
-        return decorator;
-    }
-
-    /**
-     * Sets the decorator of the annotated service object.
-     */
-    public AnnotatedServiceRegistrationBean setDecorator(
-            @NotNull Function<Service<HttpRequest, HttpResponse>,
-                              ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        this.decorator = decorator;
         return this;
     }
 

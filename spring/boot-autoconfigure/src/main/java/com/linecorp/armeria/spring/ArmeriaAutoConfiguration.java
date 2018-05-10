@@ -135,7 +135,11 @@ public class ArmeriaAutoConfiguration {
         final List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
         final Map<String, Collection<HttpHeaders>> docServiceHeaders = new HashMap<>();
         thriftServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
-            Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
+            Service<HttpRequest, HttpResponse> service = bean.getService();
+            for (Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
+                    decorator : bean.getDecorators()) {
+                service = service.decorate(decorator);
+            }
             if (metricsEnabled) {
                 service = service.decorate(MetricCollectingService.newDecorator(
                         meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
@@ -149,7 +153,11 @@ public class ArmeriaAutoConfiguration {
         }));
 
         httpServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
-            Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
+            Service<HttpRequest, HttpResponse> service = bean.getService();
+            for (Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
+                    decorator : bean.getDecorators()) {
+                service = service.decorate(decorator);
+            }
             if (metricsEnabled) {
                 service = service.decorate(MetricCollectingService.newDecorator(
                         meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
@@ -159,7 +167,11 @@ public class ArmeriaAutoConfiguration {
 
         annotatedServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator = bean.getDecorator();
+                    ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
+            for (Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
+                    d : bean.getDecorators()) {
+                decorator = decorator.andThen(d);
+            }
             if (metricsEnabled) {
                 decorator = decorator.andThen(MetricCollectingService.newDecorator(
                         meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
