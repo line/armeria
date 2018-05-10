@@ -49,10 +49,6 @@ public class CircuitBreakerThrottlingStrategyTest {
                         }
 
                         @Override
-                        public void onFailure(Throwable cause) {
-                        }
-
-                        @Override
                         public void onFailure() {
                         }
 
@@ -70,10 +66,6 @@ public class CircuitBreakerThrottlingStrategyTest {
 
                           @Override
                           public void onSuccess() {
-                          }
-
-                          @Override
-                          public void onFailure(Throwable cause) {
                           }
 
                           @Override

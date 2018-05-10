@@ -36,8 +36,6 @@ public final class CircuitBreakerBuilder {
 
         private static final double FAILURE_RATE_THRESHOLD = 0.8;
 
-        private static final ExceptionFilter EXCEPTION_FILTER = cause -> true;
-
         private static final long MINIMUM_REQUEST_THRESHOLD = 10;
 
         private static final Duration TRIAL_REQUEST_INTERVAL = Duration.ofSeconds(3);
@@ -54,8 +52,6 @@ public final class CircuitBreakerBuilder {
     private final Optional<String> name;
 
     private double failureRateThreshold = Defaults.FAILURE_RATE_THRESHOLD;
-
-    private ExceptionFilter exceptionFilter = Defaults.EXCEPTION_FILTER;
 
     private long minimumRequestThreshold = Defaults.MINIMUM_REQUEST_THRESHOLD;
 
@@ -202,14 +198,6 @@ public final class CircuitBreakerBuilder {
     }
 
     /**
-     * Sets the {@link ExceptionFilter} that decides whether the circuit breaker should deal with a given error.
-     */
-    public CircuitBreakerBuilder exceptionFilter(ExceptionFilter exceptionFilter) {
-        this.exceptionFilter = requireNonNull(exceptionFilter, "exceptionFilter");
-        return this;
-    }
-
-    /**
      * Adds a {@link CircuitBreakerListener}.
      */
     public CircuitBreakerBuilder listener(CircuitBreakerListener listener) {
@@ -240,6 +228,6 @@ public final class CircuitBreakerBuilder {
                 new CircuitBreakerConfig(name, failureRateThreshold, minimumRequestThreshold,
                                          circuitOpenWindow, trialRequestInterval,
                                          counterSlidingWindow, counterUpdateInterval,
-                                         exceptionFilter, Collections.unmodifiableList(listeners)));
+                                         Collections.unmodifiableList(listeners)));
     }
 }

@@ -41,15 +41,13 @@ class CircuitBreakerConfig {
 
     private final Duration counterUpdateInterval;
 
-    private final ExceptionFilter exceptionFilter;
-
     private final List<CircuitBreakerListener> listeners;
 
     CircuitBreakerConfig(Optional<String> name,
                          double failureRateThreshold, long minimumRequestThreshold,
                          Duration circuitOpenWindow, Duration trialRequestInterval,
                          Duration counterSlidingWindow, Duration counterUpdateInterval,
-                         ExceptionFilter exceptionFilter, List<CircuitBreakerListener> listeners) {
+                         List<CircuitBreakerListener> listeners) {
         this.name = name;
         this.failureRateThreshold = failureRateThreshold;
         this.minimumRequestThreshold = minimumRequestThreshold;
@@ -57,7 +55,6 @@ class CircuitBreakerConfig {
         this.trialRequestInterval = trialRequestInterval;
         this.counterSlidingWindow = counterSlidingWindow;
         this.counterUpdateInterval = counterUpdateInterval;
-        this.exceptionFilter = exceptionFilter;
         this.listeners = listeners;
     }
 
@@ -87,10 +84,6 @@ class CircuitBreakerConfig {
 
     Duration counterUpdateInterval() {
         return counterUpdateInterval;
-    }
-
-    ExceptionFilter exceptionFilter() {
-        return exceptionFilter;
     }
 
     List<CircuitBreakerListener> listeners() {

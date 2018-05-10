@@ -180,15 +180,4 @@ public class CircuitBreakerBuilderTest {
         throwsException(() -> builder().counterUpdateIntervalMillis(-1));
         throwsException(() -> builder().counterUpdateIntervalMillis(0));
     }
-
-    @Test
-    public void testExceptionFilter() {
-        ExceptionFilter instance = e -> true;
-        assertThat(confOf(builder().exceptionFilter(instance).build()).exceptionFilter()).isEqualTo(instance);
-    }
-
-    @Test
-    public void testExceptionFilterWithInvalidArgument() {
-        throwsException(() -> builder().exceptionFilter(null));
-    }
 }
