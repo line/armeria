@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.metric;
 
+import static com.linecorp.armeria.common.metric.DropwizardMeterRegistries.DEFAULT_DROPWIZARD_CONFIG;
+import static com.linecorp.armeria.common.metric.DropwizardMeterRegistries.DEFAULT_NAME_MAPPER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
@@ -28,6 +30,7 @@ import org.junit.Test;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 
+import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -37,6 +40,49 @@ import io.prometheus.client.Collector.MetricFamilySamples;
 import io.prometheus.client.Collector.MetricFamilySamples.Sample;
 
 public class DropwizardMeterRegistriesTest {
+    @Test
+    public void micrometerAddsUnwantedGauges() {
+        final DropwizardMeterRegistry micrometer = new DropwizardMeterRegistry(
+                DEFAULT_DROPWIZARD_CONFIG, new MetricRegistry(), DEFAULT_NAME_MAPPER, Clock.SYSTEM) {
+            @Override
+            protected Double nullGaugeValue() {
+                return 0.0;
+            }
+        };
+        final MetricRegistry dropwizard = micrometer.getDropwizardRegistry();
+
+        final DistributionSummary percentileSummary = DistributionSummary.builder("percentileSummary")
+                                                                         .publishPercentiles(0.5)
+                                                                         .register(micrometer);
+        final DistributionSummary histogramSummary = DistributionSummary.builder("histogramSummary")
+                                                                        .sla(10)
+                                                                        .register(micrometer);
+        final Timer percentileTimer = Timer.builder("percentileTimer")
+                                           .publishPercentiles(0.5)
+                                           .register(micrometer);
+        final Timer histogramTimer = Timer.builder("histogramTimer")
+                                          .sla(Duration.ofSeconds(10))
+                                          .register(micrometer);
+        percentileSummary.record(42);
+        histogramSummary.record(42);
+        percentileTimer.record(42, TimeUnit.SECONDS);
+        histogramTimer.record(42, TimeUnit.SECONDS);
+
+        // Make sure Micrometer by default registers the unwanted gauges.
+        final Map<String, Double> measurements = MoreMeters.measureAll(micrometer);
+        assertThat(measurements).containsKeys(
+                "percentileSummary.percentile#value{phi=0.5}",
+                "histogramSummary.histogram#value{le=10}",
+                "percentileTimer.percentile#value{phi=0.5}",
+                "histogramTimer.histogram#value{le=10000}");
+
+        assertThat(dropwizard.getGauges()).containsKeys(
+                "percentileSummaryPercentile.phi:0.5",
+                "histogramSummaryHistogram.le:10",
+                "percentileTimerPercentile.phi:0.5",
+                "histogramTimerHistogram.le:10000");
+    }
+
     @Test
     public void unwantedGaugesAreFilteredOut() {
         final DropwizardMeterRegistry micrometer = DropwizardMeterRegistries.newRegistry();

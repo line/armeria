@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import javax.annotation.Nullable;
 
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Meter;
@@ -40,7 +41,8 @@ import io.micrometer.core.instrument.util.HierarchicalNameMapper;
  */
 public final class DropwizardMeterRegistries {
 
-    private static final HierarchicalNameMapper DEFAULT_NAME_MAPPER = (id, convention) -> {
+    @VisibleForTesting
+    static final HierarchicalNameMapper DEFAULT_NAME_MAPPER = (id, convention) -> {
         final String name = id.getConventionName(convention);
         if (!id.getTags().iterator().hasNext()) {
             return name;
@@ -60,7 +62,8 @@ public final class DropwizardMeterRegistries {
         return buf.toString();
     };
 
-    private static final DropwizardConfig DEFAULT_DROPWIZARD_CONFIG = new DropwizardConfig() {
+    @VisibleForTesting
+    static final DropwizardConfig DEFAULT_DROPWIZARD_CONFIG = new DropwizardConfig() {
         @Override
         public String prefix() {
             return "dropwizard";
