@@ -31,7 +31,10 @@ import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -41,6 +44,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -56,7 +60,9 @@ import com.linecorp.armeria.server.logging.AccessLogWriters;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -119,6 +125,14 @@ public final class ServerBuilder {
     private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
 
+    // Prohibit deprecate option
+    @SuppressWarnings("deprecation")
+    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
+            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
+            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
+            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
+            EpollChannelOption.EPOLL_MODE);
+
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<ServerListener> serverListeners = new ArrayList<>();
     private final List<VirtualHost> virtualHosts = new ArrayList<>();
@@ -130,6 +144,8 @@ public final class ServerBuilder {
     private VirtualHost defaultVirtualHost;
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
+    private final Map<ChannelOption<?>, Object> channelOptions = new LinkedHashMap<>();
+    private final Map<ChannelOption<?>, Object> childChannelOptions = new LinkedHashMap<>();
     private int maxNumConnections = DEFAULT_MAX_NUM_CONNECTIONS;
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
@@ -313,6 +329,45 @@ public final class ServerBuilder {
                                              "duplicate local address: %s", port.localAddress()));
         }
         ports.add(port);
+        return this;
+    }
+
+    /**
+     * Sets the {@link ChannelOption} of the server socket bound by {@link Server}.
+     * Note that the previously added option will be overridden if the same option is set again.
+     *
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * sb.channelOption(ChannelOption.BACKLOG, 1024);
+     * }</pre>
+     */
+    public <T> ServerBuilder channelOption(ChannelOption<T> option, T value) {
+        requireNonNull(option, "option");
+        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
+                      "prohibited socket option: %s", option);
+
+        option.validate(value);
+        this.channelOptions.put(option, value);
+        return this;
+    }
+
+    /**
+     * Sets the {@link ChannelOption} of sockets accepted by {@link Server}.
+     * Note that the previously added option will be overridden if the same option is set again.
+     *
+     * <pre>{@code
+     * ServerBuilder sb = new ServerBuilder();
+     * sb.childChannelOption(ChannelOption.SO_REUSEADDR, true)
+     *   .childChannelOption(ChannelOption.SO_KEEPALIVE, true);
+     * }</pre>
+     */
+    public <T> ServerBuilder childChannelOption(ChannelOption<T> option, T value) {
+        requireNonNull(option, "option");
+        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
+                      "prohibited socket option: %s", option);
+
+        option.validate(value);
+        this.childChannelOptions.put(option, value);
         return this;
     }
 
@@ -1003,7 +1058,7 @@ public final class ServerBuilder {
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter,
-                proxyProtocolMaxTlvSize), sslContexts);
+                proxyProtocolMaxTlvSize, channelOptions, childChannelOptions), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
@@ -1041,7 +1096,8 @@ public final class ServerBuilder {
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix, accessLogWriter
+                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix, accessLogWriter, channelOptions,
+                childChannelOptions
         );
     }
 }
