@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.GracefulShutdownSupport;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
@@ -150,6 +151,19 @@ public class HttpHealthCheckService extends AbstractHttpService {
             }
         }
         return serverHealth.isHealthy();
+    }
+
+    @Override
+    public void startToProcessRequest(HttpRequest req,
+                                      GracefulShutdownSupport gracefulShutdownSupport) {
+        // NB: Do not call gracefulShutdownSupport.inc() to allow Server to shutdown itself even if
+        //     health check requests are coming.
+    }
+
+    @Override
+    public void finishToProcessRequest(GracefulShutdownSupport gracefulShutdownSupport) {
+        // NB: Do not call gracefulShutdownSupport.dec() to allow Server to shutdown itself even if
+        //     health check requests are coming.
     }
 
     final class ServerHealthUpdater extends ServerListenerAdapter {

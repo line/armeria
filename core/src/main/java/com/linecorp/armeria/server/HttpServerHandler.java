@@ -374,7 +374,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
-            gracefulShutdownSupport.inc();
+            service.startToProcessRequest(req, gracefulShutdownSupport);
             unfinishedRequests++;
             unfinishedResponses.put(res, true);
 
@@ -399,7 +399,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             res.completionFuture().handleAsync(voidFunction((ret, cause) -> {
                 req.abort();
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
-                gracefulShutdownSupport.dec();
+                service.finishToProcessRequest(gracefulShutdownSupport);
                 unfinishedResponses.remove(res);
                 if (--unfinishedRequests == 0 && handledLastRequest) {
                     ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
