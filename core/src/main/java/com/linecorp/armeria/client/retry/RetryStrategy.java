@@ -63,7 +63,7 @@ public interface RetryStrategy<I extends Request, O extends Response> {
     static RetryStrategy<HttpRequest, HttpResponse> onServerErrorStatus(Backoff backoff) {
         requireNonNull(backoff, "backoff");
         return onStatus((status, thrown) -> {
-            if (thrown != null && !(Exceptions.peel(thrown) instanceof FailFastException) ||
+            if ((thrown != null && !(Exceptions.peel(thrown) instanceof FailFastException)) ||
                 (status != null && status.codeClass() == HttpStatusClass.SERVER_ERROR)) {
                 return backoff;
             }

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -39,6 +40,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 import io.netty.channel.DefaultEventLoop;
@@ -134,7 +136,8 @@ public class CircuitBreakerHttpClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             // Need to call execute() one more to change the state of the circuit breaker.
 
-            stub.execute(ctx, mock(HttpRequest.class)).aggregate().join();
+            assertThat(stub.execute(ctx, mock(HttpRequest.class)).aggregate().join().headers().status())
+                    .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 

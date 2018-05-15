@@ -48,7 +48,11 @@ public interface CircuitBreakerStrategy<T extends Response> {
      * using the specified {@link BiFunction}.
      *
      * @param function the {@link BiFunction} that returns {@code true}, {@code false} or
-     *                 {@code null} according to the {@link HttpStatus} and {@link Throwable}
+     *                 {@code null} according to the {@link HttpStatus} and {@link Throwable}. If {@code true}
+     *                 is returned, {@link CircuitBreaker#onSuccess()} is called so that the
+     *                 {@link CircuitBreaker} increases its success count and use it to make a decision to
+     *                 close or open the switch. If {@code false} is returned, it works the other way around.
+     *                 If {@code null} is returned, the {@link CircuitBreaker} ignores it.
      */
     static CircuitBreakerStrategy<HttpResponse> onStatus(
             BiFunction<HttpStatus, Throwable, Boolean> function) {
@@ -57,8 +61,10 @@ public interface CircuitBreakerStrategy<T extends Response> {
 
     /**
      * Returns a {@link CompletableFuture} that contains {@code true}, {@code false} or
-     * {@code null} which will be used to report the specified {@link Response} as a success, a failure or
-     * nothing respectively.
+     * {@code null} according to the specified {@link Response}. If {@code true} is returned,
+     * {@link CircuitBreaker#onSuccess()} is called so that the {@link CircuitBreaker} increases its success
+     * count and use it to make a decision to close or open the switch. If {@code false} is returned, it works
+     * the other way around. If {@code null} is returned, the {@link CircuitBreaker} ignores it.
      */
     CompletableFuture<Boolean> shouldReportAsSuccess(T response);
 }

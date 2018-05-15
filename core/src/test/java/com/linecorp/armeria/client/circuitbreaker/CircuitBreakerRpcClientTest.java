@@ -221,7 +221,8 @@ public class CircuitBreakerRpcClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             // Need to call execute() one more to change the state of the circuit breaker.
 
-            stub.execute(ctxA, reqA);
+            assertThatThrownBy(() -> stub.execute(ctxA, reqA).join())
+                    .hasCauseInstanceOf(AnticipatedException.class);
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 
@@ -251,12 +252,8 @@ public class CircuitBreakerRpcClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             // Need to call execute() one more to change the state of the circuit breaker.
 
-            try {
-                stub.execute(ctxA, reqA);
-                assertThat(i).isLessThanOrEqualTo(minimumRequestThreshold);
-            } catch (FailFastException e) {
-                assertThat(i).isGreaterThan(minimumRequestThreshold);
-            }
+            assertThatThrownBy(() -> stub.execute(ctxA, reqA).join())
+                    .hasCauseInstanceOf(AnticipatedException.class);
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 

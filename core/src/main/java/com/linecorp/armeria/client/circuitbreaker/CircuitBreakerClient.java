@@ -98,6 +98,7 @@ public abstract class CircuitBreakerClient<I extends Request, O extends Response
                     circuitBreaker.onFailure();
                 }
             }
+            // If the success is null, the user does not want to count as a success nor failure. So ignore it.
         })).exceptionally(CompletionActions::log);
     }
 }
