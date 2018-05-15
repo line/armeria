@@ -140,19 +140,4 @@ public interface Service<I extends Request, O extends Response> {
     default boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
         return pathMapping.exactPath().isPresent() && query == null;
     }
-
-    /**
-     * Invoked when this {@link Service} starts to process a {@link Request}.
-     */
-    default void startToProcessRequest(HttpRequest req,
-                                       GracefulShutdownSupport gracefulShutdownSupport) {
-        gracefulShutdownSupport.inc();
-    }
-
-    /**
-     * Invoked when this {@link Service} finishes to process a {@link Request}.
-     */
-    default void finishToProcessRequest(GracefulShutdownSupport gracefulShutdownSupport) {
-        gracefulShutdownSupport.dec();
-    }
 }

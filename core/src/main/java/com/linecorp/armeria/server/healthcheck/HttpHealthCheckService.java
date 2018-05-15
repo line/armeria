@@ -29,13 +29,13 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.GracefulShutdownSupport;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientService;
 
 /**
  * An {@link HttpService} that responds with HTTP status {@code "200 OK"} if the server is healthy and can
@@ -71,7 +71,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  *         .build();
  * }</pre>
  */
-public class HttpHealthCheckService extends AbstractHttpService {
+public class HttpHealthCheckService extends AbstractHttpService
+        implements TransientService<HttpRequest, HttpResponse> {
 
     private static final HttpData RES_OK = HttpData.ofUtf8("ok");
     private static final HttpData RES_NOT_OK = HttpData.ofUtf8("not ok");
@@ -151,19 +152,6 @@ public class HttpHealthCheckService extends AbstractHttpService {
             }
         }
         return serverHealth.isHealthy();
-    }
-
-    @Override
-    public void startToProcessRequest(HttpRequest req,
-                                      GracefulShutdownSupport gracefulShutdownSupport) {
-        // NB: Do not call gracefulShutdownSupport.inc() to allow Server to shutdown itself even if
-        //     health check requests are coming.
-    }
-
-    @Override
-    public void finishToProcessRequest(GracefulShutdownSupport gracefulShutdownSupport) {
-        // NB: Do not call gracefulShutdownSupport.dec() to allow Server to shutdown itself even if
-        //     health check requests are coming.
     }
 
     final class ServerHealthUpdater extends ServerListenerAdapter {
