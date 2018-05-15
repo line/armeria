@@ -305,7 +305,8 @@ public class AccessLogFormatsTest {
         format = AccessLogFormats.parseCustom("\"%{requestCause}L\"");
         assertThat(AccessLogger.format(format, log)).isEqualTo("\"-\"");
         when(log.requestCause()).thenReturn(new IllegalArgumentException("detail_message"));
-        assertThat(AccessLogger.format(format, log)).isEqualTo("\"detail_message\"");
+        assertThat(AccessLogger.format(format, log))
+                .isEqualTo('"' + IllegalArgumentException.class.getSimpleName() + ": detail_message\"");
 
         format = AccessLogFormats.parseCustom("%{responseStartTimeMillis}L " +
                                               "%{responseEndTimeMillis}L " +

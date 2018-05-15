@@ -136,15 +136,15 @@ enum AccessLogType {
         this.variableRequirement = variableRequirement;
     }
 
-    public char token() {
+    char token() {
         return token;
     }
 
-    public boolean isConditionAvailable() {
+    boolean isConditionAvailable() {
         return isConditionAvailable;
     }
 
-    public VariableRequirement variableRequirement() {
+    VariableRequirement variableRequirement() {
         return variableRequirement;
     }
 }

@@ -250,7 +250,7 @@ Customizing timestamp format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can specify a new date/time format for the ``%t`` token with DateTimeFormatter_. You can use one of the
-following formatter which is built-in in JDK as a variable of the ``%t`` token, e.g. ``%{BASIC_ISO_DATE}t``.
+following formatter which is provided by JDK as a variable of the ``%t`` token, e.g. ``%{BASIC_ISO_DATE}t``.
 If you want to use your own pattern, you can specify it as the variable, e.g. ``%{yyyy MM dd}t``.
 
 +-------------------------+----------------------------------+--------------------------------------------+

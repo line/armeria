@@ -19,7 +19,10 @@ package com.linecorp.armeria.server.logging;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+import static org.reflections.ReflectionUtils.getFields;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -28,7 +31,9 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -37,6 +42,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
@@ -117,6 +123,9 @@ interface AccessLogComponent {
         private final boolean addQuote;
         private final DateTimeFormatter formatter;
 
+        @Nullable
+        private static Map<String, DateTimeFormatter> builtinFormatters;
+
         TimestampComponent(boolean addQuote, @Nullable String variable) {
             this.addQuote = addQuote;
             formatter = findFormatter(variable);
@@ -138,46 +147,42 @@ interface AccessLogComponent {
             if (variable == null) {
                 return defaultDateTimeFormatter;
             }
-            // Find pre-defined formatter first.
-            switch (variable) {
-                case "BASIC_ISO_DATE":
-                    return DateTimeFormatter.BASIC_ISO_DATE;
-                case "ISO_LOCAL_DATE":
-                    return DateTimeFormatter.ISO_LOCAL_DATE;
-                case "ISO_OFFSET_DATE":
-                    return DateTimeFormatter.ISO_OFFSET_DATE;
-                case "ISO_DATE":
-                    return DateTimeFormatter.ISO_DATE;
-                case "ISO_LOCAL_TIME":
-                    return DateTimeFormatter.ISO_LOCAL_TIME;
-                case "ISO_OFFSET_TIME":
-                    return DateTimeFormatter.ISO_OFFSET_TIME;
-                case "ISO_TIME":
-                    return DateTimeFormatter.ISO_TIME;
-                case "ISO_LOCAL_DATE_TIME":
-                    return DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-                case "ISO_OFFSET_DATE_TIME":
-                    return DateTimeFormatter.ISO_OFFSET_DATE_TIME;
-                case "ISO_ZONED_DATE_TIME":
-                    return DateTimeFormatter.ISO_ZONED_DATE_TIME;
-                case "ISO_DATE_TIME":
-                    return DateTimeFormatter.ISO_DATE_TIME;
-                case "ISO_ORDINAL_DATE":
-                    return DateTimeFormatter.ISO_ORDINAL_DATE;
-                case "ISO_WEEK_DATE":
-                    return DateTimeFormatter.ISO_WEEK_DATE;
-                case "ISO_INSTANT":
-                    return DateTimeFormatter.ISO_INSTANT;
-                case "RFC_1123_DATE_TIME":
-                    return DateTimeFormatter.RFC_1123_DATE_TIME;
-                default:
-                    try {
-                        return DateTimeFormatter.ofPattern(variable, Locale.ENGLISH);
-                    } catch (Throwable cause) {
-                        throw new IllegalArgumentException("unexpected date/time format variable: " +
-                                                           variable, cause);
-                    }
+
+            if (builtinFormatters == null) {
+                initializePredefinedFormatters();
             }
+
+            final DateTimeFormatter predefined = builtinFormatters.get(variable);
+            if (predefined != null) {
+                return predefined;
+            }
+
+            // User-defined pattern.
+            try {
+                return DateTimeFormatter.ofPattern(variable, Locale.ENGLISH);
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException("unexpected date/time format variable: " +
+                                                   variable, cause);
+            }
+        }
+
+        private static synchronized void initializePredefinedFormatters() {
+            if (builtinFormatters != null) {
+                return;
+            }
+            builtinFormatters = getFields(DateTimeFormatter.class, field -> {
+                final int m = field.getModifiers();
+                // public static final DateTimeFormatter ...
+                return Modifier.isPublic(m) && Modifier.isStatic(m) && Modifier.isFinal(m) &&
+                       (field.getType() == DateTimeFormatter.class);
+            }).stream().collect(Collectors.toMap(Field::getName, f -> {
+                try {
+                    return (DateTimeFormatter) f.get(null);
+                } catch (Throwable cause) {
+                    // Should not reach here.
+                    throw new Error(cause);
+                }
+            }));
         }
     }
 
@@ -389,11 +394,10 @@ interface AccessLogComponent {
             if (cause == null) {
                 return null;
             }
+            cause = Exceptions.peel(cause);
             final String message = cause.getMessage();
-            if (message != null) {
-                return message;
-            }
-            return cause.getClass().getSimpleName();
+            return message != null ? cause.getClass().getSimpleName() + ": " + message
+                                   : cause.getClass().getSimpleName();
         }
 
         private static Function<RequestLog, Object> findResolver(String variable) {
