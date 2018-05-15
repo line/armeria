@@ -20,7 +20,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * A {@link Service} that indicates to handles transient requests, for example, health check request.
+ * A {@link Service} handles transient requests, for example, health check requests.
  */
 public interface TransientService<I extends Request, O extends Response> extends Service<I, O> {
 }
