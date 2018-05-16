@@ -35,7 +35,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -87,7 +86,6 @@ final class AccessLogFormats {
                              ofQuotedRequestHeader(HttpHeaderNames.USER_AGENT), BLANK,
                              ofQuotedRequestHeader(HttpHeaderNames.COOKIE));
 
-    @VisibleForTesting
     static List<AccessLogComponent> parseCustom(String formatStr) {
         requireNonNull(formatStr, "formatStr");
         final ImmutableList.Builder<AccessLogComponent> builder = ImmutableList.builder();

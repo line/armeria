@@ -77,6 +77,9 @@ import io.netty.util.AttributeKey;
 
 public class AccessLogFormatsTest {
 
+    // The timestamp of first commit in Armeria project.
+    private static final long requestStartTimeMillis = 1447656026L * 1000;
+
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
 
@@ -195,10 +198,10 @@ public class AccessLogFormatsTest {
         log.endResponse();
 
         // To generate the same datetime string always.
-        when(log.requestStartTimeMillis()).thenReturn(0L);
+        when(log.requestStartTimeMillis()).thenReturn(requestStartTimeMillis);
 
         final String timestamp = defaultDateTimeFormatter.format(ZonedDateTime.ofInstant(
-                Instant.ofEpochMilli(0), defaultZoneId));
+                Instant.ofEpochMilli(requestStartTimeMillis), defaultZoneId));
 
         String message;
         List<AccessLogComponent> format;
@@ -286,7 +289,7 @@ public class AccessLogFormatsTest {
         log.startRequest(channel, SessionProtocol.H2, "www.example.com");
         log.requestHeaders(HttpHeaders.of(HttpMethod.GET, "/armeria/log"));
 
-        final Instant requestStartTime = Instant.ofEpochMilli(1000000000L);
+        final Instant requestStartTime = Instant.ofEpochMilli(requestStartTimeMillis);
         final Duration duration = Duration.ofMillis(1000000000L);
 
         log.endRequest();
@@ -317,7 +320,7 @@ public class AccessLogFormatsTest {
         log.startResponse();
         log.endResponse();
 
-        final Instant responseStartTime = Instant.ofEpochMilli(2000000000L);
+        final Instant responseStartTime = requestStartTime.plus(Duration.ofSeconds(3));
 
         when(log.responseStartTimeMillis()).thenReturn(responseStartTime.toEpochMilli());
         when(log.responseDurationNanos()).thenReturn(duration.toNanos());
@@ -341,8 +344,8 @@ public class AccessLogFormatsTest {
         final DefaultRequestLog log = spy(new DefaultRequestLog(ctx));
 
         log.startRequest(channel, SessionProtocol.H2, "www.example.com");
+
         // To generate the same datetime string always.
-        final long requestStartTimeMillis = 0L;
         when(log.requestStartTimeMillis()).thenReturn(requestStartTimeMillis);
 
         assertThat(AccessLogger.format(AccessLogFormats.parseCustom("%t"), log))

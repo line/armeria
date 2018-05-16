@@ -124,7 +124,20 @@ interface AccessLogComponent {
         private final DateTimeFormatter formatter;
 
         @Nullable
-        private static Map<String, DateTimeFormatter> builtinFormatters;
+        private static final Map<String, DateTimeFormatter> predefinedFormatters =
+                getFields(DateTimeFormatter.class, field -> {
+                    final int m = field.getModifiers();
+                    // public static final DateTimeFormatter ...
+                    return Modifier.isPublic(m) && Modifier.isStatic(m) && Modifier.isFinal(m) &&
+                           (field.getType() == DateTimeFormatter.class);
+                }).stream().collect(Collectors.toMap(Field::getName, f -> {
+                    try {
+                        return (DateTimeFormatter) f.get(null);
+                    } catch (Throwable cause) {
+                        // Should not reach here.
+                        throw new Error(cause);
+                    }
+                }));
 
         TimestampComponent(boolean addQuote, @Nullable String variable) {
             this.addQuote = addQuote;
@@ -148,11 +161,7 @@ interface AccessLogComponent {
                 return defaultDateTimeFormatter;
             }
 
-            if (builtinFormatters == null) {
-                initializePredefinedFormatters();
-            }
-
-            final DateTimeFormatter predefined = builtinFormatters.get(variable);
+            final DateTimeFormatter predefined = predefinedFormatters.get(variable);
             if (predefined != null) {
                 return predefined;
             }
@@ -164,25 +173,6 @@ interface AccessLogComponent {
                 throw new IllegalArgumentException("unexpected date/time format variable: " +
                                                    variable, cause);
             }
-        }
-
-        private static synchronized void initializePredefinedFormatters() {
-            if (builtinFormatters != null) {
-                return;
-            }
-            builtinFormatters = getFields(DateTimeFormatter.class, field -> {
-                final int m = field.getModifiers();
-                // public static final DateTimeFormatter ...
-                return Modifier.isPublic(m) && Modifier.isStatic(m) && Modifier.isFinal(m) &&
-                       (field.getType() == DateTimeFormatter.class);
-            }).stream().collect(Collectors.toMap(Field::getName, f -> {
-                try {
-                    return (DateTimeFormatter) f.get(null);
-                } catch (Throwable cause) {
-                    // Should not reach here.
-                    throw new Error(cause);
-                }
-            }));
         }
     }
 

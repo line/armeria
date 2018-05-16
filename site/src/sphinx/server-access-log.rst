@@ -179,7 +179,7 @@ the condition.
 Retrieving values from RequestLog
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:api:`RequestLog` holds information about the request, so a user may want to write these values on his or
+:api:`RequestLog` holds information about the request, so a user may want to write these values to his or
 her access log file. To write them in a simple way, ``%{variable}L`` token is provided with the following
 supported variable:
 
@@ -203,9 +203,8 @@ supported variable:
 +-------------------------------+--------------------------------------------------------------------+
 | ``requestLength``             | the length of the request content                                  |
 +-------------------------------+--------------------------------------------------------------------+
-| ``requestCause``              | the cause of request processing failure. The detail message of a   |
-|                               | ``Throwable`` or the class name of the cause if no message is      |
-|                               | specified.                                                         |
+| ``requestCause``              | the cause of request processing failure. The class name of the     |
+|                               | cause and the detail message of it will be contained if exists.    |
 +-------------------------------+--------------------------------------------------------------------+
 | ``responseStartTimeMillis``   | the time when the processing of the response started,              |
 |                               | in milliseconds since the epoch                                    |
@@ -218,9 +217,8 @@ supported variable:
 +-------------------------------+--------------------------------------------------------------------+
 | ``responseLength``            | the length of the response content                                 |
 +-------------------------------+--------------------------------------------------------------------+
-| ``responseCause``             | the cause of response processing failure. The detail message of a  |
-|                               | ``Throwable`` or the class name of the cause if no message is      |
-|                               | specified.                                                         |
+| ``responseCause``             | the cause of response processing failure. The class name of the    |
+|                               | cause and the detail message of it will be contained if exists.    |
 +-------------------------------+--------------------------------------------------------------------+
 | ``totalDurationMillis``       | the amount of time taken since the request processing started and  |
 |                               | until the response processing ended, in milliseconds               |
@@ -250,7 +248,7 @@ Customizing timestamp format
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can specify a new date/time format for the ``%t`` token with DateTimeFormatter_. You can use one of the
-following formatter which is provided by JDK as a variable of the ``%t`` token, e.g. ``%{BASIC_ISO_DATE}t``.
+following formatters which is provided by JDK as a variable of the ``%t`` token, e.g. ``%{BASIC_ISO_DATE}t``.
 If you want to use your own pattern, you can specify it as the variable, e.g. ``%{yyyy MM dd}t``.
 
 +-------------------------+----------------------------------+--------------------------------------------+
