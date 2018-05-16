@@ -35,6 +35,7 @@ import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientService;
 
 /**
  * An {@link HttpService} that responds with HTTP status {@code "200 OK"} if the server is healthy and can
@@ -70,7 +71,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  *         .build();
  * }</pre>
  */
-public class HttpHealthCheckService extends AbstractHttpService {
+public class HttpHealthCheckService extends AbstractHttpService
+        implements TransientService<HttpRequest, HttpResponse> {
 
     private static final HttpData RES_OK = HttpData.ofUtf8("ok");
     private static final HttpData RES_NOT_OK = HttpData.ofUtf8("not ok");
