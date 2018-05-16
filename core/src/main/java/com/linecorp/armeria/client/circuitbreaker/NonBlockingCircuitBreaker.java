@@ -84,18 +84,6 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     }
 
     @Override
-    public void onFailure(@Nullable Throwable cause) {
-        try {
-            if (cause != null && !config.exceptionFilter().shouldDealWith(cause)) {
-                return;
-            }
-        } catch (Exception e) {
-            logger.error("an exception has occured when calling an ExceptionFilter", e);
-        }
-        onFailure();
-    }
-
-    @Override
     public void onFailure() {
         final State currentState = state.get();
         if (currentState.isClosed()) {
@@ -186,12 +174,12 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             try {
                 listener.onStateChanged(this, circuitState);
             } catch (Throwable t) {
-                logger.warn("An error occured when notifying a state changed event", t);
+                logger.warn("An error occurred when notifying a StateChanged event", t);
             }
             try {
                 listener.onEventCountUpdated(this, EventCount.ZERO);
             } catch (Throwable t) {
-                logger.warn("An error occured when notifying an EventCount updated event", t);
+                logger.warn("An error occurred when notifying an EventCountUpdated event", t);
             }
         });
     }
@@ -201,7 +189,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             try {
                 listener.onEventCountUpdated(this, count);
             } catch (Throwable t) {
-                logger.warn("An error occured when notifying an EventCount updated event", t);
+                logger.warn("An error occurred when notifying an EventCountUpdated event", t);
             }
         });
     }
@@ -211,7 +199,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             try {
                 listener.onRequestRejected(this);
             } catch (Throwable t) {
-                logger.warn("An error occured when notifying a request rejected event", t);
+                logger.warn("An error occurred when notifying a RequestRejected event", t);
             }
         });
     }

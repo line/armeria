@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-public class CircuitBreakerThrottlingStrategyTest {
+public class CircuitBreakerBasedThrottlingStrategyTest {
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
 
@@ -38,7 +38,7 @@ public class CircuitBreakerThrottlingStrategyTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/always", SERVICE.decorate(ThrottlingHttpService.newDecorator(
-                    new CircuitBreakerThrottlingStrategy<>(new CircuitBreaker() {
+                    new CircuitBreakerBasedThrottlingStrategy<>(new CircuitBreaker() {
                         @Override
                         public String name() {
                             return "always";
@@ -46,10 +46,6 @@ public class CircuitBreakerThrottlingStrategyTest {
 
                         @Override
                         public void onSuccess() {
-                        }
-
-                        @Override
-                        public void onFailure(Throwable cause) {
                         }
 
                         @Override
@@ -62,7 +58,7 @@ public class CircuitBreakerThrottlingStrategyTest {
                         }
                     }))))
               .service("/never", SERVICE.decorate(ThrottlingHttpService.newDecorator(
-                      new CircuitBreakerThrottlingStrategy<>(new CircuitBreaker() {
+                      new CircuitBreakerBasedThrottlingStrategy<>(new CircuitBreaker() {
                           @Override
                           public String name() {
                               return "never";
@@ -70,10 +66,6 @@ public class CircuitBreakerThrottlingStrategyTest {
 
                           @Override
                           public void onSuccess() {
-                          }
-
-                          @Override
-                          public void onFailure(Throwable cause) {
                           }
 
                           @Override
