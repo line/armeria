@@ -17,13 +17,13 @@
 package com.linecorp.armeria.server.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.logging.AccessLogComponent.ofDefaultRequestTimestamp;
 import static com.linecorp.armeria.server.logging.AccessLogComponent.ofPredefinedCommon;
 import static com.linecorp.armeria.server.logging.AccessLogComponent.ofQuotedRequestHeader;
 import static com.linecorp.armeria.server.logging.AccessLogComponent.ofText;
 import static com.linecorp.armeria.server.logging.AccessLogType.AUTHENTICATED_USER;
 import static com.linecorp.armeria.server.logging.AccessLogType.REMOTE_HOST;
 import static com.linecorp.armeria.server.logging.AccessLogType.REQUEST_LINE;
-import static com.linecorp.armeria.server.logging.AccessLogType.REQUEST_TIMESTAMP;
 import static com.linecorp.armeria.server.logging.AccessLogType.RESPONSE_LENGTH;
 import static com.linecorp.armeria.server.logging.AccessLogType.RESPONSE_STATUS_CODE;
 import static com.linecorp.armeria.server.logging.AccessLogType.RFC931;
@@ -35,7 +35,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -45,8 +44,11 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.CommonComponent;
-import com.linecorp.armeria.server.logging.AccessLogComponent.RequestHeaderComponent;
+import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponent;
+import com.linecorp.armeria.server.logging.AccessLogComponent.RequestLogComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.TextComponent;
+import com.linecorp.armeria.server.logging.AccessLogComponent.TimestampComponent;
+import com.linecorp.armeria.server.logging.AccessLogType.VariableRequirement;
 
 import io.netty.util.AsciiString;
 
@@ -64,7 +66,7 @@ final class AccessLogFormats {
             ImmutableList.of(ofPredefinedCommon(REMOTE_HOST), BLANK,
                              ofPredefinedCommon(RFC931), BLANK,
                              ofPredefinedCommon(AUTHENTICATED_USER), BLANK,
-                             ofPredefinedCommon(REQUEST_TIMESTAMP), BLANK,
+                             ofDefaultRequestTimestamp(), BLANK,
                              ofPredefinedCommon(REQUEST_LINE), BLANK,
                              ofPredefinedCommon(RESPONSE_STATUS_CODE), BLANK,
                              ofPredefinedCommon(RESPONSE_LENGTH));
@@ -76,7 +78,7 @@ final class AccessLogFormats {
             ImmutableList.of(ofPredefinedCommon(REMOTE_HOST), BLANK,
                              ofPredefinedCommon(RFC931), BLANK,
                              ofPredefinedCommon(AUTHENTICATED_USER), BLANK,
-                             ofPredefinedCommon(REQUEST_TIMESTAMP), BLANK,
+                             ofDefaultRequestTimestamp(), BLANK,
                              ofPredefinedCommon(REQUEST_LINE), BLANK,
                              ofPredefinedCommon(RESPONSE_STATUS_CODE), BLANK,
                              ofPredefinedCommon(RESPONSE_LENGTH), BLANK,
@@ -84,7 +86,6 @@ final class AccessLogFormats {
                              ofQuotedRequestHeader(HttpHeaderNames.USER_AGENT), BLANK,
                              ofQuotedRequestHeader(HttpHeaderNames.COOKIE));
 
-    @VisibleForTesting
     static List<AccessLogComponent> parseCustom(String formatStr) {
         requireNonNull(formatStr, "formatStr");
         final ImmutableList.Builder<AccessLogComponent> builder = ImmutableList.builder();
@@ -131,7 +132,6 @@ final class AccessLogFormats {
                     }
                     break;
                 case CONDITION:
-                    assert condBuilder != null;
                     if (Character.isDigit(ch)) {
                         textBuilder.append(ch);
                     } else {
@@ -186,7 +186,7 @@ final class AccessLogFormats {
                                                             @Nullable Condition.Builder condBuilder) {
         final AccessLogType type = AccessLogType.find(token).orElseThrow(
                 () -> new IllegalArgumentException("Unexpected token character: '" + token + '\''));
-        if (type.isVariableRequired()) {
+        if (type.variableRequirement() == VariableRequirement.YES) {
             checkArgument(variable != null,
                           "Token " + type.token() + " requires a variable.");
         }
@@ -209,12 +209,15 @@ final class AccessLogFormats {
         final boolean addQuote = false;
 
         final Function<HttpHeaders, Boolean> condition = condBuilder != null ? condBuilder.build() : null;
+        if (TimestampComponent.isSupported(type)) {
+            return new TimestampComponent(addQuote, variable);
+        }
         if (CommonComponent.isSupported(type)) {
             return new CommonComponent(type, addQuote, condition);
         }
-        if (RequestHeaderComponent.isSupported(type)) {
+        if (HttpHeaderComponent.isSupported(type)) {
             assert variable != null;
-            return new RequestHeaderComponent(AsciiString.of(variable), addQuote, condition);
+            return new HttpHeaderComponent(type, AsciiString.of(variable), addQuote, condition);
         }
         if (AttributeComponent.isSupported(type)) {
             assert variable != null;
@@ -226,6 +229,10 @@ final class AccessLogFormats {
                 stringifier = Object::toString;
             }
             return new AttributeComponent(components[0], stringifier, addQuote, condition);
+        }
+        if (RequestLogComponent.isSupported(type)) {
+            assert variable != null;
+            return new RequestLogComponent(variable, addQuote, condition);
         }
 
         // Should not reach here.
