@@ -16,12 +16,17 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static com.linecorp.armeria.server.logging.AccessLogType.VariableRequirement.NO;
+import static com.linecorp.armeria.server.logging.AccessLogType.VariableRequirement.OPTIONAL;
+import static com.linecorp.armeria.server.logging.AccessLogType.VariableRequirement.YES;
+
 import java.util.Map;
 import java.util.Optional;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.AttributeMap;
 
@@ -45,53 +50,63 @@ enum AccessLogType {
     /**
      * {@code "%h"} - the remote hostname or IP address if DNS hostname lookup is not available.
      */
-    REMOTE_HOST('h', false, false),
+    REMOTE_HOST('h', false, NO),
 
     /**
      * {@code "%l"} - the remote logname of the user.
      */
-    RFC931('l', false, false),
+    RFC931('l', false, NO),
 
     /**
      * {@code "%u"} - the name of the authenticated remote user.
      */
-    AUTHENTICATED_USER('u', false, false),
+    AUTHENTICATED_USER('u', false, NO),
 
     /**
      * {@code "%t"} - the date, time and time zone that the request was received.
      */
-    REQUEST_TIMESTAMP('t', false, false),
+    REQUEST_TIMESTAMP('t', false, OPTIONAL),
 
     /**
      * {@code "%r"} - the request line from the client.
      */
-    REQUEST_LINE('r', true, false),
+    REQUEST_LINE('r', true, NO),
 
     /**
      * {@code "%s"} - the HTTP status code returned to the client.
      */
-    RESPONSE_STATUS_CODE('s', false, false),
+    RESPONSE_STATUS_CODE('s', false, NO),
 
     /**
      * {@code "%b"} - the size of the object returned to the client, measured in bytes.
      */
-    RESPONSE_LENGTH('b', true, false),
+    RESPONSE_LENGTH('b', true, NO),
 
     /**
      * {@code "%{HEADER_NAME}i"} - the name of HTTP request header.
      */
-    REQUEST_HEADER('i', true, true),
+    REQUEST_HEADER('i', true, YES),
+
+    /**
+     * {@code "%{HEADER_NAME}o"} - the name of HTTP response header.
+     */
+    RESPONSE_HEADER('o', true, YES),
 
     /**
      * {@code "%{ATTRIBUTE_NAME}j"} - the attribute name of the {@link AttributeMap} of the
      * {@link RequestContext}.
      */
-    ATTRIBUTE('j', true, true),
+    ATTRIBUTE('j', true, YES),
+
+    /**
+     * {@code "%{REQUEST_LOG_NAME}L"} - the name of the attributes in the {@link RequestLog}.
+     */
+    REQUEST_LOG('L', true, YES),
 
     /**
      * A plain text which would be written to access log message.
      */
-    TEXT('%', false, true);
+    TEXT('%', false, NO);
 
     private static final Map<Character, AccessLogType> tokenToEnum;
 
@@ -107,25 +122,29 @@ enum AccessLogType {
         return Optional.ofNullable(tokenToEnum.get(token));
     }
 
-    private final char token;
-    private final boolean isConditionAvailable;
-    private final boolean isVariableRequired;
-
-    AccessLogType(char token, boolean isConditionAvailable, boolean isVariableRequired) {
-        this.token = token;
-        this.isConditionAvailable = isConditionAvailable;
-        this.isVariableRequired = isVariableRequired;
+    enum VariableRequirement {
+        YES, NO, OPTIONAL
     }
 
-    public char token() {
+    private final char token;
+    private final boolean isConditionAvailable;
+    private final VariableRequirement variableRequirement;
+
+    AccessLogType(char token, boolean isConditionAvailable, VariableRequirement variableRequirement) {
+        this.token = token;
+        this.isConditionAvailable = isConditionAvailable;
+        this.variableRequirement = variableRequirement;
+    }
+
+    char token() {
         return token;
     }
 
-    public boolean isConditionAvailable() {
+    boolean isConditionAvailable() {
         return isConditionAvailable;
     }
 
-    public boolean isVariableRequired() {
-        return isVariableRequired;
+    VariableRequirement variableRequirement() {
+        return variableRequirement;
     }
 }
