@@ -62,7 +62,7 @@ public final class RequestMetricSupport {
         final MeterIdPrefix idPrefixActive = new MeterIdPrefix(idPrefix.name("activeRequests"),
                                                                idPrefix.tags());
 
-        ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
+        final ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
                 registry, idPrefixActive, ActiveRequestMetrics.class,
                 (reg, prefix) ->
                         reg.gauge(prefix.name(), prefix.tags(),

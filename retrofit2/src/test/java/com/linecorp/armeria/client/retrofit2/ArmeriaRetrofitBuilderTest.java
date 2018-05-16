@@ -26,13 +26,13 @@ public class ArmeriaRetrofitBuilderTest {
 
     @Test
     public void build() throws Exception {
-        Retrofit retrofit = new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080/").build();
+        final Retrofit retrofit = new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080/").build();
         assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
     }
 
     @Test
     public void build_wrongScheme() throws Exception {
-        Throwable thrown = catchThrowable(
+        final Throwable thrown = catchThrowable(
                 () -> new ArmeriaRetrofitBuilder().baseUrl("foo://example.com:8080").build());
         assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
                           .hasMessage("baseUrl must have an HTTP scheme: foo://example.com:8080");
@@ -40,7 +40,7 @@ public class ArmeriaRetrofitBuilderTest {
 
     @Test
     public void build_withoutSlashAtEnd() throws Exception {
-        Retrofit retrofit = new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080").build();
+        final Retrofit retrofit = new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080").build();
         assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
     }
 
@@ -53,7 +53,7 @@ public class ArmeriaRetrofitBuilderTest {
 
     @Test
     public void build_withNonRootPathNonSlashEnd() throws Exception {
-        Throwable thrown = catchThrowable(
+        final Throwable thrown = catchThrowable(
                 () -> new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080/a/b/c").build());
         assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
                           .hasMessage("baseUrl must end with /: http://example.com:8080/a/b/c");

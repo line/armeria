@@ -56,7 +56,7 @@ public class NonBlockingCircuitBreakerTest {
     }
 
     private static CircuitBreaker closedState(long minimumRequestThreshold, double failureRateThreshold) {
-        NonBlockingCircuitBreaker cb = create(minimumRequestThreshold, failureRateThreshold);
+        final NonBlockingCircuitBreaker cb = create(minimumRequestThreshold, failureRateThreshold);
         assertThat(cb.state().isClosed()).isTrue();
         assertThat(cb.canRequest()).isTrue();
         return cb;
@@ -64,7 +64,7 @@ public class NonBlockingCircuitBreakerTest {
 
     private static NonBlockingCircuitBreaker openState(long minimumRequestThreshold,
                                                        double failureRateThreshold) {
-        NonBlockingCircuitBreaker cb = create(minimumRequestThreshold, failureRateThreshold);
+        final NonBlockingCircuitBreaker cb = create(minimumRequestThreshold, failureRateThreshold);
         cb.onSuccess();
         cb.onFailure();
         cb.onFailure();
@@ -77,7 +77,7 @@ public class NonBlockingCircuitBreakerTest {
 
     private static NonBlockingCircuitBreaker halfOpenState(long minimumRequestThreshold,
                                                            double failureRateThreshold) {
-        NonBlockingCircuitBreaker cb = openState(minimumRequestThreshold, failureRateThreshold);
+        final NonBlockingCircuitBreaker cb = openState(minimumRequestThreshold, failureRateThreshold);
 
         ticker.advance(circuitOpenWindow.toNanos());
 
@@ -95,7 +95,7 @@ public class NonBlockingCircuitBreakerTest {
 
     @Test
     public void testMinimumRequestThreshold() {
-        NonBlockingCircuitBreaker cb = create(4, 0.5);
+        final NonBlockingCircuitBreaker cb = create(4, 0.5);
         assertThat(cb.state().isClosed() && cb.canRequest()).isTrue();
 
         cb.onFailure();
@@ -115,7 +115,7 @@ public class NonBlockingCircuitBreakerTest {
 
     @Test
     public void testFailureRateThreshold() {
-        NonBlockingCircuitBreaker cb = create(10, 0.5);
+        final NonBlockingCircuitBreaker cb = create(10, 0.5);
 
         for (int i = 0; i < 10; i++) {
             cb.onSuccess();
@@ -155,7 +155,7 @@ public class NonBlockingCircuitBreakerTest {
 
     @Test
     public void testHalfOpenToClosed() {
-        NonBlockingCircuitBreaker cb = halfOpenState(2, 0.5);
+        final NonBlockingCircuitBreaker cb = halfOpenState(2, 0.5);
 
         cb.onSuccess();
 
@@ -165,7 +165,7 @@ public class NonBlockingCircuitBreakerTest {
 
     @Test
     public void testHalfOpenToOpen() {
-        NonBlockingCircuitBreaker cb = halfOpenState(2, 0.5);
+        final NonBlockingCircuitBreaker cb = halfOpenState(2, 0.5);
 
         cb.onFailure();
 
@@ -175,7 +175,7 @@ public class NonBlockingCircuitBreakerTest {
 
     @Test
     public void testHalfOpenRetryRequest() {
-        NonBlockingCircuitBreaker cb = halfOpenState(2, 0.5);
+        final NonBlockingCircuitBreaker cb = halfOpenState(2, 0.5);
 
         ticker.advance(trialRequestInterval.toNanos());
 
@@ -189,7 +189,7 @@ public class NonBlockingCircuitBreakerTest {
     public void testNotification() throws Exception {
         reset(listener);
 
-        NonBlockingCircuitBreaker cb = create(4, 0.5);
+        final NonBlockingCircuitBreaker cb = create(4, 0.5);
 
         // Notify initial state
         verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);

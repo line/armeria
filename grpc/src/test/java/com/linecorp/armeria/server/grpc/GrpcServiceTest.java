@@ -64,7 +64,7 @@ public class GrpcServiceTest {
 
     @Test
     public void missingContentType() throws Exception {
-        HttpResponse response = grpcService.doPost(
+        final HttpResponse response = grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")));
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
@@ -75,7 +75,7 @@ public class GrpcServiceTest {
 
     @Test
     public void badContentType() throws Exception {
-        HttpResponse response = grpcService.doPost(
+        final HttpResponse response = grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")
                                           .contentType(MediaType.JSON_UTF_8)));
@@ -88,7 +88,7 @@ public class GrpcServiceTest {
     @Test
     public void pathMissingSlash() throws Exception {
         when(ctx.mappedPath()).thenReturn("grpc.testing.TestService.UnaryCall");
-        HttpResponse response = grpcService.doPost(
+        final HttpResponse response = grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "grpc.testing.TestService.UnaryCall")
                                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")));
@@ -101,7 +101,7 @@ public class GrpcServiceTest {
     @Test
     public void missingMethod() throws Exception {
         when(ctx.mappedPath()).thenReturn("/grpc.testing.TestService/FooCall");
-        HttpResponse response = grpcService.doPost(
+        final HttpResponse response = grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")
                                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")));
@@ -112,7 +112,7 @@ public class GrpcServiceTest {
                            .set(AsciiString.of("grpc-message"),
                                 "Method not found: grpc.testing.TestService/FooCall")
                            .set(HttpHeaderNames.CONTENT_LENGTH, "0"),
-                HttpData.of(new byte[] {})));
+                HttpData.EMPTY_DATA));
     }
 
     @Test

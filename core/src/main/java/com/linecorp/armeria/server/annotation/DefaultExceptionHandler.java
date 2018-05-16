@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
  * {@code 500 Internal Server Error} status code.
  */
 final class DefaultExceptionHandler implements ExceptionHandlerFunction {
-    private static Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
 
     @Override
     public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {

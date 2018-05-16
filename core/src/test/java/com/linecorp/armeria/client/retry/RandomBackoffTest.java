@@ -25,8 +25,8 @@ import org.junit.Test;
 public class RandomBackoffTest {
     @Test
     public void nextDelayMillis() throws Exception {
-        Random r = new Random(1);
-        Backoff backoff = new RandomBackoff(10, 100, () -> r);
+        final Random r = new Random(1);
+        final Backoff backoff = new RandomBackoff(10, 100, () -> r);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(18);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(93);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(12);

@@ -130,7 +130,7 @@ public class HttpClientSniTest {
     private static String get(String fqdn) throws Exception {
         final HttpClient client = HttpClient.of(clientFactory, "https://" + fqdn + ':' + httpsPort);
 
-        AggregatedHttpMessage response = client.get("/").aggregate().get();
+        final AggregatedHttpMessage response = client.get("/").aggregate().get();
 
         assertEquals(HttpStatus.OK, response.headers().status());
         return response.content().toString(StandardCharsets.UTF_8);

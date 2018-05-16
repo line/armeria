@@ -37,27 +37,22 @@ public class DefaultHttpClientTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testConcatenateRequestPath() throws Exception {
-        String clientUriPath = "http://127.0.0.1/hello";
-        String requestPath = "world/test?q1=foo";
+        final String clientUriPath = "http://127.0.0.1/hello";
+        final String requestPath = "world/test?q1=foo";
 
-        Client<HttpRequest, HttpResponse> mockClientDelegate = mock(Client.class);
-        ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(ClientFactory.DEFAULT,
-                                                                                 new URI(clientUriPath),
-                                                                                 HttpClient.class,
-                                                                                 ClientOptions.DEFAULT);
-        DefaultHttpClient defaultHttpClient = new DefaultHttpClient(clientBuilderParams,
-                                                                    mockClientDelegate,
-                                                                    NoopMeterRegistry.get(),
-                                                                    SessionProtocol.of("http"),
-                                                                    Endpoint.of("127.0.0.1"));
+        final Client<HttpRequest, HttpResponse> mockClientDelegate = mock(Client.class);
+        final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
+                ClientFactory.DEFAULT, new URI(clientUriPath), HttpClient.class, ClientOptions.DEFAULT);
+        final DefaultHttpClient defaultHttpClient = new DefaultHttpClient(
+                clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
+                SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));
 
         defaultHttpClient.execute(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, requestPath)));
 
-        ArgumentCaptor<HttpRequest> httpRequestArgumentCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(mockClientDelegate).execute(any(ClientRequestContext.class),
-                                           httpRequestArgumentCaptor.capture());
+        final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
 
-        String concatPath = httpRequestArgumentCaptor.getValue().path();
+        final String concatPath = argCaptor.getValue().path();
         assertThat(concatPath).isEqualTo("/hello/world/test?q1=foo");
     }
 }

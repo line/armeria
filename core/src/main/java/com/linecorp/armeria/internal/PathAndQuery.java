@@ -202,6 +202,7 @@ public final class PathAndQuery {
         return new PathAndQuery(CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/"), query);
     }
 
+    @SuppressWarnings("DuplicateBooleanBranch")
     private static boolean isValidEncoding(@Nullable String value) {
         if (value == null) {
             return true;

@@ -89,10 +89,10 @@ public class RequestContextTest {
     @Test
     public void contextAwareEventExecutor() throws Exception {
         when(channel.eventLoop()).thenReturn(eventLoop);
-        RequestContext context = createContext();
-        Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());
-        EventExecutor executor = context.contextAwareEventLoop();
-        CountDownLatch latch = new CountDownLatch(18);
+        final RequestContext context = createContext();
+        final Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        final EventExecutor executor = context.contextAwareEventLoop();
+        final CountDownLatch latch = new CountDownLatch(18);
         executor.execute(() -> checkCallback(1, context, callbacksCalled, latch));
         executor.schedule(() -> checkCallback(2, context, callbacksCalled, latch), 0, TimeUnit.SECONDS);
         executor.schedule(() -> {
@@ -113,14 +113,14 @@ public class RequestContextTest {
         executor.invokeAll(makeTaskList(11, 12, context, callbacksCalled, latch), 10000, TimeUnit.SECONDS);
         executor.invokeAny(makeTaskList(13, 13, context, callbacksCalled, latch));
         executor.invokeAny(makeTaskList(14, 14, context, callbacksCalled, latch), 10000, TimeUnit.SECONDS);
-        Promise<String> promise = executor.newPromise();
+        final Promise<String> promise = executor.newPromise();
         promise.addListener(f -> checkCallback(15, context, callbacksCalled, latch));
         promise.setSuccess("success");
         executor.newSucceededFuture("success")
                 .addListener(f -> checkCallback(16, context, callbacksCalled, latch));
         executor.newFailedFuture(new IllegalArgumentException())
                 .addListener(f -> checkCallback(17, context, callbacksCalled, latch));
-        ProgressivePromise<String> progressivePromise = executor.newProgressivePromise();
+        final ProgressivePromise<String> progressivePromise = executor.newProgressivePromise();
         progressivePromise.addListener(f -> checkCallback(18, context, callbacksCalled, latch));
         progressivePromise.setSuccess("success");
         latch.await();
@@ -130,9 +130,9 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareExecutor() {
-        RequestContext context = createContext();
-        Executor executor = context.makeContextAware(MoreExecutors.directExecutor());
-        AtomicBoolean callbackCalled = new AtomicBoolean(false);
+        final RequestContext context = createContext();
+        final Executor executor = context.makeContextAware(MoreExecutors.directExecutor());
+        final AtomicBoolean callbackCalled = new AtomicBoolean(false);
         executor.execute(() -> {
             assertCurrentContext(context);
             assertDepth(1);
@@ -144,7 +144,7 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareCallable() throws Exception {
-        RequestContext context = createContext();
+        final RequestContext context = createContext();
         context.makeContextAware(() -> {
             assertCurrentContext(context);
             assertDepth(1);
@@ -155,7 +155,7 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareRunnable() {
-        RequestContext context = createContext();
+        final RequestContext context = createContext();
         context.makeContextAware(() -> {
             assertCurrentContext(context);
             assertDepth(1);
@@ -166,8 +166,8 @@ public class RequestContextTest {
     @Test
     @SuppressWarnings("deprecation")
     public void makeContextAwareFutureListener() {
-        RequestContext context = createContext();
-        Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        final RequestContext context = createContext();
+        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.addListener(context.makeContextAware((FutureListener<String>) f -> {
             assertCurrentContext(context);
             assertDepth(1);
@@ -179,8 +179,8 @@ public class RequestContextTest {
     @Test
     @SuppressWarnings("deprecation")
     public void makeContextAwareChannelFutureListener() {
-        RequestContext context = createContext();
-        ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        final RequestContext context = createContext();
+        final ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
         promise.addListener(context.makeContextAware((ChannelFutureListener) f -> {
             assertCurrentContext(context);
             assertDepth(1);
@@ -191,10 +191,10 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareCompletableFutureInSameThread() throws Exception {
-        RequestContext context = createContext();
-        CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
-        CompletableFuture<String> resultFuture = contextAwareFuture.whenComplete((result, cause) -> {
+        final RequestContext context = createContext();
+        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
+        final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+        final CompletableFuture<String> resultFuture = contextAwareFuture.whenComplete((result, cause) -> {
             assertThat(result).isEqualTo("success");
             assertThat(cause).isNull();
             assertCurrentContext(context);
@@ -207,14 +207,14 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareCompletableFutureWithExecutor() throws Exception {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
-            RequestContext context = createContext();
-            Thread testMainThread = Thread.currentThread();
-            AtomicReference<Thread> callbackThread = new AtomicReference<>();
-            CountDownLatch latch = new CountDownLatch(1);
+            final RequestContext context = createContext();
+            final Thread testMainThread = Thread.currentThread();
+            final AtomicReference<Thread> callbackThread = new AtomicReference<>();
+            final CountDownLatch latch = new CountDownLatch(1);
 
-            CompletableFuture<String> originalFuture = CompletableFuture.supplyAsync(() -> {
+            final CompletableFuture<String> originalFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     // In CompletableFuture chaining, if previous callback was already completed,
                     // next chained callback will run in same thread instead of executor's thread.
@@ -229,9 +229,9 @@ public class RequestContextTest {
                 return "success";
             }, executor);
 
-            CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+            final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
 
-            CompletableFuture<String> resultFuture = contextAwareFuture.whenComplete((result, cause) -> {
+            final CompletableFuture<String> resultFuture = contextAwareFuture.whenComplete((result, cause) -> {
                 final Thread currentThread = Thread.currentThread();
                 assertThat(currentThread).isNotSameAs(testMainThread)
                                          .isSameAs(callbackThread.get());
@@ -250,13 +250,13 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareCompletableFutureWithAsyncChaining() throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(2);
+        final ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            RequestContext context = createContext();
-            Thread testMainThread = Thread.currentThread();
-            CountDownLatch latch = new CountDownLatch(1);
+            final RequestContext context = createContext();
+            final Thread testMainThread = Thread.currentThread();
+            final CountDownLatch latch = new CountDownLatch(1);
 
-            CompletableFuture<String> originalFuture = CompletableFuture.supplyAsync(() -> {
+            final CompletableFuture<String> originalFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     latch.await();
                 } catch (InterruptedException e) {
@@ -267,7 +267,7 @@ public class RequestContextTest {
                 return "success";
             }, executor);
 
-            BiConsumer<String, Throwable> handler = (result, cause) -> {
+            final BiConsumer<String, Throwable> handler = (result, cause) -> {
                 final Thread currentThread = Thread.currentThread();
                 assertThat(currentThread).isNotSameAs(testMainThread);
                 assertThat(result).isEqualTo("success");
@@ -275,9 +275,9 @@ public class RequestContextTest {
                 assertCurrentContext(context);
             };
 
-            CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
-            CompletableFuture<String> future1 = contextAwareFuture.whenCompleteAsync(handler, executor);
-            CompletableFuture<String> future2 = future1.whenCompleteAsync(handler, executor);
+            final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+            final CompletableFuture<String> future1 = contextAwareFuture.whenCompleteAsync(handler, executor);
+            final CompletableFuture<String> future2 = future1.whenCompleteAsync(handler, executor);
 
             latch.countDown(); // fire
 
@@ -313,7 +313,7 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareRunnableNoContextAwareHandler() {
-        RequestContext context = createContext(false);
+        final RequestContext context = createContext(false);
         context.makeContextAware(() -> {
             assertCurrentContext(context);
             assertDepth(0);
@@ -351,9 +351,9 @@ public class RequestContextTest {
 
     @Test
     public void timedOut() {
-        RequestContext ctx = createContext();
+        final AbstractRequestContext ctx = createContext();
         assertThat(ctx.isTimedOut()).isFalse();
-        ((AbstractRequestContext) ctx).setTimedOut();
+        ctx.setTimedOut();
         assertThat(ctx.isTimedOut()).isTrue();
     }
 

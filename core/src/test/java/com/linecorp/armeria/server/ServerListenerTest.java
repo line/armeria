@@ -19,14 +19,10 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.assertj.core.util.Lists;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -41,68 +37,42 @@ public class ServerListenerTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.meterRegistry(PrometheusMeterRegistries.newRegistry())
-              .service("/", new EchoService());
+              .service("/", (req, ctx) -> HttpResponse.of("Hello!"));
 
             // Record when the method triggered
-            ServerListener sl = new ServerListenerBuilder()
+            final ServerListener sl = new ServerListenerBuilder()
                     // add a callback.
-                    .addStartingCallback((Server server) -> {
-                        ServerListenerTest.STARTING_AT = System.currentTimeMillis();
-                    })
+                    .addStartingCallback((Server server) -> STARTING_AT = System.currentTimeMillis())
                     // add multiple callbacks, one by one.
-                    .addStartedCallback((Server server) -> {
-                        ServerListenerTest.STARTED_AT = -1;
-                    })
-                    .addStartedCallback((Server server) -> {
-                        ServerListenerTest.STARTED_AT = System.currentTimeMillis();
-                    })
+                    .addStartedCallback((Server server) -> STARTED_AT = -1)
+                    .addStartedCallback((Server server) -> STARTED_AT = System.currentTimeMillis())
                     // add multiple callbacks at once, with vargs api.
-                    .addStoppingCallbacks((Server server) -> {
-                        ServerListenerTest.STOPPING_AT = System.currentTimeMillis();
-                    }, (Server server) -> {
-                        ServerListenerTest.STARTING_AT = 0L;
-                    })
+                    .addStoppingCallbacks((Server server) -> STOPPING_AT = System.currentTimeMillis(),
+                                          (Server server) -> STARTING_AT = 0L)
                     // add multiple callbacks at once, with iterable api.
                     .addStoppedCallbacks(
-                            Lists.newArrayList((Server server) -> {
-                                ServerListenerTest.STOPPED_AT = System.currentTimeMillis();
-                            }, (Server server) -> {
-                                ServerListenerTest.STARTED_AT = 0L;
-                            })
-                    )
+                            Lists.newArrayList((Server server) -> STOPPED_AT = System.currentTimeMillis(),
+                                               (Server server) -> STARTED_AT = 0L))
                     .build();
             sb.serverListener(sl);
         }
     };
 
-    @Before
-    public void startServer() {
-        server.start();
-    }
-
     @Test
     public void testServerListener() throws Exception {
         // Before stop
-        assertThat(ServerListenerTest.STARTING_AT).isGreaterThan(0L);
-        assertThat(ServerListenerTest.STARTED_AT).isGreaterThanOrEqualTo(ServerListenerTest.STARTING_AT);
-        assertThat(ServerListenerTest.STOPPING_AT).isEqualTo(0L);
-        assertThat(ServerListenerTest.STOPPED_AT).isEqualTo(0L);
+        assertThat(STARTING_AT).isGreaterThan(0L);
+        assertThat(STARTED_AT).isGreaterThanOrEqualTo(STARTING_AT);
+        assertThat(STOPPING_AT).isEqualTo(0L);
+        assertThat(STOPPED_AT).isEqualTo(0L);
 
         final Server server = ServerListenerTest.server.server();
         server.stop().get();
 
         // After stop
-        assertThat(ServerListenerTest.STARTING_AT).isEqualTo(0L);
-        assertThat(ServerListenerTest.STARTED_AT).isEqualTo(0L);
-        assertThat(ServerListenerTest.STOPPING_AT).isGreaterThanOrEqualTo(0L);
-        assertThat(ServerListenerTest.STOPPED_AT).isGreaterThanOrEqualTo(ServerListenerTest.STOPPING_AT);
-    }
-
-    private static class EchoService extends AbstractHttpService {
-        protected HttpResponse echo(AggregatedHttpMessage aReq) {
-            return HttpResponse.of(
-                    HttpHeaders.of(HttpStatus.OK),
-                    aReq.content());
-        }
+        assertThat(STARTING_AT).isEqualTo(0L);
+        assertThat(STARTED_AT).isEqualTo(0L);
+        assertThat(STOPPING_AT).isGreaterThanOrEqualTo(0L);
+        assertThat(STOPPED_AT).isGreaterThanOrEqualTo(STOPPING_AT);
     }
 }

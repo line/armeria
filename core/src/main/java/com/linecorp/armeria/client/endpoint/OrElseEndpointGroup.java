@@ -36,7 +36,7 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
 
     @Override
     public List<Endpoint> endpoints() {
-        List<Endpoint> endpoints = first.endpoints();
+        final List<Endpoint> endpoints = first.endpoints();
         if (!endpoints.isEmpty()) {
             return endpoints;
         }

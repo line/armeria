@@ -25,14 +25,14 @@ public class HttpHeadersBenchmark {
 
     @Benchmark
     public MediaType parseKnown() {
-        HttpHeaders headers = new DefaultHttpHeaders()
+        final HttpHeaders headers = new DefaultHttpHeaders()
                 .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto");
         return headers.contentType();
     }
 
     @Benchmark
     public MediaType parseUnknown() {
-        HttpHeaders headers = new DefaultHttpHeaders()
+        final HttpHeaders headers = new DefaultHttpHeaders()
                 // Single letter change to keep theoretical parsing performance the same.
                 .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+oroto");
         return headers.contentType();

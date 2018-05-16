@@ -175,8 +175,10 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
             if (filteredCause != null) {
                 delegate.onError(filteredCause);
             } else {
-                logger.warn("{}#beforeError() returned null. Using the original exception:",
-                            FilteredStreamMessage.this.getClass().getName(), t.toString());
+                if (logger.isWarnEnabled()) {
+                    logger.warn("{}#beforeError() returned null. Using the original exception: {}",
+                                FilteredStreamMessage.this.getClass().getName(), t.toString());
+                }
                 delegate.onError(t);
             }
         }

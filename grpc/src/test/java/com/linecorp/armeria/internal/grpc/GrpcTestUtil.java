@@ -61,7 +61,7 @@ public final class GrpcTestUtil {
     }
 
     public static ByteBuf protoByteBuf(MessageLite msg) {
-        ByteBuf buf = Unpooled.buffer();
+        final ByteBuf buf = Unpooled.buffer();
         try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
             msg.writeTo(os);
         } catch (IOException e) {
@@ -71,30 +71,30 @@ public final class GrpcTestUtil {
     }
 
     public static byte[] uncompressedFrame(ByteBuf proto) {
-        ByteBuf buf = Unpooled.buffer();
+        final ByteBuf buf = Unpooled.buffer();
         buf.writeByte(0);
         buf.writeInt(proto.readableBytes());
         buf.writeBytes(proto);
         proto.release();
-        byte[] result = ByteBufUtil.getBytes(buf);
+        final byte[] result = ByteBufUtil.getBytes(buf);
         buf.release();
         return result;
     }
 
     public static byte[] compressedFrame(ByteBuf uncompressed) {
-        ByteBuf compressed = Unpooled.buffer();
+        final ByteBuf compressed = Unpooled.buffer();
         try (ByteBufInputStream is = new ByteBufInputStream(uncompressed, true);
              GZIPOutputStream os = new GZIPOutputStream(new ByteBufOutputStream(compressed))) {
             ByteStreams.copy(is, os);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        ByteBuf buf = Unpooled.buffer();
+        final ByteBuf buf = Unpooled.buffer();
         buf.writeByte(1);
         buf.writeInt(compressed.readableBytes());
         buf.writeBytes(compressed);
         compressed.release();
-        byte[] result = ByteBufUtil.getBytes(buf);
+        final byte[] result = ByteBufUtil.getBytes(buf);
         buf.release();
         return result;
     }

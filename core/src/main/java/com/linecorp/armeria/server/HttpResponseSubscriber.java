@@ -335,8 +335,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private State setDone() {
         cancelTimeout();
-        final State oldState = this.state;
-        this.state = State.DONE;
+        final State oldState = state;
+        state = State.DONE;
         return oldState;
     }
 

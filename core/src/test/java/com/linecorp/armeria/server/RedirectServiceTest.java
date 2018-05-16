@@ -103,8 +103,6 @@ public class RedirectServiceTest {
                         "/new0/{var1}"));
 
                 sb.build();
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     };
@@ -157,7 +155,7 @@ public class RedirectServiceTest {
     @Test
     public void testRedirectOK() throws Exception {
         serverRule1.start();
-        final String[] testPaths = new String[] {
+        final String[] testPaths = {
                 "/test1a",
                 "/test1b",
                 "/test1c",
@@ -181,7 +179,7 @@ public class RedirectServiceTest {
                 "/test3c/branch1",
                 "/test3d/branch2"
         };
-        final HttpStatus[] redirectStatuses = new HttpStatus[] {
+        final HttpStatus[] redirectStatuses = {
                 HttpStatus.TEMPORARY_REDIRECT,
                 HttpStatus.TEMPORARY_REDIRECT,
                 HttpStatus.MULTIPLE_CHOICES,
@@ -205,7 +203,7 @@ public class RedirectServiceTest {
                 HttpStatus.TEMPORARY_REDIRECT,
                 HttpStatus.TEMPORARY_REDIRECT
         };
-        final String[] expectedLocations = new String[] {
+        final String[] expectedLocations = {
                 "/new0/branch1",
                 "/new0/branch1",
                 "/new0/branch1",
@@ -229,7 +227,7 @@ public class RedirectServiceTest {
                 "http://localhost:" + serverRule1.httpPort() + "/new0/branch1",
                 "http://127.0.0.1:" + serverRule1.httpPort() + "/new0/branch2"
         };
-        final String[] expectedResponse = new String[] {
+        final String[] expectedResponse = {
                 "SERVICE_BRANCH_1",
                 "SERVICE_BRANCH_1",
                 "SERVICE_BRANCH_1",
@@ -329,7 +327,7 @@ public class RedirectServiceTest {
 
     @Test
     public void testMisconfiguredPathParams1() throws Exception {
-        assertThatThrownBy(() -> serverRule2a.start())
+        assertThatThrownBy(serverRule2a::start)
                 .isInstanceOf(IllegalStateException.class)
                 .hasCause(new IllegalArgumentException(
                         "pathParams: var6 (no matching param in [var4, var5, var1])"));
@@ -337,7 +335,7 @@ public class RedirectServiceTest {
 
     @Test
     public void testMisconfiguredPathParams2() throws Exception {
-        assertThatThrownBy(() -> serverRule2b.start())
+        assertThatThrownBy(serverRule2b::start)
                 .isInstanceOf(IllegalStateException.class)
                 .hasCause(new IllegalArgumentException(
                         "pathParams: var4 (no matching param in [var1, var2, var3])"));
@@ -362,7 +360,7 @@ public class RedirectServiceTest {
 
     @Test
     public void testMisconfiguredPathParams4() throws Exception {
-        assertThatThrownBy(() -> serverRule2d.start())
+        assertThatThrownBy(serverRule2d::start)
                 .isInstanceOf(IllegalStateException.class)
                 .hasCause(new IllegalArgumentException(
                         "pathParams: var6 (no matching param in [var4, var5, var1])"));
@@ -370,7 +368,7 @@ public class RedirectServiceTest {
 
     @Test
     public void testMisconfiguredPathParams5() throws Exception {
-        assertThatThrownBy(() -> serverRule2e.start())
+        assertThatThrownBy(serverRule2e::start)
                 .isInstanceOf(IllegalStateException.class)
                 .hasCause(new IllegalArgumentException(
                         "pathParams: var4 (no matching param in [0, 1, 2])"));

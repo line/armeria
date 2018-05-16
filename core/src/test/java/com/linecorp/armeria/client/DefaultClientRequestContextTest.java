@@ -41,7 +41,7 @@ public class DefaultClientRequestContextTest {
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
 
-        Request newRequest = mock(Request.class);
+        final Request newRequest = mock(Request.class);
         final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest);
         assertThat(derivedCtx.endpoint()).isSameAs(originalCtx.endpoint());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());

@@ -82,7 +82,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      *                                  {@link #ClientBuilder(String)} or the specified {@code clientType} is
      *                                  unsupported for the scheme
      */
-    @SuppressWarnings("unchecked")
     public <T> T build(Class<T> clientType) {
         requireNonNull(clientType, "clientType");
         return factory.newClient(uri, clientType, buildOptions());

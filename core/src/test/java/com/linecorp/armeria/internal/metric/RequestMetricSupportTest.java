@@ -97,7 +97,7 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
 
-        Map<String, Double> measurements = measureAll(registry);
+        final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 0.0)
                                 .containsEntry("foo.requests#count{method=POST,result=success,status=500}", 0.0)
                                 .containsEntry("foo.requests#count{method=POST,result=failure,status=500}", 1.0)

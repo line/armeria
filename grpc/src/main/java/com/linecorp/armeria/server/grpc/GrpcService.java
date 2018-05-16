@@ -115,8 +115,8 @@ public final class GrpcService extends AbstractHttpService
 
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        MediaType contentType = req.headers().contentType();
-        SerializationFormat serializationFormat = findSerializationFormat(contentType);
+        final MediaType contentType = req.headers().contentType();
+        final SerializationFormat serializationFormat = findSerializationFormat(contentType);
         if (serializationFormat == null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
@@ -125,14 +125,14 @@ public final class GrpcService extends AbstractHttpService
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
-        String methodName = GrpcRequestUtil.determineMethod(ctx);
+        final String methodName = GrpcRequestUtil.determineMethod(ctx);
         if (methodName == null) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST,
                                    MediaType.PLAIN_TEXT_UTF_8,
                                    "Invalid path.");
         }
 
-        ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
+        final ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
         if (method == null) {
             return HttpResponse.of(
                     ArmeriaServerCall.statusToTrailers(
@@ -142,23 +142,21 @@ public final class GrpcService extends AbstractHttpService
 
         ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method.getMethodDescriptor()), null);
 
-        String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
+        final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
         if (timeoutHeader != null) {
             try {
-                long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
+                final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
                 ctx.setRequestTimeout(Duration.ofNanos(timeout));
             } catch (IllegalArgumentException e) {
                 return HttpResponse.of(ArmeriaServerCall.statusToTrailers(Status.fromThrowable(e), false));
             }
         }
 
-        HttpResponseWriter res = HttpResponse.streaming();
-        ArmeriaServerCall<?, ?> call = startCall(
+        final HttpResponseWriter res = HttpResponse.streaming();
+        final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
-            ctx.setRequestTimeoutHandler(() -> {
-                call.close(Status.DEADLINE_EXCEEDED, EMPTY_METADATA);
-            });
+            ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, EMPTY_METADATA));
             req.subscribe(call.messageReader(), ctx.eventLoop(), true);
         }
         return res;
@@ -172,7 +170,7 @@ public final class GrpcService extends AbstractHttpService
             HttpHeaders headers,
             HttpResponseWriter res,
             SerializationFormat serializationFormat) {
-        ArmeriaServerCall<I, O> call = new ArmeriaServerCall<>(
+        final ArmeriaServerCall<I, O> call = new ArmeriaServerCall<>(
                 headers,
                 methodDef.getMethodDescriptor(),
                 compressorRegistry,
@@ -242,7 +240,7 @@ public final class GrpcService extends AbstractHttpService
     }
 
     private static MessageMarshaller jsonMarshaller(HandlerRegistry registry) {
-        List<MethodDescriptor<?, ?>> methods =
+        final List<MethodDescriptor<?, ?>> methods =
                 registry.services().stream()
                         .flatMap(service -> service.getMethods().stream())
                         .map(ServerMethodDefinition::getMethodDescriptor)

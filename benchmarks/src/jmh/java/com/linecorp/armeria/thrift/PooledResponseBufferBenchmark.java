@@ -69,8 +69,8 @@ public class PooledResponseBufferBenchmark {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            HttpResponse res = delegate().serve(ctx, req);
-            HttpResponseWriter decorated = HttpResponse.streaming();
+            final HttpResponse res = delegate().serve(ctx, req);
+            final HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -105,8 +105,8 @@ public class PooledResponseBufferBenchmark {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            HttpResponse res = delegate().serve(ctx, req);
-            HttpResponseWriter decorated = HttpResponse.streaming();
+            final HttpResponse res = delegate().serve(ctx, req);
+            final HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -138,7 +138,7 @@ public class PooledResponseBufferBenchmark {
 
     @Setup
     public void startServer() throws Exception {
-        ServerBuilder sb = new ServerBuilder()
+        final ServerBuilder sb = new ServerBuilder()
                 .service("/a", THttpService.of((AsyncIface) (name, cb) -> cb.onComplete(RESPONSE))
                                            .decorate(PooledDecoratingService::new))
                 .service("/b", THttpService.of((AsyncIface) (name, cb) -> cb.onComplete(RESPONSE))
@@ -146,9 +146,9 @@ public class PooledResponseBufferBenchmark {
         server = sb.build();
         server.start().join();
 
-        ServerPort httpPort = server.activePorts().values().stream()
-                                    .filter(ServerPort::hasHttp).findAny()
-                                    .get();
+        final ServerPort httpPort = server.activePorts().values().stream()
+                                          .filter(ServerPort::hasHttp).findAny()
+                                          .get();
         pooledClient = Clients.newClient(
                 "tbinary+http://127.0.0.1:" + httpPort.localAddress().getPort() + "/a",
                 HelloService.Iface.class);

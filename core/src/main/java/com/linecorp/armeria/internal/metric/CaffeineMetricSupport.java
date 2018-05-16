@@ -141,7 +141,7 @@ public final class CaffeineMetricSupport {
             return value -> {
                 double sum = 0;
                 synchronized (cacheRefs) {
-                    for (Iterator<CacheReference> i = cacheRefs.iterator(); i.hasNext();) {
+                    for (final Iterator<CacheReference> i = cacheRefs.iterator(); i.hasNext();) {
                         final CacheReference ref = i.next();
                         final boolean garbageCollected = ref.updateCacheStats();
                         if (!garbageCollected) {

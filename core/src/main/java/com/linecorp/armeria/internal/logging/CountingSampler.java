@@ -51,7 +51,7 @@ final class CountingSampler extends Sampler {
 
     /** Fills a bitset with decisions according to the supplied rate. */
     CountingSampler(float rate) {
-        int outOf100 = (int) (rate * 100.0f);
+        final int outOf100 = (int) (rate * 100.0f);
         sampleDecisions = randomBitSet(100, outOf100, new Random());
     }
 
@@ -60,15 +60,15 @@ final class CountingSampler extends Sampler {
      * https://stackoverflow.com/questions/12817946/generate-a-random-bitset-with-n-1s
      */
     private static BitSet randomBitSet(int size, int cardinality, Random rnd) {
-        BitSet result = new BitSet(size);
-        int[] chosen = new int[cardinality];
+        final BitSet result = new BitSet(size);
+        final int[] chosen = new int[cardinality];
         int i;
         for (i = 0; i < cardinality; ++i) {
             chosen[i] = i;
             result.set(i);
         }
         for (; i < size; ++i) {
-            int j = rnd.nextInt(i + 1);
+            final int j = rnd.nextInt(i + 1);
             if (j < cardinality) {
                 result.clear(chosen[j]);
                 result.set(i);
@@ -84,7 +84,7 @@ final class CountingSampler extends Sampler {
      */
     @Override
     public synchronized boolean isSampled() {
-        boolean result = sampleDecisions.get(counter++);
+        final boolean result = sampleDecisions.get(counter++);
         if (counter == 100) {
             counter = 0;
         }

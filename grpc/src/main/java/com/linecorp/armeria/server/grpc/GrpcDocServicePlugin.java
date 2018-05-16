@@ -41,6 +41,7 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 
 import com.linecorp.armeria.common.MediaType;
@@ -114,7 +115,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         final Map<String, ServiceEntryBuilder> map = new LinkedHashMap<>();
         for (ServiceConfig serviceConfig : serviceConfigs) {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class).get();
-            ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
+            final ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
             supportedMediaTypesBuilder.addAll(grpcService.supportedSerializationFormats()
                                                          .stream()
                                                          .map(SerializationFormat::mediaType)::iterator);
@@ -129,20 +130,19 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                     supportedMediaTypesBuilder.add(MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"));
                 }
             }
-            Set<MediaType> supportedMediaTypes = supportedMediaTypesBuilder.build();
+            final Set<MediaType> supportedMediaTypes = supportedMediaTypesBuilder.build();
             for (ServerServiceDefinition service : grpcService.services()) {
                 map.computeIfAbsent(
                         service.getServiceDescriptor().getName(),
                         s -> {
-                            FileDescriptor fileDescriptor =
-                                    ((ProtoFileDescriptorSupplier)
-                                            service.getServiceDescriptor().getSchemaDescriptor())
-                                            .getFileDescriptor();
-                            ServiceDescriptor serviceDescriptor = fileDescriptor.getServices().stream()
-                                          .filter(sd -> sd.getFullName().equals(
-                                                  service.getServiceDescriptor().getName()))
-                                          .findFirst()
-                                          .orElseThrow(IllegalStateException::new);
+                            final FileDescriptor fileDescriptor = ((ProtoFileDescriptorSupplier)
+                                    service.getServiceDescriptor().getSchemaDescriptor()).getFileDescriptor();
+                            final ServiceDescriptor serviceDescriptor =
+                                    fileDescriptor.getServices().stream()
+                                                  .filter(sd -> sd.getFullName().equals(
+                                                          service.getServiceDescriptor().getName()))
+                                                  .findFirst()
+                                                  .orElseThrow(IllegalStateException::new);
                             return new ServiceEntryBuilder(serviceDescriptor);
                         });
             }
@@ -192,7 +192,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     public Optional<String> serializeExampleRequest(String serviceName, String methodName,
                                                     Object exampleRequest) {
         try {
-            return Optional.of(JsonFormat.printer().print((Message) exampleRequest));
+            return Optional.of(JsonFormat.printer().print((MessageOrBuilder) exampleRequest));
         } catch (InvalidProtocolBufferException e) {
             throw new UncheckedIOException(
                     "Invalid example request protobuf. Is it missing required fields?", e);
@@ -202,13 +202,13 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     ServiceSpecification generate(List<ServiceEntry> entries) {
         final List<ServiceInfo> services = entries.stream()
-                                                  .map(this::newServiceInfo)
+                                                  .map(GrpcDocServicePlugin::newServiceInfo)
                                                   .collect(toImmutableList());
         return ServiceSpecification.generate(services, this::newNamedTypeInfo);
     }
 
     private NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
-        Object descriptor = typeSignature.namedTypeDescriptor().get();
+        final Object descriptor = typeSignature.namedTypeDescriptor().get();
         if (descriptor instanceof Descriptor) {
             return newStructInfo((Descriptor) descriptor);
         }
@@ -217,7 +217,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         return newEnumInfo((EnumDescriptor) descriptor);
     }
 
-    ServiceInfo newServiceInfo(ServiceEntry entry) {
+    static ServiceInfo newServiceInfo(ServiceEntry entry) {
         final List<MethodInfo> functions = entry.methods().stream()
                                                 .map(m -> newMethodInfo(m, entry))
                                                 .collect(toImmutableList());
@@ -225,8 +225,8 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    MethodInfo newMethodInfo(MethodDescriptor method, ServiceEntry service) {
-        Set<EndpointInfo> methodEndpoints =
+    static MethodInfo newMethodInfo(MethodDescriptor method, ServiceEntry service) {
+        final Set<EndpointInfo> methodEndpoints =
                 service.endpointInfos.stream()
                                      .map(e -> new EndpointInfo(
                                              e.hostnamePattern(),
@@ -253,11 +253,11 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         return new StructInfo(
                 descriptor.getFullName(),
                 descriptor.getFields().stream()
-                          .map(this::newFieldInfo)
+                          .map(GrpcDocServicePlugin::newFieldInfo)
                           .collect(toImmutableList()));
     }
 
-    private FieldInfo newFieldInfo(FieldDescriptor fieldDescriptor) {
+    private static FieldInfo newFieldInfo(FieldDescriptor fieldDescriptor) {
         return new FieldInfo(
                 fieldDescriptor.getName(),
                 fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL,
@@ -265,7 +265,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    TypeSignature newFieldTypeInfo(FieldDescriptor fieldDescriptor) {
+    static TypeSignature newFieldTypeInfo(FieldDescriptor fieldDescriptor) {
         if (fieldDescriptor.isMapField()) {
             return TypeSignature.ofMap(
                     newFieldTypeInfo(fieldDescriptor.getMessageType().findFieldByNumber(1)),
@@ -347,7 +347,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                               .collect(toImmutableList()));
     }
 
-    private TypeSignature namedMessageSignature(Descriptor descriptor) {
+    private static TypeSignature namedMessageSignature(Descriptor descriptor) {
         return TypeSignature.ofNamed(descriptor.getFullName(), descriptor);
     }
 

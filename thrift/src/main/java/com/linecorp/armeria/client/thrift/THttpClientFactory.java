@@ -94,7 +94,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
                     delegate, meterRegistry(), scheme.sessionProtocol(), newEndpoint(uri));
 
             @SuppressWarnings("unchecked")
-            T client = (T) Proxy.newProxyInstance(
+            final T client = (T) Proxy.newProxyInstance(
                     clientType.getClassLoader(),
                     new Class<?>[] { clientType },
                     new THttpClientInvocationHandler(
@@ -109,7 +109,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
     private Client<HttpRequest, HttpResponse> newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
         try {
             @SuppressWarnings("unchecked")
-            Client<HttpRequest, HttpResponse> client = delegate().newClient(
+            final Client<HttpRequest, HttpResponse> client = delegate().newClient(
                     new URI(Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()).uriText(),
                             uri.getRawAuthority(), null, null, null),
                     Client.class, options);

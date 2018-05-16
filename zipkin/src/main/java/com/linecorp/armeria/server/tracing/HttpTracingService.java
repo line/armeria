@@ -71,9 +71,9 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        TraceContextOrSamplingFlags contextOrFlags = extractor.extract(req.headers());
-        Span span = contextOrFlags.context() != null ? tracer.joinSpan(contextOrFlags.context())
-                                                     : tracer.newTrace(contextOrFlags.samplingFlags());
+        final TraceContextOrSamplingFlags contextOrFlags = extractor.extract(req.headers());
+        final Span span = contextOrFlags.context() != null ? tracer.joinSpan(contextOrFlags.context())
+                                                           : tracer.newTrace(contextOrFlags.samplingFlags());
         // For no-op spans, nothing special to do.
         if (span.isNoop()) {
             return delegate().serve(ctx, req);

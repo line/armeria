@@ -106,19 +106,21 @@ public class ThriftSerializationFormatsTest {
 
     @Test
     public void defaults() throws Exception {
-        HelloService.Iface client = Clients.newClient(server.uri(BINARY, "/hello"), HelloService.Iface.class);
+        final HelloService.Iface client = Clients.newClient(server.uri(BINARY, "/hello"),
+                                                            HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void notDefault() throws Exception {
-        HelloService.Iface client = Clients.newClient(server.uri(TEXT, "/hello"), HelloService.Iface.class);
+        final HelloService.Iface client = Clients.newClient(server.uri(TEXT, "/hello"),
+                                                            HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void notAllowed() throws Exception {
-        HelloService.Iface client =
+        final HelloService.Iface client =
                 Clients.newClient(server.uri(TEXT, "/hellobinaryonly"), HelloService.Iface.class);
         thrown.expect(InvalidResponseException.class);
         thrown.expectMessage("415 Unsupported Media Type");
@@ -128,9 +130,9 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void contentTypeNotThrift() throws Exception {
         // Browser clients often send a non-thrift content type.
-        HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE,
-                                             "text/plain; charset=utf-8");
-        HelloService.Iface client =
+        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE,
+                                                   "text/plain; charset=utf-8");
+        final HelloService.Iface client =
                 Clients.newClient(server.uri(BINARY, "/hello"),
                                   HelloService.Iface.class,
                                   ClientOption.HTTP_HEADERS.newValue(headers));
@@ -139,9 +141,9 @@ public class ThriftSerializationFormatsTest {
 
     @Test
     public void acceptNotSameAsContentType() throws Exception {
-        HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.ACCEPT,
-                                             "application/x-thrift; protocol=TBINARY");
-        HelloService.Iface client =
+        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.ACCEPT,
+                                                   "application/x-thrift; protocol=TBINARY");
+        final HelloService.Iface client =
                 Clients.newClient(server.uri(TEXT, "/hello"),
                                   HelloService.Iface.class,
                                   ClientOption.HTTP_HEADERS.newValue(headers));
@@ -154,7 +156,7 @@ public class ThriftSerializationFormatsTest {
     public void defaultSerializationFormat() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Send a TTEXT request with content type 'application/x-thrift' without 'protocol' parameter.
-            HttpPost req = new HttpPost(server.uri("/hellotextonly"));
+            final HttpPost req = new HttpPost(server.uri("/hellotextonly"));
             req.setHeader("Content-type", "application/x-thrift");
             req.setEntity(new StringEntity(
                     '{' +

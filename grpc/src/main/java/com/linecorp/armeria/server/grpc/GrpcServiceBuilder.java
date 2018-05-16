@@ -25,6 +25,7 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServiceWithPathMappings;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
@@ -185,7 +187,7 @@ public final class GrpcServiceBuilder {
      * production if this is enabled. You probably don't want to do this and should turn back now.
      *
      * <p>When enabled, the reference-counted buffer received from the client will be stored into
-     * {@link RequestContext} instead of being released. All {@link com.google.protobuf.ByteString} in a
+     * {@link RequestContext} instead of being released. All {@link ByteString} in a
      * protobuf message will reference sections of this buffer instead of having their own copies. When done
      * with a request message, call {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)}
      * with the message and the request's context to release the buffer. The message must be the same
@@ -200,19 +202,19 @@ public final class GrpcServiceBuilder {
 
     /**
      * Constructs a new {@link GrpcService} that can be bound to
-     * {@link com.linecorp.armeria.server.ServerBuilder}. It is recommended to bind the service to a server
-     * using {@link com.linecorp.armeria.server.ServerBuilder#service(ServiceWithPathMappings)} to mount all
+     * {@link ServerBuilder}. It is recommended to bind the service to a server
+     * using {@link ServerBuilder#service(ServiceWithPathMappings)} to mount all
      * service paths without interfering with other services.
      */
     public ServiceWithPathMappings<HttpRequest, HttpResponse> build() {
-        HandlerRegistry handlerRegistry = registryBuilder.build();
-        GrpcService grpcService = new GrpcService(
+        final HandlerRegistry handlerRegistry = registryBuilder.build();
+        final GrpcService grpcService = new GrpcService(
                 handlerRegistry,
                 handlerRegistry
                       .methods()
                       .keySet()
                       .stream()
-                      .map(path -> PathMapping.ofExact("/" + path))
+                      .map(path -> PathMapping.ofExact('/' + path))
                       .collect(ImmutableSet.toImmutableSet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),

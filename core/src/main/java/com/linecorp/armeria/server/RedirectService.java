@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -148,7 +149,7 @@ public class RedirectService extends AbstractHttpService {
             for (String param : paramNames) {
                 if (!params.contains(param)) {
                     throw new IllegalArgumentException("pathParams: " + param + " (no matching param in " +
-                            params.toString() + ')');
+                                                       params + ')');
                 }
             }
             // We don't need the paramNames anymore
@@ -167,9 +168,10 @@ public class RedirectService extends AbstractHttpService {
     }
 
     private static String populatePatternParams(String pathPattern, Map<String, String> pathParams) {
-        for (String param : pathParams.keySet()) {
-            final String tokenPattern = "\\{" + param + "\\}|:" + param;
-            pathPattern = pathPattern.replaceAll(tokenPattern, pathParams.get(param));
+        for (Entry<String, String> e : pathParams.entrySet()) {
+            final String tokenPattern = "\\{" + e.getKey() + "\\}|:" + e
+                    .getKey();
+            pathPattern = pathPattern.replaceAll(tokenPattern, e.getValue());
         }
         return pathPattern;
     }

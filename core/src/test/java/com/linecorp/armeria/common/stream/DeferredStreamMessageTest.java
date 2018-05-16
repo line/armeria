@@ -66,7 +66,7 @@ public class DeferredStreamMessageTest {
     public void testEarlyAbortWithSubscriber() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         @SuppressWarnings("unchecked")
-        Subscriber<Object> subscriber = mock(Subscriber.class);
+        final Subscriber<Object> subscriber = mock(Subscriber.class);
         m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         m.abort();
         assertAborted(m);

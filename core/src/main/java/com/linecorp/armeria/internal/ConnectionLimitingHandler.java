@@ -57,11 +57,10 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         final Channel child = (Channel) msg;
 
-        int conn = numConnections.incrementAndGet();
+        final int conn = numConnections.incrementAndGet();
         if (conn > 0 && conn <= maxNumConnections) {
             childChannels.add(child);
             child.closeFuture().addListener(future -> {
@@ -87,7 +86,7 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
     private void writeNumDroppedConnectionsLog() {
         loggingScheduled.set(false);
 
-        long dropped = numDroppedConnections.sumThenReset();
+        final long dropped = numDroppedConnections.sumThenReset();
         if (dropped > 0) {
             logger.warn("Dropped {} connection(s) to limit the number of open connections to {}",
                         dropped, maxNumConnections);

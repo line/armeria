@@ -24,68 +24,68 @@ public class StatusMessageEscaperTest {
 
     @Test
     public void metadataEncode_lowAscii() {
-        String s = StatusMessageEscaper.escape("my favorite character is \u0000");
+        final String s = StatusMessageEscaper.escape("my favorite character is \u0000");
         assertThat(s).isEqualTo("my favorite character is %00");
     }
 
     @Test
     public void metadataEncode_percent() {
-        String s = StatusMessageEscaper.escape("my favorite character is %");
+        final String s = StatusMessageEscaper.escape("my favorite character is %");
         assertThat(s).isEqualTo("my favorite character is %25");
     }
 
     @Test
     public void metadataEncode_surrogatePair() {
-        String s = StatusMessageEscaper.escape("my favorite character is 𐀁");
+        final String s = StatusMessageEscaper.escape("my favorite character is 𐀁");
         assertThat(s).isEqualTo("my favorite character is %F0%90%80%81");
     }
 
     @Test
     public void metadataEncode_unmatchedHighSurrogate() {
-        String s = StatusMessageEscaper.escape("my favorite character is " + ((char) 0xD801));
+        final String s = StatusMessageEscaper.escape("my favorite character is " + (char) 0xD801);
         assertThat(s).isEqualTo("my favorite character is ?");
     }
 
     @Test
     public void metadataEncode_unmatchedLowSurrogate() {
-        String s = StatusMessageEscaper.escape("my favorite character is " + ((char) 0xDC37));
+        final String s = StatusMessageEscaper.escape("my favorite character is " + (char) 0xDC37);
         assertThat(s).isEqualTo("my favorite character is ?");
     }
 
     @Test
     public void metadataEncode_maxSurrogatePair() {
-        String s = StatusMessageEscaper.escape(
-                "my favorite character is " + ((char) 0xDBFF) + ((char) 0xDFFF));
+        final String s = StatusMessageEscaper.escape(
+                "my favorite character is " + (char) 0xDBFF + (char) 0xDFFF);
         assertThat(s).isEqualTo("my favorite character is %F4%8F%BF%BF");
     }
 
     @Test
     public void metadataDecode_ascii() {
-        String s = StatusMessageEscaper.unescape("Hello");
+        final String s = StatusMessageEscaper.unescape("Hello");
         assertThat(s).isEqualTo("Hello");
     }
 
     @Test
     public void metadataDecode_percent() {
-        String s = StatusMessageEscaper.unescape("H%61o");
+        final String s = StatusMessageEscaper.unescape("H%61o");
         assertThat(s).isEqualTo("Hao");
     }
 
     @Test
     public void metadataDecode_percentUnderflow() {
-        String s = StatusMessageEscaper.unescape("H%6");
+        final String s = StatusMessageEscaper.unescape("H%6");
         assertThat(s).isEqualTo("H%6");
     }
 
     @Test
     public void metadataDecode_surrogate() {
-        String s = StatusMessageEscaper.unescape("%F0%90%80%81");
+        final String s = StatusMessageEscaper.unescape("%F0%90%80%81");
         assertThat(s).isEqualTo("𐀁");
     }
 
     @Test
     public void metadataDecode_badEncoding() {
-        String s = StatusMessageEscaper.unescape("%G0");
+        final String s = StatusMessageEscaper.unescape("%G0");
         assertThat(s).isEqualTo("%G0");
     }
 }

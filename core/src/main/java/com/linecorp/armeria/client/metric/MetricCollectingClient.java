@@ -64,7 +64,6 @@ public final class MetricCollectingClient<I extends Request, O extends Response>
 
     private final MeterIdPrefixFunction meterIdPrefixFunction;
 
-    @SuppressWarnings("unchecked")
     MetricCollectingClient(Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");

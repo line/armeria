@@ -25,7 +25,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 
@@ -55,6 +58,8 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import io.netty.handler.codec.DateFormatter;
 
 public class HttpFileServiceTest {
+
+    private static final ZoneId UTC = ZoneId.of("UTC");
 
     private static final String baseResourceDir =
             HttpFileServiceTest.class.getPackage().getName().replace('.', '/') + '/';
@@ -137,7 +142,7 @@ public class HttpFileServiceTest {
             }
 
             // Test if the 'If-Modified-Since' header works as expected.
-            HttpUriRequest req = new HttpGet(newUri("/foo.txt"));
+            final HttpUriRequest req = new HttpGet(newUri("/foo.txt"));
             req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
             req.setHeader(HttpHeaders.CONNECTION, "close");
 
@@ -174,7 +179,7 @@ public class HttpFileServiceTest {
              CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.unknown")))) {
             final String lastModified = assert200Ok(res, null, "Unknown Media Type");
 
-            HttpUriRequest req = new HttpGet(newUri("/bar.unknown"));
+            final HttpUriRequest req = new HttpGet(newUri("/bar.unknown"));
             req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
             req.setHeader(HttpHeaders.CONNECTION, "close");
 
@@ -187,7 +192,7 @@ public class HttpFileServiceTest {
     @Test
     public void testGetPreCompressedSupportsNone() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(res.getFirstHeader("Content-Encoding")).isNull();
                 assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
@@ -205,7 +210,7 @@ public class HttpFileServiceTest {
     @Test
     public void testGetPreCompressedSupportsGzip() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "gzip");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("gzip");
@@ -223,7 +228,7 @@ public class HttpFileServiceTest {
     @Test
     public void testGetPreCompressedSupportsBrotli() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "br");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("br");
@@ -241,7 +246,7 @@ public class HttpFileServiceTest {
     @Test
     public void testGetPreCompressedSupportsBothPrefersBrotli() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "gzip, br");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("br");
@@ -280,13 +285,14 @@ public class HttpFileServiceTest {
 
             // Test if the 'If-Modified-Since' header works as expected after the file is modified.
             req = new HttpGet(newUri("/fs/bar.html"));
-            Date now = new Date();
-            req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, httpDate(now));
+            final Instant now = Instant.now();
+            req.setHeader(HttpHeaders.IF_MODIFIED_SINCE,
+                          DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(now, UTC)));
 
             // HTTP-date has no sub-second precision; just add a few seconds to the time.
             Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
             assertThat(
-                    barFile.setLastModified(now.getTime() + TimeUnit.SECONDS.toMillis(5))).isTrue();
+                    barFile.setLastModified(now.toEpochMilli() + TimeUnit.SECONDS.toMillis(5))).isTrue();
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 final String newLastModified = assert200Ok(res, "text/html", expectedContentB);
@@ -359,11 +365,7 @@ public class HttpFileServiceTest {
     }
 
     private static String currentHttpDate() {
-        return httpDate(new Date());
-    }
-
-    private static String httpDate(Date date) {
-        return DateFormatter.format(date);
+        return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(UTC));
     }
 
     private static String newUri(String path) {

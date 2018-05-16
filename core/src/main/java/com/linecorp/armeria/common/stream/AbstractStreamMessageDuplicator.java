@@ -72,6 +72,9 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage<T>>
         implements SafeCloseable {
 
+    @SuppressWarnings("rawtypes")
+    private static final CompletableFuture[] EMPTY_FUTURES = new CompletableFuture[0];
+
     private final StreamMessageProcessor<T> processor;
 
     private final EventExecutor duplicatorExecutor;
@@ -407,7 +410,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             });
             downstreamSubscriptions.clear();
             final CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(
-                    completionFutures.toArray(new CompletableFuture[completionFutures.size()]));
+                    completionFutures.toArray(EMPTY_FUTURES));
             allDoneFuture.whenComplete((unused1, unused2) -> signals.clear());
         }
     }
@@ -814,7 +817,6 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
     @VisibleForTesting
     static class SignalQueue {
 
-        @SuppressWarnings("rawtypes")
         private static final AtomicIntegerFieldUpdater<SignalQueue> lastRemovalRequestedOffsetUpdater =
                 AtomicIntegerFieldUpdater.newUpdater(SignalQueue.class, "lastRemovalRequestedOffset");
 

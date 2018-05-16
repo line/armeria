@@ -91,15 +91,15 @@ public class LoggingServiceTest {
 
         when(log.toStringRequestOnly(any(), any())).thenAnswer(
                 invocation -> {
-                    Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
-                    Function<Object, Object> contentSanitizer = invocation.getArgument(1);
+                    final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
+                    final Function<Object, Object> contentSanitizer = invocation.getArgument(1);
                     return "headers: " + headersSanitizer.apply(REQUEST_HEADERS) +
                            ", content: " + contentSanitizer.apply(REQUEST_CONTENT);
                 });
         when(log.toStringResponseOnly(any(), any())).thenAnswer(
                 invocation -> {
-                    Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
-                    Function<Object, Object> contentSanitizer = invocation.getArgument(1);
+                    final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
+                    final Function<Object, Object> contentSanitizer = invocation.getArgument(1);
                     return "headers: " + headersSanitizer.apply(RESPONSE_HEADERS) +
                            ", content: " + contentSanitizer.apply(RESPONSE_CONTENT);
                 });
@@ -108,7 +108,7 @@ public class LoggingServiceTest {
 
     @Test
     public void defaults_success() throws Exception {
-        LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
+        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
         verify(logger, never()).info(isA(String.class), isA(Object.class));
@@ -116,7 +116,7 @@ public class LoggingServiceTest {
 
     @Test
     public void defaults_error() throws Exception {
-        LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
+        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         final IllegalStateException cause = new IllegalStateException("Failed");
         when(log.responseCause()).thenReturn(cause);
@@ -128,7 +128,7 @@ public class LoggingServiceTest {
 
     @Test
     public void infoLevel() throws Exception {
-        LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
+        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
                 .requestLogLevel(LogLevel.INFO)
                 .successfulResponseLogLevel(LogLevel.INFO)
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
@@ -141,27 +141,27 @@ public class LoggingServiceTest {
 
     @Test
     public void sanitize() throws Exception {
-        HttpHeaders sanitizedRequestHeaders =
+        final HttpHeaders sanitizedRequestHeaders =
                 HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, "no cookies, too bad");
-        Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer = headers -> {
+        final Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer = headers -> {
             assertThat(headers).isEqualTo(REQUEST_HEADERS);
             return sanitizedRequestHeaders;
         };
-        Function<Object, Object> requestContentSanitizer = content -> {
+        final Function<Object, Object> requestContentSanitizer = content -> {
             assertThat(content).isEqualTo(REQUEST_CONTENT);
             return "clean request";
         };
-        HttpHeaders sanitizedResponseHeaders =
+        final HttpHeaders sanitizedResponseHeaders =
                 HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, "where are the cookies?");
-        Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = headers -> {
+        final Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = headers -> {
             assertThat(headers).isEqualTo(RESPONSE_HEADERS);
             return sanitizedResponseHeaders;
         };
-        Function<Object, Object> responseContentSanitizer = content -> {
+        final Function<Object, Object> responseContentSanitizer = content -> {
             assertThat(content).isEqualTo(RESPONSE_CONTENT);
             return "clean response";
         };
-        LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
+        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
                 .requestLogLevel(LogLevel.INFO)
                 .successfulResponseLogLevel(LogLevel.INFO)
                 .requestHeadersSanitizer(requestHeadersSanitizer)
@@ -178,7 +178,7 @@ public class LoggingServiceTest {
 
     @Test
     public void sample() throws Exception {
-        LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
+        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
                 .requestLogLevel(LogLevel.INFO)
                 .successfulResponseLogLevel(LogLevel.INFO)
                 .samplingRate(0.0f)

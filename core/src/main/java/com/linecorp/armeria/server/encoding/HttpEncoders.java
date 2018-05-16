@@ -58,6 +58,7 @@ final class HttpEncoders {
 
     // Copied from netty's HttpContentCompressor.
     @Nullable
+    @SuppressWarnings("FloatingPointEquality")
     private static HttpEncodingType determineEncoding(String acceptEncoding) {
         float starQ = -1.0f;
         float gzipQ = -1.0f;

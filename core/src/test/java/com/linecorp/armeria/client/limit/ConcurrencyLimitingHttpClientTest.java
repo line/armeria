@@ -173,8 +173,7 @@ public class ConcurrencyLimitingHttpClientTest {
         final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx, req)).thenThrow(Exception.class);
 
-        final ConcurrencyLimitingHttpClient client =
-                ConcurrencyLimitingHttpClient.newDecorator(1).apply(delegate);
+        final ConcurrencyLimitingHttpClient client = newDecorator(1).apply(delegate);
         assertThat(client.numActiveRequests()).isZero();
 
         final HttpResponse res = client.execute(ctx, req);
@@ -220,8 +219,7 @@ public class ConcurrencyLimitingHttpClientTest {
         final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx, req)).thenThrow(Exception.class);
 
-        final ConcurrencyLimitingHttpClient client =
-                ConcurrencyLimitingHttpClient.newDecorator(0).apply(delegate);
+        final ConcurrencyLimitingHttpClient client = newDecorator(0).apply(delegate);
 
         // A request should be delegated immediately, rethrowing the exception from the delegate.
         assertThatThrownBy(() -> client.execute(ctx, req)).isInstanceOf(Exception.class);

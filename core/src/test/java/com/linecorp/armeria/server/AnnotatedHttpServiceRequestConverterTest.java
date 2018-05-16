@@ -615,7 +615,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         AggregatedHttpMessage response;
 
         // test for RequestBean1
-        RequestBean1 expectedRequestBean = new RequestBean1();
+        final RequestBean1 expectedRequestBean = new RequestBean1();
         expectedRequestBean.userName = "john";
         expectedRequestBean.age = 25;
         expectedRequestBean.gender = MALE;
@@ -624,10 +624,10 @@ public class AnnotatedHttpServiceRequestConverterTest {
         expectedRequestBean.seqNum = 1234L;
         expectedRequestBean.manager = true;
 
-        String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
+        final String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
 
         // Normal Request: POST + Form Data
-        HttpData formData = HttpData.ofAscii("age=25&manager=true&gender=male");
+        final HttpData formData = HttpData.ofAscii("age=25&manager=true&gender=male");
         HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean1/john/1234")
                                             .set(AsciiString.of("x-user-permission"), "permission1,permission2")
                                             .set(AsciiString.of("x-client-name"), "TestClient")
@@ -683,17 +683,17 @@ public class AnnotatedHttpServiceRequestConverterTest {
         AggregatedHttpMessage response;
 
         // test for RequestBean2
-        RequestBean2 expectedRequestBean = new RequestBean2(98765L, "abcd-efgh");
+        final RequestBean2 expectedRequestBean = new RequestBean2(98765L, "abcd-efgh");
         expectedRequestBean.userName = "john";
         expectedRequestBean.age = 25;
         expectedRequestBean.gender = MALE;
         expectedRequestBean.permissions = Arrays.asList("permission1", "permission2");
         expectedRequestBean.clientName = "TestClient";
 
-        String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
+        final String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
 
         // Normal Request: POST + Form Data
-        HttpData formData = HttpData.ofAscii("age=25&gender=male");
+        final HttpData formData = HttpData.ofAscii("age=25&gender=male");
         HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean2/john/98765")
                                             .set(AsciiString.of("x-user-permission"), "permission1,permission2")
                                             .set(AsciiString.of("x-client-name"), "TestClient")
@@ -724,17 +724,17 @@ public class AnnotatedHttpServiceRequestConverterTest {
         AggregatedHttpMessage response;
 
         // test for RequestBean3
-        RequestBean3 expectedRequestBean = new RequestBean3(3349);
+        final RequestBean3 expectedRequestBean = new RequestBean3(3349);
         expectedRequestBean.userName = "john";
         expectedRequestBean.age = 25;
         expectedRequestBean.gender = MALE;
         expectedRequestBean.permissions = Arrays.asList("permission1", "permission2");
         expectedRequestBean.clientName = "TestClient";
 
-        String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
+        final String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
 
         // Normal Request: POST + Form Data
-        HttpData formData = HttpData.ofAscii("age=25&gender=male");
+        final HttpData formData = HttpData.ofAscii("age=25&gender=male");
         HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean3/john/3349")
                                             .set(AsciiString.of("x-user-permission"), "permission1,permission2")
                                             .set(AsciiString.of("x-client-name"), "TestClient")
@@ -837,7 +837,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().toStringUtf8()).isEqualTo("abc");
 
-        String invalidJson = "{\"foo:\"bar\"}"; // should be \"foo\"
+        final String invalidJson = "{\"foo:\"bar\"}"; // should be \"foo\"
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/invalidJson",
                                                            MediaType.JSON_UTF_8, invalidJson))
                          .aggregate().join();
@@ -848,7 +848,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
     public void testDefaultRequestConverter_binary() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/"));
 
-        AggregatedHttpMessage response;
+        final AggregatedHttpMessage response;
 
         final byte[] binary = { 0x00, 0x01, 0x02 };
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/binary",

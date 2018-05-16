@@ -36,7 +36,7 @@ public class RouterTest {
 
     @Test
     public void testRouters() {
-        List<PathMapping> mappings = Lists.newArrayList(
+        final List<PathMapping> mappings = Lists.newArrayList(
                 PathMapping.of("exact:/a"),         // router 1
                 PathMapping.of("/b/{var}"),
                 PathMapping.of("prefix:/c"),
@@ -47,11 +47,11 @@ public class RouterTest {
                 PathMapping.of("glob:/h/**/z"),     // router 4
                 PathMapping.of("prefix:/i")         // router 5
         );
-        List<Router<PathMapping>> routers = Routers.routers(mappings, Function.identity());
+        final List<Router<PathMapping>> routers = Routers.routers(mappings, Function.identity());
         assertThat(routers.size()).isEqualTo(5);
 
         // Map of a path string and a router index
-        List<Entry<String, Integer>> args = Lists.newArrayList(
+        final List<Entry<String, Integer>> args = Lists.newArrayList(
                 Maps.immutableEntry("/a", 0),
                 Maps.immutableEntry("/b/1", 0),
                 Maps.immutableEntry("/c/1", 0),

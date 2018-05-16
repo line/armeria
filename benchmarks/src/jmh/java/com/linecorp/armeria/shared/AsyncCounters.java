@@ -35,9 +35,9 @@ import org.openjdk.jmh.annotations.TearDown;
 @AuxCounters
 @State(Scope.Thread)
 public class AsyncCounters {
-    private AtomicLong numSuccesses = new AtomicLong();
-    private AtomicLong numFailures = new AtomicLong();
-    private AtomicLong currentRequests = new AtomicLong();
+    private final AtomicLong numSuccesses = new AtomicLong();
+    private final AtomicLong numFailures = new AtomicLong();
+    private final AtomicLong currentRequests = new AtomicLong();
 
     private volatile boolean waiting;
 

@@ -272,7 +272,7 @@ public class StreamMessageDuplicatorTest {
         assertThat(queue.size()).isEqualTo(20);
     }
 
-    private void add(SignalQueue queue, int from, int to) {
+    private static void add(SignalQueue queue, int from, int to) {
         for (int i = from; i < to; i++) {
             queue.addAndRemoveIfRequested(i);
         }
@@ -392,6 +392,7 @@ public class StreamMessageDuplicatorTest {
         }
 
         @Override
+        @SuppressWarnings("UnnecessaryCallToStringValueOf")
         public void onError(Throwable t) {
             logger.debug("{}: onError({})", this, String.valueOf(t), t);
         }
@@ -402,6 +403,7 @@ public class StreamMessageDuplicatorTest {
         }
 
         @Override
+        @SuppressWarnings("UnnecessaryCallToStringValueOf")
         public void accept(Void aVoid, Throwable cause) {
             logger.debug("{}: completionFuture({})", this, String.valueOf(cause), cause);
             if (cause != null) {

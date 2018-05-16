@@ -27,14 +27,14 @@ public class ConnectionLimitingHandlerTest {
 
     @Test
     public void testExceedMaxNumConnections() {
-        ConnectionLimitingHandler handler = new ConnectionLimitingHandler(1);
+        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(1);
 
-        EmbeddedChannel ch1 = new EmbeddedChannel(handler);
+        final EmbeddedChannel ch1 = new EmbeddedChannel(handler);
         ch1.writeInbound(ch1);
         assertThat(handler.numConnections()).isEqualTo(1);
         assertThat(ch1.isActive()).isTrue();
 
-        EmbeddedChannel ch2 = new EmbeddedChannel(handler);
+        final EmbeddedChannel ch2 = new EmbeddedChannel(handler);
         ch2.writeInbound(ch2);
         assertThat(handler.numConnections()).isEqualTo(1);
         assertThat(ch2.isActive()).isFalse();
@@ -45,7 +45,7 @@ public class ConnectionLimitingHandlerTest {
 
     @Test
     public void testMaxNumConnectionsRange() {
-        ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE);
+        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE);
         assertThat(handler.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
 
         assertThatThrownBy(() -> new ConnectionLimitingHandler(0))

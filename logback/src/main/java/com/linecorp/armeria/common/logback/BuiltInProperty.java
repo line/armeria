@@ -145,7 +145,7 @@ public enum BuiltInProperty {
     private static final Map<String, BuiltInProperty> mdcKeyToEnum;
 
     static {
-        ImmutableMap.Builder<String, BuiltInProperty> builder = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, BuiltInProperty> builder = ImmutableMap.builder();
         for (BuiltInProperty k : BuiltInProperty.values()) {
             builder.put(k.mdcKey, k);
         }

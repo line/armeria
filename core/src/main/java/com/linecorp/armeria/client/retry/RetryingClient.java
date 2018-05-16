@@ -106,6 +106,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      *
      * @return {@code true} if the response timeout is set, {@code false} if it can't be set due to the timeout
      */
+    @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
     protected final boolean setResponseTimeout(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
         final long responseTimeoutMillis = ctx.attr(STATE).get().responseTimeoutMillis();
@@ -141,6 +142,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      *                              {@link Backoff#nextDelayMillis(int)} returns -1
      * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
      */
+    @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(backoff, "backoff");

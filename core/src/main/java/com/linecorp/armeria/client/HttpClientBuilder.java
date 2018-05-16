@@ -56,7 +56,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      */
     public HttpClientBuilder(URI uri) {
         validateScheme(requireNonNull(uri, "uri").getScheme());
-        this.uri = URI.create(SerializationFormat.NONE + "+" + uri.toString());
+        this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
     }
 
     private static void validateScheme(String scheme) {
@@ -66,7 +66,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
             }
         }
         throw new IllegalArgumentException("scheme : " + scheme + " (expected: one of " +
-                                           ImmutableList.copyOf(SessionProtocol.values()) + ")");
+                                           ImmutableList.copyOf(SessionProtocol.values()) + ')');
     }
 
     /**
@@ -85,7 +85,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     public HttpClientBuilder decorator(
             Function<? extends Client<HttpRequest, HttpResponse>, ? extends Client<HttpRequest, HttpResponse>>
                     decorator) {
-        return super.decorator(HttpRequest.class, HttpResponse.class, decorator);
+        return decorator(HttpRequest.class, HttpResponse.class, decorator);
     }
 
     /**
@@ -94,7 +94,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
      */
     public HttpClientBuilder decorator(DecoratingClientFunction<HttpRequest, HttpResponse> decorator) {
-        return super.decorator(HttpRequest.class, HttpResponse.class, decorator);
+        return decorator(HttpRequest.class, HttpResponse.class, decorator);
     }
 
     /**

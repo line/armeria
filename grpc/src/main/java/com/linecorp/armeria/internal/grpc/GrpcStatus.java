@@ -55,12 +55,12 @@ public final class GrpcStatus {
      */
     public static Status fromThrowable(Throwable t) {
         requireNonNull(t, "t");
-        Status s = Status.fromThrowable(t);
+        final Status s = Status.fromThrowable(t);
         if (s.getCode() != Code.UNKNOWN) {
             return s;
         }
         if (t instanceof StreamException) {
-            StreamException streamException = (StreamException) t;
+            final StreamException streamException = (StreamException) t;
             if (streamException.getMessage() != null && streamException.getMessage().contains("RST_STREAM")) {
                 return Status.CANCELLED;
             }

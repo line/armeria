@@ -71,7 +71,8 @@ public class GrpcDocServiceTest {
 
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            ByteString body = ByteString.copyFromUtf8("hello " + request.getPayload().getBody().toStringUtf8());
+            final ByteString body = ByteString.copyFromUtf8(
+                    "hello " + request.getPayload().getBody().toStringUtf8());
             responseObserver.onNext(
                     SimpleResponse.newBuilder()
                                   .setPayload(Payload.newBuilder().setBody(body))
@@ -110,7 +111,7 @@ public class GrpcDocServiceTest {
 
     @Test
     public void testOk() throws Exception {
-        List<ServiceEntry> entries = ImmutableList.of(
+        final List<ServiceEntry> entries = ImmutableList.of(
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
                         ImmutableList.of(

@@ -53,8 +53,8 @@ public class RpcResponseTest {
 
     @Test
     public void successfulFromResponseFuture() {
-        CompletableFuture<RpcResponse> future = new CompletableFuture<>();
-        RpcResponse res = RpcResponse.from(future);
+        final CompletableFuture<RpcResponse> future = new CompletableFuture<>();
+        final RpcResponse res = RpcResponse.from(future);
         assertThat(res.isDone()).isFalse();
         future.complete(RpcResponse.of(RESULT));
         assertThat(res.isDone()).isTrue();

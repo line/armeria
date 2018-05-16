@@ -137,8 +137,6 @@ public class AnnotatedHttpServiceDecorationTest {
     public static final class AlwaysTooManyRequestsDecorator
             implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
 
-        public AlwaysTooManyRequestsDecorator() {}
-
         @Override
         public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
                                   ServiceRequestContext ctx,
@@ -151,8 +149,6 @@ public class AnnotatedHttpServiceDecorationTest {
     static final class AlwaysLockedDecorator
             implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
 
-        AlwaysLockedDecorator() {}
-
         @Override
         public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
                                   ServiceRequestContext ctx,
@@ -164,8 +160,6 @@ public class AnnotatedHttpServiceDecorationTest {
 
     private static final class FallThroughDecorator
             implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
-
-        private FallThroughDecorator() {}
 
         @Override
         public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,

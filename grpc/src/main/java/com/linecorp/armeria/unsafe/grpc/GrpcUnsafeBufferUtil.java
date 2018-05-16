@@ -51,10 +51,10 @@ public final class GrpcUnsafeBufferUtil {
      * Releases the {@link ByteBuf} backing the provided {@link Message}.
      */
     public static void releaseBuffer(Object message, RequestContext ctx) {
-        IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS).get();
+        final IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS).get();
         checkState(buffers != null,
                    "Releasing buffer even though storeBuffer has not been called.");
-        ByteBuf removed = buffers.remove(message);
+        final ByteBuf removed = buffers.remove(message);
         if (removed == null) {
             throw new IllegalArgumentException("The provided message does not have a stored buffer.");
         }

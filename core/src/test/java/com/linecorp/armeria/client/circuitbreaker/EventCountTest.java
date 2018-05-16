@@ -56,7 +56,7 @@ public class EventCountTest {
 
     @Test
     public void testEquals() {
-        EventCount ec = new EventCount(1, 1);
+        final EventCount ec = new EventCount(1, 1);
         assertThat(ec).isEqualTo(ec);
         assertThat(new EventCount(0, 0)).isEqualTo(new EventCount(0, 0));
         assertThat(new EventCount(1, 0)).isNotEqualTo(new EventCount(0, 0));

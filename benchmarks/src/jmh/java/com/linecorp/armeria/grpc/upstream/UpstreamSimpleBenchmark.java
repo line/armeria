@@ -64,7 +64,7 @@ public class UpstreamSimpleBenchmark extends SimpleBenchmarkBase {
         server.start();
         channel = ManagedChannelBuilder.forAddress("127.0.0.1", port())
                                        .directExecutor()
-                                       .usePlaintext(true)
+                                       .usePlaintext()
                                        .build();
         githubApiClient = GithubServiceGrpc.newBlockingStub(channel);
         githubApiFutureClient = GithubServiceGrpc.newFutureStub(channel);

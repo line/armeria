@@ -127,7 +127,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
      * @param req the decoded HTTP request
      */
     private HttpResponse handleCorsPreflight(HttpRequest req) {
-        HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
         if (setCorsOrigin(req, headers)) {
             setCorsAllowMethods(headers);
             setCorsAllowHeaders(headers);
@@ -265,8 +265,8 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
     }
 
     private void setCorsAllowMethods(final HttpHeaders headers) {
-        String methods = config.allowedRequestMethods()
-                               .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
+        final String methods = config.allowedRequestMethods()
+                                     .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, methods);
     }
 

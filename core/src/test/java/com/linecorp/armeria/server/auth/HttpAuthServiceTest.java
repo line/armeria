@@ -66,7 +66,7 @@ public class HttpAuthServiceTest {
     }
 
     private static final Function<HttpHeaders, InsecureToken> INSECURE_TOKEN_EXTRACTOR =
-            (headers) -> new InsecureToken();
+            headers -> new InsecureToken();
 
     private static final AsciiString CUSTOM_TOKEN_HEADER = HttpHeaderNames.of("X-Custom-Authorization");
 
@@ -82,7 +82,7 @@ public class HttpAuthServiceTest {
             };
 
             // Auth with arbitrary authorizer
-            Authorizer<HttpRequest> authorizer = (ctx, req) ->
+            final Authorizer<HttpRequest> authorizer = (ctx, req) ->
                     CompletableFuture.supplyAsync(
                             () -> "unit test".equals(req.headers().get(AUTHORIZATION)));
             sb.service(
@@ -92,9 +92,9 @@ public class HttpAuthServiceTest {
 
             // Auth with HTTP basic
             final Map<String, String> usernameToPassword = ImmutableMap.of("brown", "cony", "pangyo", "choco");
-            Authorizer<BasicToken> httpBasicAuthorizer = (ctx, token) -> {
-                String username = token.username();
-                String password = token.password();
+            final Authorizer<BasicToken> httpBasicAuthorizer = (ctx, token) -> {
+                final String username = token.username();
+                final String password = token.password();
                 return completedFuture(password.equals(usernameToPassword.get(username)));
             };
             sb.service(
@@ -109,7 +109,7 @@ public class HttpAuthServiceTest {
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth1a
-            Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
+            final Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
                     completedFuture("dummy_signature".equals(token.signature()));
             sb.service(
                     "/oauth1a",
@@ -122,7 +122,7 @@ public class HttpAuthServiceTest {
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth2
-            Authorizer<OAuth2Token> oAuth2Authorizer = (ctx, token) ->
+            final Authorizer<OAuth2Token> oAuth2Authorizer = (ctx, token) ->
                     completedFuture("dummy_oauth2_token".equals(token.accessToken()));
             sb.service(
                     "/oauth2",
@@ -137,7 +137,7 @@ public class HttpAuthServiceTest {
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with arbitrary token extractor
-            Authorizer<InsecureToken> insecureTokenAuthorizer = (ctx, token) ->
+            final Authorizer<InsecureToken> insecureTokenAuthorizer = (ctx, token) ->
                     completedFuture(new InsecureToken().accessToken().equals(token.accessToken()));
             sb.service("/insecuretoken",
                        ok.decorate(new HttpAuthServiceBuilder()
@@ -230,7 +230,7 @@ public class HttpAuthServiceTest {
     @Test
     public void testOAuth1a() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            Map<String, String> passToken = ImmutableMap.<String, String>builder()
+            final Map<String, String> passToken = ImmutableMap.<String, String>builder()
                     .put("realm", "dummy_realm")
                     .put("oauth_consumer_key", "dummy_consumer_key")
                     .put("oauth_token", "dummy_oauth1a_token")
@@ -249,7 +249,7 @@ public class HttpAuthServiceTest {
                                       CUSTOM_TOKEN_HEADER))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
-            Map<String, String> failToken = ImmutableMap.<String, String>builder()
+            final Map<String, String> failToken = ImmutableMap.<String, String>builder()
                     .put("realm", "dummy_realm")
                     .put("oauth_consumer_key", "dummy_consumer_key")
                     .put("oauth_token", "dummy_oauth1a_token")
@@ -308,7 +308,7 @@ public class HttpAuthServiceTest {
                                     AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
-            Map<String, String> passToken = ImmutableMap.<String, String>builder()
+            final Map<String, String> passToken = ImmutableMap.<String, String>builder()
                     .put("realm", "dummy_realm")
                     .put("oauth_consumer_key", "dummy_consumer_key")
                     .put("oauth_token", "dummy_oauth1a_token")
@@ -357,13 +357,13 @@ public class HttpAuthServiceTest {
     }
 
     private static HttpRequestBase getRequest(String path, String authorization) {
-        HttpGet request = new HttpGet(server.uri(path));
+        final HttpGet request = new HttpGet(server.uri(path));
         request.addHeader("Authorization", authorization);
         return request;
     }
 
     private static HttpRequestBase basicGetRequest(String path, BasicToken basicToken, AsciiString header) {
-        HttpGet request = new HttpGet(server.uri(path));
+        final HttpGet request = new HttpGet(server.uri(path));
         request.addHeader(header.toString(), "Basic " +
                                            BASE64_ENCODER.encodeToString(
                                                    (basicToken.username() + ':' + basicToken.password())
@@ -373,9 +373,9 @@ public class HttpAuthServiceTest {
 
     private static HttpRequestBase oauth1aGetRequest(
             String path, OAuth1aToken oAuth1aToken, AsciiString header) {
-        HttpGet request = new HttpGet(server.uri(path));
-        StringBuilder authorization = new StringBuilder("OAuth ");
-        String realm = oAuth1aToken.realm();
+        final HttpGet request = new HttpGet(server.uri(path));
+        final StringBuilder authorization = new StringBuilder("OAuth ");
+        final String realm = oAuth1aToken.realm();
         if (!Strings.isNullOrEmpty(realm)) {
             authorization.append("realm=\"");
             authorization.append(realm);
@@ -408,7 +408,7 @@ public class HttpAuthServiceTest {
     }
 
     private static HttpRequestBase oauth2GetRequest(String path, OAuth2Token oAuth2Token, AsciiString header) {
-        HttpGet request = new HttpGet(server.uri(path));
+        final HttpGet request = new HttpGet(server.uri(path));
         request.addHeader(header.toString(), "Bearer " + oAuth2Token.accessToken());
         return request;
     }

@@ -58,7 +58,7 @@ public final class BasicToken {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        BasicToken that = (BasicToken) o;
+        final BasicToken that = (BasicToken) o;
         return username.equals(that.username()) && password.equals(that.password());
     }
 

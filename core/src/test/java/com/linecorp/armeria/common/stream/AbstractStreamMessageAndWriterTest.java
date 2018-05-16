@@ -59,7 +59,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
         final BlockingQueue<String> queue = new LinkedTransferQueue<>();
         // Repeat to increase the chance of reproduction.
         for (int i = 0; i < 8192; i++) {
-            StreamMessageAndWriter<Integer> stream = newStreamWriter(TEN_INTEGERS);
+            final StreamMessageAndWriter<Integer> stream = newStreamWriter(TEN_INTEGERS);
             eventLoop().execute(stream::close);
             stream.subscribe(new Subscriber<Object>() {
                 @Override
@@ -91,7 +91,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
 
     @Test
     public void rejectReferenceCounted() {
-        AbstractReferenceCounted item = new AbstractReferenceCounted() {
+        final AbstractReferenceCounted item = new AbstractReferenceCounted() {
             @Override
             protected void deallocate() {}
 
@@ -100,13 +100,13 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
                 return this;
             }
         };
-        StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of(item));
+        final StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of(item));
         assertThatThrownBy(() -> stream.write(item)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     public void releaseWhenWritingToClosedStream_ByteBuf() {
-        StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
+        final StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().retain();
         stream.close();
 
@@ -119,7 +119,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
 
     @Test
     public void releaseWhenWritingToClosedStream_ByteBuf_Supplier() {
-        StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
+        final StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().retain();
         stream.close();
 
@@ -132,7 +132,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
 
     @Test
     public void releaseWhenWritingToClosedStream_HttpData() {
-        StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
+        final StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
         final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true).retain();
         stream.close();
 
@@ -145,7 +145,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
 
     @Test
     public void releaseWhenWritingToClosedStream_HttpData_Supplier() {
-        StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
+        final StreamMessageAndWriter<Object> stream = newStreamWriter(ImmutableList.of());
         final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true).retain();
         stream.close();
 

@@ -87,7 +87,7 @@ public class GrpcFlowControlTest {
     static class FlowControlService extends FlowControlTestServiceImplBase {
         @Override
         public StreamObserver<SimpleRequest> noBackPressure(StreamObserver<SimpleResponse> responseObserver) {
-            AtomicInteger numRequests = new AtomicInteger();
+            final AtomicInteger numRequests = new AtomicInteger();
             return new StreamObserver<SimpleRequest>() {
                 @Override
                 public void onNext(SimpleRequest value) {
@@ -112,10 +112,10 @@ public class GrpcFlowControlTest {
         @Override
         public StreamObserver<SimpleRequest> serverBackPressure(
                 StreamObserver<SimpleResponse> rawResponseObserver) {
-            ServerCallStreamObserver<SimpleResponse> responseObserver =
+            final ServerCallStreamObserver<SimpleResponse> responseObserver =
                     (ServerCallStreamObserver<SimpleResponse>) rawResponseObserver;
             responseObserver.disableAutoInboundFlowControl();
-            AtomicInteger numRequests = new AtomicInteger();
+            final AtomicInteger numRequests = new AtomicInteger();
             responseObserver.request(1);
             return new StreamObserver<SimpleRequest>() {
                 @Override
@@ -143,10 +143,10 @@ public class GrpcFlowControlTest {
         @Override
         public StreamObserver<SimpleRequest> clientBackPressure(
                 StreamObserver<SimpleResponse> rawResponseObserver) {
-            AtomicInteger numRequests = new AtomicInteger();
-            AtomicInteger numResponses = new AtomicInteger();
-            AtomicBoolean done = new AtomicBoolean();
-            ServerCallStreamObserver<SimpleResponse> responseObserver =
+            final AtomicInteger numRequests = new AtomicInteger();
+            final AtomicInteger numResponses = new AtomicInteger();
+            final AtomicBoolean done = new AtomicBoolean();
+            final ServerCallStreamObserver<SimpleResponse> responseObserver =
                     (ServerCallStreamObserver<SimpleResponse>) rawResponseObserver;
             responseObserver.setOnReadyHandler(() -> {
                 if (numResponses.get() < TOTAL_NUM_MESSAGES && !done.get()) {
@@ -213,9 +213,9 @@ public class GrpcFlowControlTest {
 
     @Test
     public void noBackPressure() {
-        AtomicInteger numResponses = new AtomicInteger();
-        AtomicBoolean done = new AtomicBoolean();
-        StreamObserver<SimpleRequest> req = client.noBackPressure(new StreamObserver<SimpleResponse>() {
+        final AtomicInteger numResponses = new AtomicInteger();
+        final AtomicBoolean done = new AtomicBoolean();
+        final StreamObserver<SimpleRequest> req = client.noBackPressure(new StreamObserver<SimpleResponse>() {
             @Override
             public void onNext(SimpleResponse value) {
                 numResponses.incrementAndGet();
@@ -240,10 +240,10 @@ public class GrpcFlowControlTest {
 
     @Test
     public void serverBackPressure() {
-        AtomicInteger numRequests = new AtomicInteger();
-        AtomicInteger numResponses = new AtomicInteger();
-        AtomicBoolean done = new AtomicBoolean();
-        ClientCallStreamObserver<SimpleRequest> req =
+        final AtomicInteger numRequests = new AtomicInteger();
+        final AtomicInteger numResponses = new AtomicInteger();
+        final AtomicBoolean done = new AtomicBoolean();
+        final ClientCallStreamObserver<SimpleRequest> req =
                 (ClientCallStreamObserver<SimpleRequest>) client.serverBackPressure(
                         new ClientResponseObserver<SimpleRequest, SimpleResponse>() {
                             @Override
@@ -288,9 +288,9 @@ public class GrpcFlowControlTest {
 
     @Test
     public void clientBackPressure() {
-        AtomicInteger numResponses = new AtomicInteger();
-        AtomicBoolean done = new AtomicBoolean();
-        AtomicBoolean clientClosed = new AtomicBoolean();
+        final AtomicInteger numResponses = new AtomicInteger();
+        final AtomicBoolean done = new AtomicBoolean();
+        final AtomicBoolean clientClosed = new AtomicBoolean();
         client.clientBackPressure(
                         new ClientResponseObserver<SimpleRequest, SimpleResponse>() {
                             private ClientCallStreamObserver<SimpleRequest> requestStream;

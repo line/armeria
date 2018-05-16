@@ -147,7 +147,7 @@ public class AccessLogFormatsTest {
         assertThat(format.size()).isOne();
         entry = format.get(0);
         assertThat(entry).isInstanceOf(AttributeComponent.class);
-        AttributeComponent attrEntry = (AttributeComponent) entry;
+        final AttributeComponent attrEntry = (AttributeComponent) entry;
         assertThat(attrEntry.key().toString())
                 .isEqualTo("com.linecorp.armeria.server.logging.AccessLogFormatsTest$Attr#KEY");
 

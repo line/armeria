@@ -149,7 +149,7 @@ public class Http2ClientSettingsTest {
                     .build();
 
             final HttpClient client = HttpClient.of(clientFactory, "http://127.0.0.1:" + port);
-            final CompletableFuture<AggregatedHttpMessage> future = client.get("/").aggregate();
+            client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
                 final InputStream in = s.getInputStream();
@@ -278,7 +278,7 @@ public class Http2ClientSettingsTest {
     }
 
     private static int checkReadableForShortPeriod(InputStream in) throws Exception {
-        Future<Integer> future = EVENT_LOOP.schedule(in::available, 500, TimeUnit.MILLISECONDS);
+        final Future<Integer> future = EVENT_LOOP.schedule(in::available, 500, TimeUnit.MILLISECONDS);
         return future.get();
     }
 

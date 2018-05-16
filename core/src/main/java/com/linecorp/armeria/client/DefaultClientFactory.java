@@ -121,7 +121,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @Override
     public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
         for (ClientFactory factory : clientFactories.values()) {
-            Optional<ClientBuilderParams> params = factory.clientBuilderParams(client);
+            final Optional<ClientBuilderParams> params = factory.clientBuilderParams(client);
             if (params.isPresent()) {
                 return params;
             }

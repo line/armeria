@@ -104,7 +104,7 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doOptions(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpResponseWriter res = HttpResponse.streaming();
+        final HttpResponseWriter res = HttpResponse.streaming();
         doOptions(ctx, req, res);
         return res;
     }
@@ -126,7 +126,7 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpResponseWriter res = HttpResponse.streaming();
+        final HttpResponseWriter res = HttpResponse.streaming();
         doGet(ctx, req, res);
         return res;
     }
@@ -148,7 +148,7 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpResponseWriter res = HttpResponse.streaming();
+        final HttpResponseWriter res = HttpResponse.streaming();
         doHead(ctx, req, res);
         return res;
     }
@@ -170,7 +170,7 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpResponseWriter res = HttpResponse.streaming();
+        final HttpResponseWriter res = HttpResponse.streaming();
         doPost(ctx, req, res);
         return res;
     }
@@ -192,7 +192,7 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doPut(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpResponseWriter res = HttpResponse.streaming();
+        final HttpResponseWriter res = HttpResponse.streaming();
         doPut(ctx, req, res);
         return res;
     }
@@ -214,7 +214,7 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doPatch(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpResponseWriter res = HttpResponse.streaming();
+        final HttpResponseWriter res = HttpResponse.streaming();
         doPatch(ctx, req, res);
         return res;
     }
@@ -236,7 +236,7 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doDelete(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpResponseWriter res = HttpResponse.streaming();
+        final HttpResponseWriter res = HttpResponse.streaming();
         doDelete(ctx, req, res);
         return res;
     }
@@ -258,7 +258,7 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doTrace(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpResponseWriter res = HttpResponse.streaming();
+        final HttpResponseWriter res = HttpResponse.streaming();
         doTrace(ctx, req, res);
         return res;
     }

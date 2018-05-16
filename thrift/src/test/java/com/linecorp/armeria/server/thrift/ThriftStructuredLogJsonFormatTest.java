@@ -20,6 +20,8 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 
 import java.io.IOException;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
@@ -43,7 +45,7 @@ public class ThriftStructuredLogJsonFormatTest {
     private static final String THRIFT_SERVICE_NAME = HelloService.class.getCanonicalName();
     private static final String THRIFT_METHOD_NAME = "hello";
 
-    private static ThriftStructuredLog buildLog(ThriftCall call, ThriftReply reply) {
+    private static ThriftStructuredLog buildLog(ThriftCall call, @Nullable ThriftReply reply) {
         return new ThriftStructuredLog(
                 TIMESTAMP_MILLIS,
                 RESPONSE_TIME_NANOS,
@@ -56,7 +58,7 @@ public class ThriftStructuredLogJsonFormatTest {
 
     @Test
     public void testSerializingRegularFunctionCall() throws IOException {
-        ThriftStructuredLog log = buildLog(
+        final ThriftStructuredLog log = buildLog(
                 new ThriftCall(
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.CALL, 0),
                         new hello_args().setName("kawamuray")),
@@ -64,7 +66,7 @@ public class ThriftStructuredLogJsonFormatTest {
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.REPLY, 0),
                         new hello_result().setSuccess("Hello kawamuray")));
 
-        String actualJson = customObjectMapper.writeValueAsString(log);
+        final String actualJson = customObjectMapper.writeValueAsString(log);
 
         final String expectedJson =
                 '{' +
@@ -102,7 +104,7 @@ public class ThriftStructuredLogJsonFormatTest {
 
     @Test
     public void testSerializingExceptionalFunctionCall() throws IOException {
-        ThriftStructuredLog log = buildLog(
+        final ThriftStructuredLog log = buildLog(
                 new ThriftCall(
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.CALL, 0),
                         new hello_args().setName("kawamuray")),
@@ -110,7 +112,7 @@ public class ThriftStructuredLogJsonFormatTest {
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.EXCEPTION, 0),
                         new TApplicationException(1, "don't wanna say hello")));
 
-        String actualJson = customObjectMapper.writeValueAsString(log);
+        final String actualJson = customObjectMapper.writeValueAsString(log);
 
         final String expectedJson =
                 '{' +
@@ -149,13 +151,13 @@ public class ThriftStructuredLogJsonFormatTest {
 
     @Test
     public void testSerializingOnewayFunctionCall() throws IOException {
-        ThriftStructuredLog log = buildLog(
+        final ThriftStructuredLog log = buildLog(
                 new ThriftCall(
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.ONEWAY, 0),
                         new hello_args().setName("kawamuray")),
                 null);
 
-        String actualJson = customObjectMapper.writeValueAsString(log);
+        final String actualJson = customObjectMapper.writeValueAsString(log);
 
         final String expectedJson =
                 '{' +

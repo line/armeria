@@ -128,7 +128,7 @@ public class MediaTypeSetTest {
 
     @Test
     public void testAddRanges() {
-        List<MediaType> ranges = new ArrayList<>();
+        final List<MediaType> ranges = new ArrayList<>();
 
         // Single element without whitespaces
         MediaTypeSet.addRanges(ranges, "text/plain");

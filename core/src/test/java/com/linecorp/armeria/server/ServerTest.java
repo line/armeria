@@ -95,8 +95,8 @@ public class ServerTest {
             final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
                 @Override
                 protected HttpResponse echo(AggregatedHttpMessage aReq) {
-                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    HttpResponse res = HttpResponse.from(responseFuture);
+                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    final HttpResponse res = HttpResponse.from(responseFuture);
                     asyncExecutorGroup.schedule(
                             () -> super.echo(aReq), processDelayMillis, TimeUnit.MILLISECONDS)
                                       .addListener((Future<HttpResponse> future) ->
@@ -214,12 +214,12 @@ public class ServerTest {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
             socket.connect(server.httpSocketAddress());
-            long connectedNanos = System.nanoTime();
+            final long connectedNanos = System.nanoTime();
             //read until EOF
             while (socket.getInputStream().read() != -1) {
                 continue;
             }
-            long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
+            final long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - connectedNanos, TimeUnit.NANOSECONDS);
             assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
@@ -230,19 +230,19 @@ public class ServerTest {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
             socket.connect(server.httpSocketAddress());
-            PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
+            final PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
             outWriter.print("POST / HTTP/1.1\r\n");
             outWriter.print("Connection: Keep-Alive\r\n");
             outWriter.print("\r\n");
             outWriter.flush();
 
-            long lastWriteNanos = System.nanoTime();
+            final long lastWriteNanos = System.nanoTime();
             //read until EOF
             while (socket.getInputStream().read() != -1) {
                 continue;
             }
 
-            long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
+            final long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - lastWriteNanos, TimeUnit.NANOSECONDS);
             assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
@@ -257,7 +257,7 @@ public class ServerTest {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
             socket.connect(server.httpSocketAddress());
-            PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
+            final PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
 
             // Send a request to a buggy service whose invoke() raises an exception.
             // If the server handled the exception correctly (i.e. responded with 500 Internal Server Error and
@@ -272,13 +272,13 @@ public class ServerTest {
             outWriter.print("\r\n");
             outWriter.flush();
 
-            long lastWriteNanos = System.nanoTime();
+            final long lastWriteNanos = System.nanoTime();
             //read until EOF
             while (socket.getInputStream().read() != -1) {
                 continue;
             }
 
-            long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
+            final long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - lastWriteNanos, TimeUnit.NANOSECONDS);
             assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
@@ -306,7 +306,7 @@ public class ServerTest {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
             socket.connect(server.httpSocketAddress());
-            PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
+            final PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
 
             outWriter.print(reqLine);
             outWriter.print("\r\n");
@@ -315,14 +315,14 @@ public class ServerTest {
             outWriter.print("\r\n");
             outWriter.flush();
 
-            BufferedReader in = new BufferedReader(new InputStreamReader(
+            final BufferedReader in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream(), StandardCharsets.US_ASCII));
 
             assertThat(in.readLine()).isEqualTo(expectedStatusLine);
             // Read till the end of the connection.
-            List<String> headers = new ArrayList<>();
+            final List<String> headers = new ArrayList<>();
             for (;;) {
-                String line = in.readLine();
+                final String line = in.readLine();
                 if (line == null) {
                     break;
                 }

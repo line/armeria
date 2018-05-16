@@ -98,7 +98,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
         retryStrategy().shouldRetry(req, response).handle(voidFunction((backoff, unused) -> {
             if (backoff != null) {
-                long nextDelay;
+                final long nextDelay;
                 try {
                     nextDelay = getNextDelay(ctx, backoff);
                 } catch (Exception e) {
@@ -106,7 +106,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                     return;
                 }
 
-                EventLoop eventLoop = ctx.contextAwareEventLoop();
+                final EventLoop eventLoop = ctx.contextAwareEventLoop();
                 if (nextDelay <= 0) {
                     eventLoop.execute(() -> doExecute0(ctx, req, responseFuture));
                 } else {
@@ -126,8 +126,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
         }));
     }
 
-    private void completeOnException(ClientRequestContext ctx, DefaultRpcResponse responseFuture,
-                                     Throwable thrown) {
+    private static void completeOnException(ClientRequestContext ctx, DefaultRpcResponse responseFuture,
+                                            Throwable thrown) {
         onRetryingComplete(ctx);
         responseFuture.completeExceptionally(thrown);
     }

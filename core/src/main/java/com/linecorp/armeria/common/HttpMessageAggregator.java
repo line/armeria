@@ -124,7 +124,7 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
                 for (int i = 0; i < contentList.size(); i++) {
                     final HttpData data = contentList.set(i, null);
                     if (data instanceof ByteBufHolder) {
-                        ByteBufHolder byteBufData = (ByteBufHolder) data;
+                        final ByteBufHolder byteBufData = (ByteBufHolder) data;
                         try {
                             merged.writeBytes(byteBufData.content());
                         } finally {

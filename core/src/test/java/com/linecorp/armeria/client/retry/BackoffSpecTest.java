@@ -49,7 +49,7 @@ public class BackoffSpecTest {
 
     @Test
     public void backoffSpecWithoutBaseOption() {
-        String spec = "jitter=-0.4:0.2,maxAttempts=100";
+        final String spec = "jitter=-0.4:0.2,maxAttempts=100";
         final BackoffSpec backoffSpec = BackoffSpec.parse(spec);
         // Set by default values
         assertThat(backoffSpec.initialDelayMillis).isEqualTo(200);
@@ -68,7 +68,7 @@ public class BackoffSpecTest {
 
     @Test
     public void backoffSpecWithOnlyBaseOption() {
-        String spec1 = "random=0:1000";
+        final String spec1 = "random=0:1000";
         final BackoffSpec backoffSpec1 = BackoffSpec.parse(spec1);
         // Set by the spec
         assertThat(backoffSpec1.randomMinDelayMillis).isEqualTo(0);
@@ -81,7 +81,7 @@ public class BackoffSpecTest {
 
         assertThat(Backoff.of(spec1).as(RandomBackoff.class).isPresent()).isTrue();
 
-        String spec2 = "fixed=1000";
+        final String spec2 = "fixed=1000";
         final BackoffSpec backoffSpec2 = BackoffSpec.parse(spec2);
         // Set by the spec
         assertThat(backoffSpec2.fixedDelayMillis).isEqualTo(1000);
@@ -97,23 +97,23 @@ public class BackoffSpecTest {
     @Test
     public void backoffWithWrongArguments() {
         // wrong negative value
-        String spec1 = "exponential=-1000:60000:2.0";
+        final String spec1 = "exponential=-1000:60000:2.0";
         assertThatThrownBy(() -> BackoffSpec.parse(spec1)).isInstanceOf(IllegalArgumentException.class);
 
         // exceed bound
-        String spec2 = "jitter=-0.4:1.000000001";
+        final String spec2 = "jitter=-0.4:1.000000001";
         assertThatThrownBy(() -> BackoffSpec.parse(spec2)).isInstanceOf(IllegalArgumentException.class);
 
         // same backoff twice
-        String spec3 = "jitter=-0.4:0.2,maxAttempts=100,jitter=-0.4:0.2";
+        final String spec3 = "jitter=-0.4:0.2,maxAttempts=100,jitter=-0.4:0.2";
         assertThatThrownBy(() -> BackoffSpec.parse(spec3)).isInstanceOf(IllegalArgumentException.class);
 
         // two base backoffs
-        String spec4 = "exponential=1000:60000,fixed=1000";
+        final String spec4 = "exponential=1000:60000,fixed=1000";
         assertThatThrownBy(() -> BackoffSpec.parse(spec4)).isInstanceOf(IllegalArgumentException.class);
 
         // typo key
-        String spec5 = "texponential=1000:60000:2.0";
+        final String spec5 = "texponential=1000:60000:2.0";
         assertThatThrownBy(() -> BackoffSpec.parse(spec5)).isInstanceOf(IllegalArgumentException.class);
     }
 

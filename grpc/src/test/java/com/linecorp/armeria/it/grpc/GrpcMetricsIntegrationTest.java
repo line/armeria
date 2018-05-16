@@ -192,14 +192,15 @@ public class GrpcMetricsIntegrationTest {
     }
 
     private static void makeRequest(String name) throws Exception {
-        TestServiceBlockingStub client = new ClientBuilder(server.uri(GrpcSerializationFormats.PROTO, "/"))
+        final String uri = server.uri(GrpcSerializationFormats.PROTO, "/");
+        final TestServiceBlockingStub client = new ClientBuilder(uri)
                 .factory(clientFactory)
                 .decorator(HttpRequest.class, HttpResponse.class,
                            MetricCollectingClient.newDecorator(
                                    MeterIdPrefixFunction.ofDefault("client")))
                 .build(TestServiceBlockingStub.class);
 
-        SimpleRequest request =
+        final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setPayload(Payload.newBuilder()
                                                 .setBody(ByteString.copyFromUtf8(name)))
@@ -212,12 +213,12 @@ public class GrpcMetricsIntegrationTest {
     }
 
     private static void makeUnframedRequest(String name) throws Exception {
-        HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
+        final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
                 .factory(clientFactory)
                 .addHttpHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
                 .build(HttpClient.class);
 
-        SimpleRequest request =
+        final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setPayload(Payload.newBuilder()
                                                 .setBody(ByteString.copyFromUtf8(name)))

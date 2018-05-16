@@ -83,7 +83,7 @@ final class EventLoopScheduler {
             return;
         }
 
-        for (Iterator<State> i = map.values().iterator(); i.hasNext();) {
+        for (final Iterator<State> i = map.values().iterator(); i.hasNext();) {
             final State state = i.next();
             final boolean remove;
 

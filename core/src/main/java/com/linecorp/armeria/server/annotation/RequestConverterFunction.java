@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -35,6 +37,7 @@ public interface RequestConverterFunction {
      * Calls {@link RequestConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
      * this converter cannot convert the {@code request} to an object.
      */
+    @Nullable
     Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                           Class<?> expectedResultType) throws Exception;
 

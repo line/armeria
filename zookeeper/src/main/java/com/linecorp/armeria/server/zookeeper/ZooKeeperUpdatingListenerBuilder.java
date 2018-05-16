@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 
+import javax.annotation.Nullable;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 
@@ -58,11 +60,14 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
  * }</pre>
  * */
 public final class ZooKeeperUpdatingListenerBuilder {
+    @Nullable
     private CuratorFramework client;
+    @Nullable
     private final String connectionStr;
     private final String zNodePath;
     private int connectTimeoutMillis = ZooKeeperDefaults.DEFAULT_CONNECT_TIMEOUT_MS;
     private int sessionTimeoutMillis = ZooKeeperDefaults.DEFAULT_SESSION_TIMEOUT_MS;
+    @Nullable
     private Endpoint endpoint;
     private NodeValueCodec nodeValueCodec = NodeValueCodec.DEFAULT;
 
@@ -75,7 +80,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
      */
     public ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath) {
         this.client = requireNonNull(client, "client");
-        this.connectionStr = null;
+        connectionStr = null;
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
     }
