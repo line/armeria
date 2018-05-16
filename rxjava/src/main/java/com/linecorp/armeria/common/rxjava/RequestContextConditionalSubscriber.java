@@ -63,9 +63,9 @@ final class RequestContextConditionalSubscriber<T> extends BasicFuseableConditio
 
     @Override
     public int requestFusion(int mode) {
-        QueueSubscription<T> qs = this.qs;
+        final QueueSubscription<T> qs = this.qs;
         if (qs != null) {
-            int m = qs.requestFusion(mode);
+            final int m = qs.requestFusion(mode);
             sourceMode = m;
             return m;
         }

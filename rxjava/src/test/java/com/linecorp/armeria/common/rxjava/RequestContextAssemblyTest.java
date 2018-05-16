@@ -54,16 +54,16 @@ public class RequestContextAssemblyTest {
             sb.annotatedService(new Object() {
                 @Get("/foo")
                 public HttpResponse foo(ServiceRequestContext ctx, HttpRequest req) {
-                    CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+                    final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
                     flowable(10)
-                            .map(RequestContextAssemblyTest.this::checkRequestContext)
-                            .flatMapSingle(RequestContextAssemblyTest.this::single)
-                            .map(RequestContextAssemblyTest.this::checkRequestContext)
-                            .flatMapSingle(RequestContextAssemblyTest.this::nestSingle)
-                            .map(RequestContextAssemblyTest.this::checkRequestContext)
-                            .flatMapMaybe(RequestContextAssemblyTest.this::maybe)
-                            .map(RequestContextAssemblyTest.this::checkRequestContext)
-                            .flatMapCompletable(RequestContextAssemblyTest.this::completable)
+                            .map(RequestContextAssemblyTest::checkRequestContext)
+                            .flatMapSingle(RequestContextAssemblyTest::single)
+                            .map(RequestContextAssemblyTest::checkRequestContext)
+                            .flatMapSingle(RequestContextAssemblyTest::nestSingle)
+                            .map(RequestContextAssemblyTest::checkRequestContext)
+                            .flatMapMaybe(RequestContextAssemblyTest::maybe)
+                            .map(RequestContextAssemblyTest::checkRequestContext)
+                            .flatMapCompletable(RequestContextAssemblyTest::completable)
                             .subscribe(() -> {
                                 res.complete(HttpResponse.of(HttpStatus.OK));
                             }, e -> {
@@ -74,9 +74,9 @@ public class RequestContextAssemblyTest {
 
                 @Get("/single")
                 public HttpResponse single(ServiceRequestContext ctx, HttpRequest req) {
-                    CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+                    final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
                     Single.just("")
-                          .flatMap(RequestContextAssemblyTest.this::single)
+                          .flatMap(RequestContextAssemblyTest::single)
                           .subscribe((s, throwable) -> {
                               res.complete(HttpResponse.of(HttpStatus.OK));
                           });
@@ -128,7 +128,6 @@ public class RequestContextAssemblyTest {
         });
         final HttpClient client = HttpClient.of(rule.uri("/"));
         client.execute(HttpHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
-        // Single#create, #flatMap and #subscribe
         assertThat(calledFlag.get()).isEqualTo(3);
 
         try {
@@ -146,7 +145,7 @@ public class RequestContextAssemblyTest {
         assertThat(calledFlag.get()).isEqualTo(9);
     }
 
-    private Single<String> single(String input) {
+    private static Single<String> single(String input) {
         RequestContext.current();
         return Single.create(emitter -> {
             RequestContext.current();
@@ -154,12 +153,12 @@ public class RequestContextAssemblyTest {
         });
     }
 
-    private Single<String> nestSingle(String input) {
+    private static Single<String> nestSingle(String input) {
         RequestContext.current();
-        return single(input).flatMap(this::single);
+        return single(input).flatMap(RequestContextAssemblyTest::single);
     }
 
-    private Maybe<String> maybe(String input) {
+    private static Maybe<String> maybe(String input) {
         RequestContext.current();
         return Maybe.create(emitter -> {
             RequestContext.current();
@@ -167,7 +166,7 @@ public class RequestContextAssemblyTest {
         });
     }
 
-    private Completable completable(String input) {
+    private static Completable completable(String input) {
         RequestContext.current();
         return Completable.create(emitter -> {
             RequestContext.current();
@@ -175,7 +174,7 @@ public class RequestContextAssemblyTest {
         });
     }
 
-    private String checkRequestContext(String ignored) {
+    private static String checkRequestContext(String ignored) {
         RequestContext.current();
         return ignored;
     }

@@ -19,8 +19,7 @@ package com.linecorp.armeria.common.rxjava;
 import java.util.concurrent.Callable;
 
 import javax.annotation.Nullable;
-
-import com.google.common.base.Preconditions;
+import javax.annotation.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.RequestContext;
 
@@ -43,38 +42,53 @@ public final class RequestContextAssembly {
 
     @SuppressWarnings("rawtypes")
     @Nullable
+    @GuardedBy("RequestContextAssembly.class")
     private static Function<? super Observable, ? extends Observable> oldOnObservableAssembly;
     @SuppressWarnings("rawtypes")
     @Nullable
+    @GuardedBy("RequestContextAssembly.class")
     private static Function<? super ConnectableObservable, ? extends ConnectableObservable>
             oldOnConnectableObservableAssembly;
     @SuppressWarnings("rawtypes")
     @Nullable
+    @GuardedBy("RequestContextAssembly.class")
     private static Function<? super Completable, ? extends Completable> oldOnCompletableAssembly;
     @SuppressWarnings("rawtypes")
     @Nullable
+    @GuardedBy("RequestContextAssembly.class")
     private static Function<? super Single, ? extends Single> oldOnSingleAssembly;
     @SuppressWarnings("rawtypes")
     @Nullable
+    @GuardedBy("RequestContextAssembly.class")
     private static Function<? super Maybe, ? extends Maybe> oldOnMaybeAssembly;
     @SuppressWarnings("rawtypes")
     @Nullable
+    @GuardedBy("RequestContextAssembly.class")
     private static Function<? super Flowable, ? extends Flowable> oldOnFlowableAssembly;
     @SuppressWarnings("rawtypes")
     @Nullable
+    @GuardedBy("RequestContextAssembly.class")
     private static Function<? super ConnectableFlowable, ? extends ConnectableFlowable>
             oldOnConnectableFlowableAssembly;
     @SuppressWarnings("rawtypes")
     @Nullable
+    @GuardedBy("RequestContextAssembly.class")
     private static Function<? super ParallelFlowable, ? extends ParallelFlowable> oldOnParallelAssembly;
 
-    private RequestContextAssembly() {}
+    @GuardedBy("RequestContextAssembly.class")
+    private static boolean enabled;
+
+    private RequestContextAssembly() {
+    }
 
     /**
      * Enable {@link RequestContext} during operators.
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static synchronized void enable() {
+        if (enabled) {
+            return;
+        }
 
         oldOnObservableAssembly = RxJavaPlugins.getOnObservableAssembly();
         RxJavaPlugins.setOnObservableAssembly(compose(
@@ -116,8 +130,7 @@ public final class RequestContextAssembly {
                                     return new RequestContextScalarCallableCompletable(
                                             c, ctx);
                                 }
-                                return new RequestContextCallableCompletable(c,
-                                                                             ctx);
+                                return new RequestContextCallableCompletable(c, ctx);
                             }
                         }));
 
@@ -190,26 +203,38 @@ public final class RequestContextAssembly {
                             }
                         }
                 ));
+        enabled = true;
     }
 
     /**
      * Disable {@link RequestContext} during operators.
      */
     public static synchronized void disable() {
+        if (!enabled) {
+            return;
+        }
         RxJavaPlugins.setOnObservableAssembly(oldOnObservableAssembly);
+        oldOnObservableAssembly = null;
         RxJavaPlugins.setOnConnectableObservableAssembly(oldOnConnectableObservableAssembly);
+        oldOnConnectableObservableAssembly = null;
         RxJavaPlugins.setOnCompletableAssembly(oldOnCompletableAssembly);
+        oldOnCompletableAssembly = null;
         RxJavaPlugins.setOnSingleAssembly(oldOnSingleAssembly);
+        oldOnSingleAssembly = null;
         RxJavaPlugins.setOnMaybeAssembly(oldOnMaybeAssembly);
+        oldOnMaybeAssembly = null;
         RxJavaPlugins.setOnFlowableAssembly(oldOnFlowableAssembly);
+        oldOnFlowableAssembly = null;
         RxJavaPlugins.setOnConnectableFlowableAssembly(oldOnConnectableFlowableAssembly);
+        oldOnConnectableFlowableAssembly = null;
         RxJavaPlugins.setOnParallelAssembly(oldOnParallelAssembly);
+        oldOnParallelAssembly = null;
+        enabled = false;
     }
 
     private abstract static class ConditionalOnCurrentRequestContextFunction<T> implements Function<T, T> {
         @Override
         public final T apply(T t) {
-            //noinspection ConstantConditions
             return RequestContext.mapCurrent(requestContext -> applyActual(t, requestContext), () -> t);
         }
 
@@ -218,13 +243,9 @@ public final class RequestContextAssembly {
 
     private static <T> Function<? super T, ? extends T> compose(
             @Nullable Function<? super T, ? extends T> before,
-            @Nullable Function<? super T, ? extends T> after) {
-        Preconditions.checkArgument(before != null || after != null);
+            Function<? super T, ? extends T> after) {
         if (before == null) {
             return after;
-        }
-        if (after == null) {
-            return before;
         }
         return (T v) -> after.apply(before.apply(v));
     }
