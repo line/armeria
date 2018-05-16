@@ -116,14 +116,6 @@ interface AccessLogComponent {
         @VisibleForTesting
         static final ZoneId defaultZoneId = ZoneId.systemDefault();
 
-        static boolean isSupported(AccessLogType type) {
-            return type == AccessLogType.REQUEST_TIMESTAMP;
-        }
-
-        private final boolean addQuote;
-        private final DateTimeFormatter formatter;
-
-        @Nullable
         private static final Map<String, DateTimeFormatter> predefinedFormatters =
                 getFields(DateTimeFormatter.class, field -> {
                     final int m = field.getModifiers();
@@ -138,6 +130,13 @@ interface AccessLogComponent {
                         throw new Error(cause);
                     }
                 }));
+
+        static boolean isSupported(AccessLogType type) {
+            return type == AccessLogType.REQUEST_TIMESTAMP;
+        }
+
+        private final boolean addQuote;
+        private final DateTimeFormatter formatter;
 
         TimestampComponent(boolean addQuote, @Nullable String variable) {
             this.addQuote = addQuote;
