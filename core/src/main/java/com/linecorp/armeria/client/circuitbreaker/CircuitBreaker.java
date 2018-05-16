@@ -25,7 +25,7 @@ public interface CircuitBreaker {
     /**
      * Creates a new {@link CircuitBreaker} that has the specified name and the default configurations.
      *
-     * @param name The name of the circuit breaker.
+     * @param name the name of the circuit breaker
      */
     static CircuitBreaker of(String name) {
         return new CircuitBreakerBuilder(name).build();
@@ -47,13 +47,6 @@ public interface CircuitBreaker {
      * Reports a remote invocation success.
      */
     void onSuccess();
-
-    /**
-     * Reports a remote invocation failure with the reason.
-     *
-     * @param cause The cause of failure.
-     */
-    void onFailure(Throwable cause);
 
     /**
      * Reports a remote invocation failure.

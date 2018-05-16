@@ -20,9 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -30,6 +29,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * Determines whether a failed request should be retried.
@@ -63,7 +63,8 @@ public interface RetryStrategy<I extends Request, O extends Response> {
     static RetryStrategy<HttpRequest, HttpResponse> onServerErrorStatus(Backoff backoff) {
         requireNonNull(backoff, "backoff");
         return onStatus((status, thrown) -> {
-            if (thrown != null || (status != null && status.codeClass() == HttpStatusClass.SERVER_ERROR)) {
+            if ((thrown != null && !(Exceptions.peel(thrown) instanceof FailFastException)) ||
+                (status != null && status.codeClass() == HttpStatusClass.SERVER_ERROR)) {
                 return backoff;
             }
             return null;
@@ -92,6 +93,5 @@ public interface RetryStrategy<I extends Request, O extends Response> {
      * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
      *      timeout</a>
      */
-    @Nullable
     CompletableFuture<Backoff> shouldRetry(I request, O response);
 }

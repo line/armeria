@@ -28,9 +28,6 @@ import org.junit.Test;
 
 import com.google.common.testing.FakeTicker;
 
-import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
-
 public class NonBlockingCircuitBreakerTest {
 
     private static final String remoteServiceName = "testService";
@@ -186,17 +183,6 @@ public class NonBlockingCircuitBreakerTest {
         assertThat(cb.canRequest()).isTrue(); // first request is allowed
         assertThat(cb.state().isHalfOpen()).isTrue();
         assertThat(cb.canRequest()).isFalse(); // seconds request is refused
-    }
-
-    @Test
-    public void testFailureOfExceptionFilter() {
-        NonBlockingCircuitBreaker cb = (NonBlockingCircuitBreaker) new CircuitBreakerBuilder()
-                .exceptionFilter(cause -> {
-                    throw Exceptions.clearTrace(new AnticipatedException("exception filter failed"));
-                })
-                .ticker(ticker)
-                .build();
-        cb.onFailure(new Exception());
     }
 
     @Test

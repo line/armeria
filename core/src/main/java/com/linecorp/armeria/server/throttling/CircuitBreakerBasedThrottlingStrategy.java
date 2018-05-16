@@ -22,20 +22,31 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A {@link ThrottlingStrategy} that throttles a request using {@link CircuitBreaker} pattern.
+ * This can be used to throttle when the {@link Service} behind {@link ThrottlingService} is using
+ * {@link CircuitBreakerClient} to request to another API like following circumstance:
+ * <pre>{@code
+ * A request -> CircuitBreakerBasedThrottlingStrategy -> MyService -> CircuitBreakerClient -> another API
+ * }</pre>
+ * The {@link CircuitBreakerBasedThrottlingStrategy} and the {@link CircuitBreakerClient} in the flow share
+ * the same instance of {@link CircuitBreaker}. If the request from the {@link CircuitBreakerClient} to
+ * another API fails, the {@link CircuitBreaker} will be open so that the request will be throttled even before
+ * it reaches the {@code MyService}.
  */
-public final class CircuitBreakerThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
+public final class CircuitBreakerBasedThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
     private final CircuitBreaker circuitBreaker;
 
     /**
      * Creates a new {@link ThrottlingStrategy} that determines whether a request should be throttled or not
      * using a given {@code circuitBreaker}.
      */
-    public CircuitBreakerThrottlingStrategy(CircuitBreaker circuitBreaker) {
+    public CircuitBreakerBasedThrottlingStrategy(CircuitBreaker circuitBreaker) {
         this(circuitBreaker, null);
     }
 
@@ -43,7 +54,7 @@ public final class CircuitBreakerThrottlingStrategy<T extends Request> extends T
      * Creates a new named {@link ThrottlingStrategy} that determines whether a request should be throttled
      * or not using a given {@code circuitBreaker}.
      */
-    public CircuitBreakerThrottlingStrategy(CircuitBreaker circuitBreaker, @Nullable String name) {
+    public CircuitBreakerBasedThrottlingStrategy(CircuitBreaker circuitBreaker, @Nullable String name) {
         super(name);
         this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
     }

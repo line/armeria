@@ -19,7 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Function;
+import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -38,77 +37,31 @@ import com.linecorp.armeria.common.util.CompletionActions;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public final class CircuitBreakerClient<I extends Request, O extends Response>
+public abstract class CircuitBreakerClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(CircuitBreakerClient.class);
 
-    /**
-     * Creates a new decorator using the specified {@link CircuitBreaker} instance.
-     *
-     * <p>Since {@link CircuitBreaker} is a unit of failure detection, Don't reuse the same instance for
-     * unrelated services.
-     *
-     * @param circuitBreaker The {@link CircuitBreaker} instance to be used
-     */
-    public static <I extends Request, O extends Response>
-    Function<Client<I, O>, CircuitBreakerClient<I, O>>
-    newDecorator(CircuitBreaker circuitBreaker) {
-        return newDecorator((ctx, req) -> circuitBreaker);
-    }
-
-    /**
-     * Creates a new decorator with the specified {@link CircuitBreakerMapping}.
-     */
-    public static <I extends Request, O extends Response>
-    Function<Client<I, O>, CircuitBreakerClient<I, O>>
-    newDecorator(CircuitBreakerMapping mapping) {
-        return delegate -> new CircuitBreakerClient<>(delegate, mapping);
-    }
-
-    /**
-     * Creates a new decorator that binds one {@link CircuitBreaker} per method.
-     *
-     * @param factory A function that takes a method name and creates a new {@link CircuitBreaker}.
-     */
-    public static <I extends Request, O extends Response>
-    Function<Client<I, O>, CircuitBreakerClient<I, O>>
-    newPerMethodDecorator(Function<String, CircuitBreaker> factory) {
-        return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.METHOD, factory));
-    }
-
-    /**
-     * Creates a new decorator that binds one {@link CircuitBreaker} per host.
-     *
-     * @param factory A function that takes a host name and creates a new {@link CircuitBreaker}.
-     */
-    public static <I extends Request, O extends Response>
-    Function<Client<I, O>, CircuitBreakerClient<I, O>>
-    newPerHostDecorator(Function<String, CircuitBreaker> factory) {
-        return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST, factory));
-    }
-
-    /**
-     * Creates a new decorator that binds one {@link CircuitBreaker} per host and method.
-     *
-     * @param factory A function that takes a host+method name and creates a new {@link CircuitBreaker}.
-     */
-    public static <I extends Request, O extends Response>
-    Function<Client<I, O>, CircuitBreakerClient<I, O>>
-    newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory) {
-        return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST_AND_METHOD, factory));
-    }
+    private final CircuitBreakerStrategy<O> strategy;
 
     private final CircuitBreakerMapping mapping;
 
-    CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping) {
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     */
+    protected CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
+                                   CircuitBreakerStrategy<O> strategy) {
         super(delegate);
         this.mapping = requireNonNull(mapping, "mapping");
+        this.strategy = requireNonNull(strategy, "strategy");
+    }
+
+    protected final CircuitBreakerStrategy<O> strategy() {
+        return strategy;
     }
 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
-
         final CircuitBreaker circuitBreaker;
         try {
             circuitBreaker = mapping.get(ctx, req);
@@ -118,27 +71,34 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
         }
 
         if (circuitBreaker.canRequest()) {
-            final O response;
-            try {
-                response = delegate().execute(ctx, req);
-            } catch (Throwable cause) {
-                circuitBreaker.onFailure(cause);
-                throw cause;
-            }
-
-            response.completionFuture().handle(voidFunction((res, cause) -> {
-                // Report whether the invocation has succeeded or failed.
-                if (cause == null) {
-                    circuitBreaker.onSuccess();
-                } else {
-                    circuitBreaker.onFailure(cause);
-                }
-            })).exceptionally(CompletionActions::log);
-
-            return response;
+            return doExecute(ctx, req, circuitBreaker);
         } else {
             // the circuit is tripped; raise an exception without delegating.
             throw new FailFastException(circuitBreaker);
         }
+    }
+
+    /**
+     * Invoked when the {@link CircuitBreaker} is in closed state.
+     */
+    protected abstract O doExecute(ClientRequestContext ctx, I req, CircuitBreaker circuitBreaker)
+            throws Exception;
+
+    /**
+     * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
+     * of the specified {@code future}. If the completed value is {@code null}, this doesn't do anything.
+     */
+    protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
+                                                 CompletableFuture<Boolean> future) {
+        future.handle(voidFunction((success, unused) -> {
+            if (success != null) {
+                if (success) {
+                    circuitBreaker.onSuccess();
+                } else {
+                    circuitBreaker.onFailure();
+                }
+            }
+            // If the success is null, the user does not want to count as a success nor failure. So ignore it.
+        })).exceptionally(CompletionActions::log);
     }
 }
