@@ -152,31 +152,28 @@ public class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    HttpResponse res = HttpResponse.from(responseFuture);
+                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    final HttpResponse res = HttpResponse.from(responseFuture);
                     ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
                                              delayMillis, TimeUnit.MILLISECONDS);
                     return res;
                 }
             });
 
-            sb.service("/delay-deferred/{delay}", new HttpService() {
-                @Override
-                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    HttpResponse res = HttpResponse.from(responseFuture);
-                    final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
-                                             delayMillis, TimeUnit.MILLISECONDS);
-                    return res;
-                }
+            sb.service("/delay-deferred/{delay}", (HttpService) (ctx, req) -> {
+                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                final HttpResponse res = HttpResponse.from(responseFuture);
+                final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
+                ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
+                                         delayMillis, TimeUnit.MILLISECONDS);
+                return res;
             });
 
             sb.service("/delay-custom/{delay}", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    HttpResponse res = HttpResponse.from(responseFuture);
+                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    final HttpResponse res = HttpResponse.from(responseFuture);
                     ctx.setRequestTimeoutHandler(
                             () -> responseFuture.complete(
                                     HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
@@ -187,26 +184,23 @@ public class HttpServerTest {
                 }
             });
 
-            sb.service("/delay-custom-deferred/{delay}", new HttpService() {
-                @Override
-                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    HttpResponse res = HttpResponse.from(responseFuture);
-                    ctx.setRequestTimeoutHandler(
-                            () -> responseFuture.complete(HttpResponse.of(
-                                    HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
-                    final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
-                                             delayMillis, TimeUnit.MILLISECONDS);
-                    return res;
-                }
+            sb.service("/delay-custom-deferred/{delay}", (HttpService) (ctx, req) -> {
+                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                final HttpResponse res = HttpResponse.from(responseFuture);
+                ctx.setRequestTimeoutHandler(
+                        () -> responseFuture.complete(HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
+                final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
+                ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
+                                         delayMillis, TimeUnit.MILLISECONDS);
+                return res;
             });
 
             sb.service("/informed_delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                    HttpResponseWriter res = HttpResponse.streaming();
+                    final HttpResponseWriter res = HttpResponse.streaming();
 
                     // Send 9 informational responses before sending the actual response.
                     for (int i = 1; i <= 9; i++) {
@@ -232,7 +226,7 @@ public class HttpServerTest {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
                     final boolean pooled = "pooled".equals(ctx.query());
 
-                    HttpResponseWriter res = HttpResponse.streaming();
+                    final HttpResponseWriter res = HttpResponse.streaming();
                     res.write(HttpHeaders.of(HttpStatus.OK));
 
                     // Send 10 characters ('0' - '9') at fixed rate.
@@ -281,7 +275,7 @@ public class HttpServerTest {
             sb.service("/echo", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-                    HttpResponseWriter res = HttpResponse.streaming();
+                    final HttpResponseWriter res = HttpResponse.streaming();
                     res.write(HttpHeaders.of(HttpStatus.OK));
                     req.subscribe(new Subscriber<HttpObject>() {
                         private Subscription subscription;
@@ -321,7 +315,7 @@ public class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long length = Long.parseLong(ctx.mappedPath().substring(1));
-                    HttpResponseWriter res = HttpResponse.streaming();
+                    final HttpResponseWriter res = HttpResponse.streaming();
                     res.write(HttpHeaders.of(HttpStatus.OK)
                                          .setLong(HttpHeaderNames.CONTENT_LENGTH, length));
 
@@ -342,6 +336,7 @@ public class HttpServerTest {
             }.decorate(HttpEncodingService.class));
 
             sb.service("/images", new AbstractHttpService() {
+                @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     return HttpResponse.of(
                             HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PNG),
@@ -354,7 +349,7 @@ public class HttpServerTest {
             sb.service("/small", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    String response = Strings.repeat("a", 1023);
+                    final String response = Strings.repeat("a", 1023);
                     return HttpResponse.of(
                             HttpHeaders.of(HttpStatus.OK)
                                        .contentType(MediaType.PLAIN_TEXT_UTF_8)
@@ -366,7 +361,7 @@ public class HttpServerTest {
             sb.service("/large", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    String response = Strings.repeat("a", 1024);
+                    final String response = Strings.repeat("a", 1024);
                     return HttpResponse.of(
                             HttpHeaders.of(HttpStatus.OK)
                                        .contentType(MediaType.PLAIN_TEXT_UTF_8)
@@ -409,7 +404,7 @@ public class HttpServerTest {
                 }
             });
 
-            sb.service("/head-headers-only", ((ctx, req) -> HttpResponse.of(HttpHeaders.of(HttpStatus.OK))));
+            sb.service("/head-headers-only", (ctx, req) -> HttpResponse.of(HttpHeaders.of(HttpStatus.OK)));
 
             sb.serviceUnder("/not-cached-paths", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
@@ -563,7 +558,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeoutAfterPartialContent() throws Exception {
         serverRequestTimeoutMillis = 1000L;
-        CompletableFuture<AggregatedHttpMessage> f = client().get("/content_delay/2000").aggregate();
+        final CompletableFuture<AggregatedHttpMessage> f = client().get("/content_delay/2000").aggregate();
 
         // Because the service has written out the content partially, there's no way for the service
         // to reply with '503 Service Unavailable', so it will just close the stream.
@@ -582,7 +577,8 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeoutAfterPartialContentWithPooling() throws Exception {
         serverRequestTimeoutMillis = 1000L;
-        CompletableFuture<AggregatedHttpMessage> f = client().get("/content_delay/2000?pooled").aggregate();
+        final CompletableFuture<AggregatedHttpMessage> f =
+                client().get("/content_delay/2000?pooled").aggregate();
 
         // Because the service has written out the content partially, there's no way for the service
         // to reply with '503 Service Unavailable', so it will just close the stream.
@@ -657,7 +653,7 @@ public class HttpServerTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isEqualTo("accept-encoding");
 
-        byte[] decoded;
+        final byte[] decoded;
         try (GZIPInputStream unzipper = new GZIPInputStream(new ByteArrayInputStream(res.content().array()))) {
             decoded = ByteStreams.toByteArray(unzipper);
         } catch (EOFException e) {
@@ -706,7 +702,7 @@ public class HttpServerTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isEqualTo("accept-encoding");
 
-        byte[] decoded;
+        final byte[] decoded;
         try (GZIPInputStream unzipper = new GZIPInputStream(new ByteArrayInputStream(res.content().array()))) {
             decoded = ByteStreams.toByteArray(unzipper);
         }
@@ -725,7 +721,7 @@ public class HttpServerTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isEqualTo("accept-encoding");
 
-        byte[] decoded;
+        final byte[] decoded;
         try (InflaterInputStream unzipper =
                      new InflaterInputStream(new ByteArrayInputStream(res.content().array()))) {
             decoded = ByteStreams.toByteArray(unzipper);
@@ -823,8 +819,8 @@ public class HttpServerTest {
         clientMaxResponseLength = 0;
         serverRequestTimeoutMillis = 0;
 
-        HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/echo");
-        HttpResponse response = client().execute(request);
+        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/echo");
+        final HttpResponse response = client().execute(request);
         request.write(HttpData.ofUtf8("a"));
         Thread.sleep(2000);
         request.write(HttpData.ofUtf8("b"));
@@ -982,8 +978,8 @@ public class HttpServerTest {
 
         @Override
         protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            HttpResponse res = HttpResponse.from(responseFuture);
+            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+            final HttpResponse res = HttpResponse.from(responseFuture);
             req.subscribe(new StreamConsumer(ctx.eventLoop(), slow) {
                 @Override
                 public void onError(Throwable cause) {

@@ -48,7 +48,7 @@ public final class OAuth2Token {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        OAuth2Token that = (OAuth2Token) o;
+        final OAuth2Token that = (OAuth2Token) o;
         return accessToken.equals(that.accessToken);
     }
 

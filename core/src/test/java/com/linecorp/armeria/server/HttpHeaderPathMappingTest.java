@@ -85,7 +85,7 @@ public class HttpHeaderPathMappingTest {
 
     @Test
     public void testHttpHeader() {
-        HttpHeaderPathMapping mapping =
+        final HttpHeaderPathMapping mapping =
                 new HttpHeaderPathMapping(PathMapping.of(PATH),
                                           ImmutableSet.of(HttpMethod.GET, HttpMethod.POST),
                                           ImmutableList.of(), ImmutableList.of());  // No media type negotiation
@@ -103,7 +103,7 @@ public class HttpHeaderPathMappingTest {
 
     @Test
     public void testConsumeType() {
-        HttpHeaderPathMapping mapping =
+        final HttpHeaderPathMapping mapping =
                 new HttpHeaderPathMapping(PathMapping.of(PATH),
                                           ImmutableSet.of(HttpMethod.POST),
                                           ImmutableList.of(MediaType.JSON_UTF_8), ImmutableList.of());
@@ -115,7 +115,7 @@ public class HttpHeaderPathMappingTest {
 
     @Test
     public void testProduceType() {
-        HttpHeaderPathMapping mapping =
+        final HttpHeaderPathMapping mapping =
                 new HttpHeaderPathMapping(PathMapping.of(PATH),
                                           ImmutableSet.of(HttpMethod.GET),
                                           ImmutableList.of(), ImmutableList.of(MediaType.JSON_UTF_8));
@@ -146,14 +146,14 @@ public class HttpHeaderPathMappingTest {
     }
 
     private static PathMappingContext consumeType(HttpMethod method, MediaType contentType) {
-        HttpHeaders headers = HttpHeaders.of(method, PATH);
+        final HttpHeaders headers = HttpHeaders.of(method, PATH);
         headers.contentType(contentType);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, headers, null);
     }
 
     private static PathMappingContext produceType(HttpMethod method, String acceptHeader) {
-        HttpHeaders headers = HttpHeaders.of(method, PATH);
+        final HttpHeaders headers = HttpHeaders.of(method, PATH);
         headers.add(HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, headers, PRODUCIBLE_MEDIA_TYPES);

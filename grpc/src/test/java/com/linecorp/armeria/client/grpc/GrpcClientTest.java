@@ -115,7 +115,7 @@ public class GrpcClientTest {
                     .decorate(TestServiceImpl.EchoRequestHeadersInTrailers::new)
                     .decorate((client, ctx, req) -> {
                         CLIENT_HEADERS_CAPTURE.set(req.headers());
-                        HttpResponse res = client.serve(ctx, req);
+                        final HttpResponse res = client.serve(ctx, req);
                         return new FilteredHttpResponse(res) {
 
                             private boolean headersReceived;
@@ -142,7 +142,7 @@ public class GrpcClientTest {
     @Before
     public void setUp() {
         blockingStub = new ClientBuilder("gproto+" + server.httpUri("/"))
-                .defaultMaxResponseLength((long) MAX_MESSAGE_SIZE)
+                .defaultMaxResponseLength(MAX_MESSAGE_SIZE)
                 .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
                 .build(TestServiceBlockingStub.class);
         asyncStub = new ClientBuilder("gproto+" + server.httpUri("/"))
@@ -217,7 +217,7 @@ public class GrpcClientTest {
                                                               .setBody(ByteString.copyFrom(new byte[58979])))
                                            .build());
 
-        StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
+        final StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
         asyncStub.streamingOutputCall(request, recorder);
         recorder.awaitCompletion();
         assertSuccess(recorder);
@@ -248,8 +248,8 @@ public class GrpcClientTest {
                                           .setAggregatedPayloadSize(74922)
                                           .build();
 
-        StreamRecorder<StreamingInputCallResponse> responseObserver = StreamRecorder.create();
-        StreamObserver<StreamingInputCallRequest> requestObserver =
+        final StreamRecorder<StreamingInputCallResponse> responseObserver = StreamRecorder.create();
+        final StreamObserver<StreamingInputCallRequest> requestObserver =
                 asyncStub.streamingInputCall(responseObserver);
         for (StreamingInputCallRequest request : requests) {
             requestObserver.onNext(request);
@@ -309,7 +309,7 @@ public class GrpcClientTest {
                                            .build());
 
         final ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<>(5);
-        StreamObserver<StreamingOutputCallRequest> requestObserver
+        final StreamObserver<StreamingOutputCallRequest> requestObserver
                 = asyncStub.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
             @Override
             public void onNext(StreamingOutputCallResponse response) {
@@ -338,8 +338,8 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void emptyStream() throws Exception {
-        StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
-        StreamObserver<StreamingOutputCallRequest> requestObserver
+        final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
+        final StreamObserver<StreamingOutputCallRequest> requestObserver
                 = asyncStub.fullDuplexCall(responseObserver);
         requestObserver.onCompleted();
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
@@ -347,8 +347,8 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void cancelAfterBegin() throws Exception {
-        StreamRecorder<StreamingInputCallResponse> responseObserver = StreamRecorder.create();
-        StreamObserver<StreamingInputCallRequest> requestObserver =
+        final StreamRecorder<StreamingInputCallResponse> responseObserver = StreamRecorder.create();
+        final StreamObserver<StreamingInputCallRequest> requestObserver =
                 asyncStub.streamingInputCall(responseObserver);
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion();
@@ -373,8 +373,8 @@ public class GrpcClientTest {
                                                               .setBody(ByteString.copyFrom(new byte[31415])))
                                            .build();
 
-        StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
-        StreamObserver<StreamingOutputCallRequest> requestObserver
+        final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
+        final StreamObserver<StreamingOutputCallRequest> requestObserver
                 = asyncStub.fullDuplexCall(responseObserver);
         requestObserver.onNext(request);
         await().untilAsserted(() -> assertThat(responseObserver.firstValue().get()).isEqualTo(goldenResponse));
@@ -387,8 +387,8 @@ public class GrpcClientTest {
     @Test(timeout = 10000)
     public void fullDuplexCallShouldSucceed() throws Exception {
         // Build the request.
-        List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
-        StreamingOutputCallRequest.Builder streamingOutputBuilder =
+        final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
+        final StreamingOutputCallRequest.Builder streamingOutputBuilder =
                 StreamingOutputCallRequest.newBuilder();
         streamingOutputBuilder.setResponseType(COMPRESSABLE);
         for (Integer size : responseSizes) {
@@ -397,12 +397,12 @@ public class GrpcClientTest {
         final StreamingOutputCallRequest request =
                 streamingOutputBuilder.build();
 
-        StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
-        StreamObserver<StreamingOutputCallRequest> requestStream =
+        final StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
+        final StreamObserver<StreamingOutputCallRequest> requestStream =
                 asyncStub.fullDuplexCall(recorder);
 
         final int numRequests = 10;
-        List<StreamingOutputCallRequest> requests =
+        final List<StreamingOutputCallRequest> requests =
                 new ArrayList<>(numRequests);
         for (int ix = numRequests; ix > 0; --ix) {
             requests.add(request);
@@ -413,19 +413,20 @@ public class GrpcClientTest {
         assertSuccess(recorder);
         assertThat(recorder.getValues()).hasSize(responseSizes.size() * numRequests);
         for (int ix = 0; ix < recorder.getValues().size(); ++ix) {
-            StreamingOutputCallResponse response = recorder.getValues().get(ix);
+            final StreamingOutputCallResponse response = recorder.getValues().get(ix);
             assertThat(response.getPayload().getType()).isEqualTo(COMPRESSABLE);
-            int length = response.getPayload().getBody().size();
-            int expectedSize = responseSizes.get(ix % responseSizes.size());
-            assertThat(length).isEqualTo(expectedSize).withFailMessage("comparison failed at index " + ix);
+            final int length = response.getPayload().getBody().size();
+            final int expectedSize = responseSizes.get(ix % responseSizes.size());
+            assertThat(length).withFailMessage("comparison failed at index " + ix)
+                              .isEqualTo(expectedSize);
         }
     }
 
     @Test(timeout = 10000)
     public void halfDuplexCallShouldSucceed() throws Exception {
         // Build the request.
-        List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
-        StreamingOutputCallRequest.Builder streamingOutputBuilder =
+        final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
+        final StreamingOutputCallRequest.Builder streamingOutputBuilder =
                 StreamingOutputCallRequest.newBuilder();
         streamingOutputBuilder.setResponseType(COMPRESSABLE);
         for (Integer size : responseSizes) {
@@ -434,11 +435,11 @@ public class GrpcClientTest {
         final StreamingOutputCallRequest request =
                 streamingOutputBuilder.build();
 
-        StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
-        StreamObserver<StreamingOutputCallRequest> requestStream = asyncStub.halfDuplexCall(recorder);
+        final StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
+        final StreamObserver<StreamingOutputCallRequest> requestStream = asyncStub.halfDuplexCall(recorder);
 
         final int numRequests = 10;
-        List<StreamingOutputCallRequest> requests = new ArrayList<>(numRequests);
+        final List<StreamingOutputCallRequest> requests = new ArrayList<>(numRequests);
         for (int ix = numRequests; ix > 0; --ix) {
             requests.add(request);
             requestStream.onNext(request);
@@ -461,11 +462,12 @@ public class GrpcClientTest {
 
         assertThat(recorder.getValues()).hasSize(responseSizes.size() * numRequests);
         for (int ix = 0; ix < recorder.getValues().size(); ++ix) {
-            StreamingOutputCallResponse response = recorder.getValues().get(ix);
+            final StreamingOutputCallResponse response = recorder.getValues().get(ix);
             assertThat(response.getPayload().getType()).isEqualTo(COMPRESSABLE);
-            int length = response.getPayload().getBody().size();
-            int expectedSize = responseSizes.get(ix % responseSizes.size());
-            assertThat(length).isEqualTo(expectedSize).withFailMessage("comparison failed at index " + ix);
+            final int length = response.getPayload().getBody().size();
+            final int expectedSize = responseSizes.get(ix % responseSizes.size());
+            assertThat(length).withFailMessage("comparison failed at index " + ix)
+                              .isEqualTo(expectedSize);
         }
     }
 
@@ -491,10 +493,10 @@ public class GrpcClientTest {
                                                               .setBody(ByteString.copyFrom(new byte[100001])))
                                            .build());
 
-        long start = System.nanoTime();
+        final long start = System.nanoTime();
 
         final ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<>(10);
-        ClientCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
+        final ClientCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
                 asyncStub.getChannel().newCall(TestServiceGrpc.getStreamingOutputCallMethod(),
                                                CallOptions.DEFAULT);
         call.start(new ClientCall.Listener<StreamingOutputCallResponse>() {
@@ -519,7 +521,7 @@ public class GrpcClientTest {
         try {
             assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(
                     goldenResponses.get(0));
-            long firstCallDuration = System.nanoTime() - start;
+            final long firstCallDuration = System.nanoTime() - start;
 
             // Without giving additional flow control, make sure that we don't get another response. We wait
             // until we are comfortable the next message isn't coming. We may have very low nanoTime
@@ -582,7 +584,7 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void exchangeHeadersUnaryCall() {
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         ClientOption.HTTP_HEADERS.newValue(
@@ -598,15 +600,15 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void exchangeHeadersStreamingCall() throws Exception {
-        TestServiceStub stub =
+        final TestServiceStub stub =
                 Clients.newDerivedClient(
                         asyncStub,
                         ClientOption.HTTP_HEADERS.newValue(
                                 HttpHeaders.of()
                                            .set(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
-        List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
-        StreamingOutputCallRequest.Builder streamingOutputBuilder =
+        final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
+        final StreamingOutputCallRequest.Builder streamingOutputBuilder =
                 StreamingOutputCallRequest.newBuilder();
         streamingOutputBuilder.setResponseType(COMPRESSABLE);
         for (Integer size : responseSizes) {
@@ -614,12 +616,12 @@ public class GrpcClientTest {
         }
         final StreamingOutputCallRequest request = streamingOutputBuilder.build();
 
-        StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
-        StreamObserver<StreamingOutputCallRequest> requestStream =
+        final StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
+        final StreamObserver<StreamingOutputCallRequest> requestStream =
                 stub.fullDuplexCall(recorder);
 
         final int numRequests = 10;
-        List<StreamingOutputCallRequest> requests = new ArrayList<>(numRequests);
+        final List<StreamingOutputCallRequest> requests = new ArrayList<>(numRequests);
 
         for (int ix = numRequests; ix > 0; --ix) {
             requests.add(request);
@@ -637,14 +639,14 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void sendsTimeoutHeader() {
-        long configuredTimeoutMinutes = 100;
-        TestServiceBlockingStub stub =
+        final long configuredTimeoutMinutes = 100;
+        final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(
                                 TimeUnit.MINUTES.toMillis(configuredTimeoutMinutes)));
         stub.emptyCall(EMPTY);
-        long transferredTimeoutMinutes = TimeUnit.NANOSECONDS.toMinutes(
+        final long transferredTimeoutMinutes = TimeUnit.NANOSECONDS.toMinutes(
                 TimeoutHeaderUtil.fromHeaderValue(
                         CLIENT_HEADERS_CAPTURE.get().get(GrpcHeaderNames.GRPC_TIMEOUT)));
         assertThat(transferredTimeoutMinutes).isEqualTo(configuredTimeoutMinutes);
@@ -654,7 +656,7 @@ public class GrpcClientTest {
     public void deadlineNotExceeded() {
         // warm up the channel and JVM
         blockingStub.emptyCall(Empty.getDefaultInstance());
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(
@@ -673,17 +675,17 @@ public class GrpcClientTest {
     public void deadlineExceeded() {
         // warm up the channel and JVM
         blockingStub.emptyCall(Empty.getDefaultInstance());
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(10L));
-        StreamingOutputCallRequest request =
+        final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(
                                                   ResponseParameters.newBuilder()
                                                                     .setIntervalUs(20000))
                                           .build();
-        Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
+        final Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
@@ -693,10 +695,10 @@ public class GrpcClientTest {
     public void deadlineExceededServerStreaming() throws Exception {
         // warm up the channel and JVM
         blockingStub.emptyCall(Empty.getDefaultInstance());
-        ResponseParameters.Builder responseParameters = ResponseParameters.newBuilder()
-                                                                          .setSize(1)
-                                                                          .setIntervalUs(20000);
-        StreamingOutputCallRequest request =
+        final ResponseParameters.Builder responseParameters = ResponseParameters.newBuilder()
+                                                                                .setSize(1)
+                                                                                .setIntervalUs(20000);
+        final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
                                           .setResponseType(COMPRESSABLE)
                                           .addResponseParameters(responseParameters)
@@ -704,8 +706,8 @@ public class GrpcClientTest {
                                           .addResponseParameters(responseParameters)
                                           .addResponseParameters(responseParameters)
                                           .build();
-        StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
-        TestServiceStub stub =
+        final StreamRecorder<StreamingOutputCallResponse> recorder = StreamRecorder.create();
+        final TestServiceStub stub =
                 Clients.newDerivedClient(
                         asyncStub,
                         ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(30L));
@@ -725,7 +727,7 @@ public class GrpcClientTest {
     @Test(timeout = 10000)
     public void deadlineInPast() {
         // Test once with idle channel and once with active channel
-        TestServiceGrpc.TestServiceBlockingStub stub =
+        final TestServiceGrpc.TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
 
@@ -744,13 +746,13 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void maxInboundSize_exact() {
-        StreamingOutputCallRequest request =
+        final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(ResponseParameters.newBuilder().setSize(1))
                                           .build();
-        int size = blockingStub.streamingOutputCall(request).next().getSerializedSize();
+        final int size = blockingStub.streamingOutputCall(request).next().getSerializedSize();
 
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(size));
@@ -759,17 +761,17 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void maxInboundSize_tooBig() {
-        StreamingOutputCallRequest request =
+        final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(ResponseParameters.newBuilder().setSize(1))
                                           .build();
-        int size = blockingStub.streamingOutputCall(request).next().getSerializedSize();
+        final int size = blockingStub.streamingOutputCall(request).next().getSerializedSize();
 
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(size - 1));
-        Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
+        final Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
         assertThat(Throwables.getStackTraceAsString(t)).contains("exceeds maximum");
@@ -778,11 +780,11 @@ public class GrpcClientTest {
     @Test(timeout = 10000)
     public void maxOutboundSize_exact() {
         // set at least one field to ensure the size is non-zero.
-        StreamingOutputCallRequest request =
+        final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(ResponseParameters.newBuilder().setSize(1))
                                           .build();
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES.newValue(
@@ -793,16 +795,16 @@ public class GrpcClientTest {
     @Test(timeout = 10000)
     public void maxOutboundSize_tooBig() {
         // set at least one field to ensure the size is non-zero.
-        StreamingOutputCallRequest request =
+        final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(ResponseParameters.newBuilder().setSize(1))
                                           .build();
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES.newValue(
                                 request.getSerializedSize() - 1));
-        Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
+        final Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode()).isEqualTo(Code.CANCELLED);
         assertThat(Throwables.getStackTraceAsString(t)).contains("message too large");
@@ -810,37 +812,37 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void statusCodeAndMessage() {
-        int errorCode = 2;
-        String errorMessage = "test status message";
-        EchoStatus responseStatus = EchoStatus.newBuilder()
-                                              .setCode(errorCode)
-                                              .setMessage(errorMessage)
-                                              .build();
-        SimpleRequest simpleRequest = SimpleRequest.newBuilder()
-                                                   .setResponseStatus(responseStatus)
-                                                   .build();
-        StreamingOutputCallRequest streamingRequest = StreamingOutputCallRequest.newBuilder()
-                                                                                .setResponseStatus(
+        final int errorCode = 2;
+        final String errorMessage = "test status message";
+        final EchoStatus responseStatus = EchoStatus.newBuilder()
+                                                    .setCode(errorCode)
+                                                    .setMessage(errorMessage)
+                                                    .build();
+        final SimpleRequest simpleRequest = SimpleRequest.newBuilder()
+                                                         .setResponseStatus(responseStatus)
+                                                         .build();
+        final StreamingOutputCallRequest streamingRequest = StreamingOutputCallRequest.newBuilder()
+                                                                                      .setResponseStatus(
                                                                                         responseStatus)
-                                                                                .build();
+                                                                                      .build();
 
         // Test UnaryCall
-        Throwable t = catchThrowable(() -> blockingStub.unaryCall(simpleRequest));
+        final Throwable t = catchThrowable(() -> blockingStub.unaryCall(simpleRequest));
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
-        StatusRuntimeException e = (StatusRuntimeException) t;
+        final StatusRuntimeException e = (StatusRuntimeException) t;
         assertThat(e.getStatus().getCode()).isEqualTo(Status.UNKNOWN.getCode());
         assertThat(e.getStatus().getDescription()).isEqualTo(errorMessage);
 
         // Test FullDuplexCall
         @SuppressWarnings("unchecked")
-        StreamObserver<StreamingOutputCallResponse> responseObserver =
+        final StreamObserver<StreamingOutputCallResponse> responseObserver =
                 mock(StreamObserver.class);
-        StreamObserver<StreamingOutputCallRequest> requestObserver
+        final StreamObserver<StreamingOutputCallRequest> requestObserver
                 = asyncStub.fullDuplexCall(responseObserver);
         requestObserver.onNext(streamingRequest);
         requestObserver.onCompleted();
 
-        ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
+        final ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
         verify(responseObserver, timeout(operationTimeoutMillis())).onError(captor.capture());
         assertThat(Status.fromThrowable(captor.getValue()).getCode()).isEqualTo(Status.UNKNOWN.getCode());
         assertThat(Status.fromThrowable(captor.getValue()).getDescription()).isEqualTo(errorMessage);
@@ -850,7 +852,7 @@ public class GrpcClientTest {
     /** Sends an rpc to an unimplemented method within TestService. */
     @Test(timeout = 10000)
     public void unimplementedMethod() {
-        Throwable t = catchThrowable(() -> blockingStub.unimplementedCall(Empty.getDefaultInstance()));
+        final Throwable t = catchThrowable(() -> blockingStub.unimplementedCall(Empty.getDefaultInstance()));
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.UNIMPLEMENTED.getCode());
@@ -858,9 +860,9 @@ public class GrpcClientTest {
 
     @Test(timeout = 10000)
     public void unimplementedService() {
-        UnimplementedServiceGrpc.UnimplementedServiceBlockingStub stub =
+        final UnimplementedServiceGrpc.UnimplementedServiceBlockingStub stub =
                 UnimplementedServiceGrpc.newBlockingStub(asyncStub.getChannel());
-        Throwable t = catchThrowable(() -> stub.unimplementedCall(Empty.getDefaultInstance()));
+        final Throwable t = catchThrowable(() -> stub.unimplementedCall(Empty.getDefaultInstance()));
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.UNIMPLEMENTED.getCode());
@@ -869,15 +871,15 @@ public class GrpcClientTest {
     /** Start a fullDuplexCall which the server will not respond, and verify the deadline expires. */
     @Test(timeout = 10000)
     public void timeoutOnSleepingServer() throws Exception {
-        TestServiceStub stub = Clients.newDerivedClient(
+        final TestServiceStub stub = Clients.newDerivedClient(
                 asyncStub,
                 ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(1L));
 
-        StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
-        StreamObserver<StreamingOutputCallRequest> requestObserver
+        final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
+        final StreamObserver<StreamingOutputCallRequest> requestObserver
                 = stub.fullDuplexCall(responseObserver);
 
-        StreamingOutputCallRequest request =
+        final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest
                         .newBuilder()
                         .setPayload(Payload.newBuilder()

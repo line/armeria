@@ -156,11 +156,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testSync_HelloService_hello() throws Exception {
-        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
         invoke(service);
@@ -170,11 +170,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testAsync_HelloService_hello() throws Exception {
-        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete("Hello, " + name + '!'), defaultSerializationFormat);
 
@@ -185,11 +185,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testSync_HelloService_hello_with_null() throws Exception {
-        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(null);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (HelloService.Iface) name -> String.valueOf(name != null), defaultSerializationFormat);
 
         invoke(service);
@@ -199,11 +199,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testAsync_HelloService_hello_with_null() throws Exception {
-        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(null);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete(String.valueOf(name != null)), defaultSerializationFormat);
 
@@ -214,14 +214,14 @@ public class ThriftServiceTest {
 
     @Test
     public void testIdentity_HelloService_hello() throws Exception {
-        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService syncService = THttpService.of(
+        final THttpService syncService = THttpService.of(
                 (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
-        THttpService asyncService = THttpService.of(
+        final THttpService asyncService = THttpService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete("Hello, " + name + '!'), defaultSerializationFormat);
 
@@ -234,11 +234,12 @@ public class ThriftServiceTest {
     public void testSync_OnewayHelloService_hello() throws Exception {
         final AtomicReference<String> actualName = new AtomicReference<>();
 
-        OnewayHelloService.Client client = new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
+        final OnewayHelloService.Client client =
+                new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (OnewayHelloService.Iface) actualName::set, defaultSerializationFormat);
 
         invoke(service);
@@ -251,11 +252,12 @@ public class ThriftServiceTest {
     public void testAsync_OnewayHelloService_hello() throws Exception {
         final AtomicReference<String> actualName = new AtomicReference<>();
 
-        OnewayHelloService.Client client = new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
+        final OnewayHelloService.Client client =
+                new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
+        final THttpService service = THttpService.of((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
             actualName.set(name);
             resultHandler.onComplete(null);
         }, defaultSerializationFormat);
@@ -270,11 +272,11 @@ public class ThriftServiceTest {
     public void testSync_DevNullService_consume() throws Exception {
         final AtomicReference<String> consumed = new AtomicReference<>();
 
-        DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
+        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (DevNullService.Iface) consumed::set, defaultSerializationFormat);
 
         invoke(service);
@@ -288,11 +290,11 @@ public class ThriftServiceTest {
     public void testAsync_DevNullService_consume() throws Exception {
         final AtomicReference<String> consumed = new AtomicReference<>();
 
-        DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
+        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume("bar");
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of((DevNullService.AsyncIface) (value, resultHandler) -> {
+        final THttpService service = THttpService.of((DevNullService.AsyncIface) (value, resultHandler) -> {
             consumed.set(value);
             resultHandler.onComplete(null);
         }, defaultSerializationFormat);
@@ -306,15 +308,15 @@ public class ThriftServiceTest {
 
     @Test
     public void testIdentity_DevNullService_consume() throws Exception {
-        DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
+        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService syncService = THttpService.of((DevNullService.Iface) value -> {
+        final THttpService syncService = THttpService.of((DevNullService.Iface) value -> {
             // NOOP
         }, defaultSerializationFormat);
 
-        THttpService asyncService = THttpService.of(
+        final THttpService asyncService = THttpService.of(
                 (DevNullService.AsyncIface) (value, resultHandler) ->
                         resultHandler.onComplete(null), defaultSerializationFormat);
 
@@ -325,11 +327,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testSync_FileService_create_reply() throws Exception {
-        FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of((FileService.Iface) path -> {
+        final THttpService service = THttpService.of((FileService.Iface) path -> {
             throw newFileServiceException();
         }, defaultSerializationFormat);
 
@@ -345,11 +347,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testAsync_FileService_create_reply() throws Exception {
-        FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
                         resultHandler.onError(newFileServiceException()), defaultSerializationFormat);
 
@@ -365,15 +367,15 @@ public class ThriftServiceTest {
 
     @Test
     public void testIdentity_FileService_create_reply() throws Exception {
-        FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService syncService = THttpService.of((FileService.Iface) path -> {
+        final THttpService syncService = THttpService.of((FileService.Iface) path -> {
             throw newFileServiceException();
         }, defaultSerializationFormat);
 
-        THttpService asyncService = THttpService.of(
+        final THttpService asyncService = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
                         resultHandler.onError(newFileServiceException()), defaultSerializationFormat);
 
@@ -384,12 +386,12 @@ public class ThriftServiceTest {
 
     @Test
     public void testSync_FileService_create_exception() throws Exception {
-        FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
         assertThat(out.length()).isGreaterThan(0);
 
-        RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
-        THttpService service = THttpService.of((FileService.Iface) path -> {
+        final RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
+        final THttpService service = THttpService.of((FileService.Iface) path -> {
             throw exception;
         }, defaultSerializationFormat);
 
@@ -406,12 +408,12 @@ public class ThriftServiceTest {
 
     @Test
     public void testAsync_FileService_create_exception() throws Exception {
-        FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
         assertThat(out.length()).isGreaterThan(0);
 
-        RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
-        THttpService service = THttpService.of(
+        final RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
+        final THttpService service = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
                         resultHandler.onError(exception), defaultSerializationFormat);
 
@@ -428,16 +430,16 @@ public class ThriftServiceTest {
 
     @Test
     public void testIdentity_FileService_create_exception() throws Exception {
-        FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
         assertThat(out.length()).isGreaterThan(0);
 
-        RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
-        THttpService syncService = THttpService.of((FileService.Iface) path -> {
+        final RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
+        final THttpService syncService = THttpService.of((FileService.Iface) path -> {
             throw exception;
         }, defaultSerializationFormat);
 
-        THttpService asyncService = THttpService.of(
+        final THttpService asyncService = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
                         resultHandler.onError(exception), defaultSerializationFormat);
 
@@ -448,11 +450,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testSync_NameService_removeMiddle() throws Exception {
-        NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
+        final NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
         invoke(service);
@@ -462,11 +464,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testAsync_NameService_removeMiddle() throws Exception {
-        NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
+        final NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of(
+        final THttpService service = THttpService.of(
                 (NameService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete(new Name(name.first, null, name.last)),
                 defaultSerializationFormat);
@@ -478,14 +480,14 @@ public class ThriftServiceTest {
 
     @Test
     public void testIdentity_NameService_removeMiddle() throws Exception {
-        NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
+        final NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(FOO, BAZ, BAR));
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService syncService = THttpService.of(
+        final THttpService syncService = THttpService.of(
                 (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
-        THttpService asyncService = THttpService.of(
+        final THttpService asyncService = THttpService.of(
                 (NameService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete(new Name(name.first, null, name.last)),
                 defaultSerializationFormat);
@@ -497,12 +499,12 @@ public class ThriftServiceTest {
 
     @Test
     public void testSync_NameSortService_sort() throws Exception {
-        NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
+        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of((NameSortService.Iface) names -> {
-            ArrayList<Name> sorted = new ArrayList<>(names);
+        final THttpService service = THttpService.of((NameSortService.Iface) names -> {
+            final ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             return sorted;
         }, defaultSerializationFormat);
@@ -514,12 +516,12 @@ public class ThriftServiceTest {
 
     @Test
     public void testAsync_NameSortService_sort() throws Exception {
-        NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
+        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService service = THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
-            ArrayList<Name> sorted = new ArrayList<>(names);
+        final THttpService service = THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
+            final ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             resultHandler.onComplete(sorted);
         }, defaultSerializationFormat);
@@ -531,21 +533,22 @@ public class ThriftServiceTest {
 
     @Test
     public void testIdentity_NameSortService_sort() throws Exception {
-        NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
+        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
-        THttpService syncService = THttpService.of((NameSortService.Iface) names -> {
-            ArrayList<Name> sorted = new ArrayList<>(names);
+        final THttpService syncService = THttpService.of((NameSortService.Iface) names -> {
+            final ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             return sorted;
         }, defaultSerializationFormat);
 
-        THttpService asyncService = THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
-            ArrayList<Name> sorted = new ArrayList<>(names);
-            Collections.sort(sorted);
-            resultHandler.onComplete(sorted);
-        }, defaultSerializationFormat);
+        final THttpService asyncService =
+                THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
+                    final ArrayList<Name> sorted = new ArrayList<>(names);
+                    Collections.sort(sorted);
+                    resultHandler.onComplete(sorted);
+                }, defaultSerializationFormat);
 
         invokeTwice(syncService, asyncService);
 
@@ -554,11 +557,11 @@ public class ThriftServiceTest {
 
     @Test
     public void testBinary() throws Exception {
-        BinaryService.Client client = new BinaryService.Client.Factory().getClient(inProto, outProto);
+        final BinaryService.Client client = new BinaryService.Client.Factory().getClient(inProto, outProto);
         client.send_process(ByteBuffer.wrap(new byte[] { 1, 2 }));
 
-        THttpService service = THttpService.of((BinaryService.Iface) data -> {
-            ByteBuffer result = ByteBuffer.allocate(data.remaining());
+        final THttpService service = THttpService.of((BinaryService.Iface) data -> {
+            final ByteBuffer result = ByteBuffer.allocate(data.remaining());
             for (int i = data.position(), j = 0; i < data.limit(); i++, j++) {
                 result.put(j, (byte) (data.get(i) + 1));
             }
@@ -567,10 +570,10 @@ public class ThriftServiceTest {
 
         invoke(service);
 
-        ByteBuffer result = client.recv_process();
+        final ByteBuffer result = client.recv_process();
 
         // Convert the result into a Byte[] for more comprehensive comparison.
-        List<Byte> out = new ArrayList<>();
+        final List<Byte> out = new ArrayList<>();
         for (int i = result.position(); i < result.limit(); i++) {
             out.add(result.get(i));
         }
@@ -580,7 +583,7 @@ public class ThriftServiceTest {
 
     @Test
     public void testMultipleInheritance() throws Exception {
-        NameService.Client client1 = new NameService.Client.Factory().getClient(inProto, outProto);
+        final NameService.Client client1 = new NameService.Client.Factory().getClient(inProto, outProto);
         client1.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
@@ -589,7 +592,8 @@ public class ThriftServiceTest {
         out = new TMemoryBuffer(128);
         outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
 
-        NameSortService.Client client2 = new NameSortService.Client.Factory().getClient(inProto, outProto);
+        final NameSortService.Client client2 =
+                new NameSortService.Client.Factory().getClient(inProto, outProto);
         client2.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 

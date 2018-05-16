@@ -37,9 +37,9 @@ public final class GrpcJsonUtil {
      * registered.
      */
     public static MessageMarshaller jsonMarshaller(List<MethodDescriptor<?, ?>> methods) {
-        MessageMarshaller.Builder builder = MessageMarshaller.builder()
-                                                             .omittingInsignificantWhitespace(true)
-                                                             .ignoringUnknownFields(true);
+        final MessageMarshaller.Builder builder = MessageMarshaller.builder()
+                                                                   .omittingInsignificantWhitespace(true)
+                                                                   .ignoringUnknownFields(true);
         for (MethodDescriptor<?, ?> method : methods) {
             marshallerPrototype(method.getRequestMarshaller()).ifPresent(builder::register);
             marshallerPrototype(method.getResponseMarshaller()).ifPresent(builder::register);
@@ -49,7 +49,7 @@ public final class GrpcJsonUtil {
 
     private static Optional<Message> marshallerPrototype(Marshaller<?> marshaller) {
         if (marshaller instanceof PrototypeMarshaller) {
-            Object prototype = ((PrototypeMarshaller) marshaller).getMessagePrototype();
+            final Object prototype = ((PrototypeMarshaller<?>) marshaller).getMessagePrototype();
             if (prototype instanceof Message) {
                 return Optional.of((Message) prototype);
             }

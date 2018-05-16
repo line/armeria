@@ -228,7 +228,7 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
         public void run() {
             isRun = true;
 
-            ScheduledFuture<?> timeoutFuture = get();
+            final ScheduledFuture<?> timeoutFuture = get();
             if (timeoutFuture != null) {
                 if (timeoutFuture.isDone() || !timeoutFuture.cancel(false)) {
                     // Timeout task ran already or is determined to run.

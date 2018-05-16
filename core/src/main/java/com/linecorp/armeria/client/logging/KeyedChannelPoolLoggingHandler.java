@@ -83,7 +83,7 @@ public class KeyedChannelPoolLoggingHandler implements KeyedChannelPoolHandler<P
 
         @SuppressWarnings("checkstyle:fallthrough")
         StringBuilder status(EventType eventType, StringBuilder buf) {
-            long currentNanos = ticker.read();
+            final long currentNanos = ticker.read();
             switch (eventType) {
             case ACQUIRED:
                 buf.append("was idle for ");

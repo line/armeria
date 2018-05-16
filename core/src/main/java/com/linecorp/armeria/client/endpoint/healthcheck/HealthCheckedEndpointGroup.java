@@ -85,15 +85,15 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private CompletableFuture<Void> checkAndUpdateHealthyServers() {
-        List<ServerConnection> checkedServers = updateServerList();
+        final List<ServerConnection> checkedServers = updateServerList();
 
-        CompletableFuture<List<Boolean>> healthCheckResults = CompletableFutures.successfulAsList(
+        final CompletableFuture<List<Boolean>> healthCheckResults = CompletableFutures.successfulAsList(
                 checkedServers.stream()
                               .map(connection -> connection.healthChecker.isHealthy(connection.endpoint()))
                               .collect(toImmutableList()),
                 t -> false);
         return healthCheckResults.handle(voidFunction((result, thrown) -> {
-            ImmutableList.Builder<Endpoint> newHealthyEndpoints = ImmutableList.builder();
+            final ImmutableList.Builder<Endpoint> newHealthyEndpoints = ImmutableList.builder();
             for (int i = 0; i < result.size(); i++) {
                 if (result.get(i)) {
                     newHealthyEndpoints.add(checkedServers.get(i).endpoint());
@@ -107,7 +107,7 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * Update the servers this health checker client talks to.
      */
     private List<ServerConnection> updateServerList() {
-        Map<Endpoint, ServerConnection> allServersByEndpoint = allServers
+        final Map<Endpoint, ServerConnection> allServersByEndpoint = allServers
                 .stream()
                 .collect(toImmutableMap(ServerConnection::endpoint,
                                         Function.identity()));
@@ -147,7 +147,7 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
+        final StringBuilder buf = new StringBuilder();
         buf.append("HealthCheckedEndpointGroup(all:[");
         for (ServerConnection connection : allServers) {
             buf.append(connection.endpoint).append(',');

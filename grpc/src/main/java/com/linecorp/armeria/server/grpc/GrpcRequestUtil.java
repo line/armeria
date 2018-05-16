@@ -28,11 +28,11 @@ final class GrpcRequestUtil {
     @Nullable
     static String determineMethod(ServiceRequestContext ctx) {
         // Remove the leading slash of the path and get the fully qualified method name
-        String path = ctx.mappedPath();
+        final String path = ctx.mappedPath();
         if (path.charAt(0) != '/') {
             return null;
         }
-        return path.substring(1, path.length());
+        return path.substring(1);
     }
 
     private GrpcRequestUtil() {}

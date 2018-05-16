@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -59,6 +61,7 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
      * Converts the specified {@link AggregatedHttpMessage} to an object of {@code expectedResultType}.
      */
     @Override
+    @Nullable
     public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                  Class<?> expectedResultType) throws Exception {
 

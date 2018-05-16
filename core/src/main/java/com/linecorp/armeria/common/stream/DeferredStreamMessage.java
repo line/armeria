@@ -44,12 +44,12 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DeferredStreamMessage.class, SubscriptionImpl.class, "subscription");
 
-    @SuppressWarnings({ "AtomicFieldUpdaterIssues", "rawtypes" })
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, StreamMessage> delegateUpdater =
             AtomicReferenceFieldUpdater.newUpdater(
                     DeferredStreamMessage.class, StreamMessage.class, "delegate");
 
-    @SuppressWarnings({ "AtomicFieldUpdaterIssues", "rawtypes" })
+    @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<DeferredStreamMessage>
             subscribedToDelegateUpdater =
             AtomicIntegerFieldUpdater.newUpdater(
@@ -79,6 +79,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     // Only accessed from subscription's executor.
     private long pendingDemand;
 
+    @SuppressWarnings("unused")
     private volatile int abortPending; // 0 - false, 1 - true
 
     // Only accessed from subscription's executor.

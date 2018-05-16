@@ -42,8 +42,8 @@ public class FixedStreamMessageTest extends AbstractStreamMessageTest {
         this.num = num;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
     <T> StreamMessage<T> newStream(List<T> inputs) {
         return StreamMessage.of((T[]) inputs.toArray());
     }

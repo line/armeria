@@ -90,7 +90,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-            HttpResponseWriter res = streaming();
+            final HttpResponseWriter res = streaming();
             res.write(HttpHeaders.of(status));
             return res;
         } else if (isContentAlwaysEmpty(status)) {

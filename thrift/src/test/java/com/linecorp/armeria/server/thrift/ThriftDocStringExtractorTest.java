@@ -31,11 +31,11 @@ import com.google.common.io.Resources;
  */
 public class ThriftDocStringExtractorTest {
 
-    private ThriftDocStringExtractor extractor = new ThriftDocStringExtractor();
+    private final ThriftDocStringExtractor extractor = new ThriftDocStringExtractor();
 
     @Test
     public void testThriftTestJson() throws Exception {
-        Map<String, String> docStrings = extractor.getDocStringsFromFiles(
+        final Map<String, String> docStrings = extractor.getDocStringsFromFiles(
                 ImmutableMap.of(
                         "META-INF/armeria/thrift/ThriftTest.json",
                         Resources.toByteArray(Resources.getResource(
@@ -47,7 +47,7 @@ public class ThriftDocStringExtractorTest {
 
     @Test
     public void testCassandraJson() throws Exception {
-        Map<String, String> docStrings = extractor.getDocStringsFromFiles(
+        final Map<String, String> docStrings = extractor.getDocStringsFromFiles(
                 ImmutableMap.of(
                         "META-INF/armeria/thrift/ThriftTest.json",
                         Resources.toByteArray(Resources.getResource(
@@ -60,7 +60,7 @@ public class ThriftDocStringExtractorTest {
 
     @Test
     public void testGetAllDocStrings() throws IOException {
-        Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
+        final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
         assertThat(docStrings.containsKey("thrift.test.Numberz")).isTrue();
         assertThat(
                 docStrings.containsKey("com.linecorp.armeria.service.test.thrift.cassandra.Compression"))

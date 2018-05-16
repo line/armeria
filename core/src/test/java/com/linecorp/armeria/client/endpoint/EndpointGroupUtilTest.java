@@ -16,38 +16,51 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static com.linecorp.armeria.client.endpoint.EndpointGroupUtil.getEndpointGroupName;
+import static com.linecorp.armeria.client.endpoint.EndpointGroupUtil.replaceEndpointGroup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 
 public class EndpointGroupUtilTest {
-    String endpointGroupMark = "group:";
+
+    private static final String endpointGroupMark = "group:";
 
     @Test
     public void testGetEndpointGroupName() throws Exception {
-        assertNull(EndpointGroupUtil.getEndpointGroupName("http://myGroupName/"));
-        assertNull(EndpointGroupUtil.getEndpointGroupName("http://myGroupName:8080/xxx"));
-        assertNull(EndpointGroupUtil.getEndpointGroupName("http://group1:myGroupName:8080/"));
-        assertNull(EndpointGroupUtil.getEndpointGroupName("http://username:password@myGroupName:8080/"));
+        assertNull(getEndpointGroupName("http://myGroupName/"));
+        assertNull(getEndpointGroupName("http://myGroupName:8080/xxx"));
+        assertNull(getEndpointGroupName("http://group1:myGroupName:8080/"));
+        assertNull(getEndpointGroupName("http://username:password@myGroupName:8080/"));
 
-        assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://" + endpointGroupMark + "myGroupName/"));
-        assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://" + endpointGroupMark + "myGroupName:8080/"));
-        assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://" + endpointGroupMark + "myGroupName:8080/"));
-        assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://username:password@" + endpointGroupMark + "myGroupName:8080/"));
+        assertEquals("myGroupName", getEndpointGroupName("http://" + endpointGroupMark + "myGroupName/"));
+        assertEquals("myGroupName", getEndpointGroupName("http://" + endpointGroupMark + "myGroupName:8080/"));
+        assertEquals("myGroupName", getEndpointGroupName("http://" + endpointGroupMark + "myGroupName:8080/"));
+        assertEquals("myGroupName", getEndpointGroupName("http://username:password@" + endpointGroupMark +
+                                                         "myGroupName:8080/"));
     }
 
     @Test
     public void testReplace() throws Exception {
-        String replacement = "127.0.0.1:1234";
-        assertEquals("http://myGroupName/", EndpointGroupUtil.replaceEndpointGroup("http://myGroupName/", replacement));
-        assertEquals("http://myGroupName:8080/xxx", EndpointGroupUtil.replaceEndpointGroup("http://myGroupName:8080/xxx", replacement));
-        assertEquals("http://group1:myGroupName:8080/", EndpointGroupUtil.replaceEndpointGroup("http://group1:myGroupName:8080/", replacement));
-        assertEquals("http://username:password@myGroupName:8080/", EndpointGroupUtil.replaceEndpointGroup("http://username:password@myGroupName:8080/", replacement));
+        final String replacement = "127.0.0.1:1234";
+        assertEquals("http://myGroupName/",
+                     replaceEndpointGroup("http://myGroupName/", replacement));
+        assertEquals("http://myGroupName:8080/xxx",
+                     replaceEndpointGroup("http://myGroupName:8080/xxx", replacement));
+        assertEquals("http://group1:myGroupName:8080/",
+                     replaceEndpointGroup("http://group1:myGroupName:8080/", replacement));
+        assertEquals("http://username:password@myGroupName:8080/",
+                     replaceEndpointGroup("http://username:password@myGroupName:8080/", replacement));
 
-        assertEquals("http://127.0.0.1:1234/", EndpointGroupUtil.replaceEndpointGroup("http://" + endpointGroupMark + "myGroupName/", replacement));
-        assertEquals("http://127.0.0.1:1234/", EndpointGroupUtil.replaceEndpointGroup("http://" + endpointGroupMark + "myGroupName:8080/", replacement));
-        assertEquals("http://127.0.0.1:1234/xxx", EndpointGroupUtil.replaceEndpointGroup("http://" + endpointGroupMark + "myGroupName:8080/xxx", replacement));
-        assertEquals("http://username:password@127.0.0.1:1234/xxx", EndpointGroupUtil.replaceEndpointGroup("http://username:password@" + endpointGroupMark + "myGroupName:8080/xxx", replacement));
+        assertEquals("http://127.0.0.1:1234/",
+                     replaceEndpointGroup("http://" + endpointGroupMark + "myGroupName/", replacement));
+        assertEquals("http://127.0.0.1:1234/",
+                     replaceEndpointGroup("http://" + endpointGroupMark + "myGroupName:8080/", replacement));
+        assertEquals("http://127.0.0.1:1234/xxx",
+                     replaceEndpointGroup("http://" + endpointGroupMark + "myGroupName:8080/xxx", replacement));
+        assertEquals("http://username:password@127.0.0.1:1234/xxx",
+                     replaceEndpointGroup("http://username:password@" + endpointGroupMark +
+                                          "myGroupName:8080/xxx", replacement));
     }
 }

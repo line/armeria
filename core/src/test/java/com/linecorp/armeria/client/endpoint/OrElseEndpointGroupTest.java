@@ -26,9 +26,9 @@ import com.linecorp.armeria.client.Endpoint;
 public class OrElseEndpointGroupTest {
     @Test
     public void updateFirstEndpoints() {
-        DynamicEndpointGroup firstEndpointGroup = new DynamicEndpointGroup();
-        DynamicEndpointGroup secondEndpointGroup = new DynamicEndpointGroup();
-        EndpointGroup endpointGroup = new OrElseEndpointGroup(firstEndpointGroup, secondEndpointGroup);
+        final DynamicEndpointGroup firstEndpointGroup = new DynamicEndpointGroup();
+        final DynamicEndpointGroup secondEndpointGroup = new DynamicEndpointGroup();
+        final EndpointGroup endpointGroup = new OrElseEndpointGroup(firstEndpointGroup, secondEndpointGroup);
 
         firstEndpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111),
                                                          Endpoint.of("127.0.0.1", 2222)));
@@ -47,9 +47,9 @@ public class OrElseEndpointGroupTest {
 
     @Test
     public void updateSecondEndpoints() {
-        DynamicEndpointGroup firstEndpointGroup = new DynamicEndpointGroup();
-        DynamicEndpointGroup secondEndpointGroup = new DynamicEndpointGroup();
-        EndpointGroup endpointGroup = new OrElseEndpointGroup(firstEndpointGroup, secondEndpointGroup);
+        final DynamicEndpointGroup firstEndpointGroup = new DynamicEndpointGroup();
+        final DynamicEndpointGroup secondEndpointGroup = new DynamicEndpointGroup();
+        final EndpointGroup endpointGroup = new OrElseEndpointGroup(firstEndpointGroup, secondEndpointGroup);
 
         secondEndpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111),
                                                           Endpoint.of("127.0.0.1", 2222)));

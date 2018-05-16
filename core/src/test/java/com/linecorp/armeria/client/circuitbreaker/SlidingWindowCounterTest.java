@@ -38,16 +38,16 @@ public class SlidingWindowCounterTest {
 
     @Test
     public void testInitialState() {
-        SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
-                                                                Duration.ofSeconds(1));
+        final SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
+                                                                      Duration.ofSeconds(1));
 
         assertThat(counter.count()).isEqualTo(new EventCount(0, 0));
     }
 
     @Test
     public void testOnSuccess() {
-        SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
-                                                                Duration.ofSeconds(1));
+        final SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
+                                                                      Duration.ofSeconds(1));
 
         assertThat(counter.onSuccess()).isEmpty();
 
@@ -58,8 +58,8 @@ public class SlidingWindowCounterTest {
 
     @Test
     public void testOnFailure() {
-        SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
-                                                                Duration.ofSeconds(1));
+        final SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
+                                                                      Duration.ofSeconds(1));
 
         assertThat(counter.onFailure()).isEmpty();
 
@@ -70,8 +70,8 @@ public class SlidingWindowCounterTest {
 
     @Test
     public void testTrim() {
-        SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
-                                                                Duration.ofSeconds(1));
+        final SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
+                                                                      Duration.ofSeconds(1));
 
         assertThat(counter.onSuccess()).isEmpty();
         assertThat(counter.onFailure()).isEmpty();
@@ -87,28 +87,28 @@ public class SlidingWindowCounterTest {
 
     @Test
     public void testConcurrentAccess() throws InterruptedException {
-        SlidingWindowCounter counter = new SlidingWindowCounter(Ticker.systemTicker(), Duration.ofMinutes(5),
-                                                                Duration.ofMillis(1));
+        final SlidingWindowCounter counter = new SlidingWindowCounter(
+                Ticker.systemTicker(), Duration.ofMinutes(5), Duration.ofMillis(1));
 
-        int worker = 6;
-        int batch = 100000;
+        final int worker = 6;
+        final int batch = 100000;
 
-        AtomicLong success = new AtomicLong();
-        AtomicLong failure = new AtomicLong();
+        final AtomicLong success = new AtomicLong();
+        final AtomicLong failure = new AtomicLong();
 
-        CyclicBarrier barrier = new CyclicBarrier(worker);
+        final CyclicBarrier barrier = new CyclicBarrier(worker);
 
-        List<Thread> threads = new ArrayList<>(worker);
+        final List<Thread> threads = new ArrayList<>(worker);
 
         for (int i = 0; i < worker; i++) {
-            Thread t = new Thread(() -> {
+            final Thread t = new Thread(() -> {
                 try {
                     barrier.await();
 
                     long s = 0;
                     long f = 0;
                     for (int j = 0; j < batch; j++) {
-                        double r = ThreadLocalRandom.current().nextDouble();
+                        final double r = ThreadLocalRandom.current().nextDouble();
                         if (r > 0.6) {
                             counter.onSuccess();
                             s++;
@@ -138,8 +138,8 @@ public class SlidingWindowCounterTest {
 
     @Test
     public void testLateBucket() {
-        SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
-                                                                Duration.ofSeconds(1));
+        final SlidingWindowCounter counter = new SlidingWindowCounter(ticker, Duration.ofSeconds(10),
+                                                                      Duration.ofSeconds(1));
 
         ticker.advance(-1, TimeUnit.SECONDS);
         assertThat(counter.onSuccess()).isEmpty();

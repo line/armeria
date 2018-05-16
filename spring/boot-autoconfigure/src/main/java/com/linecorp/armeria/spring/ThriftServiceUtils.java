@@ -39,15 +39,19 @@ import com.linecorp.armeria.server.thrift.THttpService;
  * are not populated in dependency list.
  */
 final class ThriftServiceUtils {
+    @Nullable
     private static final Class<?> thriftServiceClass;
+    @Nullable
     private static final Method entriesMethod;
+    @Nullable
     private static final Method interfacesMethod;
 
     static {
         thriftServiceClass = findClass("com.linecorp.armeria.server.thrift.THttpService");
         entriesMethod = thriftServiceClass != null ? findMethod(thriftServiceClass, "entries") : null;
 
-        Class<?> thriftServiceEntryClass = findClass("com.linecorp.armeria.server.thrift.ThriftServiceEntry");
+        final Class<?> thriftServiceEntryClass =
+                findClass("com.linecorp.armeria.server.thrift.ThriftServiceEntry");
         interfacesMethod = thriftServiceEntryClass != null ? findMethod(thriftServiceEntryClass,
                                                                         "interfaces") : null;
     }

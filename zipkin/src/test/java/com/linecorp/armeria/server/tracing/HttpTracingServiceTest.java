@@ -59,14 +59,14 @@ public class HttpTracingServiceTest {
 
     @Test(timeout = 20000)
     public void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
-        SpanCollectingReporter reporter = testServiceInvocation(1.0f);
+        final SpanCollectingReporter reporter = testServiceInvocation(1.0f);
 
         // check span name
-        Span span = reporter.spans().take();
+        final Span span = reporter.spans().take();
         assertThat(span.name()).isEqualTo(TEST_METHOD);
 
         // check kind
-        assertThat(span.kind() == Kind.SERVER);
+        assertThat(span.kind()).isSameAs(Kind.SERVER);
 
         // only one span should be submitted
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
@@ -88,23 +88,23 @@ public class HttpTracingServiceTest {
 
     @Test
     public void shouldNotSubmitSpanWhenRequestIsNotSampled() throws Exception {
-        SpanCollectingReporter reporter = testServiceInvocation(0.0f);
+        final SpanCollectingReporter reporter = testServiceInvocation(0.0f);
 
         // don't submit any spans
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
     private static SpanCollectingReporter testServiceInvocation(float samplingRate) throws Exception {
-        SpanCollectingReporter reporter = new SpanCollectingReporter();
+        final SpanCollectingReporter reporter = new SpanCollectingReporter();
 
-        Tracing tracing = Tracing.newBuilder()
-                                 .localServiceName(TEST_SERVICE)
-                                 .spanReporter(reporter)
-                                 .sampler(Sampler.create(samplingRate))
-                                 .build();
+        final Tracing tracing = Tracing.newBuilder()
+                                       .localServiceName(TEST_SERVICE)
+                                       .spanReporter(reporter)
+                                       .sampler(Sampler.create(samplingRate))
+                                       .build();
 
         @SuppressWarnings("unchecked")
-        Service<HttpRequest, HttpResponse> delegate = mock(Service.class);
+        final Service<HttpRequest, HttpResponse> delegate = mock(Service.class);
 
         final HttpTracingService stub = new HttpTracingService(delegate, tracing);
 

@@ -68,7 +68,7 @@ public class DefaultStreamMessageVerification extends StreamMessageVerification<
 
     @Override
     public StreamMessage<Long> createFailedPublisher() {
-        DefaultStreamMessage<Long> stream = new DefaultStreamMessage<>();
+        final DefaultStreamMessage<Long> stream = new DefaultStreamMessage<>();
         stream.subscribe(new NoopSubscriber<>());
         return stream;
     }

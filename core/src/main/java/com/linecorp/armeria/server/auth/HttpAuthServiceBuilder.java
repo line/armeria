@@ -110,7 +110,7 @@ public final class HttpAuthServiceBuilder {
         requireNonNull(tokenExtractor, "tokenExtractor");
         requireNonNull(authorizer, "authorizer");
         final Authorizer<HttpRequest> requestAuthorizer = (ctx, req) -> {
-            T token = tokenExtractor.apply(req.headers());
+            final T token = tokenExtractor.apply(req.headers());
             if (token == null) {
                 return CompletableFuture.completedFuture(false);
             }

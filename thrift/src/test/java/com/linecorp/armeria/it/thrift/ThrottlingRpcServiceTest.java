@@ -71,7 +71,7 @@ public class ThrottlingRpcServiceTest {
 
     @Test
     public void serve() throws Exception {
-        HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-always"))
+        final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-always"))
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello("foo")).thenReturn("bar");
 
@@ -80,7 +80,7 @@ public class ThrottlingRpcServiceTest {
 
     @Test
     public void throttle() throws Exception {
-        HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-never"))
+        final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-never"))
                 .build(HelloService.Iface.class);
 
         assertThatThrownBy(() -> client.hello("foo")).isInstanceOf(TApplicationException.class);

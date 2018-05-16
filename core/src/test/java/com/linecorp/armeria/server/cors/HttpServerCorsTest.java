@@ -77,8 +77,8 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsPreflight() throws Exception {
-        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.OPTIONS, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
                            .set(HttpHeaderNames.ORIGIN, "http://example.com")
@@ -92,8 +92,8 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsAllowed() throws Exception {
-        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
                            .set(HttpHeaderNames.ORIGIN, "http://example.com")
@@ -105,8 +105,8 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsAccessControlHeaders() throws Exception {
-        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.OPTIONS, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
                            .set(HttpHeaderNames.ORIGIN, "http://example.com")
@@ -121,8 +121,8 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsExposeHeaders() throws Exception {
-        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
                            .set(HttpHeaderNames.ORIGIN, "http://example.com")
@@ -138,8 +138,8 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsForbidden() throws Exception {
-        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
                            .set(HttpHeaderNames.ORIGIN, "http://example.org")

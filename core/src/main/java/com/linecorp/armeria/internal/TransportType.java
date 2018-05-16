@@ -77,7 +77,7 @@ public enum TransportType {
      */
     public EventLoopGroup newEventLoopGroup(int nThreads,
                                             Function<TransportType, ThreadFactory> threadFactoryFactory) {
-        ThreadFactory threadFactory = threadFactoryFactory.apply(this);
+        final ThreadFactory threadFactory = threadFactoryFactory.apply(this);
         return eventLoopGroupConstructor.apply(nThreads, threadFactory);
     }
 

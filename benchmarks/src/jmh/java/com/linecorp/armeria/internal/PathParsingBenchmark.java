@@ -31,6 +31,7 @@ public class PathParsingBenchmark {
     private String path2;
 
     @Setup(Level.Invocation)
+    @SuppressWarnings("RedundantStringConstructorCall")
     public void setup() {
         // Create a new String for paths every time to avoid constant folding.
         path1 = new String("/armeria/services/hello-world");
@@ -49,7 +50,7 @@ public class PathParsingBenchmark {
     }
 
     private PathAndQuery doNormal() {
-        PathAndQuery parsed = PathAndQuery.parse(path1);
+        final PathAndQuery parsed = PathAndQuery.parse(path1);
         parsed.storeInCache(path1);
         return parsed;
     }
@@ -66,9 +67,9 @@ public class PathParsingBenchmark {
     }
 
     private PathAndQuery doCachedAndNotCached(Blackhole bh) {
-        PathAndQuery parsed = PathAndQuery.parse(path1);
+        final PathAndQuery parsed = PathAndQuery.parse(path1);
         parsed.storeInCache(path1);
-        PathAndQuery parsed2 = PathAndQuery.parse(path2);
+        final PathAndQuery parsed2 = PathAndQuery.parse(path2);
         bh.consume(parsed2);
         return parsed;
     }

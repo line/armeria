@@ -65,7 +65,7 @@ public class ArmeriaMeterBindersConfigurationTest {
                         }
                     })
                     .setPathMapping(PathMapping.ofExact("/ok"))
-                    .setDecorator(LoggingService.newDecorator());
+                    .setDecorators(LoggingService.newDecorator());
         }
     }
 

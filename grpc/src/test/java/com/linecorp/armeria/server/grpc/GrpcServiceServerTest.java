@@ -183,7 +183,7 @@ public class GrpcServiceServerTest {
                 responseObserver.onError(new IllegalArgumentException("Unexpected request: " + request));
                 return;
             }
-            ServerCallStreamObserver<SimpleResponse> callObserver =
+            final ServerCallStreamObserver<SimpleResponse> callObserver =
                     (ServerCallStreamObserver<SimpleResponse>) responseObserver;
             callObserver.setCompression("gzip");
             callObserver.setMessageCompression(true);
@@ -194,13 +194,13 @@ public class GrpcServiceServerTest {
         @Override
         public StreamObserver<SimpleRequest> checkRequestContext(
                 StreamObserver<SimpleResponse> responseObserver) {
-            RequestContext ctx = RequestContext.current();
+            final RequestContext ctx = RequestContext.current();
             ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).set(0);
             return new StreamObserver<SimpleRequest>() {
                 @Override
                 public void onNext(SimpleRequest value) {
-                    RequestContext ctx = RequestContext.current();
-                    Attribute<Integer> attr = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT);
+                    final RequestContext ctx = RequestContext.current();
+                    final Attribute<Integer> attr = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT);
                     attr.set(attr.get() + 1);
                 }
 
@@ -209,8 +209,8 @@ public class GrpcServiceServerTest {
 
                 @Override
                 public void onCompleted() {
-                    RequestContext ctx = RequestContext.current();
-                    int count = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).get();
+                    final RequestContext ctx = RequestContext.current();
+                    final int count = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).get();
                     responseObserver.onNext(
                             SimpleResponse.newBuilder()
                                           .setPayload(
@@ -308,7 +308,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void streamedOutput_normal() throws Exception {
-        StreamRecorder<SimpleResponse> recorder = StreamRecorder.create();
+        final StreamRecorder<SimpleResponse> recorder = StreamRecorder.create();
         streamingClient.staticStreamedOutputCall(REQUEST_MESSAGE, recorder);
         recorder.awaitCompletion();
         assertThat(recorder.getValues()).containsExactly(RESPONSE_MESSAGE, RESPONSE_MESSAGE);
@@ -316,7 +316,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void error_noMessage() throws Exception {
-        StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+        final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
                 () -> blockingClient.errorNoMessage(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isNull();
@@ -324,7 +324,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void error_withMessage() throws Exception {
-        StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+        final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
                 () -> blockingClient.errorWithMessage(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
@@ -332,7 +332,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void error_thrown_unary() throws Exception {
-        StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+        final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
                 () -> blockingClient.unaryThrowsError(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("call aborted");
@@ -340,29 +340,29 @@ public class GrpcServiceServerTest {
 
     @Test
     public void error_thrown_streamMessage() throws Exception {
-        StreamRecorder<SimpleResponse> response = StreamRecorder.create();
-        StreamObserver<SimpleRequest> request = streamingClient.streamThrowsError(response);
+        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        final StreamObserver<SimpleRequest> request = streamingClient.streamThrowsError(response);
         request.onNext(REQUEST_MESSAGE);
         response.awaitCompletion();
-        StatusRuntimeException t = (StatusRuntimeException) response.getError();
+        final StatusRuntimeException t = (StatusRuntimeException) response.getError();
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming message");
     }
 
     @Test
     public void error_thrown_streamStub() throws Exception {
-        StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
         streamingClient.streamThrowsErrorInStub(response);
         response.awaitCompletion();
-        StatusRuntimeException t = (StatusRuntimeException) response.getError();
+        final StatusRuntimeException t = (StatusRuntimeException) response.getError();
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming stub");
     }
 
     @Test
     public void requestContextSet() throws Exception {
-        StreamRecorder<SimpleResponse> response = StreamRecorder.create();
-        StreamObserver<SimpleRequest> request = streamingClient.checkRequestContext(response);
+        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        final StreamObserver<SimpleRequest> request = streamingClient.checkRequestContext(response);
         request.onNext(REQUEST_MESSAGE);
         request.onNext(REQUEST_MESSAGE);
         request.onNext(REQUEST_MESSAGE);
@@ -378,13 +378,13 @@ public class GrpcServiceServerTest {
 
     @Test
     public void tooLargeRequest_uncompressed() throws Exception {
-        SimpleRequest request = SimpleRequest.newBuilder()
-                                             .setPayload(
+        final SimpleRequest request = SimpleRequest.newBuilder()
+                                                   .setPayload(
                                                      Payload.newBuilder()
                                                             .setBody(ByteString.copyFrom(
                                                                     LARGE_PAYLOAD.toByteArray())))
-                                             .build();
-        StatusRuntimeException t =
+                                                   .build();
+        final StatusRuntimeException t =
                 (StatusRuntimeException) catchThrowable(
                         () -> blockingClient.staticUnaryCall(request));
         // NB: Since gRPC does not support HTTP/1, it just resets the stream with an HTTP/2 CANCEL error code,
@@ -395,13 +395,13 @@ public class GrpcServiceServerTest {
 
     @Test
     public void tooLargeRequest_compressed() throws Exception {
-        SimpleRequest request = SimpleRequest.newBuilder()
-                                             .setPayload(
+        final SimpleRequest request = SimpleRequest.newBuilder()
+                                                   .setPayload(
                                                      Payload.newBuilder()
                                                             .setBody(ByteString.copyFrom(
                                                                     LARGE_PAYLOAD.toByteArray())))
-                                             .build();
-        StatusRuntimeException t =
+                                                   .build();
+        final StatusRuntimeException t =
                 (StatusRuntimeException) catchThrowable(
                         () -> blockingClient.withCompression("gzip").staticUnaryCall(request));
         // NB: Since gRPC does not support HTTP/1, it just resets the stream with an HTTP/2 CANCEL error code,
@@ -412,14 +412,14 @@ public class GrpcServiceServerTest {
 
     @Test
     public void uncompressedClient_compressedEndpoint() throws Exception {
-        ManagedChannel nonDecompressingChannel =
+        final ManagedChannel nonDecompressingChannel =
                 ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
                                      .decompressorRegistry(
                                              DecompressorRegistry.emptyInstance()
                                                                  .with(Codec.Identity.NONE, false))
                                      .usePlaintext()
                                      .build();
-        UnitTestServiceBlockingStub client = UnitTestServiceGrpc.newBlockingStub(nonDecompressingChannel);
+        final UnitTestServiceBlockingStub client = UnitTestServiceGrpc.newBlockingStub(nonDecompressingChannel);
         assertThat(client.staticUnaryCallSetsMessageCompression(REQUEST_MESSAGE))
                 .isEqualTo(RESPONSE_MESSAGE);
         nonDecompressingChannel.shutdownNow();
@@ -441,27 +441,28 @@ public class GrpcServiceServerTest {
         clientSocketClosedBeforeHalfClose("h1c");
     }
 
-    private void clientSocketClosedBeforeHalfClose(String protocol) {
-        ClientFactory factory = new ClientFactoryBuilder().build();
-        UnitTestServiceStub stub =
-                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + "/")
+    private static void clientSocketClosedBeforeHalfClose(String protocol) {
+        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final UnitTestServiceStub stub =
+                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + '/')
                         .factory(factory)
                         .build(UnitTestServiceStub.class);
-        AtomicReference<SimpleResponse> response = new AtomicReference<>();
-        StreamObserver<SimpleRequest> stream = stub.streamClientCancels(new StreamObserver<SimpleResponse>() {
-            @Override
-            public void onNext(SimpleResponse value) {
-                response.set(value);
-            }
+        final AtomicReference<SimpleResponse> response = new AtomicReference<>();
+        final StreamObserver<SimpleRequest> stream = stub.streamClientCancels(
+                new StreamObserver<SimpleResponse>() {
+                    @Override
+                    public void onNext(SimpleResponse value) {
+                        response.set(value);
+                    }
 
-            @Override
-            public void onError(Throwable t) {
-            }
+                    @Override
+                    public void onError(Throwable t) {
+                    }
 
-            @Override
-            public void onCompleted() {
-            }
-        });
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
         stream.onNext(SimpleRequest.getDefaultInstance());
         await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
         factory.close();
@@ -478,13 +479,13 @@ public class GrpcServiceServerTest {
         clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H1C);
     }
 
-    private void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol) {
-        ClientFactory factory = new ClientFactoryBuilder().build();
-        UnitTestServiceStub stub =
+    private static void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol) {
+        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final UnitTestServiceStub stub =
                 new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
                         .factory(factory)
                         .build(UnitTestServiceStub.class);
-        AtomicReference<SimpleResponse> response = new AtomicReference<>();
+        final AtomicReference<SimpleResponse> response = new AtomicReference<>();
         stub.streamClientCancelsBeforeResponseClosedCancels(
                 SimpleRequest.getDefaultInstance(),
                 new StreamObserver<SimpleResponse>() {
@@ -509,13 +510,13 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed() throws Exception {
-        HttpClient client = HttpClient.of(server.httpUri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
                            .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
-        SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
+        final SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
         assertThat(message).isEqualTo(RESPONSE_MESSAGE);
         assertThat(response.headers().getInt(HttpHeaderNames.CONTENT_LENGTH))
                 .isEqualTo(response.content().length());
@@ -523,14 +524,14 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_acceptEncoding() throws Exception {
-        HttpClient client = HttpClient.of(server.httpUri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
                            .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf")
                            .set(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip,none"),
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
-        SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
+        final SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
         assertThat(message).isEqualTo(RESPONSE_MESSAGE);
         assertThat(response.headers().getInt(HttpHeaderNames.CONTENT_LENGTH))
                 .isEqualTo(response.content().length());
@@ -538,8 +539,8 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_streamingApi() throws Exception {
-        HttpClient client = HttpClient.of(server.httpUri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.getStaticStreamedOutputCallMethod().getFullMethodName())
                            .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
@@ -549,8 +550,8 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_noContentType() throws Exception {
-        HttpClient client = HttpClient.of(server.httpUri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName()),
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
@@ -559,8 +560,8 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_grpcEncoding() throws Exception {
-        HttpClient client = HttpClient.of(server.httpUri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
                            .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf")
@@ -571,8 +572,8 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_serviceError() throws Exception {
-        HttpClient client = HttpClient.of(server.httpUri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
                            .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
@@ -586,14 +587,14 @@ public class GrpcServiceServerTest {
 
     @Test
     public void grpcWeb() throws Exception {
-        HttpClient client = HttpClient.of(server.httpUri("/"));
-        AggregatedHttpMessage response = client.execute(
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
                            .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
                 GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
-        byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
-        byte[] serializedTrailers = Bytes.concat(
+        final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
+        final byte[] serializedTrailers = Bytes.concat(
                 new byte[] { ArmeriaServerCall.TRAILERS_FRAME_HEADER },
                 Ints.toByteArray(serializedStatusHeader.length),
                 serializedStatusHeader);
@@ -606,8 +607,8 @@ public class GrpcServiceServerTest {
 
     @Test
     public void json() throws Exception {
-        AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
-        UnitTestServiceBlockingStub jsonStub =
+        final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
+        final UnitTestServiceBlockingStub jsonStub =
                 new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
                         .decorator(HttpRequest.class, HttpResponse.class,
                                    client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
@@ -619,7 +620,7 @@ public class GrpcServiceServerTest {
                                        }
                                    })
                         .build(UnitTestServiceBlockingStub.class);
-        SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
+        final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
         assertThat(response).isEqualTo(RESPONSE_MESSAGE);
         assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("application/grpc+json");
     }

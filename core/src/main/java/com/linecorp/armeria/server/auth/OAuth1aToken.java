@@ -102,11 +102,11 @@ public final class OAuth1aToken {
 
     private OAuth1aToken(Map<String, String> params) {
         // Map builder with default version value.
-        ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
 
         for (Entry<String, String> param : params.entrySet()) {
-            String key = param.getKey();
-            String value = param.getValue();
+            final String key = param.getKey();
+            final String value = param.getValue();
 
             // Empty values are ignored.
             if (!Strings.isNullOrEmpty(value)) {
@@ -124,7 +124,7 @@ public final class OAuth1aToken {
         this.params = builder.build();
 
         if (!this.params.keySet().containsAll(REQUIRED_PARAM_KEYS)) {
-            Set<String> missing = Sets.difference(REQUIRED_PARAM_KEYS, this.params.keySet());
+            final Set<String> missing = Sets.difference(REQUIRED_PARAM_KEYS, this.params.keySet());
             throw new IllegalArgumentException("Missing OAuth1a parameter exists: " + missing);
         }
 
@@ -175,10 +175,10 @@ public final class OAuth1aToken {
      * Returns additional (or, user-defined) parameters.
      */
     public Map<String, String> additionals() {
-        ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-        for (String key : params.keySet()) {
-            if (!DEFINED_PARAM_KEYS.contains(key)) {
-                builder.put(key, params.get(key));
+        final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+        for (Entry<String, String> e : params.entrySet()) {
+            if (!DEFINED_PARAM_KEYS.contains(e.getKey())) {
+                builder.put(e.getKey(), e.getValue());
             }
         }
         return builder.build();
@@ -192,7 +192,7 @@ public final class OAuth1aToken {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        OAuth1aToken that = (OAuth1aToken) o;
+        final OAuth1aToken that = (OAuth1aToken) o;
         return params.equals(that.params);
     }
 

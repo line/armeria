@@ -220,7 +220,7 @@ abstract class TypedParser<T> {
 
         @Override
         void writeValue(JsonGenerator jw, Byte val) throws IOException {
-            String serialized;
+            final String serialized;
             switch (val.byteValue()) {
             case TMessageType.CALL:
                 serialized = "CALL";

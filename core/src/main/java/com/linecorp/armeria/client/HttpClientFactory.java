@@ -239,7 +239,7 @@ final class HttpClientFactory extends AbstractClientFactory {
             final HttpClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
 
             @SuppressWarnings("unchecked")
-            T castClient = (T) client;
+            final T castClient = (T) client;
             return castClient;
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
@@ -271,7 +271,7 @@ final class HttpClientFactory extends AbstractClientFactory {
     public void close() {
         connectionPoolListener.setClosed();
 
-        for (Iterator<KeyedChannelPool<PoolKey>> i = pools.values().iterator(); i.hasNext();) {
+        for (final Iterator<KeyedChannelPool<PoolKey>> i = pools.values().iterator(); i.hasNext();) {
             i.next().close();
             i.remove();
         }
@@ -282,13 +282,13 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {
-        KeyedChannelPool<PoolKey> pool = pools.get(eventLoop);
+        final KeyedChannelPool<PoolKey> pool = pools.get(eventLoop);
         if (pool != null) {
             return pool;
         }
 
         return pools.computeIfAbsent(eventLoop, e -> {
-            Function<PoolKey, Future<Channel>> channelFactory =
+            final Function<PoolKey, Future<Channel>> channelFactory =
                     new HttpSessionChannelFactory(this, eventLoop);
 
             @SuppressWarnings("unchecked")

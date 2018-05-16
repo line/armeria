@@ -353,7 +353,6 @@ final class AnnotatedHttpServices {
      * Adds decorators to the specified {@code list}. Decorators which are annotated with {@link Decorator}
      * and user-defined decorators will be collected.
      */
-    @SuppressWarnings("unchecked")
     private static void collectDecorators(List<DecoratorAndOrder> list, Annotation[] annotations) {
         if (annotations.length == 0) {
             return;
@@ -419,7 +418,6 @@ final class AnnotatedHttpServices {
         // In case of user-defined decorator, we need to create a new decorator from its factory.
         @SuppressWarnings("unchecked")
         final DecoratorFactoryFunction<Annotation> factory = getInstance(d, DecoratorFactoryFunction.class);
-        assert factory != null;
 
         // If the annotation has "order" attribute, we can use it when sorting decorators.
         int order = 0;

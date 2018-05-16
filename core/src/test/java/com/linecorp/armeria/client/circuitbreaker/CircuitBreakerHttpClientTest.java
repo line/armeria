@@ -108,12 +108,12 @@ public class CircuitBreakerHttpClientTest {
     @Test
     public void circuitBreakerIsOpenOnServerError() throws Exception {
         final FakeTicker ticker = new FakeTicker();
-        int minimumRequestThreshold = 2;
+        final int minimumRequestThreshold = 2;
         final Duration circuitOpenWindow = Duration.ofSeconds(60);
         final Duration counterSlidingWindow = Duration.ofSeconds(180);
         final Duration counterUpdateInterval = Duration.ofMillis(1);
 
-        CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName)
+        final CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName)
                 .minimumRequestThreshold(minimumRequestThreshold)
                 .circuitOpenWindow(circuitOpenWindow)
                 .counterSlidingWindow(counterSlidingWindow)

@@ -38,11 +38,10 @@ public class StickyEndpointSelectionStrategyTest {
 
     private static final String STICKY_HEADER_NAME = "USER_COOKIE";
 
-    ToLongFunction<ClientRequestContext> hasher = (ClientRequestContext ctx) -> {
-            return ((HttpRequest) ctx.request()).headers()
-                                                .get(AsciiString.of(STICKY_HEADER_NAME))
-                                                .hashCode();
-    };
+    final ToLongFunction<ClientRequestContext> hasher =
+            (ClientRequestContext ctx) -> ((HttpRequest) ctx.request()).headers()
+                                                                       .get(AsciiString.of(STICKY_HEADER_NAME))
+                                                                       .hashCode();
     final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
 
     private static final EndpointGroup STATIC_ENDPOINT_GROUP = new StaticEndpointGroup(
@@ -65,14 +64,14 @@ public class StickyEndpointSelectionStrategyTest {
 
     @Test
     public void select() {
-        final EndpointSelector selector = strategy.newSelector(STATIC_ENDPOINT_GROUP);
+        assertThat(strategy.newSelector(STATIC_ENDPOINT_GROUP)).isNotNull();
         final int selectTime = 5;
 
-        Endpoint ep1 = EndpointGroupRegistry.selectNode(
+        final Endpoint ep1 = EndpointGroupRegistry.selectNode(
                 contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "static");
-        Endpoint ep2 = EndpointGroupRegistry.selectNode(
+        final Endpoint ep2 = EndpointGroupRegistry.selectNode(
                 contextWithHeader(STICKY_HEADER_NAME, "armeria2"), "static");
-        Endpoint ep3 = EndpointGroupRegistry.selectNode(
+        final Endpoint ep3 = EndpointGroupRegistry.selectNode(
                 contextWithHeader(STICKY_HEADER_NAME, "armeria3"), "static");
 
         // select few times to confirm that same header will be routed to same endpoint
@@ -86,7 +85,7 @@ public class StickyEndpointSelectionStrategyTest {
         }
 
         //confirm rebuild tree of dynamic
-        Endpoint ep4 = Endpoint.parse("localhost:9494");
+        final Endpoint ep4 = Endpoint.parse("localhost:9494");
         DYNAMIC_ENDPOINT_GROUP.addEndpoint(ep4);
         assertThat(EndpointGroupRegistry.selectNode(
                 contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "dynamic")).isEqualTo(ep4);
@@ -99,7 +98,7 @@ public class StickyEndpointSelectionStrategyTest {
     }
 
     private static ClientRequestContext contextWithHeader(String k, String v) {
-        ClientRequestContext ctx = mock(ClientRequestContext.class);
+        final ClientRequestContext ctx = mock(ClientRequestContext.class);
         when(ctx.request()).thenReturn(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
                                                                  .set(AsciiString.of(k), v)));
         return ctx;

@@ -35,9 +35,7 @@ public class VirtualHostBuilder extends AbstractVirtualHostBuilder<VirtualHostBu
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
      */
-    public VirtualHostBuilder() {
-        super();
-    }
+    public VirtualHostBuilder() {}
 
     /**
      * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.

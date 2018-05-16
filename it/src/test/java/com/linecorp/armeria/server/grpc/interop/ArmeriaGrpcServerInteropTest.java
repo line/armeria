@@ -156,11 +156,11 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     @Override
     public void sendsTimeoutHeader() {
-        long configuredTimeoutMinutes = 100;
-        TestServiceGrpc.TestServiceBlockingStub stub =
+        final long configuredTimeoutMinutes = 100;
+        final TestServiceGrpc.TestServiceBlockingStub stub =
                 blockingStub.withDeadlineAfter(configuredTimeoutMinutes, TimeUnit.MINUTES);
         stub.emptyCall(EMPTY);
-        long transferredTimeoutMinutes = TimeUnit.MILLISECONDS.toMinutes(
+        final long transferredTimeoutMinutes = TimeUnit.MILLISECONDS.toMinutes(
                 ctxCapture.get().requestTimeoutMillis());
         Assert.assertTrue(
                 "configuredTimeoutMinutes=" + configuredTimeoutMinutes +

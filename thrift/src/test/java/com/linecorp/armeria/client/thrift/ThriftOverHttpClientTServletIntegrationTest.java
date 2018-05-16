@@ -115,9 +115,9 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     }
 
     private static Server startHttp1() throws Exception {
-        Server server = new Server(0);
+        final Server server = new Server(0);
 
-        ServletHandler handler = new ServletHandler();
+        final ServletHandler handler = new ServletHandler();
         handler.addServletWithMapping(newServletHolder(thriftServlet), TSERVLET_PATH);
         handler.addServletWithMapping(newServletHolder(rootServlet), "/");
         handler.addFilterWithMapping(new FilterHolder(new ConnectionCloseFilter()), "/*",
@@ -148,23 +148,23 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     }
 
     private static Server startHttp2() throws Exception {
-        Server server = new Server();
+        final Server server = new Server();
         // Common HTTP configuration.
-        HttpConfiguration config = new HttpConfiguration();
+        final HttpConfiguration config = new HttpConfiguration();
 
         // HTTP/1.1 support.
-        HttpConnectionFactory http1 = new HttpConnectionFactory(config);
+        final HttpConnectionFactory http1 = new HttpConnectionFactory(config);
 
         // HTTP/2 cleartext support.
-        HTTP2CServerConnectionFactory http2c = new HTTP2CServerConnectionFactory(config);
+        final HTTP2CServerConnectionFactory http2c = new HTTP2CServerConnectionFactory(config);
 
         // Add the connector.
-        ServerConnector connector = new ServerConnector(server, http1, http2c);
+        final ServerConnector connector = new ServerConnector(server, http1, http2c);
         connector.setPort(0);
         server.addConnector(connector);
 
         // Add the servlet.
-        ServletHandler handler = new ServletHandler();
+        final ServletHandler handler = new ServletHandler();
         handler.addServletWithMapping(newServletHolder(thriftServlet), TSERVLET_PATH);
         server.setHandler(handler);
 

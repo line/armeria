@@ -29,8 +29,8 @@ public class DynamicEndpointGroupTest {
 
     @Test
     public void updateEndpoints() {
-        DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
-        AtomicInteger updateListenerCalled = new AtomicInteger(0);
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final AtomicInteger updateListenerCalled = new AtomicInteger(0);
         endpointGroup.addListener(l -> updateListenerCalled.incrementAndGet());
 
         assertThat(updateListenerCalled.get()).isEqualTo(0);

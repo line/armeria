@@ -61,7 +61,7 @@ public abstract class WebAppContainerTest {
      * Returns the doc-base directory of the test web application.
      */
     public static File webAppRoot() {
-        URL url = WebAppContainerTest.class.getProtectionDomain().getCodeSource().getLocation();
+        final URL url = WebAppContainerTest.class.getProtectionDomain().getCodeSource().getLocation();
         File f;
         try {
             f = new File(url.toURI());
@@ -139,11 +139,11 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void https() throws Exception {
-        ClientFactory clientFactory = new ClientFactoryBuilder()
+        final ClientFactory clientFactory = new ClientFactoryBuilder()
                 .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                 .build();
-        HttpClient client = HttpClient.of(clientFactory, server().httpsUri("/"));
-        AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
+        final HttpClient client = HttpClient.of(clientFactory, server().httpsUri("/"));
+        final AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
         final String actualContent = CR_OR_LF.matcher(response.content().toStringUtf8())
                                              .replaceAll("");
         assertThat(actualContent).isEqualTo(
@@ -297,7 +297,7 @@ public abstract class WebAppContainerTest {
     @Test
     public void addressesAndPorts_localhost() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpGet request = new HttpGet(server().uri("/jsp/addrs_and_ports.jsp"));
+            final HttpGet request = new HttpGet(server().uri("/jsp/addrs_and_ports.jsp"));
             request.setHeader("Host", "localhost:1111");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");

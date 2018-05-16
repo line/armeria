@@ -24,20 +24,20 @@ public class SettableHealthCheckerTest {
 
     @Test
     public void justCreated() {
-        SettableHealthChecker checker = new SettableHealthChecker();
+        final SettableHealthChecker checker = new SettableHealthChecker();
         assertFalse(checker.isHealthy());
     }
 
     @Test
     public void setHealthy() {
-        SettableHealthChecker checker = new SettableHealthChecker();
+        final SettableHealthChecker checker = new SettableHealthChecker();
         checker.setHealthy(true);
         assertTrue(checker.isHealthy());
     }
 
     @Test
     public void setUnHealthy() {
-        SettableHealthChecker checker = new SettableHealthChecker();
+        final SettableHealthChecker checker = new SettableHealthChecker();
         checker.setHealthy(false);
         assertFalse(checker.isHealthy());
     }

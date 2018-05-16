@@ -78,8 +78,8 @@ public class HttpEncodingService
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpEncodingType encodingType = HttpEncoders.getWrapperForRequest(req);
-        HttpResponse delegateResponse = delegate().serve(ctx, req);
+        final HttpEncodingType encodingType = HttpEncoders.getWrapperForRequest(req);
+        final HttpResponse delegateResponse = delegate().serve(ctx, req);
         if (encodingType == null) {
             return delegateResponse;
         }

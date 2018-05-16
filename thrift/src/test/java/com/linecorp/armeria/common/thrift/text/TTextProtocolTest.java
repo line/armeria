@@ -30,8 +30,8 @@
 // =================================================================================================
 package com.linecorp.armeria.common.thrift.text;
 
-import static net.javacrumbs.jsonunit.JsonAssert.assertJsonEquals;
-import static org.junit.Assert.assertEquals;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -94,25 +94,25 @@ public class TTextProtocolTest {
     @Test
     public void tTextProtocolReadWriteTest() throws Exception {
         // Deserialize the file contents into a thrift message.
-        ByteArrayInputStream bais1 = new ByteArrayInputStream(
+        final ByteArrayInputStream bais1 = new ByteArrayInputStream(
                 fileContents.getBytes());
 
-        TTextProtocolTestMsg msg1 = new TTextProtocolTestMsg();
+        final TTextProtocolTestMsg msg1 = new TTextProtocolTestMsg();
         msg1.read(new TTextProtocol(new TIOStreamTransport(bais1)));
 
-        assertEquals(testMsg(), msg1);
+        assertThat(msg1).isEqualTo(testMsg());
 
         // Serialize that thrift message out to a byte array
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         msg1.write(new TTextProtocol(new TIOStreamTransport(baos)));
-        byte[] bytes = baos.toByteArray();
+        final byte[] bytes = baos.toByteArray();
 
         // Deserialize that string back to a thrift message.
-        ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);
-        TTextProtocolTestMsg msg2 = new TTextProtocolTestMsg();
+        final ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);
+        final TTextProtocolTestMsg msg2 = new TTextProtocolTestMsg();
         msg2.read(new TTextProtocol(new TIOStreamTransport(bais2)));
 
-        assertEquals(msg1, msg2);
+        assertThat(msg2).isEqualTo(msg1);
     }
 
     private TTextProtocolTestMsg testMsg() {
@@ -165,7 +165,7 @@ public class TTextProtocolTest {
 
     @Test
     public void rpcCall() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"type\" : \"CALL\",\n" +
@@ -182,32 +182,32 @@ public class TTextProtocolTest {
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        TMessage header = prot.readMessageBegin();
-        doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
+        final TMessage header = prot.readMessageBegin();
+        final doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
         args.read(prot);
         prot.readMessageEnd();
 
-        assertEquals("doDebug", header.name);
-        assertEquals(TMessageType.CALL, header.type);
-        assertEquals(1, header.seqid);
+        assertThat(header.name).isEqualTo("doDebug");
+        assertThat(header.type).isEqualTo(TMessageType.CALL);
+        assertThat(header.seqid).isOne();
 
-        assertEquals("foo1", args.getMethodArg1());
-        assertEquals(200, args.getMethodArg2());
-        assertEquals("foo2", args.getDetails().getDetailsArg1());
-        assertEquals(100, args.getDetails().getDetailsArg2());
+        assertThat(args.getMethodArg1()).isEqualTo("foo1");
+        assertThat(args.getMethodArg2()).isEqualTo(200);
+        assertThat(args.getDetails().getDetailsArg1()).isEqualTo("foo2");
+        assertThat(args.getDetails().getDetailsArg2()).isEqualTo(100);
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         args.write(prot);
         prot.writeMessageEnd();
 
-        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertThatJson(new String(outputStream.toByteArray(), StandardCharsets.UTF_8)).isEqualTo(request);
     }
 
     @Test
     public void rpcCall_noSeqId() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"type\" : \"CALL\",\n" +
@@ -221,21 +221,21 @@ public class TTextProtocolTest {
                 "  }\n" +
                 '}';
 
-        TTextProtocol prot = new TTextProtocol(
+        final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        TMessage header = prot.readMessageBegin();
-        doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
+        final TMessage header = prot.readMessageBegin();
+        final doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
         args.read(prot);
         prot.readMessageEnd();
 
-        assertEquals("doDebug", header.name);
-        assertEquals(TMessageType.CALL, header.type);
-        assertEquals(0, header.seqid);
+        assertThat(header.name).isEqualTo("doDebug");
+        assertThat(header.type).isEqualTo(TMessageType.CALL);
+        assertThat(header.seqid).isZero();
     }
 
     @Test
     public void rpcCall_oneWay() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"type\" : \"ONEWAY\",\n" +
@@ -252,32 +252,32 @@ public class TTextProtocolTest {
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        TMessage header = prot.readMessageBegin();
-        doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
+        final TMessage header = prot.readMessageBegin();
+        final doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
         args.read(prot);
         prot.readMessageEnd();
 
-        assertEquals("doDebug", header.name);
-        assertEquals(TMessageType.ONEWAY, header.type);
-        assertEquals(1, header.seqid);
+        assertThat(header.name).isEqualTo("doDebug");
+        assertThat(header.type).isEqualTo(TMessageType.ONEWAY);
+        assertThat(header.seqid).isEqualTo(1);
 
-        assertEquals("foo1", args.getMethodArg1());
-        assertEquals(200, args.getMethodArg2());
-        assertEquals("foo2", args.getDetails().getDetailsArg1());
-        assertEquals(100, args.getDetails().getDetailsArg2());
+        assertThat(args.getMethodArg1()).isEqualTo("foo1");
+        assertThat(args.getMethodArg2()).isEqualTo(200);
+        assertThat(args.getDetails().getDetailsArg1()).isEqualTo("foo2");
+        assertThat(args.getDetails().getDetailsArg2()).isEqualTo(100);
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         args.write(prot);
         prot.writeMessageEnd();
 
-        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertThatJson(new String(outputStream.toByteArray(), StandardCharsets.UTF_8)).isEqualTo(request);
     }
 
     @Test
     public void rpcReply() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"type\" : \"REPLY\",\n" +
@@ -291,29 +291,29 @@ public class TTextProtocolTest {
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        TMessage header = prot.readMessageBegin();
-        doDebug_result result = new doDebug_result();
+        final TMessage header = prot.readMessageBegin();
+        final doDebug_result result = new doDebug_result();
         result.read(prot);
         prot.readMessageEnd();
 
-        assertEquals("doDebug", header.name);
-        assertEquals(TMessageType.REPLY, header.type);
-        assertEquals(100, header.seqid);
+        assertThat(header.name).isEqualTo("doDebug");
+        assertThat(header.type).isEqualTo(TMessageType.REPLY);
+        assertThat(header.seqid).isEqualTo(100);
 
-        assertEquals("Nice response", result.getSuccess().getResponse());
+        assertThat(result.getSuccess().getResponse()).isEqualTo("Nice response");
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         result.write(prot);
         prot.writeMessageEnd();
 
-        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertThatJson(new String(outputStream.toByteArray(), StandardCharsets.UTF_8)).isEqualTo(request);
     }
 
     @Test
     public void rpcException() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"type\" : \"EXCEPTION\",\n" +
@@ -327,29 +327,29 @@ public class TTextProtocolTest {
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        TMessage header = prot.readMessageBegin();
-        doDebug_result result = new doDebug_result();
+        final TMessage header = prot.readMessageBegin();
+        final doDebug_result result = new doDebug_result();
         result.read(prot);
         prot.readMessageEnd();
 
-        assertEquals("doDebug", header.name);
-        assertEquals(TMessageType.EXCEPTION, header.type);
-        assertEquals(101, header.seqid);
+        assertThat(header.name).isEqualTo("doDebug");
+        assertThat(header.type).isEqualTo(TMessageType.EXCEPTION);
+        assertThat(header.seqid).isEqualTo(101);
 
-        assertEquals("Bad rpc", result.getE().getReason());
+        assertThat(result.getE().getReason()).isEqualTo("Bad rpc");
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         result.write(prot);
         prot.writeMessageEnd();
 
-        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertThatJson(new String(outputStream.toByteArray(), StandardCharsets.UTF_8)).isEqualTo(request);
     }
 
     @Test
     public void rpcTApplicationException() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"type\" : \"EXCEPTION\",\n" +
@@ -363,28 +363,28 @@ public class TTextProtocolTest {
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        TMessage header = prot.readMessageBegin();
-        TApplicationException result = TApplicationExceptions.read(prot);
+        final TMessage header = prot.readMessageBegin();
+        final TApplicationException result = TApplicationExceptions.read(prot);
         prot.readMessageEnd();
 
-        assertEquals("doDebug", header.name);
-        assertEquals(TMessageType.EXCEPTION, header.type);
-        assertEquals(101, header.seqid);
+        assertThat(header.name).isEqualTo("doDebug");
+        assertThat(header.type).isEqualTo(TMessageType.EXCEPTION);
+        assertThat(header.seqid).isEqualTo(101);
 
-        assertEquals(TApplicationException.BAD_SEQUENCE_ID, result.getType());
+        assertThat(result.getType()).isEqualTo(TApplicationException.BAD_SEQUENCE_ID);
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         new TApplicationException(TApplicationException.BAD_SEQUENCE_ID, "bad_seq_id").write(prot);
         prot.writeMessageEnd();
 
-        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertThatJson(new String(outputStream.toByteArray(), StandardCharsets.UTF_8)).isEqualTo(request);
     }
 
     @Test(expected = TException.class)
     public void rpcNoMethod() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"type\" : \"CALL\",\n" +
                 "  \"args\" : {\n" +
@@ -396,14 +396,14 @@ public class TTextProtocolTest {
                 "    }\n" +
                 "  }\n" +
                 '}';
-        TTextProtocol prot = new TTextProtocol(
+        final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
     }
 
     @Test(expected = TException.class)
     public void rpcNoType() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"args\" : {\n" +
@@ -415,31 +415,31 @@ public class TTextProtocolTest {
                 "    }\n" +
                 "  }\n" +
                 '}';
-        TTextProtocol prot = new TTextProtocol(
+        final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
     }
 
     @Test(expected = TException.class)
     public void noRpcArgs() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\"\n" +
                 "  \"type\" : \"CALL\",\n" +
                 '}';
-        TTextProtocol prot = new TTextProtocol(
+        final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
     }
 
     @Test(expected = TException.class)
     public void rpcArgsNotObject() throws Exception {
-        String request =
+        final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"args\" : 100\n" +
                 '}';
-        TTextProtocol prot = new TTextProtocol(
+        final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
     }

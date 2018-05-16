@@ -29,12 +29,12 @@ public class RoutingTrieTest {
 
     @Test
     public void testTrieStructure() {
-        RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
+        final RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
 
-        Object value1 = new Object();
-        Object value2 = new Object();
-        Object value3 = new Object();
-        Object value4 = new Object();
+        final Object value1 = new Object();
+        final Object value2 = new Object();
+        final Object value3 = new Object();
+        final Object value4 = new Object();
 
         builder.add("/abc/123", value1);
         builder.add("/abc/133", value2);
@@ -43,7 +43,7 @@ public class RoutingTrieTest {
         builder.add("/abc/134/*", value4);
         builder.add("/abc/124/:", value2);
 
-        RoutingTrie<Object> trie = builder.build();
+        final RoutingTrie<Object> trie = builder.build();
 
         // Expectation:
         //  /abc/1          (root)
@@ -58,7 +58,7 @@ public class RoutingTrieTest {
         //               *  (has value4)
         trie.dump(System.err);
 
-        Node<Object> found;
+        final Node<Object> found;
 
         // Root node.
         found = trie.findNode("/abc/1");
@@ -86,18 +86,18 @@ public class RoutingTrieTest {
 
     @Test
     public void testParameterAndCatchAll() {
-        RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
+        final RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
 
-        Object value0 = new Object();
-        Object value1 = new Object();
-        Object value2 = new Object();
-        Object value3 = new Object();
-        Object value4 = new Object();
-        Object value5 = new Object();
-        Object value6 = new Object();
-        Object value7 = new Object();
-        Object value8 = new Object();
-        Object value9 = new Object();
+        final Object value0 = new Object();
+        final Object value1 = new Object();
+        final Object value2 = new Object();
+        final Object value3 = new Object();
+        final Object value4 = new Object();
+        final Object value5 = new Object();
+        final Object value6 = new Object();
+        final Object value7 = new Object();
+        final Object value8 = new Object();
+        final Object value9 = new Object();
 
         builder.add("/users/:", value0);
         builder.add("/users/:", value1);
@@ -110,7 +110,7 @@ public class RoutingTrieTest {
         builder.add("/:", value8);
         builder.add("/*", value9);
 
-        RoutingTrie<Object> trie = builder.build();
+        final RoutingTrie<Object> trie = builder.build();
 
         trie.dump(System.err);
 
@@ -151,7 +151,7 @@ public class RoutingTrieTest {
     private static Node<?> testNodeWithCheckingParentPath(RoutingTrie<?> trie,
                                                           String targetPath, String parentPath,
                                                           Object... values) {
-        Node<?> found = trie.findNode(targetPath);
+        final Node<?> found = trie.findNode(targetPath);
         assertThat(found.parent().path()).isEqualTo(parentPath);
         testValues(found, values);
         return found;
@@ -160,21 +160,21 @@ public class RoutingTrieTest {
     private static Node<?> testNodeWithFindParentNode(RoutingTrie<?> trie,
                                                       String targetPath, String parentPath,
                                                       Object... values) {
-        Node<?> found = trie.findNode(targetPath);
+        final Node<?> found = trie.findNode(targetPath);
         assertThat(found.parent()).isEqualTo(trie.findNode(parentPath, true));
         testValues(found, values);
         return found;
     }
 
     private static Node<?> testIntermNode(RoutingTrie<?> trie, String targetPath, String parentPath) {
-        Node<?> found = trie.findNode(targetPath);
+        final Node<?> found = trie.findNode(targetPath);
         assertThat(found.values().size()).isEqualTo(0);
         assertThat(found.parent()).isEqualTo(trie.findNode(parentPath, true));
         return found;
     }
 
     private static void testValues(Node<?> node, Object[] values) {
-        List<?> v = node.values();
+        final List<?> v = node.values();
         assertThat(v.size()).isEqualTo(values.length);
         for (int i = 0; i < values.length; i++) {
             assertThat(v.get(i)).isEqualTo(values[i]);

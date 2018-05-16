@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server.cors;
 
+import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -102,8 +102,9 @@ public final class CorsConfig {
         if (builder.preflightResponseHeadersDisabled) {
             preflightResponseHeaders = Collections.emptyMap();
         } else if (builder.preflightResponseHeaders.isEmpty()) {
-            preflightResponseHeaders = ImmutableMap.of(HttpHeaderNames.DATE, DateValueSupplier.INSTANCE,
-                                               HttpHeaderNames.CONTENT_LENGTH, ConstantValueSupplier.ZERO);
+            preflightResponseHeaders = ImmutableMap.of(
+                    HttpHeaderNames.DATE, InstantValueSupplier.INSTANCE,
+                    HttpHeaderNames.CONTENT_LENGTH, ConstantValueSupplier.ZERO);
         } else {
             preflightResponseHeaders = ImmutableMap.copyOf(builder.preflightResponseHeaders);
         }
@@ -386,18 +387,18 @@ public final class CorsConfig {
      * It's value must be generated when the response is generated, hence will be
      * different for every call.
      */
-    static final class DateValueSupplier implements Supplier<Date> {
+    static final class InstantValueSupplier implements Supplier<Instant> {
 
-        static final DateValueSupplier INSTANCE = new DateValueSupplier();
+        static final InstantValueSupplier INSTANCE = new InstantValueSupplier();
 
         @Override
-        public Date get() {
-            return new Date();
+        public Instant get() {
+            return Instant.now();
         }
 
         @Override
         public String toString() {
-            return "<date>";
+            return "<now>";
         }
     }
 }

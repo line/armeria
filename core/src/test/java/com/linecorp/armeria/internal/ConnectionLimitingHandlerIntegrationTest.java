@@ -70,10 +70,10 @@ public class ConnectionLimitingHandlerIntegrationTest {
     }
 
     private static Socket newSocketAndTest() throws IOException {
-        Socket socket = new Socket(LOOPBACK, server.httpPort());
+        final Socket socket = new Socket(LOOPBACK, server.httpPort());
 
         // Test this socket is opened or not.
-        OutputStream os = socket.getOutputStream();
+        final OutputStream os = socket.getOutputStream();
         os.write("GET / HTTP/1.1\r\n\r\n".getBytes());
         os.flush();
 

@@ -82,7 +82,7 @@ public class CircuitBreakerBasedThrottlingStrategyTest {
 
     @Test
     public void serve() throws Exception {
-        HttpClient client = HttpClient.of(serverRule.uri("/"));
+        final HttpClient client = HttpClient.of(serverRule.uri("/"));
         assertThat(client.get("/never").aggregate().get().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(client.get("/always").aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }

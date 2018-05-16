@@ -147,7 +147,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void messageRead_notWrappedByteBuf() {
-        ByteBuf buf = GrpcTestUtil.requestByteBuf();
+        final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.messageRead(new ByteBufOrStream(buf));
 
         verifyZeroInteractions(buffersAttr);
@@ -168,7 +168,7 @@ public class ArmeriaServerCallTest {
                 MessageMarshaller.builder().build(),
                 true);
 
-        ByteBuf buf = GrpcTestUtil.requestByteBuf();
+        final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.messageRead(new ByteBufOrStream(buf));
 
         verify(buffersAttr).set(argThat(map -> map.containsValue(buf)));

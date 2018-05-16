@@ -26,14 +26,14 @@ public class HttpParametersTest {
 
     @Test
     public void caseSensitive() {
-        HttpParameters p = HttpParameters.of();
+        final HttpParameters p = HttpParameters.of();
         p.add("abc", "abc1");
         p.add("abc", "abc2");
         p.add("ABC", "ABC");
 
         assertThat(p.size()).isEqualTo(3);
 
-        List<String> values = p.getAll("abc");
+        final List<String> values = p.getAll("abc");
         assertThat(values.size()).isEqualTo(2);
         assertThat(values.get(0)).isEqualTo("abc1");
         assertThat(values.get(1)).isEqualTo("abc2");

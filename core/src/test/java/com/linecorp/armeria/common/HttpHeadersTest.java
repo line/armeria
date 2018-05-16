@@ -50,7 +50,7 @@ public class HttpHeadersTest {
         assertThatThrownBy(() -> HttpHeaders.of((AsciiString) null, "value1"))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> HttpHeaders.of(AsciiString.of(""), "value1"))
+        assertThatThrownBy(() -> HttpHeaders.of(of(""), "value1"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

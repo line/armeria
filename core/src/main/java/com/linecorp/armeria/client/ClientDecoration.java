@@ -95,7 +95,7 @@ public final class ClientDecoration {
             this.responseType = responseType;
 
             @SuppressWarnings("unchecked")
-            Function<Client<I, O>, Client<I, O>> castDecorator =
+            final Function<Client<I, O>, Client<I, O>> castDecorator =
                     (Function<Client<I, O>, Client<I, O>>) decorator;
             this.decorator = castDecorator;
         }

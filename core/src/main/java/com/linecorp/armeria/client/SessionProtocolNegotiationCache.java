@@ -49,7 +49,7 @@ public final class SessionProtocolNegotiationCache {
         protected boolean removeEldestEntry(Entry<String, CacheEntry> eldest) {
             final boolean remove = super.removeEldestEntry(eldest);
             if (remove) {
-                logger.debug("Evicted: '{}' does not support ", eldest.getKey(), eldest.getValue());
+                logger.debug("Evicted: '{}' does not support {}", eldest.getKey(), eldest.getValue());
             }
 
             return remove;
@@ -167,7 +167,7 @@ public final class SessionProtocolNegotiationCache {
     private static final class CacheEntry {
         private volatile Set<SessionProtocol> unsupported = ImmutableSet.of();
 
-        CacheEntry(String key) {
+        CacheEntry(@SuppressWarnings("unused") String key) {
             // Key is unused. It's just here to simplify the Map.computeIfAbsent() call in getOrCreate().
         }
 

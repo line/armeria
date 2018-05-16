@@ -78,7 +78,7 @@ public final class MeterIdPrefix {
             return ImmutableList.of();
         }
 
-        List<Tag> result = new ArrayList<>(tags.length / 2);
+        final List<Tag> result = new ArrayList<>(tags.length / 2);
         zip(result, tags);
         return sort(result);
     }

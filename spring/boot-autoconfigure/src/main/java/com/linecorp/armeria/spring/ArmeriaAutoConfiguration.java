@@ -176,7 +176,7 @@ public class ArmeriaAutoConfiguration {
                 decorator = decorator.andThen(MetricCollectingService.newDecorator(
                         meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
-            ImmutableList<Object> exceptionHandlersAndConverters =
+            final ImmutableList<Object> exceptionHandlersAndConverters =
                     ImmutableList.builder()
                                  .addAll(bean.getExceptionHandlers())
                                  .addAll(bean.getRequestConverters())

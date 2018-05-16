@@ -39,13 +39,13 @@ public class PathMappingContextTest {
 
     @Test
     public void testProduceTypes() {
-        DefaultHttpHeaders headers = new DefaultHttpHeaders();
+        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
         headers.add(HttpHeaderNames.ACCEPT,
                     "text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8");
-        MediaTypeSet producibleTypes =
+        final MediaTypeSet producibleTypes =
                 new MediaTypeSet(MediaType.create("application", "xml"),
                                  MediaType.create("text", "html"));
-        List<MediaType> selectedTypes = resolveProduceTypes(headers, producibleTypes);
+        final List<MediaType> selectedTypes = resolveProduceTypes(headers, producibleTypes);
 
         assertThat(selectedTypes).hasSize(3);
         assertThat(selectedTypes.get(0).type()).isEqualTo("text");
@@ -55,13 +55,13 @@ public class PathMappingContextTest {
 
     @Test
     public void testProduceTypes2() {
-        DefaultHttpHeaders headers = new DefaultHttpHeaders();
+        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
         headers.add(HttpHeaderNames.ACCEPT,
                     "text/html ;charset=UTF-8, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8");
-        MediaTypeSet producibleTypes =
+        final MediaTypeSet producibleTypes =
                 new MediaTypeSet(MediaType.create("application", "xml"),
                                  MediaType.create("text", "html"));
-        List<MediaType> selectedTypes = resolveProduceTypes(headers, producibleTypes);
+        final List<MediaType> selectedTypes = resolveProduceTypes(headers, producibleTypes);
 
         assertThat(selectedTypes).hasSize(2);
         assertThat(selectedTypes.get(0).type()).isEqualTo("application");
@@ -90,7 +90,7 @@ public class PathMappingContextTest {
 
         PathMappingContext ctx1;
         PathMappingContext ctx2;
-        PathMappingContext ctx3;
+        final PathMappingContext ctx3;
 
         ctx1 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", null,
@@ -125,7 +125,7 @@ public class PathMappingContextTest {
     }
 
     static PathMappingContext create(String path, @Nullable String query) {
-        DefaultHttpHeaders headers = new DefaultHttpHeaders();
+        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
         headers.method(HttpMethod.GET);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             path, query, headers, null);

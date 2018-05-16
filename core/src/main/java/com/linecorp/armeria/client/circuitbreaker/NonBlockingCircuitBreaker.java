@@ -121,7 +121,9 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         if (currentState.isClosed()) {
             // all requests are allowed during CLOSED
             return true;
-        } else if (currentState.isHalfOpen() || currentState.isOpen()) {
+        }
+
+        if (currentState.isHalfOpen() || currentState.isOpen()) {
             if (currentState.checkTimeout() && state.compareAndSet(currentState, newHalfOpenState())) {
                 // changes to HALF_OPEN if OPEN state has timed out
                 logStateTransition(CircuitState.HALF_OPEN, null);
@@ -132,6 +134,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             notifyRequestRejected();
             return false;
         }
+
         return true;
     }
 

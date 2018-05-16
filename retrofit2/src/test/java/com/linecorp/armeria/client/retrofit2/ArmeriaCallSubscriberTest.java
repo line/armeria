@@ -78,11 +78,9 @@ public class ArmeriaCallSubscriberTest {
     public void completeNormally() throws Exception {
         when(armeriaCall.tryFinish()).thenReturn(true);
 
-        ManualMockCallback callback = new ManualMockCallback();
-        ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(armeriaCall,
-                                                                     callback,
-                                                                     new Request.Builder().url("http://foo.com")
-                                                                                          .build());
+        final ManualMockCallback callback = new ManualMockCallback();
+        final ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(
+                armeriaCall, callback, new Request.Builder().url("http://foo.com").build());
         subscriber.onSubscribe(subscription);
         subscriber.onNext(HttpHeaders.of(200));
         subscriber.onNext(HttpData.ofUtf8("{\"name\":\"foo\"}"));
@@ -97,11 +95,9 @@ public class ArmeriaCallSubscriberTest {
     public void splitHeaders() throws Exception {
         when(armeriaCall.tryFinish()).thenReturn(true);
 
-        ManualMockCallback callback = new ManualMockCallback();
-        ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(armeriaCall,
-                                                                     callback,
-                                                                     new Request.Builder().url("http://bar.com")
-                                                                                          .build());
+        final ManualMockCallback callback = new ManualMockCallback();
+        final ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(
+                armeriaCall, callback, new Request.Builder().url("http://bar.com").build());
         subscriber.onSubscribe(subscription);
         subscriber.onNext(HttpHeaders.of(100));
         subscriber.onNext(HttpHeaders.of(200));
@@ -121,11 +117,9 @@ public class ArmeriaCallSubscriberTest {
         when(armeriaCall.tryFinish()).thenReturn(false);
         when(armeriaCall.isCanceled()).thenReturn(false, false, true);
 
-        ManualMockCallback callback = new ManualMockCallback();
-        ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(armeriaCall,
-                                                                     callback,
-                                                                     new Request.Builder().url("http://foo.com")
-                                                                                          .build());
+        final ManualMockCallback callback = new ManualMockCallback();
+        final ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(
+                armeriaCall, callback, new Request.Builder().url("http://foo.com").build());
         subscriber.onSubscribe(subscription);
         subscriber.onNext(HttpHeaders.of(200));
         subscriber.onNext(HttpData.ofUtf8("{\"name\":\"foo\"}"));

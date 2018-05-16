@@ -171,6 +171,6 @@ public class HttpStreamReaderTest {
         verifyZeroInteractions(deframer);
 
         verify(transportStatusListener).transportReportStatus(
-                argThat(s -> s.getCode().equals(Status.UNAUTHENTICATED.getCode())));
+                argThat(s -> s.getCode() == Status.UNAUTHENTICATED.getCode()));
     }
 }

@@ -254,7 +254,7 @@ public final class Clients {
             }
         }
 
-        Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
         if (params.isPresent()) {
             return params.get();
         }

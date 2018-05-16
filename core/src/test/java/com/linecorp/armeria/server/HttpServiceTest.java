@@ -105,7 +105,7 @@ public class HttpServiceTest {
         // Test if the server responds with the 'content-length' header
         // even if it is the last response of the connection.
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpUriRequest req = new HttpGet(rule.httpUri("/200"));
+            final HttpUriRequest req = new HttpGet(rule.httpUri("/200"));
             req.setHeader("Connection", "Close");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");

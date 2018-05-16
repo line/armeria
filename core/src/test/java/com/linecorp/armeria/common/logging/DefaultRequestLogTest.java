@@ -70,7 +70,7 @@ public class DefaultRequestLogTest {
 
     @Test
     public void endResponseFailure() {
-        Throwable error = new Throwable("response failed");
+        final Throwable error = new Throwable("response failed");
         log.endResponse(error);
         assertThat(log.responseDurationNanos()).isZero();
         assertThat(log.responseCause()).isSameAs(error);
@@ -78,7 +78,7 @@ public class DefaultRequestLogTest {
 
     @Test
     public void rpcFailure_endResponseWithoutCause() {
-        Throwable error = new Throwable("response failed");
+        final Throwable error = new Throwable("response failed");
         log.responseContent(RpcResponse.ofFailure(error), null);
         // If user code doesn't call endResponse, the framework automatically does with no cause.
         log.endResponse();
@@ -88,8 +88,8 @@ public class DefaultRequestLogTest {
 
     @Test
     public void rpcFailure_endResponseDifferentCause() {
-        Throwable error = new Throwable("response failed one way");
-        Throwable error2 = new Throwable("response failed a different way?");
+        final Throwable error = new Throwable("response failed one way");
+        final Throwable error2 = new Throwable("response failed a different way?");
         log.responseContent(RpcResponse.ofFailure(error), null);
         log.endResponse(error2);
         assertThat(log.responseDurationNanos()).isZero();

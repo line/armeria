@@ -84,14 +84,14 @@ public final class StatusMessageEscaper {
      * @param ri The reader index, pointed at the first byte that needs escaping.
      */
     private static String doEscape(byte[] valueBytes, int ri) {
-        byte[] escapedBytes = new byte[ri + (valueBytes.length - ri) * 3];
+        final byte[] escapedBytes = new byte[ri + (valueBytes.length - ri) * 3];
         // copy over the good bytes
         if (ri != 0) {
             System.arraycopy(valueBytes, 0, escapedBytes, 0, ri);
         }
         int wi = ri;
         for (; ri < valueBytes.length; ri++) {
-            byte b = valueBytes[ri];
+            final byte b = valueBytes[ri];
             // Manually implement URL encoding, per the gRPC spec.
             if (isEscapingChar(b)) {
                 escapedBytes[wi] = '%';
@@ -102,7 +102,7 @@ public final class StatusMessageEscaper {
             }
             escapedBytes[wi++] = b;
         }
-        byte[] dest = new byte[wi];
+        final byte[] dest = new byte[wi];
         System.arraycopy(escapedBytes, 0, dest, 0, wi);
 
         return new String(dest, StandardCharsets.US_ASCII);
@@ -113,7 +113,7 @@ public final class StatusMessageEscaper {
      */
     public static String unescape(String value) {
         for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
+            final char c = value.charAt(i);
             if (c < ' ' || c >= '~' || (c == '%' && i + 2 < value.length())) {
                 return doUnescape(value.getBytes(StandardCharsets.US_ASCII));
             }
@@ -122,7 +122,7 @@ public final class StatusMessageEscaper {
     }
 
     private static String doUnescape(byte[] value) {
-        ByteBuffer buf = ByteBuffer.allocate(value.length);
+        final ByteBuffer buf = ByteBuffer.allocate(value.length);
         for (int i = 0; i < value.length;) {
             if (value[i] == '%' && i + 2 < value.length) {
                 try {

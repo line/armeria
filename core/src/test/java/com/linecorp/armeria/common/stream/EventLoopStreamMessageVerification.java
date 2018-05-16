@@ -85,7 +85,7 @@ public class EventLoopStreamMessageVerification extends StreamMessageVerificatio
 
     @Override
     public StreamMessage<Long> createFailedPublisher() {
-        EventLoopStreamMessage<Long> stream = new EventLoopStreamMessage<Long>(eventLoop);
+        final EventLoopStreamMessage<Long> stream = new EventLoopStreamMessage<>(eventLoop);
         stream.subscribe(new NoopSubscriber<>());
         return stream;
     }

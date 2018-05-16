@@ -19,6 +19,7 @@ package com.linecorp.armeria.shared;
 import java.util.concurrent.Executor;
 
 import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -30,7 +31,7 @@ import io.netty.util.concurrent.FastThreadLocal;
  * optimized for running inside an event loop. Without this, it would be necessary to switch between threads in
  * the benchmark which adds significant noise to the benchmark.
  *
- * <p>This class is essentially the same as {@link io.netty.channel.DefaultEventLoopGroup} except it stores
+ * <p>This class is essentially the same as {@link DefaultEventLoopGroup} except it stores
  * a reference to the {@link EventLoop} in a {@link FastThreadLocal} to allow benchmark code to reference it
  * using {@link EventLoopJmhExecutor#currentEventLoop()}.
  *
@@ -57,7 +58,7 @@ public class EventLoopJmhExecutor extends MultithreadEventLoopGroup {
 
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-        EventLoop eventLoop = new DefaultEventLoop(this, executor);
+        final EventLoop eventLoop = new DefaultEventLoop(this, executor);
         eventLoop.submit(() -> CURRENT_EVENT_LOOP.set(eventLoop)).syncUninterruptibly();
         return eventLoop;
     }

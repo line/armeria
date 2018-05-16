@@ -85,11 +85,14 @@ public abstract class Sampler {
      * @param rate 0 for no sampling, 1 for full sampling, or in [0.01, 1] for random sampling.
      */
     public static Sampler create(float rate) {
-        if (rate == 1.0) {
+        if (rate >= 1.0) {
             return ALWAYS_SAMPLE;
-        } else if (rate == 0.0) {
+        }
+
+        if (rate == 0.0) {
             return NEVER_SAMPLE;
         }
+
         checkArgument(rate >= 0.01f && rate < 1, "rate should be between 0.01 and 1: was %s", rate);
         return new CountingSampler(rate);
     }

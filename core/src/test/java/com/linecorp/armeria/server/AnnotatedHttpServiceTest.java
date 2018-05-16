@@ -213,7 +213,7 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/exception-async/:var")
         public CompletableFuture<Integer> exceptionAsync(@Param int var) {
-            CompletableFuture<Integer> future = new CompletableFuture<>();
+            final CompletableFuture<Integer> future = new CompletableFuture<>();
             future.completeExceptionally(new AnticipatedException("bad var!"));
             return future;
         }
@@ -275,6 +275,7 @@ public class AnnotatedHttpServiceTest {
             return Boolean.toString(var);
         }
 
+        @Nullable
         @Get("/null1")
         public Object returnNull1() {
             return null;
@@ -331,7 +332,7 @@ public class AnnotatedHttpServiceTest {
         @Path("/a/string-async2")
         public HttpResponse postStringAsync2(AggregatedHttpMessage message, RequestContext ctx) {
             validateContext(ctx);
-            HttpResponseWriter response = HttpResponse.streaming();
+            final HttpResponseWriter response = HttpResponse.streaming();
             response.write(HttpHeaders.of(HttpStatus.OK));
             response.write(message.content());
             response.close();
@@ -351,7 +352,7 @@ public class AnnotatedHttpServiceTest {
         public AggregatedHttpMessage postStringAggregateResponse2(HttpRequest req,
                                                                   RequestContext ctx) {
             validateContextAndRequest(ctx, req);
-            AggregatedHttpMessage message = req.aggregate().join();
+            final AggregatedHttpMessage message = req.aggregate().join();
             return AggregatedHttpMessage.of(HttpHeaders.of(HttpStatus.OK), message.content());
         }
     }
@@ -405,7 +406,7 @@ public class AnnotatedHttpServiceTest {
                                @Param("username") String username,
                                @Param("password") String password) {
             validateContext(ctx);
-            return username + "/" + password;
+            return username + '/' + password;
         }
 
         @Post("/param/post")
@@ -413,21 +414,21 @@ public class AnnotatedHttpServiceTest {
                                 @Param("username") String username,
                                 @Param("password") String password) {
             validateContext(ctx);
-            return username + "/" + password;
+            return username + '/' + password;
         }
 
         @Get
         @Path("/map/get")
         public String mapGet(RequestContext ctx, HttpParameters parameters) {
             validateContext(ctx);
-            return parameters.get("username") + "/" + parameters.get("password");
+            return parameters.get("username") + '/' + parameters.get("password");
         }
 
         @Post
         @Path("/map/post")
         public String mapPost(RequestContext ctx, HttpParameters parameters) {
             validateContext(ctx);
-            return parameters.get("username") + "/" + parameters.get("password");
+            return parameters.get("username") + '/' + parameters.get("password");
         }
 
         @Get("/param/enum")
@@ -435,7 +436,7 @@ public class AnnotatedHttpServiceTest {
                                 @Param("username") String username,
                                 @Param("level") UserLevel level) {
             validateContext(ctx);
-            return username + "/" + level;
+            return username + '/' + level;
         }
 
         @Get("/param/enum2")
@@ -455,7 +456,7 @@ public class AnnotatedHttpServiceTest {
                                     @Param("number") Optional<Integer> number) {
             // "extra" might be null because there is no default value specified.
             validateContext(ctx);
-            return username + "/" + password.get() + "/" + extra.orElse("(null)") +
+            return username + '/' + password.get() + '/' + extra.orElse("(null)") +
                    (number.isPresent() ? "/" + number.get() : "");
         }
 
@@ -465,7 +466,7 @@ public class AnnotatedHttpServiceTest {
                                     @Param("username") @Default("hello") String username,
                                     @Param("password") String password) {
             validateContext(ctx);
-            return username + "/" + password;
+            return username + '/' + password;
         }
 
         @Get
@@ -474,7 +475,7 @@ public class AnnotatedHttpServiceTest {
                                       @Param("username") String username,
                                       @Param("password") String password) {
             validateContext(ctx);
-            return username + "/" + password;
+            return username + '/' + password;
         }
     }
 
@@ -619,7 +620,7 @@ public class AnnotatedHttpServiceTest {
                                     @Header Optional<String> extra,
                                     @Header Optional<Integer> number) {
             validateContext(ctx);
-            return username + "/" + password.get() + "/" + extra.orElse("(null)") +
+            return username + '/' + password.get() + '/' + extra.orElse("(null)") +
                    (number.isPresent() ? "/" + number.get() : "");
         }
 
@@ -630,7 +631,7 @@ public class AnnotatedHttpServiceTest {
                                       @Param("extra") Optional<String> extra,
                                       @Param("number") int number) {
             validateContext(ctx);
-            return username + "/" + password.get() + "/" + extra.orElse("(null)") + "/" + number;
+            return username + '/' + password.get() + '/' + extra.orElse("(null)") + '/' + number;
         }
 
         @Get
@@ -639,7 +640,7 @@ public class AnnotatedHttpServiceTest {
                                          @Header("username") @Default("hello") String username,
                                          @Header("password") String password) {
             validateContext(ctx);
-            return username + "/" + password;
+            return username + '/' + password;
         }
     }
 
@@ -948,7 +949,7 @@ public class AnnotatedHttpServiceTest {
         return request(HttpMethod.GET, uri, null, null);
     }
 
-    static HttpRequestBase get(String uri, String accept) {
+    static HttpRequestBase get(String uri, @Nullable String accept) {
         return request(HttpMethod.GET, uri, null, accept);
     }
 
@@ -956,11 +957,11 @@ public class AnnotatedHttpServiceTest {
         return request(HttpMethod.POST, uri, null, null);
     }
 
-    static HttpRequestBase post(String uri, String contentType) {
+    static HttpRequestBase post(String uri, @Nullable String contentType) {
         return request(HttpMethod.POST, uri, contentType, null);
     }
 
-    static HttpRequestBase post(String uri, String contentType, String accept) {
+    static HttpRequestBase post(String uri, @Nullable String contentType, @Nullable String accept) {
         return request(HttpMethod.POST, uri, contentType, accept);
     }
 
@@ -968,7 +969,7 @@ public class AnnotatedHttpServiceTest {
         return form(uri, null, "armeria", "armeria");
     }
 
-    static HttpPost form(String uri, Charset charset, String... kv) {
+    static HttpPost form(String uri, @Nullable Charset charset, String... kv) {
         final HttpPost req = (HttpPost) request(HttpMethod.POST, uri, MediaType.FORM_DATA.toString());
 
         final List<NameValuePair> params = new ArrayList<>();
@@ -982,11 +983,12 @@ public class AnnotatedHttpServiceTest {
         return req;
     }
 
-    static HttpRequestBase request(HttpMethod method, String uri, String contentType) {
+    static HttpRequestBase request(HttpMethod method, String uri, @Nullable String contentType) {
         return request(method, uri, contentType, null);
     }
 
-    static HttpRequestBase request(HttpMethod method, String uri, String contentType, String accept) {
+    static HttpRequestBase request(HttpMethod method, String uri,
+                                   @Nullable String contentType, @Nullable String accept) {
         final HttpRequestBase req;
         switch (method) {
             case GET:

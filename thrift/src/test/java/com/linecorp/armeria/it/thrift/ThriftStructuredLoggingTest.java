@@ -84,7 +84,7 @@ public class ThriftStructuredLoggingTest {
     };
 
     private HelloService.Iface newClient() throws Exception {
-        String uri = server.uri(BINARY, "/hello");
+        final String uri = server.uri(BINARY, "/hello");
         return Clients.newClient(uri, HelloService.Iface.class);
     }
 
@@ -93,10 +93,10 @@ public class ThriftStructuredLoggingTest {
 
     @Test(timeout = 10000)
     public void testStructuredLogging() throws Exception {
-        HelloService.Iface client = newClient();
+        final HelloService.Iface client = newClient();
         client.hello("kawamuray");
 
-        ThriftStructuredLog log = writtenLogs.take();
+        final ThriftStructuredLog log = writtenLogs.take();
         //assertThat(writtenLogs.size()).isEqualTo(1);
 
         assertThat(log.timestampMillis()).isGreaterThan(0);
@@ -105,12 +105,12 @@ public class ThriftStructuredLoggingTest {
         assertThat(log.thriftServiceName()).isEqualTo(HelloService.class.getCanonicalName());
         assertThat(log.thriftMethodName()).isEqualTo("hello");
 
-        ThriftCall call = log.thriftCall();
+        final ThriftCall call = log.thriftCall();
         assertThat(call.header().name).isEqualTo("hello");
         assertThat(call.header().type).isEqualTo(TMessageType.CALL);
         assertThat(call.args()).isEqualTo(new hello_args().setName("kawamuray"));
 
-        ThriftReply reply = log.thriftReply();
+        final ThriftReply reply = log.thriftReply();
         assertThat(reply.header().name).isEqualTo("hello");
         assertThat(reply.header().type).isEqualTo(TMessageType.REPLY);
         assertThat(reply.header().seqid).isEqualTo(call.header().seqid);

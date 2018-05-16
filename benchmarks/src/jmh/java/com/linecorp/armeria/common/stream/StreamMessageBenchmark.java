@@ -96,7 +96,7 @@ public class StreamMessageBenchmark {
         }
 
         private long computedSum() {
-            long computedSum = subscriber.sum();
+            final long computedSum = subscriber.sum();
             if (computedSum != sum) {
                 throw new IllegalStateException(
                         "Did not compute the expected sum, the stream implementation is broken, expected: " +
@@ -107,7 +107,8 @@ public class StreamMessageBenchmark {
 
         private void writeAllValues(StreamMessage<Integer> stream) {
             if (stream instanceof StreamWriter) {
-                StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
+                @SuppressWarnings("unchecked")
+                final StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
                 for (Integer i : values) {
                     writer.write(i);
                 }
@@ -126,7 +127,7 @@ public class StreamMessageBenchmark {
 
     @Benchmark
     public long noExecutor(StreamObjects streamObjects) {
-        StreamMessage<Integer> stream = newStream(streamObjects);
+        final StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber);
         streamObjects.writeAllValues(stream);
         // No executor, so sum will be updated inline.
@@ -137,7 +138,7 @@ public class StreamMessageBenchmark {
     // deadlock.
     @Benchmark
     public long jmhEventLoop(StreamObjects streamObjects) {
-        StreamMessage<Integer> stream = newStream(streamObjects);
+        final StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber, EventLoopJmhExecutor.currentEventLoop());
         streamObjects.writeAllValues(stream);
         return streamObjects.computedSum();
@@ -148,7 +149,7 @@ public class StreamMessageBenchmark {
     @Benchmark
     public long notJmhEventLoop(StreamObjects streamObjects) throws Exception {
         ANOTHER_EVENT_LOOP.execute(() -> {
-            StreamMessage<Integer> stream = newStream(streamObjects);
+            final StreamMessage<Integer> stream = newStream(streamObjects);
             stream.subscribe(streamObjects.subscriber, ANOTHER_EVENT_LOOP);
             streamObjects.writeAllValues(stream);
         });
@@ -156,7 +157,7 @@ public class StreamMessageBenchmark {
         return streamObjects.computedSum();
     }
 
-    private StreamMessage<Integer> newStream(StreamObjects streamObjects) {
+    private static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
         switch (streamObjects.streamType) {
             case EVENT_LOOP_MESSAGE:
                 return new EventLoopStreamMessage<>(EventLoopJmhExecutor.currentEventLoop());
@@ -174,7 +175,7 @@ public class StreamMessageBenchmark {
                         return StreamMessage.of(streamObjects.values);
                 }
             case DEFERRED_FIXED_STREAM_MESSAGE:
-                DeferredStreamMessage<Integer> stream = new DeferredStreamMessage<>();
+                final DeferredStreamMessage<Integer> stream = new DeferredStreamMessage<>();
                 stream.delegate(StreamMessage.of(streamObjects.values));
                 return stream;
             default:
@@ -224,7 +225,7 @@ public class StreamMessageBenchmark {
 
         @Benchmark
         public long writeFirst(StreamObjects streamObjects) throws Exception {
-            StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
+            final StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
 
             eventLoopType.writeLoop.execute(() -> streamObjects.writeAllValues(stream));
             streamObjects.wroteLatch.await(10, TimeUnit.SECONDS);
@@ -238,7 +239,7 @@ public class StreamMessageBenchmark {
 
         @Benchmark
         public long writeLast(StreamObjects streamObjects) throws Exception {
-            StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
+            final StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
 
             stream.subscribe(streamObjects.subscriber, eventLoopType.readLoop);
 
@@ -252,7 +253,7 @@ public class StreamMessageBenchmark {
 
         @Benchmark
         public long writeOnDemand(StreamObjects streamObjects) throws Exception {
-            StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
+            final StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
             stream.onDemand(() -> writeOnDemand(streamObjects, stream));
 
             stream.subscribe(streamObjects.subscriber, eventLoopType.readLoop);
@@ -271,7 +272,7 @@ public class StreamMessageBenchmark {
             });
         }
 
-        private StreamMessageAndWriter<Integer> newStream(StreamObjects streamObjects) {
+        private static StreamMessageAndWriter<Integer> newStream(StreamObjects streamObjects) {
             switch (streamObjects.streamType) {
                 case EVENT_LOOP_MESSAGE:
                     return new EventLoopStreamMessage<>(EVENT_LOOP1);

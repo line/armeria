@@ -32,27 +32,27 @@ public class ThriftFuturesTest {
 
     @Test
     public void testSuccessfulCompletedFuture() throws Exception {
-        ThriftCompletableFuture<String> future = successfulCompletedFuture("success");
+        final ThriftCompletableFuture<String> future = successfulCompletedFuture("success");
         assertThat(future.get()).isEqualTo("success");
     }
 
     @Test
     public void testFailedCompletedFuture() throws Exception {
-        ThriftCompletableFuture<String> future = failedCompletedFuture(new IllegalStateException());
+        final ThriftCompletableFuture<String> future = failedCompletedFuture(new IllegalStateException());
         assertThat(catchThrowable(future::get)).hasCauseInstanceOf(IllegalStateException.class);
     }
 
     @Test
     public void testSuccessfulListenableFuture() throws Exception {
         assumeUnshadedGuava();
-        ThriftListenableFuture<String> future = successfulListenableFuture("success");
+        final ThriftListenableFuture<String> future = successfulListenableFuture("success");
         assertThat(future.get()).isEqualTo("success");
     }
 
     @Test
     public void testFailedListenableFuture() throws Exception {
         assumeUnshadedGuava();
-        ThriftListenableFuture<String> future = failedListenableFuture(new IllegalStateException());
+        final ThriftListenableFuture<String> future = failedListenableFuture(new IllegalStateException());
         assertThat(catchThrowable(future::get)).hasCauseInstanceOf(IllegalStateException.class);
     }
 
