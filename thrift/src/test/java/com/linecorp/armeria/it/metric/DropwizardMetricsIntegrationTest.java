@@ -18,9 +18,9 @@ package com.linecorp.armeria.it.metric;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
@@ -41,7 +41,6 @@ import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -57,8 +56,6 @@ public class DropwizardMetricsIntegrationTest {
     private static final DropwizardMeterRegistry registry = DropwizardMeterRegistries.newRegistry();
     private static final MetricRegistry dropwizardRegistry = registry.getDropwizardRegistry();
 
-    private static CountDownLatch latch;
-
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
@@ -69,10 +66,6 @@ public class DropwizardMetricsIntegrationTest {
                     return "success";
                 }
                 throw new IllegalArgumentException("bad argument");
-            }).decorate((delegate, ctx, req) -> {
-                ctx.log().addListener(log -> latch.countDown(),
-                                      RequestLogAvailability.COMPLETE);
-                return delegate.serve(ctx, req);
             }).decorate(MetricCollectingService.newDecorator(
                     MeterIdPrefixFunction.ofDefault("armeria.server.HelloService"))));
         }
@@ -91,8 +84,6 @@ public class DropwizardMetricsIntegrationTest {
 
     @Test
     public void normal() throws Exception {
-        latch = new CountDownLatch(14);
-
         makeRequest("world");
         makeRequest("world");
         makeRequest("space");
@@ -101,28 +92,26 @@ public class DropwizardMetricsIntegrationTest {
         makeRequest("space");
         makeRequest("world");
 
-        // Wait until all RequestLogs are collected.
-        latch.await();
+        await().untilAsserted(() -> {
+            assertThat(dropwizardRegistry.getMeters()
+                                         .get(clientMetricNameWithStatusAndResult("requests", 200, "failure"))
+                                         .getCount()).isEqualTo(3L);
+            assertThat(dropwizardRegistry.getMeters()
+                                         .get(serverMetricNameWithStatusAndResult("requests", 200, "failure"))
+                                         .getCount()).isEqualTo(3L);
+            assertThat(dropwizardRegistry.getMeters()
+                                         .get(clientMetricNameWithStatusAndResult("requests", 200, "success"))
+                                         .getCount()).isEqualTo(4L);
+            assertThat(dropwizardRegistry.getMeters()
+                                         .get(serverMetricNameWithStatusAndResult("requests", 200, "success"))
+                                         .getCount()).isEqualTo(4L);
 
-        dropwizardRegistry.getMeters().keySet().forEach(System.out::println);
-        assertThat(dropwizardRegistry.getMeters()
-                                     .get(clientMetricNameWithStatusAndResult("requests", 200, "failure"))
-                                     .getCount()).isEqualTo(3L);
-        assertThat(dropwizardRegistry.getMeters()
-                                     .get(serverMetricNameWithStatusAndResult("requests", 200, "failure"))
-                                     .getCount()).isEqualTo(3L);
-        assertThat(dropwizardRegistry.getMeters()
-                                     .get(clientMetricNameWithStatusAndResult("requests", 200, "success"))
-                                     .getCount()).isEqualTo(4L);
-        assertThat(dropwizardRegistry.getMeters()
-                                     .get(serverMetricNameWithStatusAndResult("requests", 200, "success"))
-                                     .getCount()).isEqualTo(4L);
-
-        assertTimer("requestDuration", 7);
-        assertHistogram("requestLength", 7);
-        assertTimer("responseDuration", 7);
-        assertHistogram("responseLength", 7);
-        assertTimer("totalDuration", 7);
+            assertTimer("requestDuration", 7);
+            assertHistogram("requestLength", 7);
+            assertTimer("responseDuration", 7);
+            assertHistogram("responseLength", 7);
+            assertTimer("totalDuration", 7);
+        });
     }
 
     private static void assertHistogram(String property, int expectedCount) {
@@ -171,14 +160,8 @@ public class DropwizardMetricsIntegrationTest {
     }
 
     private static void makeRequest(String name) {
-        Iface client = new ClientBuilder(server.uri(BINARY, "/helloservice"))
+        final Iface client = new ClientBuilder(server.uri(BINARY, "/helloservice"))
                 .factory(clientFactory)
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           (delegate, ctx, req) -> {
-                               ctx.log().addListener(unused -> latch.countDown(),
-                                                     RequestLogAvailability.COMPLETE);
-                               return delegate.execute(ctx, req);
-                           })
                 .decorator(RpcRequest.class, RpcResponse.class,
                            MetricCollectingClient.newDecorator(
                                    MeterIdPrefixFunction.ofDefault("armeria.client.HelloService")))
