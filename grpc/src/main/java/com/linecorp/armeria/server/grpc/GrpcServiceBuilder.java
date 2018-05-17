@@ -69,7 +69,7 @@ public final class GrpcServiceBuilder {
 
     private boolean enableUnframedRequests;
 
-    private boolean unsafeRetainRequestBuffers;
+    private boolean unsafeWrapRequestBuffers;
 
     /**
      * Adds a gRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as
@@ -195,8 +195,8 @@ public final class GrpcServiceBuilder {
      * work. If {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)} is not called, the memory
      * will be leaked.
      */
-    public GrpcServiceBuilder unsafeWrapRequestBuffers(boolean unsafeRetainRequestBuffers) {
-        this.unsafeRetainRequestBuffers = unsafeRetainRequestBuffers;
+    public GrpcServiceBuilder unsafeWrapRequestBuffers(boolean unsafeWrapRequestBuffers) {
+        this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         return this;
     }
 
@@ -220,7 +220,7 @@ public final class GrpcServiceBuilder {
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
                 maxOutboundMessageSizeBytes,
-                unsafeRetainRequestBuffers,
+                unsafeWrapRequestBuffers,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
     }
