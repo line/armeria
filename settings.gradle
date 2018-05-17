@@ -7,6 +7,7 @@ includeWithFlags ':bom',                       'bom'
 
 // Published Java projects
 includeWithFlags ':core',                       'java', 'publish', 'shade', 'trim'
+includeWithFlags ':rxjava',                     'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                       'java', 'publish', 'relocate'
 includeWithFlags ':jetty',                      'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                      'java', 'publish', 'relocate'
