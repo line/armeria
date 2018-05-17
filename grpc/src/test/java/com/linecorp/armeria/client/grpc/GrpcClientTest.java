@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -76,6 +77,7 @@ import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallOptions;
 import io.grpc.ClientCall;
@@ -84,6 +86,7 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import io.netty.buffer.ByteBuf;
 
 public class GrpcClientTest {
 
@@ -178,6 +181,47 @@ public class GrpcClientTest {
                               .build();
 
         assertThat(blockingStub.unaryCall(request)).isEqualTo(goldenResponse);
+    }
+
+    @Test(timeout = 10000)
+    public void largeUnary_unsafe() {
+        final SimpleRequest request =
+                SimpleRequest.newBuilder()
+                             .setResponseSize(314159)
+                             .setResponseType(COMPRESSABLE)
+                             .setPayload(Payload.newBuilder()
+                                                .setBody(ByteString.copyFrom(new byte[271828])))
+                             .build();
+        final SimpleResponse goldenResponse =
+                SimpleResponse.newBuilder()
+                              .setPayload(Payload.newBuilder()
+                                                 .setType(COMPRESSABLE)
+                                                 .setBody(ByteString.copyFrom(new byte[314159])))
+                              .build();
+
+        TestServiceStub stub = new ClientBuilder("gproto+" + server.httpUri("/"))
+                .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
+                .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
+                .build(TestServiceStub.class);
+        stub.unaryCall(request, new StreamObserver<SimpleResponse>() {
+            @Override
+            public void onNext(SimpleResponse value) {
+                RequestContext ctx = RequestContext.current();
+                assertThat(value).isEqualTo(goldenResponse);
+                ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
+                assertThat(buf.refCnt()).isNotZero();
+                GrpcUnsafeBufferUtil.releaseBuffer(value, ctx);
+                assertThat(buf.refCnt()).isZero();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onCompleted() {
+            }
+        });
     }
 
     @Test(timeout = 10000)
