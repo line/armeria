@@ -48,6 +48,7 @@ import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.grpc.TransportStatusListener;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallOptions;
 import io.grpc.ClientCall;
@@ -86,6 +87,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final CompressorRegistry compressorRegistry;
     private final DecompressorRegistry decompressorRegistry;
     private final HttpStreamReader responseReader;
+    private final boolean unsafeWrapResponseBuffers;
     @Nullable
     private final Executor executor;
 
@@ -108,19 +110,19 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             CompressorRegistry compressorRegistry,
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
-            @Nullable MessageMarshaller jsonMarshaller) {
+            @Nullable MessageMarshaller jsonMarshaller,
+            boolean unsafeWrapResponseBuffers) {
         this.ctx = ctx;
         this.httpClient = httpClient;
         this.req = req;
         this.callOptions = callOptions;
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
+        this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
         messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
         marshaller = new GrpcMessageMarshaller<>(
                 ctx.alloc(), serializationFormat, method, jsonMarshaller,
-                // TODO(anuraag): Consider adding a GrpcClientOption for this after checking the server-side
-                // works / makes sense.
-                false);
+                unsafeWrapResponseBuffers);
         responseReader = new HttpStreamReader(
                 decompressorRegistry,
                 new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc()),
@@ -246,6 +248,11 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     public void messageRead(ByteBufOrStream message) {
         try {
             final O msg = marshaller.deserializeResponse(message);
+
+            if (unsafeWrapResponseBuffers && message.buf() != null) {
+                GrpcUnsafeBufferUtil.storeBuffer(message.buf(), msg, ctx);
+            }
+
             try (SafeCloseable ignored = RequestContext.push(ctx)) {
                 listener.onMessage(msg);
             }

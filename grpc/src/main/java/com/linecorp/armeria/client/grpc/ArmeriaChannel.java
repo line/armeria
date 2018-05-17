@@ -115,7 +115,8 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
                 serializationFormat,
-                jsonMarshaller);
+                jsonMarshaller,
+                options().getOrElse(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS, false));
     }
 
     @Override
