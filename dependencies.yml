@@ -146,6 +146,12 @@ io.prometheus:
     javadocs:
     - http://prometheus.github.io/client_java/
 
+io.reactivex.rxjava2:
+  rxjava:
+    version: '2.1.13'
+    javadocs:
+    - http://reactivex.io/RxJava/2.x/javadoc/
+
 io.zipkin.brave:
   brave:
     version: &BRAVE_VERSION '4.19.2'
