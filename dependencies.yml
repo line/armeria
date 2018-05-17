@@ -83,7 +83,7 @@ io.dropwizard.metrics:
   metrics-core:
     version: &DROPWIZARD_VERSION '4.0.2'
     javadocs:
-    - http://metrics.dropwizard.io/4.0.0/apidocs/
+    - https://metrics.dropwizard.io/4.0.0/apidocs/
   metrics-json: { version: *DROPWIZARD_VERSION }
 
 io.grpc:
@@ -280,7 +280,7 @@ org.eclipse.jetty:
   jetty-server:
     version: *JETTY_VERSION
     javadocs:
-    - http://download.eclipse.org/jetty/stable-9/apidocs/
+    - https://www.eclipse.org/jetty/javadoc/current/
   jetty-webapp: { version: *JETTY_VERSION }
 
 org.eclipse.jetty.alpn:
