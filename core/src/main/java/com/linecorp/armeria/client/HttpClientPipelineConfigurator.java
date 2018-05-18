@@ -543,7 +543,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            if (in.readableBytes() < 4) {
+            if (in.readableBytes() < Http2CodecUtil.FRAME_HEADER_LENGTH) {
                 return;
             }
 
@@ -551,13 +551,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
             final ChannelPipeline p = ctx.pipeline();
 
-            if (in.getInt(in.readerIndex()) == 0x48545450) { // If the response starts with 'HTTP'
-                // Http2ConnectionHandler sent the preface string, but the server responded with an HTTP/1
-                // response. i.e. The server does not support HTTP/2.
+            if (!isSettingsFrame(in)) { // The first frame must be a settings frame.
+                // Http2ConnectionHandler sent the connection preface, but the server responded with
+                // something else, which means the server does not support HTTP/2.
                 SessionProtocolNegotiationCache.setUnsupported(ctx.channel().remoteAddress(), H2C);
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, H2C, H1C,
-                                                 "received an HTTP/1 response for the HTTP/2 preface string");
+                    finishWithNegotiationFailure(
+                            ctx, H2C, H1C, "received a non-HTTP/2 response for the HTTP/2 connection preface");
                 } else {
                     // We can silently retry with H1C.
                     retryWithH1C(ctx);
@@ -571,6 +571,12 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
 
             p.remove(this);
+        }
+
+        private boolean isSettingsFrame(ByteBuf in) {
+            final int start = in.readerIndex();
+            return in.getByte(start + 3) == 4 &&             // type == SETTINGS
+                   (in.getInt(start + 5) & 0x7FFFFFFF) == 0; // streamId == 0
         }
 
         @Override
