@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Ticker;
 
 /**
@@ -285,5 +286,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         public Optional<EventCount> onFailure() {
             return Optional.empty();
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("name", name)
+                          .add("config", config)
+                          .toString();
     }
 }
