@@ -1,26 +1,25 @@
-.. _CircuitBreaker by Martin Fowler: https://martinfowler.com/bliki/CircuitBreaker.html
-.. _LINE Engineering blog: https://engineering.linecorp.com/en/blog/detail/76
-.. _decorator: client-decorator.html
+.. _CircuitBreaker wiki page: https://martinfowler.com/bliki/CircuitBreaker.html
+.. _LINE Engineering blog post about circuit breaker: https://engineering.linecorp.com/en/blog/detail/76
 
 .. _client-circuit-breaker:
 
 Circuit breaker
 ===============
 
-In Microservice Architecture, it's common that various services running on different machines are connected to
-each other through remote calls. If one of the services unreachable somehow such as TCP hang, it will take long
-to get a response from the service. The client who connects to that service will be suffer from that.
-If there are many remote calls to that unresponsive service, it will get worse.
+In microservice architecture, it's common that various services running on different machines are connected to
+each other through remote calls. If one of the services becomes unreachable somehow such as due to network
+issues, the client which connects to that service will take long to get a response from it or to fail to
+get one. Situation will get even worse if there are many remote calls to such unresponsive service.
 You can configure an Armeria client with a circuit breaker to prevent this circumstance. The circuit breaker
 can automatically detect failures by continuously updating success and failure events. If the remote service
-is unresponsive, it will immediately respond with an error and not make a remote calls.
-Please refer to `CircuitBreaker by Martin Fowler`_ and `LINE Engineering blog`_ for more information
-about circuit breaker.
+is unresponsive, it will immediately respond with an error and not make remote calls.
+Please refer to `CircuitBreaker wiki page`_ by Martin Fowler and
+`LINE Engineering blog post about circuit breaker`_ for more information.
 
 State of ``CircuitBreaker``
 ---------------------------
 
-A :api:`CircuitBreaker` can be one of three states which are ``CLOSED``, ``OPEN`` and ``HALF_OPEN``.
+A :api:`CircuitBreaker` can be one of the following three states:
 
 - ``CLOSED``
 
@@ -33,8 +32,8 @@ A :api:`CircuitBreaker` can be one of three states which are ``CLOSED``, ``OPEN`
 
 - ``HALF_OPEN``.
 
-  - After a certain amount of time in the ``OPEN`` state, it changes to the ``HALF_OPEN`` state which tries
-    to find out if the service is available by sending one request.
+  - After a certain amount of time in the ``OPEN`` state, it changes to the ``HALF_OPEN`` state which sends
+    a request to find out if the service is still unavailable or not.
     If the request succeeds, the state changes to ``CLOSED``. If it fails, the state changes to ``OPEN``.
 
 Here is the description how it works:
@@ -47,7 +46,7 @@ Here is the description how it works:
                                        |                |
                                        |      OPEN      |
                                        |                |<-------------------+
-                                       +------------+---+      fail again    |
+                                       +------------+---+     failed again   |
                                            ^        |                        |
                                            |        |                        |
                                            |        |                        |
@@ -56,11 +55,11 @@ Here is the description how it works:
          +---+                             |        |                        |
          |   |                             |        |                        |
          |   v                             |        |                        |
-    +----+-----------+  exceed threshold   |        |     timeout         +--+-------------+
+    +----+-----------+  exceeded threshold |        |     timed out       +--+-------------+
     |                +---------------------+        +-------------------->|                |
     |     CLOSED     |                                                    |    HALF_OPEN   |
     |                |<---------------------------------------------------+                |
-    +----------------+            back to normal(request succeed)         +----------------+
+    +----------------+          back to normal (request succeeded)        +----------------+
 
     @endditaa
 
@@ -74,7 +73,7 @@ Armeria provides two different :api:`Client` implementations depending on the
 - :api:`CircuitBreakerRpcClient`
 
 Let's use :api:`CircuitBreakerHttpClient` to find out what we can do.
-You can use the decorator_ method in :api:`ClientBuilder` to build a :api:`CircuitBreakerHttpClient`:
+You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`CircuitBreakerHttpClient`:
 
 .. code-block:: java
 
@@ -96,7 +95,7 @@ You can use the decorator_ method in :api:`ClientBuilder` to build a :api:`Circu
     client.execute(...).aggregate().join(); // Send requests on and on.
 
 Now, the :api:`Client` can track the number of success or failure events depending on the :apiplural:`Response`.
-The :api:`CircuitBreaker` will be ``OPEN``, when the number of failures divided by the total number of
+The :api:`CircuitBreaker` will enter ``OPEN``, when the number of failures divided by the total number of
 :apiplural:`Request` exceeds the failure rate. Then the :api:`Client` will immediately get
 :api:`FailFastException` by the :api:`CircuitBreaker`.
 
@@ -105,10 +104,12 @@ The :api:`CircuitBreaker` will be ``OPEN``, when the number of failures divided 
 ``CircuitBreakerStrategy``
 --------------------------
 
-How does the :api:`CircuitBreaker` know whether a :api:`Response` is successful or not?
-:api:`CircuitBreakerStrategy` does the job. In the above example, if a :api:`Response`'s status is ``5xx``
+How does a :api:`CircuitBreaker` know whether a :api:`Response` is successful or not?
+:api:`CircuitBreakerStrategy` does the job. In the example above, if the status of a :api:`Response` is ``5xx``
 or an ``Exception`` is raised during the call, the count of failure is increased.
 Of course, you can have your own ``strategy`` by implementing :api:`CircuitBreakerStrategy`.
+The following example shows a :api:`CircuitBreakerStrategy` implementation that fails when an ``Exception``
+is raised or the status is ``5xx``, succeeds when the status is ``2xx`` and ignores others.
 
 .. code-block:: java
 
@@ -142,77 +143,78 @@ Of course, you can have your own ``strategy`` by implementing :api:`CircuitBreak
         }
     };
 
-If you want to treat a :api:`Response` as a success, return ``true``. And return ``false`` as a failure.
+If you want to treat a :api:`Response` as a success, return ``true``. Return ``false`` to treat as a failure.
 Note that :api:`CircuitBreakerStrategy` can return ``null`` as well. It won't be counted as a success nor
 a failure.
 
-``Grouping``
-------------
+Grouping ``CircuitBreakers``
+----------------------------
 
 In the very first example above, a single :api:`CircuitBreaker` was used to track the events. However,
-using only one :api:`CircuitBreaker` is not recommend. There might be an API which needs heavy calculation
-causing failures frequently. On the other hands, there can be another API which does not need resources
-and simply respond. Having one :api:`CircuitBreaker` that tracks all the success and failure does not make
-sense in this scenario. It's even worse if the :api:`Client` connects to the services on different machines.
+in many cases, you will want to use different :api:`CircuitBreaker` for different endpoints. For example, there
+might be an API which performs heavy calculation which fails often. On the other hand, there can be another API
+which is not resource hungry and this is not likely to fail.
+Having one :api:`CircuitBreaker` that tracks all the success and failure does not make sense in this scenario.
+It's even worse if the :api:`Client` connects to the services on different machines.
 When one of the remote services is down, your :api:`CircuitBreaker` will probably be ``OPEN`` state although
 you can connect to other services.
 Therefore, Armeria provides various ways that let users group the range of circuit breaker instances.
 
-- Per Host: a single :api:`CircuitBreaker` is used for each remote host.
+- Group by host: a single :api:`CircuitBreaker` is used for each remote host.
 
-.. code-block:: java
+    .. code-block:: java
 
-    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
-    import com.linecorp.armeria.common.RpcResponse;
+        import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
+        import com.linecorp.armeria.common.RpcResponse;
 
-    // Create a CircuitBreaker with the key name
-    final Function<String, CircuitBreaker> factory = key -> CircuitBreaker.of("my-cb-" + key);
-    final CircuitBreakerStrategy<HttpResponse> httpStrategy = CircuitBreakerStrategy.onServerErrorStatus();
-    final CircuitBreakerStrategy<RpcResponse> rpcStrategy =
-            response -> response.completionFuture().handle((res, cause) -> cause == null);
+        // Create a CircuitBreaker with the key name
+        final Function<String, CircuitBreaker> factory = key -> CircuitBreaker.of("my-cb-" + key);
+        final CircuitBreakerStrategy<HttpResponse> httpStrategy = CircuitBreakerStrategy.onServerErrorStatus();
+        final CircuitBreakerStrategy<RpcResponse> rpcStrategy =
+                response -> response.completionFuture().handle((res, cause) -> cause == null);
 
-    // Create CircuitBreakers per host (a.com, b.com ...)
-    CircuitBreakerHttpClient.newPerHostDecorator(factory, httpStrategy);
-    CircuitBreakerRpcClient.newPerHostDecorator(factory, rpcStrategy);
-    // The names of the created CircuitBreaker: my-cb-a.com, my-cb-b.com, ...
+        // Create CircuitBreakers per host (a.com, b.com ...)
+        CircuitBreakerHttpClient.newPerHostDecorator(factory, httpStrategy);
+        CircuitBreakerRpcClient.newPerHostDecorator(factory, rpcStrategy);
+        // The names of the created CircuitBreaker: my-cb-a.com, my-cb-b.com, ...
 
-- Per Method: a single :api:`CircuitBreaker` is used for each method.
+- Group by method: a single :api:`CircuitBreaker` is used for each method.
 
-.. code-block:: java
+    .. code-block:: java
 
-    // Create CircuitBreakers per method
-    CircuitBreakerHttpClient.newPerHostDecorator(factory, httpStrategy);
-    // The names of the created CircuitBreaker: my-cb-GET, my-cb-POST, ...
+        // Create CircuitBreakers per method
+        CircuitBreakerHttpClient.newPerMethodDecorator(factory, httpStrategy);
+        // The names of the created CircuitBreaker: my-cb-GET, my-cb-POST, ...
 
-    CircuitBreakerRpcClient.newPerHostDecorator(factory, rpcStrategy);
-    // The names of the created CircuitBreaker: my-cb-methodA, my-cb-methodB, ...
+        CircuitBreakerRpcClient.newPerMethodDecorator(factory, rpcStrategy);
+        // The names of the created CircuitBreaker: my-cb-methodA, my-cb-methodB, ...
 
-- Per Host and Method: a single :api:`CircuitBreaker` is used each method in each host.
+- Group by host and method: a single :api:`CircuitBreaker` is used for each method and host combination.
 
-.. code-block:: java
+    .. code-block:: java
 
-    // Create CircuitBreakers per host and method
-    CircuitBreakerHttpClient.newPerHostAndMethodDecorator(factory, httpStrategy);
-    // The names of the created CircuitBreaker: my-cb-a.com#GET,
-    // my-cb-a.com#POST, my-cb-b.com#GET, my-cb-b.com#POST, ...
+        // Create CircuitBreakers per host and method
+        CircuitBreakerHttpClient.newPerHostAndMethodDecorator(factory, httpStrategy);
+        // The names of the created CircuitBreaker: my-cb-a.com#GET,
+        // my-cb-a.com#POST, my-cb-b.com#GET, my-cb-b.com#POST, ...
 
-    CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, rpcStrategy);
-    // The names of the created CircuitBreaker: my-cb-a.com#methodA,
-    // my-cb-a.com#methodB, my-cb-b.com#methodA, my-cb-b.com#methodB, ...
+        CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, rpcStrategy);
+        // The names of the created CircuitBreaker: my-cb-a.com#methodA,
+        // my-cb-a.com#methodB, my-cb-b.com#methodA, my-cb-b.com#methodB, ...
 
-If you want none of the above groupings, you can group them whatever you want using
+If you want none of the above groupings, you can group them however you want using
 :api:`KeyedCircuitBreakerMapping` and :api:`KeyedCircuitBreakerMapping.KeySelector`.
 
-.. code-block:: java
+    .. code-block:: java
 
-    import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping;
-    import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
+        import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping;
+        import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
 
-    final KeyedCircuitBreakerMapping<String> mapping =
-            new KeyedCircuitBreakerMapping<>((ctx, req) -> ctx.path(), factory);
-    // I want to create CircuitBreakers per path!
+        // I want to create CircuitBreakers per path!
+        final KeyedCircuitBreakerMapping<String> mapping =
+                new KeyedCircuitBreakerMapping<>((ctx, req) -> ctx.path(), factory);
 
-    CircuitBreakerHttpClient.newDecorator(mapping, httpStrategy);
+        CircuitBreakerHttpClient.newDecorator(mapping, httpStrategy);
 
 ``CircuitBreakerBuilder``
 -------------------------
@@ -256,8 +258,9 @@ If you use :api:`CircuitBreakerBuilder`, you can configure the parameters which 
 
 - ``listeners``:
 
-  - The listeners which are notified when a event is happened in a :api:`CircuitBreaker`. The events are
-    ``stateChanged``, ``eventCountUpdated`` and ``requestRejected``. You can export metrics using ``listeners``:
+  - The listeners which are notified by a :api:`CircuitBreaker` when an event occurs. The events are one of
+    ``stateChanged``, ``eventCountUpdated`` and ``requestRejected``. You can use
+    :api:`MetricCollectingCircuitBreakerListener` to export metrics:
 
 .. code-block:: java
 
