@@ -18,6 +18,9 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
@@ -25,6 +28,7 @@ import java.util.Locale;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
  * HTTP/2 data. Helpers in this class create {@link HttpData} objects that leave the stream open.
@@ -228,5 +232,37 @@ public interface HttpData extends HttpObject {
      */
     default String toStringAscii() {
         return toString(StandardCharsets.US_ASCII);
+    }
+
+    /**
+     * Returns a new {@link InputStream} that is sourced from this data.
+     */
+    default InputStream toInputStream() {
+        return new FastByteArrayInputStream(array(), offset(), length());
+    }
+
+    /**
+     * Returns a new {@link Reader} that is sourced from this data and decoded using the specified
+     * {@link Charset}.
+     */
+    default Reader toReader(Charset charset) {
+        requireNonNull(charset, "charset");
+        return new InputStreamReader(toInputStream(), charset);
+    }
+
+    /**
+     * Returns a new {@link Reader} that is sourced from this data and decoded using
+     * {@link StandardCharsets#UTF_8}.
+     */
+    default Reader toReaderUtf8() {
+        return toReader(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Returns a new {@link Reader} that is sourced from this data and decoded using
+     * {@link StandardCharsets#US_ASCII}.
+     */
+    default Reader toReaderAscii() {
+        return toReader(StandardCharsets.US_ASCII);
     }
 }
