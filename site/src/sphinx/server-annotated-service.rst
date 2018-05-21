@@ -604,6 +604,59 @@ as follows.
         }
     }
 
+Even you do not specify any :api:`ResponseConverter` annotation, the response object can be converted into
+a :api:`HttpResponse` with the following response converters by default. They convert the response object
+to :api:`HttpResponse` based on the negotiated media type and the type of the object.
+
+- :api:`JacksonResponseConverterFunction`
+
+  - try to convert any object to a JSON document if the negotiated media type is ``application/json``.
+    ``JsonNode`` object can be converted to a JSON document even if there is no media type negotiated.
+
+- :api:`StringResponseConverterFunction`
+
+  - try to convert an object by ``String.valueOf()`` method if the negotiated media type is one of
+    ``text`` types. If there is no media type negotiated, ``String`` and ``CharSequence`` object
+    can be written as a text with ``Content-Type: text/plain; charset=utf-8`` header.
+
+- :api:`ByteArrayResponseConverterFunction`
+
+  - try to convert an object to a byte array. Only :api:`HttpData` and ``byte[]`` can be handled
+    even if the negotiated media type is one of ``application/binary`` and ``application/octet-stream``.
+    If there is no media type negotiated, :api:`HttpData` and ``byte[]`` object will be written as a binary
+    with ``Content-Type: application/binary`` header.
+
+Let's see the following example about the default response conversion.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        // JacksonResponseConverterFunction will be worked for the following methods:
+        @Get("/json1")
+        @ProduceJson    // the same as @ProduceType("application/json; charset=utf-8")
+        public MyObject json1() { ... }
+
+        @Get("/json2")
+        public JsonNode json2() { ... }
+
+        // StringResponseConverterFunction will be worked for the following methods:
+        @Get("/string1")
+        @ProduceText    // the same as @ProduceType("text/plain; charset=utf-8")
+        public int string1() { ... }
+
+        @Get("/string2")
+        public CharSequence string2() { ... }
+
+        // ByteArrayResponseConverterFunction will be worked for the following methods:
+        @Get("/byte1")
+        @ProduceBinary  // the same as @ProduceType("application/binary")
+        public HttpData byte1() { ... }
+
+        @Get("/byte2")
+        public byte[] byte2() { ... }
+    }
+
 .. _configure-using-serverbuilder:
 
 Using ``ServerBuilder`` to configure converters and exception handlers
@@ -1024,3 +1077,11 @@ as follows. ``helloCatchAll()`` method would accept every request except for the
         }
     }
 
+.. note::
+
+    You can use :api:`@ConsumeJson`, :api:`@ConsumeText`, :api:`@ConsumeBinary` and :api:`@ConsumeOctetStream`
+    instead of ``@ConsumeType("application/json; charset=utf-8")``,
+    ``@ConsumeType("text/plain; charset=utf-8")``, ``@ConsumeType("application/binary")`` and
+    ``@ConsumeType("application/octet-stream")`` respectively.
+    Also, :api:`@ProduceJson`, :api:`@ProduceText`, :api:`@ProduceBinary` and :api:`@ProduceOctetStream`
+    are provided in a same manner.
