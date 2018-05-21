@@ -23,10 +23,10 @@ You can just use the ``decorator()`` method in :api:`ClientBuilder` to build a :
 
     import com.linecorp.armeria.client.ClientBuilder;
     import com.linecorp.armeria.client.HttpClient;
-    import com.linecorp.armeria.common.HttpRequest;
-    import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.client.retry.RetryingHttpClient;
     import com.linecorp.armeria.client.retry.RetryStrategy;
+    import com.linecorp.armeria.common.HttpRequest;
+    import com.linecorp.armeria.common.HttpResponse;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
     HttpClient client = new ClientBuilder(...)
