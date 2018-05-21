@@ -27,16 +27,14 @@ A :api:`CircuitBreaker` can be one of the following three states:
 
 - ``OPEN``
 
-  - The state changes to ``OPEN`` once the number of failures divided by the total number of requests exceeds
-    the failure rate. All requests are blocked off responding with :api:`FailFastException`.
+  - The state machine enters the ``OPEN`` state once the number of failures divided by the total number of
+    requests exceeds a certain threshold. All requests are blocked off responding with :api:`FailFastException`.
 
 - ``HALF_OPEN``.
 
-  - After a certain amount of time in the ``OPEN`` state, it changes to the ``HALF_OPEN`` state which sends
-    a request to find out if the service is still unavailable or not.
-    If the request succeeds, the state changes to ``CLOSED``. If it fails, the state changes to ``OPEN``.
-
-Here is the description how it works:
+  - After a certain amount of time in the ``OPEN`` state, the state machine enters the ``HALF_OPEN`` state
+    which sends a request to find out if the service is still unavailable or not.
+    If the request succeeds, it enters the ``CLOSED`` state. If it fails, it enters the ``OPEN`` state again.
 
 .. uml::
 
@@ -137,7 +135,7 @@ is raised or the status is ``5xx``, succeeds when the status is ``2xx`` and igno
                     }
                 }
 
-                // Not a success nor a failure. Do not include this response.
+                // Neither a success nor a failure. Do not take this response into account.
                 return null;
             });
         }
@@ -203,23 +201,23 @@ Therefore, Armeria provides various ways that let users group the range of circu
         // my-cb-a.com#methodB, my-cb-b.com#methodA, my-cb-b.com#methodB, ...
 
 If you want none of the above groupings, you can group them however you want using
-:api:`KeyedCircuitBreakerMapping` and :api:`KeyedCircuitBreakerMapping.KeySelector`.
+:api:`KeyedCircuitBreakerMapping` and :api:`KeyedCircuitBreakerMapping$KeySelector`.
 
-    .. code-block:: java
+.. code-block:: java
 
-        import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping;
-        import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
+    import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping;
+    import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
 
-        // I want to create CircuitBreakers per path!
-        final KeyedCircuitBreakerMapping<String> mapping =
-                new KeyedCircuitBreakerMapping<>((ctx, req) -> ctx.path(), factory);
+    // I want to create CircuitBreakers per path!
+    final KeyedCircuitBreakerMapping<String> mapping =
+            new KeyedCircuitBreakerMapping<>((ctx, req) -> ctx.path(), factory);
 
-        CircuitBreakerHttpClient.newDecorator(mapping, httpStrategy);
+    CircuitBreakerHttpClient.newDecorator(mapping, httpStrategy);
 
 ``CircuitBreakerBuilder``
 -------------------------
 
-We have used static methods in :api:`CircuitBreaker` interface to create a :api:`CircuitBreaker`.
+We have used static factory methods in :api:`CircuitBreaker` interface to create a :api:`CircuitBreaker` so far.
 If you use :api:`CircuitBreakerBuilder`, you can configure the parameters which decide
 :api:`CircuitBreaker`'s behavior. Here are the parameters:
 
@@ -262,12 +260,12 @@ If you use :api:`CircuitBreakerBuilder`, you can configure the parameters which 
     ``stateChanged``, ``eventCountUpdated`` and ``requestRejected``. You can use
     :api:`MetricCollectingCircuitBreakerListener` to export metrics:
 
-.. code-block:: java
+    .. code-block:: java
 
-    import com.linecorp.armeria.client.circuitbreaker.MetricCollectingCircuitBreakerListener
+        import com.linecorp.armeria.client.circuitbreaker.MetricCollectingCircuitBreakerListener
 
-    import io.micrometer.core.instrument.Metrics;
+        import io.micrometer.core.instrument.Metrics;
 
-    final MetricCollectingCircuitBreakerListener listener =
-            new MetricCollectingCircuitBreakerListener(Metrics.globalRegistry);
-    final CircuitBreakerBuilder builder = new CircuitBreakerBuilder().listener(listener);
+        final MetricCollectingCircuitBreakerListener listener =
+                new MetricCollectingCircuitBreakerListener(Metrics.globalRegistry);
+        final CircuitBreakerBuilder builder = new CircuitBreakerBuilder().listener(listener);
