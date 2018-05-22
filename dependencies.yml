@@ -158,12 +158,9 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '4.19.2'
+    version: &BRAVE_VERSION '5.0.0'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/4.19.2/
-
-io.zipkin.java:
-  zipkin: { version: &ZIPKIN_VERSION '2.8.3' }
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.0.0/
 
 it.unimi.dsi:
   fastutil:
