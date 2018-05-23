@@ -28,6 +28,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
@@ -87,10 +88,9 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
         final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
-            final ImmutableList.Builder<Endpoint> newEndpointsBuilder = ImmutableList.builder();
-            newEndpointsBuilder.addAll(endpoints);
-            newEndpointsBuilder.add(e);
-            endpoints = newEndpoints = newEndpointsBuilder.build();
+            List<Endpoint> newEndpointsUnsorted = Lists.newArrayList(endpoints);
+            newEndpointsUnsorted.add(e);
+            endpoints = newEndpoints = ImmutableList.sortedCopyOf(newEndpointsUnsorted);
         } finally {
             endpointsLock.unlock();
         }
@@ -119,10 +119,16 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
      * Sets the specified {@link Endpoint}s as current {@link Endpoint} list.
      */
     protected final void setEndpoints(Iterable<Endpoint> endpoints) {
-        final List<Endpoint> newEndpoints;
+        final List<Endpoint> oldEndpoints = this.endpoints;
+        final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
+
+        if (oldEndpoints.equals(newEndpoints)) {
+            return;
+        }
+
         endpointsLock.lock();
         try {
-            this.endpoints = newEndpoints = ImmutableList.copyOf(endpoints);
+            this.endpoints = newEndpoints;
         } finally {
             endpointsLock.unlock();
         }
