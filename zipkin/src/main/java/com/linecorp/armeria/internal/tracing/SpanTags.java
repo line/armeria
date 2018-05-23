@@ -22,8 +22,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import brave.Span;
-import zipkin.Constants;
-import zipkin.TraceKeys;
 
 /**
  * Adds standard Zipkin tags to a span with the information in a {@link RequestLog}.
@@ -35,7 +33,7 @@ public final class SpanTags {
      */
     public static void addTags(Span span, RequestLog log) {
         if (log.host() != null) {
-            span.tag(TraceKeys.HTTP_HOST, log.host());
+            span.tag("http.host", log.host());
         }
         final StringBuilder uriBuilder = new StringBuilder()
                 .append(log.scheme().uriText())
@@ -45,13 +43,13 @@ public final class SpanTags {
         if (log.query() != null) {
             uriBuilder.append('?').append(log.query());
         }
-        span.tag(TraceKeys.HTTP_METHOD, log.method().name())
-            .tag(TraceKeys.HTTP_PATH, log.path())
-            .tag(TraceKeys.HTTP_URL, uriBuilder.toString())
-            .tag(TraceKeys.HTTP_STATUS_CODE, String.valueOf(log.statusCode()));
+        span.tag("http.method", log.method().name())
+            .tag("http.path", log.path())
+            .tag("http.url", uriBuilder.toString())
+            .tag("http.status_code", String.valueOf(log.statusCode()));
         final Throwable responseCause = log.responseCause();
         if (responseCause != null) {
-            span.tag(Constants.ERROR, responseCause.toString());
+            span.tag("error", responseCause.toString());
         }
 
         final SocketAddress raddr = log.context().remoteAddress();
