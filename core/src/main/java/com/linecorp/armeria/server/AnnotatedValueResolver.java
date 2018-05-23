@@ -104,6 +104,7 @@ final class AnnotatedValueResolver {
     static Object[] toArguments(List<AnnotatedValueResolver> resolvers,
                                 ResolverContext resolverContext) {
         requireNonNull(resolvers, "resolvers");
+        requireNonNull(resolverContext, "resolverContext");
         if (resolvers.isEmpty()) {
             return emptyArguments;
         }
@@ -519,7 +520,7 @@ final class AnnotatedValueResolver {
             return null;
         }
         return enumConverters.computeIfAbsent(elementType, newElementType -> {
-            logger.info("Register Enum {}", newElementType);
+            logger.debug("Registered an Enum {}", newElementType);
             return new EnumConverter<>(newElementType.asSubclass(Enum.class));
         });
     }
@@ -537,7 +538,8 @@ final class AnnotatedValueResolver {
 
     @Nullable
     String httpElementName() {
-        // Currently, this is non-null only if the element one of the HTTP path variable, parameter or header.
+        // Currently, this is non-null only if the element is one of the HTTP path variable,
+        // parameter or header.
         return httpElementName;
     }
 
@@ -701,7 +703,7 @@ final class AnnotatedValueResolver {
         }
 
         /**
-         * Sets an {@link AnnotatedElement} which is to infer its type.
+         * Sets an {@link AnnotatedElement} which is used to infer its type.
          */
         private Builder typeElement(AnnotatedElement typeElement) {
             this.typeElement = typeElement;
@@ -873,7 +875,7 @@ final class AnnotatedValueResolver {
          * Returns {@link AggregationStrategy} which specifies how to aggregate the request
          * for injecting its parameters.
          */
-        static AggregationStrategy resolve(List<AnnotatedValueResolver> resolvers) {
+        static AggregationStrategy from(List<AnnotatedValueResolver> resolvers) {
             AggregationStrategy strategy = NONE;
             for (final AnnotatedValueResolver r : resolvers) {
                 switch (r.aggregationStrategy()) {
@@ -1047,6 +1049,7 @@ final class AnnotatedValueResolver {
             };
         }
 
+        @Nullable
         Object convert(ResolverContext resolverContext, Class<?> expectedResultType,
                        @Nullable BeanFactoryId beanFactoryId) throws Throwable;
     }

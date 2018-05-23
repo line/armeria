@@ -77,7 +77,7 @@ final class AnnotatedHttpService implements HttpService {
         this.responseConverters = ImmutableList.copyOf(
                 requireNonNull(responseConverters, "responseConverters"));
 
-        aggregationStrategy = AggregationStrategy.resolve(resolvers);
+        aggregationStrategy = AggregationStrategy.from(resolvers);
 
         final Class<?> returnType = method.getReturnType();
         if (HttpResponse.class.isAssignableFrom(returnType)) {
@@ -167,7 +167,7 @@ final class AnnotatedHttpService implements HttpService {
     }
 
     /**
-     * Returns a {@link HttpResponse} which is created by {@link ExceptionHandlerFunction}.
+     * Returns an {@link HttpResponse} which is created by {@link ExceptionHandlerFunction}.
      */
     private HttpResponse convertException(ServiceRequestContext ctx, HttpRequest req,
                                           Throwable cause) {

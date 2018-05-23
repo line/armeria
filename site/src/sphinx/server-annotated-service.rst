@@ -252,6 +252,8 @@ or ``Optional<?>`` class here, too.
         @Get("/hello1")
         public HttpResponse hello1(@Param("number") List<Integer> numbers) { ... }
 
+        // If there is no 'number' parameter, the default value "1" will be converted to Integer 1,
+        // then it will be added to the 'numbers' list.
         @Get("/hello2")
         public HttpResponse hello2(@Param("number") @Default("1") List<Integer> numbers) { ... }
 
