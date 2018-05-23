@@ -13,14 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal;
+package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.AnnotatedHttpServiceParamUtil.toHeaderName;
+import static com.linecorp.armeria.server.AnnotatedElementNameUtil.toHeaderName;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-public class AnnotatedHttpServiceParamUtilTest {
+public class AnnotatedElementNameUtilTest {
     @Test
     public void ofHeaderName() {
         assertThat(toHeaderName("camelCase")).isEqualTo("camel-case");

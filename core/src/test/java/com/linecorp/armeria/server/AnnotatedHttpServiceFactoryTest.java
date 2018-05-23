@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.AnnotatedHttpServices.collectDecorators;
+import static com.linecorp.armeria.server.AnnotatedHttpServiceFactory.collectDecorators;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.annotation.ElementType;
@@ -32,7 +32,7 @@ import org.junit.Test;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.server.AnnotatedHttpServices.DecoratorAndOrder;
+import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.DecoratorAndOrder;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
@@ -41,7 +41,7 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryF
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
 
-public class AnnotatedHttpServicesTest {
+public class AnnotatedHttpServiceFactoryTest {
 
     @Test
     public void ofNoOrdering() throws NoSuchMethodException {

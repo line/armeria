@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -48,6 +49,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -447,6 +450,17 @@ public class AnnotatedHttpServiceTest {
             return type + "/" + level;
         }
 
+        @Get("/param/enum3")
+        public String paramEnum3(RequestContext ctx,
+                                 @Param("type") List<UserType> types,
+                                 @Param("level") Set<UserLevel> levels) {
+            validateContext(ctx);
+            return String.join("/",
+                               ImmutableList.builder().addAll(types).addAll(levels).build()
+                                            .stream().map(e -> ((Enum<?>) e).name())
+                                            .collect(Collectors.toList()));
+        }
+
         @Get
         @Path("/param/default1")
         public String paramDefault1(RequestContext ctx,
@@ -613,6 +627,15 @@ public class AnnotatedHttpServiceTest {
             return String.join(":", aName) + " is awesome";
         }
 
+        @Post("/customHeader5")
+        public String customHeader5(@Header List<Integer> numbers,
+                                    @Header Set<String> strings) {
+            return String.join(":",
+                               numbers.stream()
+                                      .map(String::valueOf).collect(Collectors.toList())) + '/' +
+                   String.join(":", strings);
+        }
+
         @Get("/headerDefault")
         public String headerDefault(RequestContext ctx,
                                     @Header @Default("hello") String username,
@@ -744,6 +767,11 @@ public class AnnotatedHttpServiceTest {
             testBody(hc, get("/7/param/enum2?type=NORMAL&level=LV1"), "NORMAL/LV1");
             testStatusCode(hc, get("/7/param/enum2?type=MINOOX&level=LV1"), 400);
 
+            // Case sensitive test enum
+            testBody(hc, get("/7/param/enum3?type=normal&level=LV1&level=LV1"), "normal/LV1");
+            testBody(hc, get("/7/param/enum3?type=NORMAL&type=NORMAL&level=LV1"), "NORMAL/NORMAL/LV1");
+            testStatusCode(hc, get("/7/param/enum3?type=BAD&level=LV100"), 400);
+
             testBody(hc, get("/7/param/default1"), "hello/world/(null)");
             testBody(hc, get("/7/param/default1?extra=people&number=1"), "hello/world/people/1");
 
@@ -850,6 +878,15 @@ public class AnnotatedHttpServiceTest {
             request.addHeader("a-name", "minwoox");
             request.addHeader("a-name", "giraffe");
             testBody(hc, request, "giraffe:minwoox is awesome");
+
+            request = post("/11/customHeader5");
+            request.addHeader("numbers", "1");
+            request.addHeader("numbers", "2");
+            request.addHeader("numbers", "1");
+            request.addHeader("strings", "minwoox");
+            request.addHeader("strings", "giraffe");
+            request.addHeader("strings", "minwoox");
+            testBody(hc, request, "1:2:1/minwoox:giraffe");
 
             request = get("/11/headerDefault");
             testBody(hc, request, "hello/world/(null)");
