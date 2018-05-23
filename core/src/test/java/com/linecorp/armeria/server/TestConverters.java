@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
-final class TestConverters {
+public final class TestConverters {
 
     public static class NaiveIntConverterFunction implements ResponseConverterFunction {
         @Override

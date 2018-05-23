@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.server.AnnotatedHttpServices.PrefixAddingPathMapping;
+import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 
 public class PrefixAddingPathMappingTest {
 

@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
  * Specifies the default value of an optional parameter.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.PARAMETER)
+@Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR })
 public @interface Default {
 
     /**
