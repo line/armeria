@@ -106,7 +106,7 @@ public class HttpHealthCheckedEndpointGroupTest {
         endpointGroup.newMeterBinder("foo").bindTo(registry);
 
         await().untilAsserted(() -> {
-            assertThat(endpointGroup.endpoints()).containsExactly(
+            assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
                     Endpoint.of("127.0.0.1", portOne),
                     Endpoint.of("127.0.0.1", portTwo));
 
