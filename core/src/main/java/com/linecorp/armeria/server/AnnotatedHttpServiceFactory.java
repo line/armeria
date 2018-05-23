@@ -195,7 +195,8 @@ final class AnnotatedHttpServiceFactory {
 
         final Set<HttpMethod> methods = toHttpMethods(methodAnnotations);
         if (methods.isEmpty()) {
-            throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
+            throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
+                                               " must have an HTTP method annotation.");
         }
 
         final Class<?> clazz = object.getClass();
@@ -234,7 +235,7 @@ final class AnnotatedHttpServiceFactory {
 
         if (!expectedParamNames.containsAll(requiredParamNames)) {
             final Set<String> missing = Sets.difference(requiredParamNames, expectedParamNames);
-            throw new IllegalArgumentException("Missing @Param exists: " + missing);
+            throw new IllegalArgumentException("cannot find path variables: " + missing);
         }
 
         // Warn unused path variables only if there's no '@RequestObject' annotation.

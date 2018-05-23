@@ -464,7 +464,6 @@ final class AnnotatedValueResolver {
         };
     }
 
-    // Test-purpose.
     @Nullable
     private final Annotation annotation;
 
@@ -525,6 +524,7 @@ final class AnnotatedValueResolver {
         });
     }
 
+    @VisibleForTesting
     @Nullable
     Annotation annotation() {
         return annotation;
@@ -922,7 +922,6 @@ final class AnnotatedValueResolver {
         }
 
         HttpParameters httpParameters() {
-            // Use a temporary variable to reduce the number of reads of the volatile field.
             HttpParameters result = httpParameters;
             if (result == null) {
                 synchronized (this) {

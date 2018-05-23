@@ -243,7 +243,7 @@ as the value of parameter ``name``. If there is no parameter named ``name`` in t
     }
 
 If multiple parameters exist with the same name in a query string, they can be injected as a ``List<?>``
-or ``Set<?>`` type, e.g. ``/hello1?number=1&number=2&number=3``. You can use :api:`@Default` annotation
+or ``Set<?>``, e.g. ``/hello1?number=1&number=2&number=3``. You can use :api:`@Default` annotation
 or ``Optional<?>`` class here, too.
 
 .. code-block:: java
@@ -281,7 +281,7 @@ Getting an HTTP header
 Armeria also provides :api:`@Header` annotation to inject an HTTP header value into a parameter.
 The parameter annotated with :api:`@Header` can also be specified as one of the built-in types as follows.
 :api:`@Default` and ``Optional<?>`` are also supported. :api:`@Header` annotation also supports
-``List<?>`` or ``Set<?>`` as its type because HTTP headers can be added several times with the same name.
+``List<?>`` or ``Set<?>`` because HTTP headers can be added several times with the same name.
 
 .. code-block:: java
 
@@ -479,7 +479,7 @@ converting ``MyRequest``.
 Injecting value of parameters and HTTP headers into a Java object
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-There is a built-in request converter for Java object. You can use it by
+Armeria provides a generic built-in request converter for Java objects which is activated by
 putting :api:`@RequestObject` annotation on the parameters which you want to convert.
 
 .. code-block:: java

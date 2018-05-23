@@ -120,7 +120,7 @@ final class AnnotatedBeanFactory {
         fields.forEach(field -> field.getKey().setAccessible(true));
         methods.forEach(method -> method.getKey().setAccessible(true));
 
-        logger.debug("Register bean factory: {}", beanFactoryId);
+        logger.debug("Registered a bean factory: {}", beanFactoryId);
         return resolverContext -> {
             try {
                 final Object[] constructorArgs = AnnotatedValueResolver.toArguments(
@@ -151,13 +151,13 @@ final class AnnotatedBeanFactory {
     private static <T> Entry<Constructor<T>, List<AnnotatedValueResolver>> findConstructor(
             BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
 
-        Constructor<T> defaultConstructor = null;
-        final List<Entry<Constructor<T>, List<AnnotatedValueResolver>>> candidates = new ArrayList<>();
+        Entry<Constructor<T>, List<AnnotatedValueResolver>> candidate = null;
 
         final Set<Constructor> constructors = getAllConstructors(beanFactoryId.type);
         for (final Constructor<T> constructor : constructors) {
-            if (constructor.getParameterCount() == 0) {
-                defaultConstructor = constructor;
+            // A default constructor can be a candidate only if there has been no candidate yet.
+            if (constructor.getParameterCount() == 0 && candidate == null) {
+                candidate = new SimpleImmutableEntry<>(constructor, ImmutableList.of());
                 continue;
             }
 
@@ -165,28 +165,20 @@ final class AnnotatedBeanFactory {
                 final List<AnnotatedValueResolver> resolvers =
                         AnnotatedValueResolver.of(constructor, beanFactoryId.pathParams, objectResolvers);
                 if (!resolvers.isEmpty()) {
-                    candidates.add(new SimpleImmutableEntry<>(constructor, resolvers));
+                    // Can overwrite only if the current candidate is a default constructor.
+                    if (candidate == null || candidate.getValue().isEmpty()) {
+                        candidate = new SimpleImmutableEntry<>(constructor, resolvers);
+                    } else {
+                        throw new IllegalArgumentException(
+                                "too many annotated constructors in " + beanFactoryId.type.getSimpleName() +
+                                " (expected: 0 or 1)");
+                    }
                 }
             } catch (NoAnnotatedParameterException ignored) {
                 // There's no annotated parameters in the constructor.
             }
         }
-
-        switch (candidates.size()) {
-            case 0:
-                // No annotated constructor. Use default constructor if it exists.
-                return defaultConstructor != null ? new SimpleImmutableEntry<>(defaultConstructor,
-                                                                               ImmutableList.of())
-                                                  : null;
-            case 1:
-                // Only 1 annotated constructor.
-                return candidates.get(0);
-            default:
-                // More than 1 annotated constructors. We don't know which one to use.
-                throw new IllegalArgumentException(
-                        "too many annotated constructors in " + beanFactoryId.type.getSimpleName() +
-                        ": " + candidates.size() + " (expected: 0 or 1)");
-        }
+        return candidate;
     }
 
     private static List<Entry<Field, AnnotatedValueResolver>> findFields(

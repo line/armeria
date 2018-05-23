@@ -55,7 +55,6 @@ import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
 
-import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.util.AsciiString;
 
 public class AnnotatedValueResolverTest {
@@ -92,11 +91,9 @@ public class AnnotatedValueResolverTest {
 
         when(context.request()).thenReturn(request);
         when(context.query())
-                .thenReturn(new QueryStringEncoder(
-                        String.join("&",
-                                    existingHttpParameters.stream().map(p -> p + '=' + p)
-                                                          .collect(Collectors.toList())))
-                                    .toString());
+                .thenReturn(String.join("&",
+                                        existingHttpParameters.stream().map(p -> p + '=' + p)
+                                                              .collect(Collectors.toList())));
         when(context.pathParam(anyString())).thenAnswer(arg -> arg.getArguments()[0]);
 
         when(parameters.getAll(anyString())).thenAnswer(arg -> {
