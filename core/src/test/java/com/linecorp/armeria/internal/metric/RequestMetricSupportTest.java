@@ -70,12 +70,14 @@ public class RequestMetricSupportTest {
 
         measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 0.0)
-                                .containsEntry("foo.requests#count{method=POST,result=success,status=200}", 1.0)
-                                .containsEntry("foo.requests#count{method=POST,result=failure,status=200}", 0.0)
-                                .containsEntry("foo.responseDuration#count{method=POST,status=200}", 1.0)
-                                .containsEntry("foo.responseLength#count{method=POST,status=200}", 1.0)
-                                .containsEntry("foo.responseLength#total{method=POST,status=200}", 456.0)
-                                .containsEntry("foo.totalDuration#count{method=POST,status=200}", 1.0);
+                                .containsEntry("foo.requests#count{httpStatus=200,method=POST,result=success}",
+                                               1.0)
+                                .containsEntry("foo.requests#count{httpStatus=200,method=POST,result=failure}",
+                                               0.0)
+                                .containsEntry("foo.responseDuration#count{httpStatus=200,method=POST}", 1.0)
+                                .containsEntry("foo.responseLength#count{httpStatus=200,method=POST}", 1.0)
+                                .containsEntry("foo.responseLength#total{httpStatus=200,method=POST}", 456.0)
+                                .containsEntry("foo.totalDuration#count{httpStatus=200,method=POST}", 1.0);
     }
 
     @Test
@@ -99,11 +101,13 @@ public class RequestMetricSupportTest {
 
         final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 0.0)
-                                .containsEntry("foo.requests#count{method=POST,result=success,status=500}", 0.0)
-                                .containsEntry("foo.requests#count{method=POST,result=failure,status=500}", 1.0)
-                                .containsEntry("foo.responseDuration#count{method=POST,status=500}", 1.0)
-                                .containsEntry("foo.responseLength#count{method=POST,status=500}", 1.0)
-                                .containsEntry("foo.totalDuration#count{method=POST,status=500}", 1.0);
+                                .containsEntry("foo.requests#count{httpStatus=500,method=POST,result=success}",
+                                               0.0)
+                                .containsEntry("foo.requests#count{httpStatus=500,method=POST,result=failure}",
+                                               1.0)
+                                .containsEntry("foo.responseDuration#count{httpStatus=500,method=POST}", 1.0)
+                                .containsEntry("foo.responseLength#count{httpStatus=500,method=POST}", 1.0)
+                                .containsEntry("foo.totalDuration#count{httpStatus=500,method=POST}", 1.0);
     }
 
     @Test
