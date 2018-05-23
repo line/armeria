@@ -17,9 +17,9 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
-import static org.reflections.ReflectionUtils.getAllConstructors;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
+import static org.reflections.ReflectionUtils.getConstructors;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -153,7 +153,7 @@ final class AnnotatedBeanFactory {
 
         Entry<Constructor<T>, List<AnnotatedValueResolver>> candidate = null;
 
-        final Set<Constructor> constructors = getAllConstructors(beanFactoryId.type);
+        final Set<Constructor> constructors = getConstructors(beanFactoryId.type);
         for (final Constructor<T> constructor : constructors) {
             // A default constructor can be a candidate only if there has been no candidate yet.
             if (constructor.getParameterCount() == 0 && candidate == null) {
