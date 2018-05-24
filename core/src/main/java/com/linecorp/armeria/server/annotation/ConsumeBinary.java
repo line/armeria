@@ -21,9 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * A shortcut of {@code @ConsumeType("application/binary")}.
+ * An alias for {@code @ConsumeType("application/binary")}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
+@ConsumeType("application/binary")
 public @interface ConsumeBinary {
 }

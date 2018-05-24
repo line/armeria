@@ -18,6 +18,10 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -78,7 +82,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 }
 
                 @Get("/byteArray")
-                @ProduceType("application/binary")
+                @UserProduceBinary
                 public byte[] byteArray() {
                     return "¥".getBytes();
                 }
@@ -97,6 +101,12 @@ public class AnnotatedHttpServiceResponseConverterTest {
             });
         }
     };
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    @ProduceType("application/binary")
+    @ProduceType("application/octet-stream")
+    @interface UserProduceBinary {}
 
     @Test
     public void typeBasedDefaultResponseConverter() throws Exception {

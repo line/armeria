@@ -21,9 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * A shortcut of {@code @ConsumeType("text/plain; charset=utf-8")}.
+ * An alias for {@code @ConsumeType("text/plain; charset=utf-8")}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
+@ConsumeType("text/plain; charset=utf-8")
 public @interface ConsumeText {
 }

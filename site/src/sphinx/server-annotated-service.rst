@@ -1077,11 +1077,39 @@ as follows. ``helloCatchAll()`` method would accept every request except for the
         }
     }
 
-.. note::
+Creating user-defined media type annotations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    You can use :api:`@ConsumeJson`, :api:`@ConsumeText`, :api:`@ConsumeBinary` and :api:`@ConsumeOctetStream`
-    instead of ``@ConsumeType("application/json; charset=utf-8")``,
-    ``@ConsumeType("text/plain; charset=utf-8")``, ``@ConsumeType("application/binary")`` and
-    ``@ConsumeType("application/octet-stream")`` respectively.
-    Also, :api:`@ProduceJson`, :api:`@ProduceText`, :api:`@ProduceBinary` and :api:`@ProduceOctetStream`
-    are provided in a same manner.
+Armeria provides annotations like :api:`@ConsumeJson`, :api:`@ConsumeText`, :api:`@ConsumeBinary`
+and :api:`@ConsumeOctetStream` which are aliases for ``@ConsumeType("application/json; charset=utf-8")``,
+``@ConsumeType("text/plain; charset=utf-8")``, ``@ConsumeType("application/binary")`` and
+``@ConsumeType("application/octet-stream")`` respectively.
+Also, :api:`@ProduceJson`, :api:`@ProduceText`, :api:`@ProduceBinary` and :api:`@ProduceOctetStream`
+are provided in a same manner.
+
+Moreover, you can specify your own alias for :api:`@ConsumeType` and :api:`@ProduceType` as follows.
+It would be better to specify your annotation than writing a media type as a string on every method
+which is more error-prone.
+
+.. code-block:: java
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    @ConsumeType("application/xml")
+    public @interface MyConsumeType {}
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    @ProduceType("application/xml")
+    public @interface MyProduceType {}
+
+Then, you can annotate your service method with your annotation as follows.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+        @Post("/hello")
+        @MyConsumeType  // the same as @ConsumeType("application/xml")
+        @MyProduceType  // the same as @ProduceType("application/xml")
+        public MyResponse hello(@RequestObject MyRequest myRequest) { ... }
+    }

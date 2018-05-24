@@ -61,11 +61,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.server.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ConsumeBinary;
-import com.linecorp.armeria.server.annotation.ConsumeJson;
-import com.linecorp.armeria.server.annotation.ConsumeOctetStream;
-import com.linecorp.armeria.server.annotation.ConsumeText;
 import com.linecorp.armeria.server.annotation.ConsumeType;
+import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
@@ -81,11 +78,8 @@ import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
-import com.linecorp.armeria.server.annotation.ProduceBinary;
-import com.linecorp.armeria.server.annotation.ProduceJson;
-import com.linecorp.armeria.server.annotation.ProduceOctetStream;
-import com.linecorp.armeria.server.annotation.ProduceText;
 import com.linecorp.armeria.server.annotation.ProduceType;
+import com.linecorp.armeria.server.annotation.ProduceTypes;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -118,24 +112,6 @@ final class AnnotatedHttpServiceFactory {
             ImmutableList.of(new JacksonResponseConverterFunction(),
                              new StringResponseConverterFunction(),
                              new ByteArrayResponseConverterFunction());
-
-    /**
-     * Shortcuts for {@link ConsumeType} annotation.
-     */
-    private static final Map<Class<? extends Annotation>, MediaType> consumeTypeShortcuts =
-            ImmutableMap.of(ConsumeJson.class, MediaType.JSON_UTF_8,
-                            ConsumeText.class, MediaType.PLAIN_TEXT_UTF_8,
-                            ConsumeBinary.class, MediaType.APPLICATION_BINARY,
-                            ConsumeOctetStream.class, MediaType.OCTET_STREAM);
-
-    /**
-     * Shortcuts for {@link ProduceType} annotation.
-     */
-    private static final Map<Class<? extends Annotation>, MediaType> produceTypeShortcuts =
-            ImmutableMap.of(ProduceJson.class, MediaType.JSON_UTF_8,
-                            ProduceText.class, MediaType.PLAIN_TEXT_UTF_8,
-                            ProduceBinary.class, MediaType.APPLICATION_BINARY,
-                            ProduceOctetStream.class, MediaType.OCTET_STREAM);
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -238,8 +214,7 @@ final class AnnotatedHttpServiceFactory {
         final Class<?> clazz = object.getClass();
         final HttpHeaderPathMapping pathMapping =
                 new HttpHeaderPathMapping(pathStringMapping(pathPrefix, method, methodAnnotations),
-                                          methods, consumeTypes(method, clazz),
-                                          produceTypes(method, clazz));
+                                          methods, consumeTypes(method, clazz), produceTypes(method, clazz));
 
         final List<ExceptionHandlerFunction> eh =
                 exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
@@ -358,16 +333,22 @@ final class AnnotatedHttpServiceFactory {
     private static List<MediaType> consumeTypes(AnnotatedElement element) {
         final List<MediaType> mediaTypes = new ArrayList<>();
 
-        // Try to find shortcuts for '@ConsumeType' annotation.
-        consumeTypeShortcuts.forEach((clazz, mediaType) -> {
-            if (element.isAnnotationPresent(clazz)) {
-                mediaTypes.add(mediaType);
+        for (final Annotation annotation : element.getAnnotations()) {
+            if (annotation instanceof ConsumeTypes) {
+                Arrays.stream(((ConsumeTypes) annotation).value())
+                      .forEach(e -> addConsumeType(mediaTypes, MediaType.parse(e.value())));
+            } else if (annotation instanceof ConsumeType) {
+                addConsumeType(mediaTypes, MediaType.parse(((ConsumeType) annotation).value()));
+            } else {
+                Arrays.stream(annotation.annotationType().getAnnotationsByType(ConsumeType.class))
+                      .forEach(e -> addConsumeType(mediaTypes, MediaType.parse(e.value())));
             }
-        });
-
-        final ConsumeType[] consumeTypes = element.getAnnotationsByType(ConsumeType.class);
-        Arrays.stream(consumeTypes).forEach(e -> mediaTypes.add(MediaType.parse(e.value())));
+        }
         return mediaTypes;
+    }
+
+    private static void addConsumeType(List<MediaType> mediaTypes, MediaType newMediaType) {
+        addMediaType(mediaTypes, newMediaType, ConsumeType.class.getSimpleName(), true);
     }
 
     /**
@@ -381,22 +362,35 @@ final class AnnotatedHttpServiceFactory {
     private static List<MediaType> produceTypes(AnnotatedElement element) {
         final List<MediaType> mediaTypes = new ArrayList<>();
 
-        // Try to find shortcuts for '@ProduceType' annotation.
-        produceTypeShortcuts.forEach((clazz, mediaType) -> {
-            if (element.isAnnotationPresent(clazz)) {
-                mediaTypes.add(mediaType);
+        for (final Annotation annotation : element.getAnnotations()) {
+            if (annotation instanceof ProduceTypes) {
+                Arrays.stream(((ProduceTypes) annotation).value())
+                      .forEach(e -> addProduceType(mediaTypes, MediaType.parse(e.value())));
+            } else if (annotation instanceof ProduceType) {
+                addProduceType(mediaTypes, MediaType.parse(((ProduceType) annotation).value()));
+            } else {
+                Arrays.stream(annotation.annotationType().getAnnotationsByType(ProduceType.class))
+                      .forEach(e -> addProduceType(mediaTypes, MediaType.parse(e.value())));
             }
-        });
-
-        final ProduceType[] produceTypes = element.getAnnotationsByType(ProduceType.class);
-        Arrays.stream(produceTypes).forEach(e -> {
-            final MediaType type = MediaType.parse(e.value());
-            if (type.hasWildcard()) {
-                throw new IllegalArgumentException("@ProduceType must not have a wildcard: " + e.value());
-            }
-            mediaTypes.add(type);
-        });
+        }
         return mediaTypes;
+    }
+
+    private static void addProduceType(List<MediaType> mediaTypes, MediaType newMediaType) {
+        addMediaType(mediaTypes, newMediaType, ProduceType.class.getSimpleName(), false);
+    }
+
+    private static void addMediaType(List<MediaType> mediaTypes, MediaType newMediaType,
+                                     String className, boolean allowWildcard) {
+        if (!allowWildcard && newMediaType.hasWildcard()) {
+            throw new IllegalArgumentException('@' + className + " must not have a wildcard: " +
+                                               newMediaType);
+        }
+        if (mediaTypes.stream().anyMatch(e -> e.equals(newMediaType))) {
+            throw new IllegalArgumentException("Duplicated media type for @" + className + ": " +
+                                               newMediaType);
+        }
+        mediaTypes.add(newMediaType);
     }
 
     /**

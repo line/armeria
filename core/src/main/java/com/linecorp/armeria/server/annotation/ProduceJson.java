@@ -21,9 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * A shortcut of {@code @ProduceType("application/json; charset=utf-8")}.
+ * An alias for {@code @ProduceType("application/json; charset=utf-8")}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
+@ProduceType("application/json; charset=utf-8")
 public @interface ProduceJson {
 }

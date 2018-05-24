@@ -21,9 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * A shortcut of {@code @ProduceType("application/binary")}.
+ * An alias for {@code @ProduceType("application/binary")}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
+@ProduceType("application/binary")
 public @interface ProduceBinary {
 }

@@ -21,9 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * A shortcut of {@code @ConsumeType("application/octet-stream")}.
+ * An alias for {@code @ConsumeType("application/octet-stream")}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
+@ConsumeType("application/octet-stream")
 public @interface ConsumeOctetStream {
 }
