@@ -326,6 +326,7 @@ The following classes are automatically injected when you specify them on the pa
 - :api:`HttpRequest`
 - :api:`AggregatedHttpMessage`
 - :api:`HttpParameters`
+- :api:`Cookies`
 
 .. code-block:: java
 
@@ -349,6 +350,11 @@ The following classes are automatically injected when you specify them on the pa
         @Post("/hello4")
         public HttpResponse hello4(HttpParameters httpParameters) {
             // If a request has a url-encoded form as its body, it can be accessed via 'httpParameters'.
+        }
+
+        @Post("/hello5")
+        public HttpResponse hello5(Cookies cookies) {
+            // If 'Cookie' header exists, it will be injected into the specified 'cookies' parameter.
         }
     }
 

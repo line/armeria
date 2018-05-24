@@ -15,19 +15,27 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Set;
+
+import com.google.common.collect.ForwardingSet;
 
 import io.netty.handler.codec.http.cookie.Cookie;
 
 /**
- * An interface which holds decoded {@link Cookie} instances for an HTTP request.
+ * A default implementation of {@link Cookies} interface.
  */
-public interface Cookies extends Set<Cookie> {
+final class DefaultCookies extends ForwardingSet<Cookie> implements Cookies {
 
-    /**
-     * Creates an instance with the specified set of {@link Cookie}s.
-     */
-    static Cookies from(Set<Cookie> cookies) {
-        return new DefaultCookies(cookies);
+    private final Set<Cookie> delegate;
+
+    DefaultCookies(Set<Cookie> delegate) {
+        this.delegate = requireNonNull(delegate, "delegate");
+    }
+
+    @Override
+    protected Set<Cookie> delegate() {
+        return delegate;
     }
 }
