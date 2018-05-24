@@ -44,12 +44,14 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.server.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
+import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -102,9 +104,14 @@ public class AnnotatedValueResolverTest {
         });
 
         when(request.headers()).thenReturn(headers);
-        when(headers.getAll(any())).thenAnswer(
-                arg -> existingHttpHeaders.contains(arg.getArguments()[0]) ? headerValues
-                                                                           : ImmutableList.of());
+        when(headers.getAll(any())).thenAnswer(arg -> {
+            final Object value = arg.getArguments()[0];
+            // Return values for 'Cookie' headers.
+            if (value.equals(HttpHeaderNames.COOKIE)) {
+                return ImmutableList.of("a=1;b=2", "c=3", "a=4");
+            }
+            return existingHttpHeaders.contains(value) ? headerValues : ImmutableList.of();
+        });
     }
 
     static boolean shouldHttpHeaderExist(AnnotatedValueResolver element) {
@@ -217,6 +224,22 @@ public class AnnotatedValueResolverTest {
         logger.debug("Element {}: value {}", resolver, value);
         if (resolver.annotation() == null) {
             assertThat(value).isInstanceOf(resolver.elementType());
+
+            // Check whether 'Cookie' header is decoded correctly.
+            // 'a=4' will be ignored because 'a=1' is already in the set.
+            if (resolver.elementType() == Cookies.class) {
+                final Cookies cookies = (Cookies) value;
+                assertThat(cookies.size()).isEqualTo(3);
+                cookies.forEach(cookie -> {
+                    if ("a".equals(cookie.name())) {
+                        assertThat(cookie.value()).isEqualTo("1");
+                    } else if ("b".equals(cookie.name())) {
+                        assertThat(cookie.value()).isEqualTo("2");
+                    } else if ("c".equals(cookie.name())) {
+                        assertThat(cookie.value()).isEqualTo("3");
+                    }
+                });
+            }
             return;
         }
 
@@ -350,7 +373,8 @@ public class AnnotatedValueResolverTest {
                             @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
                             ServiceRequestContext ctx,
                             HttpRequest request,
-                            @RequestObject OuterBean outerBean) {}
+                            @RequestObject OuterBean outerBean,
+                            Cookies cookies) {}
 
         public void dummy1() {}
 
@@ -389,6 +413,8 @@ public class AnnotatedValueResolverTest {
         HttpRequest request();
 
         OuterBean outerBean();
+
+        Cookies cookies();
     }
 
     static class FieldBean implements Bean {
@@ -443,6 +469,8 @@ public class AnnotatedValueResolverTest {
 
         @RequestObject
         OuterBean outerBean;
+
+        Cookies cookies;
 
         String notInjected1;
 
@@ -525,6 +553,11 @@ public class AnnotatedValueResolverTest {
         public OuterBean outerBean() {
             return outerBean;
         }
+
+        @Override
+        public Cookies cookies() {
+            return cookies;
+        }
     }
 
     static class ConstructorBean implements Bean {
@@ -544,6 +577,7 @@ public class AnnotatedValueResolverTest {
         final ServiceRequestContext ctx;
         final HttpRequest request;
         final OuterBean outerBean;
+        final Cookies cookies;
 
         ConstructorBean(@Param String var1,
                         @Param String param1,
@@ -560,7 +594,8 @@ public class AnnotatedValueResolverTest {
                         @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
                         ServiceRequestContext ctx,
                         HttpRequest request,
-                        @RequestObject OuterBean outerBean) {
+                        @RequestObject OuterBean outerBean,
+                        Cookies cookies) {
             this.var1 = var1;
             this.param1 = param1;
             this.param2 = param2;
@@ -577,6 +612,7 @@ public class AnnotatedValueResolverTest {
             this.ctx = ctx;
             this.request = request;
             this.outerBean = outerBean;
+            this.cookies = cookies;
         }
 
         @Override
@@ -658,6 +694,11 @@ public class AnnotatedValueResolverTest {
         public OuterBean outerBean() {
             return outerBean;
         }
+
+        @Override
+        public Cookies cookies() {
+            return cookies;
+        }
     }
 
     static class SetterBean implements Bean {
@@ -677,6 +718,7 @@ public class AnnotatedValueResolverTest {
         ServiceRequestContext ctx;
         HttpRequest request;
         OuterBean outerBean;
+        Cookies cookies;
 
         @Param
         void setVar1(String var1) {
@@ -743,8 +785,12 @@ public class AnnotatedValueResolverTest {
             this.request = request;
         }
 
-        public void setOuterBean(@RequestObject OuterBean outerBean) {
+        void setOuterBean(@RequestObject OuterBean outerBean) {
             this.outerBean = outerBean;
+        }
+
+        void setCookies(Cookies cookies) {
+            this.cookies = cookies;
         }
 
         @Override
@@ -826,6 +872,11 @@ public class AnnotatedValueResolverTest {
         public OuterBean outerBean() {
             return outerBean;
         }
+
+        @Override
+        public Cookies cookies() {
+            return cookies;
+        }
     }
 
     static class MixedBean implements Bean {
@@ -845,6 +896,7 @@ public class AnnotatedValueResolverTest {
         final ServiceRequestContext ctx;
         HttpRequest request;
         final OuterBean outerBean;
+        final Cookies cookies;
 
         MixedBean(@Param String var1,
                   @Param String param1,
@@ -854,7 +906,8 @@ public class AnnotatedValueResolverTest {
                   @Param CaseInsensitiveEnum enum1,
                   @Param("sensitive") CaseSensitiveEnum enum3,
                   ServiceRequestContext ctx,
-                  @RequestObject OuterBean outerBean) {
+                  @RequestObject OuterBean outerBean,
+                  Cookies cookies) {
             this.var1 = var1;
             this.param1 = param1;
             this.header1 = header1;
@@ -864,6 +917,7 @@ public class AnnotatedValueResolverTest {
             this.enum3 = enum3;
             this.ctx = ctx;
             this.outerBean = outerBean;
+            this.cookies = cookies;
         }
 
         void setParam2(@Param @Default("1") int param2) {
@@ -972,6 +1026,11 @@ public class AnnotatedValueResolverTest {
         @Override
         public OuterBean outerBean() {
             return outerBean;
+        }
+
+        @Override
+        public Cookies cookies() {
+            return cookies;
         }
     }
 
