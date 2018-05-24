@@ -87,7 +87,7 @@ public interface MeterIdPrefixFunction {
 
             if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS) &&
                 log.status() != null) {
-                tags.add(Tag.of("status", String.valueOf(log.statusCode())));
+                tags.add(Tag.of("httpStatus", String.valueOf(log.statusCode())));
             }
 
             return new MeterIdPrefix(name, tags);
