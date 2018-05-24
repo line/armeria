@@ -133,30 +133,31 @@ public class DropwizardMetricsIntegrationTest {
                 .isPositive();
     }
 
-    private static String serverMetricName(String property) {
+    private static String serverMetricName(String property, int status) {
         return MetricRegistry.name("armeria", "server", "HelloService", property,
-                                   "hostnamePattern:*", "method:hello", "pathMapping:exact:/helloservice");
+                                   "hostnamePattern:*", "httpStatus:" + status,
+                                   "method:hello", "pathMapping:exact:/helloservice");
     }
 
     private static String serverMetricNameWithStatus(String property, int status) {
-        return serverMetricName(property) + ".status:" + status;
+        return serverMetricName(property, status);
     }
 
     private static String serverMetricNameWithStatusAndResult(String property, int status, String result) {
-        return serverMetricName(property) + ".result:" + result + ".status:" + status;
+        return serverMetricName(property, status) + ".result:" + result;
     }
 
-    private static String clientMetricName(String property) {
+    private static String clientMetricName(String property, int status) {
         return MetricRegistry.name("armeria", "client", "HelloService", property,
-                                   "method:hello");
+                                   "httpStatus:" + status, "method:hello");
     }
 
     private static String clientMetricNameWithStatus(String prop, int status) {
-        return clientMetricName(prop) + ".status:" + status;
+        return clientMetricName(prop, status);
     }
 
     private static String clientMetricNameWithStatusAndResult(String prop, int status, String result) {
-        return clientMetricName(prop) + ".result:" + result + ".status:" + status;
+        return clientMetricName(prop, status) + ".result:" + result;
     }
 
     private static void makeRequest(String name) {
