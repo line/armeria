@@ -59,9 +59,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
@@ -71,6 +73,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.AnnotatedBeanFactory.BeanFactoryId;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
+import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
@@ -81,6 +84,8 @@ import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.util.AsciiString;
 
 final class AnnotatedValueResolver {
@@ -387,6 +392,23 @@ final class AnnotatedValueResolver {
                     .aggregation(AggregationStrategy.FOR_FORM_DATA)
                     .build();
         }
+
+        if (type == Cookies.class) {
+            return builder(annotatedElement, Cookies.class)
+                    .resolver((unused, ctx) -> {
+                        final List<String> values = ctx.request().headers().getAll(HttpHeaderNames.COOKIE);
+                        if (values.isEmpty()) {
+                            return Cookies.copyOf(ImmutableSet.of());
+                        }
+                        final ImmutableSet.Builder<Cookie> cookies = ImmutableSet.builder();
+                        values.stream()
+                              .map(ServerCookieDecoder.STRICT::decode)
+                              .forEach(cookies::addAll);
+                        return Cookies.copyOf(cookies.build());
+                    })
+                    .build();
+        }
+
         // Unsupported type.
         return null;
     }
