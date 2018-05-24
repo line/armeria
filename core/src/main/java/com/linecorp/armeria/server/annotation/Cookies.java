@@ -15,7 +15,11 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 
 import io.netty.handler.codec.http.cookie.Cookie;
 
@@ -25,9 +29,17 @@ import io.netty.handler.codec.http.cookie.Cookie;
 public interface Cookies extends Set<Cookie> {
 
     /**
-     * Creates an instance with the specified set of {@link Cookie}s.
+     * Creates an instance with a copy of the specified set of {@link Cookie}s.
      */
-    static Cookies from(Set<Cookie> cookies) {
-        return new DefaultCookies(cookies);
+    static Cookies of(Cookie... cookies) {
+        return new DefaultCookies(ImmutableSet.copyOf(cookies));
+    }
+
+    /**
+     * Creates an instance with a copy of the specified {@link Iterable} of {@link Cookie}s.
+     */
+    static Cookies copyOf(Iterable<? extends Cookie> cookies) {
+        requireNonNull(cookies, "cookies");
+        return new DefaultCookies(ImmutableSet.copyOf(cookies));
     }
 }

@@ -398,13 +398,13 @@ final class AnnotatedValueResolver {
                     .resolver((unused, ctx) -> {
                         final List<String> values = ctx.request().headers().getAll(HttpHeaderNames.COOKIE);
                         if (values.isEmpty()) {
-                            return Cookies.from(ImmutableSet.of());
+                            return Cookies.copyOf(ImmutableSet.of());
                         }
                         final ImmutableSet.Builder<Cookie> cookies = ImmutableSet.builder();
                         values.stream()
                               .map(ServerCookieDecoder.STRICT::decode)
                               .forEach(cookies::addAll);
-                        return Cookies.from(cookies.build());
+                        return Cookies.copyOf(cookies.build());
                     })
                     .build();
         }
