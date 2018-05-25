@@ -100,6 +100,11 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
+    public HttpHeaders setHeadersIfNotExist(HttpHeaders headers) {
+        return unsupported();
+    }
+
+    @Override
     public boolean isEndOfStream() {
         return delegate.isEndOfStream();
     }

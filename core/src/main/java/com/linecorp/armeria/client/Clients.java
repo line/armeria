@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.ClientRequestContext.HTTP_HEADERS;
 import static com.linecorp.armeria.client.DefaultClientRequestContext.THREAD_LOCAL_CONTEXT_CUSTOMIZER;
 import static java.util.Objects.requireNonNull;
 
@@ -26,12 +25,10 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.AsciiString;
-import io.netty.util.Attribute;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -330,11 +327,7 @@ public final class Clients {
      */
     public static SafeCloseable withHttpHeaders(Function<HttpHeaders, HttpHeaders> headerManipulator) {
         requireNonNull(headerManipulator, "headerManipulator");
-        return withContextCustomizer(ctx -> {
-            final Attribute<HttpHeaders> attr = ctx.attr(HTTP_HEADERS);
-            final HttpHeaders headers = attr.get();
-            attr.set(headerManipulator.apply(headers != null ? headers : new DefaultHttpHeaders()));
-        });
+        return withContextCustomizer(ctx -> headerManipulator.apply(ctx.additionalRequestHeaders()));
     }
 
     /**

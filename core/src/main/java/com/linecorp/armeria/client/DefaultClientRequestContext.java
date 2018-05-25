@@ -57,6 +57,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     private final DefaultRequestLog log;
 
+    private final HttpHeaders additionalRequestHeaders;
+
     private long writeTimeoutMillis;
     private long responseTimeoutMillis;
     private long maxResponseLength;
@@ -90,11 +92,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         maxResponseLength = options.defaultMaxResponseLength();
 
         final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
+        final HttpHeaders headersCopy = new DefaultHttpHeaders(true, headers.size());
         if (!headers.isEmpty()) {
-            final HttpHeaders headersCopy = new DefaultHttpHeaders(true, headers.size());
             headersCopy.set(headers);
-            attr(HTTP_HEADERS).set(headersCopy);
         }
+        additionalRequestHeaders = headersCopy;
+
         runThreadLocalContextCustomizer();
     }
 
@@ -122,6 +125,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
+
+        final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
+        additionalRequestHeaders = new DefaultHttpHeaders(true, additionalHeaders.size());
+        additionalRequestHeaders.set(additionalHeaders);
 
         for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
             addAttr(i.next());
@@ -222,6 +229,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public void setMaxResponseLength(long maxResponseLength) {
         this.maxResponseLength = maxResponseLength;
+    }
+
+    @Override
+    public HttpHeaders additionalRequestHeaders() {
+        return additionalRequestHeaders;
     }
 
     @Override

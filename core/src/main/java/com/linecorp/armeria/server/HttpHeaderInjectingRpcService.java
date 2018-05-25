@@ -18,19 +18,20 @@ package com.linecorp.armeria.server;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * Decorates a {@link Service} to inject {@link HttpHeaders} when using an RPC {@link Service}.
- * A Thrift call replies with an {@link RpcResponse} which is wrapped by an {@link HttpResponse}.
- * The {@link HttpHeaders} returned from {@link #httpHeaders(ServiceRequestContext, RpcRequest, RpcResponse)}
- * will be added to that {@link HttpResponse}.
+ * Decorates a {@link Service} to inject {@link HttpHeaders} when using RPC which uses HTTP as underlying
+ * protocol. The {@link HttpHeaders} returned from
+ * {@link #httpHeaders(ServiceRequestContext, RpcRequest, RpcResponse)} will be added to the underlying
+ * {@link HttpResponse}.
+ * Here is an example which uses {@code ThriftCallService} and {@code THttpService} in armeria-thrift module:
  *
  * <pre>{@code
  * final ServerBuilder sb = ...
@@ -43,30 +44,21 @@ import com.linecorp.armeria.common.util.Exceptions;
  *
  * <p>Note that this class adds {@link HttpHeaders} only when the {@link HttpRequest} is decoded to
  * an {@link RpcRequest} successfully. If you want to add {@link HttpHeaders} regardless of the decoding
- * succeeded or not, use your own decorator:
+ * succeeded or not, use your own decorator whose {@link Request} and {@link Response} types are
+ * {@link HttpRequest} and {@link HttpResponse} respectively. For example:
  *
  * <pre>{@code
  * > public final class MyOwnInjector extends SimpleDecoratingService<HttpRequest, HttpResponse> {
- * >     MyOwnInjector(Service<HttpRequest, HttpResponse> delegate) {
- * >         super(delegate);
- * >     }
+ * >
+ * >     ...
  * >
  * >     @Override
  * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
- * >         final HttpResponse originalRes = delegate().serve(ctx, req);
- * >         final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
- * >         final HttpResponse newRes = HttpResponse.from(future);
+ * >         final HttpHeaders myHeaders = ... // Create headers according to ctx, req or res.
  * >
- * >         originalRes.aggregate().whenComplete((res, cause) -> {
- * >             if (cause != null) {
- * >                 future.completeExceptionally(cause);
- * >             } else {
- * >                 final HttpHeaders headers =
- * >                 res.headers().add(AsciiString.of("my-header"), "foo");
- * >                 future.complete(HttpResponse.of(headers, res.content(), res.trailingHeaders()));
- * >             }
- * >         });
- * >         return newRes;
+ * >         // myHeaders will be injected to an HttpResponse.
+ * >         ctx.additionalResponseHeaders().add(myHeaders);
+ * >         ...
  * >     }
  * > }
  * }</pre>
@@ -92,36 +84,17 @@ public abstract class HttpHeaderInjectingRpcService extends SimpleDecoratingServ
 
     @Override
     public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
-        final RpcResponse originalRes = delegate().serve(ctx, req);
-        final DefaultRpcResponse newRes = new DefaultRpcResponse();
-
-        originalRes.whenComplete((value, cause) -> {
-            final HttpHeaders headers = httpHeaders(ctx, req, originalRes);
+        final RpcResponse res = delegate().serve(ctx, req);
+        return RpcResponse.from(res.whenComplete((value, cause) -> {
+            final HttpHeaders headers = httpHeaders(ctx, req, res);
             if (headers != null && !headers.isEmpty()) {
-                ctx.addAdditionalResponseHeaders(headers);
+                ctx.additionalResponseHeaders().add(headers);
             }
-
-            if (cause != null) {
-                newRes.completeExceptionally(cause);
-                return;
-            }
-            if (value instanceof RpcResponse) {
-                ((RpcResponse) value).whenComplete((rpcResponseResult, rpcResponseCause) -> {
-                    if (rpcResponseCause != null) {
-                        newRes.completeExceptionally(Exceptions.peel(rpcResponseCause));
-                        return;
-                    }
-                    newRes.complete(rpcResponseResult);
-                });
-            } else {
-                newRes.complete(value);
-            }
-        });
-        return newRes;
+        }));
     }
 
     /**
-     * Returns {@link HttpHeaders} which will be added to the {@link HttpResponse} which wraps the specified
+     * Returns {@link HttpHeaders} which will be added to the underlying {@link HttpResponse} of the
      * {@link RpcResponse}.
      */
     @Nullable

@@ -30,6 +30,7 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -56,6 +57,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private final ServiceConfig cfg;
     private final PathMappingContext pathMappingContext;
     private final PathMappingResult pathMappingResult;
+    private final HttpHeaders additionalResponseHeaders = new DefaultHttpHeaders();
     @Nullable
     private final SSLSession sslSession;
 
@@ -72,9 +74,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Nullable
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
-
-    @Nullable
-    private HttpHeaders additionalResponseHeaders;
 
     @Nullable
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
@@ -137,6 +136,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
                 pathMappingResult, request, sslSession(), proxiedAddresses());
+
+        ctx.additionalResponseHeaders().set(additionalResponseHeaders());
         for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();/* noop */) {
             ctx.addAttr(i.next());
         }
@@ -273,19 +274,9 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.maxRequestLength = maxRequestLength;
     }
 
-    @Nullable
     @Override
     public HttpHeaders additionalResponseHeaders() {
         return additionalResponseHeaders;
-    }
-
-    @Override
-    public void addAdditionalResponseHeaders(HttpHeaders headers) {
-        if (additionalResponseHeaders == null || additionalResponseHeaders.isEmpty()) {
-            additionalResponseHeaders = requireNonNull(headers, "headers");
-        } else {
-            additionalResponseHeaders.add(headers);
-        }
     }
 
     @Nullable

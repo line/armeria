@@ -27,9 +27,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
-
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
  * Every client request has its own {@link ClientRequestContext} instance.
@@ -41,13 +38,6 @@ public interface ClientRequestContext extends RequestContext {
 
     @Override
     ClientRequestContext newDerivedContext(Request request);
-
-    /**
-     * The {@link AttributeKey} of the {@link HttpHeaders} to include when a {@link Client} sends an
-     * {@link HttpRequest}. This {@link Attribute} is initially populated from
-     * {@link ClientOption#HTTP_HEADERS} and can be modified by a {@link DecoratingClient}.
-     */
-    AttributeKey<HttpHeaders> HTTP_HEADERS = AttributeKey.valueOf(ClientRequestContext.class, "HTTP_HEADERS");
 
     /**
      * Returns the remote {@link Endpoint} of the current {@link Request}.
@@ -122,4 +112,10 @@ public interface ClientRequestContext extends RequestContext {
      * @see ContentTooLargeException
      */
     void setMaxResponseLength(long maxResponseLength);
+
+    /**
+     * Returns {@link HttpHeaders} which is included when a {@link Client} sends an {@link HttpRequest}.
+     * If you want to send more {@link HttpHeaders}, add it to the returned {@link HttpHeaders}.
+     */
+    HttpHeaders additionalRequestHeaders();
 }

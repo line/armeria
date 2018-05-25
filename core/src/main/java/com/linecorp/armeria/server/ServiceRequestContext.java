@@ -187,15 +187,15 @@ public interface ServiceRequestContext extends RequestContext {
      */
     void setMaxRequestLength(long maxRequestLength);
 
-    @Nullable
+    /**
+     * Returns {@link HttpHeaders} which is included when a {@link Service} sends an {@link HttpResponse}.
+     * If you want to send more {@link HttpHeaders}, add it to the returned {@link HttpHeaders}.
+     */
     HttpHeaders additionalResponseHeaders();
-
-    void addAdditionalResponseHeaders(HttpHeaders headers);
 
     /**
      * Returns the proxied addresses if the current {@link Request} is received through a proxy.
      */
     @Nullable
     ProxiedAddresses proxiedAddresses();
-
 }

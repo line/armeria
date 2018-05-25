@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import org.apache.thrift.async.AsyncMethodCallback;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Client;
@@ -54,8 +54,8 @@ import io.netty.util.AsciiString;
 
 public class ThriftHttpHeaderInjectingServiceTest {
 
-    @Rule
-    public final ServerRule server = new ServerRule(true) {
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) {
             final HelloService.Iface helloSync = name -> "Hello, " + name + '!';
@@ -72,7 +72,7 @@ public class ThriftHttpHeaderInjectingServiceTest {
     };
 
     @Test
-    public void checkHttpHeader() throws Exception {
+    public void httpHeaderInjection() throws Exception {
         final AtomicInteger counter = new AtomicInteger();
 
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/sync"))

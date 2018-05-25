@@ -191,6 +191,11 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     HttpHeaders contentType(MediaType mediaType);
 
     /**
+     * Sets {@link HttpHeaders} if this doesn't have, from the specified {@link HttpHeaders}.
+     */
+    HttpHeaders setHeadersIfNotExist(HttpHeaders headers);
+
+    /**
      * Returns the immutable view of this headers.
      */
     default HttpHeaders asImmutable() {
