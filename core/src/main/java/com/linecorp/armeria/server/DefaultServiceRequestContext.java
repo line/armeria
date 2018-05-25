@@ -30,6 +30,7 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -71,6 +72,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Nullable
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
+
+    @Nullable
+    private HttpHeaders additionalResponseHeaders;
+
     @Nullable
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
 
@@ -266,6 +271,21 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                     "maxRequestLength: " + maxRequestLength + " (expected: >= 0)");
         }
         this.maxRequestLength = maxRequestLength;
+    }
+
+    @Nullable
+    @Override
+    public HttpHeaders additionalResponseHeaders() {
+        return additionalResponseHeaders;
+    }
+
+    @Override
+    public void addAdditionalResponseHeaders(HttpHeaders headers) {
+        if (additionalResponseHeaders == null || additionalResponseHeaders.isEmpty()) {
+            additionalResponseHeaders = requireNonNull(headers, "headers");
+        } else {
+            additionalResponseHeaders.add(headers);
+        }
     }
 
     @Nullable

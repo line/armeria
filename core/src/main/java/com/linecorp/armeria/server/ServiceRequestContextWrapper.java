@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -132,6 +133,16 @@ public class ServiceRequestContextWrapper
     @Override
     public void setMaxRequestLength(long maxRequestLength) {
         delegate().setMaxRequestLength(maxRequestLength);
+    }
+
+    @Override
+    public HttpHeaders additionalResponseHeaders() {
+        return delegate().additionalResponseHeaders();
+    }
+
+    @Override
+    public void addAdditionalResponseHeaders(HttpHeaders headers) {
+        delegate().addAdditionalResponseHeaders(headers);
     }
 
     @Nullable

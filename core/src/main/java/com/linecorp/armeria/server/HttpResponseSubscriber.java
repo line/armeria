@@ -46,6 +46,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
 final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener {
@@ -171,7 +172,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     break;
                 }
 
-                final int statusCode = status.code();
+                final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
+                if (additionalHeaders != null && !additionalHeaders.isEmpty()) {
+                    headers.add(additionalHeaders);
+                }
                 logBuilder().responseHeaders(headers);
 
                 if (req.method() == HttpMethod.HEAD) {
@@ -181,6 +185,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     break;
                 }
 
+                final int statusCode = status.code();
                 switch (statusCode) {
                     case 204:
                     case 205:

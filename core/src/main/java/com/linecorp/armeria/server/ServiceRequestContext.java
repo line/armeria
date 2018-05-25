@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -186,9 +187,15 @@ public interface ServiceRequestContext extends RequestContext {
      */
     void setMaxRequestLength(long maxRequestLength);
 
+    @Nullable
+    HttpHeaders additionalResponseHeaders();
+
+    void addAdditionalResponseHeaders(HttpHeaders headers);
+
     /**
      * Returns the proxied addresses if the current {@link Request} is received through a proxy.
      */
     @Nullable
     ProxiedAddresses proxiedAddresses();
+
 }
