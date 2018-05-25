@@ -57,6 +57,7 @@ import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -75,6 +76,7 @@ public class ServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
 
+            sb.channelOption(ChannelOption.SO_BACKLOG, 1024);
             sb.meterRegistry(PrometheusMeterRegistries.newRegistry());
 
             final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
@@ -169,6 +171,12 @@ public class ServerTest {
     @Test
     public void testDelayedResponseApiInvocationExpectedTimeout() throws Exception {
         testInvocation0("/delayed");
+    }
+
+    @Test
+    public void testChannelOptions() throws Exception {
+        assertThat(server.server().serverBootstrap().config()
+                         .options().get(ChannelOption.SO_BACKLOG)).isEqualTo(1024);
     }
 
     private static void testInvocation0(String path) throws IOException {
