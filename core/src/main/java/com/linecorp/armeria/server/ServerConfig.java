@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -30,11 +31,14 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -79,6 +83,9 @@ public final class ServerConfig {
 
     private final int proxyProtocolMaxTlvSize;
 
+    private final Map<ChannelOption<?>, ?> channelOptions;
+    private final Map<ChannelOption<?>, ?> childChannelOptions;
+
     @Nullable
     private String strVal;
 
@@ -91,7 +98,9 @@ public final class ServerConfig {
             int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
-            Consumer<RequestLog> accessLogWriter, int proxyProtocolMaxTlvSize) {
+            Consumer<RequestLog> accessLogWriter, int proxyProtocolMaxTlvSize,
+            Map<ChannelOption<?>, Object> channelOptions,
+            Map<ChannelOption<?>, Object> childChannelOptions) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -127,6 +136,9 @@ public final class ServerConfig {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
+        this.channelOptions = ImmutableMap.copyOf(requireNonNull(channelOptions, "channelOptions"));
+        this.childChannelOptions = ImmutableMap.copyOf(requireNonNull(childChannelOptions,
+                                                                      "childChannelOptions"));
 
         // Set localAddresses.
         final List<ServerPort> portsCopy = new ArrayList<>();
@@ -340,6 +352,20 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns the {@link ChannelOption}s and their values of {@link Server}'s server sockets.
+     */
+    public Map<ChannelOption<?>, ?> channelOptions() {
+        return channelOptions;
+    }
+
+    /**
+     * Returns the {@link ChannelOption}s and their values of sockets accepted by {@link Server}.
+     */
+    public Map<ChannelOption<?>, ?> childChannelOptions() {
+        return childChannelOptions;
+    }
+
+    /**
      * Returns the maximum allowed number of open connections.
      */
     public int maxNumConnections() {
@@ -457,7 +483,8 @@ public final class ServerConfig {
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
                     defaultMaxHttp1InitialLineLength(), defaultMaxHttp1HeaderSize(), defaultMaxHttp1ChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(), accessLogWriter()
+                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(), accessLogWriter(),
+                    channelOptions(), childChannelOptions()
             );
         }
 
@@ -473,7 +500,8 @@ public final class ServerConfig {
             long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
-            Consumer<RequestLog> accessLogWriter) {
+            Consumer<RequestLog> accessLogWriter, Map<ChannelOption<?>, ?> channelOptions,
+            Map<ChannelOption<?>, ?> childChannelOptions) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -552,6 +580,10 @@ public final class ServerConfig {
         buf.append(", accessLogWriter: ");
         buf.append(accessLogWriter);
         buf.append(')');
+        buf.append(", channelOptions: ");
+        buf.append(channelOptions);
+        buf.append(", childChannelOptions: ");
+        buf.append(childChannelOptions);
 
         return buf.toString();
     }

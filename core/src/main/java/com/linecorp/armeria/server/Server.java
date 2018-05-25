@@ -45,6 +45,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
@@ -63,6 +64,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
@@ -97,6 +99,9 @@ public final class Server implements AutoCloseable {
 
     @Nullable
     private volatile ServerPort primaryActivePort;
+
+    @Nullable
+    private ServerBootstrap serverBootstrap;
 
     /**
      * A handler that is shared by all ports and channels to be able to keep
@@ -156,6 +161,12 @@ public final class Server implements AutoCloseable {
      */
     public Optional<ServerPort> activePort() {
         return Optional.ofNullable(primaryActivePort);
+    }
+
+    @Nullable
+    @VisibleForTesting
+    ServerBootstrap serverBootstrap() {
+        return serverBootstrap;
     }
 
     /**
@@ -263,6 +274,17 @@ public final class Server implements AutoCloseable {
 
     private ChannelFuture start(ServerPort port) {
         final ServerBootstrap b = new ServerBootstrap();
+        this.serverBootstrap = b;
+        config.channelOptions().forEach((k, v) -> {
+            @SuppressWarnings("unchecked")
+            final ChannelOption<Object> castOption = (ChannelOption<Object>) k;
+            b.option(castOption, v);
+        });
+        config.childChannelOptions().forEach((k, v) -> {
+            @SuppressWarnings("unchecked")
+            final ChannelOption<Object> castOption = (ChannelOption<Object>) k;
+            b.childOption(castOption, v);
+        });
 
         b.group(EventLoopGroups.newEventLoopGroup(1, r -> {
             final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName(port));
@@ -288,6 +310,8 @@ public final class Server implements AutoCloseable {
     public CompletableFuture<Void> stop() {
         final CompletableFuture<Void> future = new CompletableFuture<>();
         stop(future);
+        // Make sure all channel services will be GC'd even if a user forgot to dereference a Server
+        serverBootstrap = null;
         return future;
     }
 
