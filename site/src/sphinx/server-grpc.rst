@@ -116,9 +116,12 @@ to just pass ``GrpcSerializationFormats.values()``.
 
 The server will support both native gRPC_ and gRPC-Web_ from the same endpoint. Use the unofficial
 gRPC-Web-Client_ to access the service from a browser. gRPC-Web_ does not support RPC methods with streaming
-requests. gRPC-Web-Client_ might first send ``preflighted`` requests by the HTTP ``OPTIONS`` method, in order
-to determine whether the actual request is safe to send in terms of CORS. Armeria provides :api:`CorsService`
-to handle this requests, so you need to decorate it when you build a :api:`GrpcService`:
+requests.
+
+If the origin of the Javascript and API server are different, gRPC-Web-Client_ first sends ``preflight``
+requests by the HTTP ``OPTIONS`` method, in order to determine whether the actual request is safe to send
+in terms of CORS. Armeria provides :api:`CorsService` to handle this requests, so you need to decorate it when
+you build a :api:`GrpcService`:
 
 .. code-block:: java
 
@@ -136,7 +139,7 @@ to handle this requests, so you need to decorate it when you build a :api:`GrpcS
 
     sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
                                        .supportedSerializationFormats(GrpcSerializationFormats.values())
-                                       .build(), corsBuilder::build);
+                                       .build(), corsBuilder.newDecorator());
     ...
     Server server = sb.build();
     server.start();
