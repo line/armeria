@@ -21,12 +21,14 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
 public class DefaultClientRequestContextTest {
@@ -37,6 +39,10 @@ public class DefaultClientRequestContextTest {
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
                 ClientOptions.DEFAULT, mock(Request.class));
+
+        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
+        headers.set(AsciiString.of("my-header"), "baz");
+        originalCtx.setAdditionalRequestHeaders(headers);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
@@ -53,6 +59,7 @@ public class DefaultClientRequestContextTest {
         assertThat(derivedCtx.maxResponseLength()).isEqualTo(originalCtx.maxResponseLength());
         assertThat(derivedCtx.responseTimeoutMillis()).isEqualTo(originalCtx.responseTimeoutMillis());
         assertThat(derivedCtx.writeTimeoutMillis()).isEqualTo(originalCtx.writeTimeoutMillis());
+        assertThat(derivedCtx.additionalRequestHeaders().get(AsciiString.of("my-header"))).isEqualTo("baz");
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
 

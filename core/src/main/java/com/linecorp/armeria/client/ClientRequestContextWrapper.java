@@ -105,4 +105,14 @@ public class ClientRequestContextWrapper
     public HttpHeaders additionalRequestHeaders() {
         return delegate().additionalRequestHeaders();
     }
+
+    @Override
+    public void setAdditionalRequestHeaders(HttpHeaders headers) {
+        delegate().setAdditionalRequestHeaders(headers);
+    }
+
+    @Override
+    public void addAdditionalRequestHeaders(HttpHeaders headers) {
+        delegate().setAdditionalRequestHeaders(headers);
+    }
 }

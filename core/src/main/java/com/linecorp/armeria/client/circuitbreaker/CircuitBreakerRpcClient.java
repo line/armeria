@@ -56,7 +56,7 @@ public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcReque
      * Creates a new decorator that binds one {@link CircuitBreaker} per RPC method name with the specified
      * {@link CircuitBreakerStrategy}.
      *
-     * @param factory A function that takes a RPC method name and creates a new {@link CircuitBreaker}.
+     * @param factory A function that takes an RPC method name and creates a new {@link CircuitBreaker}.
      */
     public static Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,

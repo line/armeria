@@ -416,7 +416,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
         /**
          * A synonym for {@link #getMDCPropertyMap}.
-         * @deprecated Use {@link #getMDCPropertyMap} instead.
+         * @deprecated Use {@link #getMDCPropertyMap()}.
          */
         @Override
         @Deprecated

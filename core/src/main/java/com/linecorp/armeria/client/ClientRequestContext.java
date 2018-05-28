@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.ImmutableHttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
@@ -114,8 +115,20 @@ public interface ClientRequestContext extends RequestContext {
     void setMaxResponseLength(long maxResponseLength);
 
     /**
-     * Returns {@link HttpHeaders} which is included when a {@link Client} sends an {@link HttpRequest}.
-     * If you want to send more {@link HttpHeaders}, add it to the returned {@link HttpHeaders}.
+     * Returns {@link ImmutableHttpHeaders} which is included when a {@link Client} sends an
+     * {@link HttpRequest}.
      */
     HttpHeaders additionalRequestHeaders();
+
+    /**
+     * Sets the specified {@link HttpHeaders} which is included when a {@link Client} sends an
+     * {@link HttpRequest}.
+     */
+    void setAdditionalRequestHeaders(HttpHeaders headers);
+
+    /**
+     * Adds the specified {@link HttpHeaders} which is included when a {@link Client} sends an
+     * {@link HttpRequest}.
+     */
+    void addAdditionalRequestHeaders(HttpHeaders headers);
 }

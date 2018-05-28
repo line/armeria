@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -327,7 +328,16 @@ public final class Clients {
      */
     public static SafeCloseable withHttpHeaders(Function<HttpHeaders, HttpHeaders> headerManipulator) {
         requireNonNull(headerManipulator, "headerManipulator");
-        return withContextCustomizer(ctx -> headerManipulator.apply(ctx.additionalRequestHeaders()));
+        return withContextCustomizer(ctx -> {
+            final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
+            final DefaultHttpHeaders headers = new DefaultHttpHeaders();
+            if (!additionalHeaders.isEmpty()) {
+                headers.set(additionalHeaders);
+            }
+
+            final HttpHeaders manipulatedHeaders = headerManipulator.apply(headers);
+            ctx.setAdditionalRequestHeaders(manipulatedHeaders);
+        });
     }
 
     /**

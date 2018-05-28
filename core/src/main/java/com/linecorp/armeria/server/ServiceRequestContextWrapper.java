@@ -140,6 +140,16 @@ public class ServiceRequestContextWrapper
         return delegate().additionalResponseHeaders();
     }
 
+    @Override
+    public void setAdditionalResponseHeaders(HttpHeaders headers) {
+        delegate().setAdditionalResponseHeaders(headers);
+    }
+
+    @Override
+    public void addAdditionalResponseHeaders(HttpHeaders headers) {
+        delegate().addAdditionalResponseHeaders(headers);
+    }
+
     @Nullable
     @Override
     public ProxiedAddresses proxiedAddresses() {

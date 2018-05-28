@@ -25,12 +25,13 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.DecoratingService;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 
 /**
- * Decorates a {@link Service} to provide HTTP encoding (e.g., gzip) functionality.
+ * Decorates a {@link Service} to apply HTTP encoding (e.g., gzip) to an {@link HttpService}.
  * HTTP encoding will be applied if the client specifies it, the response content type is a reasonable
  * type to encode, and the response either has no fixed content length or the length is larger than 1KB.
  */

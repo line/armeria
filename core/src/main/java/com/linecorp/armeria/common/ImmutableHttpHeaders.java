@@ -26,7 +26,10 @@ import java.util.Set;
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
-final class ImmutableHttpHeaders implements HttpHeaders {
+/**
+ * An immutable {@link HttpHeaders} which {@code set} and {@code add} operations are not supported.
+ */
+public final class ImmutableHttpHeaders implements HttpHeaders {
 
     private final HttpHeaders delegate;
 
@@ -100,7 +103,7 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
-    public HttpHeaders setHeadersIfNotExist(HttpHeaders headers) {
+    public HttpHeaders setAllIfAbsent(Headers<? extends AsciiString, ? extends String, ?> headers) {
         return unsupported();
     }
 

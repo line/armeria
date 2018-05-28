@@ -25,8 +25,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -50,7 +48,6 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Endpoint endpoint = ctx.endpoint().resolve(ctx)
                                      .withDefaultPort(ctx.sessionProtocol().defaultPort());
-        autoFillHeaders(ctx, endpoint, req);
         if (!sanitizePath(req)) {
             req.abort();
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
@@ -81,41 +78,6 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
 
         return res;
-    }
-
-    private static void autoFillHeaders(ClientRequestContext ctx, Endpoint endpoint, HttpRequest req) {
-        requireNonNull(req, "req");
-        final HttpHeaders headers = req.headers();
-        final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
-
-        if (headers.authority() == null && additionalHeaders.authority() == null) {
-            final String hostname = endpoint.host();
-            final int port = endpoint.port();
-
-            final String authority;
-            if (port == ctx.sessionProtocol().defaultPort()) {
-                authority = hostname;
-            } else {
-                final StringBuilder buf = new StringBuilder(hostname.length() + 6);
-                buf.append(hostname);
-                buf.append(':');
-                buf.append(port);
-                authority = buf.toString();
-            }
-
-            headers.authority(authority);
-        }
-
-        if (headers.scheme() == null) {
-            headers.scheme(ctx.sessionProtocol().isTls() ? "https" : "http");
-        }
-
-        // Add the headers specified in ClientOptions, if not overridden by request.
-        headers.setHeadersIfNotExist(additionalHeaders);
-
-        if (!headers.contains(HttpHeaderNames.USER_AGENT)) {
-            headers.set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
-        }
     }
 
     private static boolean sanitizePath(HttpRequest req) {

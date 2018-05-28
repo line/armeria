@@ -57,7 +57,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private final ServiceConfig cfg;
     private final PathMappingContext pathMappingContext;
     private final PathMappingResult pathMappingResult;
-    private final HttpHeaders additionalResponseHeaders = new DefaultHttpHeaders();
     @Nullable
     private final SSLSession sslSession;
 
@@ -77,6 +76,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Nullable
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
+    @Nullable
+    private volatile HttpHeaders additionalResponseHeaders;
 
     @Nullable
     private String strVal;
@@ -137,11 +138,21 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                 cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
                 pathMappingResult, request, sslSession(), proxiedAddresses());
 
-        ctx.additionalResponseHeaders().set(additionalResponseHeaders());
+        final HttpHeaders additionalHeaders = additionalResponseHeaders();
+        if (!additionalHeaders.isEmpty()) {
+            ctx.setAdditionalResponseHeaders(additionalHeaders);
+        }
+
         for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();/* noop */) {
             ctx.addAttr(i.next());
         }
         return ctx;
+    }
+
+    private void createAdditionalHeadersIfAbsent() {
+        if (additionalResponseHeaders == null) {
+            additionalResponseHeaders = new DefaultHttpHeaders();
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -276,7 +287,24 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public HttpHeaders additionalResponseHeaders() {
-        return additionalResponseHeaders;
+        if (additionalResponseHeaders == null) {
+            return HttpHeaders.EMPTY_HEADERS;
+        }
+        return additionalResponseHeaders.asImmutable();
+    }
+
+    @Override
+    public void setAdditionalResponseHeaders(HttpHeaders headers) {
+        requireNonNull(headers, "headers");
+        createAdditionalHeadersIfAbsent();
+        additionalResponseHeaders.set(headers);
+    }
+
+    @Override
+    public void addAdditionalResponseHeaders(HttpHeaders headers) {
+        requireNonNull(headers, "headers");
+        createAdditionalHeadersIfAbsent();
+        additionalResponseHeaders.add(headers);
     }
 
     @Nullable

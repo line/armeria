@@ -57,14 +57,15 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     private final DefaultRequestLog log;
 
-    private final HttpHeaders additionalRequestHeaders;
-
     private long writeTimeoutMillis;
     private long responseTimeoutMillis;
     private long maxResponseLength;
 
     @Nullable
     private String strVal;
+
+    @Nullable
+    private volatile HttpHeaders additionalRequestHeaders;
 
     /**
      * Creates a new instance.
@@ -92,13 +93,18 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         maxResponseLength = options.defaultMaxResponseLength();
 
         final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
-        final HttpHeaders headersCopy = new DefaultHttpHeaders(true, headers.size());
         if (!headers.isEmpty()) {
-            headersCopy.set(headers);
+            createAdditionalHeadersIfAbsent();
+            additionalRequestHeaders.set(headers);
         }
-        additionalRequestHeaders = headersCopy;
 
         runThreadLocalContextCustomizer();
+    }
+
+    private void createAdditionalHeadersIfAbsent() {
+        if (additionalRequestHeaders == null) {
+            additionalRequestHeaders = new DefaultHttpHeaders();
+        }
     }
 
     private void runThreadLocalContextCustomizer() {
@@ -127,8 +133,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         maxResponseLength = ctx.maxResponseLength();
 
         final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
-        additionalRequestHeaders = new DefaultHttpHeaders(true, additionalHeaders.size());
-        additionalRequestHeaders.set(additionalHeaders);
+        if (!additionalHeaders.isEmpty()) {
+            createAdditionalHeadersIfAbsent();
+            additionalRequestHeaders.set(additionalHeaders);
+        }
 
         for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
             addAttr(i.next());
@@ -233,7 +241,24 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public HttpHeaders additionalRequestHeaders() {
-        return additionalRequestHeaders;
+        if (additionalRequestHeaders == null) {
+            return HttpHeaders.EMPTY_HEADERS;
+        }
+        return additionalRequestHeaders.asImmutable();
+    }
+
+    @Override
+    public void setAdditionalRequestHeaders(HttpHeaders headers) {
+        requireNonNull(headers, "headers");
+        createAdditionalHeadersIfAbsent();
+        additionalRequestHeaders.set(headers);
+    }
+
+    @Override
+    public void addAdditionalRequestHeaders(HttpHeaders headers) {
+        requireNonNull(headers, "headers");
+        createAdditionalHeadersIfAbsent();
+        additionalRequestHeaders.add(headers);
     }
 
     @Override

@@ -24,6 +24,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 import io.netty.channel.Channel;
+import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
 public class DefaultServiceRequestContextTest {
@@ -50,6 +52,10 @@ public class DefaultServiceRequestContextTest {
                 mappingCtx, PathMappingResult.of("/foo", null, ImmutableMap.of()),
                 mock(Request.class), null, null);
 
+        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
+        headers.set(AsciiString.of("my-header"), "baz");
+        originalCtx.setAdditionalResponseHeaders(headers);
+
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
 
@@ -64,6 +70,7 @@ public class DefaultServiceRequestContextTest {
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
         assertThat(derivedCtx.maxRequestLength()).isEqualTo(originalCtx.maxRequestLength());
         assertThat(derivedCtx.requestTimeoutMillis()).isEqualTo(originalCtx.requestTimeoutMillis());
+        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header"))).isEqualTo("baz");
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
 

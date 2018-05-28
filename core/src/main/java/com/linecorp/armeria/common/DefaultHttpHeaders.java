@@ -215,20 +215,6 @@ public final class DefaultHttpHeaders
     }
 
     @Override
-    public HttpHeaders setHeadersIfNotExist(HttpHeaders headers) {
-        requireNonNull(headers, "headers");
-        if (!headers.isEmpty()) {
-            headers.forEach(entry -> {
-                final AsciiString name = entry.getKey();
-                if (!this.contains(name)) {
-                    this.set(name, entry.getValue());
-                }
-            });
-        }
-        return this;
-    }
-
-    @Override
     public boolean isEndOfStream() {
         return endOfStream;
     }

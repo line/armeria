@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ImmutableHttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -188,10 +189,22 @@ public interface ServiceRequestContext extends RequestContext {
     void setMaxRequestLength(long maxRequestLength);
 
     /**
-     * Returns {@link HttpHeaders} which is included when a {@link Service} sends an {@link HttpResponse}.
-     * If you want to send more {@link HttpHeaders}, add it to the returned {@link HttpHeaders}.
+     * Returns {@link ImmutableHttpHeaders} which is included when a {@link Service} sends an
+     * {@link HttpResponse}.
      */
     HttpHeaders additionalResponseHeaders();
+
+    /**
+     * Sets the specified {@link HttpHeaders} which is included when a {@link Service} sends an
+     * {@link HttpResponse}.
+     */
+    void setAdditionalResponseHeaders(HttpHeaders headers);
+
+    /**
+     * Adds the specified {@link HttpHeaders} which is included when a {@link Service} sends an
+     * {@link HttpResponse}.
+     */
+    void addAdditionalResponseHeaders(HttpHeaders headers);
 
     /**
      * Returns the proxied addresses if the current {@link Request} is received through a proxy.

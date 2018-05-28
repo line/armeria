@@ -29,12 +29,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.ImmutableHttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -159,7 +161,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                             " (service: " + service() + ')');
                 }
 
-                final HttpHeaders headers = (HttpHeaders) o;
+                HttpHeaders headers = (HttpHeaders) o;
                 final HttpStatus status = headers.status();
                 if (status == null) {
                     throw newIllegalStateException("published an HttpHeaders without status: " + o +
@@ -171,7 +173,18 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     break;
                 }
 
-                headers.setHeadersIfNotExist(reqCtx.additionalResponseHeaders());
+                final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
+                if (!additionalHeaders.isEmpty()) {
+                    if (headers instanceof ImmutableHttpHeaders) {
+                        // All headers are already validated.
+                        final HttpHeaders temp = headers;
+                        headers = new DefaultHttpHeaders(false, temp.size() + additionalHeaders.size());
+                        headers.set(temp);
+                        o = headers;
+                    }
+                    headers.setAllIfAbsent(additionalHeaders);
+                }
+
                 logBuilder().responseHeaders(headers);
 
                 if (req.method() == HttpMethod.HEAD) {
