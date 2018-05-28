@@ -31,7 +31,6 @@ import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,6 +65,7 @@ import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
  * Builds a new {@link Server} and its {@link ServerConfig}.
@@ -144,8 +144,8 @@ public final class ServerBuilder {
     private VirtualHost defaultVirtualHost;
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
-    private final Map<ChannelOption<?>, Object> channelOptions = new LinkedHashMap<>();
-    private final Map<ChannelOption<?>, Object> childChannelOptions = new LinkedHashMap<>();
+    private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
+    private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = DEFAULT_MAX_NUM_CONNECTIONS;
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
@@ -347,7 +347,7 @@ public final class ServerBuilder {
                       "prohibited socket option: %s", option);
 
         option.validate(value);
-        this.channelOptions.put(option, value);
+        channelOptions.put(option, value);
         return this;
     }
 
@@ -367,7 +367,7 @@ public final class ServerBuilder {
                       "prohibited socket option: %s", option);
 
         option.validate(value);
-        this.childChannelOptions.put(option, value);
+        childChannelOptions.put(option, value);
         return this;
     }
 

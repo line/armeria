@@ -31,8 +31,6 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
@@ -42,6 +40,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
  * {@link Server} configuration.
@@ -136,9 +135,10 @@ public final class ServerConfig {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
-        this.channelOptions = ImmutableMap.copyOf(requireNonNull(channelOptions, "channelOptions"));
-        this.childChannelOptions = ImmutableMap.copyOf(requireNonNull(childChannelOptions,
-                                                                      "childChannelOptions"));
+        this.channelOptions = Collections.unmodifiableMap(
+                new Object2ObjectArrayMap<>(requireNonNull(channelOptions, "channelOptions")));
+        this.childChannelOptions = Collections.unmodifiableMap(
+                new Object2ObjectArrayMap<>(requireNonNull(childChannelOptions, "childChannelOptions")));
 
         // Set localAddresses.
         final List<ServerPort> portsCopy = new ArrayList<>();
