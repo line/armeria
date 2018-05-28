@@ -348,7 +348,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      */
     public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
             R extends Service<HttpRequest, HttpResponse>>
-    B service(T serviceWithPathMappings, Function<T, R> decorator) {
+    B service(T serviceWithPathMappings, Function<? super T, R> decorator) {
         requireNonNull(serviceWithPathMappings, "serviceWithPathMappings");
         requireNonNull(serviceWithPathMappings.pathMappings(), "serviceWithPathMappings.pathMappings()");
         requireNonNull(decorator, "decorator");

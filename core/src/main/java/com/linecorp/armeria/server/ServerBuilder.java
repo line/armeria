@@ -783,7 +783,7 @@ public final class ServerBuilder {
      */
     public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
             R extends Service<HttpRequest, HttpResponse>>
-    ServerBuilder service(T serviceWithPathMappings, Function<T, R> decorator) {
+    ServerBuilder service(T serviceWithPathMappings, Function<? super T, R> decorator) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(serviceWithPathMappings, decorator);
         return this;
