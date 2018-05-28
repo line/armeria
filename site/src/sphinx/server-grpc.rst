@@ -76,6 +76,10 @@ a :api:`GrpcServiceBuilder` and add it to the :api:`ServerBuilder`:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.Server;
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+
     ServerBuilder sb = new ServerBuilder();
     ...
     sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
@@ -99,6 +103,8 @@ to just pass ``GrpcSerializationFormats.values()``.
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.grpc.GrpcSerializationFormats;
+
     ServerBuilder sb = new ServerBuilder();
     ...
     sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
@@ -111,6 +117,35 @@ to just pass ``GrpcSerializationFormats.values()``.
 The server will support both native gRPC_ and gRPC-Web_ from the same endpoint. Use the unofficial
 gRPC-Web-Client_ to access the service from a browser. gRPC-Web_ does not support RPC methods with streaming
 requests.
+
+If the origin of the Javascript and API server are different, gRPC-Web-Client_ first sends ``preflight``
+requests by the HTTP ``OPTIONS`` method, in order to determine whether the actual request is safe to send
+in terms of CORS. Armeria provides :api:`CorsService` to handle this requests, so you need to decorate it when
+you build a :api:`GrpcService`:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.cors.CorsServiceBuilder;
+
+    ServerBuilder sb = new ServerBuilder();
+    ...
+
+    final CorsServiceBuilder corsBuilder =
+            CorsServiceBuilder.forOrigin("http://foo.com")
+                              .allowRequestMethods(HttpMethod.POST) // Allow POST method.
+                              // Allow Content-type and X-GRPC-WEB headers.
+                              .allowRequestHeaders(HttpHeaderNames.CONTENT_TYPE,
+                                                   HttpHeaderNames.of("X-GRPC-WEB"));
+
+    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+                                       .supportedSerializationFormats(GrpcSerializationFormats.values())
+                                       .build(), corsBuilder.newDecorator());
+    ...
+    Server server = sb.build();
+    server.start();
+
+Please refer to `Cross-Origin Resource Sharing (CORS) <https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS>`_
+by MDN for more information.
 
 Unframed requests
 -----------------
@@ -143,6 +178,9 @@ implementation requires blocking, either run the individual blocking logic in a 
 entire service implementation in ``RequestContext.current().blockingTaskExecutor().submit``
 
 .. code-block:: java
+
+    import com.linecorp.armeria.common.RequestContext;
+    import com.linecorp.armeria.server.ServiceRequestContext;
 
     public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
         @Override
