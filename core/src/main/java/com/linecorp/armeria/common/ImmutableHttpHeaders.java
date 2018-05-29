@@ -26,6 +26,9 @@ import java.util.Set;
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
+/**
+ * An immutable {@link HttpHeaders} which {@code set} and {@code add} operations are not supported.
+ */
 final class ImmutableHttpHeaders implements HttpHeaders {
 
     private final HttpHeaders delegate;
@@ -96,6 +99,11 @@ final class ImmutableHttpHeaders implements HttpHeaders {
 
     @Override
     public HttpHeaders contentType(MediaType mediaType) {
+        return unsupported();
+    }
+
+    @Override
+    public HttpHeaders setAllIfAbsent(Headers<? extends AsciiString, ? extends String, ?> headers) {
         return unsupported();
     }
 

@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.logging.structured.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
@@ -53,13 +52,16 @@ public class KafkaStructuredLoggingServiceTest {
         }
     }
 
+    @Mock
+    private static Service<HttpRequest, HttpResponse> service;
+
     private static class KafkaStructuredLoggingServiceExposed
             extends KafkaStructuredLoggingService<HttpRequest, HttpResponse, SimpleStructuredLog> {
         KafkaStructuredLoggingServiceExposed(
                 Producer<byte[], SimpleStructuredLog> producer,
                 @Nullable KeySelector<SimpleStructuredLog> keySelector,
                 boolean needToCloseProducer) {
-            super(mock(Service.class), log -> null, producer, TOPIC_NAME, keySelector, needToCloseProducer);
+            super(service, log -> null, producer, TOPIC_NAME, keySelector, needToCloseProducer);
         }
     }
 

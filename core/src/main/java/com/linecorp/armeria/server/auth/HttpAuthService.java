@@ -32,13 +32,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 
 /**
- * A {@link DecoratingService} that provides HTTP authorization functionality.
+ * Decorates a {@link Service} to provide HTTP authorization functionality.
  */
 public abstract class HttpAuthService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 

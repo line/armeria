@@ -30,6 +30,8 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -44,6 +46,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 
 /**
@@ -71,8 +75,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Nullable
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
+
     @Nullable
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
+    @Nullable
+    private volatile HttpHeaders additionalResponseHeaders;
 
     @Nullable
     private String strVal;
@@ -132,10 +139,25 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
                 pathMappingResult, request, sslSession(), proxiedAddresses());
+
+        final HttpHeaders additionalHeaders = additionalResponseHeaders();
+        if (!additionalHeaders.isEmpty()) {
+            ctx.setAdditionalResponseHeaders(additionalHeaders);
+        }
+
         for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();/* noop */) {
             ctx.addAttr(i.next());
         }
         return ctx;
+    }
+
+    private HttpHeaders createAdditionalHeadersIfAbsent() {
+        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
+        if (additionalResponseHeaders == null) {
+            return this.additionalResponseHeaders = new DefaultHttpHeaders();
+        } else {
+            return additionalResponseHeaders;
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -266,6 +288,50 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                     "maxRequestLength: " + maxRequestLength + " (expected: >= 0)");
         }
         this.maxRequestLength = maxRequestLength;
+    }
+
+    @Override
+    public HttpHeaders additionalResponseHeaders() {
+        if (additionalResponseHeaders == null) {
+            return HttpHeaders.EMPTY_HEADERS;
+        }
+        return additionalResponseHeaders.asImmutable();
+    }
+
+    @Override
+    public void setAdditionalResponseHeader(AsciiString name, String value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        createAdditionalHeadersIfAbsent().set(name, value);
+    }
+
+    @Override
+    public void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        requireNonNull(headers, "headers");
+        createAdditionalHeadersIfAbsent().set(headers);
+    }
+
+    @Override
+    public void addAdditionalResponseHeader(AsciiString name, String value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        createAdditionalHeadersIfAbsent().add(name, value);
+    }
+
+    @Override
+    public void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        requireNonNull(headers, "headers");
+        createAdditionalHeadersIfAbsent().add(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalResponseHeader(AsciiString name) {
+        requireNonNull(name, "name");
+        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
+        if (additionalResponseHeaders == null) {
+            return false;
+        }
+        return additionalResponseHeaders.remove(name);
     }
 
     @Nullable

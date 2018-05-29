@@ -123,8 +123,7 @@ public class HttpTracingServiceTest {
         when(ctx.log()).thenReturn(log);
         when(ctx.logBuilder()).thenReturn(log);
         when(ctx.path()).thenReturn("/hello/trustin");
-        ctx.onEnter(isA(Consumer.class));
-        ctx.onExit(isA(Consumer.class));
+        checkCtxOnEnterAndExitParameter(ctx);
         when(delegate.serve(ctx, req)).thenReturn(res);
 
         // do invoke
@@ -136,5 +135,11 @@ public class HttpTracingServiceTest {
         log.endResponse();
 
         return reporter;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void checkCtxOnEnterAndExitParameter(ServiceRequestContext ctx) {
+        ctx.onEnter(isA(Consumer.class));
+        ctx.onExit(isA(Consumer.class));
     }
 }

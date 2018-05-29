@@ -18,9 +18,13 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.server.ServiceRequestContext;
+
+import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
 
 /**
  * Wraps an existing {@link ServiceRequestContext}.
@@ -98,5 +102,35 @@ public class ClientRequestContextWrapper
     @Override
     public void setMaxResponseLength(long maxResponseLength) {
         delegate().setMaxResponseLength(maxResponseLength);
+    }
+
+    @Override
+    public HttpHeaders additionalRequestHeaders() {
+        return delegate().additionalRequestHeaders();
+    }
+
+    @Override
+    public void setAdditionalRequestHeader(AsciiString name, String value) {
+        delegate().setAdditionalRequestHeader(name, value);
+    }
+
+    @Override
+    public void setAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        delegate().setAdditionalRequestHeaders(headers);
+    }
+
+    @Override
+    public void addAdditionalRequestHeader(AsciiString name, String value) {
+        delegate().addAdditionalRequestHeader(name, value);
+    }
+
+    @Override
+    public void addAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        delegate().setAdditionalRequestHeaders(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalRequestHeader(AsciiString name) {
+        return delegate().removeAdditionalRequestHeader(name);
     }
 }

@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -34,6 +35,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+
+import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -197,6 +201,44 @@ public interface ServiceRequestContext extends RequestContext {
      * @see ContentTooLargeException
      */
     void setMaxRequestLength(long maxRequestLength);
+
+    /**
+     * Returns an immutable {@link HttpHeaders} which is included when a {@link Service} sends an
+     * {@link HttpResponse}.
+     */
+    HttpHeaders additionalResponseHeaders();
+
+    /**
+     * Sets a header with the specified {@code name} and {@code value}. This will remove all previous values
+     * associated with the specified {@code name}.
+     * The header will be included when a {@link Service} sends an {@link HttpResponse}.
+     */
+    void setAdditionalResponseHeader(AsciiString name, String value);
+
+    /**
+     * Clears the current header and sets the specified {@link Headers} which is included when a
+     * {@link Service} sends an {@link HttpResponse}.
+     */
+    void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+
+    /**
+     * Adds a header with the specified {@code name} and {@code value}. The header will be included when
+     * a {@link Service} sends an {@link HttpResponse}.
+     */
+    void addAdditionalResponseHeader(AsciiString name, String value);
+
+    /**
+     * Adds the specified {@link Headers} which is included when a {@link Service} sends an
+     * {@link HttpResponse}.
+     */
+    void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+
+    /**
+     * Removes all headers with the specified {@code name}.
+     *
+     * @return {@code true} if at least one entry has been removed
+     */
+    boolean removeAdditionalResponseHeader(AsciiString name);
 
     /**
      * Returns the proxied addresses if the current {@link Request} is received through a proxy.

@@ -27,8 +27,8 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
+import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
@@ -41,13 +41,6 @@ public interface ClientRequestContext extends RequestContext {
 
     @Override
     ClientRequestContext newDerivedContext(Request request);
-
-    /**
-     * The {@link AttributeKey} of the {@link HttpHeaders} to include when a {@link Client} sends an
-     * {@link HttpRequest}. This {@link Attribute} is initially populated from
-     * {@link ClientOption#HTTP_HEADERS} and can be modified by a {@link DecoratingClient}.
-     */
-    AttributeKey<HttpHeaders> HTTP_HEADERS = AttributeKey.valueOf(ClientRequestContext.class, "HTTP_HEADERS");
 
     /**
      * Returns the remote {@link Endpoint} of the current {@link Request}.
@@ -122,4 +115,42 @@ public interface ClientRequestContext extends RequestContext {
      * @see ContentTooLargeException
      */
     void setMaxResponseLength(long maxResponseLength);
+
+    /**
+     * Returns an immutable {@link HttpHeaders} which is included when a {@link Client} sends an
+     * {@link HttpRequest}.
+     */
+    HttpHeaders additionalRequestHeaders();
+
+    /**
+     * Sets a header with the specified {@code name} and {@code value}. This will remove all previous values
+     * associated with the specified {@code name}.
+     * The header will be included when a {@link Client} sends an {@link HttpRequest}.
+     */
+    void setAdditionalRequestHeader(AsciiString name, String value);
+
+    /**
+     * Clears the current header and sets the specified {@link Headers} which is included when a
+     * {@link Client} sends an {@link HttpRequest}.
+     */
+    void setAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+
+    /**
+     * Adds a header with the specified {@code name} and {@code value}. The header will be included when
+     * a {@link Client} sends an {@link HttpRequest}.
+     */
+    void addAdditionalRequestHeader(AsciiString name, String value);
+
+    /**
+     * Adds the specified {@link Headers} which is included when a {@link Client} sends an
+     * {@link HttpRequest}.
+     */
+    void addAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+
+    /**
+     * Removes all headers with the specified {@code name}.
+     *
+     * @return {@code true} if at least one entry has been removed
+     */
+    boolean removeAdditionalRequestHeader(AsciiString name);
 }

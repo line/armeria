@@ -71,8 +71,8 @@ Essential features for building microservices
 Interactive web-based debug console
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Browse the list of available RPC operations
-- Invoke a RPC operation via a web form
-- Share a RPC request with your colleagues so they can reproduce the problem easily
+- Invoke an RPC operation via a web form
+- Share an RPC request with your colleagues so they can reproduce the problem easily
 
   - Just like sharing a cURL command, but works for RPC
 

@@ -24,11 +24,15 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
+
+import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
 
 /**
  * Wraps an existing {@link ServiceRequestContext}.
@@ -132,6 +136,36 @@ public class ServiceRequestContextWrapper
     @Override
     public void setMaxRequestLength(long maxRequestLength) {
         delegate().setMaxRequestLength(maxRequestLength);
+    }
+
+    @Override
+    public HttpHeaders additionalResponseHeaders() {
+        return delegate().additionalResponseHeaders();
+    }
+
+    @Override
+    public void setAdditionalResponseHeader(AsciiString name, String value) {
+        delegate().setAdditionalResponseHeader(name, value);
+    }
+
+    @Override
+    public void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        delegate().setAdditionalResponseHeaders(headers);
+    }
+
+    @Override
+    public void addAdditionalResponseHeader(AsciiString name, String value) {
+        delegate().addAdditionalResponseHeader(name, value);
+    }
+
+    @Override
+    public void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        delegate().addAdditionalResponseHeaders(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalResponseHeader(AsciiString name) {
+        return delegate().removeAdditionalResponseHeader(name);
     }
 
     @Nullable
