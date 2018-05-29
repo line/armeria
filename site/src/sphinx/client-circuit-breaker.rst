@@ -145,8 +145,8 @@ If you want to treat a :api:`Response` as a success, return ``true``. Return ``f
 Note that :api:`CircuitBreakerStrategy` can return ``null`` as well. It won't be counted as a success nor
 a failure.
 
-Grouping ``CircuitBreakers``
-----------------------------
+Grouping ``CircuitBreaker``\s
+-----------------------------
 
 In the very first example above, a single :api:`CircuitBreaker` was used to track the events. However,
 in many cases, you will want to use different :api:`CircuitBreaker` for different endpoints. For example, there
@@ -269,3 +269,40 @@ If you use :api:`CircuitBreakerBuilder`, you can configure the parameters which 
         final MetricCollectingCircuitBreakerListener listener =
                 new MetricCollectingCircuitBreakerListener(Metrics.globalRegistry);
         final CircuitBreakerBuilder builder = new CircuitBreakerBuilder().listener(listener);
+
+.. _circuit-breaker-with-non-armeria-client:
+
+Using ``CircuitBreaker`` with non-Armeria client
+------------------------------------------------
+
+:api:`CircuitBreaker` API is designed to be framework-agnostic and thus can be used with any non-Armeria
+clients:
+
+1. Create a :api:`CircuitBreaker`.
+2. Guard your client calls with ``CircuitBreaker.canRequest()``.
+3. Update the state of :api:`CircuitBreaker` by calling ``CircuitBreaker.onSuccess()`` or ``onFailure()``
+   depending on the outcome of the client call.
+
+For example:
+
+.. code-block:: java
+
+    private final CircuitBreaker cb = CircuitBreaker.of("some-client");
+    private final SomeClient client = ...;
+
+    public void sendRequestWithCircuitBreaker() {
+        if (!cb.canRequest()) {
+            throw new RuntimeException();
+        }
+
+        boolean success = false;
+        try {
+            success = client.sendRequest();
+        } finally {
+            if (success) {
+                cb.onSuccess();
+            } else {
+                cb.onFailure();
+            }
+        }
+    }

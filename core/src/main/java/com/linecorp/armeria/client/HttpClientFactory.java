@@ -97,7 +97,7 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     HttpClientFactory(
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnClose,
-            Map<ChannelOption<?>, Object> socketOptions,
+            Map<ChannelOption<?>, Object> channelOptions,
             Consumer<? super SslContextBuilder> sslContextCustomizer,
             Function<? super EventLoopGroup,
                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
@@ -110,7 +110,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
         baseBootstrap.resolver(addressResolverGroupFactory.apply(workerGroup));
 
-        socketOptions.forEach((option, value) -> {
+        channelOptions.forEach((option, value) -> {
             @SuppressWarnings("unchecked")
             final ChannelOption<Object> castOption = (ChannelOption<Object>) option;
             baseBootstrap.option(castOption, value);

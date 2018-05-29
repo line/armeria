@@ -11,3 +11,4 @@ Advanced topics
     advanced-structured-logging-kafka
     advanced-zipkin
     advanced-zookeeper
+    advanced-production-checklist
