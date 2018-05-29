@@ -26,7 +26,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -53,6 +52,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
  * Builds a new {@link ClientFactory}.
@@ -92,7 +92,7 @@ public final class ClientFactoryBuilder {
     // Netty-related properties:
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnClose;
-    private final Map<ChannelOption<?>, Object> socketOptions = new HashMap<>();
+    private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private Consumer<? super SslContextBuilder> sslContextCustomizer = DEFAULT_SSL_CONTEXT_CUSTOMIZER;
     private Function<? super EventLoopGroup,
             ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
@@ -116,7 +116,7 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
-        socketOption(ChannelOption.SO_KEEPALIVE, true);
+        channelOption(ChannelOption.SO_KEEPALIVE, true);
     }
 
     /**
@@ -149,19 +149,29 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder connectTimeoutMillis(long connectTimeoutMillis) {
         checkArgument(connectTimeoutMillis > 0,
                       "connectTimeoutMillis: %s (expected: > 0)", connectTimeoutMillis);
-        return socketOption(ChannelOption.CONNECT_TIMEOUT_MILLIS,
-                            ConvertUtils.safeLongToInt(connectTimeoutMillis));
+        return channelOption(ChannelOption.CONNECT_TIMEOUT_MILLIS,
+                             ConvertUtils.safeLongToInt(connectTimeoutMillis));
+    }
+
+    /**
+     * Sets the options of sockets created by the {@link ClientFactory}.
+     *
+     * @deprecated Use {@link #channelOption(ChannelOption, Object)}.
+     */
+    @Deprecated
+    public <T> ClientFactoryBuilder socketOption(ChannelOption<T> option, T value) {
+        return channelOption(option, value);
     }
 
     /**
      * Sets the options of sockets created by the {@link ClientFactory}.
      */
-    public <T> ClientFactoryBuilder socketOption(ChannelOption<T> option, T value) {
+    public <T> ClientFactoryBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
         checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
                       "prohibited socket option: %s", option);
 
-        socketOptions.put(option, requireNonNull(value, "value"));
+        channelOptions.put(option, requireNonNull(value, "value"));
         return this;
     }
 
@@ -328,7 +338,7 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactory build() {
         return new DefaultClientFactory(new HttpClientFactory(
-                workerGroup, shutdownWorkerGroupOnClose, socketOptions, sslContextCustomizer,
+                workerGroup, shutdownWorkerGroupOnClose, channelOptions, sslContextCustomizer,
                 addressResolverGroupFactory, initialHttp2ConnectionWindowSize, initialHttp2StreamWindowSize,
                 http2MaxFrameSize, maxHttp1InitialLineLength, maxHttp1HeaderSize,
                 maxHttp1ChunkSize, idleTimeoutMillis, useHttp2Preface,
@@ -337,7 +347,7 @@ public final class ClientFactoryBuilder {
 
     @Override
     public String toString() {
-        return toString(this, workerGroup, shutdownWorkerGroupOnClose, socketOptions,
+        return toString(this, workerGroup, shutdownWorkerGroupOnClose, channelOptions,
                         sslContextCustomizer, addressResolverGroupFactory, initialHttp2ConnectionWindowSize,
                         initialHttp2StreamWindowSize, http2MaxFrameSize, maxHttp1InitialLineLength,
                         maxHttp1HeaderSize, maxHttp1ChunkSize, idleTimeoutMillis,
