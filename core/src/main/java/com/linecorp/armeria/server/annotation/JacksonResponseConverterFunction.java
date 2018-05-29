@@ -64,8 +64,8 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
             if (mediaType.is(MediaType.JSON) || mediaType.subtype().endsWith("+json")) {
                 final Charset charset = mediaType.charset().orElse(StandardCharsets.UTF_8);
 
-                // 'utf-8' is always used as charset in ObjectMapper internally.
-                // So the result will be encoded only if the mediaType contains 'utf-8'.
+                // Convert the object only if the charset supports UTF-8,
+                // because ObjectMapper always writes JSON document as UTF-8.
                 if (charset.contains(StandardCharsets.UTF_8)) {
                     return HttpResponse.of(HttpStatus.OK, mediaType.withCharset(StandardCharsets.UTF_8),
                                            mapper.writeValueAsBytes(result));

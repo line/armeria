@@ -409,7 +409,7 @@ Conversion between an HTTP message and a Java object
 Converting an HTTP request to a Java object
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In some cases like receiving a JSON document from a client, it may be useful to convert the document to
+In some cases like receiving a JSON text from a client, it may be useful to convert the document to
 a Java object automatically. Armeria provides :api:`@RequestConverter` and :api:`@RequestObject`
 annotations so that such conversion can be done conveniently.
 You can write your own request converter by implementing :api:`RequestConverterFunction` as follows.
@@ -455,9 +455,9 @@ which are annotated with :api:`@RequestObject`.
         }
     }
 
-Armeria also provides built-in request converters such as, a request converter for Java Beans,
-:api:`JacksonRequestConverterFunction` for JSON documents, :api:`StringRequestConverterFunction`
-for text contents and :api:`ByteArrayRequestConverterFunction` for binary contents. They will be applied
+Armeria also provides built-in request converters such as, a request converter for a Java Bean,
+:api:`JacksonRequestConverterFunction` for JSON text, :api:`StringRequestConverterFunction`
+for a string and :api:`ByteArrayRequestConverterFunction` for binary data. They will be applied
 after your request converters by default, so you can use these built-in converters by just putting
 :api:`@RequestObject` annotation on the parameters which you want to convert.
 
@@ -604,24 +604,24 @@ as follows.
         }
     }
 
-Even you do not specify any :api:`ResponseConverter` annotation, the response object can be converted into
-a :api:`HttpResponse` with the following response converters by default. They convert the response object
+Even if you do not specify any :api:`ResponseConverter` annotation, the response object can be converted into
+an :api:`HttpResponse` by one of the following response converters. They convert the response object
 to :api:`HttpResponse` based on the negotiated media type and the type of the object.
 
 - :api:`JacksonResponseConverterFunction`
 
-  - try to convert any object to a JSON document if the negotiated media type is ``application/json``.
-    ``JsonNode`` object can be converted to a JSON document even if there is no media type negotiated.
+  - convert an object to a JSON text if the negotiated media type is ``application/json``.
+    ``JsonNode`` object can be converted to a JSON text even if there is no media type negotiated.
 
 - :api:`StringResponseConverterFunction`
 
-  - try to convert an object by ``String.valueOf()`` method if the negotiated media type is one of
-    ``text`` types. If there is no media type negotiated, ``String`` and ``CharSequence`` object
-    can be written as a text with ``Content-Type: text/plain; charset=utf-8`` header.
+  - convert an object to a string if the negotiated media type is one of ``text`` types.
+    If there is no media type negotiated, ``String`` and ``CharSequence`` object can be written as a text
+    with ``Content-Type: text/plain; charset=utf-8`` header.
 
 - :api:`ByteArrayResponseConverterFunction`
 
-  - try to convert an object to a byte array. Only :api:`HttpData` and ``byte[]`` can be handled
+  - convert an object to a byte array. Only :api:`HttpData` and ``byte[]`` can be handled
     even if the negotiated media type is one of ``application/binary`` and ``application/octet-stream``.
     If there is no media type negotiated, :api:`HttpData` and ``byte[]`` object will be written as a binary
     with ``Content-Type: application/binary`` header.
@@ -632,7 +632,7 @@ Let's see the following example about the default response conversion.
 
     public class MyAnnotatedService {
 
-        // JacksonResponseConverterFunction will be worked for the following methods:
+        // JacksonResponseConverterFunction will convert the return values to JSON texts:
         @Get("/json1")
         @ProduceJson    // the same as @ProduceType("application/json; charset=utf-8")
         public MyObject json1() { ... }
@@ -640,7 +640,7 @@ Let's see the following example about the default response conversion.
         @Get("/json2")
         public JsonNode json2() { ... }
 
-        // StringResponseConverterFunction will be worked for the following methods:
+        // StringResponseConverterFunction will convert the return values to strings:
         @Get("/string1")
         @ProduceText    // the same as @ProduceType("text/plain; charset=utf-8")
         public int string1() { ... }
@@ -648,7 +648,7 @@ Let's see the following example about the default response conversion.
         @Get("/string2")
         public CharSequence string2() { ... }
 
-        // ByteArrayResponseConverterFunction will be worked for the following methods:
+        // ByteArrayResponseConverterFunction will convert the return values to byte arrays:
         @Get("/byte1")
         @ProduceBinary  // the same as @ProduceType("application/binary")
         public HttpData byte1() { ... }
@@ -1080,16 +1080,16 @@ as follows. ``helloCatchAll()`` method would accept every request except for the
 Creating user-defined media type annotations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Armeria provides annotations like :api:`@ConsumeJson`, :api:`@ConsumeText`, :api:`@ConsumeBinary`
+Armeria provides pre-defined annotations such as :api:`@ConsumeJson`, :api:`@ConsumeText`, :api:`@ConsumeBinary`
 and :api:`@ConsumeOctetStream` which are aliases for ``@ConsumeType("application/json; charset=utf-8")``,
 ``@ConsumeType("text/plain; charset=utf-8")``, ``@ConsumeType("application/binary")`` and
 ``@ConsumeType("application/octet-stream")`` respectively.
 Also, :api:`@ProduceJson`, :api:`@ProduceText`, :api:`@ProduceBinary` and :api:`@ProduceOctetStream`
-are provided in a same manner.
+are provided in the same manner.
 
-Moreover, you can specify your own alias for :api:`@ConsumeType` and :api:`@ProduceType` as follows.
-It would be better to specify your annotation than writing a media type as a string on every method
-which is more error-prone.
+If there is no annotation that meets your need, you can define your own annotations for :api:`@ConsumeType`
+and :api:`@ProduceType` as follows. Specifying your own annotations is recommended because writing a media type
+with a string is more error-prone.
 
 .. code-block:: java
 
