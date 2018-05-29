@@ -23,9 +23,13 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+
+import io.netty.util.NetUtil;
 
 /**
  * HTTP implementation of {@link HealthCheckedEndpointGroup}.
@@ -98,8 +102,24 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
                                           Endpoint endpoint,
                                           SessionProtocol protocol,
                                           String healthCheckPath) {
-            httpClient = HttpClient.of(clientFactory,
-                                       protocol.uriText() + "://" + endpoint.authority());
+
+            final String scheme = protocol.uriText();
+            final String ipAddr = endpoint.ipAddr();
+            if (ipAddr == null) {
+                httpClient = HttpClient.of(clientFactory, scheme + "://" + endpoint.authority());
+            } else {
+                final int port = endpoint.port(protocol.defaultPort());
+                final HttpClientBuilder builder;
+                if (NetUtil.isValidIpV4Address(ipAddr)) {
+                    builder = new HttpClientBuilder(scheme + "://" + ipAddr + ':' + port);
+                } else {
+                    builder = new HttpClientBuilder(scheme + "://[" + ipAddr + "]:" + port);
+                }
+
+                builder.factory(clientFactory);
+                builder.setHttpHeader(HttpHeaderNames.AUTHORITY, endpoint.authority());
+                httpClient = builder.build();
+            }
             this.healthCheckPath = healthCheckPath;
         }
 

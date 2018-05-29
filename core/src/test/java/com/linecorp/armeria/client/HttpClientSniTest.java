@@ -32,10 +32,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -134,6 +138,28 @@ public class HttpClientSniTest {
 
         assertEquals(HttpStatus.OK, response.headers().status());
         return response.content().toString(StandardCharsets.UTF_8);
+    }
+
+    @Test
+    public void testCustomAuthority() throws Exception {
+        final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
+        final AggregatedHttpMessage response =
+                client.execute(HttpHeaders.of(HttpMethod.GET, "/")
+                                          .set(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort))
+                      .aggregate().get();
+
+        assertEquals(HttpStatus.OK, response.headers().status());
+        assertEquals("a.com: CN=a.com", response.content().toStringUtf8());
+    }
+
+    @Test
+    public void testCustomAuthorityWithAdditionalHeaders() throws Exception {
+        final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
+        try (SafeCloseable unused = Clients.withHttpHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
+            final AggregatedHttpMessage response = client.get("/").aggregate().get();
+            assertEquals(HttpStatus.OK, response.headers().status());
+            assertEquals("a.com: CN=a.com", response.content().toStringUtf8());
+        }
     }
 
     private static class DummyAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
