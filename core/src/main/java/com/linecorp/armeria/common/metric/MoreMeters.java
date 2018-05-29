@@ -41,9 +41,27 @@ public final class MoreMeters {
 
     private static final double[] PERCENTILES = { 0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0 };
 
+    /**
+     * Export the percentile values only by default. We specify all properties so that we get consistent values
+     * even if Micrometer changes its defaults. Most notably, we changed {@code percentilePrecision},
+     * {@code expiry} and {@code bufferLength} due to the following reasons:
+     * <ul>
+     *   <li>The default {@code percentilePrecision} of 1 is way too inaccurate.</li>
+     *   <li>Histogram buckets should be rotated every minute rather than every some-arbitrary-seconds
+     *       because that fits better to human's mental model of time. Micrometer's 2 minutes / 3 buffers
+     *       (i.e. rotate every 40 seconds) does not make much sense.</li>
+     * </ul>
+     */
     private static volatile DistributionStatisticConfig distStatCfg =
             DistributionStatisticConfig.builder()
+                                       .percentilesHistogram(false)
+                                       .sla()
                                        .percentiles(PERCENTILES)
+                                       .percentilePrecision(2)
+                                       .minimumExpectedValue(1L)
+                                       .maximumExpectedValue(Long.MAX_VALUE)
+                                       .expiry(Duration.ofMinutes(3))
+                                       .bufferLength(3)
                                        .build();
 
     /**
