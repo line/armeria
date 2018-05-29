@@ -39,7 +39,7 @@ com.google.code.findbugs:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '25.0-jre'
+    version: &GUAVA_VERSION '25.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -152,7 +152,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.1.13'
+    version: '2.1.14'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -164,7 +164,7 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil:
-    version: '8.1.1'
+    version: '8.2.1'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
@@ -194,7 +194,7 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.5' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '1.29.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '1.29.1' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
