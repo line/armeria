@@ -12,3 +12,4 @@ Advanced topics
     advanced-zipkin
     advanced-zookeeper
     advanced-production-checklist
+    advanced-saml
