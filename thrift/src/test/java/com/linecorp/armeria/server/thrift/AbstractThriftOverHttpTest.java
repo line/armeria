@@ -74,6 +74,7 @@ public abstract class AbstractThriftOverHttpTest {
 
     abstract static class HelloServiceBase implements AsyncIface {
         @Override
+        @SuppressWarnings("unchecked")
         public void hello(String name, AsyncMethodCallback resultHandler) throws TException {
             resultHandler.onComplete(getResponse(name));
         }

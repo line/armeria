@@ -191,9 +191,41 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     HttpHeaders contentType(MediaType mediaType);
 
     /**
+     * Copies the entries missing in this headers from the specified {@link Headers}.
+     * This method is a shortcut of the following code:
+     * <pre>{@code
+     * headers.forEach(entry -> {
+     *     final AsciiString name = entry.getKey();
+     *     if (!this.contains(name)) {
+     *         this.set(name, entry.getValue());
+     *     }
+     * });
+     * }</pre>
+     */
+    default HttpHeaders setAllIfAbsent(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        requireNonNull(headers, "headers");
+        if (!headers.isEmpty()) {
+            headers.forEach(entry -> {
+                final AsciiString name = entry.getKey();
+                if (!this.contains(name)) {
+                    this.set(name, entry.getValue());
+                }
+            });
+        }
+        return this;
+    }
+
+    /**
      * Returns the immutable view of this headers.
      */
     default HttpHeaders asImmutable() {
         return new ImmutableHttpHeaders(this);
+    }
+
+    /**
+     * Returns whether this is immutable or not.
+     */
+    default boolean isImmutable() {
+        return this instanceof ImmutableHttpHeaders;
     }
 }

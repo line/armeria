@@ -125,6 +125,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void ofMethods() {
         getAllMethods(Service.class).forEach(method -> {
             try {
@@ -138,6 +139,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void ofFieldBean() throws NoSuchFieldException {
         final FieldBean bean = new FieldBean();
 
@@ -160,6 +162,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void ofConstructorBean() {
         final Set<Constructor> constructors = getAllConstructors(ConstructorBean.class);
         assertThat(constructors.size()).isOne();
@@ -182,6 +185,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void ofSetterBean() throws Exception {
         final SetterBean bean = SetterBean.class.newInstance();
         getAllMethods(SetterBean.class).forEach(method -> testMethod(method, bean));
@@ -189,7 +193,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public void ofMixedBean() throws Exception {
         final Set<Constructor> constructors = getAllConstructors(MixedBean.class);
         assertThat(constructors.size()).isOne();

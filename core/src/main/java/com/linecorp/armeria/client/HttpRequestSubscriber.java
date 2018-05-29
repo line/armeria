@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -29,7 +30,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.AbstractRequestContext;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -147,7 +150,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             return;
         }
 
-        final HttpHeaders firstHeaders = request.headers();
+        final HttpHeaders firstHeaders = autoFillHeaders(ch);
         final String host = LoggingUtil.remoteHost(firstHeaders, ch);
 
         final SessionProtocol protocol = session.protocol();
@@ -163,6 +166,49 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
         state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
         cancelTimeout();
+    }
+
+    private HttpHeaders autoFillHeaders(Channel ch) {
+        HttpHeaders requestHeaders = request.headers();
+        if (requestHeaders.isImmutable()) {
+            final HttpHeaders temp = requestHeaders;
+            requestHeaders = new DefaultHttpHeaders(false);
+            requestHeaders.set(temp);
+        }
+
+        final HttpHeaders additionalHeaders = reqCtx.additionalRequestHeaders();
+        if (!additionalHeaders.isEmpty()) {
+            requestHeaders.setAllIfAbsent(additionalHeaders);
+        }
+
+        final SessionProtocol sessionProtocol = reqCtx.sessionProtocol();
+        if (requestHeaders.authority() == null) {
+            final InetSocketAddress isa = (InetSocketAddress) ch.remoteAddress();
+            final String hostname = isa.getHostName();
+            final int port = isa.getPort();
+
+            final String authority;
+            if (port == sessionProtocol.defaultPort()) {
+                authority = hostname;
+            } else {
+                final StringBuilder buf = new StringBuilder(hostname.length() + 6);
+                buf.append(hostname);
+                buf.append(':');
+                buf.append(port);
+                authority = buf.toString();
+            }
+
+            requestHeaders.authority(authority);
+        }
+
+        if (requestHeaders.scheme() == null) {
+            requestHeaders.scheme(sessionProtocol.isTls() ? "https" : "http");
+        }
+
+        if (!requestHeaders.contains(HttpHeaderNames.USER_AGENT)) {
+            requestHeaders.set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
+        }
+        return requestHeaders;
     }
 
     @Override

@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * Decorates a RPC {@link Service} to throttle incoming requests.
+ * Decorates an RPC {@link Service} to throttle incoming requests.
  */
 public class ThrottlingRpcService extends ThrottlingService<RpcRequest, RpcResponse> {
     /**

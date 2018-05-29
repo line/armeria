@@ -414,9 +414,14 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
             return mdcPropertyMap;
         }
 
+        /**
+         * A synonym for {@link #getMDCPropertyMap}.
+         * @deprecated Use {@link #getMDCPropertyMap()}.
+         */
         @Override
+        @Deprecated
         public Map<String, String> getMdc() {
-            return event.getMdc();
+            return event.getMDCPropertyMap();
         }
 
         @Override
