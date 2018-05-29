@@ -461,9 +461,9 @@ which are annotated with :api:`@RequestObject`.
         }
     }
 
-Armeria also provides built-in request converters such as, a request converter for Java Beans,
-:api:`JacksonRequestConverterFunction` for JSON documents, :api:`StringRequestConverterFunction`
-for text contents and :api:`ByteArrayRequestConverterFunction` for binary contents. They will be applied
+Armeria also provides built-in request converters such as, a request converter for a Java Bean,
+:api:`JacksonRequestConverterFunction` for a JSON document, :api:`StringRequestConverterFunction`
+for a string and :api:`ByteArrayRequestConverterFunction` for binary data. They will be applied
 after your request converters by default, so you can use these built-in converters by just putting
 :api:`@RequestObject` annotation on the parameters which you want to convert.
 
@@ -602,12 +602,65 @@ as follows.
     public class MyResponseConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx, Object result)  {
-            MediaType mediaType = ctx.negotiatedProduceType();
+            MediaType mediaType = ctx.negotiatedResponseMediaType();
             if (mediaType != null) {
                 // Do something based on the media type.
                 // ...
             }
         }
+    }
+
+Even if you do not specify any :api:`ResponseConverter` annotation, the response object can be converted into
+an :api:`HttpResponse` by one of the following response converters which performs the conversion based on
+the negotiated media type and the type of the object.
+
+- :api:`JacksonResponseConverterFunction`
+
+  - converts an object to a JSON document if the negotiated media type is ``application/json``.
+    ``JsonNode`` object can be converted to a JSON document even if there is no media type negotiated.
+
+- :api:`StringResponseConverterFunction`
+
+  - converts an object to a string if the negotiated main media type is one of ``text`` types.
+    If there is no media type negotiated, ``String`` and ``CharSequence`` object will be written as a text
+    with ``Content-Type: text/plain; charset=utf-8`` header.
+
+- :api:`ByteArrayResponseConverterFunction`
+
+  - converts an object to a byte array. Only :api:`HttpData` and ``byte[]`` will be handled
+    even if the negotiated media type is ``application/binary`` or ``application/octet-stream``.
+    If there is no media type negotiated, :api:`HttpData` and ``byte[]`` object will be written as a binary
+    with ``Content-Type: application/binary`` header.
+
+Let's see the following example about the default response conversion.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        // JacksonResponseConverterFunction will convert the return values to JSON documents:
+        @Get("/json1")
+        @ProduceJson    // the same as @Produces("application/json; charset=utf-8")
+        public MyObject json1() { ... }
+
+        @Get("/json2")
+        public JsonNode json2() { ... }
+
+        // StringResponseConverterFunction will convert the return values to strings:
+        @Get("/string1")
+        @ProduceText    // the same as @Produces("text/plain; charset=utf-8")
+        public int string1() { ... }
+
+        @Get("/string2")
+        public CharSequence string2() { ... }
+
+        // ByteArrayResponseConverterFunction will convert the return values to byte arrays:
+        @Get("/byte1")
+        @ProduceBinary  // the same as @Produces("application/binary")
+        public HttpData byte1() { ... }
+
+        @Get("/byte2")
+        public byte[] byte2() { ... }
     }
 
 .. _configure-using-serverbuilder:
@@ -872,7 +925,7 @@ the order value of the decorator:
 Media type negotiation
 ----------------------
 
-Armeria provides :api:`@ProduceType` and :api:`@ConsumeType` annotations to support media type
+Armeria provides :api:`@Produces` and :api:`@Consumes` annotations to support media type
 negotiation. It is not necessary if you have only one service method for a path and an HTTP method.
 However, assume that you have multiple service methods for the same path and the same HTTP method as follows.
 
@@ -904,14 +957,14 @@ to your client request.
     public class MyAnnotatedService {
 
         @Get("/hello")
-        @ProduceType("text/plain")
+        @Produces("text/plain")
         public HttpResponse helloText() {
             // Return a text document to the client.
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Armeria");
         }
 
         @Get("/hello")
-        @ProduceType("application/json")
+        @Produces("application/json")
         public HttpResponse helloJson() {
             // Return a JSON object to the client.
             return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, "{ \"name\": \"Armeria\" }");
@@ -935,7 +988,7 @@ A request like the following would get a JSON object:
 .. note::
 
     Note that a ``Content-Type`` header of a response is not automatically set. You may want to get the
-    negotiated :api:`@ProduceType` from ``ServiceRequestContext.negotiatedProduceType()`` method and
+    negotiated :api:`@Produces` from ``ServiceRequestContext.negotiatedResponseMediaType()`` method and
     set it as the value of the ``Content-Type`` header of your response.
 
 If a client sends a request without an ``Accept`` header (or sending an ``Accept`` header with an unsupported
@@ -953,14 +1006,14 @@ In this example, it would also make the same effect to annotate ``helloJson()`` 
 
         @Order(-1)
         @Get("/hello")
-        @ProduceType("text/plain")
+        @Produces("text/plain")
         public HttpResponse helloText() {
             // Return a text document to the client.
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Armeria");
         }
 
         @Get("/hello")
-        @ProduceType("application/json")
+        @Produces("application/json")
         public HttpResponse helloJson() {
             // Return a JSON object to the client.
             return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, "{ \"name\": \"Armeria\" }");
@@ -969,20 +1022,20 @@ In this example, it would also make the same effect to annotate ``helloJson()`` 
 
 Next, let's learn how to handle a ``Content-Type`` header of a request. Assume that there are two service
 methods that expect a text document and a JSON object as a content of a request, respectively.
-You can annotate them with :api:`@ConsumeType` annotation.
+You can annotate them with :api:`@Consumes` annotation.
 
 .. code-block:: java
 
     public class MyAnnotatedService {
 
         @Post("/hello")
-        @ConsumeType("text/plain")
+        @Consumes("text/plain")
         public HttpResponse helloText(AggregatedHttpMessage message) {
             // Get a text content by calling message.content().toStringAscii().
         }
 
         @Post("/hello")
-        @ConsumeType("application/json")
+        @Consumes("application/json")
         public HttpResponse helloJson(AggregatedHttpMessage message) {
             // Get a JSON object by calling message.content().toStringUtf8().
         }
@@ -1009,7 +1062,7 @@ A request like the following would be handled by ``helloJson()`` method:
     { "name": "Armeria" }
 
 However, if a client sends a request with a ``Content-Type: application/octet-stream`` header which is not
-specified with :api:`@ConsumeType`, the client would get an HTTP status code of 415 which means
+specified with :api:`@Consumes`, the client would get an HTTP status code of 415 which means
 ``Unsupported Media Type``. If you want to make one of the methods catch-all, you can remove the annotation
 as follows. ``helloCatchAll()`` method would accept every request except for the request with a
 ``Content-Type: application/json`` header.
@@ -1024,9 +1077,45 @@ as follows. ``helloCatchAll()`` method would accept every request except for the
         }
 
         @Post("/hello")
-        @ConsumeType("application/json")
+        @Consumes("application/json")
         public HttpResponse helloJson(AggregatedHttpMessage message) {
             // Get a JSON object by calling message.content().toStringUtf8().
         }
     }
 
+Creating user-defined media type annotations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Armeria provides pre-defined annotations such as :api:`@ConsumesJson`, :api:`@ConsumesText`,
+:api:`@ConsumesBinary` and :api:`@ConsumesOctetStream` which are aliases for
+``@Consumes("application/json; charset=utf-8")``, ``@Consumes("text/plain; charset=utf-8")``,
+``@Consumes("application/binary")`` and ``@Consumes("application/octet-stream")`` respectively.
+Also, :api:`@ProducesJson`, :api:`@ProducesText`, :api:`@ProducesBinary` and :api:`@ProducesOctetStream`
+are provided in the same manner.
+
+If there is no annotation that meets your need, you can define your own annotations for :api:`@Consumes`
+and :api:`@Produces` as follows. Specifying your own annotations is recommended because writing a media type
+with a string is more error-prone.
+
+.. code-block:: java
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    @Consumes("application/xml")
+    public @interface MyConsumableType {}
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    @Produces("application/xml")
+    public @interface MyProducibleType {}
+
+Then, you can annotate your service method with your annotation as follows.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+        @Post("/hello")
+        @MyConsumableType  // the same as @Consumes("application/xml")
+        @MyProducibleType  // the same as @Produces("application/xml")
+        public MyResponse hello(@RequestObject MyRequest myRequest) { ... }
+    }

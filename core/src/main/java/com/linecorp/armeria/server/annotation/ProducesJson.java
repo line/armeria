@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,34 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.annotation;
 
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies a media type which would be consumed by the service method or class.
- *
- * @deprecated Use {@link Consumes}.
+ * An alias for {@code @Produces("application/json; charset=utf-8")}.
  */
-@Deprecated
-@Repeatable(ConsumeTypes.class)
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface ConsumeType {
-
-    /**
-     * A media type string. For example,
-     * <ul>
-     *   <li>{@code application/json; charset=utf-8}</li>
-     *   <li>{@code application/xml}</li>
-     *   <li>{@code application/octet-stream}</li>
-     *   <li>{@code text/html}</li>
-     * </ul>
-     */
-    String value();
+@Produces("application/json; charset=utf-8")
+public @interface ProducesJson {
 }

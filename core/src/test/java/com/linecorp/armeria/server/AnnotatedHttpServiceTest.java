@@ -68,7 +68,7 @@ import com.linecorp.armeria.server.TestConverters.NaiveStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.TypedNumberConverterFunction;
 import com.linecorp.armeria.server.TestConverters.TypedStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
-import com.linecorp.armeria.server.annotation.ConsumeType;
+import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
@@ -76,7 +76,7 @@ import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
-import com.linecorp.armeria.server.annotation.ProduceType;
+import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -507,41 +507,41 @@ public class AnnotatedHttpServiceTest {
         }
 
         @Post("/same/path")
-        @ConsumeType("application/json")
+        @Consumes("application/json")
         public String sharedPostJson() {
             return "POST/JSON";
         }
 
         @Get("/same/path")
-        @ProduceType("application/json")
+        @Produces("application/json")
         public String sharedGetJson() {
             return "GET/JSON";
         }
 
         @Order(-1)
         @Get("/same/path")
-        @ProduceType("text/plain")
+        @Produces("text/plain")
         public String sharedGetText() {
             return "GET/TEXT";
         }
 
         @Post("/same/path")
-        @ConsumeType("application/json")
-        @ProduceType("application/json")
+        @Consumes("application/json")
+        @Produces("application/json")
         public String sharedPostJsonBoth() {
             return "POST/JSON/BOTH";
         }
 
         // To add one more produce type to the virtual host.
         @Get("/other")
-        @ProduceType("application/x-www-form-urlencoded")
+        @Produces("application/x-www-form-urlencoded")
         public String other() {
             return "GET/FORM";
         }
     }
 
-    @ProduceType("application/xml")
-    @ProduceType("application/json")
+    @Produces("application/xml")
+    @Produces("application/json")
     @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService9 {
 
@@ -551,8 +551,8 @@ public class AnnotatedHttpServiceTest {
         }
 
         @Post("/same/path")
-        @ConsumeType("application/xml")
-        @ConsumeType("application/json")
+        @Consumes("application/xml")
+        @Consumes("application/json")
         public String post() {
             return "POST";
         }
