@@ -78,7 +78,7 @@ public final class PathMappingResult {
 
     private int score;
     @Nullable
-    private MediaType negotiatedProduceType;
+    private MediaType negotiatedResponseMediaType;
 
     private PathMappingResult(@Nullable String path, @Nullable String query,
                               @Nullable Map<String, String> pathParams, int score) {
@@ -166,17 +166,28 @@ public final class PathMappingResult {
      * Returns the negotiated producible media type.
      */
     @Nullable
-    public MediaType negotiatedProduceType() {
+    public MediaType negotiatedResponseMediaType() {
         ensurePresence();
-        return negotiatedProduceType;
+        return negotiatedResponseMediaType;
+    }
+
+    /**
+     * Returns the negotiated producible media type.
+     *
+     * @deprecated Use {@link #negotiatedResponseMediaType()}.
+     */
+    @Deprecated
+    @Nullable
+    public MediaType negotiatedProduceType() {
+        return negotiatedResponseMediaType();
     }
 
     /**
      * Sets the negotiated producible media type.
      */
-    void setNegotiatedProduceType(MediaType negotiatedProduceType) {
+    void setNegotiatedResponseMediaType(MediaType negotiatedResponseMediaType) {
         ensurePresence();
-        this.negotiatedProduceType = negotiatedProduceType;
+        this.negotiatedResponseMediaType = negotiatedResponseMediaType;
     }
 
     private void ensurePresence() {
@@ -199,7 +210,7 @@ public final class PathMappingResult {
                               .add("query", query)
                               .add("pathParams", pathParams)
                               .add("score", score)
-                              .add("negotiatedProduceType", negotiatedProduceType)
+                              .add("negotiatedResponseMediaType", negotiatedResponseMediaType)
                               .toString();
         } else {
             return getClass().getSimpleName() + "{<empty>}";

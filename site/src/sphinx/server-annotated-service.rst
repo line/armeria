@@ -982,7 +982,7 @@ A request like the following would get a JSON object:
 .. note::
 
     Note that a ``Content-Type`` header of a response is not automatically set. You may want to get the
-    negotiated :api:`@Produces` from ``ServiceRequestContext.negotiatedProduceType()`` method and
+    negotiated :api:`@Produces` from ``ServiceRequestContext.negotiatedResponseMediaType()`` method and
     set it as the value of the ``Content-Type`` header of your response.
 
 If a client sends a request without an ``Accept`` header (or sending an ``Accept`` header with an unsupported

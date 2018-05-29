@@ -57,7 +57,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         @Nullable Object result) throws Exception {
-        final MediaType mediaType = ctx.negotiatedProduceType();
+        final MediaType mediaType = ctx.negotiatedResponseMediaType();
         if (mediaType != null) {
             // @Produces("application/json") or @ProducesJson is specified.
             // Any MIME type which ends with '+json' such as 'application/json-patch+json' can be also accepted.

@@ -95,8 +95,8 @@ public class ServiceRequestContextWrapper
 
     @Nullable
     @Override
-    public MediaType negotiatedProduceType() {
-        return delegate().negotiatedProduceType();
+    public MediaType negotiatedResponseMediaType() {
+        return delegate().negotiatedResponseMediaType();
     }
 
     @Override

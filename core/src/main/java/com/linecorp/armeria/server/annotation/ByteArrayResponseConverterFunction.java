@@ -33,11 +33,12 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         @Nullable Object result) throws Exception {
         if (result instanceof HttpData) {
-            return HttpResponse.of(HttpStatus.OK, mediaType(ctx.negotiatedProduceType()),
+            return HttpResponse.of(HttpStatus.OK, mediaType(ctx.negotiatedResponseMediaType()),
                                    ((HttpData) result).array());
         }
         if (result instanceof byte[]) {
-            return HttpResponse.of(HttpStatus.OK, mediaType(ctx.negotiatedProduceType()), (byte[]) result);
+            return HttpResponse.of(HttpStatus.OK, mediaType(ctx.negotiatedResponseMediaType()),
+                                   (byte[]) result);
         }
         return ResponseConverterFunction.fallthrough();
     }

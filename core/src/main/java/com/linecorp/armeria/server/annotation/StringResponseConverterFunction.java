@@ -35,7 +35,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         @Nullable Object result) throws Exception {
 
-        final MediaType mediaType = ctx.negotiatedProduceType();
+        final MediaType mediaType = ctx.negotiatedResponseMediaType();
         if (mediaType != null) {
             // @Produces("text/plain") or @ProducesText is specified.
             if (mediaType.is(MediaType.ANY_TEXT_TYPE)) {
@@ -44,13 +44,8 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
                 return HttpResponse.of(HttpStatus.OK, mediaType.withCharset(charset),
                                        charset.encode(String.valueOf(result)).array());
             }
-        } else {
-            if (result instanceof String) {
-                return HttpResponse.of((String) result);
-            }
-            if (result instanceof CharSequence) {
-                return HttpResponse.of(((CharSequence) result).toString());
-            }
+        } else if (result instanceof CharSequence) {
+            return HttpResponse.of(((CharSequence) result).toString());
         }
 
         return ResponseConverterFunction.fallthrough();
