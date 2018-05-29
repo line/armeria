@@ -24,7 +24,10 @@ import java.lang.annotation.Target;
 
 /**
  * Specifies a media type which would be produced by the service method or class.
+ *
+ * @deprecated Use {@link Produces}.
  */
+@Deprecated
 @Repeatable(ProduceTypes.class)
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })

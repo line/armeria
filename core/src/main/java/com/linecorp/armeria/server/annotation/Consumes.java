@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,14 +24,11 @@ import java.lang.annotation.Target;
 
 /**
  * Specifies a media type which would be consumed by the service method or class.
- *
- * @deprecated Use {@link Consumes}.
  */
-@Deprecated
-@Repeatable(ConsumeTypes.class)
+@Repeatable(ConsumesGroup.class)
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface ConsumeType {
+public @interface Consumes {
 
     /**
      * A media type string. For example,

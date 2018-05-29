@@ -122,7 +122,19 @@ public interface ServiceRequestContext extends RequestContext {
      * {@link Service}, {@code null} would be returned.
      */
     @Nullable
-    MediaType negotiatedProduceType();
+    MediaType negotiatedResponseMediaType();
+
+    /**
+     * Returns the negotiated producible media type. If the media type negotiation is not used for the
+     * {@link Service}, {@code null} would be returned.
+     *
+     * @deprecated Use {@link #negotiatedResponseMediaType()}.
+     */
+    @Deprecated
+    @Nullable
+    default MediaType negotiatedProduceType() {
+        return negotiatedResponseMediaType();
+    }
 
     /**
      * Returns the {@link Logger} of the {@link Service}.

@@ -125,7 +125,7 @@ final class HttpHeaderPathMapping implements PathMapping {
                     // we set the score as the best score when the index is 0.
                     result.setScore(i == 0 ? PathMappingResult.HIGHEST_SCORE : -1 * i);
                     if (!produceTypes.isEmpty()) {
-                        result.setNegotiatedProduceType(produceType);
+                        result.setNegotiatedResponseMediaType(produceType);
                     }
                     return result;
                 }

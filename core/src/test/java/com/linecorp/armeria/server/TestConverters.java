@@ -107,7 +107,7 @@ public final class TestConverters {
                                                .setTimeMillis(HttpHeaderNames.DATE, current);
 
         final MediaType contentType =
-                ((ServiceRequestContext) RequestContext.current()).negotiatedProduceType();
+                ((ServiceRequestContext) RequestContext.current()).negotiatedResponseMediaType();
         if (contentType != null) {
             headers.contentType(contentType);
         }

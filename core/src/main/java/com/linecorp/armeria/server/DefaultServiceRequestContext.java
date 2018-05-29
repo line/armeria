@@ -195,8 +195,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Nullable
     @Override
-    public MediaType negotiatedProduceType() {
-        return pathMappingResult.negotiatedProduceType();
+    public MediaType negotiatedResponseMediaType() {
+        return pathMappingResult.negotiatedResponseMediaType();
     }
 
     @Override
