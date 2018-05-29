@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.annotation;
 
 import java.lang.annotation.ElementType;
@@ -21,10 +22,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * An alias for {@code @ProduceType("application/octet-stream")}.
+ * The containing annotation type for {@link Consumes}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@ProduceType("application/octet-stream")
-public @interface ProduceOctetStream {
+public @interface ConsumesGroup {
+
+    /**
+     * An array of {@link Consumes} annotations.
+     */
+    Consumes[] value();
 }

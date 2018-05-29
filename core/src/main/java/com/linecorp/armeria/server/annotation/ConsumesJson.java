@@ -21,10 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * An alias for {@code @ProduceType("application/binary")}.
+ * An alias for {@code @Consumes("application/json; charset=utf-8")}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@ProduceType("application/binary")
-public @interface ProduceBinary {
+@Consumes("application/json; charset=utf-8")
+public @interface ConsumesJson {
 }

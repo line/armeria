@@ -63,6 +63,8 @@ import com.linecorp.armeria.server.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
+import com.linecorp.armeria.server.annotation.Consumes;
+import com.linecorp.armeria.server.annotation.ConsumesGroup;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
@@ -80,6 +82,8 @@ import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.annotation.ProduceTypes;
+import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.annotation.ProducesGroup;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -214,7 +218,8 @@ final class AnnotatedHttpServiceFactory {
         final Class<?> clazz = object.getClass();
         final HttpHeaderPathMapping pathMapping =
                 new HttpHeaderPathMapping(pathStringMapping(pathPrefix, method, methodAnnotations),
-                                          methods, consumeTypes(method, clazz), produceTypes(method, clazz));
+                                          methods, consumableMediaTypes(method, clazz),
+                                          producibleMediaTypes(method, clazz));
 
         final List<ExceptionHandlerFunction> eh =
                 exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
@@ -323,71 +328,81 @@ final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns the list of {@link MediaType}s specified by {@link ConsumeType} annotation.
+     * Returns the list of {@link MediaType}s specified by {@link Consumes} annotation.
      */
-    private static List<MediaType> consumeTypes(Method method, Class<?> clazz) {
-        final List<MediaType> mediaTypes = consumeTypes(method);
-        return mediaTypes.isEmpty() ? consumeTypes(clazz) : mediaTypes;
+    private static List<MediaType> consumableMediaTypes(Method method, Class<?> clazz) {
+        final List<MediaType> mediaTypes = consumableMediaTypes(method);
+        return mediaTypes.isEmpty() ? consumableMediaTypes(clazz) : mediaTypes;
     }
 
-    private static List<MediaType> consumeTypes(AnnotatedElement element) {
+    private static List<MediaType> consumableMediaTypes(AnnotatedElement element) {
         final List<MediaType> mediaTypes = new ArrayList<>();
 
         for (final Annotation annotation : element.getAnnotations()) {
-            if (annotation instanceof ConsumeTypes) {
+            if (annotation instanceof ConsumesGroup) {
+                Arrays.stream(((ConsumesGroup) annotation).value())
+                      .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
+            } else if (annotation instanceof Consumes) {
+                addConsumableMediaType(mediaTypes, MediaType.parse(((Consumes) annotation).value()));
+            } else if (annotation instanceof ConsumeTypes) {
                 Arrays.stream(((ConsumeTypes) annotation).value())
-                      .forEach(e -> addConsumeType(mediaTypes, MediaType.parse(e.value())));
+                      .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
             } else if (annotation instanceof ConsumeType) {
-                addConsumeType(mediaTypes, MediaType.parse(((ConsumeType) annotation).value()));
+                addConsumableMediaType(mediaTypes, MediaType.parse(((ConsumeType) annotation).value()));
             } else {
-                Arrays.stream(annotation.annotationType().getAnnotationsByType(ConsumeType.class))
-                      .forEach(e -> addConsumeType(mediaTypes, MediaType.parse(e.value())));
+                Arrays.stream(annotation.annotationType().getAnnotationsByType(Consumes.class))
+                      .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
             }
         }
         return mediaTypes;
     }
 
-    private static void addConsumeType(List<MediaType> mediaTypes, MediaType newMediaType) {
-        addMediaType(mediaTypes, newMediaType, ConsumeType.class.getSimpleName(), true);
+    private static void addConsumableMediaType(List<MediaType> mediaTypes, MediaType newMediaType) {
+        addMediaType(mediaTypes, newMediaType, Consumes.class, true);
     }
 
     /**
-     * Returns the list of {@link MediaType}s specified by {@link ProduceType} annotation.
+     * Returns the list of {@link MediaType}s specified by {@link Produces} annotation.
      */
-    private static List<MediaType> produceTypes(Method method, Class<?> clazz) {
-        final List<MediaType> mediaTypes = produceTypes(method);
-        return mediaTypes.isEmpty() ? produceTypes(clazz) : mediaTypes;
+    private static List<MediaType> producibleMediaTypes(Method method, Class<?> clazz) {
+        final List<MediaType> mediaTypes = producibleMediaTypes(method);
+        return mediaTypes.isEmpty() ? producibleMediaTypes(clazz) : mediaTypes;
     }
 
-    private static List<MediaType> produceTypes(AnnotatedElement element) {
+    private static List<MediaType> producibleMediaTypes(AnnotatedElement element) {
         final List<MediaType> mediaTypes = new ArrayList<>();
 
         for (final Annotation annotation : element.getAnnotations()) {
-            if (annotation instanceof ProduceTypes) {
+            if (annotation instanceof ProducesGroup) {
+                Arrays.stream(((ProducesGroup) annotation).value())
+                      .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
+            } else if (annotation instanceof Produces) {
+                addProducibleMediaType(mediaTypes, MediaType.parse(((Produces) annotation).value()));
+            } else if (annotation instanceof ProduceTypes) {
                 Arrays.stream(((ProduceTypes) annotation).value())
-                      .forEach(e -> addProduceType(mediaTypes, MediaType.parse(e.value())));
+                      .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
             } else if (annotation instanceof ProduceType) {
-                addProduceType(mediaTypes, MediaType.parse(((ProduceType) annotation).value()));
+                addProducibleMediaType(mediaTypes, MediaType.parse(((ProduceType) annotation).value()));
             } else {
-                Arrays.stream(annotation.annotationType().getAnnotationsByType(ProduceType.class))
-                      .forEach(e -> addProduceType(mediaTypes, MediaType.parse(e.value())));
+                Arrays.stream(annotation.annotationType().getAnnotationsByType(Produces.class))
+                      .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
             }
         }
         return mediaTypes;
     }
 
-    private static void addProduceType(List<MediaType> mediaTypes, MediaType newMediaType) {
-        addMediaType(mediaTypes, newMediaType, ProduceType.class.getSimpleName(), false);
+    private static void addProducibleMediaType(List<MediaType> mediaTypes, MediaType newMediaType) {
+        addMediaType(mediaTypes, newMediaType, Produces.class, false);
     }
 
     private static void addMediaType(List<MediaType> mediaTypes, MediaType newMediaType,
-                                     String className, boolean allowWildcard) {
+                                     Class<?> clazz, boolean allowWildcard) {
         if (!allowWildcard && newMediaType.hasWildcard()) {
-            throw new IllegalArgumentException('@' + className + " must not have a wildcard: " +
+            throw new IllegalArgumentException('@' + clazz.getSimpleName() + " must not have a wildcard: " +
                                                newMediaType);
         }
         if (mediaTypes.stream().anyMatch(e -> e.equals(newMediaType))) {
-            throw new IllegalArgumentException("Duplicated media type for @" + className + ": " +
+            throw new IllegalArgumentException("Duplicated media type for @" + clazz.getSimpleName() + ": " +
                                                newMediaType);
         }
         mediaTypes.add(newMediaType);

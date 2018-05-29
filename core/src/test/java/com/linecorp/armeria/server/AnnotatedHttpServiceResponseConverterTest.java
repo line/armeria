@@ -39,9 +39,9 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.ProduceJson;
-import com.linecorp.armeria.server.annotation.ProduceText;
-import com.linecorp.armeria.server.annotation.ProduceType;
+import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class AnnotatedHttpServiceResponseConverterTest {
@@ -76,7 +76,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
             sb.annotatedService("/produce", new Object() {
                 @Get("/string")
-                @ProduceText
+                @ProducesText
                 public int string() {
                     return 100;
                 }
@@ -88,13 +88,13 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 }
 
                 @Get("/httpData")
-                @ProduceType("application/octet-stream")
+                @Produces("application/octet-stream")
                 public HttpData httpData() {
                     return HttpData.of("¥".getBytes());
                 }
 
                 @Get("/jsonNode")
-                @ProduceJson
+                @ProducesJson
                 public Map<String, String> jsonNode() throws IOException {
                     return ImmutableMap.of("a", "¥");
                 }
@@ -104,8 +104,8 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Retention(RetentionPolicy.RUNTIME)
     @Target({ ElementType.TYPE, ElementType.METHOD })
-    @ProduceType("application/binary")
-    @ProduceType("application/octet-stream")
+    @Produces("application/binary")
+    @Produces("application/octet-stream")
     @interface UserProduceBinary {}
 
     @Test

@@ -23,7 +23,10 @@ import java.lang.annotation.Target;
 
 /**
  * The containing annotation type for {@link ConsumeType}.
+ *
+ * @deprecated Use {@link ConsumesGroup}.
  */
+@Deprecated
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
 public @interface ConsumeTypes {

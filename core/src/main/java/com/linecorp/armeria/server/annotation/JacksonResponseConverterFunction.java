@@ -59,7 +59,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
                                         @Nullable Object result) throws Exception {
         final MediaType mediaType = ctx.negotiatedProduceType();
         if (mediaType != null) {
-            // @ProduceType("application/json") or @ProduceJson is specified.
+            // @Produces("application/json") or @ProducesJson is specified.
             // Any MIME type which ends with '+json' such as 'application/json-patch+json' can be also accepted.
             if (mediaType.is(MediaType.JSON) || mediaType.subtype().endsWith("+json")) {
                 final Charset charset = mediaType.charset().orElse(StandardCharsets.UTF_8);

@@ -37,7 +37,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
 
         final MediaType mediaType = ctx.negotiatedProduceType();
         if (mediaType != null) {
-            // @ProduceType("text/plain") or @ProduceText is specified.
+            // @Produces("text/plain") or @ProducesText is specified.
             if (mediaType.is(MediaType.ANY_TEXT_TYPE)) {
                 // Use 'utf-8' charset by default.
                 final Charset charset = mediaType.charset().orElse(StandardCharsets.UTF_8);

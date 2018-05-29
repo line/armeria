@@ -50,8 +50,8 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
         // A user expects 'binary'.
         if (mediaType.is(MediaType.APPLICATION_BINARY) ||
             mediaType.is(MediaType.OCTET_STREAM)) {
-            // @ProduceType("application/binary") or @ProduceBinary
-            // @ProduceType("application/octet-stream") or @ProduceOctetStream
+            // @Produces("application/binary") or @ProducesBinary
+            // @Produces("application/octet-stream") or @ProducesOctetStream
             return mediaType;
         }
 
