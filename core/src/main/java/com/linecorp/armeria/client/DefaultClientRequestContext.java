@@ -40,6 +40,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 
@@ -250,29 +251,39 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public void setAdditionalRequestHeaders(AsciiString name, String value) {
+    public void setAdditionalRequestHeader(AsciiString name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         createAdditionalHeadersIfAbsent().set(name, value);
     }
 
     @Override
-    public void setAdditionalRequestHeaders(HttpHeaders headers) {
+    public void setAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
         requireNonNull(headers, "headers");
         createAdditionalHeadersIfAbsent().set(headers);
     }
 
     @Override
-    public void addAdditionalRequestHeaders(AsciiString name, String value) {
+    public void addAdditionalRequestHeader(AsciiString name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         createAdditionalHeadersIfAbsent().add(name, value);
     }
 
     @Override
-    public void addAdditionalRequestHeaders(HttpHeaders headers) {
+    public void addAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
         requireNonNull(headers, "headers");
         createAdditionalHeadersIfAbsent().add(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalRequestHeader(AsciiString name) {
+        requireNonNull(name, "name");
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        if (additionalRequestHeaders == null) {
+            return false;
+        }
+        return additionalRequestHeaders.remove(name);
     }
 
     @Override

@@ -68,8 +68,7 @@ public class DefaultServiceRequestContextTest {
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
         assertThat(derivedCtx.maxRequestLength()).isEqualTo(originalCtx.maxRequestLength());
         assertThat(derivedCtx.requestTimeoutMillis()).isEqualTo(originalCtx.requestTimeoutMillis());
-        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#1")))
-                .isEqualTo("value#1");
+        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#1"))).isNull();
         assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#2")))
                 .isEqualTo("value#2");
         assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#3")))
@@ -101,11 +100,13 @@ public class DefaultServiceRequestContextTest {
         final DefaultHttpHeaders headers1 = new DefaultHttpHeaders();
         headers1.set(AsciiString.of("my-header#1"), "value#1");
         originalCtx.setAdditionalResponseHeaders(headers1);
-        originalCtx.setAdditionalResponseHeaders(AsciiString.of("my-header#2"), "value#2");
+        originalCtx.setAdditionalResponseHeader(AsciiString.of("my-header#2"), "value#2");
 
         final DefaultHttpHeaders headers2 = new DefaultHttpHeaders();
         headers2.set(AsciiString.of("my-header#3"), "value#3");
         originalCtx.addAdditionalResponseHeaders(headers2);
-        originalCtx.addAdditionalResponseHeaders(AsciiString.of("my-header#4"), "value#4");
+        originalCtx.addAdditionalResponseHeader(AsciiString.of("my-header#4"), "value#4");
+        // Remove the first one.
+        originalCtx.removeAdditionalResponseHeader(AsciiString.of("my-header#1"));
     }
 }

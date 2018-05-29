@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
 /**
@@ -126,23 +127,30 @@ public interface ClientRequestContext extends RequestContext {
      * associated with the specified {@code name}.
      * The header will be included when a {@link Client} sends an {@link HttpRequest}.
      */
-    void setAdditionalRequestHeaders(AsciiString name, String value);
+    void setAdditionalRequestHeader(AsciiString name, String value);
 
     /**
-     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
+     * Clears the current header and sets the specified {@link Headers} which is included when a
      * {@link Client} sends an {@link HttpRequest}.
      */
-    void setAdditionalRequestHeaders(HttpHeaders headers);
+    void setAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
 
     /**
      * Adds a header with the specified {@code name} and {@code value}. The header will be included when
      * a {@link Client} sends an {@link HttpRequest}.
      */
-    void addAdditionalRequestHeaders(AsciiString name, String value);
+    void addAdditionalRequestHeader(AsciiString name, String value);
 
     /**
-     * Adds the specified {@link HttpHeaders} which is included when a {@link Client} sends an
+     * Adds the specified {@link Headers} which is included when a {@link Client} sends an
      * {@link HttpRequest}.
      */
-    void addAdditionalRequestHeaders(HttpHeaders headers);
+    void addAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+
+    /**
+     * Removes all headers with the specified {@code name}.
+     *
+     * @return {@code true} if at least one entry has been removed
+     */
+    boolean removeAdditionalRequestHeader(AsciiString name);
 }

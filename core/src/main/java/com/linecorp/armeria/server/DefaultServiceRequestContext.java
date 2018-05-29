@@ -46,6 +46,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 
@@ -298,29 +299,39 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public void setAdditionalResponseHeaders(AsciiString name, String value) {
+    public void setAdditionalResponseHeader(AsciiString name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         createAdditionalHeadersIfAbsent().set(name, value);
     }
 
     @Override
-    public void setAdditionalResponseHeaders(HttpHeaders headers) {
+    public void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
         requireNonNull(headers, "headers");
         createAdditionalHeadersIfAbsent().set(headers);
     }
 
     @Override
-    public void addAdditionalResponseHeaders(AsciiString name, String value) {
+    public void addAdditionalResponseHeader(AsciiString name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         createAdditionalHeadersIfAbsent().add(name, value);
     }
 
     @Override
-    public void addAdditionalResponseHeaders(HttpHeaders headers) {
+    public void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
         requireNonNull(headers, "headers");
         createAdditionalHeadersIfAbsent().add(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalResponseHeader(AsciiString name) {
+        requireNonNull(name, "name");
+        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
+        if (additionalResponseHeaders == null) {
+            return false;
+        }
+        return additionalResponseHeaders.remove(name);
     }
 
     @Nullable

@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
 /**
@@ -109,22 +110,27 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public void setAdditionalRequestHeaders(AsciiString name, String value) {
-        delegate().setAdditionalRequestHeaders(name, value);
+    public void setAdditionalRequestHeader(AsciiString name, String value) {
+        delegate().setAdditionalRequestHeader(name, value);
     }
 
     @Override
-    public void setAdditionalRequestHeaders(HttpHeaders headers) {
+    public void setAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
         delegate().setAdditionalRequestHeaders(headers);
     }
 
     @Override
-    public void addAdditionalRequestHeaders(AsciiString name, String value) {
-        delegate().addAdditionalRequestHeaders(name, value);
+    public void addAdditionalRequestHeader(AsciiString name, String value) {
+        delegate().addAdditionalRequestHeader(name, value);
     }
 
     @Override
-    public void addAdditionalRequestHeaders(HttpHeaders headers) {
+    public void addAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
         delegate().setAdditionalRequestHeaders(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalRequestHeader(AsciiString name) {
+        return delegate().removeAdditionalRequestHeader(name);
     }
 }

@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
 /**
@@ -200,25 +201,32 @@ public interface ServiceRequestContext extends RequestContext {
      * associated with the specified {@code name}.
      * The header will be included when a {@link Service} sends an {@link HttpResponse}.
      */
-    void setAdditionalResponseHeaders(AsciiString name, String value);
+    void setAdditionalResponseHeader(AsciiString name, String value);
 
     /**
-     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
+     * Clears the current header and sets the specified {@link Headers} which is included when a
      * {@link Service} sends an {@link HttpResponse}.
      */
-    void setAdditionalResponseHeaders(HttpHeaders headers);
+    void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
 
     /**
      * Adds a header with the specified {@code name} and {@code value}. The header will be included when
      * a {@link Service} sends an {@link HttpResponse}.
      */
-    void addAdditionalResponseHeaders(AsciiString name, String value);
+    void addAdditionalResponseHeader(AsciiString name, String value);
 
     /**
-     * Adds the specified {@link HttpHeaders} which is included when a {@link Service} sends an
+     * Adds the specified {@link Headers} which is included when a {@link Service} sends an
      * {@link HttpResponse}.
      */
-    void addAdditionalResponseHeaders(HttpHeaders headers);
+    void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+
+    /**
+     * Removes all headers with the specified {@code name}.
+     *
+     * @return {@code true} if at least one entry has been removed
+     */
+    boolean removeAdditionalResponseHeader(AsciiString name);
 
     /**
      * Returns the proxied addresses if the current {@link Request} is received through a proxy.

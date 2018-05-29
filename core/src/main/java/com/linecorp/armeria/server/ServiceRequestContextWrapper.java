@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 
+import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
 /**
@@ -143,23 +144,28 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public void setAdditionalResponseHeaders(AsciiString name, String value) {
-        delegate().setAdditionalResponseHeaders(name, value);
+    public void setAdditionalResponseHeader(AsciiString name, String value) {
+        delegate().setAdditionalResponseHeader(name, value);
     }
 
     @Override
-    public void setAdditionalResponseHeaders(HttpHeaders headers) {
+    public void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
         delegate().setAdditionalResponseHeaders(headers);
     }
 
     @Override
-    public void addAdditionalResponseHeaders(AsciiString name, String value) {
-        delegate().addAdditionalResponseHeaders(name, value);
+    public void addAdditionalResponseHeader(AsciiString name, String value) {
+        delegate().addAdditionalResponseHeader(name, value);
     }
 
     @Override
-    public void addAdditionalResponseHeaders(HttpHeaders headers) {
+    public void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
         delegate().addAdditionalResponseHeaders(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalResponseHeader(AsciiString name) {
+        return delegate().removeAdditionalResponseHeader(name);
     }
 
     @Nullable
