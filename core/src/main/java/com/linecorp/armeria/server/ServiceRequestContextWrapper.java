@@ -31,6 +31,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 
+import io.netty.util.AsciiString;
+
 /**
  * Wraps an existing {@link ServiceRequestContext}.
  */
@@ -141,8 +143,18 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public void setAdditionalResponseHeaders(AsciiString name, String value) {
+        delegate().setAdditionalResponseHeaders(name, value);
+    }
+
+    @Override
     public void setAdditionalResponseHeaders(HttpHeaders headers) {
         delegate().setAdditionalResponseHeaders(headers);
+    }
+
+    @Override
+    public void addAdditionalResponseHeaders(AsciiString name, String value) {
+        delegate().addAdditionalResponseHeaders(name, value);
     }
 
     @Override

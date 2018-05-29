@@ -46,6 +46,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 
 /**
@@ -149,9 +150,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         return ctx;
     }
 
-    private void createAdditionalHeadersIfAbsent() {
+    private HttpHeaders createAdditionalHeadersIfAbsent() {
+        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
         if (additionalResponseHeaders == null) {
-            additionalResponseHeaders = new DefaultHttpHeaders();
+            return this.additionalResponseHeaders = new DefaultHttpHeaders();
+        } else {
+            return additionalResponseHeaders;
         }
     }
 
@@ -294,17 +298,29 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
+    public void setAdditionalResponseHeaders(AsciiString name, String value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        createAdditionalHeadersIfAbsent().set(name, value);
+    }
+
+    @Override
     public void setAdditionalResponseHeaders(HttpHeaders headers) {
         requireNonNull(headers, "headers");
-        createAdditionalHeadersIfAbsent();
-        additionalResponseHeaders.set(headers);
+        createAdditionalHeadersIfAbsent().set(headers);
+    }
+
+    @Override
+    public void addAdditionalResponseHeaders(AsciiString name, String value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        createAdditionalHeadersIfAbsent().add(name, value);
     }
 
     @Override
     public void addAdditionalResponseHeaders(HttpHeaders headers) {
         requireNonNull(headers, "headers");
-        createAdditionalHeadersIfAbsent();
-        additionalResponseHeaders.add(headers);
+        createAdditionalHeadersIfAbsent().add(headers);
     }
 
     @Nullable

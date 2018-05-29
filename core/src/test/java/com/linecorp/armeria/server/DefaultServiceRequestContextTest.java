@@ -52,9 +52,7 @@ public class DefaultServiceRequestContextTest {
                 mappingCtx, PathMappingResult.of("/foo", null, ImmutableMap.of()),
                 mock(Request.class), null, null);
 
-        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        headers.set(AsciiString.of("my-header"), "baz");
-        originalCtx.setAdditionalResponseHeaders(headers);
+        setAdditionalHeaders(originalCtx);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
@@ -70,7 +68,14 @@ public class DefaultServiceRequestContextTest {
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
         assertThat(derivedCtx.maxRequestLength()).isEqualTo(originalCtx.maxRequestLength());
         assertThat(derivedCtx.requestTimeoutMillis()).isEqualTo(originalCtx.requestTimeoutMillis());
-        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header"))).isEqualTo("baz");
+        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#1")))
+                .isEqualTo("value#1");
+        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#2")))
+                .isEqualTo("value#2");
+        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#3")))
+                .isEqualTo("value#3");
+        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#4")))
+                .isEqualTo("value#4");
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
 
@@ -90,5 +95,17 @@ public class DefaultServiceRequestContextTest {
                                                  .serviceUnder("/", service)
                                                  .and().build();
         return server.config().findVirtualHost("example.com");
+    }
+
+    private static void setAdditionalHeaders(ServiceRequestContext originalCtx) {
+        final DefaultHttpHeaders headers1 = new DefaultHttpHeaders();
+        headers1.set(AsciiString.of("my-header#1"), "value#1");
+        originalCtx.setAdditionalResponseHeaders(headers1);
+        originalCtx.setAdditionalResponseHeaders(AsciiString.of("my-header#2"), "value#2");
+
+        final DefaultHttpHeaders headers2 = new DefaultHttpHeaders();
+        headers2.set(AsciiString.of("my-header#3"), "value#3");
+        originalCtx.addAdditionalResponseHeaders(headers2);
+        originalCtx.addAdditionalResponseHeaders(AsciiString.of("my-header#4"), "value#4");
     }
 }

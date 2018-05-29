@@ -23,6 +23,8 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.netty.util.AsciiString;
+
 /**
  * Wraps an existing {@link ServiceRequestContext}.
  */
@@ -107,8 +109,18 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public void setAdditionalRequestHeaders(AsciiString name, String value) {
+        delegate().setAdditionalRequestHeaders(name, value);
+    }
+
+    @Override
     public void setAdditionalRequestHeaders(HttpHeaders headers) {
         delegate().setAdditionalRequestHeaders(headers);
+    }
+
+    @Override
+    public void addAdditionalRequestHeaders(AsciiString name, String value) {
+        delegate().addAdditionalRequestHeaders(name, value);
     }
 
     @Override

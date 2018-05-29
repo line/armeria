@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.ImmutableHttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
@@ -63,7 +62,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         DONE
     }
 
-    private final Channel ch;
     private final ChannelHandlerContext ctx;
     private final HttpObjectEncoder encoder;
     private final int id;
@@ -81,7 +79,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
                           ClientRequestContext reqCtx, long timeoutMillis) {
-        this.ch = ch;
+
         ctx = ch.pipeline().lastContext();
 
         this.encoder = encoder;
@@ -152,7 +150,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             return;
         }
 
-        final HttpHeaders firstHeaders = autoFillHeaders();
+        final HttpHeaders firstHeaders = autoFillHeaders(ch);
         final String host = LoggingUtil.remoteHost(firstHeaders, ch);
 
         final SessionProtocol protocol = session.protocol();
@@ -170,9 +168,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         cancelTimeout();
     }
 
-    private HttpHeaders autoFillHeaders() {
+    private HttpHeaders autoFillHeaders(Channel ch) {
         HttpHeaders requestHeaders = request.headers();
-        if (requestHeaders instanceof ImmutableHttpHeaders) {
+        if (requestHeaders.isImmutable()) {
             final HttpHeaders temp = requestHeaders;
             requestHeaders = new DefaultHttpHeaders(false);
             requestHeaders.set(temp);

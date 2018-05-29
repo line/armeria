@@ -29,7 +29,7 @@ import io.netty.util.AsciiString;
 /**
  * An immutable {@link HttpHeaders} which {@code set} and {@code add} operations are not supported.
  */
-public final class ImmutableHttpHeaders implements HttpHeaders {
+final class ImmutableHttpHeaders implements HttpHeaders {
 
     private final HttpHeaders delegate;
 

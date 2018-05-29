@@ -23,10 +23,11 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.ImmutableHttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
+
+import io.netty.util.AsciiString;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
@@ -115,16 +116,29 @@ public interface ClientRequestContext extends RequestContext {
     void setMaxResponseLength(long maxResponseLength);
 
     /**
-     * Returns {@link ImmutableHttpHeaders} which is included when a {@link Client} sends an
+     * Returns an immutable {@link HttpHeaders} which is included when a {@link Client} sends an
      * {@link HttpRequest}.
      */
     HttpHeaders additionalRequestHeaders();
 
     /**
-     * Sets the specified {@link HttpHeaders} which is included when a {@link Client} sends an
-     * {@link HttpRequest}.
+     * Sets a header with the specified {@code name} and {@code value}. This will remove all previous values
+     * associated with the specified {@code name}.
+     * The header will be included when a {@link Client} sends an {@link HttpRequest}.
+     */
+    void setAdditionalRequestHeaders(AsciiString name, String value);
+
+    /**
+     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
+     * {@link Client} sends an {@link HttpRequest}.
      */
     void setAdditionalRequestHeaders(HttpHeaders headers);
+
+    /**
+     * Adds a header with the specified {@code name} and {@code value}. The header will be included when
+     * a {@link Client} sends an {@link HttpRequest}.
+     */
+    void addAdditionalRequestHeaders(AsciiString name, String value);
 
     /**
      * Adds the specified {@link HttpHeaders} which is included when a {@link Client} sends an

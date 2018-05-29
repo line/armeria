@@ -221,4 +221,11 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     default HttpHeaders asImmutable() {
         return new ImmutableHttpHeaders(this);
     }
+
+    /**
+     * Returns whether this is immutable or not.
+     */
+    default boolean isImmutable() {
+        return this instanceof ImmutableHttpHeaders;
+    }
 }

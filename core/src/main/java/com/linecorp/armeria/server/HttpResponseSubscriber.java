@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
-import com.linecorp.armeria.common.ImmutableHttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -175,7 +174,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
                 if (!additionalHeaders.isEmpty()) {
-                    if (headers instanceof ImmutableHttpHeaders) {
+                    if (headers.isImmutable()) {
                         // All headers are already validated.
                         final HttpHeaders temp = headers;
                         headers = new DefaultHttpHeaders(false, temp.size() + additionalHeaders.size());

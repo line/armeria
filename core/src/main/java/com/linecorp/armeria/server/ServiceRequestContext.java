@@ -32,10 +32,11 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.ImmutableHttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+
+import io.netty.util.AsciiString;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -189,16 +190,29 @@ public interface ServiceRequestContext extends RequestContext {
     void setMaxRequestLength(long maxRequestLength);
 
     /**
-     * Returns {@link ImmutableHttpHeaders} which is included when a {@link Service} sends an
+     * Returns an immutable {@link HttpHeaders} which is included when a {@link Service} sends an
      * {@link HttpResponse}.
      */
     HttpHeaders additionalResponseHeaders();
 
     /**
-     * Sets the specified {@link HttpHeaders} which is included when a {@link Service} sends an
-     * {@link HttpResponse}.
+     * Sets a header with the specified {@code name} and {@code value}. This will remove all previous values
+     * associated with the specified {@code name}.
+     * The header will be included when a {@link Service} sends an {@link HttpResponse}.
+     */
+    void setAdditionalResponseHeaders(AsciiString name, String value);
+
+    /**
+     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
+     * {@link Service} sends an {@link HttpResponse}.
      */
     void setAdditionalResponseHeaders(HttpHeaders headers);
+
+    /**
+     * Adds a header with the specified {@code name} and {@code value}. The header will be included when
+     * a {@link Service} sends an {@link HttpResponse}.
+     */
+    void addAdditionalResponseHeaders(AsciiString name, String value);
 
     /**
      * Adds the specified {@link HttpHeaders} which is included when a {@link Service} sends an
