@@ -596,7 +596,7 @@ as follows.
     public class MyResponseConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx, Object result)  {
-            MediaType mediaType = ctx.negotiatedProduces();
+            MediaType mediaType = ctx.negotiatedResponseMediaType();
             if (mediaType != null) {
                 // Do something based on the media type.
                 // ...
