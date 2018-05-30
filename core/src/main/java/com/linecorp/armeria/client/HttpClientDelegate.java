@@ -22,9 +22,14 @@ import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -53,8 +58,9 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
         }
 
+        final String host = extractHost(ctx, req, endpoint);
         final EventLoop eventLoop = ctx.eventLoop();
-        final PoolKey poolKey = new PoolKey(endpoint.host(), endpoint.ipAddr(),
+        final PoolKey poolKey = new PoolKey(host, endpoint.ipAddr(),
                                             endpoint.port(), ctx.sessionProtocol());
         final Future<Channel> channelFuture = factory.pool(eventLoop).acquire(poolKey);
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
@@ -78,6 +84,43 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
 
         return res;
+    }
+
+    @VisibleForTesting
+    static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
+        final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
+        String authority = additionalHeaders.get(HttpHeaderNames.AUTHORITY);
+        if (Strings.isNullOrEmpty(authority)) {
+            authority = req.authority();
+            if (Strings.isNullOrEmpty(authority)) {
+                return endpoint.host();
+            }
+        }
+
+        if (authority.charAt(0) == '[') {
+            // Surrounded by '[' and ']'
+            final int closingBracketPos = authority.lastIndexOf(']');
+            if (closingBracketPos > 0) {
+                return authority.substring(1, closingBracketPos);
+            } else {
+                // Invalid authority - no matching ']'
+                return endpoint.host();
+            }
+        }
+
+        // Not surrounded by '[' and ']'
+        final int colonPos = authority.lastIndexOf(':');
+        if (colonPos > 0) {
+            // Strip the port number.
+            return authority.substring(0, colonPos);
+        }
+        if (colonPos < 0) {
+            // authority does not have a port number.
+            return authority;
+        }
+
+        // Invalid authority - ':' is the first character.
+        return endpoint.host();
     }
 
     private static boolean sanitizePath(HttpRequest req) {

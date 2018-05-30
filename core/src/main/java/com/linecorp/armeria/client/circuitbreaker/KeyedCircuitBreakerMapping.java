@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 
@@ -76,13 +77,26 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
                 (ctx, req) -> req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method().name();
 
         /**
-         * A {@link KeySelector} that returns a key consisted of remote host name and port number.
+         * A {@link KeySelector} that returns a key consisted of remote host name, IP address and port number.
          */
         KeySelector<String> HOST =
-                (ctx, req) -> ctx.endpoint().authority();
+                (ctx, req) -> {
+                    final Endpoint endpoint = ctx.endpoint();
+                    if (endpoint.isGroup()) {
+                        return endpoint.authority();
+                    } else {
+                        final String ipAddr = endpoint.ipAddr();
+                        if (ipAddr != null && !endpoint.host().equals(ipAddr)) {
+                            return endpoint.authority() + '/' + ipAddr;
+                        } else {
+                            return endpoint.authority();
+                        }
+                    }
+                };
 
         /**
-         * A {@link KeySelector} that returns a key consisted of remote host name, port number, and method name.
+         * A {@link KeySelector} that returns a key consisted of remote host name, IP address, port number
+         * and method name.
          */
         KeySelector<String> HOST_AND_METHOD =
                 (ctx, req) -> HOST.get(ctx, req) + '#' + METHOD.get(ctx, req);

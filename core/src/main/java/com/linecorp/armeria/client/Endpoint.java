@@ -249,14 +249,13 @@ public final class Endpoint implements Comparable<Endpoint> {
     /**
      * Returns the port number of this endpoint.
      *
-     * @param defaultPort the default port number to use when this endpoint does not have its port specified
+     * @param defaultValue the default value to return when this endpoint does not have its port specified
      *
      * @throws IllegalStateException if this endpoint is not a host endpoint
      */
-    public int port(int defaultPort) {
+    public int port(int defaultValue) {
         ensureSingle();
-        validatePort("defaultPort", defaultPort);
-        return port != 0 ? port : defaultPort;
+        return port != 0 ? port : defaultValue;
     }
 
     /**
