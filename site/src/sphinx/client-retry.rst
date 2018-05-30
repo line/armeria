@@ -214,27 +214,31 @@ it is timed out by the per-attempt timeout.
                                            10,000ms (ResponseTimeoutException)
     @endditaa
 
-In above example, every attempt is made before it is timed out because the :api:`Backoff` is disabled.
-However, What if a :api:`Backoff` is enabled and the moment of trying next attempt is after the point of
-occurring :api:`ResponseTimeoutException`? The :api:`RetryingClient` do not schedule for the next attempt and
-returned with the latest :api:`Response` from the server immediately. Consider following example:
+In the example above, every attempt is made before it is timed out because the :api:`Backoff` is disabled.
+However, what if a :api:`Backoff` is enabled and the moment of trying next attempt is after the point of
+:api:`ResponseTimeoutException`? In such a case, the :api:`RetryingClient` does not schedule for the
+next attempt and finish the retry session immediately with the last :api:`Response`.
+Consider the following example:
 
 .. uml::
 
     @startditaa(--no-separation, --no-shadows, scale=0.95)
     0ms         3,000ms     6,000ms     9,000ms     12,000ms
     |           |           |           |           |
-    +-----------+-----------+-----------+-----------+--------------------+
-    | Attempt 1 |           | Attempt 2 |           | Attempt 3 is made? |
-    +-----------+-----------+-----------+----+------+--------------------+
-                                             |
-                                           10,000ms (ResponseTimeoutException)
+    +-----------+-----------+-----------+-----------+-----------------------+
+    | Attempt 1 |           | Attempt 2 |           | Attempt 3 is not made |
+    +-----------+-----------+-----------+----+------+-----------------------+
+                                        |    |
+                                        | 10,000ms (retry session deadline)
+                                        |
+                                    stops retrying at this point
     @endditaa
 
-Unlike above example, the :api:`Backoff` is enabled and it makes the :api:`RetryingClient` retries after ``3``
-seconds. When the second attempt is finished, the next attempt will be 12,000ms which is after 10,000ms.
-The :api:`RetryingClient`, at this point, stops to retry and returned with the latest :api:`Response` which it
-gets from the server at 9,000ms.
+Unlike the example above, the :api:`Backoff` is enabled and it makes the :api:`RetryingClient` perform retries
+with 3-second delay. When the second attempt is finished at 9,000ms, the next attempt will be at 12,000ms
+exceeding thre response timeout of 10,000ms.
+The :api:`RetryingClient`, at this point, stops retrying and finished the retry session with the last
+:api:`Response`, retrieved at 9,000ms.
 
 .. _retry-with-logging:
 
