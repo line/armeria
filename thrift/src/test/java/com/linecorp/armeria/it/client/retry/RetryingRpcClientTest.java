@@ -16,9 +16,8 @@
 package com.linecorp.armeria.it.client.retry;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -29,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.thrift.TApplicationException;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -49,20 +49,20 @@ public class RetryingRpcClientTest {
     private static final RetryStrategy<RpcRequest, RpcResponse> ALWAYS =
             (request, response) -> {
                 final CompletableFuture<Backoff> future = new CompletableFuture<>();
-                response.handle(voidFunction((unused1, unused2) -> future.complete(Backoff.withoutDelay())));
+                response.whenComplete((unused1, unused2) -> future.complete(Backoff.withoutDelay()));
                 return future;
             };
 
     private static final RetryStrategy<RpcRequest, RpcResponse> ONLY_HANDLES_EXCEPTION =
         (request, response) -> {
             final CompletableFuture<Backoff> future = new CompletableFuture<>();
-            response.handle(voidFunction((unused1, cause) -> {
+            response.whenComplete((unused1, cause) -> {
                 if (cause != null) {
                     future.complete(Backoff.withoutDelay());
                 } else {
                     future.complete(null);
                 }
-            }));
+            });
             return future;
         };
 
@@ -80,40 +80,60 @@ public class RetryingRpcClientTest {
 
     @Test
     public void execute() throws Exception {
-        final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           RetryingRpcClient.newDecorator(ONLY_HANDLES_EXCEPTION))
-                .build(HelloService.Iface.class);
-        when(serviceHandler.hello(anyString()))
-                .thenReturn("world");
+        final HelloService.Iface client = helloClient(ONLY_HANDLES_EXCEPTION, 100);
+        when(serviceHandler.hello(anyString())).thenReturn("world");
+
         assertThat(client.hello("hello")).isEqualTo("world");
         verify(serviceHandler, only()).hello("hello");
     }
 
     @Test
     public void execute_retry() throws Exception {
-        final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           RetryingRpcClient.newDecorator(ONLY_HANDLES_EXCEPTION))
-                .build(HelloService.Iface.class);
+        final HelloService.Iface client = helloClient(ONLY_HANDLES_EXCEPTION, 100);
         when(serviceHandler.hello(anyString()))
                 .thenThrow(new IllegalArgumentException())
                 .thenThrow(new IllegalArgumentException())
                 .thenReturn("world");
+
         assertThat(client.hello("hello")).isEqualTo("world");
         verify(serviceHandler, times(3)).hello("hello");
     }
 
     @Test
     public void execute_reachedMaxAttempts() throws Exception {
-        final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
+        final HelloService.Iface client = helloClient(ALWAYS, 2);
+        when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
+
+        final Throwable thrown = catchThrowable(() -> client.hello("hello"));
+        assertThat(thrown).isInstanceOf(TApplicationException.class);
+        assertThat(((TApplicationException) thrown).getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
+        verify(serviceHandler, times(2)).hello("hello");
+    }
+
+    @Test
+    public void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
+        final RetryStrategy<RpcRequest, RpcResponse> strategy =
+                (request, response) -> {
+                    final CompletableFuture<Backoff> future = new CompletableFuture<>();
+                    response.whenComplete((unused1, unused2) -> future.complete(Backoff.fixed(10000000)));
+                    return future;
+                };
+
+        final HelloService.Iface client = helloClient(strategy, 100);
+        when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
+
+        final Throwable thrown = catchThrowable(() -> client.hello("hello"));
+        assertThat(thrown).isInstanceOf(TApplicationException.class);
+        assertThat(((TApplicationException) thrown).getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
+        verify(serviceHandler, only()).hello("hello");
+    }
+
+    private HelloService.Iface helloClient(RetryStrategy<RpcRequest, RpcResponse> strategy,
+                                           int maxAttempts) {
+        return new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .decorator(RpcRequest.class, RpcResponse.class,
-                           new RetryingRpcClientBuilder(ALWAYS).maxTotalAttempts(1).newDecorator())
+                           new RetryingRpcClientBuilder(strategy).maxTotalAttempts(maxAttempts).newDecorator())
                 .build(HelloService.Iface.class);
-        when(serviceHandler.hello(anyString()))
-                .thenThrow(new IllegalArgumentException());
-        assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(Exception.class);
-        verify(serviceHandler, times(1)).hello("hello");
     }
 
     @Test
