@@ -191,4 +191,37 @@ public class HttpHealthCheckedEndpointGroupTest {
                                    "{authority=127.0.0.1:" + portOne + ",name=baz}", 1.0);
         });
     }
+
+    /**
+     * When an endpoint has an IP address already, the health checker must send a health check request using
+     * an IP address, because otherwise the health checker can send the health check request to a wrong host
+     * if there are more than one IP addresses assigned to the host name.
+     */
+    @Test
+    public void endpoints_customAuthority() throws Exception {
+        serverOne.start();
+
+        // This test case will fail if the health check does not use an IP address
+        // because the host name 'foo' does not really exist.
+        final int port = serverOne.port(protocol);
+        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
+                new StaticEndpointGroup(Endpoint.of("foo", port).withIpAddr("127.0.0.1")),
+                HEALTH_CHECK_PATH)
+                .protocol(protocol)
+                .clientFactory(clientFactory)
+                .build();
+
+        endpointGroup.newMeterBinder("qux").bindTo(registry);
+
+        await().untilAsserted(() -> {
+            assertThat(endpointGroup.endpoints())
+                    .containsOnly(Endpoint.of("foo", port).withIpAddr("127.0.0.1"));
+
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsEntry("armeria.client.endpointGroup.count#value{name=qux,state=healthy}", 1.0)
+                    .containsEntry("armeria.client.endpointGroup.count#value{name=qux,state=unhealthy}", 0.0)
+                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                   "{authority=foo:" + port + ",name=qux}", 1.0);
+        });
+    }
 }
