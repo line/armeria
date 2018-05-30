@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,12 +88,23 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @VisibleForTesting
     static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
-        String authority = ctx.additionalRequestHeaders().authority();
+        String host = extractHost(ctx.additionalRequestHeaders().authority());
+        if (host != null) {
+            return host;
+        }
+
+        host = extractHost(req.authority());
+        if (host != null) {
+            return host;
+        }
+
+        return endpoint.host();
+    }
+
+    @Nullable
+    private static String extractHost(@Nullable String authority) {
         if (Strings.isNullOrEmpty(authority)) {
-            authority = req.authority();
-            if (Strings.isNullOrEmpty(authority)) {
-                return endpoint.host();
-            }
+            return null;
         }
 
         if (authority.charAt(0) == '[') {
@@ -101,7 +114,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                 return authority.substring(1, closingBracketPos);
             } else {
                 // Invalid authority - no matching ']'
-                return endpoint.host();
+                return null;
             }
         }
 
@@ -117,7 +130,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
 
         // Invalid authority - ':' is the first character.
-        return endpoint.host();
+        return null;
     }
 
     private static boolean sanitizePath(HttpRequest req) {

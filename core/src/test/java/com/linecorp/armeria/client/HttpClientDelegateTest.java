@@ -60,6 +60,18 @@ public class HttpClientDelegateTest {
         assertThat(extractHost(context(HttpHeaders.of(HttpHeaderNames.AUTHORITY, ":8080")),
                                HttpRequest.of(HttpMethod.GET, "/"),
                                Endpoint.of("baz", 8080))).isEqualTo("baz");
+
+        // If additionalRequestHeader's authority is invalid but req.authority() is valid,
+        // use the authority from 'req'.
+        assertThat(extractHost(context(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "[::1")),
+                               HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
+                                                         .set(HttpHeaderNames.AUTHORITY, "bar")),
+                               Endpoint.of("baz", 8080))).isEqualTo("bar");
+
+        assertThat(extractHost(context(HttpHeaders.of(HttpHeaderNames.AUTHORITY, ":8080")),
+                               HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
+                                                         .set(HttpHeaderNames.AUTHORITY, "bar")),
+                               Endpoint.of("baz", 8080))).isEqualTo("bar");
     }
 
     private static ClientRequestContext context(HttpHeaders additionalHeaders) {
