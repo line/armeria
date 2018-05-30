@@ -86,10 +86,10 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
                         return endpoint.authority();
                     } else {
                         final String ipAddr = endpoint.ipAddr();
-                        if (ipAddr != null && !endpoint.host().equals(ipAddr)) {
-                            return endpoint.authority() + '/' + ipAddr;
-                        } else {
+                        if (ipAddr == null || endpoint.isIpAddrOnly()) {
                             return endpoint.authority();
+                        } else {
+                            return endpoint.authority() + '/' + ipAddr;
                         }
                     }
                 };

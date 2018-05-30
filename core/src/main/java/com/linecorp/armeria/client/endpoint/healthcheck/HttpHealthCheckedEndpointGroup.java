@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.StandardProtocolFamily;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
@@ -108,7 +109,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
             } else {
                 final int port = endpoint.port(protocol.defaultPort());
                 final HttpClientBuilder builder;
-                if (ipAddr.indexOf(':') < 0) {
+                if (endpoint.ipFamily() == StandardProtocolFamily.INET) {
                     builder = new HttpClientBuilder(scheme + "://" + ipAddr + ':' + port);
                 } else {
                     builder = new HttpClientBuilder(scheme + "://[" + ipAddr + "]:" + port);

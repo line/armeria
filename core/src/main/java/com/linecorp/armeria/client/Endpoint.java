@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.net.StandardProtocolFamily;
 import java.util.Comparator;
 import java.util.Objects;
 
@@ -120,7 +121,7 @@ public final class Endpoint implements Comparable<Endpoint> {
         requireNonNull(host, "host");
 
         if (NetUtil.isValidIpV4Address(host)) {
-            return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostIpAddrType.IPv4);
+            return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY);
         }
 
         if (NetUtil.isValidIpV6Address(host)) {
@@ -131,16 +132,19 @@ public final class Endpoint implements Comparable<Endpoint> {
             } else {
                 ipV6Addr = host;
             }
-            return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostIpAddrType.IPv6);
+            return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY);
         }
 
         return new Endpoint(InternetDomainName.from(host).toString(),
-                            null, port, DEFAULT_WEIGHT, null);
+                            null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY);
     }
 
-    private enum HostIpAddrType {
-        IPv4,
-        IPv6
+    private enum HostType {
+        HOSTNAME_ONLY,
+        HOSTNAME_AND_IPv4,
+        HOSTNAME_AND_IPv6,
+        IPv4_ONLY,
+        IPv6_ONLY
     }
 
     @Nullable
@@ -151,8 +155,8 @@ public final class Endpoint implements Comparable<Endpoint> {
     private final String ipAddr;
     private final int port;
     private final int weight;
-    @Nullable // null if host is not an IP address.
-    private final HostIpAddrType hostIpAddrType;
+    @Nullable // null if this endpoint is a group.
+    private final HostType hostType;
     @Nullable
     private String authority;
 
@@ -162,20 +166,20 @@ public final class Endpoint implements Comparable<Endpoint> {
         ipAddr = null;
         port = 0;
         weight = 0;
-        hostIpAddrType = null;
+        hostType = null;
     }
 
-    private Endpoint(String host, @Nullable String ipAddr, int port, int weight,
-                     @Nullable HostIpAddrType hostIpAddrType) {
+    private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType) {
         this.host = host;
         this.ipAddr = ipAddr;
         this.port = port;
         this.weight = weight;
-        this.hostIpAddrType = hostIpAddrType;
+        this.hostType = hostType;
         groupName = null;
 
-        // It is not possible to have non-null hostIpAddrType if ipAddr is null.
-        assert ipAddr != null || ipAddr == null && hostIpAddrType == null;
+        // hostType must be HOSTNAME_ONLY when ipAddr is null and vice versa.
+        assert ipAddr == null && hostType == HostType.HOSTNAME_ONLY ||
+               ipAddr != null && hostType != HostType.HOSTNAME_ONLY;
     }
 
     /**
@@ -203,7 +207,7 @@ public final class Endpoint implements Comparable<Endpoint> {
     /**
      * Returns the group name of this endpoint.
      *
-     * @throws IllegalStateException if this endpoint is not a group endpoint
+     * @throws IllegalStateException if this endpoint is not a group but a host
      */
     public String groupName() {
         ensureGroup();
@@ -213,7 +217,7 @@ public final class Endpoint implements Comparable<Endpoint> {
     /**
      * Returns the host name of this endpoint.
      *
-     * @throws IllegalStateException if this endpoint is not a host endpoint
+     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public String host() {
         ensureSingle();
@@ -224,7 +228,7 @@ public final class Endpoint implements Comparable<Endpoint> {
      * Returns the IP address of this endpoint.
      *
      * @return the IP address, or {@code null} if the host name is not resolved yet
-     * @throws IllegalStateException if this endpoint is not a host endpoint
+     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     @Nullable
     public String ipAddr() {
@@ -233,9 +237,53 @@ public final class Endpoint implements Comparable<Endpoint> {
     }
 
     /**
+     * Returns whether this endpoint has an IP address resolved. This method is a shortcut of
+     * {@code ipAddr() != null}.
+     *
+     * @return {@code true} if and only if this endpoint has an IP address.
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public boolean hasIpAddr() {
+        return ipAddr() != null;
+    }
+
+    /**
+     * Returns whether this endpoint's host name is an IP address.
+     *
+     * @return {@code true} if and only if this endpoint's host name is an IP address
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public boolean isIpAddrOnly() {
+        ensureSingle();
+        return hostType == HostType.IPv4_ONLY || hostType == HostType.IPv6_ONLY;
+    }
+
+    /**
+     * Returns the {@link StandardProtocolFamily} of this endpoint's IP address.
+     *
+     * @return the {@link StandardProtocolFamily} of this endpoint's IP address, or
+     *         {@code null} if the host name is not resolved yet
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    @Nullable
+    public StandardProtocolFamily ipFamily() {
+        ensureSingle();
+        switch (hostType) {
+            case HOSTNAME_AND_IPv4:
+            case IPv4_ONLY:
+                return StandardProtocolFamily.INET;
+            case HOSTNAME_AND_IPv6:
+            case IPv6_ONLY:
+                return StandardProtocolFamily.INET6;
+            default:
+                return null;
+        }
+    }
+
+    /**
      * Returns the port number of this endpoint.
      *
-     * @throws IllegalStateException if this endpoint is not a host endpoint or
+     * @throws IllegalStateException if this endpoint is not a host but a group, or
      *                               this endpoint does not have its port specified.
      */
     public int port() {
@@ -251,7 +299,7 @@ public final class Endpoint implements Comparable<Endpoint> {
      *
      * @param defaultValue the default value to return when this endpoint does not have its port specified
      *
-     * @throws IllegalStateException if this endpoint is not a host endpoint
+     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public int port(int defaultValue) {
         ensureSingle();
@@ -264,7 +312,7 @@ public final class Endpoint implements Comparable<Endpoint> {
      * @return the new endpoint whose port is {@code defaultPort} if this endpoint does not have its port
      *         specified. {@code this} if this endpoint already has its port specified.
      *
-     * @throws IllegalStateException if this endpoint is not a host endpoint
+     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withDefaultPort(int defaultPort) {
         ensureSingle();
@@ -274,7 +322,7 @@ public final class Endpoint implements Comparable<Endpoint> {
             return this;
         }
 
-        return new Endpoint(host(), ipAddr(), defaultPort, weight(), hostIpAddrType);
+        return new Endpoint(host(), ipAddr(), defaultPort, weight(), hostType);
     }
 
     /**
@@ -283,7 +331,7 @@ public final class Endpoint implements Comparable<Endpoint> {
      * @return the new endpoint with the specified IP address.
      *         {@code this} if this endpoint has the same IP address.
      *
-     * @throws IllegalStateException if this endpoint is not a host endpoint
+     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withIpAddr(@Nullable String ipAddr) {
         ensureSingle();
@@ -292,41 +340,45 @@ public final class Endpoint implements Comparable<Endpoint> {
         }
 
         if (NetUtil.isValidIpV4Address(ipAddr)) {
-            return withIpAddr(ipAddr, HostIpAddrType.IPv4);
+            return withIpAddr(ipAddr, StandardProtocolFamily.INET);
         }
 
         if (NetUtil.isValidIpV6Address(ipAddr)) {
             if (ipAddr.charAt(0) == '[') {
                 ipAddr = ipAddr.substring(1, ipAddr.length() - 1);
             }
-            return withIpAddr(ipAddr, HostIpAddrType.IPv6);
+            return withIpAddr(ipAddr, StandardProtocolFamily.INET6);
         }
 
         throw new IllegalArgumentException("ipAddr: " + ipAddr + " (expected: an IP address)");
     }
 
-    private Endpoint withIpAddr(String ipAddr, HostIpAddrType ipAddrType) {
+    private Endpoint withIpAddr(String ipAddr, StandardProtocolFamily ipFamily) {
         if (ipAddr.equals(this.ipAddr)) {
             return this;
         }
 
         // Replace the host name as well if the host name is an IP address.
-        if (hostIpAddrType != null) {
-            return new Endpoint(ipAddr, ipAddr, port, weight, ipAddrType);
+        if (isIpAddrOnly()) {
+            return new Endpoint(ipAddr, ipAddr, port, weight,
+                                ipFamily == StandardProtocolFamily.INET ? HostType.IPv4_ONLY
+                                                                        : HostType.IPv6_ONLY);
         }
 
-        return new Endpoint(host(), ipAddr, port, weight, null);
+        return new Endpoint(host(), ipAddr, port, weight,
+                            ipFamily == StandardProtocolFamily.INET ? HostType.HOSTNAME_AND_IPv4
+                                                                    : HostType.HOSTNAME_AND_IPv6);
     }
 
     private Endpoint withoutIpAddr() {
         if (ipAddr == null) {
             return this;
         }
-        if (hostIpAddrType != null) {
+        if (isIpAddrOnly()) {
             throw new IllegalStateException("can't clear the IP address if host name is an IP address: " +
                                             this);
         }
-        return new Endpoint(host(), null, port, weight, null);
+        return new Endpoint(host(), null, port, weight, HostType.HOSTNAME_ONLY);
     }
 
     /**
@@ -334,7 +386,7 @@ public final class Endpoint implements Comparable<Endpoint> {
      *
      * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
      *
-     * @throws IllegalStateException if this endpoint is not a host endpoint
+     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withWeight(int weight) {
         ensureSingle();
@@ -342,7 +394,7 @@ public final class Endpoint implements Comparable<Endpoint> {
         if (this.weight == weight) {
             return this;
         }
-        return new Endpoint(host(), ipAddr(), port, weight, hostIpAddrType);
+        return new Endpoint(host(), ipAddr(), port, weight, hostType);
     }
 
     /**
@@ -367,12 +419,12 @@ public final class Endpoint implements Comparable<Endpoint> {
         if (isGroup()) {
             authority = "group:" + groupName;
         } else if (port != 0) {
-            if (hostIpAddrType == HostIpAddrType.IPv6) {
+            if (hostType == HostType.IPv6_ONLY) {
                 authority = '[' + host() + "]:" + port;
             } else {
                 authority = host() + ':' + port;
             }
-        } else if (hostIpAddrType == HostIpAddrType.IPv6) {
+        } else if (hostType == HostType.IPv6_ONLY) {
             authority = '[' + host() + ']';
         } else {
             authority = host();
@@ -456,7 +508,7 @@ public final class Endpoint implements Comparable<Endpoint> {
         final ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
         helper.addValue(authority());
         if (!isGroup()) {
-            if (hostIpAddrType == null) {
+            if (hostType == null) {
                 helper.add("ipAddr", ipAddr);
             }
             helper.add("weight", weight);
