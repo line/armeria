@@ -170,7 +170,7 @@ the maximum number of total attempts to 10 by default. You can change this value
 Or, you can override the default value of 10 using the JVM system property
 ``-Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>``.
 
-Note that when a :api:`RetryingClient` stops by the attempts limit, the client will get the latest
+Note that when a :api:`RetryingClient` stops due to the attempts limit, the client will get the last received
 :api:`Response` from the server.
 
 Per-attempt timeout
@@ -217,7 +217,7 @@ it is timed out by the per-attempt timeout.
 In the example above, every attempt is made before it is timed out because the :api:`Backoff` is disabled.
 However, what if a :api:`Backoff` is enabled and the moment of trying next attempt is after the point of
 :api:`ResponseTimeoutException`? In such a case, the :api:`RetryingClient` does not schedule for the
-next attempt and finish the retry session immediately with the last :api:`Response`.
+next attempt, but finishes the retry session immediately with the last received :api:`Response`.
 Consider the following example:
 
 .. uml::
@@ -236,9 +236,9 @@ Consider the following example:
 
 Unlike the example above, the :api:`Backoff` is enabled and it makes the :api:`RetryingClient` perform retries
 with 3-second delay. When the second attempt is finished at 9,000ms, the next attempt will be at 12,000ms
-exceeding thre response timeout of 10,000ms.
-The :api:`RetryingClient`, at this point, stops retrying and finished the retry session with the last
-:api:`Response`, retrieved at 9,000ms.
+exceeding the response timeout of 10,000ms.
+The :api:`RetryingClient`, at this point, stops retrying and finished the retry session with the last received
+:api:`Response`, retrieved at 9,000ms from the attempt 2.
 
 .. _retry-with-logging:
 
