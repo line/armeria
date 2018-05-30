@@ -29,8 +29,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 
-import io.netty.util.NetUtil;
-
 /**
  * HTTP implementation of {@link HealthCheckedEndpointGroup}.
  */
@@ -110,7 +108,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
             } else {
                 final int port = endpoint.port(protocol.defaultPort());
                 final HttpClientBuilder builder;
-                if (NetUtil.isValidIpV4Address(ipAddr)) {
+                if (ipAddr.indexOf(':') < 0) {
                     builder = new HttpClientBuilder(scheme + "://" + ipAddr + ':' + port);
                 } else {
                     builder = new HttpClientBuilder(scheme + "://[" + ipAddr + "]:" + port);

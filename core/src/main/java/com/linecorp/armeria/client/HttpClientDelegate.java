@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
@@ -57,7 +58,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
         }
 
-        final String host = extractHost(ctx, endpoint, req);
+        final String host = extractHost(ctx, req, endpoint);
         final EventLoop eventLoop = ctx.eventLoop();
         final PoolKey poolKey = new PoolKey(host, endpoint.ipAddr(),
                                             endpoint.port(), ctx.sessionProtocol());
@@ -85,7 +86,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         return res;
     }
 
-    private static String extractHost(ClientRequestContext ctx, Endpoint endpoint, HttpRequest req) {
+    @VisibleForTesting
+    static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
         final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
         String authority = additionalHeaders.get(HttpHeaderNames.AUTHORITY);
         if (Strings.isNullOrEmpty(authority)) {
