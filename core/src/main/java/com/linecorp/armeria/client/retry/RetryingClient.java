@@ -94,10 +94,6 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         }
     }
 
-    protected static Logger logger() {
-        return logger;
-    }
-
     /**
      * This should be called when retrying is finished.
      */
@@ -130,8 +126,9 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      *
      * <p>{@code Math.min(responseTimeoutMillis, Backoff.nextDelayMillis(int))}
      *
-     * @return the number of milliseconds to wait for before attempting a retry. -1 if the currentAttemptNo
-     *         exceeds the maxAttempts or the nextDelay is after the moment which timeout happens.
+     * @return the number of milliseconds to wait for before attempting a retry. -1 if the
+     *         {@code currentAttemptNo} exceeds the {@code maxAttempts} or the {@code nextDelay} is after
+     *         the moment which timeout happens.
      */
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff) {
         return getNextDelay(ctx, backoff, -1);
@@ -143,8 +140,9 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * <p>{@code Math.min(responseTimeoutMillis, Math.max(Backoff.nextDelayMillis(int),
      * millisAfterFromServer))}
      *
-     * @return the number of milliseconds to wait for before attempting a retry. -1 if the currentAttemptNo
-     *         exceeds the maxAttempts or the nextDelay is after the moment which timeout happens.
+     * @return the number of milliseconds to wait for before attempting a retry. -1 if the
+     *         {@code currentAttemptNo} exceeds the {@code maxAttempts} or the {@code nextDelay} is after
+     *         the moment which timeout happens.
      */
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {

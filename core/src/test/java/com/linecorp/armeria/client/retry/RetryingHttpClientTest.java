@@ -362,13 +362,12 @@ public class RetryingHttpClientTest {
         public CompletableFuture<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
             final CompletableFuture<AggregatedHttpMessage> future = response.aggregate();
             return future.handle((message, unused) -> {
-                                     if (message != null &&
-                                         message.content().toStringUtf8().equalsIgnoreCase(retryContent)) {
-                                         return backoffOnContent;
-                                     }
-                                     return null;
-                                 }
-            );
+                if (message != null &&
+                    message.content().toStringUtf8().equalsIgnoreCase(retryContent)) {
+                    return backoffOnContent;
+                }
+                return null;
+            });
         }
     }
 }

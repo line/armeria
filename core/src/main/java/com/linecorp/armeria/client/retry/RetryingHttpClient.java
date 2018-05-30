@@ -27,6 +27,8 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -48,6 +50,8 @@ import io.netty.channel.EventLoop;
  * A {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
  */
 public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpResponse> {
+
+    private static final Logger logger = LoggerFactory.getLogger(RetryingHttpClient.class);
 
     private final boolean useRetryAfter;
 
@@ -196,8 +200,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                 final Long later = headers.getTimeMillis(HttpHeaderNames.RETRY_AFTER);
                 millisAfter = later - System.currentTimeMillis();
             } catch (Exception ignored) {
-                logger().debug("The retryAfter: {}, from the server is neither an HTTP date nor a second.",
-                               value);
+                logger.debug("The retryAfter: {}, from the server is neither an HTTP date nor a second.",
+                             value);
             }
         }
         return millisAfter;

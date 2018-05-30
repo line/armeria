@@ -170,6 +170,9 @@ the maximum number of total attempts to 10 by default. You can change this value
 Or, you can override the default value of 10 using the JVM system property
 ``-Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>``.
 
+Note that when a :api:`RetryingClient` stops by the attempts limit, the client will get the latest
+:api:`Response` from the server.
+
 Per-attempt timeout
 -------------------
 
@@ -194,7 +197,7 @@ You can configure it when you create the decorator:
 You can retry on this :api:`ResponseTimeoutException`.
 
 For example, when making a retrying request to an unresponsive service
-with responseTimeoutMillis = 10,000, responseTimeoutMillisForEachAttempt = 3,000 and disabled
+with ``responseTimeoutMillis = 10,000``, ``responseTimeoutMillisForEachAttempt = 3,000`` and disabled
 :api:`Backoff`, the first three attempts will be timed out by the per-attempt timeout (3,000ms).
 The 4th one will be aborted after 1,000ms since the request session has reached at 10,000ms before
 it is timed out by the per-attempt timeout.
@@ -211,7 +214,27 @@ it is timed out by the per-attempt timeout.
                                            10,000ms (ResponseTimeoutException)
     @endditaa
 
+In above example, every attempt is made before it is timed out because the :api:`Backoff` is disabled.
+However, What if a :api:`Backoff` is enabled and the moment of trying next attempt is after the point of
+occurring :api:`ResponseTimeoutException`? The :api:`RetryingClient` do not schedule for the next attempt and
+returned with the latest :api:`Response` from the server immediately. Consider following example:
 
+.. uml::
+
+    @startditaa(--no-separation, --no-shadows, scale=0.95)
+    0ms         3,000ms     6,000ms     9,000ms     12,000ms
+    |           |           |           |           |
+    +-----------+-----------+-----------+-----------+--------------------+
+    | Attempt 1 |           | Attempt 2 |           | Attempt 3 is made? |
+    +-----------+-----------+-----------+----+------+--------------------+
+                                             |
+                                           10,000ms (ResponseTimeoutException)
+    @endditaa
+
+Unlike above example, the :api:`Backoff` is enabled and it makes the :api:`RetryingClient` retries after ``3``
+seconds. When the second attempt is finished, the next attempt will be 12,000ms which is after 10,000ms.
+The :api:`RetryingClient`, at this point, stops to retry and returned with the latest :api:`Response` which it
+gets from the server at 9,000ms.
 
 .. _retry-with-logging:
 
