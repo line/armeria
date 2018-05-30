@@ -28,8 +28,6 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -88,8 +86,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @VisibleForTesting
     static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
-        final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
-        String authority = additionalHeaders.get(HttpHeaderNames.AUTHORITY);
+        String authority = ctx.additionalRequestHeaders().authority();
         if (Strings.isNullOrEmpty(authority)) {
             authority = req.authority();
             if (Strings.isNullOrEmpty(authority)) {
