@@ -25,12 +25,14 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
 /**
- * Control back off between attempts in a single retry operation.
+ * Controls back off between attempts in a single retry operation.
  */
 @FunctionalInterface
 public interface Backoff {
     /**
-     * Returns a {@link Backoff} that that will never wait between attempts.
+     * Returns a {@link Backoff} that will never wait between attempts. In most cases, using back off
+     * without delay is very dangerous. Please consider using {@link #exponential(long, long)} with
+     * {@link #withJitter(double)} or {@link #fixed(long)} with pre calculated delay depending on the situation.
      */
     static Backoff withoutDelay() {
         return NO_DELAY;

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -136,7 +135,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         final HttpResponseDuplicator resDuplicator =
                 new HttpResponseDuplicator(response, maxSignalLength(ctx.maxResponseLength()), ctx.eventLoop());
         retryStrategy().shouldRetry(rootReqDuplicator.duplicateStream(), contentPreviewResponse(resDuplicator))
-                       .handle(voidFunction((backoff, unused) -> {
+                       .whenComplete((backoff, unused) -> {
                            if (backoff != null) {
                                final long millisAfter;
                                if (useRetryAfter) {
@@ -144,16 +143,14 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                } else {
                                    millisAfter = -1;
                                }
-                               resDuplicator.close();
 
-                               final long nextDelay;
-                               try {
-                                   nextDelay = getNextDelay(ctx, backoff, millisAfter);
-                               } catch (Exception e) {
-                                   closeOnException(ctx, res, rootReqDuplicator, e);
+                               final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
+                               if (nextDelay < 0) {
+                                   finishRetryWithCurrentResponse(ctx, rootReqDuplicator, res, resDuplicator);
                                    return;
                                }
 
+                               resDuplicator.close();
                                final EventLoop eventLoop = ctx.contextAwareEventLoop();
                                if (nextDelay <= 0) {
                                    eventLoop.execute(() -> doExecute0(ctx, rootReqDuplicator, res));
@@ -163,11 +160,18 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                            nextDelay, TimeUnit.MILLISECONDS);
                                }
                            } else {
-                               onRetryingComplete(ctx);
-                               res.complete(resDuplicator.duplicateStream(true));
-                               rootReqDuplicator.close();
+                               finishRetryWithCurrentResponse(ctx, rootReqDuplicator, res, resDuplicator);
                            }
-                       }));
+                       });
+    }
+
+    private static void finishRetryWithCurrentResponse(ClientRequestContext ctx,
+                                                       HttpRequestDuplicator rootReqDuplicator,
+                                                       CompletableFuture<HttpResponse> res,
+                                                       HttpResponseDuplicator resDuplicator) {
+        onRetryingComplete(ctx);
+        res.complete(resDuplicator.duplicateStream(true));
+        rootReqDuplicator.close();
     }
 
     private static int maxSignalLength(long maxResponseLength) {

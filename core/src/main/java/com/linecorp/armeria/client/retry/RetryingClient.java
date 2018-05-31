@@ -22,9 +22,11 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -41,6 +43,8 @@ import io.netty.util.AttributeKey;
  */
 public abstract class RetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
+
+    private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
 
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(RetryingClient.class, "STATE");
@@ -122,10 +126,9 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      *
      * <p>{@code Math.min(responseTimeoutMillis, Backoff.nextDelayMillis(int))}
      *
-     * @return the number of milliseconds to wait for before attempting a retry
-     * @throws RetryGiveUpException if the current attempt number is greater than {@code maxTotalAttempts} or
-     *                              {@link Backoff#nextDelayMillis(int)} returns -1
-     * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
+     * @return the number of milliseconds to wait for before attempting a retry. -1 if the
+     *         {@code currentAttemptNo} exceeds the {@code maxAttempts} or the {@code nextDelay} is after
+     *         the moment which timeout happens.
      */
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff) {
         return getNextDelay(ctx, backoff, -1);
@@ -137,10 +140,9 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * <p>{@code Math.min(responseTimeoutMillis, Math.max(Backoff.nextDelayMillis(int),
      * millisAfterFromServer))}
      *
-     * @return the number of milliseconds to wait for before attempting a retry
-     * @throws RetryGiveUpException if the current attempt number is greater than {@code maxTotalAttempts} or
-     *                              {@link Backoff#nextDelayMillis(int)} returns -1
-     * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
+     * @return the number of milliseconds to wait for before attempting a retry. -1 if the
+     *         {@code currentAttemptNo} exceeds the {@code maxAttempts} or the {@code nextDelay} is after
+     *         the moment which timeout happens.
      */
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
@@ -150,21 +152,20 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         final int currentAttemptNo = state.currentAttemptNoWith(backoff);
 
         if (currentAttemptNo < 0) {
-            // Exceeded the default number of max attempt.
-            throw RetryGiveUpException.get();
+            logger.debug("Exceeded the default number of max attempt: {}", state.maxTotalAttempts);
+            return -1;
         }
 
         long nextDelay = backoff.nextDelayMillis(currentAttemptNo);
         if (nextDelay < 0) {
-            // Exceeded the number of max attempt in the backoff.
-            throw RetryGiveUpException.get();
+            logger.debug("Exceeded the number of max attempts in the backoff: {}", backoff);
+            return -1;
         }
 
         nextDelay = Math.max(nextDelay, millisAfterFromServer);
-
         if (state.timeoutForWholeRetryEnabled() && nextDelay > state.actualResponseTimeoutMillis()) {
-            // Do not wait until the timeout occurs, but throw the Exception as soon as possible.
-            throw ResponseTimeoutException.get();
+            // The nextDelay will be after the moment which timeout will happen. So return just -1.
+            return -1;
         }
 
         return nextDelay;
