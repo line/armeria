@@ -127,10 +127,15 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         final String remoteServiceName;
         if (this.remoteServiceName != null) {
             remoteServiceName = this.remoteServiceName;
-        } else if (log.host() != null) {
-            remoteServiceName = log.host();
         } else {
-            remoteServiceName = null;
+            final String authority = log.requestHeaders().authority();
+            if (!"?".equals(authority)) {
+                remoteServiceName = authority;
+            } else if (address != null) {
+                remoteServiceName = String.valueOf(remoteAddress);
+            } else {
+                remoteServiceName = null;
+            }
         }
 
         if (remoteServiceName == null && address == null) {

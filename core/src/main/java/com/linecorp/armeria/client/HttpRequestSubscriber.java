@@ -42,7 +42,6 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
-import com.linecorp.armeria.internal.logging.LoggingUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -151,11 +150,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         final HttpHeaders firstHeaders = autoFillHeaders(ch);
-        final String host = LoggingUtil.remoteHost(firstHeaders, ch);
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        logBuilder.startRequest(ch, protocol, host);
+        logBuilder.startRequest(ch, protocol);
         logBuilder.requestHeaders(firstHeaders);
 
         if (request.isEmpty()) {

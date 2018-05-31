@@ -52,7 +52,7 @@ public class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
-        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C, "example.com");
+        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
 
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
@@ -90,7 +90,7 @@ public class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
-        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C, "example.com");
+        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
 
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
@@ -120,7 +120,7 @@ public class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
 
-        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C, "example.com");
+        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
 
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/bar"));

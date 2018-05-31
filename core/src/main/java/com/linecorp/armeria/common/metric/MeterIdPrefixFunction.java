@@ -85,9 +85,8 @@ public interface MeterIdPrefixFunction {
                 tags.add(Tag.of("pathMapping", sCtx.pathMapping().meterTag()));
             }
 
-            if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS) &&
-                log.status() != null) {
-                tags.add(Tag.of("httpStatus", String.valueOf(log.statusCode())));
+            if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+                tags.add(Tag.of("httpStatus", log.status().codeAsText()));
             }
 
             return new MeterIdPrefix(name, tags);

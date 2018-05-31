@@ -55,7 +55,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
@@ -64,7 +63,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.netty.channel.Channel;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
@@ -238,17 +236,8 @@ final class RequestContextExporter {
         }
 
         if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
-            String authority = log.host();
-            if (authority != null) {
-                final Channel ch = log.channel();
-                assert ch != null;
-                final InetSocketAddress addr = (InetSocketAddress)
-                        (ctx instanceof ServiceRequestContext ? ch.localAddress() : ch.remoteAddress());
-                final int port = addr.getPort();
-
-                if (ctx.sessionProtocol().defaultPort() != port) {
-                    authority = authority + ':' + port;
-                }
+            final String authority = log.authority();
+            if (!"?".equals(authority)) {
                 out.put(REQ_AUTHORITY.mdcKey, authority);
                 return;
             }
@@ -318,8 +307,7 @@ final class RequestContextExporter {
 
     private static void exportStatusCode(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            final HttpStatus status = log.status();
-            out.put(RES_STATUS_CODE.mdcKey, status != null ? status.codeAsText() : "-1");
+            out.put(RES_STATUS_CODE.mdcKey, log.status().codeAsText());
         }
     }
 

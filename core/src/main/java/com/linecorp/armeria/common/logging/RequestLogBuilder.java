@@ -56,11 +56,30 @@ public interface RequestLogBuilder {
      * properties:
      * <ul>
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
      *   <li>{@link RequestLog#host()}</li>
      * </ul>
      */
-    void startRequest(Channel channel, SessionProtocol sessionProtocol, String host);
+    void startRequest(Channel channel, SessionProtocol sessionProtocol);
+
+    /**
+     * Starts the collection of information for the {@link Request}. This method sets the following
+     * properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#channel()}</li>
+     *   <li>{@link RequestLog#sessionProtocol()}</li>
+     *   <li>{@link RequestLog#host()}</li>
+     * </ul>
+     *
+     * @deprecated Use {@link #startRequest(Channel, SessionProtocol)}.
+     */
+    @Deprecated
+    default void startRequest(Channel channel, SessionProtocol sessionProtocol,
+                              @SuppressWarnings("unused") String host) {
+        startRequest(channel, sessionProtocol);
+    }
 
     /**
      * Sets the {@link SerializationFormat}.

@@ -111,7 +111,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.proxiedAddresses = proxiedAddresses;
 
         log = new DefaultRequestLog(this);
-        log.startRequest(ch, sessionProtocol, cfg.virtualHost().defaultHostname());
+        log.startRequest(ch, sessionProtocol);
         logger = newLogger(cfg);
 
         final ServerConfig serverCfg = cfg.server().config();
@@ -154,7 +154,9 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private HttpHeaders createAdditionalHeadersIfAbsent() {
         final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
         if (additionalResponseHeaders == null) {
-            return this.additionalResponseHeaders = new DefaultHttpHeaders();
+            final HttpHeaders newHeaders = new DefaultHttpHeaders();
+            this.additionalResponseHeaders = newHeaders;
+            return newHeaders;
         } else {
             return additionalResponseHeaders;
         }
@@ -292,6 +294,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public HttpHeaders additionalResponseHeaders() {
+        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
         if (additionalResponseHeaders == null) {
             return HttpHeaders.EMPTY_HEADERS;
         }

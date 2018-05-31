@@ -185,7 +185,7 @@ public class AccessLogFormatsTest {
 
         ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
 
-        log.startRequest(channel, SessionProtocol.H2, "www.example.com");
+        log.startRequest(channel, SessionProtocol.H2);
         log.requestHeaders(HttpHeaders.of(HttpMethod.GET, "/armeria/log")
                                       .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
                                       .add(HttpHeaderNames.REFERER, "http://log.example.com")
@@ -259,7 +259,7 @@ public class AccessLogFormatsTest {
         log.addListener(l -> assertThat(AccessLogger.format(AccessLogFormats.COMMON, l))
                 .endsWith(expectedLogMessage), RequestLogAvailability.COMPLETE);
 
-        log.startRequest(channel, SessionProtocol.H2, "www.example.com");
+        log.startRequest(channel, SessionProtocol.H2);
         log.requestHeaders(HttpHeaders.of(HttpMethod.GET, "/armeria/log")
                                       .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
                                       .add(HttpHeaderNames.REFERER, "http://log.example.com")
@@ -286,7 +286,7 @@ public class AccessLogFormatsTest {
 
         List<AccessLogComponent> format;
 
-        log.startRequest(channel, SessionProtocol.H2, "www.example.com");
+        log.startRequest(channel, SessionProtocol.H2);
         log.requestHeaders(HttpHeaders.of(HttpMethod.GET, "/armeria/log"));
 
         final Instant requestStartTime = Instant.ofEpochMilli(requestStartTimeMillis);
@@ -343,7 +343,7 @@ public class AccessLogFormatsTest {
         final DummyRequestContext ctx = new DummyRequestContext();
         final DefaultRequestLog log = spy(new DefaultRequestLog(ctx));
 
-        log.startRequest(channel, SessionProtocol.H2, "www.example.com");
+        log.startRequest(channel, SessionProtocol.H2);
 
         // To generate the same datetime string always.
         when(log.requestStartTimeMillis()).thenReturn(requestStartTimeMillis);

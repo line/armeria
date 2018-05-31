@@ -93,17 +93,17 @@ public class HttpTracingClientTest {
 
         // check tags
         assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
-                "http.host", "localhost",
+                "http.host", "foo.com",
                 "http.method", "POST",
                 "http.path", "/hello/armeria",
                 "http.status_code", "200",
-                "http.url", "none+h2c://localhost/hello/armeria"));
+                "http.url", "none+h2c://foo.com/hello/armeria"));
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
 
         // check remote service name
-        assertThat(span.remoteServiceName()).isEqualTo("localhost");
+        assertThat(span.remoteServiceName()).isEqualTo("foo.com");
     }
 
     @Test(timeout = 20000)
@@ -115,24 +115,24 @@ public class HttpTracingClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
-        testRemoteInvocation(tracing, "foo");
+        testRemoteInvocation(tracing, "fooService");
 
         // check span name
         final Span span = reporter.spans().take();
 
         // check tags
         assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
-                "http.host", "localhost",
+                "http.host", "foo.com",
                 "http.method", "POST",
                 "http.path", "/hello/armeria",
                 "http.status_code", "200",
-                "http.url", "none+h2c://localhost/hello/armeria"));
+                "http.url", "none+h2c://foo.com/hello/armeria"));
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
 
-        // check remote service name
-        assertThat(span.remoteServiceName()).isEqualTo("foo");
+        // check remote service name, lower-cased
+        assertThat(span.remoteServiceName()).isEqualTo("fooservice");
     }
 
     @Test
@@ -152,7 +152,8 @@ public class HttpTracingClientTest {
             throws Exception {
 
         // prepare parameters
-        final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/hello/armeria");
+        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/hello/armeria")
+                                                          .authority("foo.com"));
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
@@ -160,7 +161,8 @@ public class HttpTracingClientTest {
                 new DefaultEventLoop(), NoopMeterRegistry.get(), H2C, Endpoint.of("localhost", 8080),
                 HttpMethod.POST, "/hello/armeria", null, null, ClientOptions.DEFAULT, req);
 
-        ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost");
+        ctx.logBuilder().startRequest(mock(Channel.class), H2C);
+        ctx.logBuilder().requestHeaders(req.headers());
         ctx.logBuilder().requestContent(rpcReq, req);
         ctx.logBuilder().endRequest();
 
