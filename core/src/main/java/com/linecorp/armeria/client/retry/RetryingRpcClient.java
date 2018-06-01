@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.retry;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
@@ -25,8 +25,6 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-
-import io.netty.channel.EventLoop;
 
 /**
  * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.
@@ -106,13 +104,12 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                         return;
                     }
 
-                    final EventLoop eventLoop = ctx.contextAwareEventLoop();
-                    if (nextDelay <= 0) {
-                        eventLoop.execute(() -> doExecute0(ctx, req, future));
-                    } else {
-                        eventLoop.schedule(() -> doExecute0(ctx, req, future),
-                                           nextDelay, TimeUnit.MILLISECONDS);
-                    }
+                    final Consumer<? super Throwable> actionOnException = cause -> {
+                        onRetryingComplete(ctx);
+                        future.completeExceptionally(cause);
+                    };
+                    final Runnable retryTask = () -> doExecute0(ctx, req, future);
+                    scheduleNextRetry(ctx, actionOnException, retryTask, nextDelay);
                 } else {
                     onRetryingComplete(ctx);
                     future.complete(res);
