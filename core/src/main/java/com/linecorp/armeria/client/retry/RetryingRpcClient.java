@@ -87,8 +87,6 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     }
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req, CompletableFuture<RpcResponse> future) {
-        removeRetryScheduleIfExist(ctx);
-
         if (!setResponseTimeout(ctx)) {
             onRetryingComplete(ctx);
             future.completeExceptionally(ResponseTimeoutException.get());
@@ -106,13 +104,12 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                         return;
                     }
 
-                    if (nextDelay == 0) {
-                        ctx.contextAwareEventLoop().execute(() -> doExecute0(ctx, req, future));
-                    } else {
-                        final Consumer<Throwable> actionOnFactoryClosed = future::completeExceptionally;
-                        final Runnable scheduleCommand = () -> doExecute0(ctx, req, future);
-                        scheduleNextRetry(ctx, actionOnFactoryClosed, scheduleCommand, nextDelay);
-                    }
+                    final Consumer<? super Throwable> actionOnException = cause -> {
+                        onRetryingComplete(ctx);
+                        future.completeExceptionally(cause);
+                    };
+                    final Runnable retryTask = () -> doExecute0(ctx, req, future);
+                    scheduleNextRetry(ctx, actionOnException, retryTask, nextDelay);
                 } else {
                     onRetryingComplete(ctx);
                     future.complete(res);

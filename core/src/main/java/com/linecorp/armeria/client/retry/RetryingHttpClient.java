@@ -118,8 +118,6 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
     private void doExecute0(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
                             CompletableFuture<HttpResponse> res) {
-        removeRetryScheduleIfExist(ctx);
-
         if (!setResponseTimeout(ctx)) {
             onRetryingComplete(ctx);
             res.completeExceptionally(ResponseTimeoutException.get());
@@ -153,19 +151,13 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                }
 
                                resDuplicator.close();
-                               if (nextDelay == 0) {
-                                   ctx.contextAwareEventLoop()
-                                      .execute(() -> doExecute0(ctx, rootReqDuplicator, res));
-                               } else {
-                                   final Consumer<Throwable> actionOnFactoryClosed = (cause -> {
-                                       res.completeExceptionally(cause);
-                                       rootReqDuplicator.close();
-                                   });
-                                   final Runnable scheduleCommand =
-                                           () -> doExecute0(ctx, rootReqDuplicator, res);
-                                   scheduleNextRetry(ctx, actionOnFactoryClosed, scheduleCommand,
-                                                     nextDelay);
-                               }
+                               final Consumer<? super Throwable> actionOnException = cause -> {
+                                   onRetryingComplete(ctx);
+                                   res.completeExceptionally(cause);
+                                   rootReqDuplicator.close();
+                               };
+                               final Runnable retryTask = () -> doExecute0(ctx, rootReqDuplicator, res);
+                               scheduleNextRetry(ctx, actionOnException, retryTask, nextDelay);
                            } else {
                                finishRetryWithCurrentResponse(ctx, rootReqDuplicator, res, resDuplicator);
                            }

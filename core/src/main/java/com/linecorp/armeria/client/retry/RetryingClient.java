@@ -18,10 +18,6 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -39,9 +35,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -61,7 +55,6 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     private final RetryStrategy<I, O> retryStrategy;
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
-    private final Map<ClientRequestContext, Entry<ScheduledFuture<Void>, FutureListener<Void>>> retrySchedules;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
@@ -77,7 +70,6 @@ public abstract class RetryingClient<I extends Request, O extends Response>
                       "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                       responseTimeoutMillisForEachAttempt);
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-        retrySchedules = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -117,38 +109,28 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     }
 
     /**
-     * Removes a retry {@link ScheduledFuture} which is added in
-     * {@link #scheduleNextRetry(ClientRequestContext, Consumer, Runnable, long)}.
-     */
-    protected void removeRetryScheduleIfExist(ClientRequestContext ctx) {
-        final Entry<ScheduledFuture<Void>, FutureListener<Void>> futureAndListener = retrySchedules.remove(ctx);
-        if (futureAndListener != null) {
-            assert ctx.eventLoop().inEventLoop() : "Cannot remove listener in another thread: " +
-                                                   Thread.currentThread().getName();
-
-            final ScheduledFuture<Void> future = futureAndListener.getKey();
-            final FutureListener<Void> lister = futureAndListener.getValue();
-            future.removeListener(lister);
-        }
-    }
-
-    /**
      * Schedules next retry.
      */
-    protected void scheduleNextRetry(ClientRequestContext ctx, Consumer<Throwable> actionOnFactoryClosed,
-                                     Runnable scheduleCommand, long nextDelay) {
-        final EventLoop eventLoop = ctx.contextAwareEventLoop();
-        @SuppressWarnings("unchecked")
-        final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) eventLoop.schedule(
-                scheduleCommand, nextDelay, TimeUnit.MILLISECONDS);
-        final FutureListener<Void> listener = future -> {
-            if (future.isCancelled()) {
-                onRetryingComplete(ctx);
-                actionOnFactoryClosed.accept(ClosedClientFactoryException.get());
+    protected static void scheduleNextRetry(ClientRequestContext ctx,
+                                            Consumer<? super Throwable> actionOnException,
+                                            Runnable retryTask, long nextDelayMillis) {
+        try {
+            if (nextDelayMillis == 0) {
+                ctx.contextAwareEventLoop().execute(retryTask);
+            } else {
+                @SuppressWarnings("unchecked")
+                final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) ctx
+                        .contextAwareEventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
+                scheduledFuture.addListener(future -> {
+                    if (future.isCancelled()) {
+                        // future is cancelled when the client factory is closed.
+                        actionOnException.accept(ClosedClientFactoryException.get());
+                    }
+                });
             }
-        };
-        scheduledFuture.addListener(listener);
-        retrySchedules.put(ctx, new SimpleImmutableEntry<>(scheduledFuture, listener));
+        } catch (Throwable t) {
+            actionOnException.accept(t);
+        }
     }
 
     /**
