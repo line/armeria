@@ -71,8 +71,7 @@ You can customize the ``strategy`` by implementing :api:`RetryStrategy`.
         final Backoff backoff = RetryStrategy.defaultBackoff;
 
         @Override
-        public CompletableFuture<Backoff> shouldRetry(HttpRequest request,
-                                                      HttpResponse response) {
+        public CompletionStage<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
             return response.aggregate().handle((result, cause) -> { // Do not use get() or join()!
                 if (cause != null) {
                     if (cause instanceof ResponseTimeoutException) {
@@ -111,8 +110,7 @@ You can return a different :api:`Backoff` according to the response.
         final Backoff backoffOnConflict = Backoff.fixed(100);
 
         @Override
-        public CompletableFuture<Backoff> shouldRetry(HttpRequest request,
-                                                      HttpResponse response) {
+        public CompletionStage<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
             return response.aggregate().handle((result, cause) -> {
                 if (cause != null) {
                     if (cause instanceof ResponseTimeoutException) {

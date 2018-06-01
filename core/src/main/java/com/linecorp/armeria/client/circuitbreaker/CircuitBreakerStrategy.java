@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.HttpResponse;
@@ -60,11 +60,11 @@ public interface CircuitBreakerStrategy<T extends Response> {
     }
 
     /**
-     * Returns a {@link CompletableFuture} that contains {@code true}, {@code false} or
+     * Returns a {@link CompletionStage} that contains {@code true}, {@code false} or
      * {@code null} according to the specified {@link Response}. If {@code true} is returned,
      * {@link CircuitBreaker#onSuccess()} is called so that the {@link CircuitBreaker} increases its success
      * count and use it to make a decision to close or open the switch. If {@code false} is returned, it works
      * the other way around. If {@code null} is returned, the {@link CircuitBreaker} ignores it.
      */
-    CompletableFuture<Boolean> shouldReportAsSuccess(T response);
+    CompletionStage<Boolean> shouldReportAsSuccess(T response);
 }

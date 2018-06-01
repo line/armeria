@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -43,7 +44,7 @@ final class HttpStatusBasedRetryStrategy implements RetryStrategy<HttpRequest, H
     }
 
     @Override
-    public CompletableFuture<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
+    public CompletionStage<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
         final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
         response.completionFuture().whenComplete(subscriber);

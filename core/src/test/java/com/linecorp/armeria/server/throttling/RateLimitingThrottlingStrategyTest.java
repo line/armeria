@@ -36,14 +36,14 @@ public class RateLimitingThrottlingStrategyTest {
     private RateLimiter rateLimiter;
 
     @Test
-    public void rateLimit() throws Exception {
+    public void rateLimit() {
         final RateLimitingThrottlingStrategy<Request> strategy =
                 new RateLimitingThrottlingStrategy<>(rateLimiter);
         when(rateLimiter.tryAcquire()).thenReturn(true)
                                       .thenReturn(false)
                                       .thenReturn(true);
-        assertThat(strategy.accept(null, null).get()).isEqualTo(true);
-        assertThat(strategy.accept(null, null).get()).isEqualTo(false);
-        assertThat(strategy.accept(null, null).get()).isEqualTo(true);
+        assertThat(strategy.accept(null, null).toCompletableFuture().join()).isEqualTo(true);
+        assertThat(strategy.accept(null, null).toCompletableFuture().join()).isEqualTo(false);
+        assertThat(strategy.accept(null, null).toCompletableFuture().join()).isEqualTo(true);
     }
 }

@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -35,7 +36,7 @@ final class HttpStatusBasedCircuitBreakerStrategy implements CircuitBreakerStrat
     }
 
     @Override
-    public CompletableFuture<Boolean> shouldReportAsSuccess(HttpResponse response) {
+    public CompletionStage<Boolean> shouldReportAsSuccess(HttpResponse response) {
         final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
         response.completionFuture().whenComplete(subscriber);

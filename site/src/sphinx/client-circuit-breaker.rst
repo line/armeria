@@ -116,7 +116,7 @@ is raised or the status is ``5xx``, succeeds when the status is ``2xx`` and igno
     final CircuitBreakerStrategy<HttpResponse> myStrategy = new CircuitBreakerStrategy<HttpResponse>() {
 
         @Override
-        public CompletableFuture<Boolean> shouldReportAsSuccess(HttpResponse response) {
+        public CompletionStage<Boolean> shouldReportAsSuccess(HttpResponse response) {
             return response.aggregate().handle((res, cause) -> {
                 if (cause != null) { // A failure if an Exception is raised.
                     return false;

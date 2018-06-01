@@ -19,7 +19,7 @@ package com.linecorp.armeria.server.throttling;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.junit.Test;
 
@@ -39,7 +39,7 @@ public class ThrottlingStrategyTest {
 
     private static class TestThrottlingStrategy extends ThrottlingStrategy<RpcRequest> {
         @Override
-        public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, RpcRequest request) {
+        public CompletionStage<Boolean> accept(ServiceRequestContext ctx, RpcRequest request) {
             return completedFuture(true);
         }
     }
