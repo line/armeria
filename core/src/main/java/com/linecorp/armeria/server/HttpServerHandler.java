@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -25,6 +26,8 @@ import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -36,8 +39,6 @@ import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
@@ -68,7 +69,6 @@ import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.logging.LoggingUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.Unpooled;
@@ -90,9 +90,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final MediaType ERROR_CONTENT_TYPE = MediaType.PLAIN_TEXT_UTF_8;
 
+    // Note: Use EnumSet to ensure the iteration order is always same.
     private static final Set<HttpMethod> ALLOWED_METHODS =
-            Sets.immutableEnumSet(HttpMethod.DELETE, HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS,
-                                  HttpMethod.PATCH, HttpMethod.POST, HttpMethod.PUT, HttpMethod.TRACE);
+            Collections.unmodifiableSet(EnumSet.of(
+                    HttpMethod.OPTIONS, HttpMethod.GET, HttpMethod.HEAD, HttpMethod.POST,
+                    HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.DELETE, HttpMethod.TRACE));
+
+    private static final Set<String> ALLOWED_METHOD_NAMES =
+            ALLOWED_METHODS.stream().map(HttpMethod::name).collect(toImmutableSet());
 
     private static final String ALLOWED_METHODS_STRING =
             ALLOWED_METHODS.stream().map(HttpMethod::name).collect(Collectors.joining(","));
@@ -278,10 +283,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final HttpHeaders headers = req.headers();
-        if (!ALLOWED_METHODS.contains(headers.method())) {
+        final String methodName = headers.get(HttpHeaderNames.METHOD);
+        if (methodName == null) {
+            respond(ctx, req, HttpStatus.BAD_REQUEST,
+                    new IllegalArgumentException("Method is missing."));
+            return;
+        }
+        if (!ALLOWED_METHOD_NAMES.contains(methodName)) {
             respond(ctx, req, HttpStatus.METHOD_NOT_ALLOWED,
-                    new IllegalArgumentException("Request method is not allowed: " +
-                                                 headers.method().name()));
+                    new IllegalArgumentException("Request method is not allowed: " + methodName));
             return;
         }
 
@@ -311,6 +321,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
+        fillSchemeIfMissing(headers);
         final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
@@ -449,6 +460,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         respond(ctx, req, HttpStatus.NOT_FOUND, null);
+    }
+
+    private void fillSchemeIfMissing(HttpHeaders headers) {
+        if (headers.scheme() == null) {
+            headers.scheme(protocol.isTls() ? "https" : "http");
+        }
     }
 
     private String hostname(ChannelHandlerContext ctx, HttpHeaders headers) {
@@ -638,10 +655,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final EarlyRespondingRequestContext reqCtx =
                 new EarlyRespondingRequestContext(channel, NoopMeterRegistry.get(), protocol(),
                                                   req.method(), path, query, req);
-        final String host = LoggingUtil.remoteHost(req.headers(), ctx.channel());
 
         final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-        logBuilder.startRequest(channel, protocol(), host);
+        logBuilder.startRequest(channel, protocol());
         logBuilder.requestHeaders(req.headers());
 
         return reqCtx;

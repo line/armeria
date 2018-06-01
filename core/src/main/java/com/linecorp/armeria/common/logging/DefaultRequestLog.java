@@ -41,6 +41,8 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
@@ -64,6 +66,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             RESPONSE_END.setterFlags() & ~RESPONSE_CONTENT.setterFlags();
 
     private static final int STRING_BUILDER_CAPACITY = 512;
+
+    private static final HttpHeaders DUMMY_REQUEST_HEADERS_HTTP =
+            HttpHeaders.of().scheme("http").authority("?").method(HttpMethod.UNKNOWN).path("?").asImmutable();
+    private static final HttpHeaders DUMMY_REQUEST_HEADERS_HTTPS =
+            HttpHeaders.of().scheme("https").authority("?").method(HttpMethod.UNKNOWN).path("?").asImmutable();
+    private static final HttpHeaders DUMMY_RESPONSE_HEADERS = HttpHeaders.of(HttpStatus.UNKNOWN).asImmutable();
 
     private final RequestContext ctx;
 
@@ -102,8 +110,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private String host;
 
-    private HttpHeaders requestHeaders = HttpHeaders.EMPTY_HEADERS;
-    private HttpHeaders responseHeaders = HttpHeaders.EMPTY_HEADERS;
+    private HttpHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
+    private HttpHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
     @Nullable
     private Object requestContent;
     @Nullable
@@ -142,7 +150,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void propagateRequestSideLog(RequestLog child) {
         child.addListener(log -> {
             startRequest0(log.requestStartTimeNanos(), log.requestStartTimeMillis(), log.channel(),
-                          log.sessionProtocol(), log.host(), true);
+                          log.sessionProtocol(), true);
         }, REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
         child.addListener(log -> requestHeaders(log.requestHeaders()), REQUEST_HEADERS);
@@ -301,22 +309,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void startRequest(Channel channel, SessionProtocol sessionProtocol, String host) {
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol) {
         requireNonNull(channel, "channel");
         requireNonNull(sessionProtocol, "sessionProtocol");
-        requireNonNull(host, "host");
-        startRequest0(channel, sessionProtocol, host, true);
+        startRequest0(channel, sessionProtocol, true);
     }
 
-    private void startRequest0(Channel channel, SessionProtocol sessionProtocol,
-                               String host, boolean updateAvailability) {
-        startRequest0(System.nanoTime(), System.currentTimeMillis(), channel, sessionProtocol, host,
+    private void startRequest0(Channel channel, SessionProtocol sessionProtocol, boolean updateAvailability) {
+        startRequest0(System.nanoTime(), System.currentTimeMillis(), channel, sessionProtocol,
                       updateAvailability);
     }
 
     private void startRequest0(long requestStartTimeNanos, long requestStartTimeMillis,
                                @Nullable Channel channel, SessionProtocol sessionProtocol,
-                               @Nullable String host, boolean updateAvailability) {
+                               boolean updateAvailability) {
         if (isAvailabilityAlreadyUpdated(REQUEST_START)) {
             return;
         }
@@ -325,7 +331,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestStartTimeMillis = requestStartTimeMillis;
         this.channel = channel;
         this.sessionProtocol = sessionProtocol;
-        this.host = host;
+        if (sessionProtocol.isTls()) {
+            // Switch to the dummy headers with ':scheme=https' if the connection is TLS.
+            if (requestHeaders == DUMMY_REQUEST_HEADERS_HTTP) {
+                requestHeaders = DUMMY_REQUEST_HEADERS_HTTPS;
+            }
+        }
 
         if (updateAvailability) {
             updateAvailability(REQUEST_START);
@@ -372,12 +383,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public SessionProtocol sessionProtocol() {
         ensureAvailability(REQUEST_START);
         return sessionProtocol;
-    }
-
-    @Override
-    public String host() {
-        ensureAvailability(REQUEST_START);
-        return host;
     }
 
     @Override
@@ -510,7 +515,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
         startRequest0(requestEndTimeNanos, System.currentTimeMillis(), null,
-                      context().sessionProtocol(), null, false);
+                      context().sessionProtocol(), false);
 
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;

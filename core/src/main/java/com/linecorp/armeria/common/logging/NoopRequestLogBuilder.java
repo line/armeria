@@ -33,7 +33,7 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void endResponseWithLastChild() {}
 
     @Override
-    public void startRequest(Channel ch, SessionProtocol sessionProtocol, String host) {}
+    public void startRequest(Channel ch, SessionProtocol sessionProtocol) {}
 
     @Override
     public void serializationFormat(SerializationFormat serializationFormat) {}

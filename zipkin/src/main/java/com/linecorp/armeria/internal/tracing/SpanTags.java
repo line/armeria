@@ -32,13 +32,13 @@ public final class SpanTags {
      * Adds information about the raw HTTP request, RPC request, and endpoint to the span.
      */
     public static void addTags(Span span, RequestLog log) {
-        if (log.host() != null) {
-            span.tag("http.host", log.host());
-        }
+        final String host = log.requestHeaders().authority();
+        assert host != null;
+        span.tag("http.host", host);
         final StringBuilder uriBuilder = new StringBuilder()
                 .append(log.scheme().uriText())
                 .append("://")
-                .append(log.host())
+                .append(host)
                 .append(log.path());
         if (log.query() != null) {
             uriBuilder.append('?').append(log.query());
@@ -46,7 +46,7 @@ public final class SpanTags {
         span.tag("http.method", log.method().name())
             .tag("http.path", log.path())
             .tag("http.url", uriBuilder.toString())
-            .tag("http.status_code", String.valueOf(log.statusCode()));
+            .tag("http.status_code", log.status().codeAsText());
         final Throwable responseCause = log.responseCause();
         if (responseCause != null) {
             span.tag("error", responseCause.toString());

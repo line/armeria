@@ -261,10 +261,9 @@ interface AccessLogComponent {
                 case REQUEST_LINE:
                     final StringBuilder requestLine = new StringBuilder();
 
-                    final HttpHeaders headers = log.requestHeaders();
-                    requestLine.append(headers.method().name())
+                    requestLine.append(log.method())
                                .append(' ')
-                               .append(headers.path());
+                               .append(log.requestHeaders().path());
 
                     final Object requestContent = log.requestContent();
                     if (requestContent instanceof RpcRequest) {
@@ -439,7 +438,15 @@ interface AccessLogComponent {
                 case "scheme":
                     return RequestLog::scheme;
                 case "host":
-                    return RequestLog::host;
+                    return log -> {
+                        final String authority = log.responseHeaders().authority();
+                        if ("?".equals(authority)) {
+                            final InetSocketAddress remoteAddr = log.context().remoteAddress();
+                            assert remoteAddr != null;
+                            return remoteAddr.getHostString();
+                        }
+                        return authority;
+                    };
                 case "status":
                     return RequestLog::status;
                 case "statusCode":
