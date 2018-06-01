@@ -19,7 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +89,7 @@ public abstract class CircuitBreakerClient<I extends Request, O extends Response
      * of the specified {@code future}. If the completed value is {@code null}, this doesn't do anything.
      */
     protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
-                                                 CompletableFuture<Boolean> future) {
+                                                 CompletionStage<Boolean> future) {
         future.handle(voidFunction((success, unused) -> {
             if (success != null) {
                 if (success) {

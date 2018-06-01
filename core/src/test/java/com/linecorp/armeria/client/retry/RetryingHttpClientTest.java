@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
@@ -359,7 +360,7 @@ public class RetryingHttpClientTest {
         }
 
         @Override
-        public CompletableFuture<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
+        public CompletionStage<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
             final CompletableFuture<AggregatedHttpMessage> future = response.aggregate();
             return future.handle((message, unused) -> {
                 if (message != null &&

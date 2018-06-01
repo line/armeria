@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import com.google.common.base.Ascii;
 
@@ -42,7 +42,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * <pre>{@code
  * > Server server = new ServerBuilder().serviceUnder("health", new ManagedHttpHealthCheckService() {
  * >         @Override
- * >         public CompletableFuture<Optional<Boolean>> mode(HttpRequest req) {
+ * >         public CompletionStage<Optional<Boolean>> mode(HttpRequest req) {
  * >             return CompletableFuture.completedFuture(Optional.empty());
  * >         }
  * >     }).build();
@@ -66,7 +66,7 @@ public class ManagedHttpHealthCheckService extends HttpHealthCheckService {
     /**
      * Updates health status using the specified {@link HttpRequest}.
      */
-    private CompletableFuture<AggregatedHttpMessage> updateHealthStatus(
+    private CompletionStage<AggregatedHttpMessage> updateHealthStatus(
             ServiceRequestContext ctx, HttpRequest req) {
         return mode(ctx, req).thenApply(mode -> {
             if (!mode.isPresent()) {
@@ -89,8 +89,8 @@ public class ManagedHttpHealthCheckService extends HttpHealthCheckService {
      *
      * @param req HttpRequest
      */
-    protected CompletableFuture<Optional<Boolean>> mode(@SuppressWarnings("unused") ServiceRequestContext ctx,
-                                                        HttpRequest req) {
+    protected CompletionStage<Optional<Boolean>> mode(@SuppressWarnings("unused") ServiceRequestContext ctx,
+                                                      HttpRequest req) {
         return req.aggregate()
                   .thenApply(AggregatedHttpMessage::content)
                   .thenApply(HttpData::toStringAscii)
