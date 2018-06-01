@@ -315,13 +315,13 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "5678")
                            .containsEntry("req.direction", "INBOUND")
-                           .containsEntry("req.authority", "server.com:8080")
+                           .containsEntry("req.authority", "?")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "name=alice")
                            .containsEntry("scheme", "none+h2")
                            .containsEntry("req.content_length", "0")
-                           .containsEntry("res.status_code", "-1")
+                           .containsEntry("res.status_code", "0")
                            .containsEntry("res.content_length", "0")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
@@ -402,7 +402,9 @@ public class RequestContextExportingAppenderTest {
         return event;
     }
 
-    private static ServiceRequestContext newServiceContext(String path, String query) throws Exception {
+    private static ServiceRequestContext newServiceContext(
+            String path, @Nullable String query) throws Exception {
+
         final Channel ch = mock(Channel.class);
         when(ch.remoteAddress()).thenReturn(
                 new InetSocketAddress(InetAddress.getByAddress("client.com", new byte[] { 1, 2, 3, 4 }),
@@ -520,7 +522,9 @@ public class RequestContextExportingAppenderTest {
         }
     }
 
-    private static ClientRequestContext newClientContext(String path, String query) throws Exception {
+    private static ClientRequestContext newClientContext(
+            String path, @Nullable String query) throws Exception {
+
         final Channel ch = mock(Channel.class);
         when(ch.remoteAddress()).thenReturn(
                 new InetSocketAddress(InetAddress.getByAddress("server.com", new byte[] { 1, 2, 3, 4 }),
@@ -537,14 +541,13 @@ public class RequestContextExportingAppenderTest {
                 Endpoint.of("server.com", 8080), req.method(), path, query, null,
                 ClientOptions.DEFAULT, req) {
 
-            @Nullable
             @Override
             public SSLSession sslSession() {
                 return newSslSession();
             }
         };
 
-        ctx.logBuilder().startRequest(ch, ctx.sessionProtocol(), "some-host.server.com");
+        ctx.logBuilder().startRequest(ch, ctx.sessionProtocol());
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;
@@ -581,10 +584,11 @@ public class RequestContextExportingAppenderTest {
         private final String query;
         private final HttpHeaders headers;
         private final List<Object> summary;
+        @Nullable
         private Throwable delayedCause;
 
         DummyPathMappingContext(VirtualHost virtualHost, String hostname,
-                                String path, String query, HttpHeaders headers) {
+                                String path, @Nullable String query, HttpHeaders headers) {
             this.virtualHost = requireNonNull(virtualHost, "virtualHost");
             this.hostname = requireNonNull(hostname, "hostname");
             this.path = requireNonNull(path, "path");

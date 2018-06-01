@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -25,6 +26,7 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -171,7 +173,7 @@ public interface RequestLog {
      * Returns the query part of the {@link Request} URI, without the leading {@code '?'},
      * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      * This method is a shortcut to {@code context().query()}.
-     * This method returns non-{@code null} regardless the current {@link RequestLogAvailability}.
+     * This property is available regardless the current {@link RequestLogAvailability}.
      */
     @Nullable
     default String query() {
@@ -284,7 +286,7 @@ public interface RequestLog {
      * Returns the Netty {@link Channel} which handled the {@link Request}.
      *
      * @return the Netty {@link Channel}. {@code null} if the {@link Request} has failed even before
-     *         a {@link Request} is assigned to a {@link Channel}.
+     *         a connection is established.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
@@ -315,37 +317,68 @@ public interface RequestLog {
     /**
      * Returns the host name of the {@link Request}.
      *
-     * @return the host name. {@code null} if the {@link Request} has failed even before it is started.
+     * @deprecated Do not use this method. Get the remote or local address from {@link #context()} or get
+     *             the authority from {@link #authority()}.
+     *
+     * @return the host name. {@code null} if the {@link Request} has failed even before a connection is
+     *         established.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     @Nullable
-    String host();
+    @Deprecated
+    default String host() {
+        final RequestContext ctx = context();
+        final InetSocketAddress addr;
+        if (ctx instanceof ClientRequestContext) {
+            addr = ctx.remoteAddress();
+        } else {
+            addr = ctx.localAddress();
+        }
+        return addr != null ? addr.getHostString() : null;
+    }
+
+    /**
+     * Returns the authority of the {@link Request}.
+     *
+     * @return the authority. {@code "?"} if the {@link Request} has failed even before its headers are
+     *         properly constructed.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    default String authority() {
+        final String authority = requestHeaders().authority();
+        assert authority != null;
+        return authority;
+    }
 
     /**
      * Returns the status of the {@link Response}.
      *
-     * @return the {@link HttpStatus}. {@code null} if the {@link Response} has failed even before receiving
-     *         its first non-informational headers.
+     * @return the {@link HttpStatus}. {@link HttpStatus#UNKNOWN} if the {@link Response} has failed even
+     *         before receiving its first non-informational headers.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    @Nullable
     default HttpStatus status() {
-        return responseHeaders().status();
+        final HttpStatus status = responseHeaders().status();
+        assert status != null;
+        return status;
     }
 
     /**
      * Returns the status code of the {@link Response}.
      *
-     * @return the integer value of the {@link #status()}.
-     *         {@code -1} if {@link #status()} returns {@code null}.
+     * @return the integer value of the {@link #status()}. {@code 0} if the {@link Response} has failed even
+     *         before receiving its first non-informational headers.
      */
     default int statusCode() {
-        final HttpStatus status = status();
-        return status != null ? status.code() : -1;
+        return status().code();
     }
 
     /**
-     * Returns the {@link HttpHeaders} of the {@link Request}.
+     * Returns the {@link HttpHeaders} of the {@link Request}. If the {@link Request} was not received or sent
+     * at all, it will return a dummy {@link HttpHeaders} whose {@code :authority} and {@code :path} are
+     * set to {@code "?"}, {@code :scheme} is set to {@code "http"} or {@code "https"}, and {@code :method} is
+     * set to {@code "UNKNOWN"}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
@@ -373,6 +406,8 @@ public interface RequestLog {
 
     /**
      * Returns the non-informational status {@link HttpHeaders} of the {@link Response}.
+     * If the {@link Response} was not received or sent at all, it will return a dummy
+     * {@link HttpHeaders} whose {@code :status} is {@code "0"}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */

@@ -120,6 +120,8 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
 
     /**
      * Gets the {@link HttpHeaderNames#METHOD} header or {@code null} if there is no such header.
+     * {@link HttpMethod#UNKNOWN} is returned if the value of the {@link HttpHeaderNames#METHOD} header is
+     * not defined in {@link HttpMethod}.
      */
     @Nullable
     HttpMethod method();

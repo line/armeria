@@ -100,11 +100,8 @@ public final class DefaultHttpHeaders
             return null;
         }
 
-        try {
-            return this.method = HttpMethod.valueOf(methodStr);
-        } catch (IllegalArgumentException ignored) {
-            throw new IllegalStateException("unknown method: " + methodStr);
-        }
+        return this.method = HttpMethod.isSupported(methodStr) ? HttpMethod.valueOf(methodStr)
+                                                               : HttpMethod.UNKNOWN;
     }
 
     @Override

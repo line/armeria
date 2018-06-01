@@ -312,6 +312,11 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     public static final HttpStatus NETWORK_AUTHENTICATION_REQUIRED =
             newConstant(511, "Network Authentication Required");
 
+    /**
+     * A special status code '0' which represents that the response status is unknown.
+     */
+    public static final HttpStatus UNKNOWN = newConstant(0, "Unknown reason");
+
     static {
         for (int i = 0; i < 1000; i++) {
             if (!map.containsKey(i)) {

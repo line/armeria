@@ -76,11 +76,11 @@ public class HttpTracingServiceTest {
 
         // check tags
         assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
-                "http.host", "localhost",
+                "http.host", "foo.com",
                 "http.method", "POST",
                 "http.path", "/hello/trustin",
                 "http.status_code", "200",
-                "http.url", "none+h2c://localhost/hello/trustin"));
+                "http.url", "none+h2c://foo.com/hello/trustin"));
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
@@ -109,16 +109,17 @@ public class HttpTracingServiceTest {
         final HttpTracingService stub = new HttpTracingService(delegate, tracing);
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/hello/trustin");
+        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/hello/trustin")
+                                                          .authority("foo.com"));
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, trustin!");
         final DefaultRequestLog log = new DefaultRequestLog(ctx);
-        log.startRequest(mock(Channel.class), H2C, "localhost");
+        log.startRequest(mock(Channel.class), H2C);
+        log.requestHeaders(req.headers());
         log.requestContent(rpcReq, req);
         log.endRequest();
 
-        // HttpTracingService prefers RpcRequest.method() to ctx.method(), so "POST" should be ignored.
         when(ctx.method()).thenReturn(HttpMethod.POST);
         when(ctx.log()).thenReturn(log);
         when(ctx.logBuilder()).thenReturn(log);
