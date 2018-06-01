@@ -17,10 +17,12 @@
 package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
@@ -38,6 +40,7 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClosedClientFactoryException;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -332,6 +335,26 @@ public class RetryingHttpClientTest {
         final HttpClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(10)));
         final AggregatedHttpMessage res = client.post("/post-ping-pong", "bar").aggregate().join();
         assertThat(res.content().toStringUtf8()).isEqualTo("bar");
+    }
+
+    @Test
+    public void shouldGetExceptionWhenFactoryIsClosed() {
+        final ClientFactory factory = new ClientFactoryBuilder()
+                .workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+
+        // There's no way to notice that the RetryingClient has scheduled the next retry.
+        // The next retry will be after 8 seconds so closing the factory after 1 second should be work.
+        Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 1, TimeUnit.SECONDS);
+
+        final HttpClient client = new HttpClientBuilder(server.uri("/"))
+                .factory(factory)
+                .defaultResponseTimeoutMillis(10000)
+                .decorator(new RetryingHttpClientBuilder(
+                        // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
+                        RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
+                .build();
+        assertThatThrownBy(() -> client.get("/service-unavailable").aggregate().join())
+                .hasCauseInstanceOf(ClosedClientFactoryException.class);
     }
 
     private HttpClient client(RetryStrategy<HttpRequest, HttpResponse> strategy) {

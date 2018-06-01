@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClosedClientFactoryException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -34,6 +36,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * A {@link Client} decorator that handles failures of remote invocation and retries requests.
@@ -103,6 +106,31 @@ public abstract class RetryingClient<I extends Request, O extends Response>
 
     protected RetryStrategy<I, O> retryStrategy() {
         return retryStrategy;
+    }
+
+    /**
+     * Schedules next retry.
+     */
+    protected static void scheduleNextRetry(ClientRequestContext ctx,
+                                            Consumer<? super Throwable> actionOnException,
+                                            Runnable retryTask, long nextDelayMillis) {
+        try {
+            if (nextDelayMillis == 0) {
+                ctx.contextAwareEventLoop().execute(retryTask);
+            } else {
+                @SuppressWarnings("unchecked")
+                final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) ctx
+                        .contextAwareEventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
+                scheduledFuture.addListener(future -> {
+                    if (future.isCancelled()) {
+                        // future is cancelled when the client factory is closed.
+                        actionOnException.accept(ClosedClientFactoryException.get());
+                    }
+                });
+            }
+        } catch (Throwable t) {
+            actionOnException.accept(t);
+        }
     }
 
     /**
