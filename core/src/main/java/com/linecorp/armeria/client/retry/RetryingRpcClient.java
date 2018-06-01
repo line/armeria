@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.retry;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
@@ -25,8 +25,6 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-
-import io.netty.channel.EventLoop;
 
 /**
  * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.
@@ -89,6 +87,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     }
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req, CompletableFuture<RpcResponse> future) {
+        removeRetryScheduleIfExist(ctx);
+
         if (!setResponseTimeout(ctx)) {
             onRetryingComplete(ctx);
             future.completeExceptionally(ResponseTimeoutException.get());
@@ -106,12 +106,12 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                         return;
                     }
 
-                    final EventLoop eventLoop = ctx.contextAwareEventLoop();
-                    if (nextDelay <= 0) {
-                        eventLoop.execute(() -> doExecute0(ctx, req, future));
+                    if (nextDelay == 0) {
+                        ctx.contextAwareEventLoop().execute(() -> doExecute0(ctx, req, future));
                     } else {
-                        eventLoop.schedule(() -> doExecute0(ctx, req, future),
-                                           nextDelay, TimeUnit.MILLISECONDS);
+                        final Consumer<Throwable> actionOnFactoryClosed = future::completeExceptionally;
+                        final Runnable scheduleCommand = () -> doExecute0(ctx, req, future);
+                        scheduleNextRetry(ctx, actionOnFactoryClosed, scheduleCommand, nextDelay);
                     }
                 } else {
                     onRetryingComplete(ctx);

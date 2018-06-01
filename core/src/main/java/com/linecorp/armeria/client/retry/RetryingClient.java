@@ -18,7 +18,12 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -27,13 +32,17 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClosedClientFactoryException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * A {@link Client} decorator that handles failures of remote invocation and retries requests.
@@ -52,6 +61,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     private final RetryStrategy<I, O> retryStrategy;
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
+    private final Map<ClientRequestContext, Entry<ScheduledFuture<Void>, FutureListener<Void>>> retrySchedules;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
@@ -67,6 +77,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
                       "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                       responseTimeoutMillisForEachAttempt);
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+        retrySchedules = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -103,6 +114,41 @@ public abstract class RetryingClient<I extends Request, O extends Response>
 
     protected RetryStrategy<I, O> retryStrategy() {
         return retryStrategy;
+    }
+
+    /**
+     * Removes a retry {@link ScheduledFuture} which is added in
+     * {@link #scheduleNextRetry(ClientRequestContext, Consumer, Runnable, long)}.
+     */
+    protected void removeRetryScheduleIfExist(ClientRequestContext ctx) {
+        final Entry<ScheduledFuture<Void>, FutureListener<Void>> futureAndListener = retrySchedules.remove(ctx);
+        if (futureAndListener != null) {
+            assert ctx.eventLoop().inEventLoop() : "Cannot remove listener in another thread: " +
+                                                   Thread.currentThread().getName();
+
+            final ScheduledFuture<Void> future = futureAndListener.getKey();
+            final FutureListener<Void> lister = futureAndListener.getValue();
+            future.removeListener(lister);
+        }
+    }
+
+    /**
+     * Schedules next retry.
+     */
+    protected void scheduleNextRetry(ClientRequestContext ctx, Consumer<Throwable> actionOnFactoryClosed,
+                                     Runnable scheduleCommand, long nextDelay) {
+        final EventLoop eventLoop = ctx.contextAwareEventLoop();
+        @SuppressWarnings("unchecked")
+        final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) eventLoop.schedule(
+                scheduleCommand, nextDelay, TimeUnit.MILLISECONDS);
+        final FutureListener<Void> listener = future -> {
+            if (future.isCancelled()) {
+                onRetryingComplete(ctx);
+                actionOnFactoryClosed.accept(ClosedClientFactoryException.get());
+            }
+        };
+        scheduledFuture.addListener(listener);
+        retrySchedules.put(ctx, new SimpleImmutableEntry<>(scheduledFuture, listener));
     }
 
     /**
