@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.retry;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -84,7 +85,7 @@ public interface RetryStrategy<I extends Request, O extends Response> {
     }
 
     /**
-     * Returns a {@link CompletableFuture} that contains {@link Backoff} which will be used for retry.
+     * Returns a {@link CompletionStage} that contains {@link Backoff} which will be used for retry.
      * If the condition does not match, this will return {@code null} to stop retry attempt.
      * Note that {@link ResponseTimeoutException} is not retriable for the whole retry, but each attempt.
      *
@@ -93,5 +94,5 @@ public interface RetryStrategy<I extends Request, O extends Response> {
      * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
      *      timeout</a>
      */
-    CompletableFuture<Backoff> shouldRetry(I request, O response);
+    CompletionStage<Backoff> shouldRetry(I request, O response);
 }
