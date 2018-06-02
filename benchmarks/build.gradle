@@ -76,6 +76,9 @@ jmh {
     if (rootProject.hasProperty('jmh.profilers')) {
         profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',')
     }
+    if (rootProject.hasProperty('jmh.threads')) {
+        threads = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.threads')))
+    }
     if (rootProject.hasProperty('jmh.verbose')) {
         verbosity = 'EXTRA'
     }
