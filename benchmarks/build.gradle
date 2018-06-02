@@ -24,7 +24,11 @@ dependencies {
 
 dependencies {
     compile project(':grpc')
+    compile project(':retrofit2')
     compile project(':thrift')
+
+    compile 'com.squareup.retrofit2:adapter-java8'
+    compile 'com.squareup.retrofit2:converter-jackson'
 
     if (grpcUpstream) {
         // Since project(':core') is automatically added in the top-level build, it's difficult to exclude
