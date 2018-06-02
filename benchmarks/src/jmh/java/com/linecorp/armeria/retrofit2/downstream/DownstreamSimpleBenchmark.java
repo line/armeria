@@ -44,5 +44,5 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
                 .create(SimpleBenchmarkClient.class);
-  }
+    }
 }

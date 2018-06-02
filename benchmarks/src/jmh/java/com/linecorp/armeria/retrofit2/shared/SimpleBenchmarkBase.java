@@ -31,6 +31,7 @@ import com.linecorp.armeria.server.ServerPort;
 public abstract class SimpleBenchmarkBase {
 
     private Server server;
+    private SimpleBenchmarkClient client;
 
     @Setup
     public void start() throws Exception {
@@ -40,6 +41,7 @@ public abstract class SimpleBenchmarkBase {
                 .tlsSelfSigned()
                 .build();
         server.start().join();
+        client = client();
     }
 
     @TearDown
@@ -57,7 +59,7 @@ public abstract class SimpleBenchmarkBase {
     }
 
     @Benchmark
-    public void empty() throws Exception {
-        client().empty().join();
+    public void empty() {
+        client.empty().join();
     }
 }
