@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -82,14 +83,19 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         final CompletableFuture<RpcResponse> future = new CompletableFuture<>();
         final RpcResponse res = RpcResponse.from(future);
-        doExecute0(ctx, req, future);
+        doExecute0(ctx, req, res, future);
         return res;
     }
 
-    private void doExecute0(ClientRequestContext ctx, RpcRequest req, CompletableFuture<RpcResponse> future) {
+    private void doExecute0(ClientRequestContext ctx, RpcRequest req,
+                            RpcResponse returnedRes, CompletableFuture<RpcResponse> future) {
+        if (returnedRes.isDone()) {
+            // The response is cancelled by the client before it receives a response, so stop retrying.
+            actionOnException(ctx, future).accept(new CancellationException());
+            return;
+        }
         if (!setResponseTimeout(ctx)) {
-            onRetryingComplete(ctx);
-            future.completeExceptionally(ResponseTimeoutException.get());
+            actionOnException(ctx, future).accept(ResponseTimeoutException.get());
             return;
         }
 
@@ -104,18 +110,22 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                         return;
                     }
 
-                    final Consumer<? super Throwable> actionOnException = cause -> {
-                        onRetryingComplete(ctx);
-                        future.completeExceptionally(cause);
-                    };
-                    final Runnable retryTask = () -> doExecute0(ctx, req, future);
-                    scheduleNextRetry(ctx, actionOnException, retryTask, nextDelay);
+                    scheduleNextRetry(ctx, actionOnException(ctx, future),
+                                      () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
                 } else {
                     onRetryingComplete(ctx);
                     future.complete(res);
                 }
             });
         });
+    }
+
+    private static Consumer<? super Throwable> actionOnException(ClientRequestContext ctx,
+                                                                 CompletableFuture<RpcResponse> future) {
+        return cause -> {
+            onRetryingComplete(ctx);
+            future.completeExceptionally(cause);
+        };
     }
 
     private RpcResponse getResponse(ClientRequestContext ctx, RpcRequest req) {
