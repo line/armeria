@@ -108,7 +108,7 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
-  grpc-netty: { version: *GRPC_VERSION }
+  grpc-netty-shaded: { version: *GRPC_VERSION }
   grpc-okhttp: { version: *GRPC_VERSION }
   grpc-protobuf: { version: *GRPC_VERSION }
   grpc-stub: { version: *GRPC_VERSION }
