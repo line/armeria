@@ -430,16 +430,13 @@ public class RetryingHttpClientTest {
                     }
 
                     @Override
-                    public void onNext(HttpObject httpObject) {
-                    }
+                    public void onNext(HttpObject httpObject) {}
 
                     @Override
-                    public void onError(Throwable t) {
-                    }
+                    public void onError(Throwable t) {}
 
                     @Override
-                    public void onComplete() {
-                    }
+                    public void onComplete() {}
                 });
 
         await().untilAsserted(() -> assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(3));
@@ -449,8 +446,7 @@ public class RetryingHttpClientTest {
     public void doNotRetryWhenRequestIsAborted() throws Exception {
         final HttpClient client = client(retryAlways);
 
-        final HttpRequestWriter req = HttpRequest.streaming(
-                HttpHeaders.of(HttpMethod.GET, "/request-abort"));
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/request-abort");
         req.write(HttpData.ofUtf8("I'm going to abort this request"));
         req.abort();
         client.execute(req);
