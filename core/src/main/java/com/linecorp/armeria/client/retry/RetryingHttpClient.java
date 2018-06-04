@@ -120,7 +120,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                             HttpRequest originalReq, HttpResponse returnedRes,
                             CompletableFuture<HttpResponse> future) {
         if (originalReq.completionFuture().isCompletedExceptionally() || returnedRes.isComplete()) {
-            // The request or response is aborted by the client before it receives a response, so stop retrying.
+            // The request or response has been aborted by the client before it receives a response,
+            // so stop retrying.
             handleException(ctx, rootReqDuplicator, future, AbortedStreamException.get());
             return;
         }

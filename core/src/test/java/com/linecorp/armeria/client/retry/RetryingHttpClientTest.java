@@ -414,7 +414,7 @@ public class RetryingHttpClientTest {
         httpResponse.abort();
 
         await().untilAsserted(() -> assertThat(responseAbortServiceCallCounter.get()).isOne());
-        // Sleep 3 seconds more to check if there was another retrying.
+        // Sleep 3 seconds more to check if there was another retry.
         TimeUnit.SECONDS.sleep(3);
         assertThat(responseAbortServiceCallCounter.get()).isOne();
     }

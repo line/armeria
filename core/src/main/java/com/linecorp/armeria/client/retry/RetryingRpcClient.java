@@ -89,8 +89,9 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     private void doExecute0(ClientRequestContext ctx, RpcRequest req,
                             RpcResponse returnedRes, CompletableFuture<RpcResponse> future) {
         if (returnedRes.isDone()) {
-            // The response is cancelled by the client before it receives a response, so stop retrying.
-            handleException(ctx, future, new CancellationException());
+            // The response has been cancelled by the client before it receives a response, so stop retrying.
+            handleException(ctx, future, new CancellationException(
+                    "the response returned to the client has been cancelled"));
             return;
         }
         if (!setResponseTimeout(ctx)) {

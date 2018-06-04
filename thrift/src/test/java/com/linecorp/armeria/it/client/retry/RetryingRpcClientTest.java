@@ -206,7 +206,7 @@ public class RetryingRpcClientTest {
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
         await().untilAsserted(() -> verify(serviceHandler, only()).hello("hello"));
 
-        // Sleep 1 second more to check if there was another retrying.
+        // Sleep 1 second more to check if there was another retry.
         TimeUnit.SECONDS.sleep(1);
         verify(serviceHandler, only()).hello("hello");
     }
