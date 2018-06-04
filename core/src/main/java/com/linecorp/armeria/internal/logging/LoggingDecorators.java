@@ -48,7 +48,9 @@ public final class LoggingDecorators {
     /**
      * Logs a stringified response of {@link RequestLog}.
      */
-    public static void logResponse(Logger logger, RequestLog log,
+    public static void logResponse(Logger logger, RequestLog log, LogLevel requestLogLevel,
+                                   Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer,
+                                   Function<Object, Object> requestContentSanitizer,
                                    LogLevel successfulResponseLogLevel,
                                    LogLevel failedResponseLogLevel,
                                    Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
@@ -60,6 +62,12 @@ public final class LoggingDecorators {
                 level.log(logger, RESPONSE_FORMAT,
                           log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer));
             } else {
+                if (!requestLogLevel.isEnabled(logger)) {
+                    // Request wasn't logged but this is an unsuccessful response, log the request too to help
+                    // debugging.
+                    level.log(logger, REQUEST_FORMAT, log.toStringRequestOnly(requestHeadersSanitizer,
+                                                                              responseContentSanitizer));
+                }
                 level.log(logger, RESPONSE_FORMAT,
                           log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer),
                           log.responseCause());

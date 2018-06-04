@@ -145,7 +145,9 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
             ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
                                                     requestHeadersSanitizer, requestContentSanitizer),
                                   RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(logger, log, successfulResponseLogLevel,
+            ctx.log().addListener(log -> logResponse(logger, log, requestLogLevel,
+                                                     requestHeadersSanitizer, requestContentSanitizer,
+                                                     successfulResponseLogLevel,
                                                      failedResponseLogLevel, responseHeadersSanitizer,
                                                      responseContentSanitizer),
                                   RequestLogAvailability.COMPLETE);
