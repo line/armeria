@@ -27,13 +27,15 @@ allprojects {
         // Use larger heap when test coverage is enabled.
         maxHeapSize = project.hasFlags('coverage') ? '384m' : '128m'
 
-        // Use verbose exception reporting for easier debugging.
-        systemProperties 'com.linecorp.armeria.verboseExceptions': 'true'
-
         // Enable leak detection when '-Pleak' option is specified.
-        if (project.hasProperty('leak')) {
+        if (rootProject.hasProperty('leak')) {
             systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
         }
+    }
+
+    tasks.withType(Test) {
+        // Use verbose exception reporting for easier debugging.
+        systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
     }
 }
 
