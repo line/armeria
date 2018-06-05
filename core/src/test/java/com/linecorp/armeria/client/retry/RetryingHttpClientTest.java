@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +36,8 @@ import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.base.Stopwatch;
 
@@ -45,9 +48,13 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -60,8 +67,19 @@ import com.linecorp.armeria.testing.server.ServerRule;
 public class RetryingHttpClientTest {
 
     // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
-    private static ClientFactory clientFactory = new ClientFactoryBuilder()
+    private static final ClientFactory clientFactory = new ClientFactoryBuilder()
             .workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+
+    private static final RetryStrategy<HttpRequest, HttpResponse> retryAlways =
+            (request, response) -> response.aggregate().handle((msg, cause) -> {
+                return Backoff.fixed(500);
+            });
+
+    private final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
+
+    private final AtomicInteger requestAbortServiceCallCounter = new AtomicInteger();
+
+    private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
 
     @AfterClass
     public static void destroy() {
@@ -204,6 +222,38 @@ public class RetryingHttpClientTest {
                                                    message.content().toStringUtf8());
                         }
                     }));
+                }
+            });
+
+            sb.service("/response-abort", new AbstractHttpService() {
+
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    responseAbortServiceCallCounter.incrementAndGet();
+                    return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                }
+            });
+
+            sb.service("/request-abort", new AbstractHttpService() {
+
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    requestAbortServiceCallCounter.incrementAndGet();
+                    return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                }
+            });
+
+            sb.service("/subscriber-cancel", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    if (subscriberCancelServiceCallCounter.getAndIncrement() < 2) {
+                        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                    } else {
+                        return HttpResponse.of("Succeeded after retry");
+                    }
                 }
             });
         }
@@ -355,6 +405,55 @@ public class RetryingHttpClientTest {
                 .build();
         assertThatThrownBy(() -> client.get("/service-unavailable").aggregate().join())
                 .hasCauseInstanceOf(ClosedClientFactoryException.class);
+    }
+
+    @Test
+    public void doNotRetryWhenResponseIsAborted() throws Exception {
+        final HttpClient client = client(retryAlways);
+        final HttpResponse httpResponse = client.get("/response-abort");
+        httpResponse.abort();
+
+        await().untilAsserted(() -> assertThat(responseAbortServiceCallCounter.get()).isOne());
+        // Sleep 3 seconds more to check if there was another retry.
+        TimeUnit.SECONDS.sleep(3);
+        assertThat(responseAbortServiceCallCounter.get()).isOne();
+    }
+
+    @Test
+    public void retryDoNotStopUntilGetResponseWhenSubscriberCancel() {
+        final HttpClient client = client(retryAlways);
+        client.get("/subscriber-cancel").subscribe(
+                new Subscriber<HttpObject>() {
+                    @Override
+                    public void onSubscribe(Subscription s) {
+                        s.cancel(); // Cancel as soon as getting the subscription.
+                    }
+
+                    @Override
+                    public void onNext(HttpObject httpObject) {}
+
+                    @Override
+                    public void onError(Throwable t) {}
+
+                    @Override
+                    public void onComplete() {}
+                });
+
+        await().untilAsserted(() -> assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(3));
+    }
+
+    @Test
+    public void doNotRetryWhenRequestIsAborted() throws Exception {
+        final HttpClient client = client(retryAlways);
+
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/request-abort");
+        req.write(HttpData.ofUtf8("I'm going to abort this request"));
+        req.abort();
+        client.execute(req);
+
+        TimeUnit.SECONDS.sleep(1);
+        // No request is made.
+        assertThat(responseAbortServiceCallCounter.get()).isZero();
     }
 
     private HttpClient client(RetryStrategy<HttpRequest, HttpResponse> strategy) {

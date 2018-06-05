@@ -108,7 +108,9 @@ public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcReque
             throw cause;
         }
 
-        reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(response));
+        response.whenComplete((unused1, unused2) -> {
+            reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(response));
+        });
         return response;
     }
 }
