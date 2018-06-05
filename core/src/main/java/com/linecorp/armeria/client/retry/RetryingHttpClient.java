@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -42,6 +41,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.HttpHeaderSubscriber;
 
 /**
@@ -112,16 +112,22 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture);
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req, 0, ctx.eventLoop());
-        doExecute0(ctx, reqDuplicator, responseFuture);
+        doExecute0(ctx, reqDuplicator, req, res, responseFuture);
         return res;
     }
 
     private void doExecute0(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
-                            CompletableFuture<HttpResponse> res) {
+                            HttpRequest originalReq, HttpResponse returnedRes,
+                            CompletableFuture<HttpResponse> future) {
+        if (originalReq.completionFuture().isCompletedExceptionally() || returnedRes.isComplete()) {
+            // The request or response has been aborted by the client before it receives a response,
+            // so stop retrying.
+            handleException(ctx, rootReqDuplicator, future, AbortedStreamException.get());
+            return;
+        }
+
         if (!setResponseTimeout(ctx)) {
-            onRetryingComplete(ctx);
-            res.completeExceptionally(ResponseTimeoutException.get());
-            rootReqDuplicator.close();
+            handleException(ctx, rootReqDuplicator, future, ResponseTimeoutException.get());
             return;
         }
 
@@ -146,22 +152,28 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
                                final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
                                if (nextDelay < 0) {
-                                   finishRetryWithCurrentResponse(ctx, rootReqDuplicator, res, resDuplicator);
+                                   finishRetryWithCurrentResponse(
+                                           ctx, rootReqDuplicator, future, resDuplicator);
                                    return;
                                }
 
                                resDuplicator.close();
-                               final Consumer<? super Throwable> actionOnException = cause -> {
-                                   onRetryingComplete(ctx);
-                                   res.completeExceptionally(cause);
-                                   rootReqDuplicator.close();
-                               };
-                               final Runnable retryTask = () -> doExecute0(ctx, rootReqDuplicator, res);
-                               scheduleNextRetry(ctx, actionOnException, retryTask, nextDelay);
+                               scheduleNextRetry(
+                                       ctx, cause -> handleException(ctx, rootReqDuplicator, future, cause),
+                                       () -> doExecute0(ctx, rootReqDuplicator, originalReq,
+                                                        returnedRes, future),
+                                       nextDelay);
                            } else {
-                               finishRetryWithCurrentResponse(ctx, rootReqDuplicator, res, resDuplicator);
+                               finishRetryWithCurrentResponse(ctx, rootReqDuplicator, future, resDuplicator);
                            }
                        });
+    }
+
+    private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
+                                        CompletableFuture<HttpResponse> future, Throwable cause) {
+        onRetryingComplete(ctx);
+        future.completeExceptionally(cause);
+        rootReqDuplicator.close();
     }
 
     private static int maxSignalLength(long maxResponseLength) {
