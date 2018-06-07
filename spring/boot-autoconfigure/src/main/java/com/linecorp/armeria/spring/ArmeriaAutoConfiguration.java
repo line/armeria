@@ -237,7 +237,12 @@ public class ArmeriaAutoConfiguration {
 
         final Server s = server.build();
 
-        s.start().join();
+        s.start().handle((result, t) -> {
+            if (t != null) {
+                throw new IllegalStateException("Armeria server failed to start", t);
+            }
+            return result;
+        }).join();
         logger.info("Armeria server started at ports: {}", s.activePorts());
         return s;
     }

@@ -65,8 +65,10 @@ public class UnmanagedTomcatServiceTest {
 
             // Bind them to the Server.
             sb.serviceUnder("/empty/", TomcatService.forConnector("someHost", new Connector()))
-              .serviceUnder("/no-webapp/", TomcatService.forConnector(tomcatWithoutWebApp.getConnector()))
-              .serviceUnder("/some-webapp/", TomcatService.forConnector(tomcatWithWebApp.getConnector()));
+              .serviceUnder("/some-webapp-nohostname/",
+                            TomcatService.forConnector(tomcatWithWebApp.getConnector()))
+              .serviceUnder("/no-webapp/", TomcatService.forTomcat(tomcatWithoutWebApp))
+              .serviceUnder("/some-webapp/", TomcatService.forTomcat(tomcatWithWebApp));
         }
     };
 
@@ -109,6 +111,15 @@ public class UnmanagedTomcatServiceTest {
     public void ok() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/some-webapp/")))) {
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+            }
+        }
+    }
+
+    @Test
+    public void okNoHostName() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/some-webapp-nohostname/")))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
         }
