@@ -32,7 +32,7 @@ public final class GrpcSerializationFormatProvider extends SerializationFormatPr
     @Override
     protected Set<Entry> entries() {
         return ImmutableSet.of(
-                new Entry("gproto", create("application", "grpc+proto"), create("application", "grpc")),
+                new Entry("gproto", create("application", "grpc"), create("application", "grpc+proto")),
                 new Entry("gjson", create("application", "grpc+json")),
                 new Entry("gproto-web", create("application", "grpc-web+proto"),
                           create("application", "grpc-web")),
