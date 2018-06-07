@@ -137,6 +137,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
                                                     requestContentSanitizer),
                                   RequestLogAvailability.REQUEST_END);
             ctx.log().addListener(log -> logResponse(((ServiceRequestContext) log.context()).logger(), log,
+                                                     requestLogLevel, requestHeadersSanitizer,
+                                                     requestContentSanitizer,
                                                      successfulResponseLogLevel, failedResponseLogLevel,
                                                      responseHeadersSanitizer, responseContentSanitizer),
                                   RequestLogAvailability.COMPLETE);

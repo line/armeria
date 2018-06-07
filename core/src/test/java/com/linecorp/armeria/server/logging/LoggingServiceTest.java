@@ -121,6 +121,8 @@ public class LoggingServiceTest {
         final IllegalStateException cause = new IllegalStateException("Failed");
         when(log.responseCause()).thenReturn(cause);
         service.serve(ctx, REQUEST);
+        verify(logger).warn(REQUEST_FORMAT,
+                            "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT);
         verify(logger).warn(RESPONSE_FORMAT,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT,
                             cause);
