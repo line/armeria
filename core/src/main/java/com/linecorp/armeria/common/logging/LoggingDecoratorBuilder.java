@@ -76,7 +76,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     /**
      * Sets the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
-     * If unset, will use {@link LogLevel#WARN}.
+     * If unset, will use {@link LogLevel#WARN}. The request will be logged too if it was not otherwise.
      */
     public T failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
