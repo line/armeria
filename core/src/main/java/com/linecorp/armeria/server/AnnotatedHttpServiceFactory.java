@@ -216,10 +216,9 @@ final class AnnotatedHttpServiceFactory {
         }
 
         final Class<?> clazz = object.getClass();
-        final HttpHeaderPathMapping pathMapping =
-                new HttpHeaderPathMapping(pathStringMapping(pathPrefix, method, methodAnnotations),
-                                          methods, consumableMediaTypes(method, clazz),
-                                          producibleMediaTypes(method, clazz));
+        final PathMapping pathMapping = new HttpHeaderPathMapping(
+                pathStringMapping(pathPrefix, method, methodAnnotations),
+                methods, consumableMediaTypes(method, clazz), producibleMediaTypes(method, clazz));
 
         final List<ExceptionHandlerFunction> eh =
                 exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
@@ -854,7 +853,7 @@ final class AnnotatedHttpServiceFactory {
         /**
          * Path param extractor with placeholders, e.g., "/const1/{var1}/{var2}/const2"
          */
-        private final HttpHeaderPathMapping pathMapping;
+        private final PathMapping pathMapping;
 
         /**
          * The {@link AnnotatedHttpService} that will handle the request actually.
@@ -867,7 +866,7 @@ final class AnnotatedHttpServiceFactory {
         private final Function<Service<HttpRequest, HttpResponse>,
                 ? extends Service<HttpRequest, HttpResponse>> decorator;
 
-        private AnnotatedHttpServiceElement(HttpHeaderPathMapping pathMapping,
+        private AnnotatedHttpServiceElement(PathMapping pathMapping,
                                             AnnotatedHttpService service,
                                             Function<Service<HttpRequest, HttpResponse>,
                                                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
@@ -876,7 +875,7 @@ final class AnnotatedHttpServiceFactory {
             this.decorator = requireNonNull(decorator, "decorator");
         }
 
-        HttpHeaderPathMapping pathMapping() {
+        PathMapping pathMapping() {
             return pathMapping;
         }
 
