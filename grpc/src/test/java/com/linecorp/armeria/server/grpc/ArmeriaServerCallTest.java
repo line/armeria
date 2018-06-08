@@ -125,7 +125,8 @@ public class ArmeriaServerCallTest {
                 ctx,
                 GrpcSerializationFormats.PROTO,
                 MessageMarshaller.builder().build(),
-                false);
+                false,
+                "gzip");
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
         when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
@@ -166,7 +167,8 @@ public class ArmeriaServerCallTest {
                 ctx,
                 GrpcSerializationFormats.PROTO,
                 MessageMarshaller.builder().build(),
-                true);
+                true,
+                "gzip");
 
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.messageRead(new ByteBufOrStream(buf));
