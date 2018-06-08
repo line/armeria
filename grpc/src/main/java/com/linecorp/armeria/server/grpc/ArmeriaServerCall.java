@@ -111,6 +111,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final boolean unsafeWrapRequestBuffers;
+    private final String advertisedEncodingsHeader;
 
     // Only set once.
     @Nullable
@@ -143,7 +144,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       ServiceRequestContext ctx,
                       SerializationFormat serializationFormat,
                       MessageMarshaller jsonMarshaller,
-                      boolean unsafeWrapRequestBuffers) {
+                      boolean unsafeWrapRequestBuffers,
+                      String advertisedEncodingsHeader) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -165,6 +167,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
+        this.advertisedEncodingsHeader = advertisedEncodingsHeader;
 
         res.completionFuture().handleAsync(voidFunction((unused, t) -> {
             if (!closeCalled) {
@@ -216,10 +219,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         // Always put compressor, even if it's identity.
         headers.add(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
 
-        final String advertisedEncodings =
-                String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
-        if (!advertisedEncodings.isEmpty()) {
-            headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodings);
+        if (!advertisedEncodingsHeader.isEmpty()) {
+            headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
         }
 
         sendHeadersCalled = true;

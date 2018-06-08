@@ -72,6 +72,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     private final SerializationFormat serializationFormat;
     @Nullable
     private final MessageMarshaller jsonMarshaller;
+    private final String advertisedEncodingsHeader;
 
     ArmeriaChannel(ClientBuilderParams params,
                    Client<HttpRequest, HttpResponse> httpClient,
@@ -87,6 +88,9 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
         this.endpoint = endpoint;
         this.serializationFormat = serializationFormat;
         this.jsonMarshaller = jsonMarshaller;
+
+        advertisedEncodingsHeader = String.join(
+                ",", DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings());
     }
 
     @Override
@@ -116,7 +120,8 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                 DecompressorRegistry.getDefaultInstance(),
                 serializationFormat,
                 jsonMarshaller,
-                options().getOrElse(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS, false));
+                options().getOrElse(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS, false),
+                advertisedEncodingsHeader);
     }
 
     @Override

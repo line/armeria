@@ -90,6 +90,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final boolean unsafeWrapResponseBuffers;
     @Nullable
     private final Executor executor;
+    private final String advertisedEncodingsHeader;
 
     // Effectively final, only set once during start()
     @Nullable
@@ -111,7 +112,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
             @Nullable MessageMarshaller jsonMarshaller,
-            boolean unsafeWrapResponseBuffers) {
+            boolean unsafeWrapResponseBuffers,
+            String advertisedEncodingsHeader) {
         this.ctx = ctx;
         this.httpClient = httpClient;
         this.req = req;
@@ -119,6 +121,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
         this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
+        this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
         marshaller = new GrpcMessageMarshaller<>(
                 ctx.alloc(), serializationFormat, method, jsonMarshaller,
@@ -276,10 +279,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (compressor != Identity.NONE) {
             headers.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
         }
-        final String advertisedEncodings =
-                String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
-        if (!advertisedEncodings.isEmpty()) {
-            headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodings);
+        if (!advertisedEncodingsHeader.isEmpty()) {
+            headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
         }
         headers.add(GrpcHeaderNames.GRPC_TIMEOUT,
                     TimeoutHeaderUtil.toHeaderValue(

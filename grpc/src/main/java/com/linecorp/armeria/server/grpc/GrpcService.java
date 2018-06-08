@@ -91,6 +91,7 @@ public final class GrpcService extends AbstractHttpService
     private final MessageMarshaller jsonMarshaller;
     private final int maxOutboundMessageSizeBytes;
     private final boolean unsafeWrapRequestBuffers;
+    private final String advertisedEncodingsHeader;
 
     private int maxInboundMessageSizeBytes;
 
@@ -111,6 +112,8 @@ public final class GrpcService extends AbstractHttpService
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
+
+        advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
     }
 
     @Override
@@ -181,7 +184,8 @@ public final class GrpcService extends AbstractHttpService
                 ctx,
                 serializationFormat,
                 jsonMarshaller,
-                unsafeWrapRequestBuffers);
+                unsafeWrapRequestBuffers,
+                advertisedEncodingsHeader);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
