@@ -108,8 +108,6 @@ public abstract class AbstractThriftOverHttpTest {
                     (AsyncIface) (name, resultHandler) ->
                             resultHandler.onError(new AnticipatedException(name))));
 
-            sb.service("/hellochild", THttpService.of(new HelloServiceChild()));
-
             sb.service("/sleep", THttpService.of(
                     (SleepService.AsyncIface) (milliseconds, resultHandler) ->
                             RequestContext.current().eventLoop().schedule(
