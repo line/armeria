@@ -16,16 +16,16 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
@@ -36,6 +36,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
     /**
      * A weighted round robin select strategy.
+     *
      * <p>For example, with node a, b and c:
      * <ul>
      *   <li>if endpoint weights are 1,1,1 (or 2,2,2), then select result is abc abc ...</li>
@@ -151,7 +152,9 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                         return endpoints.get((int) (mod % numberEndpoints));
                     }
 
-                    int left = 0, right = endpointsGroupByWeight.length - 1, mid;
+                    int left = 0;
+                    int right = endpointsGroupByWeight.length - 1;
+                    int mid;
                     while (left < right) {
                         mid = left + ((right - left) >> 1);
 

@@ -16,10 +16,12 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import com.google.common.collect.ImmutableList;
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
+import java.util.List;
+import java.util.Random;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -28,17 +30,14 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import java.util.List;
-import java.util.Random;
+import com.google.common.collect.ImmutableList;
 
-import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 
 public class WeightedRoundRobinStrategyTest {
     private static final EndpointGroup ENDPOINT_GROUP =
-            new StaticEndpointGroup(Endpoint.parse("localhost:1234"),
-                    Endpoint.parse("localhost:2345"));
+            new StaticEndpointGroup(Endpoint.parse("localhost:1234"), Endpoint.parse("localhost:2345"));
 
     private static final EndpointGroup EMPTY_ENDPOINT_GROUP = new StaticEndpointGroup();
 
@@ -212,23 +211,29 @@ public class WeightedRoundRobinStrategyTest {
 
         //weight dynamic
         EndpointGroup dynamic = new DynamicEndpointGroup();
-        int numberOfEndpoint = 500, totalWeight = 0;
+        int numberOfEndpoint = 500;
+        int totalWeight = 0;
 
         int[] weights = new int[numberOfEndpoint];
         for (int i = 0; i < numberOfEndpoint; i++) {
             weights[i] = (i + 2) >> 1; // w1 == w2 == 1; w3 == w4 == 2; and so on
             totalWeight += weights[i];
 
-            ((DynamicEndpointGroup) dynamic).addEndpoint(Endpoint.of("127.0.0.1", i + 1).withWeight(weights[i]));
+            ((DynamicEndpointGroup) dynamic).addEndpoint(
+                    Endpoint.of("127.0.0.1", i + 1).withWeight(weights[i])
+            );
         }
         EndpointGroupRegistry.register(groupName, dynamic, WEIGHTED_ROUND_ROBIN);
 
         int chosen = 0;
         while (totalWeight-- > 0) {
-            while (weights[chosen] == 0)
+            while (weights[chosen] == 0) {
                 chosen = (chosen + 1) % numberOfEndpoint;
+            }
 
-            assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:" + (chosen + 1));
+            assertThat(EndpointGroupRegistry
+                    .selectNode(ctx, groupName).authority())
+                    .isEqualTo("127.0.0.1:" + (chosen + 1));
             weights[chosen]--;
 
             chosen = (chosen + 1) % numberOfEndpoint;
@@ -243,16 +248,21 @@ public class WeightedRoundRobinStrategyTest {
         for (int i = 0; i < numberOfEndpoint; i++) {
             weights[i] = i == 0 ? weights[i] : weights[i - 1] + rnd.nextInt(100);
             totalWeight += weights[i];
-            ((DynamicEndpointGroup) dynamic).addEndpoint(Endpoint.of("127.0.0.1", i + 1).withWeight(weights[i]));
+            ((DynamicEndpointGroup) dynamic).addEndpoint(
+                    Endpoint.of("127.0.0.1", i + 1).withWeight(weights[i])
+            );
         }
         EndpointGroupRegistry.register(groupName, dynamic, WEIGHTED_ROUND_ROBIN);
 
         chosen = 0;
         while (totalWeight-- > 0) {
-            while (weights[chosen] == 0)
+            while (weights[chosen] == 0) {
                 chosen = (chosen + 1) % numberOfEndpoint;
+            }
 
-            assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:" + (chosen + 1));
+            assertThat(EndpointGroupRegistry
+                    .selectNode(ctx, groupName).authority())
+                    .isEqualTo("127.0.0.1:" + (chosen + 1));
             weights[chosen]--;
 
             chosen = (chosen + 1) % numberOfEndpoint;
