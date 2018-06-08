@@ -78,21 +78,21 @@ public class StaticEndpointGroupIntegrationTest {
                                       HelloService.Iface.class);
 
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
-        assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());
+        assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
-        assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());
+        assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
 
         //new round
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
-        assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());
+        assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
-        assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());
+        assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
 
