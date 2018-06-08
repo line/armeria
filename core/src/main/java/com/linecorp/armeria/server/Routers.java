@@ -26,7 +26,10 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -89,6 +92,8 @@ public final class Routers {
      */
     @VisibleForTesting
     static <V> List<Router<V>> routers(Iterable<V> values, Function<V, PathMapping> pathMappingResolver) {
+        rejectDuplicateMapping(values, pathMappingResolver);
+
         final ImmutableList.Builder<Router<V>> builder = ImmutableList.builder();
         final List<V> group = new ArrayList<>();
 
@@ -114,6 +119,75 @@ public final class Routers {
             builder.add(router(addingTrie, group, pathMappingResolver));
         }
         return builder.build();
+    }
+
+    private static <V> void rejectDuplicateMapping(
+            Iterable<V> values, Function<V, PathMapping> pathMappingResolver) {
+
+        final Map<String, List<PathMapping>> triePath2mappings = new HashMap<>();
+        for (V v : values) {
+            final PathMapping mapping = pathMappingResolver.apply(v);
+            final Optional<String> triePathOpt = mapping.triePath();
+            if (!triePathOpt.isPresent()) {
+                continue;
+            }
+            final String triePath = triePathOpt.get();
+            final List<PathMapping> existingMappings =
+                    triePath2mappings.computeIfAbsent(triePath, unused -> new ArrayList<>());
+            for (PathMapping existingMapping : existingMappings) {
+                if (mapping.complexity() != existingMapping.complexity()) {
+                    continue;
+                }
+
+                if (mapping.getClass() != existingMapping.getClass()) {
+                    continue;
+                }
+
+                if (!(mapping instanceof HttpHeaderPathMapping)) {
+                    assert mapping.complexity() == 0;
+                    assert existingMapping.complexity() == 0;
+                    rejectDuplicateMapping(mapping, existingMapping);
+                    return;
+                }
+
+                final HttpHeaderPathMapping headerMapping = (HttpHeaderPathMapping) mapping;
+                final HttpHeaderPathMapping existingHeaderMapping = (HttpHeaderPathMapping) existingMapping;
+                if (headerMapping.supportedMethods().stream().noneMatch(
+                        method -> existingHeaderMapping.supportedMethods().contains(method))) {
+                    // No overlap in supported methods.
+                    continue;
+                }
+                if (!headerMapping.consumeTypes().isEmpty() &&
+                    headerMapping.consumeTypes().stream().noneMatch(
+                            mediaType -> existingHeaderMapping.consumeTypes().contains(mediaType))) {
+                    // No overlap in consume types.
+                    continue;
+                }
+                if (!headerMapping.produceTypes().isEmpty() &&
+                    headerMapping.produceTypes().stream().noneMatch(
+                            mediaType -> existingHeaderMapping.produceTypes().contains(mediaType))) {
+                    // No overlap in produce types.
+                    continue;
+                }
+
+                rejectDuplicateMapping(mapping, existingMapping);
+                return;
+            }
+
+            existingMappings.add(mapping);
+        }
+    }
+
+    private static void rejectDuplicateMapping(PathMapping mapping, PathMapping existingMapping) {
+        final String a = mapping.toString();
+        final String b = existingMapping.toString();
+        if (a.equals(b)) {
+            throw new IllegalStateException("Your server has a duplicate service mapping: " + a);
+        } else {
+            throw new IllegalStateException(
+                    "Your server has the service mappings that conflict with each other: " +
+                    a + " vs. " + b);
+        }
     }
 
     /**
