@@ -36,7 +36,7 @@ public class WeightedRoundRobinStrategyBenchmark {
 
     final int numEndpoints = 500;
 
-    // normal round robin, all weight: 3
+    // normal round robin, all weight: 300
     EndpointSelector selectorSameWeight;
 
     // mainly weight: 1, max weight: 30
@@ -77,7 +77,7 @@ public class WeightedRoundRobinStrategyBenchmark {
         selectorSameWeight = getEndpointSelector(generateEndpoints(
                 id -> Endpoint.of("127.0.0.1", id + 1)
                         .withWeight(
-                                30
+                                300
                         )), "same-weight");
 
         selectorRandomMainly1Max30 = getEndpointSelector(generateEndpoints(

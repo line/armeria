@@ -209,52 +209,24 @@ public class WeightedRoundRobinStrategyTest {
         assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
         assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
 
-        //weight dynamic
-        EndpointGroup dynamic = new DynamicEndpointGroup();
+        //weight dynamic with random weight
+        Random rnd = new Random();
+
+        DynamicEndpointGroup dynamic = new DynamicEndpointGroup();
         int numberOfEndpoint = 500;
-        int totalWeight = 0;
-
         int[] weights = new int[numberOfEndpoint];
-        for (int i = 0; i < numberOfEndpoint; i++) {
-            weights[i] = (i + 2) >> 1; // w1 == w2 == 1; w3 == w4 == 2; and so on
-            totalWeight += weights[i];
 
-            ((DynamicEndpointGroup) dynamic).addEndpoint(
+        long totalWeight = 0;
+        for (int i = 0; i < numberOfEndpoint; i++) {
+            weights[i] = i == 0 ? weights[i] : weights[i - 1] + rnd.nextInt(100);
+            totalWeight += weights[i];
+            dynamic.addEndpoint(
                     Endpoint.of("127.0.0.1", i + 1).withWeight(weights[i])
             );
         }
         EndpointGroupRegistry.register(groupName, dynamic, WEIGHTED_ROUND_ROBIN);
 
         int chosen = 0;
-        while (totalWeight-- > 0) {
-            while (weights[chosen] == 0) {
-                chosen = (chosen + 1) % numberOfEndpoint;
-            }
-
-            assertThat(EndpointGroupRegistry
-                    .selectNode(ctx, groupName).authority())
-                    .isEqualTo("127.0.0.1:" + (chosen + 1));
-            weights[chosen]--;
-
-            chosen = (chosen + 1) % numberOfEndpoint;
-        }
-
-        //weight dynamic with random weight
-        Random rnd = new Random();
-
-        dynamic = new DynamicEndpointGroup();
-        weights[0] = 1;
-        totalWeight = 0;
-        for (int i = 0; i < numberOfEndpoint; i++) {
-            weights[i] = i == 0 ? weights[i] : weights[i - 1] + rnd.nextInt(100);
-            totalWeight += weights[i];
-            ((DynamicEndpointGroup) dynamic).addEndpoint(
-                    Endpoint.of("127.0.0.1", i + 1).withWeight(weights[i])
-            );
-        }
-        EndpointGroupRegistry.register(groupName, dynamic, WEIGHTED_ROUND_ROBIN);
-
-        chosen = 0;
         while (totalWeight-- > 0) {
             while (weights[chosen] == 0) {
                 chosen = (chosen + 1) % numberOfEndpoint;
@@ -278,8 +250,10 @@ public class WeightedRoundRobinStrategyTest {
         final EndpointSelector selector = EndpointGroupRegistry.getNodeSelector("dynamic");
         assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1000));
 
-        endpointGroup.updateEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111).withWeight(1),
-                Endpoint.of("127.0.0.1", 2222).withWeight(2)));
+        endpointGroup.updateEndpoints(ImmutableList.of(
+                Endpoint.of("127.0.0.1", 1111).withWeight(1),
+                Endpoint.of("127.0.0.1", 2222).withWeight(2))
+        );
 
         assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
         assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
