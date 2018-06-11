@@ -36,20 +36,20 @@ public class WeightedRoundRobinStrategyBenchmark {
 
     final int numEndpoints = 500;
 
-    // Case 1: normal round robin, all weight: 3
-    EndpointSelector selector1;
+    // normal round robin, all weight: 3
+    EndpointSelector selectorSameWeight;
 
-    // Case 3: mainly weight: 1, max weight: 30
-    EndpointSelector selector2;
+    // mainly weight: 1, max weight: 30
+    EndpointSelector selectorRandomMainly1Max30;
 
-    // Case 4: randomly, max weight: 10
-    EndpointSelector selector4;
+    // randomly, max weight: 10
+    EndpointSelector selectorRandomMax10;
 
-    // Case 5: randomly, max weight: 100
-    EndpointSelector selector5;
+    // randomly, max weight: 100
+    EndpointSelector selectorRandomMax100;
 
-    // Case 6: all weights are unique
-    EndpointSelector selector6;
+    // all weights are unique
+    EndpointSelector selectorUnique;
 
     interface EndpointGenerator {
         Endpoint generate(int id);
@@ -74,49 +74,55 @@ public class WeightedRoundRobinStrategyBenchmark {
     public void setupCases() {
         Random rand = new Random();
 
-        selector1 = getEndpointSelector(generateEndpoints(id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                3
-        )), "group1");
+        selectorSameWeight = getEndpointSelector(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1)
+                        .withWeight(
+                                30
+                        )), "same-weight");
 
-        selector2 = getEndpointSelector(generateEndpoints(id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                1 + (id % 50 == 0 ? 29 : 0)
-        )), "group3");
+        selectorRandomMainly1Max30 = getEndpointSelector(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
+                        1 + (id % 50 == 0 ? 29 : 0)
+                )), "main-1-max-30");
 
-        selector4 = getEndpointSelector(generateEndpoints(id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                1 + rand.nextInt(10)
-        )), "group4");
+        selectorRandomMax10 = getEndpointSelector(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
+                        1 + rand.nextInt(10)
+                )), "random-max-10");
 
-        selector5 = getEndpointSelector(generateEndpoints(id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                1 + rand.nextInt(100)
-        )), "group5");
+        selectorRandomMax100 = getEndpointSelector(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
+                        1 + rand.nextInt(100)
+                )), "random-max-100");
 
-        selector6 = getEndpointSelector(generateEndpoints(id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                id + 1
-        )), "group6");
+        selectorUnique = getEndpointSelector(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
+                        id + 1
+                )), "unique");
     }
 
     @Benchmark
     public Endpoint sameWeight() throws Exception {
-        return selector1.select(null);
+        return selectorSameWeight.select(null);
     }
 
     @Benchmark
     public Endpoint randomMainly1Max30() throws Exception {
-        return selector2.select(null);
+        return selectorRandomMainly1Max30.select(null);
     }
 
     @Benchmark
     public Endpoint randomMax10() throws Exception {
-        return selector4.select(null);
+        return selectorRandomMax10.select(null);
     }
 
     @Benchmark
     public Endpoint randomMax100() throws Exception {
-        return selector5.select(null);
+        return selectorRandomMax100.select(null);
     }
 
     @Benchmark
     public Endpoint unique() throws Exception {
-        return selector6.select(null);
+        return selectorUnique.select(null);
     }
 }
