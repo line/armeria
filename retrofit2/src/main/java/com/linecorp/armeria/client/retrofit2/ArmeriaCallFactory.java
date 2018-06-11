@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import okhttp3.Call;
 import okhttp3.Call.Factory;
 import okhttp3.Callback;
+import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.Request;
@@ -152,10 +153,11 @@ final class ArmeriaCallFactory implements Factory {
                 default:
                     throw new IllegalArgumentException("Invalid HTTP method:" + request.method());
             }
-            final int numHeaders = request.headers().size();
+            final Headers requestHeaders = request.headers();
+            final int numHeaders = requestHeaders.size();
             for (int i = 0; i < numHeaders; i++) {
-                headers.add(HttpHeaderNames.of(request.headers().name(i)),
-                            request.headers().value(i));
+                headers.add(HttpHeaderNames.of(requestHeaders.name(i)),
+                            requestHeaders.value(i));
             }
             final RequestBody body = request.body();
             if (body != null) {
