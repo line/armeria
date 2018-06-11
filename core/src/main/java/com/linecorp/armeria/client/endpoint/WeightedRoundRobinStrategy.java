@@ -179,14 +179,14 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 this.weighted = minWeight != maxWeight;
             }
 
-            Endpoint selectEndpoint(long currentSequence) {
+            Endpoint selectEndpoint(int currentSequence) {
                 if (endpoints.isEmpty()) {
                     throw new EndpointGroupException(endpoints + " is empty");
                 }
 
-                long numberEndpoints = endpoints.size();
-
                 if (weighted) {
+                    long numberEndpoints = endpoints.size();
+
                     long mod = Math.abs(currentSequence % totalWeight);
 
                     if (mod < endpointsGroupByWeight[0].accumulatedWeight) {
@@ -218,7 +218,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                     return endpoints.get((int) realIndex);
                 }
 
-                return endpoints.get((int) Math.abs(currentSequence % numberEndpoints));
+                return endpoints.get(Math.abs(currentSequence % endpoints.size()));
             }
         }
     }
