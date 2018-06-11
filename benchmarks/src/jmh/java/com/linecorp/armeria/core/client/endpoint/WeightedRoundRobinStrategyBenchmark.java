@@ -16,30 +16,23 @@
 
 package com.linecorp.armeria.core.client.endpoint;
 
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-import com.linecorp.armeria.client.endpoint.EndpointSelector;
-import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.runner.RunnerException;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
-import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
+import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 
 @State(Scope.Thread)
 public class WeightedRoundRobinStrategyBenchmark {
-
-    public static void main(String[] args) throws IOException, RunnerException {
-        org.openjdk.jmh.Main.main(args);
-    }
 
     final int numEndpoints = 500;
 
@@ -58,7 +51,6 @@ public class WeightedRoundRobinStrategyBenchmark {
     // Case 6: all weights are unique
     EndpointSelector selector6;
 
-
     interface EndpointGenerator {
         Endpoint generate(int id);
     }
@@ -72,7 +64,9 @@ public class WeightedRoundRobinStrategyBenchmark {
     }
 
     private EndpointSelector getEndpointSelector(List<Endpoint> endpoints, String groupName) {
-        EndpointGroupRegistry.register(groupName, new StaticEndpointGroup(endpoints), WEIGHTED_ROUND_ROBIN);
+        EndpointGroupRegistry.register(groupName,
+                new StaticEndpointGroup(endpoints),
+                EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN);
         return EndpointGroupRegistry.getNodeSelector(groupName);
     }
 

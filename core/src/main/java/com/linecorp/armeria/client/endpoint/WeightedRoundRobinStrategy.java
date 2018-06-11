@@ -212,8 +212,9 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
                     // (left + 1) is the part where sequence belongs
                     long indexInPart = mod - endpointsGroupByWeight[left].accumulatedWeight;
-                    long realIndex = endpointsGroupByWeight[left + 1].startIndex +
-                            indexInPart % (numberEndpoints - endpointsGroupByWeight[left + 1].startIndex);
+                    long startIndex = endpointsGroupByWeight[left + 1].startIndex;
+                    long realIndex = startIndex +
+                            indexInPart % (numberEndpoints - startIndex);
                     return endpoints.get((int) realIndex);
                 }
 
