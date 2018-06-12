@@ -137,7 +137,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                                 .thenComparing(Endpoint::host)
                                 .thenComparingInt(Endpoint::port))
                         .collect(toImmutableList());
-                long numEndpoints = this.endpoints.size();
+                final long numEndpoints = this.endpoints.size();
 
                 // get min weight, max weight and number of distinct weight
                 int minWeight = Integer.MAX_VALUE;
@@ -186,9 +186,9 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 }
 
                 if (weighted) {
-                    long numberEndpoints = endpoints.size();
+                    final long numberEndpoints = endpoints.size();
 
-                    long mod = Math.abs(currentSequence % totalWeight);
+                    final long mod = Math.abs(currentSequence % totalWeight);
 
                     if (mod < accumulatedGroups.get(0).accumulatedWeight) {
                         return endpoints.get((int) (mod % numberEndpoints));
@@ -212,8 +212,8 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                     }
 
                     // (left + 1) is the part where sequence belongs
-                    long indexInPart = mod - accumulatedGroups.get(left).accumulatedWeight;
-                    long startIndex = accumulatedGroups.get(left + 1).startIndex;
+                    final long indexInPart = mod - accumulatedGroups.get(left).accumulatedWeight;
+                    final long startIndex = accumulatedGroups.get(left + 1).startIndex;
                     return endpoints.get((int) (startIndex + indexInPart % (numberEndpoints - startIndex)));
                 }
 
