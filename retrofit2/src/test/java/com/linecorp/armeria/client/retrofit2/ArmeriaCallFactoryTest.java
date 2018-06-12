@@ -41,6 +41,7 @@ import com.google.common.base.Throwables;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -156,6 +157,10 @@ public class ArmeriaCallFactoryTest {
 
         @GET("{path}")
         CompletableFuture<Pojo> customPathEncoded(@Path(value = "path", encoded = true) String path);
+
+        @GET("/headers")
+        CompletableFuture<Pojo> customHeaders(
+                @Header("x-header1") String header1, @Header("x-header2") String header2);
     }
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -268,6 +273,15 @@ public class ArmeriaCallFactoryTest {
                           assertThat(params).isEmpty();
                           return HttpResponse.of(HttpStatus.OK);
                       }));
+                  }
+              })
+              .service("/headers", new AbstractHttpService() {
+                  @Override
+                  protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      assertThat(req.headers().get(HttpHeaderNames.of("x-header1"))).isEqualTo("foo");
+                      assertThat(req.headers().get(HttpHeaderNames.of("x-header2"))).isEqualTo("bar");
+                      return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                             "{\"name\":\"Cony\", \"age\":26}");
                   }
               });
         }
@@ -491,6 +505,11 @@ public class ArmeriaCallFactoryTest {
         assertThat(service.customPathEncoded("nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
         assertThat(service.customPathEncoded("/pojo").get()).isEqualTo(new Pojo("Cony", 26));
         assertThat(service.customPathEncoded("pojo").get()).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void customHeaders() throws Exception {
+        assertThat(service.customHeaders("foo", "bar").get()).isEqualTo(new Pojo("Cony", 26));
     }
 
     @Test
