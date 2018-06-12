@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,13 +16,14 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import java.util.ArrayList;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -125,26 +126,24 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
             private final List<Endpoint> endpoints;
             private final boolean weighted;
             private final long totalWeight; // prevent overflow by using long
-            private final EndpointsGroupByWeight[] endpointsGroupByWeight;
+            private final List<EndpointsGroupByWeight> accumulatedGroups;
 
             EndpointsAndWeights(Iterable<Endpoint> endpoints) {
-                long totalWeight = 0;
+
+                // prepare immutable endpoints
+                this.endpoints = Streams.stream(endpoints)
+                        .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
+                        .sorted(Comparator.comparing(Endpoint::weight)
+                                .thenComparing(Endpoint::host)
+                                .thenComparingInt(Endpoint::port))
+                        .collect(toImmutableList());
+                long numEndpoints = this.endpoints.size();
+
+                // get min weight, max weight and number of distinct weight
                 int minWeight = Integer.MAX_VALUE;
                 int maxWeight = Integer.MIN_VALUE;
                 int numberDistinctWeight = 0;
 
-                // prepare endpoints by copying
-                this.endpoints = ImmutableList.copyOf(endpoints)
-                        .stream()
-                        .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
-                        .sorted(Comparator
-                                .comparing(Endpoint::weight)
-                                .thenComparing(Endpoint::host)
-                                .thenComparingInt(Endpoint::port))
-                        .collect(Collectors.toCollection(ArrayList::new));
-                long numEndpoints = this.endpoints.size();
-
-                // get min weight, max weight and number of distinct weight
                 int oldWeight = -1;
                 for (Endpoint endpoint : this.endpoints) {
                     final int weight = endpoint.weight();
@@ -155,26 +154,28 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 }
 
                 // accumulation
-                EndpointsGroupByWeight[] accumulatedGroups = new EndpointsGroupByWeight[numberDistinctWeight];
+                long totalWeight = 0;
+
+                ImmutableList.Builder<EndpointsGroupByWeight> accumulatedGroupsBuilder
+                        = ImmutableList.builderWithExpectedSize(numberDistinctWeight);
                 EndpointsGroupByWeight currentGroup = null;
-                int index = -1;
 
                 long rest = numEndpoints;
                 for (Endpoint endpoint : this.endpoints) {
                     if (currentGroup == null || currentGroup.weight != endpoint.weight()) {
                         totalWeight += currentGroup == null ?
-                                (long) endpoint.weight() * rest
-                                : (long) (endpoint.weight() - currentGroup.weight) * rest;
+                                endpoint.weight() * rest
+                                : (endpoint.weight() - currentGroup.weight) * rest;
                         currentGroup = new EndpointsGroupByWeight(
                                 numEndpoints - rest, endpoint.weight(), totalWeight
                         );
-                        accumulatedGroups[++index] = currentGroup;
+                        accumulatedGroupsBuilder = accumulatedGroupsBuilder.add(currentGroup);
                     }
 
                     rest--;
                 }
 
-                this.endpointsGroupByWeight = accumulatedGroups;
+                this.accumulatedGroups = accumulatedGroupsBuilder.build();
                 this.totalWeight = totalWeight;
                 this.weighted = minWeight != maxWeight;
             }
@@ -189,12 +190,12 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
                     long mod = Math.abs(currentSequence % totalWeight);
 
-                    if (mod < endpointsGroupByWeight[0].accumulatedWeight) {
+                    if (mod < accumulatedGroups.get(0).accumulatedWeight) {
                         return endpoints.get((int) (mod % numberEndpoints));
                     }
 
                     int left = 0;
-                    int right = endpointsGroupByWeight.length - 1;
+                    int right = accumulatedGroups.size() - 1;
                     int mid;
                     while (left < right) {
                         mid = left + ((right - left) >> 1);
@@ -203,7 +204,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                             break;
                         }
 
-                        if (endpointsGroupByWeight[mid].accumulatedWeight <= mod) {
+                        if (accumulatedGroups.get(mid).accumulatedWeight <= mod) {
                             left = mid;
                         } else {
                             right = mid;
@@ -211,11 +212,9 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                     }
 
                     // (left + 1) is the part where sequence belongs
-                    long indexInPart = mod - endpointsGroupByWeight[left].accumulatedWeight;
-                    long startIndex = endpointsGroupByWeight[left + 1].startIndex;
-                    long realIndex = startIndex +
-                            indexInPart % (numberEndpoints - startIndex);
-                    return endpoints.get((int) realIndex);
+                    long indexInPart = mod - accumulatedGroups.get(left).accumulatedWeight;
+                    long startIndex = accumulatedGroups.get(left + 1).startIndex;
+                    return endpoints.get((int) (startIndex + indexInPart % (numberEndpoints - startIndex)));
                 }
 
                 return endpoints.get(Math.abs(currentSequence % endpoints.size()));
