@@ -82,16 +82,9 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
     }
 
     private static InetSocketAddress toRemoteAddress(PoolKey key) throws UnknownHostException {
-        final InetSocketAddress remoteAddress;
-        final String ipAddr = key.ipAddr();
-        if (ipAddr == null) {
-            remoteAddress = InetSocketAddress.createUnresolved(key.host(), key.port());
-        } else {
-            final InetAddress inetAddr = InetAddress.getByAddress(
-                        key.host(), NetUtil.createByteArrayFromIpAddressString(ipAddr));
-            remoteAddress = new InetSocketAddress(inetAddr, key.port());
-        }
-        return remoteAddress;
+        final InetAddress inetAddr = InetAddress.getByAddress(
+                    key.host(), NetUtil.createByteArrayFromIpAddressString(key.ipAddr()));
+        return new InetSocketAddress(inetAddr, key.port());
     }
 
     void connect(SocketAddress remoteAddress, SessionProtocol protocol, Promise<Channel> sessionPromise) {

@@ -17,6 +17,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -37,53 +38,88 @@ import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
 
     private final HttpClientFactory factory;
+    private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
 
-    HttpClientDelegate(HttpClientFactory factory) {
+    HttpClientDelegate(HttpClientFactory factory,
+                       AddressResolverGroup<InetSocketAddress> addressResolverGroup) {
         this.factory = requireNonNull(factory, "factory");
+        this.addressResolverGroup = requireNonNull(addressResolverGroup, "addressResolverGroup");
     }
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final Endpoint endpoint = ctx.endpoint().resolve(ctx)
-                                     .withDefaultPort(ctx.sessionProtocol().defaultPort());
         if (!sanitizePath(req)) {
             req.abort();
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
         }
 
-        final String host = extractHost(ctx, req, endpoint);
+        final Endpoint endpoint = ctx.endpoint().resolve(ctx)
+                                     .withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop();
-        final PoolKey poolKey = new PoolKey(host, endpoint.ipAddr(),
-                                            endpoint.port(), ctx.sessionProtocol());
-        final Future<Channel> channelFuture = factory.pool(eventLoop).acquire(poolKey);
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
-        if (channelFuture.isDone()) {
-            if (channelFuture.isSuccess()) {
-                final Channel ch = channelFuture.getNow();
-                invoke0(ch, ctx, req, res, poolKey);
-            } else {
-                res.close(channelFuture.cause());
-            }
+        if (endpoint.hasIpAddr()) {
+            // IP address has been resolved already.
+            executeWithIpAddr(ctx, endpoint, endpoint.ipAddr(), req, res);
         } else {
-            channelFuture.addListener((Future<Channel> future) -> {
-                if (future.isSuccess()) {
-                    final Channel ch = future.getNow();
-                    invoke0(ch, ctx, req, res, poolKey);
-                } else {
-                    res.close(channelFuture.cause());
-                }
-            });
+            // IP address has not been resolved yet.
+            final Future<InetSocketAddress> resolveFuture =
+                    addressResolverGroup.getResolver(eventLoop)
+                                        .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
+                                                                                    endpoint.port()));
+            if (resolveFuture.isDone()) {
+                finishResolve(ctx, endpoint, resolveFuture, req, res);
+            } else {
+                resolveFuture.addListener(
+                        (FutureListener<InetSocketAddress>) future ->
+                                finishResolve(ctx, endpoint, future, req, res));
+            }
         }
 
         return res;
+    }
+
+    private void finishResolve(ClientRequestContext ctx, Endpoint endpoint,
+                               Future<InetSocketAddress> resolveFuture, HttpRequest req,
+                               DecodedHttpResponse res) {
+        if (resolveFuture.isSuccess()) {
+            executeWithIpAddr(ctx, endpoint, resolveFuture.getNow().getAddress().getHostAddress(), req, res);
+        } else {
+            res.close(resolveFuture.cause());
+        }
+    }
+
+    private void executeWithIpAddr(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
+                                   HttpRequest req, DecodedHttpResponse res) {
+        final String host = extractHost(ctx, req, endpoint);
+        final PoolKey poolKey = new PoolKey(host, ipAddr, endpoint.port(), ctx.sessionProtocol());
+        final Future<Channel> channelFuture = factory.pool(ctx.eventLoop()).acquire(poolKey);
+
+        if (channelFuture.isDone()) {
+            finishExecute(ctx, poolKey, channelFuture, req, res);
+        } else {
+            channelFuture.addListener(
+                    (Future<Channel> future) -> finishExecute(ctx, poolKey, future, req, res));
+        }
+    }
+
+    private void finishExecute(ClientRequestContext ctx, PoolKey poolKey, Future<Channel> channelFuture,
+                               HttpRequest req, DecodedHttpResponse res) {
+        if (channelFuture.isSuccess()) {
+            final Channel ch = channelFuture.getNow();
+            invoke0(ch, ctx, req, res, poolKey);
+        } else {
+            res.close(channelFuture.cause());
+        }
     }
 
     @VisibleForTesting
