@@ -106,9 +106,13 @@ final class HttpClientFactory extends AbstractClientFactory {
             long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
             KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener, MeterRegistry meterRegistry) {
 
+        @SuppressWarnings("unchecked")
+        final AddressResolverGroup<InetSocketAddress> addressResolverGroup =
+                (AddressResolverGroup<InetSocketAddress>) addressResolverGroupFactory.apply(workerGroup);
+
         final Bootstrap baseBootstrap = new Bootstrap();
         baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
-        baseBootstrap.resolver(addressResolverGroupFactory.apply(workerGroup));
+        baseBootstrap.resolver(addressResolverGroup);
 
         channelOptions.forEach((option, value) -> {
             @SuppressWarnings("unchecked")
@@ -132,7 +136,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.connectionPoolListener = new ConnectionPoolListenerImpl(connectionPoolListener);
         this.meterRegistry = meterRegistry;
 
-        clientDelegate = new HttpClientDelegate(this);
+        clientDelegate = new HttpClientDelegate(this, addressResolverGroup);
         eventLoopScheduler = new EventLoopScheduler(workerGroup);
     }
 

@@ -43,6 +43,10 @@ import com.google.common.io.Closeables;
 
 import com.linecorp.armeria.client.encoding.DeflateStreamDecoderFactory;
 import com.linecorp.armeria.client.encoding.HttpDecodingClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -346,6 +350,35 @@ public class HttpClientIntegrationTest {
         assertEquals("alwayscache", response.headers().get(HttpHeaderNames.CACHE_CONTROL));
         assertEquals("METHOD: POST|ACCEPT: utf-8|BODY: requestbody日本語",
                      response.content().toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void testResolvedEndpointWithAlternateAuthority() throws Exception {
+        final EndpointGroup group = new StaticEndpointGroup(Endpoint.of("localhost", server.httpPort())
+                                                                    .withIpAddr("127.0.0.1"));
+        testEndpointWithAlternateAuthority(group);
+    }
+
+    @Test
+    public void testUnresolvedEndpointWithAlternateAuthority() throws Exception {
+        final EndpointGroup group = new StaticEndpointGroup(Endpoint.of("localhost", server.httpPort()));
+        testEndpointWithAlternateAuthority(group);
+    }
+
+    private static void testEndpointWithAlternateAuthority(EndpointGroup group) {
+        final String groupName = "testEndpointWithAlternateAuthority";
+        EndpointGroupRegistry.register(groupName, group, EndpointSelectionStrategy.ROUND_ROBIN);
+        try {
+            final HttpClient client = new HttpClientBuilder("http://group:" + groupName)
+                    .setHttpHeader(HttpHeaderNames.AUTHORITY, "255.255.255.255.xip.io")
+                    .build();
+
+            final AggregatedHttpMessage res = client.get("/hello/world").aggregate().join();
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+            assertThat(res.content().toStringUtf8()).isEqualTo("success");
+        } finally {
+            EndpointGroupRegistry.unregister(groupName);
+        }
     }
 
     @Test
