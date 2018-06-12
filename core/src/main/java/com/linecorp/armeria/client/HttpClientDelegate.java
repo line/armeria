@@ -69,27 +69,37 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
         if (endpoint.hasIpAddr()) {
             // IP address has been resolved already.
-            execute(ctx, endpoint, endpoint.ipAddr(), req, res);
+            executeWithIpAddr(ctx, endpoint, endpoint.ipAddr(), req, res);
         } else {
             // IP address has not been resolved yet.
             final Future<InetSocketAddress> resolveFuture =
                     addressResolverGroup.getResolver(eventLoop)
                                         .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
                                                                                     endpoint.port()));
-            resolveFuture.addListener((FutureListener<InetSocketAddress>) future -> {
-                if (future.isSuccess()) {
-                    execute(ctx, endpoint, future.getNow().getAddress().getHostAddress(), req, res);
-                } else {
-                    res.close(future.cause());
-                }
-            });
+            if (resolveFuture.isDone()) {
+                finishResolve(ctx, endpoint, resolveFuture, req, res);
+            } else {
+                resolveFuture.addListener(
+                        (FutureListener<InetSocketAddress>) future ->
+                                finishResolve(ctx, endpoint, future, req, res));
+            }
         }
 
         return res;
     }
 
-    private void execute(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
-                         HttpRequest req, DecodedHttpResponse res) {
+    private void finishResolve(ClientRequestContext ctx, Endpoint endpoint,
+                               Future<InetSocketAddress> resolveFuture, HttpRequest req,
+                               DecodedHttpResponse res) {
+        if (resolveFuture.isSuccess()) {
+            executeWithIpAddr(ctx, endpoint, resolveFuture.getNow().getAddress().getHostAddress(), req, res);
+        } else {
+            res.close(resolveFuture.cause());
+        }
+    }
+
+    private void executeWithIpAddr(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
+                                   HttpRequest req, DecodedHttpResponse res) {
         final String host = extractHost(ctx, req, endpoint);
         final PoolKey poolKey = new PoolKey(host, ipAddr, endpoint.port(), ctx.sessionProtocol());
         final Future<Channel> channelFuture = factory.pool(ctx.eventLoop()).acquire(poolKey);
