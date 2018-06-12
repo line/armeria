@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import okhttp3.Call;
 import okhttp3.Call.Factory;
 import okhttp3.Callback;
+import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.Request;
@@ -120,11 +121,12 @@ final class ArmeriaCallFactory implements Factory {
             final HttpUrl httpUrl = request.url();
             final URI uri = httpUrl.uri();
             final HttpClient httpClient = callFactory.getHttpClient(uri.getAuthority(), uri.getScheme());
-            final StringBuilder uriBuilder = new StringBuilder(httpUrl.encodedPath());
-            if (uri.getQuery() != null) {
-                uriBuilder.append('?').append(httpUrl.encodedQuery());
+            final String uriString;
+            if (uri.getQuery() == null) {
+                uriString = httpUrl.encodedPath();
+            } else {
+                uriString = httpUrl.encodedPath() + '?' + httpUrl.encodedQuery();
             }
-            final String uriString = uriBuilder.toString();
             final HttpHeaders headers;
             switch (request.method()) {
                 case "GET":
@@ -151,8 +153,12 @@ final class ArmeriaCallFactory implements Factory {
                 default:
                     throw new IllegalArgumentException("Invalid HTTP method:" + request.method());
             }
-            request.headers().toMultimap().forEach(
-                    (key, values) -> headers.add(HttpHeaderNames.of(key), values));
+            final Headers requestHeaders = request.headers();
+            final int numHeaders = requestHeaders.size();
+            for (int i = 0; i < numHeaders; i++) {
+                headers.add(HttpHeaderNames.of(requestHeaders.name(i)),
+                            requestHeaders.value(i));
+            }
             final RequestBody body = request.body();
             if (body != null) {
                 final MediaType contentType = body.contentType();
