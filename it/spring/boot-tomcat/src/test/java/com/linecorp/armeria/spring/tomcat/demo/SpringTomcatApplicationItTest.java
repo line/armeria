@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 public class SpringTomcatApplicationItTest {
     @Inject
     private Server server;

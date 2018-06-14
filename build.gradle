@@ -24,8 +24,7 @@ apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
 allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
-        // Use larger heap when test coverage is enabled.
-        maxHeapSize = project.hasFlags('coverage') ? '384m' : '128m'
+        maxHeapSize = '512m'
 
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
@@ -36,6 +35,10 @@ allprojects {
     tasks.withType(Test) {
         // Use verbose exception reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
+        // Pass special system property to tell our tests that we are measuring coverage.
+        if (project.hasFlags('coverage')) {
+            systemProperty 'com.linecorp.armeria.testing.coverage', 'true'
+        }
     }
 }
 

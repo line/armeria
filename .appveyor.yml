@@ -7,7 +7,7 @@ build:
   verbosity: detailed
 
 build_script:
-  - gradlew.bat --no-daemon --stacktrace checkstyle test build
+  - gradlew.bat --no-daemon --stacktrace checkstyle check build
 
 test: off
 
