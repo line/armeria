@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -754,6 +755,8 @@ public class HttpServerTest {
 
     @Test
     public void testHeadHeadersOnly() throws Exception {
+        assumeThat(protocol).isSameAs(H1C);
+
         final int port = server.httpPort();
         try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
             s.setSoTimeout(10000);
@@ -764,6 +767,56 @@ public class HttpServerTest {
             // Should neither be chunked nor have content.
             assertThat(new String(ByteStreams.toByteArray(in)))
                     .isEqualTo("HTTP/1.1 200 OK\r\ncontent-length: 0\r\n\r\n");
+        }
+    }
+
+    @Test(timeout = 10000)
+    public void testExpect100Continue() throws Exception {
+        // Makes sure the server sends a '100 Continue' response if 'expect: 100-continue' header exists.
+        final AggregatedHttpMessage res =
+                client().execute(HttpHeaders.of(HttpMethod.POST, "/echo")
+                                            .set(HttpHeaderNames.EXPECT, "100-continue"),
+                                 "met expectation")
+                        .aggregate().join();
+
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.informationals()).containsExactly(HttpHeaders.of(100));
+        assertThat(res.content().toStringUtf8()).isEqualTo("met expectation");
+
+        // Makes sure the server does not send a '100 Continue' response if 'expect: 100-continue' header
+        // does not exists.
+        final AggregatedHttpMessage res2 =
+                client().execute(HttpHeaders.of(HttpMethod.POST, "/echo"), "without expectation")
+                        .aggregate().join();
+
+        assertThat(res2.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res2.informationals()).isEmpty();
+        assertThat(res2.content().toStringUtf8()).isEqualTo("without expectation");
+    }
+
+    @Test(timeout = 10000)
+    public void testExpect100ContinueDoesNotBreakHttp1Decoder() throws Exception {
+        assumeThat(protocol).isSameAs(H1C);
+
+        final int port = server.httpPort();
+        try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
+            s.setSoTimeout(10000);
+            final InputStream in = s.getInputStream();
+            final OutputStream out = s.getOutputStream();
+            // Send 4 pipelined requests with 'Expect: 100-continue' header.
+            out.write((Strings.repeat("POST /head-headers-only HTTP/1.1\r\n" +
+                                      "Expect: 100-continue\r\n" +
+                                      "Content-Length: 0\r\n\r\n", 3) +
+                       "POST /head-headers-only HTTP/1.1\r\n" +
+                       "Expect: 100-continue\r\n" +
+                       "Content-Length: 0\r\n" +
+                       "Connection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+
+            // '100 Continue' responses must appear once for each '200 OK' response.
+            assertThat(new String(ByteStreams.toByteArray(in)))
+                    .isEqualTo(Strings.repeat("HTTP/1.1 100 Continue\r\n\r\n" +
+                                              "HTTP/1.1 200 OK\r\n" +
+                                              "transfer-encoding: chunked\r\n\r\n0\r\n\r\n", 4));
         }
     }
 

@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
@@ -147,10 +148,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
+        final Http1ObjectEncoder responseEncoder = new Http1ObjectEncoder(true, false);
         p.addLast(TrafficLoggingHandler.SERVER);
-        p.addLast(new Http2PrefaceOrHttpHandler());
+        p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
         configureIdleTimeoutHandler(p);
-        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, responseEncoder,
                                         SessionProtocol.H1C, proxiedAddresses));
     }
 
@@ -357,27 +359,33 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p));
             configureIdleTimeoutHandler(p);
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, null,
                                             SessionProtocol.H2, proxiedAddresses));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
+            final Http1ObjectEncoder writer = new Http1ObjectEncoder(true, true);
             p.addLast(new HttpServerCodec(
                     config.defaultMaxHttp1InitialLineLength(),
                     config.defaultMaxHttp1HeaderSize(),
                     config.defaultMaxHttp1ChunkSize()));
-            p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
+            p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS, writer));
             configureIdleTimeoutHandler(p);
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport,
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer,
                                             SessionProtocol.H1, proxiedAddresses));
         }
     }
 
     private final class Http2PrefaceOrHttpHandler extends ByteToMessageDecoder {
 
+        private final Http1ObjectEncoder responseEncoder;
         @Nullable
         private String name;
+
+        Http2PrefaceOrHttpHandler(Http1ObjectEncoder responseEncoder) {
+            this.responseEncoder = responseEncoder;
+        }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -424,7 +432,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     },
                     UPGRADE_REQUEST_MAX_LENGTH));
 
-            addAfter(p, baseName, new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP));
+            addAfter(p, baseName, new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder));
         }
 
         private void configureHttp2(ChannelHandlerContext ctx) {

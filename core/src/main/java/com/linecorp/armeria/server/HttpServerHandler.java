@@ -173,6 +173,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
+                      @Nullable HttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
                       @Nullable ProxiedAddresses proxiedAddresses) {
 
@@ -182,10 +183,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
         this.protocol = requireNonNull(protocol, "protocol");
-        if (protocol == H1 || protocol == H1C) {
-            responseEncoder = new Http1ObjectEncoder(true, protocol.isTls());
-        }
-
+        this.responseEncoder = responseEncoder;
         this.proxiedAddresses = proxiedAddresses;
 
         unfinishedResponses = new IdentityHashMap<>();
