@@ -23,11 +23,14 @@ import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.web.context.WebServerApplicationContext;
+import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
+import org.springframework.boot.web.server.WebServer;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -39,18 +42,16 @@ import com.linecorp.armeria.server.ServerPort;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 public class SpringTomcatApplicationItTest {
     @Inject
+    private ApplicationContext applicationContext;
+    @Inject
     private Server server;
     private int httpPort;
-
-    @Autowired
+    @Inject
     private TestRestTemplate restTemplate;
-
-    @Autowired
+    @Inject
     private GreetingController greetingController;
-
     @Value("${armeria-tomcat.version.major:9}")
     private int tomcatMajorVersion;
-
     @Value("${armeria-tomcat.version.minor:0}")
     private int tomcatMinorVersion;
 
@@ -78,6 +79,18 @@ public class SpringTomcatApplicationItTest {
     }
 
     @Test
+    public void verifySingleConnector() {
+        // Relevant to Tomcat 9.0
+        assertThat(applicationContext).isInstanceOf(WebServerApplicationContext.class);
+        WebServer webServer = ((WebServerApplicationContext) applicationContext).getWebServer();
+        assertThat(webServer).isInstanceOf(TomcatWebServer.class);
+        assertThat(((TomcatWebServer) webServer).getTomcat()
+                                                .getEngine()
+                                                .getService()
+                                                .findConnectors()).hasSize(1);
+    }
+
+    @Test
     public void greetingShouldReturnDefaultMessage() throws Exception {
         assertThat(restTemplate.getForObject("http://localhost:" +
                                              httpPort +
@@ -101,6 +114,6 @@ public class SpringTomcatApplicationItTest {
                                              httpPort +
                                              "/tomcat/api/rest/v1/greet",
                                              Void.class)
-                    .getStatusCode()).isEqualByComparingTo(HttpStatus.NOT_FOUND);
+                               .getStatusCode()).isEqualByComparingTo(HttpStatus.NOT_FOUND);
     }
 }
