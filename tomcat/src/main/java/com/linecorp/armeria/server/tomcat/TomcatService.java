@@ -26,16 +26,13 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
-import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Queue;
-import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.apache.catalina.Engine;
 import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
@@ -53,8 +50,6 @@ import org.apache.tomcat.util.http.MimeHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
-
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -65,12 +60,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.internal.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerListener;
-import com.linecorp.armeria.server.ServerListenerAdapter;
-import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -81,12 +73,9 @@ import io.netty.util.AsciiString;
  *
  * @see TomcatServiceBuilder
  */
-public final class TomcatService implements HttpService {
+public abstract class TomcatService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatService.class);
-
-    private static final Set<LifecycleState> TOMCAT_START_STATES = Sets.immutableEnumSet(
-            LifecycleState.STARTED, LifecycleState.STARTING, LifecycleState.STARTING_PREP);
 
     private static final MethodHandle INPUT_BUFFER_CONSTRUCTOR;
     private static final MethodHandle OUTPUT_BUFFER_CONSTRUCTOR;
@@ -121,7 +110,7 @@ public final class TomcatService implements HttpService {
         }
     }
 
-    private static final Set<String> activeEngines = new HashSet<>();
+    TomcatService() {}
 
     /**
      * Creates a new {@link TomcatService} with the web application at the root directory inside the
@@ -175,43 +164,39 @@ public final class TomcatService implements HttpService {
      * Creates a new {@link TomcatService} from an existing {@link Tomcat} instance.
      * If the specified {@link Tomcat} instance is not configured properly, the returned {@link TomcatService}
      * may respond with '503 Service Not Available' error.
+     *
+     * @return a new {@link TomcatService}, which will not manage the provided {@link Tomcat} instance.
      */
     public static TomcatService forTomcat(Tomcat tomcat) {
         requireNonNull(tomcat, "tomcat");
 
-        final String hostname = tomcat.getEngine().getDefaultHost();
-        if (hostname == null) {
-            throw new IllegalArgumentException("default hostname not configured: " + tomcat);
-        }
-
-        final Connector connector = tomcat.getConnector();
-        if (connector == null) {
-            throw new IllegalArgumentException("connector not configured: " + tomcat);
-        }
-
-        return forConnector(hostname, connector);
+        return new UnmanagedTomcatService(tomcat);
     }
 
     /**
      * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
      * If the specified {@link Connector} instance is not configured properly, the returned
      * {@link TomcatService} may respond with '503 Service Not Available' error.
+     *
+     * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
      */
     public static TomcatService forConnector(Connector connector) {
         requireNonNull(connector, "connector");
-        return new TomcatService(null, hostname -> connector);
+        return new UnmanagedTomcatService(null, connector);
     }
 
     /**
      * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
      * If the specified {@link Connector} instance is not configured properly, the returned
      * {@link TomcatService} may respond with '503 Service Not Available' error.
+     *
+     * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
      */
     public static TomcatService forConnector(String hostname, Connector connector) {
         requireNonNull(hostname, "hostname");
         requireNonNull(connector, "connector");
 
-        return new TomcatService(hostname, h -> connector);
+        return new UnmanagedTomcatService(hostname, connector);
     }
 
     static TomcatService forConfig(TomcatServiceConfig config) {
@@ -227,7 +212,7 @@ public final class TomcatService implements HttpService {
             }
         };
 
-        return new TomcatService(null, new ManagedConnectorFactory(config), postStopTask);
+        return new ManagedTomcatService(null, new ManagedConnectorFactory(config), postStopTask);
     }
 
     static String toString(org.apache.catalina.Server server) {
@@ -254,125 +239,19 @@ public final class TomcatService implements HttpService {
         return buf.toString();
     }
 
-    private final Function<String, Connector> connectorFactory;
-    private final Consumer<Connector> postStopTask;
-    private final ServerListener configurator;
-
-    @Nullable
-    private org.apache.catalina.Server server;
-    @Nullable
-    private Server armeriaServer;
-    @Nullable
-    private String hostname;
-    @Nullable
-    private Connector connector;
-    @Nullable
-    private String engineName;
-    private boolean started;
-
-    private TomcatService(@Nullable String hostname, Function<String, Connector> connectorFactory) {
-        this(hostname, connectorFactory, unused -> { /* unused */ });
-    }
-
-    private TomcatService(@Nullable String hostname,
-                          Function<String, Connector> connectorFactory, Consumer<Connector> postStopTask) {
-
-        this.hostname = hostname;
-        this.connectorFactory = connectorFactory;
-        this.postStopTask = postStopTask;
-        configurator = new Configurator();
-    }
-
-    @Override
-    public void serviceAdded(ServiceConfig cfg) throws Exception {
-        if (hostname == null) {
-            hostname = cfg.server().defaultHostname();
-        }
-
-        if (armeriaServer != null) {
-            if (armeriaServer != cfg.server()) {
-                throw new IllegalStateException("cannot be added to more than one server");
-            } else {
-                return;
-            }
-        }
-
-        armeriaServer = cfg.server();
-        armeriaServer.addListener(configurator);
-    }
-
     /**
      * Returns Tomcat {@link Connector}.
      */
-    public Connector connector() {
-        final Connector connector = this.connector;
-        if (connector == null) {
-            throw new IllegalStateException("not started yet");
-        }
+    public abstract Optional<Connector> connector();
 
-        return connector;
-    }
-
-    void start() throws Exception {
-        assert hostname != null;
-        started = false;
-        connector = connectorFactory.apply(hostname);
-        final Service service = connector.getService();
-        if (service == null) {
-            return;
-        }
-
-        final Engine engine = TomcatUtil.engine(service, hostname);
-        final String engineName = engine.getName();
-        if (engineName == null) {
-            return;
-        }
-
-        if (activeEngines.contains(engineName)) {
-            throw new TomcatServiceException("duplicate engine name: " + engineName);
-        }
-
-        server = service.getServer();
-
-        if (!TOMCAT_START_STATES.contains(server.getState())) {
-            logger.info("Starting an embedded Tomcat: {}", toString(server));
-            server.start();
-            started = true;
-        }
-
-        activeEngines.add(engineName);
-        this.engineName = engineName;
-    }
-
-    void stop() throws Exception {
-        final org.apache.catalina.Server server = this.server;
-        final Connector connector = this.connector;
-        this.server = null;
-        this.connector = null;
-
-        if (engineName != null) {
-            activeEngines.remove(engineName);
-            engineName = null;
-        }
-
-        if (server == null || !started) {
-            return;
-        }
-
-        try {
-            logger.info("Stopping an embedded Tomcat: {}", toString(server));
-            server.stop();
-        } catch (Exception e) {
-            logger.warn("Failed to stop an embedded Tomcat: {}", toString(server), e);
-        }
-
-        postStopTask.accept(connector);
-    }
+    @Nullable
+    abstract String hostName();
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Adapter coyoteAdapter = connector().getProtocolHandler().getAdapter();
-        if (coyoteAdapter == null) {
+        final Optional<Adapter> coyoteAdapter = connector().map(c -> c.getProtocolHandler().getAdapter());
+
+        if (!coyoteAdapter.isPresent()) {
             // Tomcat is not configured / stopped.
             throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
@@ -404,7 +283,7 @@ public final class TomcatService implements HttpService {
                     }
 
                     try {
-                        coyoteAdapter.service(coyoteReq, coyoteRes);
+                        coyoteAdapter.get().service(coyoteReq, coyoteRes);
                         final HttpHeaders headers = convertResponse(coyoteRes);
                         if (res.tryWrite(headers)) {
                             for (;;) {
@@ -445,7 +324,7 @@ public final class TomcatService implements HttpService {
         // Set the local host/address.
         final InetSocketAddress localAddr = ctx.localAddress();
         coyoteReq.localAddr().setString(localAddr.getAddress().getHostAddress());
-        coyoteReq.localName().setString(hostname);
+        coyoteReq.localName().setString(hostName());
         coyoteReq.setLocalPort(localAddr.getPort());
 
         final String hostHeader = req.headers().authority();
@@ -575,17 +454,5 @@ public final class TomcatService implements HttpService {
             }
         }
         return null;
-    }
-
-    private final class Configurator extends ServerListenerAdapter {
-        @Override
-        public void serverStarting(Server server) throws Exception {
-            start();
-        }
-
-        @Override
-        public void serverStopped(Server server) throws Exception {
-            stop();
-        }
     }
 }
