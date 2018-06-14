@@ -2,9 +2,11 @@
 /build
 /*/build
 /*/*/build
+/*/*/*/build
 /out
 /*/out
 /*/*/out
+/*/*/*/out
 **/gen-java
 **/gen-src
 /reports
