@@ -32,11 +32,11 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
  * <pre>{@code
  * armeria:
  *   ports:
- *   - port: 8080
- *     protocol: HTTP
- *   - ip: 127.0.0.1
- *     port: 8081
- *     protocol:HTTP
+ *     - port: 8080
+ *       protocol: HTTP
+ *     - ip: 127.0.0.1
+ *       port: 8081
+ *       protocol:HTTP
  * }</pre>
  * TODO(ide) Adds SSL and virtualhost settings
  */

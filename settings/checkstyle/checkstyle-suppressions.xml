@@ -15,4 +15,6 @@
   <suppress checks=".*" files="[\\/]grpc[\\/]ServerCallImpl.java$" />
   <!-- Enable 'NonNullByDefaultAnnotation' for package-info.java only -->
   <suppress id="NonNullByDefaultAnnotation" files="(?&lt;![\\/]package-info\.java)$" />
+  <!-- Suppress checks for Main method in integration tests -->
+  <suppress checks="UncommentedMain" files="[\\/]it[\\/]"/>
 </suppressions>

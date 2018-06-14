@@ -39,7 +39,7 @@ import com.linecorp.armeria.testing.server.ServerRule;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.concurrent.Future;
 
-public class TomcatServiceTest extends WebAppContainerTest {
+public class ManagedTomcatServiceTest extends WebAppContainerTest {
 
     private static final String SERVICE_NAME = "TomcatServiceTest";
 

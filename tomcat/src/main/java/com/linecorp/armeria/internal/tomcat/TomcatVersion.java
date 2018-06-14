@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.tomcat;
+package com.linecorp.armeria.internal.tomcat;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,7 +23,10 @@ import org.apache.catalina.util.ServerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-final class TomcatVersion {
+import com.google.common.annotations.VisibleForTesting;
+
+@VisibleForTesting
+public final class TomcatVersion {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatVersion.class);
 
@@ -54,11 +57,11 @@ final class TomcatVersion {
         }
     }
 
-    static int major() {
+    public static int major() {
         return TOMCAT_MAJOR_VERSION;
     }
 
-    static int minor() {
+    public static int minor() {
         return TOMCAT_MINOR_VERSION;
     }
 

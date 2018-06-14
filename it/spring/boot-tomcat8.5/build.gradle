@@ -1,0 +1,37 @@
+dependencyManagement {
+    // Override Tomcat versions.
+    dependencies {
+        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.31') {
+            entry 'tomcat-embed-core'
+            entry 'tomcat-embed-jasper'
+            entry 'tomcat-embed-el'
+        }
+    }
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.springframework.boot:spring-boot-gradle-plugin:2.0.2.RELEASE'
+    }
+}
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+
+sourceSets {
+    main.java.srcDir project(':it:spring:boot-tomcat').sourceSets.main.java
+    main.resources.srcDir project(':it:spring:boot-tomcat').sourceSets.main.resources
+    test.java.srcDir project(':it:spring:boot-tomcat').sourceSets.test.java
+}
+
+dependencies {
+    compile project(':spring:boot-starter')
+    compile project(':tomcat')
+    compile project(':thrift0.9')
+    compile('org.springframework.boot:spring-boot-starter-web') {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+    }
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+}
