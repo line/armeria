@@ -234,9 +234,10 @@ public class DnsAddressEndpointGroupTest {
                         new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("backoff.com", "1.1.1.1")),
                         new DefaultDnsQuestion("backoff.com.", AAAA),
                         new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("backoff.com", "::1"))));
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+
+                await().untilAsserted(() -> assertThat(group.endpoints()).containsExactly(
                         Endpoint.of("backoff.com").withIpAddr("1.1.1.1"),
-                        Endpoint.of("backoff.com").withIpAddr("::1"));
+                        Endpoint.of("backoff.com").withIpAddr("::1")));
             }
         }
     }
@@ -263,9 +264,10 @@ public class DnsAddressEndpointGroupTest {
                         new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("empty.com", "1.1.1.1")),
                         new DefaultDnsQuestion("empty.com.", AAAA),
                         new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("empty.com", "::1"))));
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+
+                await().untilAsserted(() -> assertThat(group.endpoints()).containsExactly(
                         Endpoint.of("empty.com").withIpAddr("1.1.1.1"),
-                        Endpoint.of("empty.com").withIpAddr("::1"));
+                        Endpoint.of("empty.com").withIpAddr("::1")));
             }
         }
     }
