@@ -17,44 +17,41 @@
 package com.linecorp.armeria.server;
 
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpExpectationFailedEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
-import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -69,22 +66,26 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private static final Logger logger = LoggerFactory.getLogger(Http1RequestDecoder.class);
 
     private static final Http2Settings DEFAULT_HTTP2_SETTINGS = new Http2Settings();
+    private static final com.linecorp.armeria.common.HttpHeaders CONTINUE_RESPONSE =
+            com.linecorp.armeria.common.HttpHeaders.of(HttpStatus.CONTINUE);
 
     private final ServerConfig cfg;
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
+    private final Http1ObjectEncoder writer;
 
     /** The request being decoded currently. */
     @Nullable
     private DecodedHttpRequest req;
     private int receivedRequests;
-    private int sentResponses;
     private boolean discarding;
 
-    Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme) {
+    Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
+                        Http1ObjectEncoder writer) {
         this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = new InboundTrafficController(channel);
+        this.writer = writer;
     }
 
     @Override
@@ -105,6 +106,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
         // this.req can be set to null by fail(), so we keep it in a local variable.
         DecodedHttpRequest req = this.req;
+        final int id = req != null ? req.id() : ++receivedRequests;
         try {
             if (discarding) {
                 return;
@@ -114,16 +116,15 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 if (msg instanceof HttpRequest) {
                     final HttpRequest nettyReq = (HttpRequest) msg;
                     if (!nettyReq.decoderResult().isSuccess()) {
-                        fail(ctx, HttpResponseStatus.BAD_REQUEST);
+                        fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
                         return;
                     }
 
                     final HttpHeaders nettyHeaders = nettyReq.headers();
-                    final int id = ++receivedRequests;
 
                     // Validate the method.
                     if (!HttpMethod.isSupported(nettyReq.method().name())) {
-                        fail(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                        fail(ctx, id, HttpResponseStatus.METHOD_NOT_ALLOWED);
                         return;
                     }
 
@@ -135,17 +136,23 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         try {
                             contentLength = Long.parseLong(contentLengthStr);
                         } catch (NumberFormatException ignored) {
-                            fail(ctx, HttpResponseStatus.BAD_REQUEST);
+                            fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
                             return;
                         }
                         if (contentLength < 0) {
-                            fail(ctx, HttpResponseStatus.BAD_REQUEST);
+                            fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
                             return;
                         }
 
                         contentEmpty = contentLength == 0;
                     } else {
                         contentEmpty = true;
+                    }
+
+                    if (!handle100Continue(ctx, id, nettyReq, nettyHeaders)) {
+                        ctx.pipeline().fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
+                        fail(ctx, id, HttpResponseStatus.EXPECTATION_FAILED);
+                        return;
                     }
 
                     nettyHeaders.set(ExtensionHeaderNames.SCHEME.text(), scheme);
@@ -166,7 +173,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     ctx.fireChannelRead(req);
                 } else {
-                    fail(ctx, HttpResponseStatus.BAD_REQUEST);
+                    fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
                     return;
                 }
             }
@@ -175,7 +182,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    fail(ctx, HttpResponseStatus.BAD_REQUEST);
+                    fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
                     req.close(new ProtocolViolationException(decoderResult.cause()));
                     return;
                 }
@@ -186,7 +193,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     req.increaseTransferredBytes(dataLength);
                     final long maxContentLength = req.maxRequestLength();
                     if (maxContentLength > 0 && req.transferredBytes() > maxContentLength) {
-                        fail(ctx, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+                        fail(ctx, id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
                         req.close(ContentTooLargeException.get());
                         return;
                     }
@@ -207,12 +214,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
         } catch (URISyntaxException e) {
-            fail(ctx, HttpResponseStatus.BAD_REQUEST);
+            fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
             if (req != null) {
                 req.close(e);
             }
         } catch (Throwable t) {
-            fail(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            fail(ctx, id, HttpResponseStatus.INTERNAL_SERVER_ERROR);
             if (req != null) {
                 req.close(t);
             } else {
@@ -223,29 +230,45 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
-    private void fail(ChannelHandlerContext ctx, HttpResponseStatus status) {
+    private boolean handle100Continue(ChannelHandlerContext ctx, int id,
+                                      HttpRequest nettyReq, HttpHeaders nettyHeaders) {
+
+        if (nettyReq.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
+            // Ignore HTTP/1.0 requests.
+            return true;
+        }
+
+        final String expectValue = nettyHeaders.get(HttpHeaderNames.EXPECT);
+        if (expectValue == null) {
+            // No 'expect' header.
+            return true;
+        }
+
+        // '100-continue' is the only allowed expectation.
+        if (!Ascii.equalsIgnoreCase("100-continue", expectValue)) {
+            return false;
+        }
+
+        // Send a '100 Continue' response.
+        writer.writeHeaders(ctx, id, 1, CONTINUE_RESPONSE, false);
+
+        // Remove the 'expect' header so that it's handled in a way invisible to a Service.
+        nettyHeaders.remove(HttpHeaderNames.EXPECT);
+        return true;
+    }
+
+    private void fail(ChannelHandlerContext ctx, int id, HttpResponseStatus status) {
         discarding = true;
         req = null;
 
-        final ChannelFuture future;
-        if (receivedRequests <= sentResponses) {
-            // Just close the connection if sending an error response will make the number of the sent
-            // responses exceed the number of the received requests, which doesn't make sense.
-            future = ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
-        } else {
-            final ByteBuf content = Unpooled.copiedBuffer(status.toString(), StandardCharsets.UTF_8);
-            final FullHttpResponse res = new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, status, content);
-
-            final HttpHeaders headers = res.headers();
-            headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-            headers.set(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
-            headers.setInt(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
-
-            future = ctx.writeAndFlush(res);
-        }
-
-        future.addListener(ChannelFutureListener.CLOSE);
+        final HttpData data = HttpData.ofUtf8(status.toString());
+        final com.linecorp.armeria.common.HttpHeaders headers =
+                com.linecorp.armeria.common.HttpHeaders.of(status.code());
+        headers.set(HttpHeaderNames.CONNECTION, "close");
+        headers.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        headers.setInt(HttpHeaderNames.CONTENT_LENGTH, data.length());
+        writer.writeHeaders(ctx, id, 1, headers, false);
+        writer.writeData(ctx, id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
     }
 
     @Override
@@ -276,14 +299,5 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
 
         ctx.fireUserEventTriggered(evt);
-    }
-
-    @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (msg instanceof HttpResponse &&
-            ((HttpResponse) msg).status().codeClass() != HttpStatusClass.INFORMATIONAL) {
-            sentResponses++;
-        }
-        ctx.write(msg, promise);
     }
 }
