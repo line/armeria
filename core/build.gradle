@@ -36,6 +36,22 @@ dependencies {
     compile 'org.bouncycastle:bcprov-jdk15on'
 }
 
+// Run HttpServerStreamingTest separately with memory constraint.
+tasks.test.exclude '**/HttpServerStreamingTest**'
+task testStreaming(type: Test,
+                   group: 'Verification',
+                   description: 'Runs the streaming tests.') {
+    // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
+    maxHeapSize = '64m'
+
+    testClassesDirs = tasks.test.testClassesDirs
+    classpath = tasks.test.classpath
+
+    include '**/HttpServerStreamingTest**'
+}
+tasks.test.finalizedBy tasks.testStreaming
+tasks.check.dependsOn tasks.testStreaming
+
 // Run the test cases based on reactive-streams-tck
 task testNg(type: Test,
             group: 'Verification',

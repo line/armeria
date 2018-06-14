@@ -30,7 +30,7 @@ before_install:
 install:
 - true
 script:
-- "./gradlew --no-daemon --stacktrace -Pcoverage checkstyle test build"
+- "./gradlew --no-daemon --stacktrace -Pcoverage checkstyle check build"
 before_cache:
 - find $HOME/.gradle/caches -name '*.lock' -delete
 after_success:
