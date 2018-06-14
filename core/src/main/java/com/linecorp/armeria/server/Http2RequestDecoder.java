@@ -157,6 +157,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 ctx, streamId,
                 new DefaultHttp2Headers(false).status(HttpStatus.CONTINUE.codeAsText()),
                 0, false, ctx.voidPromise());
+
+        // Remove the 'expect' header so that it's handled in a way invisible to a Service.
+        headers.remove(HttpHeaderNames.EXPECT);
         return true;
     }
 
