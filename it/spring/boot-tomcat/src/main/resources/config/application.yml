@@ -1,6 +1,4 @@
 armeria:
   ports:
-    - port: 8081
+    - port: 0
       protocol: HTTP
-server:
-  port: 8080
