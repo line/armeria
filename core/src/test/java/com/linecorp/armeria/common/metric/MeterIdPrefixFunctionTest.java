@@ -22,6 +22,10 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.logging.RequestLog;
+
+import io.micrometer.core.instrument.MeterRegistry;
+
 public class MeterIdPrefixFunctionTest {
 
     @Test
@@ -45,9 +49,21 @@ public class MeterIdPrefixFunctionTest {
 
     @Test
     public void testAndThen() {
-        final MeterIdPrefixFunction f = (registry, log) -> new MeterIdPrefix("foo", ImmutableList.of());
+        final MeterIdPrefixFunction f = new MeterIdPrefixFunction() {
+            @Override
+            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+                return new MeterIdPrefix("oof");
+            }
+
+            @Override
+            public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+                return new MeterIdPrefix("foo", ImmutableList.of());
+            }
+        };
         final MeterIdPrefixFunction f2 = f.andThen((registry, id) -> id.append("bar"));
         assertThat(f2.apply(PrometheusMeterRegistries.newRegistry(), null))
                 .isEqualTo(new MeterIdPrefix("foo.bar", ImmutableList.of()));
+        assertThat(f2.activeRequestPrefix(PrometheusMeterRegistries.newRegistry(), null))
+                .isEqualTo(new MeterIdPrefix("oof.bar", ImmutableList.of()));
     }
 }

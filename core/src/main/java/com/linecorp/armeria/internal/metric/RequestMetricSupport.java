@@ -58,12 +58,11 @@ public final class RequestMetricSupport {
     private static void onRequest(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
-        final MeterIdPrefix idPrefix = meterIdPrefixFunction.apply(registry, log);
-        final MeterIdPrefix idPrefixActive = new MeterIdPrefix(idPrefix.name("activeRequests"),
-                                                               idPrefix.tags());
+        final MeterIdPrefix activeRequestsId = meterIdPrefixFunction.activeRequestPrefix(registry, log)
+                                                                    .append("activeRequests");
 
         final ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
-                registry, idPrefixActive, ActiveRequestMetrics.class,
+                registry, activeRequestsId, ActiveRequestMetrics.class,
                 (reg, prefix) ->
                         reg.gauge(prefix.name(), prefix.tags(),
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
