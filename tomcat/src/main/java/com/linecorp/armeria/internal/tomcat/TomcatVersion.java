@@ -23,9 +23,6 @@ import org.apache.catalina.util.ServerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-
-@VisibleForTesting
 public final class TomcatVersion {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatVersion.class);
