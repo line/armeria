@@ -32,13 +32,23 @@ public final class SpanContextUtil {
     /**
      * Sets up the {@link RequestContext} to push and pop the {@link Span} whenever it is entered/exited.
      */
-    public static void setupContext(FastThreadLocal<SpanInScope> threadLocalSpan, RequestContext ctx, Span span,
-                                    Tracer tracer) {
-        ctx.onEnter(unused -> threadLocalSpan.set(tracer.withSpanInScope(span)));
+    public static void setupContext(FastThreadLocal<SpanInScopeWrapper> threadLocalSpan, RequestContext ctx,
+                                    Span span, Tracer tracer) {
+        ctx.onEnter(unused -> {
+            final SpanInScopeWrapper current = threadLocalSpan.get();
+            final SpanInScope newScope = tracer.withSpanInScope(span);
+            threadLocalSpan.set(new SpanInScopeWrapper(newScope, current));
+        });
         ctx.onExit(unused -> {
-            final SpanInScope spanInScope = threadLocalSpan.get();
-            if (spanInScope != null) {
-                spanInScope.close();
+            final SpanInScopeWrapper spanInScope = threadLocalSpan.get();
+            if (spanInScope == null) {
+                return;
+            }
+            spanInScope.close();
+            final SpanInScopeWrapper previousScope = spanInScope.previous();
+            if (previousScope != null) {
+                threadLocalSpan.set(previousScope);
+            } else {
                 threadLocalSpan.remove();
             }
         });

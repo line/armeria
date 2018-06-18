@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
+import com.linecorp.armeria.internal.tracing.SpanInScopeWrapper;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -52,7 +53,7 @@ import zipkin2.Endpoint;
  */
 public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
 
-    private static final FastThreadLocal<SpanInScope> SPAN_IN_THREAD = new FastThreadLocal<>();
+    private static final FastThreadLocal<SpanInScopeWrapper> SPAN_IN_THREAD = new FastThreadLocal<>();
 
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.

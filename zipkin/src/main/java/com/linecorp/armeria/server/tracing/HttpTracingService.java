@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
+import com.linecorp.armeria.internal.tracing.SpanInScopeWrapper;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -46,7 +47,7 @@ import io.netty.util.concurrent.FastThreadLocal;
  */
 public class HttpTracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
-    private static final FastThreadLocal<SpanInScope> SPAN_IN_THREAD = new FastThreadLocal<>();
+    private static final FastThreadLocal<SpanInScopeWrapper> SPAN_IN_THREAD = new FastThreadLocal<>();
 
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.
