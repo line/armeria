@@ -213,8 +213,7 @@ public interface RequestContext extends AttributeMap {
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
      *
-     * @see #push()
-     * @deprecated Use {@link #push()} instead.
+     * @deprecated Use {@link #push()}.
      */
     @Deprecated
     static SafeCloseable push(RequestContext ctx) {
@@ -226,7 +225,7 @@ public interface RequestContext extends AttributeMap {
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
      *
      * @see #push(boolean)
-     * @deprecated Use {@link #push(boolean)} instead.
+     * @deprecated Use {@link #push(boolean)}.
      */
     @Deprecated
     static SafeCloseable push(RequestContext ctx, boolean runCallbacks) {
@@ -301,20 +300,20 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Pushes this context to the thread-local stack if there is no current context. If there is, this method
-     * will throw IllegalStateException. To pop the context from the stack, call {@link SafeCloseable#close()},
+     * Pushes this context to the thread-local stack if there is no current context. If there is and it is not
+     * same with this context (i.e. not reentrance), this method will throw an {@link IllegalStateException}.
+     * To pop the context from the stack, call {@link SafeCloseable#close()},
      * which can be done using a {@code try-with-resources} block.
      */
     default SafeCloseable pushIfAbsent() {
-        return mapCurrent(currentContext -> {
-            if (currentContext != this) {
-                throw new IllegalStateException(
-                        "Trying to call object wrapped with context " + this + ", but context is currently " +
-                        "set to " + currentContext + ". This means the callback was called from unexpected " +
-                        "thread or forgetting to close previous context.");
-            }
-            return () -> { /* no-op */ };
-        }, () -> push());
+        final RequestContext currentRequestContext = RequestContextThreadLocal.get();
+        if (currentRequestContext != null && currentRequestContext != this) {
+            throw new IllegalStateException(
+                    "Trying to call object wrapped with context " + this + ", but context is currently " +
+                    "set to " + currentRequestContext + ". This means the callback was called from " +
+                    "unexpected thread or forgetting to close previous context.");
+        }
+        return push();
     }
 
     /**
