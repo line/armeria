@@ -59,7 +59,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final <T> Callable<T> makeContextAware(Callable<T> callable) {
         return () -> {
-            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = pushIfAbsent()) {
                 return callable.call();
             }
         };
@@ -68,7 +68,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final Runnable makeContextAware(Runnable runnable) {
         return () -> {
-            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = pushIfAbsent()) {
                 runnable.run();
             }
         };
@@ -77,7 +77,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final <T, R> Function<T, R> makeContextAware(Function<T, R> function) {
         return t -> {
-            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = pushIfAbsent()) {
                 return function.apply(t);
             }
         };
@@ -86,7 +86,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
         return (t, u) -> {
-            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = pushIfAbsent()) {
                 return function.apply(t, u);
             }
         };
@@ -95,7 +95,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final <T> Consumer<T> makeContextAware(Consumer<T> action) {
         return t -> {
-            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = pushIfAbsent()) {
                 action.accept(t);
             }
         };
@@ -104,7 +104,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
         return (t, u) -> {
-            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = pushIfAbsent()) {
                 action.accept(t, u);
             }
         };
@@ -130,7 +130,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
         final CompletableFuture<T> future = new RequestContextAwareCompletableFuture<>(this);
         stage.whenComplete((result, cause) -> {
-            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = pushIfAbsent()) {
                 if (cause != null) {
                     future.completeExceptionally(cause);
                 } else {
@@ -161,7 +161,7 @@ public abstract class AbstractRequestContext implements RequestContext {
 
     private <T extends Future<?>> void invokeOperationComplete(
             GenericFutureListener<T> listener, T future) throws Exception {
-        try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+        try (SafeCloseable ignored = pushIfAbsent()) {
             listener.operationComplete(future);
         }
     }

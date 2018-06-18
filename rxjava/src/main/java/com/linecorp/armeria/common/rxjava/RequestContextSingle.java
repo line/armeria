@@ -35,7 +35,7 @@ final class RequestContextSingle<T> extends Single<T> {
 
     @Override
     protected void subscribeActual(SingleObserver<? super T> s) {
-        try (SafeCloseable ignored = assemblyContext.propagateContextIfNotPresent()) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             source.subscribe(new RequestContextSingleObserver<>(s, assemblyContext));
         }
     }

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -290,7 +291,7 @@ public class RequestContextTest {
     @Test
     public void contextPropagationSameContextAlreadySet() {
         final RequestContext context = createContext();
-        try (SafeCloseable ignored = RequestContext.push(context, false)) {
+        try (SafeCloseable ignored = context.push(false)) {
             context.makeContextAware(() -> {
                 assertCurrentContext(context);
                 // Context was already correct, so handlers were not run (in real code they would already be
@@ -305,9 +306,9 @@ public class RequestContextTest {
         final RequestContext context = createContext();
         final RequestContext context2 = createContext();
 
-        try (SafeCloseable ignored = RequestContext.push(context2)) {
+        try (SafeCloseable ignored = context2.push()) {
             thrown.expect(IllegalStateException.class);
-            context.makeContextAware((Runnable) Assert::fail).run();
+            context.makeContextAware((Runnable) () -> Assert.fail()).run();
         }
     }
 
@@ -326,7 +327,7 @@ public class RequestContextTest {
         final RequestContext ctx1 = createContext(true);
         final RequestContext ctx2 = createContext(true);
         final AtomicBoolean nested = new AtomicBoolean();
-        try (SafeCloseable ignored = RequestContext.push(ctx1)) {
+        try (SafeCloseable ignored = ctx1.push()) {
             assertDepth(1);
             assertThat(ctxStack).containsExactly(ctx1);
             ctx1.onChild((curCtx, newCtx) -> {
@@ -337,7 +338,7 @@ public class RequestContextTest {
             });
 
             assertThat(nested.get()).isFalse();
-            try (SafeCloseable ignored2 = RequestContext.push(ctx2)) {
+            try (SafeCloseable ignored2 = ctx2.push()) {
                 assertDepth(2);
                 assertThat(ctxStack).containsExactly(ctx1, ctx2);
                 assertThat(nested.get()).isTrue();
@@ -347,6 +348,18 @@ public class RequestContextTest {
             assertThat(nested.get()).isFalse();
         }
         assertDepth(0);
+    }
+
+    @Test
+    public void unintentionalNestedContexts() throws Exception {
+        thrown.expect(IllegalStateException.class);
+        final RequestContext ctx1 = createContext();
+        final RequestContext ctx2 = createContext();
+        try (SafeCloseable ignored = ctx1.push()) {
+            try (SafeCloseable ignored2 = ctx2.pushIfAbsent()) {
+                fail("Should throw IllegalStateException.");
+            }
+        }
     }
 
     @Test

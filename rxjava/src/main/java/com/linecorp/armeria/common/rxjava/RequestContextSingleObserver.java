@@ -39,21 +39,21 @@ final class RequestContextSingleObserver<T> implements SingleObserver<T>, Dispos
             return;
         }
         disposable = d;
-        try (SafeCloseable ignored = assemblyContext.propagateContextIfNotPresent()) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             actual.onSubscribe(this);
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        try (SafeCloseable ignored = assemblyContext.propagateContextIfNotPresent()) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             actual.onError(t);
         }
     }
 
     @Override
     public void onSuccess(T value) {
-        try (SafeCloseable ignored = assemblyContext.propagateContextIfNotPresent()) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             actual.onSuccess(value);
         }
     }

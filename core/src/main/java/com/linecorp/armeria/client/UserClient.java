@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -156,7 +155,7 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
                                                   method, path, query, fragment, options(), req);
         }
 
-        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = ctx.push()) {
             return delegate().execute(ctx, req);
         } catch (Throwable cause) {
             ctx.logBuilder().endResponse(cause);
