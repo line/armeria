@@ -166,20 +166,6 @@ public abstract class AbstractRequestContext implements RequestContext {
         }
     }
 
-    private SafeCloseable propagateContextIfNotPresent() {
-        return RequestContext.mapCurrent(currentContext -> {
-            if (currentContext != this) {
-                throw new IllegalStateException(
-                        "Trying to call object made with makeContextAware or object on executor made with " +
-                        "makeContextAware with context " + this +
-                        ", but context is currently set to " + currentContext + ". This means the " +
-                        "callback was passed from one invocation to another which is not allowed. Make " +
-                        "sure you are not saving callbacks into shared state.");
-            }
-            return () -> { /* no-op */ };
-        }, () -> RequestContext.push(this));
-    }
-
     @Override
     public final void onEnter(Runnable callback) {
         RequestContext.super.onEnter(callback);

@@ -277,6 +277,25 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
+     * Pushes this context to the thread-local stack if there is no current context. If there is, this method
+     * will throw IllegalStateException. To pop the context from the stack, call {@link SafeCloseable#close()},
+     * which can be done using a {@code try-with-resources} block.
+     */
+    default SafeCloseable propagateContextIfNotPresent() {
+        return mapCurrent(currentContext -> {
+            if (currentContext != this) {
+                throw new IllegalStateException(
+                        "Trying to call object made with makeContextAware or object on executor made with " +
+                        "makeContextAware with context " + this +
+                        ", but context is currently set to " + currentContext + ". This means the " +
+                        "callback was passed from one invocation to another which is not allowed. Make " +
+                        "sure you are not saving callbacks into shared state.");
+            }
+            return () -> { /* no-op */ };
+        }, () -> push(this));
+    }
+
+    /**
      * Returns an {@link Executor} that will execute callbacks in the given {@code executor}, making sure to
      * propagate the current {@link RequestContext} into the callback execution. It is generally preferred to
      * use {@link #contextAwareEventLoop()} to ensure the callback stays on the same thread as well.
