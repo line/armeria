@@ -45,7 +45,7 @@ public final class SpanContextUtil {
                 return;
             }
             spanInScope.close();
-            final SpanInScopeWrapper previousScope = spanInScope.getPrevious();
+            final SpanInScopeWrapper previousScope = spanInScope.previous();
             if (previousScope != null) {
                 threadLocalSpan.set(previousScope);
             } else {

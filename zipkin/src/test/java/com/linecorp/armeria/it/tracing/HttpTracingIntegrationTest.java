@@ -24,15 +24,11 @@ import static com.linecorp.armeria.common.HttpStatus.OK;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -68,7 +64,6 @@ import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
 import brave.sampler.Sampler;
 import zipkin2.Span;
-import zipkin2.reporter.Reporter;
 
 public class HttpTracingIntegrationTest {
 
@@ -162,7 +157,7 @@ public class HttpTracingIntegrationTest {
                 .build(HelloService.Iface.class);
         zipClient = new ClientBuilder(server.uri(BINARY, "/zip"))
                 .decorator(HttpRequest.class, HttpResponse.class,
-                        HttpTracingClient.newDecorator(newTracing("client/zip")))
+                           HttpTracingClient.newDecorator(newTracing("client/zip")))
                 .build(HelloService.Iface.class);
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
@@ -177,7 +172,7 @@ public class HttpTracingIntegrationTest {
 
     @After
     public void shouldHaveNoExtraSpans() {
-        assertThat(spanReporter.spans).isEmpty();
+        assertThat(spanReporter.getSpans()).isEmpty();
     }
 
     private static HttpTracingService decorate(String name, Service<HttpRequest, HttpResponse> service) {
@@ -329,26 +324,6 @@ public class HttpTracingIntegrationTest {
         @Override
         public void onError(Exception exception) {
             resultHandler.onError(exception);
-        }
-    }
-
-    private static class ReporterImpl implements Reporter<Span> {
-        private final BlockingQueue<Span> spans = new LinkedBlockingQueue<>();
-
-        @Override
-        public void report(Span span) {
-            spans.add(span);
-        }
-
-        Span[] take(int numSpans) throws InterruptedException {
-            final List<Span> taken = new ArrayList<>();
-            while (taken.size() < numSpans) {
-                taken.add(spans.take());
-            }
-
-            // Reverse the collected spans to sort the spans by request time.
-            Collections.reverse(taken);
-            return taken.toArray(new Span[numSpans]);
         }
     }
 }

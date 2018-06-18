@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 import brave.Tracer.SpanInScope;
 
 /**
- * SpanInScope Wrapper for keeping previous span scope.
+ * {@link SpanInScope} wrapper that keeps the previous {@link SpanInScope}.
  */
 public final class SpanInScopeWrapper implements AutoCloseable {
 
@@ -36,7 +36,7 @@ public final class SpanInScopeWrapper implements AutoCloseable {
     }
 
     @Nullable
-    public SpanInScopeWrapper getPrevious() {
+    public SpanInScopeWrapper previous() {
         return previous;
     }
 
