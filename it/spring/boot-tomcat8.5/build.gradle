@@ -1,3 +1,15 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.springframework.boot:spring-boot-gradle-plugin:2.0.2.RELEASE'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+
 dependencyManagement {
     // Override Tomcat versions.
     dependencies {
@@ -9,29 +21,28 @@ dependencyManagement {
     }
 }
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'org.springframework.boot:spring-boot-gradle-plugin:2.0.2.RELEASE'
-    }
-}
-apply plugin: 'java'
-apply plugin: 'org.springframework.boot'
-
-sourceSets {
-    main.java.srcDir project(':it:spring:boot-tomcat').sourceSets.main.java
-    main.resources.srcDir project(':it:spring:boot-tomcat').sourceSets.main.resources
-    test.java.srcDir project(':it:spring:boot-tomcat').sourceSets.test.java
-}
-
 dependencies {
     compile project(':spring:boot-starter')
     compile project(':tomcat')
-    compile project(':thrift0.9')
     compile('org.springframework.boot:spring-boot-starter-web') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
     testCompile('org.springframework.boot:spring-boot-starter-test')
 }
+
+// Use the sources from ':it:spring:boot-tomcat'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+def tomcatProjectDir = "${rootProject.projectDir}/it/spring/boot-tomcat"
+tasks.compileJava.source "${tomcatProjectDir}/src/main/java"
+tasks.processResources.from "${tomcatProjectDir}/src/main/resources"
+tasks.compileTestJava.source "${tomcatProjectDir}/src/test/java", "${tomcatProjectDir}/gen-src/test/java"
+tasks.processTestResources.from "${tomcatProjectDir}/src/test/resources"
+tasks.sourceJar.from "${tomcatProjectDir}/src/main/java"
+tasks.sourceJar.from "${tomcatProjectDir}/src/main/resources"
+tasks.javadoc.source "${tomcatProjectDir}/src/main/java"
+
+// Disable checkstyle because it's checked by ':it:spring:boot-tomcat'.
+tasks.checkstyleMain.onlyIf { false }
+tasks.checkstyleTest.onlyIf { false }
