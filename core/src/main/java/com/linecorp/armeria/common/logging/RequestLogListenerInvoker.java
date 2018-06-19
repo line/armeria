@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.logging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -35,7 +34,7 @@ public final class RequestLogListenerInvoker {
      * Invokes {@link RequestLogListener#onRequestLog(RequestLog)}.
      */
     public static void invokeOnRequestLog(RequestLogListener listener, RequestLog log) {
-        try (SafeCloseable ignored = RequestContext.push(log.context())) {
+        try (SafeCloseable ignored = log.context().push()) {
             listener.onRequestLog(log);
         } catch (Throwable e) {
             logger.warn("onRequestLog() failed with an exception:", e);

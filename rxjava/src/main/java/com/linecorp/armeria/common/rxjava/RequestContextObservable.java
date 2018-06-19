@@ -35,7 +35,7 @@ final class RequestContextObservable<T> extends Observable<T> {
 
     @Override
     protected void subscribeActual(Observer<? super T> s) {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             source.subscribe(new RequestContextObserver<>(s, assemblyContext));
         }
     }

@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
@@ -68,7 +67,8 @@ import io.netty.buffer.ByteBuf;
 class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         implements ArmeriaMessageDeframer.Listener, TransportStatusListener {
 
-    private static final Runnable NO_OP = () -> { };
+    private static final Runnable NO_OP = () -> {
+    };
 
     private static final Metadata EMPTY_METADATA = new Metadata();
 
@@ -256,7 +256,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 GrpcUnsafeBufferUtil.storeBuffer(message.buf(), msg, ctx);
             }
 
-            try (SafeCloseable ignored = RequestContext.push(ctx)) {
+            try (SafeCloseable ignored = ctx.push()) {
                 listener.onMessage(msg);
             }
         } catch (Throwable t) {
@@ -289,7 +289,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private void close(Status status) {
         responseReader.cancel();
-        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = ctx.push()) {
             listener.onClose(status, EMPTY_METADATA);
         }
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status), null);

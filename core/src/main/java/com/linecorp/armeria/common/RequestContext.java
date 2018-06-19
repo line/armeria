@@ -116,73 +116,6 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
-     * <pre>{@code
-     * try (SafeCloseable ignored = RequestContext.push(ctx)) {
-     *     ...
-     * }
-     * }</pre>
-     *
-     * <p>The callbacks added by {@link #onEnter(Consumer)} and {@link #onExit(Consumer)} will be invoked
-     * when the context is pushed to and removed from the thread-local stack respectively.
-     *
-     * <p>NOTE: In case of re-entrance, the callbacks will never run.
-     */
-    static SafeCloseable push(RequestContext ctx) {
-        return push(ctx, true);
-    }
-
-    /**
-     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
-     * <pre>{@code
-     * try (PushHandle ignored = RequestContext.push(ctx, true)) {
-     *     ...
-     * }
-     * }</pre>
-     *
-     * <p>NOTE: This method is only useful when it is undesirable to invoke the callbacks, such as replacing
-     *          the current context with another. Prefer {@link #push(RequestContext)} otherwise.
-     *
-     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
-     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
-     *                     removed from the thread-local stack respectively.
-     *                     If {@code false}, no callbacks will be executed.
-     *                     NOTE: In case of re-entrance, the callbacks will never run.
-     */
-    static SafeCloseable push(RequestContext ctx, boolean runCallbacks) {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(ctx);
-        if (oldCtx == ctx) {
-            // Reentrance
-            return () -> { /* no-op */ };
-        }
-
-        if (runCallbacks) {
-            if (oldCtx != null) {
-                oldCtx.invokeOnChildCallbacks(ctx);
-                ctx.invokeOnEnterCallbacks();
-                return () -> {
-                    ctx.invokeOnExitCallbacks();
-                    RequestContextThreadLocal.set(oldCtx);
-                };
-            } else {
-                ctx.invokeOnEnterCallbacks();
-                return () -> {
-                    ctx.invokeOnExitCallbacks();
-                    RequestContextThreadLocal.remove();
-                };
-            }
-        } else {
-            if (oldCtx != null) {
-                return () -> RequestContextThreadLocal.set(oldCtx);
-            } else {
-                return RequestContextThreadLocal::remove;
-            }
-        }
-    }
-
-    /**
      * Returns the {@link SessionProtocol} of the current {@link Request}.
      */
     SessionProtocol sessionProtocol();
@@ -274,6 +207,112 @@ public interface RequestContext extends AttributeMap {
      */
     default EventLoop contextAwareEventLoop() {
         return new RequestContextAwareEventLoop(this, eventLoop());
+    }
+
+    /**
+     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
+     *
+     * @deprecated Use {@link #push()}.
+     */
+    @Deprecated
+    static SafeCloseable push(RequestContext ctx) {
+        return ctx.push(true);
+    }
+
+    /**
+     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
+     *
+     * @deprecated Use {@link #push(boolean)}.
+     */
+    @Deprecated
+    static SafeCloseable push(RequestContext ctx, boolean runCallbacks) {
+        return ctx.push(runCallbacks);
+    }
+
+    /**
+     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
+     * <pre>{@code
+     * try (SafeCloseable ignored = ctx.push()) {
+     *     ...
+     * }
+     * }</pre>
+     *
+     * <p>The callbacks added by {@link #onEnter(Consumer)} and {@link #onExit(Consumer)} will be invoked
+     * when the context is pushed to and removed from the thread-local stack respectively.
+     *
+     * <p>NOTE: In case of re-entrance, the callbacks will never run.
+     */
+    default SafeCloseable push() {
+        return push(true);
+    }
+
+    /**
+     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
+     * <pre>{@code
+     * try (PushHandle ignored = ctx.push(true)) {
+     *     ...
+     * }
+     * }</pre>
+     *
+     * <p>NOTE: This method is only useful when it is undesirable to invoke the callbacks, such as replacing
+     *          the current context with another. Prefer {@link #push(RequestContext)} otherwise.
+     *
+     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
+     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
+     *                     removed from the thread-local stack respectively.
+     *                     If {@code false}, no callbacks will be executed.
+     *                     NOTE: In case of re-entrance, the callbacks will never run.
+     */
+    default SafeCloseable push(boolean runCallbacks) {
+        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        if (oldCtx == this) {
+            // Reentrance
+            return () -> { /* no-op */ };
+        }
+
+        if (runCallbacks) {
+            if (oldCtx != null) {
+                oldCtx.invokeOnChildCallbacks(this);
+                invokeOnEnterCallbacks();
+                return () -> {
+                    invokeOnExitCallbacks();
+                    RequestContextThreadLocal.set(oldCtx);
+                };
+            } else {
+                invokeOnEnterCallbacks();
+                return () -> {
+                    invokeOnExitCallbacks();
+                    RequestContextThreadLocal.remove();
+                };
+            }
+        } else {
+            if (oldCtx != null) {
+                return () -> RequestContextThreadLocal.set(oldCtx);
+            } else {
+                return RequestContextThreadLocal::remove;
+            }
+        }
+    }
+
+    /**
+     * Pushes this context to the thread-local stack if there is no current context. If there is and it is not
+     * same with this context (i.e. not reentrance), this method will throw an {@link IllegalStateException}.
+     * To pop the context from the stack, call {@link SafeCloseable#close()},
+     * which can be done using a {@code try-with-resources} block.
+     */
+    default SafeCloseable pushIfAbsent() {
+        final RequestContext currentRequestContext = RequestContextThreadLocal.get();
+        if (currentRequestContext != null && currentRequestContext != this) {
+            throw new IllegalStateException(
+                    "Trying to call object wrapped with context " + this + ", but context is currently " +
+                    "set to " + currentRequestContext + ". This means the callback was called from " +
+                    "unexpected thread or forgetting to close previous context.");
+        }
+        return push();
     }
 
     /**

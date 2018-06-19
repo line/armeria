@@ -31,7 +31,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClosedClientFactoryException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -92,7 +91,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     protected final O executeDelegate(ClientRequestContext ctx, I req) throws Exception {
         final ClientRequestContext derivedContext = ctx.newDerivedContext(req);
         ctx.logBuilder().addChild(derivedContext.log());
-        try (SafeCloseable ignore = RequestContext.push(derivedContext, false)) {
+        try (SafeCloseable ignore = derivedContext.push(false)) {
             return delegate().execute(derivedContext, req);
         }
     }

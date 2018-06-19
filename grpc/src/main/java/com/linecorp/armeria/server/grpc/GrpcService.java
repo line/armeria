@@ -35,7 +35,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
@@ -187,7 +186,7 @@ public final class GrpcService extends AbstractHttpService
                 unsafeWrapRequestBuffers,
                 advertisedEncodingsHeader);
         final ServerCall.Listener<I> listener;
-        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = ctx.push()) {
             listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
