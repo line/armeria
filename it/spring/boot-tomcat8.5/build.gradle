@@ -31,9 +31,9 @@ dependencies {
 }
 
 // Use the sources from ':it:spring:boot-tomcat'.
-// NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
-//     below are added to two projects and having a source directory with two output directories will confuse
-//     the IDE.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
 def tomcatProjectDir = "${rootProject.projectDir}/it/spring/boot-tomcat"
 tasks.compileJava.source "${tomcatProjectDir}/src/main/java"
 tasks.processResources.from "${tomcatProjectDir}/src/main/resources"

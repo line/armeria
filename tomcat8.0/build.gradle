@@ -18,10 +18,10 @@ dependencies {
     runtime 'org.slf4j:jcl-over-slf4j'
 }
 
-// Use the sources from 'armeria-tomcat' as well as ours.
-// NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
-//     below are added to more than one project and having a source dir with more than one output dir will
-//     confuse the IDE.
+// Use the sources from ':tomcat' as well as ours.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
 tasks.compileJava.source "${rootProject.projectDir}/tomcat/src/main/java"
 tasks.compileJava.exclude '**/Tomcat90*'
 tasks.processResources.from "${rootProject.projectDir}/tomcat/src/main/resources"
