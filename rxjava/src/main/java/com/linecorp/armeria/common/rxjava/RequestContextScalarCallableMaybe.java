@@ -36,7 +36,7 @@ final class RequestContextScalarCallableMaybe<T> extends Maybe<T>
 
     @Override
     protected void subscribeActual(MaybeObserver<? super T> s) {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             source.subscribe(new RequestContextMaybeObserver<>(s, assemblyContext));
         }
     }
@@ -44,7 +44,7 @@ final class RequestContextScalarCallableMaybe<T> extends Maybe<T>
     @SuppressWarnings("unchecked")
     @Override
     public T call() {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             return ((ScalarCallable<T>) source).call();
         }
     }

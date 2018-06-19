@@ -46,7 +46,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -362,7 +361,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             GrpcUnsafeBufferUtil.storeBuffer(message.buf(), request, ctx);
         }
 
-        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = ctx.push()) {
             listener.onMessage(request);
         } catch (Throwable t) {
             close(Status.fromThrowable(t), EMPTY_METADATA);
@@ -373,7 +372,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     public void endOfStream() {
         clientStreamClosed = true;
         if (!closeCalled) {
-            try (SafeCloseable ignored = RequestContext.push(ctx)) {
+            try (SafeCloseable ignored = ctx.push()) {
                 listener.onHalfClose();
             } catch (Throwable t) {
                 close(Status.fromThrowable(t), EMPTY_METADATA);
@@ -403,7 +402,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             messageFramer.close();
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus), null);
             if (newStatus.isOk()) {
-                try (SafeCloseable ignored = RequestContext.push(ctx)) {
+                try (SafeCloseable ignored = ctx.push()) {
                     listener.onComplete();
                 } catch (Throwable t) {
                     // This should not be possible with normal generated stubs which do not implement
@@ -412,7 +411,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             } else {
                 cancelled = true;
-                try (SafeCloseable ignored = RequestContext.push(ctx)) {
+                try (SafeCloseable ignored = ctx.push()) {
                     listener.onCancel();
                 } catch (Throwable t) {
                     if (!closeCalled) {

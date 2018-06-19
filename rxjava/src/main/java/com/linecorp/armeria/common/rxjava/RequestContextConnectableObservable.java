@@ -36,14 +36,14 @@ final class RequestContextConnectableObservable<T> extends ConnectableObservable
 
     @Override
     protected void subscribeActual(Observer<? super T> s) {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             source.subscribe(new RequestContextObserver<>(s, assemblyContext));
         }
     }
 
     @Override
     public void connect(Consumer<? super Disposable> connection) {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             source.connect(connection);
         }
     }

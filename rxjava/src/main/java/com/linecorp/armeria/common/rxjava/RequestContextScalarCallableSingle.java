@@ -36,7 +36,7 @@ final class RequestContextScalarCallableSingle<T> extends Single<T>
 
     @Override
     protected void subscribeActual(SingleObserver<? super T> s) {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             source.subscribe(new RequestContextSingleObserver<>(s, assemblyContext));
         }
     }
@@ -44,7 +44,7 @@ final class RequestContextScalarCallableSingle<T> extends Single<T>
     @SuppressWarnings("unchecked")
     @Override
     public T call() {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             return ((ScalarCallable<T>) source).call();
         }
     }

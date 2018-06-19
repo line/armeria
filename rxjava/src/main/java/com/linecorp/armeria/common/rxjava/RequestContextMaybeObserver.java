@@ -39,28 +39,28 @@ final class RequestContextMaybeObserver<T> implements MaybeObserver<T>, Disposab
             return;
         }
         disposable = d;
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             actual.onSubscribe(this);
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             actual.onError(t);
         }
     }
 
     @Override
     public void onSuccess(T value) {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             actual.onSuccess(value);
         }
     }
 
     @Override
     public void onComplete() {
-        try (SafeCloseable ignored = RequestContext.push(assemblyContext)) {
+        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
             actual.onComplete();
         }
     }

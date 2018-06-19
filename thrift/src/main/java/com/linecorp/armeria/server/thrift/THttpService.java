@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -590,7 +589,7 @@ public final class THttpService extends AbstractHttpService {
 
         final RpcResponse reply;
 
-        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = ctx.push()) {
             reply = delegate.serve(ctx, call);
         } catch (Throwable cause) {
             handleException(ctx, new DefaultRpcResponse(cause), res, serializationFormat, seqId, func, cause);

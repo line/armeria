@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -154,7 +153,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
 
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
                     ctx, newMapping, mapped.mappingResult().path());
-            try (SafeCloseable ignored = RequestContext.push(newCtx, false)) {
+            try (SafeCloseable ignored = newCtx.push(false)) {
                 return mapped.value().serve(newCtx, req);
             }
         } else {
