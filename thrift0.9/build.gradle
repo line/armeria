@@ -20,10 +20,10 @@ dependencies {
     testCompile 'io.prometheus:simpleclient_common'
 }
 
-// Use the sources from 'armeria-thrift'.
-// NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
-//     below are added to two projects and having a source directory with two output directories will confuse
-//     the IDE.
+// Use the sources from ':thrift'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
 tasks.compileJava.source "${rootProject.projectDir}/thrift/src/main/java"
 tasks.processResources.from "${rootProject.projectDir}/thrift/src/main/resources"
 tasks.compileTestJava.source "${rootProject.projectDir}/thrift/src/test/java"
@@ -40,7 +40,7 @@ ext {
 
 // Keep the original Guava references in ThriftListenableFuture,
 // which is the only place we expose Guava classes in our public API.
-// NB: Keep this same with 'armeria-thrift'.
+// NB: Keep this same with ':thrift'.
 tasks.shadedJar.exclude 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*'
 tasks.shadedJar.doLast {
     ant.jar(update: true, destfile: tasks.shadedJar.archivePath) {
@@ -51,6 +51,6 @@ tasks.shadedJar.doLast {
     }
 }
 
-// Disable checkstyle because it's checked by 'armeria-thrift'
+// Disable checkstyle because it's checked by ':thrift'.
 tasks.checkstyleMain.onlyIf { false }
 tasks.checkstyleTest.onlyIf { false }

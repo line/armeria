@@ -15,10 +15,10 @@ dependencies {
     testCompile 'org.hibernate.validator:hibernate-validator'
 }
 
-// Use the sources from 'armeria-spring-boot-autoconfigure'.
-// NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
-//     below are added to two projects and having a source directory with two output directories will confuse
-//     the IDE.
+// Use the sources from ':spring:boot-autoconfigure'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
 def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot-autoconfigure"
 tasks.compileJava.source "${autoconfigureProjectDir}/src/main/java"
 tasks.processResources.from "${autoconfigureProjectDir}/src/main/resources"
@@ -30,6 +30,6 @@ tasks.javadoc.source "${autoconfigureProjectDir}/src/main/java"
 
 tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.findByName('compileTestThrift'))
 
-// Disable checkstyle because it's checked by 'armeria-spring-boot-autoconfigure'
+// Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
 tasks.checkstyleMain.onlyIf { false }
 tasks.checkstyleTest.onlyIf { false }

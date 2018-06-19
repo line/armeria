@@ -12,7 +12,6 @@ apply plugin: 'org.springframework.boot'
 dependencies {
     compile project(':spring:boot-starter')
     compile project(':tomcat')
-    compile project(':thrift0.9')
     compile('org.springframework.boot:spring-boot-starter-web') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
