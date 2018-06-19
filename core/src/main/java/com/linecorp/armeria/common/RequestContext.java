@@ -224,7 +224,6 @@ public interface RequestContext extends AttributeMap {
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
      *
-     * @see #push(boolean)
      * @deprecated Use {@link #push(boolean)}.
      */
     @Deprecated
