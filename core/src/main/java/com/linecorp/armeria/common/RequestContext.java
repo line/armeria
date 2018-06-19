@@ -259,7 +259,7 @@ public interface RequestContext extends AttributeMap {
      * }</pre>
      *
      * <p>NOTE: This method is only useful when it is undesirable to invoke the callbacks, such as replacing
-     *          the current context with another. Prefer {@link #push(RequestContext)} otherwise.
+     *          the current context with another. Prefer {@link #push()} otherwise.
      *
      * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
      *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
@@ -478,22 +478,22 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Invokes all {@link #onEnter(Consumer)} callbacks. It is discouraged to use this method directly.
-     * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
-     * the callbacks are invoked automatically.
+     * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
+     * invoked automatically.
      */
     void invokeOnEnterCallbacks();
 
     /**
      * Invokes all {@link #onExit(Consumer)} callbacks. It is discouraged to use this method directly.
-     * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
-     * the callbacks are invoked automatically.
+     * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
+     * invoked automatically.
      */
     void invokeOnExitCallbacks();
 
     /**
      * Invokes all {@link #onChild(BiConsumer)} callbacks. It is discouraged to use this method directly.
-     * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
-     * the callbacks are invoked automatically.
+     * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
+     * invoked automatically.
      */
     void invokeOnChildCallbacks(RequestContext newCtx);
 
