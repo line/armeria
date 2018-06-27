@@ -59,7 +59,7 @@ com.google.guava:
       to: com.linecorp.armeria.internal.shaded.guava
 
 com.google.protobuf:
-  protoc: { version: '3.5.1-1' }
+  protoc: { version: '3.6.0' }
   protobuf-gradle-plugin: { version: '0.8.5' }
 
 com.puppycrawl.tools:
@@ -92,7 +92,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.12.0'
+    version: &GRPC_VERSION '1.13.1'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
