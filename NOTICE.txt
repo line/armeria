@@ -172,11 +172,6 @@ This product depends on Jackson, distributed by FasterXML, LLC:
   * License: licenses/LICENSE.jackson.al20.txt (Apache License v2.0)
   * Homepage: http://wiki.fasterxml.com/JacksonHome
 
-This product depends on Javassist, distributed by Shigeru Chiba:
-
-  * License: licenses/LICENSE.javassist.mpl11.html (Mozilla Public License v1.1)
-  * Homepage: http://www.javassist.org/
-
 This product depends on javax.inject API, distributed by the JSR-330 Expert Group:
 
   * License: licenses/LICENSE.javax-inject.al20.txt (Apache License v2.0)

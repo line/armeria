@@ -26,7 +26,6 @@ dependencies {
     compile "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-transport-native-unix-common']}:linux-x86_64"
     compile "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     compile 'io.netty:netty-tcnative-boringssl-static'
-    runtime 'org.javassist:javassist'
 
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'

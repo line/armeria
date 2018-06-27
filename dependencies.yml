@@ -299,9 +299,6 @@ org.eclipse.jetty.http2:
 org.hibernate.validator:
   hibernate-validator: { version: '6.0.10.Final' }
 
-org.javassist:
-  javassist: { version: '3.23.0-GA' }
-
 org.jctools:
   jctools-core:
     version: '2.1.2'
