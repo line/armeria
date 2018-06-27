@@ -64,7 +64,7 @@ Essential features for building microservices
 - Client-side health-check and load-balancing
 - Service discovery from various sources such as DNS and ZooKeeper
 
-  - See :ref:`advanced-zookeeper`.
+  - See :ref:`client-service-discovery`.
 
 - Distributed call tracing via `Zipkin`_
 
