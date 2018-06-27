@@ -59,7 +59,7 @@ com.google.guava:
       to: com.linecorp.armeria.internal.shaded.guava
 
 com.google.protobuf:
-  protoc: { version: '3.6.0' }
+  protoc: { version: '3.5.1-1' }
   protobuf-gradle-plugin: { version: '0.8.6' }
 
 com.puppycrawl.tools:
