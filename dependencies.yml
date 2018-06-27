@@ -92,7 +92,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.12.0'
+    version: &GRPC_VERSION '1.13.1'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/

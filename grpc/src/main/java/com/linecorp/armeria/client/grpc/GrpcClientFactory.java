@@ -15,12 +15,10 @@
  */
 package com.linecorp.armeria.client.grpc;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -29,6 +27,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -46,6 +46,7 @@ import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 
 import io.grpc.Channel;
 import io.grpc.MethodDescriptor;
+import io.grpc.ServiceDescriptor;
 import io.grpc.stub.AbstractStub;
 
 /**
@@ -145,18 +146,19 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     }
 
     private static List<MethodDescriptor<?, ?>> stubMethods(Class<?> stubClass) {
-        return Arrays.stream(stubClass.getDeclaredFields())
-                     .filter(field -> (field.getModifiers() & Modifier.PUBLIC) != 0 &&
-                                      (field.getModifiers() & Modifier.STATIC) != 0 &&
-                                      MethodDescriptor.class.isAssignableFrom(field.getType()))
-                     .map(field -> {
-                         try {
-                             return (MethodDescriptor<?, ?>) field.get(null);
-                         } catch (IllegalAccessException e) {
-                             throw new IllegalStateException("Modifier is public so can't happen.", e);
-                         }
-                     })
-                     .collect(toImmutableList());
+        final Method getServiceDescriptorMethod;
+        try {
+            getServiceDescriptorMethod = stubClass.getDeclaredMethod("getServiceDescriptor");
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException("Could not find getServiceDescriptor on gRPC client stub.");
+        }
+        final ServiceDescriptor descriptor;
+        try {
+            descriptor = (ServiceDescriptor) getServiceDescriptorMethod.invoke(stubClass);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new IllegalStateException("Could not invoke getServiceDescriptor on a gRPC client stub.");
+        }
+        return ImmutableList.copyOf(descriptor.getMethods());
     }
 
     private Client<HttpRequest, HttpResponse> newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
