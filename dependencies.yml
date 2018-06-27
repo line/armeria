@@ -10,7 +10,7 @@ ch.qos.logback:
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.5'
+    version: &JACKSON_VERSION '2.9.6'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
@@ -60,10 +60,10 @@ com.google.guava:
 
 com.google.protobuf:
   protoc: { version: '3.5.1-1' }
-  protobuf-gradle-plugin: { version: '0.8.5' }
+  protobuf-gradle-plugin: { version: '0.8.6' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.10' }
+  checkstyle: { version: '8.10.1' }
 
 com.spotify:
   completable-futures:
@@ -116,17 +116,17 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.4'
+    version: &MICROMETER_VERSION '1.0.5'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.4/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.5/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.4/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.5/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.4/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.5/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -142,7 +142,7 @@ io.netty:
     - https://netty.io/4.1/api/
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.8.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.11.Final' }
 
 io.prometheus:
   simpleclient_common:
@@ -152,15 +152,15 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.1.14'
+    version: '2.1.16'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.0.0'
+    version: &BRAVE_VERSION '5.1.2'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.0.0/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.1.2/
 
 it.unimi.dsi:
   fastutil:
@@ -191,10 +191,10 @@ log4j:
   log4j: { version: '1.2.17' }
 
 me.champeau.gradle:
-  jmh-gradle-plugin: { version: '0.4.5' }
+  jmh-gradle-plugin: { version: '0.4.6' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '1.29.1' }
+  json-unit: { version: &JSON_UNIT_VERSION '1.31.1' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -240,7 +240,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.8'
+    version: &TOMCAT_VERSION '9.0.10'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -268,7 +268,7 @@ org.bouncycastle:
       to: com.linecorp.armeria.internal.shaded.bouncycastle
 
 org.checkerframework:
-  checker-compat-qual: { version: '2.5.1' }
+  checker-compat-qual: { version: '2.5.2' }
 
 org.curioswitch.curiostack:
   protobuf-jackson: { version: '0.2.1' }
@@ -277,7 +277,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.10.v20180503' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.11.v20180605' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
@@ -300,7 +300,7 @@ org.hibernate.validator:
   hibernate-validator: { version: '6.0.10.Final' }
 
 org.javassist:
-  javassist: { version: '3.22.0-GA' }
+  javassist: { version: '3.23.0-GA' }
 
 org.jctools:
   jctools-core:
@@ -310,13 +310,13 @@ org.jctools:
       to: com.linecorp.armeria.internal.shaded.jctools
 
 org.mockito:
-  mockito-core: { version: '2.18.3' }
+  mockito-core: { version: '2.19.0' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.7' }
 
 org.openjdk.jmh:
-  jmh-core: { version: &JMH_VERSION '1.20' }
+  jmh-core: { version: &JMH_VERSION '1.21' }
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.reactivestreams:
@@ -344,8 +344,9 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.0.2.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.0.3.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
+  spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }

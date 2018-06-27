@@ -26,7 +26,6 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -99,10 +98,11 @@ public class UnmanagedTomcatServiceTest {
     public void unconfiguredWebApp() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/no-webapp/")))) {
-                // as no webapp is configured inside tomcat, 404 will be thrown.
-                System.err.println("Entity: " + EntityUtils.toString(res.getEntity()));
-                assertThat(res.getStatusLine().toString()).isEqualTo(
-                        "HTTP/1.1 404 Not Found");
+                // When no webapp is configured, Tomcat sends:
+                // - 400 Bad Request response for 9.0.10+
+                // - 404 Not Found for other versions
+                final String statusLine = res.getStatusLine().toString();
+                assertThat(statusLine).matches("^HTTP/1\\.1 (400 Bad Request|404 Not Found)$");
             }
         }
     }
