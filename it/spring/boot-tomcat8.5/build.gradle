@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'org.springframework.boot:spring-boot-gradle-plugin:2.0.2.RELEASE'
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
     }
 }
 
@@ -13,7 +13,7 @@ apply plugin: 'org.springframework.boot'
 dependencyManagement {
     // Override Tomcat versions.
     dependencies {
-        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.31') {
+        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.32') {
             entry 'tomcat-embed-core'
             entry 'tomcat-embed-jasper'
             entry 'tomcat-embed-el'
