@@ -14,36 +14,49 @@
  * under the License.
  */
 
+import Button from '@material-ui/core/Button';
+import Grid from '@material-ui/core/Grid';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
+import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
 import {
-  packageName,
   simpleName,
   Specification,
   SpecificationData,
 } from '../../lib/specification';
+import { TRANSPORTS } from '../../lib/transports';
 
 import testSpecification from '../../specification.json';
 
 const specification = new Specification(testSpecification as SpecificationData);
 
+interface State {
+  debugRequest: string;
+  debugResponse: string;
+}
+
 export default class MethodPage extends React.PureComponent<
-  RouteComponentProps<{ serviceName: string; methodName: string }>
+  RouteComponentProps<{ serviceName: string; methodName: string }>,
+  State
 > {
+  public state = {
+    debugRequest: '',
+    debugResponse: '',
+  };
+
   public render() {
-    const { serviceName, methodName } = this.props.match.params;
-    const service = specification.getServiceByName(serviceName);
+    const service = this.getService();
     if (!service) {
       return <>Not found.</>;
     }
-    const method = service.methods.find((m) => m.name === methodName);
+    const method = this.getMethod();
     if (!method) {
       return <>Not found.</>;
     }
@@ -78,7 +91,7 @@ export default class MethodPage extends React.PureComponent<
                     {specification.getTypeSignatureHtml(param.typeSignature)}
                   </code>
                 </TableCell>
-                <TableCell>{param.docString || ''}</TableCell>
+                <TableCell>{param.docString}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -152,7 +165,74 @@ export default class MethodPage extends React.PureComponent<
             ))}
           </TableBody>
         </Table>
+        {TRANSPORTS.getDebugTransport(method) && (
+          <>
+            <Typography variant="body1" paragraph />
+            <Typography variant="title" paragraph>
+              Debug
+            </Typography>
+            <Grid container spacing={16}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  multiline
+                  fullWidth
+                  rows={15}
+                  value={this.state.debugRequest}
+                  onChange={this.onDebugFormChange}
+                />
+                <Typography variant="body1" paragraph />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={this.onSubmit}
+                >
+                  Submit
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  multiline
+                  fullWidth
+                  disabled
+                  rows={15}
+                  value={this.state.debugResponse}
+                />
+              </Grid>
+            </Grid>
+          </>
+        )}
       </>
+    );
+  }
+
+  private onDebugFormChange = (e: ChangeEvent<HTMLInputElement>) => {
+    this.setState({
+      debugRequest: e.target.value,
+    });
+  };
+
+  private onSubmit = async () => {
+    const method = this.getMethod()!;
+    const transport = TRANSPORTS.getDebugTransport(method)!;
+    let debugResponse;
+    try {
+      debugResponse = await transport.send(method, this.state.debugRequest);
+    } catch (e) {
+      debugResponse = e.toString();
+    }
+    this.setState({
+      debugResponse,
+    });
+  };
+
+  private getService() {
+    return specification.getServiceByName(this.props.match.params.serviceName);
+  }
+
+  private getMethod() {
+    const service = this.getService()!;
+    return service.methods.find(
+      (m) => m.name === this.props.match.params.methodName,
     );
   }
 }

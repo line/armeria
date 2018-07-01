@@ -35,6 +35,7 @@ export interface Endpoint {
   path: string;
   defaultMimeType: string;
   availableMimeTypes: string[];
+  fragment?: string;
 }
 
 export interface Method {
@@ -154,15 +155,21 @@ export class Specification {
   }
 
   public getTypeSignatureHtml(typeSignature: string) {
-    let type: Enum | Struct | undefined = this.enumsByName.get(typeSignature);
+    // Split on all non-identifier parts and optimistically find matches for type identifiers.
+    const parts = typeSignature.split(/([^\w.]+)/g);
+    return <>{parts.map((part) => this.renderTypePart(part))}</>;
+  }
+
+  private renderTypePart(part: string) {
+    let type: Enum | Struct | undefined = this.enumsByName.get(part);
     if (type) {
       return this.getTypeLink(type.name, 'enum');
     }
-    type = this.structsByName.get(typeSignature);
+    type = this.structsByName.get(part);
     if (type) {
       return this.getTypeLink(type.name, 'struct');
     }
-    return simpleName(typeSignature);
+    return simpleName(part);
   }
 
   private getTypeLink(name: string, type: 'enum' | 'struct') {
@@ -200,14 +207,8 @@ export class Specification {
     for (const service of this.data.services) {
       this.renderDocString(service);
       for (const method of service.methods) {
-        if (method.docString) {
-          this.renderDocString(method as HasDocString);
-        }
-        for (const param of method.parameters) {
-          if (param.docString) {
-            this.renderDocString(param as HasDocString);
-          }
-        }
+        this.renderDocString(method as HasDocString);
+        method.parameters.forEach(this.renderDocString);
       }
     }
     this.data.structs.forEach(this.renderDocString);
