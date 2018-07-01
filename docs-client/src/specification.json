@@ -1,0 +1,3356 @@
+{
+  "services" : [ {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.Cassandra",
+    "methods" : [ {
+      "name" : "add",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "key",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "column_parent",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent"
+      }, {
+        "name" : "column",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CounterColumn"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Increment or decrement a counter."
+    }, {
+      "name" : "batch_mutate",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "mutation_map",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "map<binary, map<string, list<com.linecorp.armeria.service.test.thrift.cassandra.Mutation>>>"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Mutate many columns or super columns for many row keys. See also: Mutation.\n\n  mutation_map maps key to column family to a list of Mutation objects to take place at that scope.\n*"
+    }, {
+      "name" : "describe_cluster_name",
+      "returnTypeSignature" : "string",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "get the cluster name"
+    }, {
+      "name" : "describe_keyspace",
+      "returnTypeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.KsDef",
+      "parameters" : [ {
+        "name" : "keyspace",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.NotFoundException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "describe specified keyspace"
+    }, {
+      "name" : "describe_keyspaces",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.KsDef>",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "list the defined keyspaces in this cluster"
+    }, {
+      "name" : "describe_partitioner",
+      "returnTypeSignature" : "string",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "returns the partitioner used by this cluster"
+    }, {
+      "name" : "describe_ring",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.TokenRange>",
+      "parameters" : [ {
+        "name" : "keyspace",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "get the token ring: a map of ranges to host addresses,\nrepresented as a set of TokenRange instead of a map from range\nto list of endpoints, because you can't use Thrift structs as\nmap keys:\nhttps://issues.apache.org/jira/browse/THRIFT-162\n\nfor the same reason, we can't return a set here, even though\norder is neither important nor predictable."
+    }, {
+      "name" : "describe_schema_versions",
+      "returnTypeSignature" : "map<string, list<string>>",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "for each schema version present in the cluster, returns a list of nodes at that version.\nhosts that do not respond will be under the key DatabaseDescriptor.INITIAL_VERSION.\nthe cluster is all on the same version if the size of the map is 1."
+    }, {
+      "name" : "describe_snitch",
+      "returnTypeSignature" : "string",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "returns the snitch used by this cluster"
+    }, {
+      "name" : "describe_splits",
+      "returnTypeSignature" : "list<string>",
+      "parameters" : [ {
+        "name" : "cfName",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      }, {
+        "name" : "start_token",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      }, {
+        "name" : "end_token",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      }, {
+        "name" : "keys_per_split",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "i32"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "experimental API for hadoop/parallel query support.\nmay change violently and without warning.\n\nreturns list of token strings such that first subrange is (list[0], list[1]],\nnext is (list[1], list[2]], etc."
+    }, {
+      "name" : "describe_version",
+      "returnTypeSignature" : "string",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "get the thrift api version"
+    }, {
+      "name" : "execute_cql_query",
+      "returnTypeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlResult",
+      "parameters" : [ {
+        "name" : "query",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "compression",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.Compression"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Executes a CQL (Cassandra Query Language) statement and returns a\nCqlResult containing the results."
+    }, {
+      "name" : "execute_prepared_cql_query",
+      "returnTypeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlResult",
+      "parameters" : [ {
+        "name" : "itemId",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "i32"
+      }, {
+        "name" : "values",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "list<string>"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Executes a prepared CQL (Cassandra Query Language) statement by passing an id token and  a list of variables\nto bind and returns a CqlResult containing the results."
+    }, {
+      "name" : "get",
+      "returnTypeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnOrSuperColumn",
+      "parameters" : [ {
+        "name" : "key",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "column_path",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnPath"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.NotFoundException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the Column or SuperColumn at the given column_path. If no value is present, NotFoundException is thrown. (This is\nthe only method that can throw an exception under non-failure conditions.)\n\n@param key. key of column."
+    }, {
+      "name" : "get_count",
+      "returnTypeSignature" : "i32",
+      "parameters" : [ {
+        "name" : "key",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "column_parent",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent"
+      }, {
+        "name" : "predicate",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SlicePredicate"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "returns the number of columns matching <code>predicate</code> for a particular <code>key</code>,\n<code>ColumnFamily</code> and optionally <code>SuperColumn</code>."
+    }, {
+      "name" : "get_indexed_slices",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.KeySlice>",
+      "parameters" : [ {
+        "name" : "column_parent",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent"
+      }, {
+        "name" : "index_clause",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.IndexClause"
+      }, {
+        "name" : "column_predicate",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SlicePredicate"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Returns the subset of columns specified in SlicePredicate for the rows matching the IndexClause"
+    }, {
+      "name" : "get_range_slices",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.KeySlice>",
+      "parameters" : [ {
+        "name" : "column_parent",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent"
+      }, {
+        "name" : "predicate",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SlicePredicate"
+      }, {
+        "name" : "range",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.KeyRange"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "returns a subset of columns for a contiguous range of keys."
+    }, {
+      "name" : "get_slice",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.ColumnOrSuperColumn>",
+      "parameters" : [ {
+        "name" : "key",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "column_parent",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent"
+      }, {
+        "name" : "predicate",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SlicePredicate"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the group of columns contained by column_parent (either a ColumnFamily name or a ColumnFamily/SuperColumn name\npair) specified by the given SlicePredicate. If no matching values are found, an empty list is returned."
+    }, {
+      "name" : "insert",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "key",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "column_parent",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent"
+      }, {
+        "name" : "column",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.Column"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Insert a Column at the given column_parent.column_family and optional column_parent.super_column."
+    }, {
+      "name" : "login",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "auth_request",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.AuthenticationRequest"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.AuthenticationException", "com.linecorp.armeria.service.test.thrift.cassandra.AuthorizationException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "multiget_count",
+      "returnTypeSignature" : "map<binary, i32>",
+      "parameters" : [ {
+        "name" : "keys",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "list<binary>"
+      }, {
+        "name" : "column_parent",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent"
+      }, {
+        "name" : "predicate",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SlicePredicate"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Perform a get_count in parallel on the given list<binary> keys. The return value maps keys to the count found."
+    }, {
+      "name" : "multiget_slice",
+      "returnTypeSignature" : "map<binary, list<com.linecorp.armeria.service.test.thrift.cassandra.ColumnOrSuperColumn>>",
+      "parameters" : [ {
+        "name" : "keys",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "list<binary>"
+      }, {
+        "name" : "column_parent",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent"
+      }, {
+        "name" : "predicate",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SlicePredicate"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Performs a get_slice for column_parent and predicate for the given keys in parallel."
+    }, {
+      "name" : "prepare_cql_query",
+      "returnTypeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlPreparedResult",
+      "parameters" : [ {
+        "name" : "query",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "compression",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.Compression"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Prepare a CQL (Cassandra Query Language) statement by compiling and returning\n- the type of CQL statement\n- an id token of the compiled CQL stored on the server side.\n- a count of the discovered bound markers in the statement"
+    }, {
+      "name" : "remove",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "key",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "column_path",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnPath"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "i64"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Remove data from the row specified by key at the granularity specified by column_path, and the given timestamp. Note\nthat all the values in column_path besides column_path.column_family are truly optional: you can remove the entire\nrow by just specifying the ColumnFamily, or you can remove a SuperColumn or a single Column by specifying those levels too."
+    }, {
+      "name" : "remove_counter",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "key",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "binary"
+      }, {
+        "name" : "path",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnPath"
+      }, {
+        "name" : "consistency_level",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Remove a counter at the specified location.\nNote that counters have limited support for deletes: if you remove a counter, you must wait to issue any following update\nuntil the delete has reached all the nodes and all of them have been fully compacted."
+    }, {
+      "name" : "set_keyspace",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "keyspace",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "system_add_column_family",
+      "returnTypeSignature" : "string",
+      "parameters" : [ {
+        "name" : "cf_def",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CfDef"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "adds a column family. returns the new schema id."
+    }, {
+      "name" : "system_add_keyspace",
+      "returnTypeSignature" : "string",
+      "parameters" : [ {
+        "name" : "ks_def",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.KsDef"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "adds a keyspace and any column families that are part of it. returns the new schema id."
+    }, {
+      "name" : "system_drop_column_family",
+      "returnTypeSignature" : "string",
+      "parameters" : [ {
+        "name" : "column_family",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "drops a column family. returns the new schema id."
+    }, {
+      "name" : "system_drop_keyspace",
+      "returnTypeSignature" : "string",
+      "parameters" : [ {
+        "name" : "keyspace",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "drops a keyspace and any column families that are part of it. returns the new schema id."
+    }, {
+      "name" : "system_update_column_family",
+      "returnTypeSignature" : "string",
+      "parameters" : [ {
+        "name" : "cf_def",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CfDef"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "updates properties of a column family. returns the new schema id."
+    }, {
+      "name" : "system_update_keyspace",
+      "returnTypeSignature" : "string",
+      "parameters" : [ {
+        "name" : "ks_def",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.KsDef"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "updates properties of a keyspace. returns the new schema id."
+    }, {
+      "name" : "truncate",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "cfname",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException", "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException", "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/cassandra/debug",
+        "defaultMimeType" : "application/x-thrift; protocol=TTEXT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Truncate will mark and entire column family as deleted.\nFrom the user's perspective a successful call to truncate will result complete data deletion from cfname.\nInternally, however, disk space will not be immediatily released, as with all deletes in cassandra, this one\nonly marks the data as deleted.\nThe operation succeeds only if all hosts in the cluster at available and will throw an UnavailableException if\nsome hosts are down."
+    } ],
+    "exampleHttpHeaders" : [ ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.Hbase",
+    "methods" : [ {
+      "name" : "append",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TCell>",
+      "parameters" : [ {
+        "name" : "append",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.hbase.TAppend",
+        "docString" : "The single append operation to apply"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Appends values to one or more columns within a single row.\n\n@return values of columns after the append operation."
+    }, {
+      "name" : "atomicIncrement",
+      "returnTypeSignature" : "i64",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row to increment"
+      }, {
+        "name" : "column",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of column"
+      }, {
+        "name" : "value",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "amount to increment by"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Atomically increment the column value specified.  Returns the next value post increment."
+    }, {
+      "name" : "checkAndPut",
+      "returnTypeSignature" : "bool",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "column",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "column name"
+      }, {
+        "name" : "value",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "the expected value for the column parameter, if not\nprovided the check is for the non-existence of the\ncolumn in question"
+      }, {
+        "name" : "mput",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.hbase.Mutation",
+        "docString" : "mutation for the put"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Mutation attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Atomically checks if a row/family/qualifier value matches the expected\nvalue. If it does, it adds the corresponding mutation operation for put.\n\n@return true if the new put was executed, false otherwise"
+    }, {
+      "name" : "compact",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableNameOrRegionName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "createTable",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table to create"
+      }, {
+        "name" : "columnFamilies",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.ColumnDescriptor>",
+        "docString" : "list of column family descriptors"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.AlreadyExists", "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Create a table with the specified column families.  The name\nfield for each ColumnDescriptor must be set and must end in a\ncolon (:). All other fields are optional and will get default\nvalues if not explicitly specified.\n\n@throws IllegalArgument if an input parameter is invalid\n\n@throws AlreadyExists if the table name already exists"
+    }, {
+      "name" : "deleteAll",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "Row to update"
+      }, {
+        "name" : "column",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of column whose value is to be deleted"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Delete attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Delete all cells that match the passed row and column."
+    }, {
+      "name" : "deleteAllRow",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "key of the row to be completely deleted."
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Delete attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Completely delete the row's cells."
+    }, {
+      "name" : "deleteAllRowTs",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "key of the row to be completely deleted."
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Delete attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Completely delete the row's cells marked with a timestamp\nequal-to or older than the passed timestamp."
+    }, {
+      "name" : "deleteAllTs",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "Row to update"
+      }, {
+        "name" : "column",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of column whose value is to be deleted"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Delete attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Delete all cells that match the passed row and column and whose\ntimestamp is equal-to or older than the passed timestamp."
+    }, {
+      "name" : "deleteTable",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table to delete"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Deletes a table\n\n@throws IOError if table doesn't exist on server or there was some other\nproblem"
+    }, {
+      "name" : "disableTable",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of the table"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Disables a table (takes it off-line) If it is being served, the master\nwill tell the servers to stop serving it."
+    }, {
+      "name" : "enableTable",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of the table"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Brings a table on-line (enables it)"
+    }, {
+      "name" : "get",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TCell>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "column",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "column name"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get a single TCell for the specified table, row, and column at the\nlatest timestamp. Returns an empty list if no such value exists.\n\n@return value for specified row/column"
+    }, {
+      "name" : "getColumnDescriptors",
+      "returnTypeSignature" : "map<string, com.linecorp.armeria.service.test.thrift.hbase.ColumnDescriptor>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "table name"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "List all the column families associated with a table.\n\n@return list of column family descriptors"
+    }, {
+      "name" : "getRegionInfo",
+      "returnTypeSignature" : "com.linecorp.armeria.service.test.thrift.hbase.TRegionInfo",
+      "parameters" : [ {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the regininfo for the specified row. It scans\nthe metatable to find region's start and end keys.\n\n@return value for specified row/column"
+    }, {
+      "name" : "getRow",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get all the data for the specified table and row at the latest\ntimestamp. Returns an empty list if the row does not exist.\n\n@return TRowResult containing the row and map of columns to TCells"
+    }, {
+      "name" : "getRowOrBefore",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TCell>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "family",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "column name"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the row just before the specified one.\n\n@return value for specified row/column"
+    }, {
+      "name" : "getRowTs",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of the table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get all the data for the specified table and row at the specified\ntimestamp. Returns an empty list if the row does not exist.\n\n@return TRowResult containing the row and map of columns to TCells"
+    }, {
+      "name" : "getRowWithColumns",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "List of columns to return, null for all columns"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the specified columns for the specified table and row at the latest\ntimestamp. Returns an empty list if the row does not exist.\n\n@return TRowResult containing the row and map of columns to TCells"
+    }, {
+      "name" : "getRowWithColumnsTs",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "List of columns to return, null for all columns"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the specified columns for the specified table and row at the specified\ntimestamp. Returns an empty list if the row does not exist.\n\n@return TRowResult containing the row and map of columns to TCells"
+    }, {
+      "name" : "getRows",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "rows",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "row keys"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get all the data for the specified table and rows at the latest\ntimestamp. Returns an empty list if no rows exist.\n\n@return TRowResult containing the rows and map of columns to TCells"
+    }, {
+      "name" : "getRowsTs",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of the table"
+      }, {
+        "name" : "rows",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "row keys"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get all the data for the specified table and rows at the specified\ntimestamp. Returns an empty list if no rows exist.\n\n@return TRowResult containing the rows and map of columns to TCells"
+    }, {
+      "name" : "getRowsWithColumns",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "rows",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "row keys"
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "List of columns to return, null for all columns"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the specified columns for the specified table and rows at the latest\ntimestamp. Returns an empty list if no rows exist.\n\n@return TRowResult containing the rows and map of columns to TCells"
+    }, {
+      "name" : "getRowsWithColumnsTs",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "rows",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "row keys"
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "List of columns to return, null for all columns"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the specified columns for the specified table and rows at the specified\ntimestamp. Returns an empty list if no rows exist.\n\n@return TRowResult containing the rows and map of columns to TCells"
+    }, {
+      "name" : "getTableNames",
+      "returnTypeSignature" : "list<string>",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "List all the userspace tables.\n\n@return returns a list of names"
+    }, {
+      "name" : "getTableRegions",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRegionInfo>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "table name"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "List the regions associated with a table.\n\n@return list of region descriptors"
+    }, {
+      "name" : "getVer",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TCell>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "column",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "column name"
+      }, {
+        "name" : "numVersions",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i32",
+        "docString" : "number of versions to retrieve"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the specified number of versions for the specified table,\nrow, and column.\n\n@return list of cells for specified row/column"
+    }, {
+      "name" : "getVerTs",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TCell>",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "column",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "column name"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "numVersions",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i32",
+        "docString" : "number of versions to retrieve"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Get attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get the specified number of versions for the specified table,\nrow, and column.  Only versions less than or equal to the specified\ntimestamp will be returned.\n\n@return list of cells for specified row/column"
+    }, {
+      "name" : "increment",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "increment",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.hbase.TIncrement",
+        "docString" : "The single increment to apply"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Increment a cell by the ammount.\nIncrements can be applied async if hbase.regionserver.thrift.coalesceIncrement is set to true.\nFalse is the default.  Turn to true if you need the extra performance and can accept some\ndata loss if a thrift server dies with increments still in the queue."
+    }, {
+      "name" : "incrementRows",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "increments",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TIncrement>",
+        "docString" : "The list of increments"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "isTableEnabled",
+      "returnTypeSignature" : "bool",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of the table to check"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "@return true if table is on-line"
+    }, {
+      "name" : "majorCompact",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableNameOrRegionName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "mutateRow",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "mutations",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.Mutation>",
+        "docString" : "list of mutation commands"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Mutation attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Apply a series of mutations (updates/deletes) to a row in a\nsingle transaction.  If an exception is thrown, then the\ntransaction is aborted.  Default current timestamp is used, and\nall entries will have an identical timestamp."
+    }, {
+      "name" : "mutateRowTs",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "row",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row key"
+      }, {
+        "name" : "mutations",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.Mutation>",
+        "docString" : "list of mutation commands"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Mutation attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Apply a series of mutations (updates/deletes) to a row in a\nsingle transaction.  If an exception is thrown, then the\ntransaction is aborted.  The specified timestamp is used, and\nall entries will have an identical timestamp."
+    }, {
+      "name" : "mutateRows",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "rowBatches",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.BatchMutation>",
+        "docString" : "list of row batches"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Mutation attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Apply a series of batches (each a series of mutations on a single row)\nin a single transaction.  If an exception is thrown, then the\ntransaction is aborted.  Default current timestamp is used, and\nall entries will have an identical timestamp."
+    }, {
+      "name" : "mutateRowsTs",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "rowBatches",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.BatchMutation>",
+        "docString" : "list of row batches"
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Mutation attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Apply a series of batches (each a series of mutations on a single row)\nin a single transaction.  If an exception is thrown, then the\ntransaction is aborted.  The specified timestamp is used, and\nall entries will have an identical timestamp."
+    }, {
+      "name" : "scannerClose",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "id",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i32",
+        "docString" : "id of a scanner returned by scannerOpen"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Closes the server-state associated with an open scanner.\n\n@throws IllegalArgument if ScannerID is invalid"
+    }, {
+      "name" : "scannerGet",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "id",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i32",
+        "docString" : "id of a scanner returned by scannerOpen"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Returns the scanner's current row value and advances to the next\nrow in the table.  When there are no more rows in the table, or a key\ngreater-than-or-equal-to the scanner's specified stopRow is reached,\nan empty list is returned.\n\n@return a TRowResult containing the current row and a map of the columns to TCells.\n\n@throws IllegalArgument if ScannerID is invalid\n\n@throws NotFound when the scanner reaches the end"
+    }, {
+      "name" : "scannerGetList",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TRowResult>",
+      "parameters" : [ {
+        "name" : "id",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i32",
+        "docString" : "id of a scanner returned by scannerOpen"
+      }, {
+        "name" : "nbRows",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i32",
+        "docString" : "number of results to return"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError", "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Returns, starting at the scanner's current row value nbRows worth of\nrows and advances to the next row in the table.  When there are no more\nrows in the table, or a key greater-than-or-equal-to the scanner's\nspecified stopRow is reached,  an empty list is returned.\n\n@return a TRowResult containing the current row and a map of the columns to TCells.\n\n@throws IllegalArgument if ScannerID is invalid\n\n@throws NotFound when the scanner reaches the end"
+    }, {
+      "name" : "scannerOpen",
+      "returnTypeSignature" : "i32",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "startRow",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "Starting row in table to scan.\nSend \"\" (empty string) to start at the first row."
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "columns to scan. If column name is a column family, all\ncolumns of the specified column family are returned. It's also possible\nto pass a regex in the column qualifier."
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Scan attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get a scanner on the current table starting at the specified row and\nending at the last row in the table.  Return the specified columns.\n\n@return scanner id to be used with other scanner procedures"
+    }, {
+      "name" : "scannerOpenTs",
+      "returnTypeSignature" : "i32",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "startRow",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "Starting row in table to scan.\nSend \"\" (empty string) to start at the first row."
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "columns to scan. If column name is a column family, all\ncolumns of the specified column family are returned. It's also possible\nto pass a regex in the column qualifier."
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Scan attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get a scanner on the current table starting at the specified row and\nending at the last row in the table.  Return the specified columns.\nOnly values with the specified timestamp are returned.\n\n@return scanner id to be used with other scanner procedures"
+    }, {
+      "name" : "scannerOpenWithPrefix",
+      "returnTypeSignature" : "i32",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "startAndPrefix",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "the prefix (and thus start row) of the keys you want"
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "the columns you want returned"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Scan attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Open a scanner for a given prefix.  That is all rows will have the specified\nprefix. No other rows will be returned.\n\n@return scanner id to use with other scanner calls"
+    }, {
+      "name" : "scannerOpenWithScan",
+      "returnTypeSignature" : "i32",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "scan",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.hbase.TScan",
+        "docString" : "Scan instance"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Scan attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get a scanner on the current table, using the Scan instance\nfor the scan parameters."
+    }, {
+      "name" : "scannerOpenWithStop",
+      "returnTypeSignature" : "i32",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "startRow",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "Starting row in table to scan.\nSend \"\" (empty string) to start at the first row."
+      }, {
+        "name" : "stopRow",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row to stop scanning on. This row is *not* included in the\nscanner's results"
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "columns to scan. If column name is a column family, all\ncolumns of the specified column family are returned. It's also possible\nto pass a regex in the column qualifier."
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Scan attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get a scanner on the current table starting and stopping at the\nspecified rows.  ending at the last row in the table.  Return the\nspecified columns.\n\n@return scanner id to be used with other scanner procedures"
+    }, {
+      "name" : "scannerOpenWithStopTs",
+      "returnTypeSignature" : "i32",
+      "parameters" : [ {
+        "name" : "tableName",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "name of table"
+      }, {
+        "name" : "startRow",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "Starting row in table to scan.\nSend \"\" (empty string) to start at the first row."
+      }, {
+        "name" : "stopRow",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string",
+        "docString" : "row to stop scanning on. This row is *not* included in the\nscanner's results"
+      }, {
+        "name" : "columns",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<string>",
+        "docString" : "columns to scan. If column name is a column family, all\ncolumns of the specified column family are returned. It's also possible\nto pass a regex in the column qualifier."
+      }, {
+        "name" : "timestamp",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64",
+        "docString" : "timestamp"
+      }, {
+        "name" : "attributes",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, string>",
+        "docString" : "Scan attributes"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.hbase.IOError" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/hbase",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "docString" : "Get a scanner on the current table starting and stopping at the\nspecified rows.  ending at the last row in the table.  Return the\nspecified columns.  Only values with the specified timestamp are\nreturned.\n\n@return scanner id to be used with other scanner procedures"
+    } ],
+    "exampleHttpHeaders" : [ ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.main.FooService",
+    "methods" : [ {
+      "name" : "bar1",
+      "returnTypeSignature" : "void",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.main.FooServiceException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/foo",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/foo/",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      } ],
+      "exampleHttpHeaders" : [ {
+        "g" : "h"
+      } ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "bar2",
+      "returnTypeSignature" : "string",
+      "parameters" : [ ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.main.FooServiceException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/foo",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/foo/",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "bar3",
+      "returnTypeSignature" : "com.linecorp.armeria.service.test.thrift.main.FooStruct",
+      "parameters" : [ {
+        "name" : "intVal",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i32"
+      }, {
+        "name" : "foo",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "com.linecorp.armeria.service.test.thrift.main.FooStruct"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.main.FooServiceException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/foo",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/foo/",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "bar4",
+      "returnTypeSignature" : "list<com.linecorp.armeria.service.test.thrift.main.FooStruct>",
+      "parameters" : [ {
+        "name" : "foos",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.main.FooStruct>"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.main.FooServiceException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/foo",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/foo/",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "bar5",
+      "returnTypeSignature" : "map<string, com.linecorp.armeria.service.test.thrift.main.FooStruct>",
+      "parameters" : [ {
+        "name" : "foos",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "map<string, com.linecorp.armeria.service.test.thrift.main.FooStruct>"
+      } ],
+      "exceptionTypeSignatures" : [ "com.linecorp.armeria.service.test.thrift.main.FooServiceException" ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/foo",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/foo/",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    }, {
+      "name" : "bar6",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "foo1",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string"
+      }, {
+        "name" : "foo2",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "?TypedefedStruct"
+      }, {
+        "name" : "foo3",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "?TypedefedEnum"
+      }, {
+        "name" : "foo4",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "?TypedefedMap"
+      }, {
+        "name" : "foo5",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "?TypedefedList"
+      }, {
+        "name" : "foo6",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "?TypedefedSet"
+      }, {
+        "name" : "foo7",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "?NestedTypedefedStructs"
+      }, {
+        "name" : "foo8",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "list<list<?TypedefedStruct>>"
+      } ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/foo",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      }, {
+        "hostnamePattern" : "*",
+        "path" : "/foo/",
+        "defaultMimeType" : "application/x-thrift; protocol=TCOMPACT",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TCOMPACT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    } ],
+    "exampleHttpHeaders" : [ {
+      "e" : "f"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.main.HelloService",
+    "methods" : [ {
+      "name" : "hello",
+      "returnTypeSignature" : "string",
+      "parameters" : [ {
+        "name" : "name",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/",
+        "fragment" : "hello",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ "{\r\n  \"name\" : \"sample user\"\r\n}" ]
+    } ],
+    "exampleHttpHeaders" : [ {
+      "c" : "d"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.main.OnewayHelloService",
+    "methods" : [ {
+      "name" : "hello",
+      "returnTypeSignature" : "void",
+      "parameters" : [ {
+        "name" : "name",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "string"
+      } ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/oneway",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    } ],
+    "exampleHttpHeaders" : [ ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.main.SleepService",
+    "methods" : [ {
+      "name" : "sleep",
+      "returnTypeSignature" : "i64",
+      "parameters" : [ {
+        "name" : "delay",
+        "requirement" : "DEFAULT",
+        "typeSignature" : "i64"
+      } ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "path" : "/",
+        "fragment" : "sleep",
+        "defaultMimeType" : "application/x-thrift; protocol=TBINARY",
+        "availableMimeTypes" : [ "application/x-thrift; protocol=TBINARY", "application/x-thrift; protocol=TCOMPACT", "application/x-thrift; protocol=TJSON", "application/x-thrift; protocol=TTEXT" ]
+      } ],
+      "exampleHttpHeaders" : [ ],
+      "exampleRequests" : [ ]
+    } ],
+    "exampleHttpHeaders" : [ ]
+  } ],
+  "enums" : [ {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.Compression",
+    "values" : [ {
+      "name" : "GZIP"
+    }, {
+      "name" : "NONE"
+    } ],
+    "docString" : "CQL query compression"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.ConsistencyLevel",
+    "values" : [ {
+      "name" : "ONE"
+    }, {
+      "name" : "QUORUM"
+    }, {
+      "name" : "LOCAL_QUORUM"
+    }, {
+      "name" : "EACH_QUORUM"
+    }, {
+      "name" : "ALL"
+    }, {
+      "name" : "ANY"
+    }, {
+      "name" : "TWO"
+    }, {
+      "name" : "THREE"
+    } ],
+    "docString" : "The ConsistencyLevel is an enum that controls both read and write\nbehavior based on the ReplicationFactor of the keyspace.  The\ndifferent consistency levels have different meanings, depending on\nif you're doing a write or read operation.\n\nIf W + R > ReplicationFactor, where W is the number of nodes to\nblock for on write, and R the number to block for on reads, you\nwill have strongly consistent behavior; that is, readers will\nalways see the most recent write. Of these, the most interesting is\nto do QUORUM reads and writes, which gives you consistency while\nstill allowing availability in the face of node failures up to half\nof <ReplicationFactor>. Of course if latency is more important than\nconsistency then you can use lower values for either or both.\n\nSome ConsistencyLevels (ONE, TWO, THREE) refer to a specific number\nof replicas rather than a logical concept that adjusts\nautomatically with the replication factor.  Of these, only ONE is\ncommonly used; TWO and (even more rarely) THREE are only useful\nwhen you care more about guaranteeing a certain level of\ndurability, than consistency.\n\nWrite consistency levels make the following guarantees before reporting success to the client:\n  ANY          Ensure that the write has been written once somewhere, including possibly being hinted in a non-target node.\n  ONE          Ensure that the write has been written to at least 1 node's commit log and memory table\n  TWO          Ensure that the write has been written to at least 2 node's commit log and memory table\n  THREE        Ensure that the write has been written to at least 3 node's commit log and memory table\n  QUORUM       Ensure that the write has been written to <ReplicationFactor> / 2 + 1 nodes\n  LOCAL_QUORUM Ensure that the write has been written to <ReplicationFactor> / 2 + 1 nodes, within the local datacenter (requires NetworkTopologyStrategy)\n  EACH_QUORUM  Ensure that the write has been written to <ReplicationFactor> / 2 + 1 nodes in each datacenter (requires NetworkTopologyStrategy)\n  ALL          Ensure that the write is written to <code>&lt;ReplicationFactor&gt;</code> nodes before responding to the client.\n\nRead consistency levels make the following guarantees before returning successful results to the client:\n  ANY          Not supported. You probably want ONE instead.\n  ONE          Returns the record obtained from a single replica.\n  TWO          Returns the record with the most recent timestamp once two replicas have replied.\n  THREE        Returns the record with the most recent timestamp once three replicas have replied.\n  QUORUM       Returns the record with the most recent timestamp once a majority of replicas have replied.\n  LOCAL_QUORUM Returns the record with the most recent timestamp once a majority of replicas within the local datacenter have replied.\n  EACH_QUORUM  Returns the record with the most recent timestamp once a majority of replicas within each datacenter have replied.\n  ALL          Returns the record with the most recent timestamp once all replicas have replied (implies no replica may be down).."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType",
+    "values" : [ {
+      "name" : "ROWS"
+    }, {
+      "name" : "VOID"
+    }, {
+      "name" : "INT"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.IndexOperator",
+    "values" : [ {
+      "name" : "EQ"
+    }, {
+      "name" : "GTE"
+    }, {
+      "name" : "GT"
+    }, {
+      "name" : "LTE"
+    }, {
+      "name" : "LT"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.IndexType",
+    "values" : [ {
+      "name" : "KEYS"
+    }, {
+      "name" : "CUSTOM"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.main.FooEnum",
+    "values" : [ {
+      "name" : "VAL1"
+    }, {
+      "name" : "VAL2"
+    }, {
+      "name" : "VAL3"
+    } ]
+  } ],
+  "structs" : [ {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.AuthenticationRequest",
+    "fields" : [ {
+      "name" : "credentials",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "map<string, string>"
+    } ],
+    "docString" : "Authentication requests can contain any data, dependent on the IAuthenticator used"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.CfDef",
+    "fields" : [ {
+      "name" : "keyspace",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "name",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "column_type",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "comparator_type",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "subcomparator_type",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "comment",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "read_repair_chance",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "double"
+    }, {
+      "name" : "column_metadata",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.ColumnDef>"
+    }, {
+      "name" : "gc_grace_seconds",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "default_validation_class",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "id",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "min_compaction_threshold",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "max_compaction_threshold",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "replicate_on_write",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "bool"
+    }, {
+      "name" : "merge_shards_chance",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "double"
+    }, {
+      "name" : "key_validation_class",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "key_alias",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "compaction_strategy",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "compaction_strategy_options",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "map<string, string>"
+    }, {
+      "name" : "compression_options",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "map<string, string>"
+    }, {
+      "name" : "bloom_filter_fp_chance",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "double"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.Column",
+    "fields" : [ {
+      "name" : "name",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary",
+      "docString" : "the name by which this column is set and retrieved.  Maximum 64KB long."
+    }, {
+      "name" : "value",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "binary",
+      "docString" : "The data associated with the name.  Maximum 2GB long, but in practice you should limit it to small numbers of MB (since Thrift must read the full value into memory to operate on it)."
+    }, {
+      "name" : "timestamp",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i64",
+      "docString" : "The timestamp is used for conflict detection/resolution when two columns with same name need to be compared."
+    }, {
+      "name" : "ttl",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32",
+      "docString" : "An optional, positive delay (in seconds) after which the column will be automatically deleted."
+    } ],
+    "docString" : "Basic unit of data within a ColumnFamily."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnDef",
+    "fields" : [ {
+      "name" : "name",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "validation_class",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "index_type",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.IndexType"
+    }, {
+      "name" : "index_name",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "index_options",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "map<string, string>"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnOrSuperColumn",
+    "fields" : [ {
+      "name" : "column",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.Column",
+      "docString" : "The Column returned by get() or get_slice()."
+    }, {
+      "name" : "super_column",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SuperColumn",
+      "docString" : "The SuperColumn returned by get() or get_slice()."
+    }, {
+      "name" : "counter_column",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CounterColumn",
+      "docString" : "The Counterolumn returned by get() or get_slice()."
+    }, {
+      "name" : "counter_super_column",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CounterSuperColumn",
+      "docString" : "The CounterSuperColumn returned by get() or get_slice()."
+    } ],
+    "docString" : "Methods for fetching rows/records from Cassandra will return either a single instance of ColumnOrSuperColumn or a list\nof ColumnOrSuperColumns (get_slice()). If you're looking up a SuperColumn (or list of SuperColumns) then the resulting\ninstances of ColumnOrSuperColumn will have the requested SuperColumn in the attribute super_column. For queries resulting\nin Columns, those values will be in the attribute column. This change was made between 0.3 and 0.4 to standardize on\nsingle query methods that may return either a SuperColumn or Column.\n\nIf the query was on a counter column family, you will either get a counter_column (instead of a column) or a\ncounter_super_column (instead of a super_column)"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnParent",
+    "fields" : [ {
+      "name" : "column_family",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "super_column",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "binary"
+    } ],
+    "docString" : "ColumnParent is used when selecting groups of columns from the same ColumnFamily. In directory structure terms, imagine\nColumnParent as ColumnPath + '/../'.\n\nSee also <a href=\"cassandra.html#Struct_ColumnPath\">ColumnPath</a>"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnPath",
+    "fields" : [ {
+      "name" : "column_family",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "super_column",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "column",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "binary"
+    } ],
+    "docString" : "The ColumnPath is the path to a single column in Cassandra. It might make sense to think of ColumnPath and\nColumnParent in terms of a directory structure.\n\nColumnPath is used to looking up a single column.\n\n@param column_family. The name of the CF of the column being looked up.\n@param super_column. The super column name.\n@param column. The column name."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.CounterColumn",
+    "fields" : [ {
+      "name" : "name",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "value",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "i64"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.CounterSuperColumn",
+    "fields" : [ {
+      "name" : "name",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "columns",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.CounterColumn>"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlMetadata",
+    "fields" : [ {
+      "name" : "name_types",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "map<binary, string>"
+    }, {
+      "name" : "value_types",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "map<binary, string>"
+    }, {
+      "name" : "default_name_type",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "default_value_type",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlPreparedResult",
+    "fields" : [ {
+      "name" : "itemId",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "count",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "i32"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlResult",
+    "fields" : [ {
+      "name" : "type",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType"
+    }, {
+      "name" : "rows",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.CqlRow>"
+    }, {
+      "name" : "num",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "schema",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlMetadata"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.CqlRow",
+    "fields" : [ {
+      "name" : "key",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "columns",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.Column>"
+    } ],
+    "docString" : "Row returned from a CQL query"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.Deletion",
+    "fields" : [ {
+      "name" : "timestamp",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i64"
+    }, {
+      "name" : "super_column",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "predicate",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SlicePredicate"
+    } ],
+    "docString" : "Note that the timestamp is only optional in case of counter deletion."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.EndpointDetails",
+    "fields" : [ {
+      "name" : "host",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "datacenter",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "rack",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.IndexClause",
+    "fields" : [ {
+      "name" : "expressions",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.IndexExpression>"
+    }, {
+      "name" : "start_key",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "count",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "i32"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.IndexExpression",
+    "fields" : [ {
+      "name" : "column_name",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "op",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.IndexOperator"
+    }, {
+      "name" : "value",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.KeyRange",
+    "fields" : [ {
+      "name" : "start_key",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "end_key",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "start_token",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "end_token",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "count",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "i32"
+    } ],
+    "docString" : "The semantics of start keys and tokens are slightly different.\nKeys are start-inclusive; tokens are start-exclusive.  Token\nranges may also wrap -- that is, the end token may be less\nthan the start one.  Thus, a range from keyX to keyX is a\none-element range, but a range from tokenY to tokenY is the\nfull ring."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.KeySlice",
+    "fields" : [ {
+      "name" : "key",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "columns",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.ColumnOrSuperColumn>"
+    } ],
+    "docString" : "A KeySlice is key followed by the data it maps to. A collection of KeySlice is returned by the get_range_slice operation.\n\n@param key. a row key\n@param columns. List of data represented by the key. Typically, the list is pared down to only the columns specified by\n                a SlicePredicate."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.KsDef",
+    "fields" : [ {
+      "name" : "name",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "strategy_class",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "strategy_options",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "map<string, string>"
+    }, {
+      "name" : "replication_factor",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32",
+      "docString" : "@deprecated"
+    }, {
+      "name" : "cf_defs",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.CfDef>"
+    }, {
+      "name" : "durable_writes",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "bool"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.Mutation",
+    "fields" : [ {
+      "name" : "column_or_supercolumn",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.ColumnOrSuperColumn"
+    }, {
+      "name" : "deletion",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.Deletion"
+    } ],
+    "docString" : "A Mutation is either an insert (represented by filling column_or_supercolumn) or a deletion (represented by filling the deletion attribute).\n@param column_or_supercolumn. An insert to a column or supercolumn (possibly counter column or supercolumn)\n@param deletion. A deletion of a column or supercolumn"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.SlicePredicate",
+    "fields" : [ {
+      "name" : "column_names",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "list<binary>"
+    }, {
+      "name" : "slice_range",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.cassandra.SliceRange"
+    } ],
+    "docString" : "A SlicePredicate is similar to a mathematic predicate (see http://en.wikipedia.org/wiki/Predicate_(mathematical_logic)),\nwhich is described as \"a property that the elements of a set have in common.\"\n\nSlicePredicate's in Cassandra are described with either a list of column_names or a SliceRange.  If column_names is\nspecified, slice_range is ignored.\n\n@param column_name. A list of column names to retrieve. This can be used similar to Memcached's \"multi-get\" feature\n                    to fetch N known column names. For instance, if you know you wish to fetch columns 'Joe', 'Jack',\n                    and 'Jim' you can pass those column names as a list to fetch all three at once.\n@param slice_range. A SliceRange describing how to range, order, and/or limit the slice."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.SliceRange",
+    "fields" : [ {
+      "name" : "start",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "finish",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "reversed",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "bool"
+    }, {
+      "name" : "count",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "i32"
+    } ],
+    "docString" : "A slice range is a structure that stores basic range, ordering and limit information for a query that will return\nmultiple columns. It could be thought of as Cassandra's version of LIMIT and ORDER BY\n\n@param start. The column name to start the slice with. This attribute is not required, though there is no default value,\n              and can be safely set to '', i.e., an empty byte array, to start with the first column name. Otherwise, it\n              must a valid value under the rules of the Comparator defined for the given ColumnFamily.\n@param finish. The column name to stop the slice at. This attribute is not required, though there is no default value,\n               and can be safely set to an empty byte array to not stop until 'count' results are seen. Otherwise, it\n               must also be a valid value to the ColumnFamily Comparator.\n@param reversed. Whether the results should be ordered in reversed order. Similar to ORDER BY blah DESC in SQL.\n@param count. How many columns to return. Similar to LIMIT in SQL. May be arbitrarily large, but Thrift will\n              materialize the whole result into memory before returning it to the client, so be aware that you may\n              be better served by iterating through slices by passing the last value of one call in as the 'start'\n              of the next instead of increasing 'count' arbitrarily large."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.SuperColumn",
+    "fields" : [ {
+      "name" : "name",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "binary",
+      "docString" : "see Column.name."
+    }, {
+      "name" : "columns",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.Column>",
+      "docString" : "A collection of standard Columns.  The columns within a super column are defined in an adhoc manner.\nColumns within a super column do not have to have matching structures (similarly named child columns)."
+    } ],
+    "docString" : "A named list of columns."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.TokenRange",
+    "fields" : [ {
+      "name" : "start_token",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "end_token",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    }, {
+      "name" : "endpoints",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "list<string>"
+    }, {
+      "name" : "rpc_endpoints",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "list<string>"
+    }, {
+      "name" : "endpoint_details",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.cassandra.EndpointDetails>"
+    } ],
+    "docString" : "A TokenRange describes part of the Cassandra ring, it is a mapping from a range to\nendpoints responsible for that range.\n@param start_token The first token in the range\n@param end_token The last token in the range\n@param endpoints The endpoints responsible for the range (listed by their configured listen_address)\n@param rpc_endpoints The endpoints responsible for the range (listed by their configured rpc_address)"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.BatchMutation",
+    "fields" : [ {
+      "name" : "row",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "mutations",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.Mutation>"
+    } ],
+    "docString" : "A BatchMutation object is used to apply a number of Mutations to a single row."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.ColumnDescriptor",
+    "fields" : [ {
+      "name" : "name",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "maxVersions",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "compression",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "inMemory",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "bool"
+    }, {
+      "name" : "bloomFilterType",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "bloomFilterVectorSize",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "bloomFilterNbHashes",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "blockCacheEnabled",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "bool"
+    }, {
+      "name" : "timeToLive",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i32"
+    } ],
+    "docString" : "An HColumnDescriptor contains information about a column family\nsuch as the number of versions, compression settings, etc. It is\nused as input when creating a table or adding a column."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.Mutation",
+    "fields" : [ {
+      "name" : "isDelete",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "bool"
+    }, {
+      "name" : "column",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "value",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "writeToWAL",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "bool"
+    } ],
+    "docString" : "A Mutation object is used to either update or delete a column-value."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.TAppend",
+    "fields" : [ {
+      "name" : "table",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "row",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "columns",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "list<string>"
+    }, {
+      "name" : "values",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "list<string>"
+    } ],
+    "docString" : "An Append object is used to specify the parameters for performing the append operation."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.TCell",
+    "fields" : [ {
+      "name" : "value",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "timestamp",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i64"
+    } ],
+    "docString" : "TCell - Used to transport a cell value (byte[]) and the timestamp it was\nstored with together as a result for get and getRow methods. This promotes\nthe timestamp of a cell to a first-class value, making it easy to take\nnote of temporal data. Cell is used all the way from HStore up to HTable."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.TColumn",
+    "fields" : [ {
+      "name" : "columnName",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "cell",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.hbase.TCell"
+    } ],
+    "docString" : "Holds column name and the cell."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.TIncrement",
+    "fields" : [ {
+      "name" : "table",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "row",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "column",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "ammount",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i64"
+    } ],
+    "docString" : "For increments that are not incrementColumnValue\nequivalents."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.TRegionInfo",
+    "fields" : [ {
+      "name" : "startKey",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "endKey",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "id",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i64"
+    }, {
+      "name" : "name",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "version",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i8"
+    }, {
+      "name" : "serverName",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "port",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i32"
+    } ],
+    "docString" : "A TRegionInfo contains information about an HTable region."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.TRowResult",
+    "fields" : [ {
+      "name" : "row",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "columns",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "map<string, com.linecorp.armeria.service.test.thrift.hbase.TCell>"
+    }, {
+      "name" : "sortedColumns",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "list<com.linecorp.armeria.service.test.thrift.hbase.TColumn>"
+    } ],
+    "docString" : "Holds row name and then a map of columns to cells."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.TScan",
+    "fields" : [ {
+      "name" : "startRow",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "stopRow",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "timestamp",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i64"
+    }, {
+      "name" : "columns",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "list<string>"
+    }, {
+      "name" : "caching",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "filterString",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "batchSize",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "sortColumns",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "bool"
+    }, {
+      "name" : "reversed",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "bool"
+    } ],
+    "docString" : "A Scan object is used to specify scanner parameters when opening a scanner."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.main.FooStruct",
+    "fields" : [ {
+      "name" : "boolVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "bool"
+    }, {
+      "name" : "byteVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i8"
+    }, {
+      "name" : "i16Val",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i16"
+    }, {
+      "name" : "i32Val",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i32"
+    }, {
+      "name" : "i64Val",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "i64"
+    }, {
+      "name" : "doubleVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "double"
+    }, {
+      "name" : "stringVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    }, {
+      "name" : "binaryVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "binary"
+    }, {
+      "name" : "enumVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.main.FooEnum"
+    }, {
+      "name" : "unionVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.main.FooUnion"
+    }, {
+      "name" : "mapVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "map<string, com.linecorp.armeria.service.test.thrift.main.FooEnum>"
+    }, {
+      "name" : "setVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "set<com.linecorp.armeria.service.test.thrift.main.FooUnion>"
+    }, {
+      "name" : "listVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "list<string>"
+    }, {
+      "name" : "selfRef",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.main.FooStruct"
+    } ]
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.main.FooUnion",
+    "fields" : [ {
+      "name" : "stringVal",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string"
+    }, {
+      "name" : "enumVal",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "com.linecorp.armeria.service.test.thrift.main.FooEnum"
+    } ]
+  } ],
+  "exceptions" : [ {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.AuthenticationException",
+    "fields" : [ {
+      "name" : "why",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    } ],
+    "docString" : "invalid authentication request (invalid keyspace, user does not exist, or credentials invalid)"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.AuthorizationException",
+    "fields" : [ {
+      "name" : "why",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    } ],
+    "docString" : "invalid authorization request (user does not have access to keyspace)"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.InvalidRequestException",
+    "fields" : [ {
+      "name" : "why",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "string"
+    } ],
+    "docString" : "Invalid request could mean keyspace or column family does not exist, required parameters are missing, or a parameter is malformed.\nwhy contains an associated error message."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.NotFoundException",
+    "fields" : [ ],
+    "docString" : "A specific column was requested that does not exist."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.SchemaDisagreementException",
+    "fields" : [ ],
+    "docString" : "schemas are not in agreement across all nodes"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.TimedOutException",
+    "fields" : [ ],
+    "docString" : "RPC timeout was exceeded.  either a node failed mid-operation, or load was too high, or the requested op was too large."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.cassandra.UnavailableException",
+    "fields" : [ ],
+    "docString" : "Not all the replicas required could be created and/or read."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.AlreadyExists",
+    "fields" : [ {
+      "name" : "message",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    } ],
+    "docString" : "An AlreadyExists exceptions signals that a table with the specified\nname already exists"
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.IOError",
+    "fields" : [ {
+      "name" : "message",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    } ],
+    "docString" : "An IOError exception signals that an error occurred communicating\nto the Hbase master or an Hbase region server.  Also used to return\nmore general Hbase error conditions."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.hbase.IllegalArgument",
+    "fields" : [ {
+      "name" : "message",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    } ],
+    "docString" : "An IllegalArgument exception indicates an illegal or invalid\nargument was passed into a procedure."
+  }, {
+    "name" : "com.linecorp.armeria.service.test.thrift.main.FooServiceException",
+    "fields" : [ {
+      "name" : "stringVal",
+      "requirement" : "DEFAULT",
+      "typeSignature" : "string"
+    } ]
+  } ],
+  "exampleHttpHeaders" : [ {
+    "a" : "b"
+  } ]
+}

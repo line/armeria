@@ -111,6 +111,7 @@ public class GrpcDocServiceTest {
 
     @Test
     public void testOk() throws Exception {
+        Thread.sleep(Long.MAX_VALUE);
         final List<ServiceEntry> entries = ImmutableList.of(
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
