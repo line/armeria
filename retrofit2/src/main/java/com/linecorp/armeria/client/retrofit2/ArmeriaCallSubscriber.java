@@ -25,6 +25,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.retrofit2.ArmeriaCallFactory.ArmeriaCall;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -39,6 +40,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okio.Buffer;
+import okio.ForwardingSource;
+import okio.Okio;
 
 final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
 
@@ -48,7 +51,7 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
     private final Callback callback;
     private final Request request;
     private final Response.Builder responseBuilder = new Response.Builder();
-    private final Buffer responseDataBuffer = new Buffer();
+    private final PipeBuffer pipeBuffer = new PipeBuffer();
     @Nullable
     private Subscription subscription;
     private boolean nonInformationalHeadersStarted;
@@ -71,7 +74,7 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
             subscription.cancel();
             return;
         }
-        subscription.request(Long.MAX_VALUE);
+        subscription.request(1);
     }
 
     @Override
@@ -82,6 +85,7 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
             return;
         }
         if (httpObject instanceof HttpHeaders) {
+            subscription.request(1);
             final HttpHeaders headers = (HttpHeaders) httpObject;
             final HttpStatus status = headers.status();
             if (!nonInformationalHeadersStarted) { // If not received a non-informational header yet
@@ -104,12 +108,25 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
             if (contentLength == NO_CONTENT_LENGTH) {
                 contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, NO_CONTENT_LENGTH);
             }
-
             return;
+        }
+        if (!callbackCalled) {
+            responseBuilder.body(ResponseBody.create(
+                    Strings.isNullOrEmpty(contentType) ? null : MediaType.parse(contentType),
+                    contentLength, Okio.buffer(new ForwardingSource(pipeBuffer.source()) {
+                        @Override
+                        public long read(Buffer sink, long byteCount) throws IOException {
+                            subscription.request(1);
+                            return super.read(sink, byteCount);
+                        }
+                    })));
+            responseBuilder.request(request);
+            responseBuilder.protocol(Protocol.HTTP_1_1);
+            safeOnResponse(responseBuilder.build());
         }
 
         final HttpData data = (HttpData) httpObject;
-        responseDataBuffer.write(data.array(), data.offset(), data.length());
+        pipeBuffer.write(data.array(), data.offset(), data.length());
     }
 
     @Override
@@ -119,20 +136,15 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
         } else {
             safeOnFailure(newCanceledException());
         }
+        pipeBuffer.close(throwable);
     }
 
     @Override
     public void onComplete() {
-        if (armeriaCall.tryFinish()) {
-            responseBuilder.body(ResponseBody.create(
-                    Strings.isNullOrEmpty(contentType) ? null : MediaType.parse(contentType),
-                    contentLength, responseDataBuffer));
-            responseBuilder.request(request);
-            responseBuilder.protocol(Protocol.HTTP_1_1);
-            safeOnResponse(responseBuilder.build());
-        } else {
+        if (!armeriaCall.tryFinish()) {
             safeOnFailure(newCanceledException());
         }
+        pipeBuffer.close(null);
     }
 
     private void safeOnFailure(IOException e) {
@@ -140,7 +152,7 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
             return;
         }
         callbackCalled = true;
-        callback.onFailure(armeriaCall, e);
+        CommonPools.blockingTaskExecutor().execute(() -> callback.onFailure(armeriaCall, e));
     }
 
     private void safeOnResponse(Response response) {
@@ -148,11 +160,13 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
             return;
         }
         callbackCalled = true;
-        try {
-            callback.onResponse(armeriaCall, response);
-        } catch (IOException e) {
-            callback.onFailure(armeriaCall, e);
-        }
+        CommonPools.blockingTaskExecutor().execute(() -> {
+            try {
+                callback.onResponse(armeriaCall, response);
+            } catch (IOException e) {
+                callback.onFailure(armeriaCall, e);
+            }
+        });
     }
 
     private static IOException newCanceledException() {
