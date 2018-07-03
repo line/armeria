@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -41,7 +41,7 @@ import okhttp3.Callback;
 import okhttp3.Request;
 import okhttp3.Response;
 
-public class ArmeriaCallSubscriberTest {
+public class BlockingCallSubscriberTest {
 
     private static class ManualMockCallback implements Callback {
         private int callbackCallingCount;
@@ -79,7 +79,7 @@ public class ArmeriaCallSubscriberTest {
         when(armeriaCall.tryFinish()).thenReturn(true);
 
         final ManualMockCallback callback = new ManualMockCallback();
-        final ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(
+        final BlockingCallSubscriber subscriber = new BlockingCallSubscriber(
                 armeriaCall, callback, new Request.Builder().url("http://foo.com").build());
         subscriber.onSubscribe(subscription);
         subscriber.onNext(HttpHeaders.of(200));
@@ -96,7 +96,7 @@ public class ArmeriaCallSubscriberTest {
         when(armeriaCall.tryFinish()).thenReturn(true);
 
         final ManualMockCallback callback = new ManualMockCallback();
-        final ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(
+        final BlockingCallSubscriber subscriber = new BlockingCallSubscriber(
                 armeriaCall, callback, new Request.Builder().url("http://bar.com").build());
         subscriber.onSubscribe(subscription);
         subscriber.onNext(HttpHeaders.of(100));
@@ -118,7 +118,7 @@ public class ArmeriaCallSubscriberTest {
         when(armeriaCall.isCanceled()).thenReturn(false, false, true);
 
         final ManualMockCallback callback = new ManualMockCallback();
-        final ArmeriaCallSubscriber subscriber = new ArmeriaCallSubscriber(
+        final BlockingCallSubscriber subscriber = new BlockingCallSubscriber(
                 armeriaCall, callback, new Request.Builder().url("http://foo.com").build());
         subscriber.onSubscribe(subscription);
         subscriber.onNext(HttpHeaders.of(200));
@@ -127,6 +127,6 @@ public class ArmeriaCallSubscriberTest {
 
         verify(subscription).request(Long.MAX_VALUE);
         assertThat(callback.callbackCallingCount).isEqualTo(1);
-        assertThat(callback.exception.getMessage()).isEqualTo("Canceled");
+        assertThat(callback.exception.getMessage()).isEqualTo("cancelled");
     }
 }
