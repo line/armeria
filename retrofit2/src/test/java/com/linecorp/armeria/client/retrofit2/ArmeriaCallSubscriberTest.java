@@ -16,6 +16,8 @@
 package com.linecorp.armeria.client.retrofit2;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -86,9 +88,10 @@ public class ArmeriaCallSubscriberTest {
         subscriber.onNext(HttpData.ofUtf8("{\"name\":\"foo\"}"));
         subscriber.onComplete();
 
-        verify(subscription).request(Long.MAX_VALUE);
-        assertThat(callback.callbackCallingCount).isEqualTo(1);
-        assertThat(callback.response.body().string()).isEqualTo("{\"name\":\"foo\"}");
+        verify(subscription, times(2)).request(1L);
+        await().untilAsserted(() -> assertThat(callback.callbackCallingCount).isEqualTo(1));
+        await().untilAsserted(
+                () -> assertThat(callback.response.body().string()).isEqualTo("{\"name\":\"foo\"}"));
     }
 
     @Test
@@ -105,15 +108,16 @@ public class ArmeriaCallSubscriberTest {
         subscriber.onNext(HttpData.ofUtf8("bar"));
         subscriber.onComplete();
 
-        verify(subscription).request(Long.MAX_VALUE);
-        assertThat(callback.callbackCallingCount).isEqualTo(1);
-        assertThat(callback.response.header("content-type")).isEqualToIgnoringCase("text/plain; charset=utf-8");
-        assertThat(callback.response.body().string()).isEqualTo("bar");
+        verify(subscription, times(4)).request(1L);
+
+        await().untilAsserted(() -> assertThat(callback.callbackCallingCount).isEqualTo(1));
+        await().untilAsserted(() -> assertThat(callback.response.header("content-type"))
+                .isEqualToIgnoringCase("text/plain; charset=utf-8"));
+        await().untilAsserted(() -> assertThat(callback.response.body().string()).isEqualTo("bar"));
     }
 
     @Test
     public void cancel() throws Exception {
-
         when(armeriaCall.tryFinish()).thenReturn(false);
         when(armeriaCall.isCanceled()).thenReturn(false, false, true);
 
@@ -125,8 +129,9 @@ public class ArmeriaCallSubscriberTest {
         subscriber.onNext(HttpData.ofUtf8("{\"name\":\"foo\"}"));
         subscriber.onComplete();
 
-        verify(subscription).request(Long.MAX_VALUE);
-        assertThat(callback.callbackCallingCount).isEqualTo(1);
-        assertThat(callback.exception.getMessage()).isEqualTo("Canceled");
+        verify(subscription, times(2)).request(1L);
+
+        await().untilAsserted(() -> assertThat(callback.callbackCallingCount).isEqualTo(1));
+        await().untilAsserted(() -> assertThat(callback.exception.getMessage()).isEqualTo("Canceled"));
     }
 }
