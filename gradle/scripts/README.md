@@ -82,7 +82,7 @@ sensible defaults. By applying them, you can:
            mavenCentral()
        }
        dependencies {
-           classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+           classpath 'com.google.gradle:osdetector-gradle-plugin:1.6.0'
            classpath 'io.spring.gradle:dependency-management-plugin:1.0.5.RELEASE'
        }
    }
@@ -169,7 +169,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.google.gradle:osdetector-gradle-plugin:1.4.0"
+        classpath "com.google.gradle:osdetector-gradle-plugin:1.6.0"
+        classpath 'io.spring.gradle:dependency-management-plugin:1.0.5.RELEASE'
     }
 }
 
@@ -530,7 +531,7 @@ The task called `release` is added at the top level project. It will update the
 update the `version` property again to a next version.
 
 ```
-$ ./gradlew release -PreleaseVersion=0.0.1 -PnextVersion=0.0.2-SNAPSHOT
+$ ./gradlew release -PreleaseVersion=0.0.1 -PnextVersion=0.0.2
 ...
 Tagged: myproject-0.0.1
 ...

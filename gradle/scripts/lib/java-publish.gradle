@@ -1,13 +1,5 @@
-import java.nio.file.Files
-
 configure(projectsWithFlags('publish', 'java')) {
     def needsToPublishShadedJar = project.hasFlags('relocate')
-
-    if (project.ext.isSigning()) {
-        signing {
-            sign configurations.archives
-        }
-    }
 
     publishing {
         publications {
@@ -181,40 +173,6 @@ configure(projectsWithFlags('publish', 'java')) {
                 artifact(tasks.javadocJar) {
                     classifier = 'javadoc'
                 }
-
-                // Add the .asc signatures.
-                if (project.ext.isSigning()) {
-                    // Add the signature to pom.xml.
-                    pom.withXml {
-                        def tmpDir = project.file("${project.buildDir}/publications/tmp")
-                        project.mkdir(tmpDir)
-                        def tmpPomFile = Files.createTempFile(tmpDir.toPath(), 'pom-', '.xml').toFile()
-                        writeTo(tmpPomFile)
-                        def pomAscFile = signing.sign(tmpPomFile).signatureFiles[0]
-                        artifact(pomAscFile) {
-                            classifier = null
-                            extension = 'pom.asc'
-                        }
-                        tmpPomFile.delete()
-                    }
-
-                    // Add the signature to the main JAR.
-                    artifact(new File("${mainJarFile}.asc")) {
-                        extension = 'jar.asc'
-                    }
-
-                    // Add the signature to the sources JAR.
-                    artifact(new File("${tasks.sourceJar.archivePath}.asc")) {
-                        classifier = 'sources'
-                        extension = 'jar.asc'
-                    }
-
-                    // Add the signature to the javadoc JAR.
-                    artifact(new File("${tasks.javadocJar.archivePath}.asc")) {
-                        classifier = 'javadoc'
-                        extension = 'jar.asc'
-                    }
-                }
             }
 
             jar(MavenPublication, configureJarPublication.curry(false))
@@ -225,24 +183,8 @@ configure(projectsWithFlags('publish', 'java')) {
     }
 
     if (project.ext.isSigning()) {
-        model {
-            tasks.publishJarPublicationToMavenLocal {
-                dependsOn(project.tasks.signArchives)
-            }
-            tasks.publishJarPublicationToMavenRepository {
-                dependsOn(project.tasks.signArchives)
-            }
-            if (needsToPublishShadedJar) {
-                tasks.publishShadedJarPublicationToMavenLocal {
-                    dependsOn(project.tasks.signArchives)
-                }
-                tasks.publishShadedJarPublicationToMavenRepository {
-                    dependsOn(project.tasks.signArchives)
-                }
-            }
-            tasks.signArchives {
-                onlyIf { rootProject.ext.isSigning() }
-            }
+        signing {
+            sign publishing.publications
         }
     }
 }
