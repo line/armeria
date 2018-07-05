@@ -5,6 +5,7 @@ buildscript {
     dependencies {
         classpath 'com.google.gradle:osdetector-gradle-plugin:1.6.0'
         classpath 'io.spring.gradle:dependency-management-plugin:1.0.5.RELEASE'
+        classpath "ru.vyarus:gradle-animalsniffer-plugin:1.4.3"
     }
 }
 
@@ -44,6 +45,7 @@ allprojects {
 
 // Configure all Java projects
 configure(projectsWithFlags('java')) {
+    apply plugin: 'ru.vyarus.animalsniffer'
 
     // Common dependencies
     dependencies {
@@ -94,6 +96,17 @@ configure(projectsWithFlags('java')) {
         testCompile 'org.assertj:assertj-core'
         testCompile 'org.mockito:mockito-core'
         testCompile 'org.apache.httpcomponents:httpclient'
+
+        // Fail the build if Java 9+ APIs are used.
+        signature 'org.codehaus.mojo.signature:java18:1.0@signature'
+    }
+
+    animalsniffer {
+        toolVersion = '1.17'
+        sourceSets = [sourceSets.main]
+        ignore = [
+                'java.lang.invoke.MethodHandle' // https://github.com/mojohaus/animal-sniffer/issues/18
+        ]
     }
 }
 
