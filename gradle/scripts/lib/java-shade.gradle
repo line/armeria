@@ -130,19 +130,10 @@ configure(relocatedProjects) {
 
         tasks.assemble.dependsOn tasks.trimShadedJar
 
-        // Add the trimmed JAR to archives so that the 'signArchives' task signs it.
+        // Add the trimmed JAR to archives.
         artifacts {
             trimShadedJar.outJarFiles.each {
                 archives it
-            }
-        }
-
-        // Make sure trimShadedJar task is executed before signing.
-        if (project.ext.isSigning()) {
-            model {
-                tasks.signArchives {
-                    dependsOn tasks.trimShadedJar
-                }
             }
         }
     }

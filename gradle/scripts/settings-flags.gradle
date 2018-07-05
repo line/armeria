@@ -1,5 +1,12 @@
 import static java.util.Objects.requireNonNull
 
+// Ensure the Gradle version first of all.
+GradleVersion minimumSupportedGradleVersion = GradleVersion.version('4.8')
+if (GradleVersion.current() < minimumSupportedGradleVersion) {
+    throw new IllegalStateException("${minimumSupportedGradleVersion} or above is required to build this project.")
+}
+
+// Add the 'includeWithFlags' directive to 'settings'.
 ext.includeWithFlags = this.&includeWithFlags
 
 def includeWithFlags(CharSequence path, ...flags) {

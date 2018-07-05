@@ -132,43 +132,13 @@ configure(projectsWithFlags('bom')) {
                         return artifactA.compareTo(artifactB);
                     }
                 }
-
-                if (project.ext.isSigning()) {
-                    // Add the signature to pom.xml.
-                    pom.withXml {
-                        def outDir = project.file("${project.buildDir}/publications/bom")
-                        def pomFile = new File(outDir, 'pom-default.xml')
-                        def pomAscFile = new File(outDir, "${pomFile.name}.asc")
-
-                        writeTo(pomFile)
-
-                        def actualPomAscFile = signing.sign(pomFile).signatureFiles[0]
-                        if (actualPomAscFile != pomAscFile) {
-                            if (!actualPomAscFile.renameTo(pomAscFile)) {
-                                throw new IllegalStateException("failed to rename ${actualPomAscFile} to ${pomAscFile}")
-                            }
-                        }
-
-                        artifact(pomAscFile) {
-                            classifier = null
-                            extension = 'pom.asc'
-                        }
-
-                        // NB: No idea why, but Gradle does not publish an artifact when it's the only artifact
-                        // in a publication. We add /dev/null as a placeholder artifact to work around this
-                        // problem. However, this will not work on a non-UNIX which does not have /dev/null.
-                        def devNull = new File('/dev/null')
-                        if (!devNull.exists() || devNull.isFile() || devNull.isDirectory()) {
-                            throw new IllegalStateException('Cannot publish a BOM without /dev/null; try on UNIX.')
-                        }
-
-                        artifact(devNull) {
-                            classifier = null
-                            extension = '_'
-                        }
-                    }
-                }
             }
+        }
+    }
+
+    if (project.ext.isSigning()) {
+        signing {
+            sign publishing.publications
         }
     }
 
