@@ -44,8 +44,8 @@ const proxier = proxy('/', {
   changeOrigin: true,
 });
 
-async function proxyOnPost(ctx: any, next: any) {
-  if (ctx.method !== 'POST') {
+async function proxyToApi(ctx: any, next: any) {
+  if (ctx.method !== 'POST' && !ctx.path.endsWith('specification.json')) {
     return next();
   }
   return proxier(ctx, next);
@@ -59,7 +59,7 @@ serve({
   config,
   port: 3000,
   add: (app, middleware) => {
-    app.use(proxyOnPost);
+    app.use(proxyToApi);
     app.use(historyFallback);
     middleware.webpack();
     middleware.content();

@@ -26,32 +26,48 @@ import Typography from '@material-ui/core/Typography';
 import React, { ChangeEvent } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
-import {
-  simpleName,
-  Specification,
-  SpecificationData,
-} from '../../lib/specification';
+import { simpleName, Specification } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
-
-import testSpecification from '../../specification.json';
-
-const specification = new Specification(testSpecification as SpecificationData);
 
 interface State {
   debugRequest: string;
   debugResponse: string;
+  additionalHeadersOpen: boolean;
+  additionalHeaders: string;
 }
 
-export default class MethodPage extends React.PureComponent<
-  RouteComponentProps<{ serviceName: string; methodName: string }>,
-  State
-> {
-  public state = {
+interface OwnProps {
+  specification: Specification;
+}
+
+type Props = OwnProps &
+  RouteComponentProps<{ serviceName: string; methodName: string }>;
+
+export default class MethodPage extends React.PureComponent<Props, State> {
+  public state: State = {
     debugRequest: '',
     debugResponse: '',
+    additionalHeadersOpen: false,
+    additionalHeaders: '',
   };
 
+  public componentDidMount() {
+    this.initializeState();
+    this.executeRequest();
+  }
+
+  public componentDidUpdate(prevProps: Props) {
+    if (this.props.match.params !== prevProps.match.params) {
+      this.initializeState();
+    }
+    if (this.props.location.search !== prevProps.location.search) {
+      this.executeRequest();
+    }
+  }
+
   public render() {
+    const { specification } = this.props;
+
     const service = this.getService();
     if (!service) {
       return <>Not found.</>;
@@ -181,6 +197,22 @@ export default class MethodPage extends React.PureComponent<
                   onChange={this.onDebugFormChange}
                 />
                 <Typography variant="body1" paragraph />
+                <Button color="secondary" onClick={this.onEditHttpHeadersClick}>
+                  Edit HTTP headers
+                </Button>
+                <Typography variant="body1" paragraph />
+                {this.state.additionalHeadersOpen && (
+                  <>
+                    <TextField
+                      multiline
+                      fullWidth
+                      rows={8}
+                      value={this.state.additionalHeaders}
+                      onChange={this.onHeadersFormChange}
+                    />
+                    <Typography variant="body1" paragraph />
+                  </>
+                )}
                 <Button
                   variant="contained"
                   color="primary"
@@ -211,22 +243,57 @@ export default class MethodPage extends React.PureComponent<
     });
   };
 
+  private onHeadersFormChange = (e: ChangeEvent<HTMLInputElement>) => {
+    this.setState({
+      additionalHeaders: e.target.value,
+    });
+  };
+
+  private onEditHttpHeadersClick = () => {
+    this.setState({
+      additionalHeadersOpen: !this.state.additionalHeadersOpen,
+    });
+  };
+
   private onSubmit = async () => {
+    const args = this.state.debugRequest;
+    const headers = this.state.additionalHeaders;
+    const params = new URLSearchParams(this.props.location.search);
+    params.set('args', JSON.stringify(JSON.parse(args)));
+    if (headers) {
+      params.set('http_headers', JSON.stringify(JSON.parse(headers)));
+    }
+    this.props.history.push(
+      `${this.props.location.pathname}?${params.toString()}`,
+    );
+  };
+
+  private async executeRequest() {
+    const params = new URLSearchParams(this.props.location.search);
+    const argsText = params.get('args');
+    if (!argsText) {
+      return;
+    }
+    const headersText = params.get('http_headers');
+    const headers = headersText ? JSON.parse(headersText) : {};
+
     const method = this.getMethod()!;
     const transport = TRANSPORTS.getDebugTransport(method)!;
     let debugResponse;
     try {
-      debugResponse = await transport.send(method, this.state.debugRequest);
+      debugResponse = await transport.send(method, argsText, headers);
     } catch (e) {
       debugResponse = e.toString();
     }
     this.setState({
       debugResponse,
     });
-  };
+  }
 
   private getService() {
-    return specification.getServiceByName(this.props.match.params.serviceName);
+    return this.props.specification.getServiceByName(
+      this.props.match.params.serviceName,
+    );
   }
 
   private getMethod() {
@@ -234,5 +301,35 @@ export default class MethodPage extends React.PureComponent<
     return service.methods.find(
       (m) => m.name === this.props.match.params.methodName,
     );
+  }
+
+  private initializeState() {
+    const service = this.getService();
+    if (!service) {
+      return;
+    }
+    const method = this.getMethod();
+    if (!method) {
+      return;
+    }
+
+    const urlParams = new URLSearchParams(this.props.location.search);
+    const urlDebugRequest = urlParams.has('args')
+      ? JSON.stringify(JSON.parse(urlParams.get('args')!), null, 2)
+      : null;
+    const urlHeaders = urlParams.has('http_headers')
+      ? JSON.stringify(JSON.parse(urlParams.get('http_headers')!), null, 2)
+      : null;
+
+    const hasHeaders = !!urlHeaders || service.exampleHttpHeaders.length > 0;
+    this.setState({
+      debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
+      additionalHeaders:
+        urlHeaders ||
+        (hasHeaders
+          ? JSON.stringify(service.exampleHttpHeaders[0], null, 2)
+          : ''),
+      additionalHeadersOpen: hasHeaders,
+    });
   }
 }

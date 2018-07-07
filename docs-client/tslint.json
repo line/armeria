@@ -12,6 +12,7 @@
     "import-name": false,
     "interface-name": false,
     "jsx-boolean-value": false,
+    "jsx-no-lambda": false,
     "no-implicit-dependencies": false,
     "no-submodule-imports": false,
     "object-literal-sort-keys": false,

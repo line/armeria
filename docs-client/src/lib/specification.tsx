@@ -52,7 +52,7 @@ export interface Method {
 export interface Service {
   name: string;
   methods: Method[];
-  exampleHttpHeaders: any[];
+  exampleHttpHeaders: { [name: string]: string }[];
   docString?: DocString;
 }
 

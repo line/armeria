@@ -43,10 +43,6 @@ import {
   SpecificationData,
 } from '../../lib/specification';
 
-import testSpecification from '../../specification.json';
-
-const specification = new Specification(testSpecification as SpecificationData);
-
 const styles = (theme: Theme) =>
   createStyles({
     root: {
@@ -71,11 +67,32 @@ const styles = (theme: Theme) =>
     toolbar: theme.mixins.toolbar,
   });
 
-class App extends React.PureComponent<
-  WithStyles<typeof styles> & RouteComponentProps<{}>
-> {
+interface State {
+  specification?: Specification;
+}
+
+interface OwnProps {
+  urlBasename: string;
+}
+
+type Props = OwnProps & WithStyles<typeof styles> & RouteComponentProps<{}>;
+
+class App extends React.PureComponent<Props, State> {
+  public state: State = {
+    specification: undefined,
+  };
+
+  public componentWillMount() {
+    this.fetchSpecification();
+  }
+
   public render() {
     const { classes } = this.props;
+    const { specification } = this.state;
+
+    if (!specification) {
+      return null;
+    }
 
     return (
       <div className={classes.root}>
@@ -187,12 +204,24 @@ class App extends React.PureComponent<
         <main className={classes.content}>
           <div className={classes.toolbar} />
           <Route exact path="/" component={HomePage} />
-          <Route path="/enums/:name" component={EnumPage} />
+          <Route
+            path="/enums/:name"
+            render={(props) => (
+              <EnumPage {...props} specification={specification} />
+            )}
+          />
           <Route
             path="/methods/:serviceName/:methodName"
-            component={MethodPage}
+            render={(props) => (
+              <MethodPage {...props} specification={specification} />
+            )}
           />
-          <Route path="/structs/:name" component={StructPage} />
+          <Route
+            path="/structs/:name"
+            render={(props) => (
+              <StructPage {...props} specification={specification} />
+            )}
+          />
         </main>
       </div>
     );
@@ -201,6 +230,16 @@ class App extends React.PureComponent<
   private navigateTo(to: string) {
     this.props.history.push(to);
   }
+
+  private fetchSpecification = async () => {
+    const httpResponse = await fetch(
+      `${this.props.urlBasename}/specification.json`,
+    );
+    const specification: SpecificationData = await httpResponse.json();
+    this.setState({
+      specification: new Specification(specification),
+    });
+  };
 }
 
 export default hot(module)(withRouter(withStyles(styles)(App)));

@@ -22,9 +22,15 @@ import { BrowserRouter } from 'react-router-dom';
 
 import App from './containers/App';
 
+const path = window.location.pathname;
+const PATH_REGEX = /^(\/.+)(\/enums\/.+|\/methods\/.+|\/structs\/.+|\/)$/g;
+
+const match = PATH_REGEX.exec(path);
+const basename = match ? match[1] : '';
+
 ReactDOM.render(
-  <BrowserRouter>
-    <App />
+  <BrowserRouter basename={basename}>
+    <App urlBasename={basename} />
   </BrowserRouter>,
   document.getElementById('app'),
 );

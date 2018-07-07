@@ -16,13 +16,19 @@
 
 import { Method } from '../specification';
 
+import GrpcUnframedTransport from './grpc-unframed';
 import ThriftTransport from './thrift';
 
 export interface Transport {
   supportsMimeType(mimeType: string): boolean;
-  send(method: Method, bodyJson: string): Promise<string>;
+  send(
+    method: Method,
+    bodyJson: string,
+    headers: { [name: string]: string },
+  ): Promise<string>;
 }
 
+const grpcUnframedTransport = new GrpcUnframedTransport();
 const thriftTransport = new ThriftTransport();
 
 export class Transports {
@@ -34,6 +40,9 @@ export class Transports {
       );
     }
     for (const mimeType of mimeTypes) {
+      if (grpcUnframedTransport.supportsMimeType(mimeType)) {
+        return grpcUnframedTransport;
+      }
       if (thriftTransport.supportsMimeType(mimeType)) {
         return thriftTransport;
       }

@@ -18,11 +18,12 @@ import { Method } from '../specification';
 
 import { Transport } from './index';
 
-const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
+const GRPC_UNFRAMED_MIME_TYPE =
+  'application/json; charset=utf-8; protocol=gRPC';
 
-export default class ThriftTransport implements Transport {
+export default class GrpcUnframedTransport implements Transport {
   public supportsMimeType(mimeType: string): boolean {
-    return mimeType === TTEXT_MIME_TYPE;
+    return mimeType === GRPC_UNFRAMED_MIME_TYPE;
   }
 
   public async send(
@@ -31,18 +32,14 @@ export default class ThriftTransport implements Transport {
     headers: { [name: string]: string },
   ): Promise<string> {
     const endpoint = method.endpoints.find((ep) =>
-      ep.availableMimeTypes.includes(TTEXT_MIME_TYPE),
+      ep.availableMimeTypes.includes(GRPC_UNFRAMED_MIME_TYPE),
     );
     if (!endpoint) {
-      throw new Error('Endpoint does not support thrift debug transport');
+      throw new Error('Endpoint does not support gRPC debug transport');
     }
 
-    const thriftMethod = endpoint.fragment
-      ? `${endpoint.fragment}:${method.name}`
-      : method.name;
-
     const hdrs = new Headers();
-    hdrs.set('content-type', TTEXT_MIME_TYPE);
+    hdrs.set('content-type', GRPC_UNFRAMED_MIME_TYPE);
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
     }
@@ -50,9 +47,9 @@ export default class ThriftTransport implements Transport {
     const httpResponse = await fetch(endpoint.path, {
       headers: hdrs,
       method: 'POST',
-      body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,
+      body: bodyJson,
     });
     const response = await httpResponse.text();
-    return response.length > 0 ? response : 'Request sent to one-way function';
+    return response;
   }
 }

@@ -27,17 +27,17 @@ import {
   packageName,
   simpleName,
   Specification,
-  SpecificationData,
 } from '../../lib/specification';
 
-import testSpecification from '../../specification.json';
+interface OwnProps {
+  specification: Specification;
+}
 
-const specification = new Specification(testSpecification as SpecificationData);
+type Props = OwnProps & RouteComponentProps<{ name: string }>;
 
-export default class EnumPage extends React.PureComponent<
-  RouteComponentProps<{ name: string }>
-> {
+export default class EnumPage extends React.PureComponent<Props> {
   public render() {
+    const { specification } = this.props;
     const data = specification.getEnumByName(this.props.match.params.name);
     if (!data) {
       return <>Not found.</>;
