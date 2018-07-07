@@ -21,3 +21,11 @@ $ PROXY_PORT=51234 yarn run start
 
 Replacing the port of a docs page in the running server with `3000` will use the dev server to render while
 proxying all server calls to the actual Armeria server.
+
+## Updating licenses
+
+When changing a dependency (i.e., when the `yarn.lock` file changes), refresh license information by running
+
+```bash
+$ yarn licenses generate-disclaimer --prod > 3rd-party-licenses.txt
+```
