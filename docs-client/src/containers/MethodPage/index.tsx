@@ -319,9 +319,12 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       params.delete('http_headers_sticky');
     }
 
-    this.props.history.push(
-      `${this.props.location.pathname}?${params.toString()}`,
-    );
+    const serializedParams = `?${params.toString()}`;
+    if (serializedParams !== this.props.location.search) {
+      this.props.history.push(
+        `${this.props.location.pathname}${serializedParams}`,
+      );
+    }
   };
 
   private async executeRequest() {
