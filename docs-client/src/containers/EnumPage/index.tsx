@@ -45,9 +45,11 @@ export default class EnumPage extends React.PureComponent<Props> {
 
     return (
       <>
-        <Typography variant="headline">{simpleName(data.name)}</Typography>
+        <Typography variant="headline">
+          <code>{simpleName(data.name)}</code>
+        </Typography>
         <Typography variant="subheading" paragraph>
-          {packageName(data.name)}
+          <code>{packageName(data.name)}</code>
         </Typography>
         <Typography variant="body1" paragraph>
           {data.docString}

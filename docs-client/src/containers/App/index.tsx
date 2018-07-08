@@ -71,11 +71,7 @@ interface State {
   specification?: Specification;
 }
 
-interface OwnProps {
-  urlBasename: string;
-}
-
-type Props = OwnProps & WithStyles<typeof styles> & RouteComponentProps<{}>;
+type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
 
 class App extends React.PureComponent<Props, State> {
   public state: State = {
@@ -228,13 +224,16 @@ class App extends React.PureComponent<Props, State> {
   }
 
   private navigateTo(to: string) {
-    this.props.history.push(to);
+    const params = new URLSearchParams(this.props.location.search);
+    params.delete('args');
+    const url = params.has('http_headers_sticky')
+      ? `${to}?${params.toString()}`
+      : to;
+    this.props.history.push(url);
   }
 
   private fetchSpecification = async () => {
-    const httpResponse = await fetch(
-      `${this.props.urlBasename}/specification.json`,
-    );
+    const httpResponse = await fetch('specification.json');
     const specification: SpecificationData = await httpResponse.json();
     this.setState({
       specification: new Specification(specification),

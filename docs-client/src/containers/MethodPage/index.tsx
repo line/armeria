@@ -15,6 +15,8 @@
  */
 
 import Button from '@material-ui/core/Button';
+import Checkbox from '@material-ui/core/Checkbox';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Grid from '@material-ui/core/Grid';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -23,17 +25,24 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
+import jsonMinify from 'jsonminify';
 import React, { ChangeEvent } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
 
+import jsonPrettify from '../../lib/json-prettify';
 import { simpleName, Specification } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
+
+import VariableList from '../../components/VariableList';
 
 interface State {
   debugRequest: string;
   debugResponse: string;
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
+  stickyHeaders: boolean;
 }
 
 interface OwnProps {
@@ -49,6 +58,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     debugResponse: '',
     additionalHeadersOpen: false,
     additionalHeaders: '',
+    stickyHeaders: false,
   };
 
   public componentDidMount() {
@@ -85,34 +95,11 @@ export default class MethodPage extends React.PureComponent<Props, State> {
         <Typography variant="body1" paragraph>
           {method.docString}
         </Typography>
-        <Typography variant="title">Parameters</Typography>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Required</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Description</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {method.parameters.map((param) => (
-              <TableRow key={param.name}>
-                <TableCell>
-                  <code>{param.name}</code>
-                </TableCell>
-                <TableCell>{param.requirement}</TableCell>
-                <TableCell>
-                  <code>
-                    {specification.getTypeSignatureHtml(param.typeSignature)}
-                  </code>
-                </TableCell>
-                <TableCell>{param.docString}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Typography variant="body1" paragraph />
+        <VariableList
+          title="Parameters"
+          variables={method.parameters}
+          specification={specification}
+        />
         <Typography variant="title">Return Type</Typography>
         <Table>
           <TableBody>
@@ -211,6 +198,16 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                       onChange={this.onHeadersFormChange}
                     />
                     <Typography variant="body1" paragraph />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={this.state.stickyHeaders}
+                          onChange={this.onStickyHeadersChange}
+                        />
+                      }
+                      label="Use these HTTP headers for all functions."
+                    />
+                    <Typography variant="body1" paragraph />
                   </>
                 )}
                 <Button
@@ -222,13 +219,13 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                 </Button>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  multiline
-                  fullWidth
-                  disabled
-                  rows={15}
-                  value={this.state.debugResponse}
-                />
+                <SyntaxHighlighter
+                  language="json"
+                  style={githubGist}
+                  wrapLines={false}
+                >
+                  {this.state.debugResponse}
+                </SyntaxHighlighter>
               </Grid>
             </Grid>
           </>
@@ -249,6 +246,12 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     });
   };
 
+  private onStickyHeadersChange = () => {
+    this.setState({
+      stickyHeaders: !this.state.stickyHeaders,
+    });
+  };
+
   private onEditHttpHeadersClick = () => {
     this.setState({
       additionalHeadersOpen: !this.state.additionalHeadersOpen,
@@ -259,10 +262,51 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     const args = this.state.debugRequest;
     const headers = this.state.additionalHeaders;
     const params = new URLSearchParams(this.props.location.search);
-    params.set('args', JSON.stringify(JSON.parse(args)));
-    if (headers) {
-      params.set('http_headers', JSON.stringify(JSON.parse(headers)));
+
+    try {
+      const parsedArgs = JSON.parse(args);
+      if (typeof parsedArgs !== 'object') {
+        this.setState({
+          debugResponse: `Arguments must be a JSON object.\nYou entered: ${typeof parsedArgs}`,
+        });
+      }
+    } catch (e) {
+      this.setState({
+        debugResponse: `Failed to parse a JSON object in the arguments field:\n${e}`,
+      });
     }
+    // Do not round-trip through JSON.parse to minify the text so as to not lose numeric precision.
+    // See: https://github.com/line/armeria/issues/273
+    params.set('args', jsonMinify(args));
+
+    if (headers) {
+      try {
+        const parsedHeaders = JSON.parse(headers);
+        if (typeof params !== 'object') {
+          this.setState({
+            debugResponse: `HTTP headers must be a JSON object.\nYou entered: ${typeof parsedHeaders}`,
+          });
+        }
+      } catch (e) {
+        this.setState({
+          debugResponse: `Failed to parse a JSON object in the HTTP headers field:\n${e}`,
+        });
+      }
+      let minifiedHeaders = jsonMinify(headers);
+      if (minifiedHeaders === '{}') {
+        minifiedHeaders = '';
+      }
+      if (minifiedHeaders.length > 0) {
+        params.set('http_headers', minifiedHeaders);
+      }
+    }
+
+    if (this.state.stickyHeaders) {
+      params.set('http_headers_sticky', 'true');
+    } else {
+      params.delete('http_headers_sticky');
+    }
+
     this.props.history.push(
       `${this.props.location.pathname}?${params.toString()}`,
     );
@@ -315,21 +359,23 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
     const urlParams = new URLSearchParams(this.props.location.search);
     const urlDebugRequest = urlParams.has('args')
-      ? JSON.stringify(JSON.parse(urlParams.get('args')!), null, 2)
+      ? jsonPrettify(urlParams.get('args')!)
       : null;
     const urlHeaders = urlParams.has('http_headers')
-      ? JSON.stringify(JSON.parse(urlParams.get('http_headers')!), null, 2)
+      ? jsonPrettify(urlParams.get('http_headers')!)
       : null;
 
     const hasHeaders = !!urlHeaders || service.exampleHttpHeaders.length > 0;
     this.setState({
       debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
+      debugResponse: '',
       additionalHeaders:
         urlHeaders ||
         (hasHeaders
           ? JSON.stringify(service.exampleHttpHeaders[0], null, 2)
           : ''),
       additionalHeadersOpen: hasHeaders,
+      stickyHeaders: urlParams.has('http_headers_sticky'),
     });
   }
 }

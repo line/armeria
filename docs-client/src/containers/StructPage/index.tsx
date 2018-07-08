@@ -14,14 +14,11 @@
  * under the License.
  */
 
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
+
+import VariableList from '../../components/VariableList';
 
 import {
   packageName,
@@ -45,45 +42,21 @@ export default class StructPage extends React.PureComponent<Props> {
 
     return (
       <>
-        <Typography variant="headline">{simpleName(data.name)}</Typography>
+        <Typography variant="headline">
+          <code>{simpleName(data.name)}</code>
+        </Typography>
         <Typography variant="subheading" paragraph>
-          {packageName(data.name)}
+          <code>{packageName(data.name)}</code>
         </Typography>
         <Typography variant="body1" paragraph>
           {data.docString}
         </Typography>
         {data.fields.length > 0 && (
-          <>
-            <Typography variant="title">Fields</Typography>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Required</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Description</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.fields.map((field) => (
-                  <TableRow key={field.name}>
-                    <TableCell>
-                      <code>{field.name}</code>
-                    </TableCell>
-                    <TableCell>{field.requirement}</TableCell>
-                    <TableCell>
-                      <code>
-                        {specification.getTypeSignatureHtml(
-                          field.typeSignature,
-                        )}
-                      </code>
-                    </TableCell>
-                    <TableCell>{field.docString}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </>
+          <VariableList
+            title="Fields"
+            variables={data.fields}
+            specification={specification}
+          />
         )}
       </>
     );
