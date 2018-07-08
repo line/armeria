@@ -257,7 +257,7 @@ private Configuration createShadedTestRuntimeConfiguration(
 
     if (recursedProject.tasks.findByName('trimShadedJar')) {
         project.dependencies.add(shadedTestRuntime.name, files(recursedProject.tasks.trimShadedJar.outJarFiles))
-    } else {
+    } else if (recursedProject.tasks.findByName('shadedJar')) {
         project.dependencies.add(shadedTestRuntime.name, files(recursedProject.tasks.shadedJar.archivePath))
     }
 
