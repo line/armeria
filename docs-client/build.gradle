@@ -18,8 +18,28 @@ plugins {
     id 'com.moowork.node' version '1.2.0'
 }
 
+apply plugin: 'java-library'
+
 task buildWeb(type: YarnTask) {
     args = ['run', 'build']
+
+    inputs.dir('src')
+    inputs.file('package.json')
+    inputs.file('yarn.lock')
+    outputs.dir('build/web')
+}
+
+task copyWeb(type: Copy) {
+    dependsOn buildWeb
+
+    from 'build/web'
+    into 'build/javaweb/com/linecorp/armeria/server/docs'
+}
+
+sourceSets {
+    main {
+        output.dir 'build/javaweb', builtBy: copyWeb
+    }
 }
 
 node {

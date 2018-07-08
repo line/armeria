@@ -29,7 +29,7 @@ const config: webpack.Configuration = {
   },
   output: {
     path: path.resolve(process.cwd(), './build/web'),
-    publicPath: '/',
+    publicPath: '',
   },
   module: {
     rules: [
