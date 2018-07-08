@@ -18,6 +18,9 @@ import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Grid from '@material-ui/core/Grid';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -149,20 +152,23 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                 <TableCell>{endpoint.hostnamePattern}</TableCell>
                 <TableCell>{endpoint.path}</TableCell>
                 <TableCell>
-                  <ul>
+                  <List dense>
                     {endpoint.availableMimeTypes.map((mimeType) => (
-                      <li
-                        style={{
-                          fontWeight:
-                            mimeType === endpoint.defaultMimeType
-                              ? 'bold'
-                              : 'normal',
-                        }}
-                      >
-                        {mimeType}
-                      </li>
+                      <ListItem>
+                        <ListItemText
+                          primary={mimeType}
+                          primaryTypographyProps={{
+                            style: {
+                              fontWeight:
+                                mimeType === endpoint.defaultMimeType
+                                  ? 'bold'
+                                  : 'normal',
+                            },
+                          }}
+                        />
+                      </ListItem>
                     ))}
-                  </ul>
+                  </List>
                 </TableCell>
               </TableRow>
             ))}
@@ -182,6 +188,9 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                   rows={15}
                   value={this.state.debugRequest}
                   onChange={this.onDebugFormChange}
+                  inputProps={{
+                    className: 'code',
+                  }}
                 />
                 <Typography variant="body1" paragraph />
                 <Button color="secondary" onClick={this.onEditHttpHeadersClick}>
@@ -196,6 +205,9 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                       rows={8}
                       value={this.state.additionalHeaders}
                       onChange={this.onHeadersFormChange}
+                      inputProps={{
+                        className: 'code',
+                      }}
                     />
                     <Typography variant="body1" paragraph />
                     <FormControlLabel

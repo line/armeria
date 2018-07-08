@@ -14,21 +14,7 @@
  * under the License.
  */
 
-import '@babel/polyfill';
-import 'typeface-roboto';
-import 'typeface-roboto-mono';
-
-import React from 'react';
-import ReactDOM from 'react-dom';
-import { HashRouter } from 'react-router-dom';
-
-import App from './containers/App';
-
-import './index.css';
-
-ReactDOM.render(
-  <HashRouter>
-    <App />
-  </HashRouter>,
-  document.getElementById('app'),
-);
+pre, code, kbd, var, samp, tt, .code {
+  font-family: 'Roboto Mono', 'Consolas', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
+    'DejaVu Sans Mono', monospace !important;
+}

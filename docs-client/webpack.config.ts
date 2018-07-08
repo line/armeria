@@ -73,6 +73,14 @@ const config: webpack.Configuration = {
           },
         ],
       },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.(eot|otf|ttf|woff|woff2)$/,
+        use: 'file-loader',
+      },
     ],
   },
   resolve: {

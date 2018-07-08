@@ -28,7 +28,9 @@ async function historyFallback(ctx: any, next: any) {
   if (
     ctx.path.endsWith('.js') ||
     ctx.path.endsWith('.css') ||
-    ctx.path.endsWith('.json')
+    ctx.path.endsWith('.json') ||
+    ctx.path.endsWith('.woff') ||
+    ctx.path.endsWith('.woff2')
   ) {
     return next();
   }
