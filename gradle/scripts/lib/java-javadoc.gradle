@@ -2,7 +2,9 @@ import java.security.MessageDigest
 
 def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
 def javadocCacheDir = new File(gradle.gradleUserHomeDir, 'caches/package-lists')
-def defaultStylesheetFile = new File(buildscript.sourceFile.parentFile, 'java-javadoc.css')
+def defaultStylesheetFile = new File(
+        buildscript.sourceFile.parentFile,
+        JavaVersion.current() < JavaVersion.VERSION_1_9 ? 'java-javadoc.pre-jdk9.css' : 'java-javadoc.css')
 def visitedUrls = new HashSet<String>()
 
 task cleanJavadocCache(type: Delete, group: 'Build', description: 'Deletes the javadoc cache directory.') {
@@ -105,14 +107,25 @@ allprojects {
             stylesheetFile = defaultStylesheetFile
 
             // Enable all lints except the missing tag warnings
-            addBooleanOption('Xdoclint:all').value = true
-            addBooleanOption('Xdoclint:-missing').value = true
+            addBooleanOption('Xdoclint:accessibility').value = true
+            addBooleanOption('Xdoclint:html').value = true
+            addBooleanOption('Xdoclint:reference').value = true
+            addBooleanOption('Xdoclint:syntax').value = true
+
+            // Enable HTML5 if possible.
+            if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+                addBooleanOption('html5').value = true
+            }
 
             // Add --allow-script-in-comments if available (since 1.8.0_121)
             try {
-                if (Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl')
-                        .newInstance().optionLength('--allow-script-in-comments') > 0) {
+                if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
                     addBooleanOption('-allow-script-in-comments').value = true
+                } else {
+                    if (Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl')
+                            .newInstance().optionLength('--allow-script-in-comments') > 0) {
+                        addBooleanOption('-allow-script-in-comments').value = true
+                    }
                 }
             } catch (ignored) {}
 

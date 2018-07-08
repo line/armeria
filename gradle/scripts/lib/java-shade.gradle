@@ -116,7 +116,16 @@ configure(relocatedProjects) {
                 }
             }
             libraryjars files(dependencyJars)
-            libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
+
+            // Add JDK. Use modules instead of rt.jar if possible.
+            File jmodDir = file("${System.getProperty('java.home')}/jmods")
+            if (jmodDir.isDirectory()) {
+                jmodDir.listFiles().findAll { File f ->
+                    f.isFile() && f.name.toLowerCase(Locale.ENGLISH).endsWith(".jmod")
+                }.each { libraryjars it }
+            } else {
+                libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
+            }
 
             dontoptimize
             dontobfuscate
@@ -130,19 +139,10 @@ configure(relocatedProjects) {
 
         tasks.assemble.dependsOn tasks.trimShadedJar
 
-        // Add the trimmed JAR to archives so that the 'signArchives' task signs it.
+        // Add the trimmed JAR to archives.
         artifacts {
             trimShadedJar.outJarFiles.each {
                 archives it
-            }
-        }
-
-        // Make sure trimShadedJar task is executed before signing.
-        if (project.ext.isSigning()) {
-            model {
-                tasks.signArchives {
-                    dependsOn tasks.trimShadedJar
-                }
             }
         }
     }

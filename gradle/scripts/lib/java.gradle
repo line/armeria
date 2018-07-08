@@ -21,13 +21,25 @@ configure(projectsWithFlags('java')) {
 
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
+        def task = delegate
         sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: '1.8'
         targetCompatibility = project.findProperty('javaTargetCompatibility') ?: '1.8'
         options.encoding = 'UTF-8'
         options.warnings = false
         options.debug = true
-        options.incremental = true
         options.compilerArgs += '-parameters'
+        project.configurations.each { Configuration cfg ->
+            if (cfg.name == 'annotationProcessor' || cfg.name.endsWith('AnnotationProcessor')) {
+                cfg.withDependencies { deps ->
+                    // Use incremental compilation only when there are no annotation processors,
+                    // because it seems to cause compilation errors for some processors such as Lombok.
+                    def useIncrementalCompilation = deps.size() == 0
+                    options.incremental = useIncrementalCompilation
+                    logger.info("${useIncrementalCompilation ? 'Enabling' : 'Disabling'} " +
+                                "incremental compilation for '${task.path}'")
+                }
+            }
+        }
     }
 
     // Generate a source JAR.
