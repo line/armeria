@@ -75,21 +75,24 @@ final class ThriftServiceUtils {
             return ImmutableSet.of();
         }
         return service.as(thriftServiceClass)
-                      .map(s -> invokeMethod(entriesMethod, s))
-                      .map(Map.class::cast)
-                      .map(Map::values)
-                      .map(ThriftServiceUtils::toServiceName)
+                      .map(s -> {
+                          @SuppressWarnings("unchecked")
+                          final Map<String, ?> entries = (Map<String, ?>) invokeMethod(entriesMethod, s);
+                          assert entries != null;
+                          return toServiceName(entries.values());
+                      })
                       .orElse(ImmutableSet.of());
     }
 
     private static Set<String> toServiceName(Collection<?> entries) {
         return entries.stream()
-                      .map(entry -> invokeMethod(interfacesMethod, entry))
-                      .map(Collection.class::cast)
-                      .flatMap(Collection::stream)
-                      .map(Class.class::cast)
-                      .map(Class::getEnclosingClass)
-                      .map(Class::getName)
+                      .flatMap(entry -> {
+                          @SuppressWarnings("unchecked")
+                          final Set<Class<?>> ifaces = (Set<Class<?>>) invokeMethod(interfacesMethod, entry);
+                          assert ifaces != null;
+                          return ifaces.stream();
+                      })
+                      .map(iface -> iface.getEnclosingClass().getName())
                       .collect(toImmutableSet());
     }
 }
