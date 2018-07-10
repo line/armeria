@@ -49,20 +49,20 @@ public class ClientAuthIntegrationTest {
     public static ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            SslContext sslContext =
+            final SslContext sslContext =
                     SslContextBuilder.forServer(serverCert.certificateFile(), serverCert.privateKeyFile())
                                      .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                                     .clientAuth(ClientAuth.OPTIONAL)
+                                     .clientAuth(ClientAuth.REQUIRE)
                                      .build();
             sb.tls(sslContext)
-              .service("/", ((ctx, req) -> HttpResponse.of("success")))
+              .service("/", (ctx, req) -> HttpResponse.of("success"))
               .decorator(new LoggingServiceBuilder().newDecorator());
         }
     };
 
     @Test
     public void normal() {
-        HttpClient client = new HttpClientBuilder(rule.httpsUri("/"))
+        final HttpClient client = new HttpClientBuilder(rule.httpsUri("/"))
                 .factory(new ClientFactoryBuilder()
                                  .sslContextCustomizer(ctx -> ctx
                                          .keyManager(clientCert.certificateFile(), clientCert.privateKeyFile())
