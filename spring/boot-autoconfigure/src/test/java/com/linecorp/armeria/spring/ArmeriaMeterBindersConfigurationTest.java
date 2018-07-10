@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
+import org.assertj.core.api.Condition;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -86,11 +87,15 @@ public class ArmeriaMeterBindersConfigurationTest {
         assertThat(measurements).containsKeys(
                 "jvm.buffer.count#value{id=direct}",
                 "jvm.classes.loaded#value",
-                "jvm.memory.max#value{area=nonheap,id=Code Cache}",
                 "jvm.threads.daemon#value",
                 "logback.events#count{level=debug}",
                 "process.uptime#value",
                 "system.cpu.count#value");
+
+        // Use prefix-matching for meter IDs because JVM memory meters differ between JVM versions.
+        assertThat(measurements).hasKeySatisfying(new Condition<>(
+                key -> key.startsWith("jvm.memory.max#value{area=nonheap,id="),
+                "MeterRegistry must contain JVM memory meters"));
 
         final OperatingSystemMXBean os = ManagementFactory.getOperatingSystemMXBean();
         boolean hasOpenFdCount = false;
