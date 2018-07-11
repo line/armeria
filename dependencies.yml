@@ -142,7 +142,7 @@ io.netty:
     - https://netty.io/4.1/api/
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.12.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.10.Final' }
 
 io.prometheus:
   simpleclient_common:
