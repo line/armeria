@@ -1,6 +1,6 @@
 dependencyManagement {
     dependencies {
-        dependencySet(group: 'org.apache.tomcat.embed', version: '8.0.52') {
+        dependencySet(group: 'org.apache.tomcat.embed', version: '8.0.53') {
             entry 'tomcat-embed-core'
             entry 'tomcat-embed-jasper'
             entry 'tomcat-embed-el'
