@@ -491,20 +491,9 @@ public class GrpcClientTest {
         requestStream.onCompleted();
         recorder.awaitCompletion();
 
-        try {
-            assertSuccess(recorder);
-        } catch (AssertionError e) {
-            if (System.getenv("CI") != null) {
-                // On CI, it seems relatively common for the socket to get killed during this test. Just log
-                // the error instead of failing it.
-                logger.warn("Ignoring test failure.", e);
-                return;
-            }
-
-            throw e;
-        }
-
+        assertSuccess(recorder);
         assertThat(recorder.getValues()).hasSize(responseSizes.size() * numRequests);
+
         for (int ix = 0; ix < recorder.getValues().size(); ++ix) {
             final StreamingOutputCallResponse response = recorder.getValues().get(ix);
             assertThat(response.getPayload().getType()).isEqualTo(COMPRESSABLE);
@@ -562,33 +551,26 @@ public class GrpcClientTest {
 
         // Time how long it takes to get the first response.
         call.request(1);
-        try {
-            assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(
-                    goldenResponses.get(0));
-            final long firstCallDuration = System.nanoTime() - start;
 
-            // Without giving additional flow control, make sure that we don't get another response. We wait
-            // until we are comfortable the next message isn't coming. We may have very low nanoTime
-            // resolution (like on Windows) or be using a testing, in-process transport where message
-            // handling is instantaneous. In both cases, firstCallDuration may be 0, so round up sleep time
-            // to at least 1ms.
-            assertThat(queue.poll(Math.max(firstCallDuration * 4, 1_000_000), TimeUnit.NANOSECONDS)).isNull();
+        final Object actualResponse1 = queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
+        assertThat(actualResponse1).withFailMessage("Unexpected response: %s", actualResponse1)
+                                   .isEqualTo(goldenResponses.get(0));
+        final long firstCallDuration = System.nanoTime() - start;
 
-            // Make sure that everything still completes.
-            call.request(1);
-            assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(
-                    goldenResponses.get(1));
-            assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(Status.OK);
-            call.cancel("Cancelled after all of the requests are done", null);
-        } catch (Throwable t) {
-            if (System.getenv("CI") != null) {
-                // On CI, it seems relatively common for the socket to get killed during this test. Just log
-                // the error instead of failing it.
-                logger.warn("Ignoring test failure.", t);
-            } else {
-                throw t;
-            }
-        }
+        // Without giving additional flow control, make sure that we don't get another response. We wait
+        // until we are comfortable the next message isn't coming. We may have very low nanoTime
+        // resolution (like on Windows) or be using a testing, in-process transport where message
+        // handling is instantaneous. In both cases, firstCallDuration may be 0, so round up sleep time
+        // to at least 1ms.
+        assertThat(queue.poll(Math.max(firstCallDuration * 4, 1_000_000), TimeUnit.NANOSECONDS)).isNull();
+
+        // Make sure that everything still completes.
+        call.request(1);
+        final Object actualResponse2 = queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
+        assertThat(actualResponse2).withFailMessage("Unexpected response: %s", actualResponse2)
+                                   .isEqualTo(goldenResponses.get(1));
+        assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(Status.OK);
+        call.cancel("Cancelled after all of the requests are done", null);
     }
 
     @Test(timeout = 30000)
