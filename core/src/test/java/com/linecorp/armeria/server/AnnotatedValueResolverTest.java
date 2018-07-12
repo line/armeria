@@ -121,13 +121,11 @@ public class AnnotatedValueResolverTest {
     }
 
     static boolean shouldHttpParameterExist(AnnotatedValueResolver element) {
-        return element.shouldExist() ||
-               existingHttpParameters.contains(element.httpElementName());
+        return existingHttpParameters.contains(element.httpElementName());
     }
 
     static boolean shouldPathVariableExist(AnnotatedValueResolver element) {
-        return element.shouldExist() ||
-               pathParams.contains(element.httpElementName());
+        return pathParams.contains(element.httpElementName());
     }
 
     @Test
