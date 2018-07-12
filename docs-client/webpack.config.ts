@@ -58,7 +58,7 @@ const config: webpack.Configuration = {
                   },
                 ],
               ],
-              plugins: ['react-hot-loader/babel', 'styled-components'],
+              plugins: ['react-hot-loader/babel'],
             },
           },
           {
