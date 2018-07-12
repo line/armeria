@@ -299,6 +299,7 @@ final class AnnotatedValueResolver {
                 .annotation(param)
                 .httpElementName(name)
                 .typeElement(typeElement)
+                .supportOptional(true)
                 .pathVariable(true)
                 .resolver(resolver(ctx -> ctx.context().pathParam(name)))
                 .build();
@@ -570,8 +571,13 @@ final class AnnotatedValueResolver {
     }
 
     @VisibleForTesting
-    public boolean shouldExist() {
+    boolean shouldExist() {
         return shouldExist;
+    }
+
+    @VisibleForTesting
+    boolean shouldWrapValueAsOptional() {
+        return shouldWrapValueAsOptional;
     }
 
     @VisibleForTesting
@@ -806,33 +812,48 @@ final class AnnotatedValueResolver {
 
             final Default aDefault = annotatedElement.getAnnotation(Default.class);
             if (aDefault != null) {
-                if (!supportDefault) {
-                    throw new IllegalArgumentException(
-                            '@' + Default.class.getSimpleName() + " is not supported for: " +
-                            (annotation != null ? annotation.annotationType().getSimpleName()
-                                                : type.getTypeName()));
-                }
+                if (supportDefault) {
+                    // Warn unusual usage. e.g. @Param @Default("a") Optional<String> param
+                    if (shouldWrapValueAsOptional) {
+                        // 'annotatedElement' can be one of constructor, field, method or parameter.
+                        // So, it may be printed verbosely but it's okay because it provides where this message
+                        // is caused.
+                        logger.warn("@{} was used with '{}'. " +
+                                    "Optional is redundant because the value is always present.",
+                                    Default.class.getSimpleName(), annotatedElement);
+                    }
 
-                // Warn unusual usage. e.g. @Param @Default("a") Optional<String> param
-                if (shouldWrapValueAsOptional) {
-                    // 'annotatedElement' can be one of constructor, field, method or parameter.
-                    // So, it may be printed verbosely but it's okay because it provides where this message
-                    // is caused.
-                    logger.warn("Both {} type and @{} are specified on {}. One of them can be omitted.",
-                                Optional.class.getSimpleName(), Default.class.getSimpleName(),
-                                annotatedElement);
-                }
+                    shouldExist = false;
+                    defaultValue = getSpecifiedValue(aDefault.value()).get();
+                } else {
+                    // Warn if @Default exists in an unsupported place.
+                    final StringBuilder msg = new StringBuilder();
+                    msg.append('@');
+                    msg.append(Default.class.getSimpleName());
+                    msg.append(" is redundant for ");
+                    if (pathVariable) {
+                        msg.append("path variable '").append(httpElementName).append('\'');
+                    } else if (annotation != null) {
+                        msg.append("annotation @").append(annotation.annotationType().getSimpleName());
+                    } else {
+                        msg.append("type '").append(type.getTypeName()).append('\'');
+                    }
+                    msg.append(" because the value is always present.");
+                    logger.warn(msg.toString());
 
-                shouldExist = false;
-                defaultValue = getSpecifiedValue(aDefault.value()).get();
+                    shouldExist = !shouldWrapValueAsOptional;
+                    // Set the default value to null just like it was not specified.
+                    defaultValue = null;
+                }
             } else {
                 shouldExist = !shouldWrapValueAsOptional;
-                // Set the default value to 'null' if it was not specified.
+                // Set the default value to null if it was not specified.
                 defaultValue = null;
             }
 
             if (pathVariable && !shouldExist) {
-                throw new IllegalArgumentException("Path variable should be mandatory: " + annotatedElement);
+                logger.warn("Optional is redundant for path variable '{}' because the value is always present.",
+                            httpElementName);
             }
 
             final Entry<Class<?>, Class<?>> types;

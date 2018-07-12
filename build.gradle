@@ -44,7 +44,6 @@ allprojects {
 
 // Configure all Java projects
 configure(projectsWithFlags('java')) {
-
     // Common dependencies
     dependencies {
         // All projects currently require ':core' (except itself)
@@ -95,6 +94,13 @@ configure(projectsWithFlags('java')) {
         testCompile 'org.mockito:mockito-core'
         testCompile 'org.apache.httpcomponents:httpclient'
     }
+
+    // Target Java 8.
+    tasks.withType(JavaCompile) {
+        if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+            options.compilerArgs += ['--release', '8']
+        }
+    }
 }
 
 // Configure the Javadoc tasks of all projects.
@@ -111,5 +117,12 @@ allprojects {
             exclude '**/internal/**'
             exclude '**/thrift/v1/**'
         }
+    }
+}
+
+// Require to use JDK 10 when releasing.
+tasks.release.doFirst {
+    if (JavaVersion.current() != JavaVersion.VERSION_1_10) {
+        throw new IllegalStateException("You must release using JDK 10.");
     }
 }
