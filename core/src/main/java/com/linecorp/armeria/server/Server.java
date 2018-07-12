@@ -242,7 +242,8 @@ public final class Server implements AutoCloseable {
         case STOPPING:
             // A user called start() to restart the server, but the server is not stopped completely.
             // Try again after stopping.
-            state.future.handle(voidFunction((ret, cause) -> start(future)))
+            state.future.handleAsync(voidFunction((ret, cause) -> start(future)),
+                                     GlobalEventExecutor.INSTANCE)
                         .exceptionally(CompletionActions::log);
             return;
         }
@@ -274,7 +275,7 @@ public final class Server implements AutoCloseable {
 
     private ChannelFuture start(ServerPort port) {
         final ServerBootstrap b = new ServerBootstrap();
-        this.serverBootstrap = b;
+        serverBootstrap = b;
         config.channelOptions().forEach((k, v) -> {
             @SuppressWarnings("unchecked")
             final ChannelOption<Object> castOption = (ChannelOption<Object>) k;
@@ -341,7 +342,8 @@ public final class Server implements AutoCloseable {
                 return;
             case STARTING:
                 // Wait until the start process is finished, and then try again.
-                state.future.handle(voidFunction((ret, cause) -> stop(future)))
+                state.future.handleAsync(voidFunction((ret, cause) -> stop(future)),
+                                         GlobalEventExecutor.INSTANCE)
                             .exceptionally(CompletionActions::log);
                 return;
             }
