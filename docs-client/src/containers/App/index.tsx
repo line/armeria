@@ -90,6 +90,23 @@ class App extends React.PureComponent<Props, State> {
       return null;
     }
 
+    const { pathname, search } = this.props.location;
+    if (pathname.startsWith('/method/')) {
+      const redirectPath = `/methods${pathname.substring(
+        pathname.indexOf('/', 2),
+      )}`;
+      this.props.history.push(`${redirectPath}${search || ''}`);
+      return null;
+    }
+    if (pathname.startsWith('/namedType')) {
+      const name = pathname.substring(pathname.indexOf('/', 2) + 1);
+      const redirectBase = specification.getStructByName(name)
+        ? '/structs/'
+        : '/enums/';
+      this.props.history.push(`${redirectBase}${name}${search || ''}`);
+      return null;
+    }
+
     return (
       <div className={classes.root}>
         <AppBar className={classes.appBar}>

@@ -29,7 +29,8 @@ const config: webpack.Configuration = {
   },
   output: {
     path: path.resolve(process.cwd(), './build/web'),
-    publicPath: '',
+    // We don't mount to '/' for production build since we want the code to be relocatable.
+    publicPath: isDev ? '/' : '',
   },
   module: {
     rules: [
