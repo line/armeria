@@ -53,6 +53,7 @@ import com.linecorp.armeria.server.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
@@ -120,8 +121,11 @@ public class AnnotatedValueResolverTest {
     }
 
     static boolean shouldHttpParameterExist(AnnotatedValueResolver element) {
-        return element.shouldExist() ||
-               existingHttpParameters.contains(element.httpElementName());
+        return existingHttpParameters.contains(element.httpElementName());
+    }
+
+    static boolean shouldPathVariableExist(AnnotatedValueResolver element) {
+        return pathParams.contains(element.httpElementName());
     }
 
     @Test
@@ -282,9 +286,13 @@ public class AnnotatedValueResolverTest {
         }
 
         if (resolver.annotation().annotationType() == Param.class) {
-            if (shouldHttpParameterExist(resolver)) {
+            if (shouldHttpParameterExist(resolver) ||
+                shouldPathVariableExist(resolver)) {
+                assertThat(resolver.httpElementName()).isNotNull();
                 if (resolver.elementType().isEnum()) {
                     testEnum(value, resolver.httpElementName());
+                } else if (resolver.shouldWrapValueAsOptional()) {
+                    assertThat(value).isEqualTo(Optional.of(resolver.httpElementName()));
                 } else {
                     assertThat(value).isEqualTo(resolver.httpElementName());
                 }
@@ -296,6 +304,8 @@ public class AnnotatedValueResolverTest {
                                                     .containsOnly(resolver.defaultValue());
                     assertThat(((List<Object>) value).get(0).getClass())
                             .isEqualTo(resolver.elementType());
+                } else if (resolver.shouldWrapValueAsOptional()) {
+                    assertThat(value).isEqualTo(Optional.of(resolver.defaultValue()));
                 } else {
                     assertThat(value).isEqualTo(resolver.defaultValue());
                 }
@@ -383,6 +393,14 @@ public class AnnotatedValueResolverTest {
         public void dummy1() {}
 
         public void dummy2(String a) {}
+
+        public void redundant1(@Param @Default("defaultValue") Optional<String> value) {}
+
+        @Get("/r2/:var1")
+        public void redundant2(@Param @Default("defaultValue") String var1) {}
+
+        @Get("/r3/:var1")
+        public void redundant3(@Param Optional<String> var1) {}
     }
 
     interface Bean {
