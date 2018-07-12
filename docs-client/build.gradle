@@ -21,6 +21,8 @@ plugins {
 apply plugin: 'java-library'
 
 task buildWeb(type: YarnTask) {
+    dependsOn 'yarn'
+
     args = ['run', 'build']
 
     inputs.dir('src')
