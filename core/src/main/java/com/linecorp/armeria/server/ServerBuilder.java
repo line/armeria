@@ -1037,7 +1037,7 @@ public final class ServerBuilder {
             if (!this.ports.isEmpty()) {
                 ports = ImmutableList.copyOf(this.ports);
             } else {
-                ports = ImmutableList.of(new ServerPort(0, HTTP, HTTPS));
+                ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }
 
             final DomainNameMappingBuilder<SslContext>
