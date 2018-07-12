@@ -190,6 +190,24 @@ public class AnnotatedHttpServiceBuilderTest {
             public void root(@Header("a") ArrayList<String> a,
                              @Header("a") LinkedList<String> b) {}
         });
+
+        // Optional is redundant, but we just warn.
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/{name}")
+            public void root(@Param("name") Optional<String> name) {}
+        });
+
+        // @Default and Optional were used together, but we just warn.
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public void root(@Param("name") @Default("a") Optional<String> name) {}
+        });
+
+        // @Default is redundant, but we just warn.
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public void root(@Default("a") ServiceRequestContext ctx) {}
+        });
     }
 
     @Test
@@ -243,11 +261,6 @@ public class AnnotatedHttpServiceBuilderTest {
 
         assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
             @Get("/{name}")
-            public void root(@Param("name") Optional<String> name) {}
-        })).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
-            @Get("/{name}")
             public void root(@Param("name") Optional<AnnotatedHttpServiceBuilderTest> name) {}
         })).isInstanceOf(IllegalArgumentException.class);
 
@@ -280,11 +293,6 @@ public class AnnotatedHttpServiceBuilderTest {
             @Get("/test")
             @Default("a")
             public void root(ServiceRequestContext ctx) {}
-        })).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
-            @Get("/test")
-            public void root(@Default("a") ServiceRequestContext ctx) {}
         })).isInstanceOf(IllegalArgumentException.class);
     }
 

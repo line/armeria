@@ -571,12 +571,12 @@ final class AnnotatedValueResolver {
     }
 
     @VisibleForTesting
-    public boolean shouldExist() {
+    boolean shouldExist() {
         return shouldExist;
     }
 
     @VisibleForTesting
-    public boolean shouldWrapValueAsOptional() {
+    boolean shouldWrapValueAsOptional() {
         return shouldWrapValueAsOptional;
     }
 
