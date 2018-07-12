@@ -76,7 +76,7 @@ final class AnnotatedElementNameUtil {
                         "cannot obtain the name of the parameter or field automatically. " +
                         "Please make sure you compiled your code with '-parameters' option. " +
                         "If not, you need to specify parameter and header names with @" +
-                        Param.class.getName() + " and @" + Header.class.getName() + '.');
+                        Param.class.getSimpleName() + " and @" + Header.class.getSimpleName() + '.');
             }
             return parameter.getName();
         }
