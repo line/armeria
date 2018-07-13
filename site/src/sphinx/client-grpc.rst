@@ -1,4 +1,4 @@
-.. _CompletableFuture: https://docs.oracle.com/javase/8/docs/api/index.html?java/util/concurrent/CompletableFuture.html
+.. _CompletableFuture: https://docs.oracle.com/javase/10/docs/api/java/util/concurrent/CompletableFuture.html
 .. _Futures: https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/Futures.html
 .. _ListenableFuture: https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/ListenableFuture.html
 .. _gRPC: https://grpc.io/

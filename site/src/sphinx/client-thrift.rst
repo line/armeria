@@ -1,5 +1,5 @@
 .. _AsyncMethodCallback: https://github.com/apache/thrift/blob/bd964c7f3460c308161cb6eb90583874a7d8d848/lib/java/src/org/apache/thrift/async/AsyncMethodCallback.java#L22
-.. _CompletableFuture: https://docs.oracle.com/javase/8/docs/api/index.html?java/util/concurrent/CompletableFuture.html
+.. _CompletableFuture: https://docs.oracle.com/javase/10/docs/api/java/util/concurrent/CompletableFuture.html
 
 .. _client-thrift:
 

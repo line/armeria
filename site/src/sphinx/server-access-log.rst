@@ -1,4 +1,4 @@
-.. _DateTimeFormatter: https://docs.oracle.com/javase/8/docs/api/index.html?java/time/format/DateTimeFormatter.html
+.. _DateTimeFormatter: https://docs.oracle.com/javase/10/docs/api/java/time/format/DateTimeFormatter.html
 
 .. _server-access-log:
 
