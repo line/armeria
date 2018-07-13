@@ -73,8 +73,8 @@ def api_visit_literal(self, node, next_visitor):
         uri = javadoc_mappings[text]
         text = text.replace('$', '.')
 
-    # Prepend the frame index.html path.
-    uri = os.path.relpath(javadoc_dir, env.app.outdir).replace(os.sep, '/') + '/index.html?' + uri
+    # Prepend the path to the Javadoc directory.
+    uri = os.path.relpath(javadoc_dir, env.app.outdir).replace(os.sep, '/') + '/' + uri
     # Prepend the '@' back again if necessary
     if is_annotation:
         text = '@' + text
