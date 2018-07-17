@@ -18,6 +18,7 @@
 5. Copy the web site generated to the 'gh-pages' branch, e.g.
 
    cd ../site-armeria
+   git checkout gh-pages
    rm -fr .buildinfo .doctrees .gradle *
    rsync -aiP --exclude '.*' ../upstream-armeria/site/build/site/ .
    git add -A .
