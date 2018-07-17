@@ -190,6 +190,8 @@ public class HttpHealthCheckedEndpointGroupTest {
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
                                    "{authority=127.0.0.1:" + portOne + ",name=baz}", 1.0);
         });
+        serverOne.stop();
+        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).isEmpty());
     }
 
     /**

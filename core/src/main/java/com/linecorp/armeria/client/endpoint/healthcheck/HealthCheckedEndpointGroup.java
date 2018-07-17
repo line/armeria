@@ -110,7 +110,8 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         final Map<Endpoint, ServerConnection> allServersByEndpoint = allServers
                 .stream()
                 .collect(toImmutableMap(ServerConnection::endpoint,
-                                        Function.identity()));
+                                        Function.identity(),
+                                        (l, r) -> l));
         return allServers = delegate
                 .endpoints()
                 .stream()
