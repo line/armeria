@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.internal.metric;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Java6Assertions.assertThat;
 
 import org.junit.Test;
 
