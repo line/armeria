@@ -1,3 +1,7 @@
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css');
+@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,400i,700,700i');
+@import url('https://fonts.googleapis.com/css?family=Inconsolata:400,700');
+
 /* Original CSS begins */
 body {
     background-color:#ffffff;
@@ -889,10 +893,6 @@ table.striped > tbody > tr > th {
 /* Original CSS ends */
 
 /* Customization begins */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css');
-@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,400i,700,700i');
-@import url('https://fonts.googleapis.com/css?family=Inconsolata:400,700');
-
 /* Reset font styles, from http://meyerweb.com/eric/tools/css/reset/ */
 html, body, div, span, applet, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
