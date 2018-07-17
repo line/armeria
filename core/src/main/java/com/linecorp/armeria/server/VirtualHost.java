@@ -75,9 +75,21 @@ public final class VirtualHost {
     @Nullable
     private String strVal;
 
+    /**
+     * Use this constructor when you are sure that the {@link ServiceConfig}s have no duplicate
+     * {@link PathMapping}s or it's OK to have them. This is useful when you create a new {@link VirtualHost}
+     * from an existing {@link VirtualHost}, because its {@link ServiceConfig}s were validated already.
+     */
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
+        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
+             (virtualHost, mapping, existingMapping) -> {});
+    }
+
+    VirtualHost(String defaultHostname, String hostnamePattern,
+                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
+                MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
@@ -98,7 +110,7 @@ public final class VirtualHost {
         }
 
         services = Collections.unmodifiableList(servicesCopy);
-        router = Routers.ofVirtualHost(services);
+        router = Routers.ofVirtualHost(this, services, rejectionHandler);
     }
 
     /**

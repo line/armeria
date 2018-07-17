@@ -139,6 +139,7 @@ public final class ServerBuilder {
     private final List<ChainedVirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
     private final ChainedVirtualHostBuilder defaultVirtualHostBuilder = new ChainedVirtualHostBuilder(this);
     private boolean updatedDefaultVirtualHostBuilder;
+    private RejectedPathMappingHandler rejectedPathMappingHandler = RejectedPathMappingHandler.WARN;
 
     @Nullable
     private VirtualHost defaultVirtualHost;
@@ -989,6 +990,16 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link RejectedPathMappingHandler} which will be invoked when an attempt to bind
+     * a {@link Service} at a certain {@link PathMapping} is rejected. By default, the duplicate
+     * mappings are logged at WARN level.
+     */
+    public ServerBuilder rejectedPathMappingHandler(RejectedPathMappingHandler handler) {
+        rejectedPathMappingHandler = requireNonNull(handler, "handler");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1064,14 +1075,14 @@ public final class ServerBuilder {
         return server;
     }
 
-    private static VirtualHost normalizeDefaultVirtualHost(VirtualHost h,
-                                                           @Nullable SslContext defaultSslContext) {
+    private VirtualHost normalizeDefaultVirtualHost(VirtualHost h,
+                                                    @Nullable SslContext defaultSslContext) {
         final SslContext sslCtx = h.sslContext() != null ? h.sslContext() : defaultSslContext;
         return new VirtualHost(
                 h.defaultHostname(), "*", sslCtx,
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
-                 .collect(Collectors.toList()), h.producibleMediaTypes());
+                 .collect(Collectors.toList()), h.producibleMediaTypes(), rejectedPathMappingHandler);
     }
 
     @Nullable
