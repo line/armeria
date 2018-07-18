@@ -1,6 +1,4 @@
 dependencies {
-    compile project(':docs-client')
-
     // Caffeine
     compile 'com.github.ben-manes.caffeine:caffeine'
 
