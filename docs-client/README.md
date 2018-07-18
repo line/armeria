@@ -39,5 +39,5 @@ proxying all server calls to the actual Armeria server.
 When changing a dependency (i.e., when the `yarn.lock` file changes), refresh license information by running
 
 ```bash
-$ yarn licenses generate-disclaimer --prod > 3rd-party-licenses.txt
+$ yarn licenses generate-disclaimer --prod > ../licenses/web-licenses.txt
 ```

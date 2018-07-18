@@ -18,7 +18,7 @@ plugins {
     id 'com.moowork.node' version '1.2.0'
 }
 
-apply plugin: 'java-library'
+apply plugin: 'base'
 
 task buildWeb(type: YarnTask) {
     dependsOn 'yarn'
@@ -36,12 +36,6 @@ task copyWeb(type: Copy) {
 
     from 'build/web'
     into 'build/javaweb/com/linecorp/armeria/server/docs'
-}
-
-sourceSets {
-    main {
-        output.dir 'build/javaweb', builtBy: copyWeb
-    }
 }
 
 node {
