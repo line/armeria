@@ -110,6 +110,7 @@ function AppDrawer({ classes, navigateTo, specification }: AppDrawerProps) {
                 {service.methods.map((method) => (
                   <ListItem
                     key={`${service.name}/${method.name}`}
+                    button
                     onClick={() =>
                       navigateTo(`/methods/${service.name}/${method.name}`)
                     }
