@@ -61,6 +61,9 @@ const styles = (theme: Theme) =>
     },
     drawerPaper: {
       position: 'relative',
+      [theme.breakpoints.down('sm')]: {
+        width: '80%',
+      },
     },
     content: {
       backgroundColor: theme.palette.background.default,
@@ -242,6 +245,7 @@ class App extends React.PureComponent<Props, State> {
           <Drawer
             variant="temporary"
             open={this.state.mobileDrawerOpen}
+            onClose={this.toggleMobileDrawer}
             classes={{ paper: classes.drawerPaper }}
           >
             <div className={classes.toolbar} />
