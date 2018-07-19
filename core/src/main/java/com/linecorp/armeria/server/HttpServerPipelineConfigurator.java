@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
@@ -44,9 +46,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
@@ -374,6 +378,33 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer,
                                             SessionProtocol.H1, proxiedAddresses));
+        }
+
+        @Override
+        protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            logger.warn("{} TLS handshake failed:", ctx.channel(), cause);
+            ctx.close();
+
+            // On handshake failure, ApplicationProtocolNegotiationHandler will remove itself,
+            // leaving no handlers behind it. Add a handler that handles the exceptions raised after this point.
+            ctx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    if (cause instanceof DecoderException &&
+                        cause.getCause() instanceof SSLException) {
+                        // Swallow an SSLException raised after handshake failure.
+                        return;
+                    }
+
+                    Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+                }
+            });
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+            ctx.close();
         }
     }
 
