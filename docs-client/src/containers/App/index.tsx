@@ -73,6 +73,9 @@ const styles = (theme: Theme) =>
       overflowY: 'auto',
       padding: theme.spacing.unit * 3,
     },
+    methodHeader: {
+      backgroundColor: theme.palette.background.paper,
+    },
     toolbar: theme.mixins.toolbar,
   });
 
@@ -83,12 +86,12 @@ interface State {
 
 type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
 
-interface AppDrawerProps {
+interface AppDrawerProps extends WithStyles<typeof styles> {
   specification: Specification;
   navigateTo: (url: string) => void;
 }
 
-function AppDrawer({ navigateTo, specification }: AppDrawerProps) {
+function AppDrawer({ classes, navigateTo, specification }: AppDrawerProps) {
   return (
     <List component="nav">
       {specification.getServices().length > 0 && (
@@ -99,22 +102,25 @@ function AppDrawer({ navigateTo, specification }: AppDrawerProps) {
             </ListItemText>
           </ListItem>
           {specification.getServices().map((service) => (
-            <React.Fragment key={service.name}>
-              <ListSubheader>{simpleName(service.name)}</ListSubheader>
-              {service.methods.map((method) => (
-                <ListItem
-                  key={method.name}
-                  button
-                  onClick={() =>
-                    navigateTo(`/methods/${service.name}/${method.name}`)
-                  }
-                >
-                  <ListItemText inset>
-                    <code>{method.name}()</code>
-                  </ListItemText>
-                </ListItem>
-              ))}
-            </React.Fragment>
+            <li key={service.name}>
+              <ul>
+                <ListSubheader className={classes.methodHeader}>
+                  {simpleName(service.name)}
+                </ListSubheader>
+                {service.methods.map((method) => (
+                  <ListItem
+                    key={`${service.name}/${method.name}`}
+                    onClick={() =>
+                      navigateTo(`/methods/${service.name}/${method.name}`)
+                    }
+                  >
+                    <ListItemText inset>
+                      <code>{method.name}()</code>
+                    </ListItemText>
+                  </ListItem>
+                ))}
+              </ul>
+            </li>
           ))}
         </>
       )}
@@ -236,6 +242,7 @@ class App extends React.PureComponent<Props, State> {
           <Drawer variant="permanent" classes={{ paper: classes.drawerPaper }}>
             <div className={classes.toolbar} />
             <AppDrawer
+              classes={classes}
               specification={specification}
               navigateTo={(url: string) => this.navigateTo(url)}
             />
@@ -249,6 +256,7 @@ class App extends React.PureComponent<Props, State> {
             classes={{ paper: classes.drawerPaper }}
           >
             <AppDrawer
+              classes={classes}
               specification={specification}
               navigateTo={(url: string) => this.navigateTo(url)}
             />
