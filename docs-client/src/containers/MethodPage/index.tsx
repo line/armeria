@@ -123,15 +123,21 @@ export default class MethodPage extends React.PureComponent<Props, State> {
             <Typography variant="title">Exceptions</Typography>
             <Table>
               <TableBody>
-                {method.exceptionTypeSignatures.map((exception) => (
-                  <TableRow key={exception}>
-                    <TableCell>
-                      <code>
-                        {specification.getTypeSignatureHtml(exception)}
-                      </code>
-                    </TableCell>
+                {method.exceptionTypeSignatures.length > 0 ? (
+                  method.exceptionTypeSignatures.map((exception) => (
+                    <TableRow key={exception}>
+                      <TableCell>
+                        <code>
+                          {specification.getTypeSignatureHtml(exception)}
+                        </code>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell>There are no exceptions</TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </>
@@ -270,7 +276,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     });
   };
 
-  private onSubmit = async () => {
+  private onSubmit = () => {
     const args = this.state.debugRequest;
     const headers = this.state.additionalHeaders;
     const params = new URLSearchParams(this.props.location.search);
@@ -324,6 +330,8 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       this.props.history.push(
         `${this.props.location.pathname}${serializedParams}`,
       );
+    } else {
+      this.executeRequest();
     }
   };
 
@@ -376,21 +384,28 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     const urlDebugRequest = urlParams.has('args')
       ? jsonPrettify(urlParams.get('args')!)
       : null;
+
     const urlHeaders = urlParams.has('http_headers')
       ? jsonPrettify(urlParams.get('http_headers')!)
       : null;
+
+    const stateHeaders = this.state.stickyHeaders
+      ? this.state.additionalHeaders
+      : undefined;
+
+    const exampleHeaders =
+      service.exampleHttpHeaders.length > 0
+        ? JSON.stringify(service.exampleHttpHeaders[0], null, 2)
+        : undefined;
 
     const hasHeaders = !!urlHeaders || service.exampleHttpHeaders.length > 0;
     this.setState({
       debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
       debugResponse: '',
-      additionalHeaders:
-        urlHeaders ||
-        (hasHeaders
-          ? JSON.stringify(service.exampleHttpHeaders[0], null, 2)
-          : ''),
+      additionalHeaders: urlHeaders || stateHeaders || exampleHeaders || '',
       additionalHeadersOpen: hasHeaders,
-      stickyHeaders: urlParams.has('http_headers_sticky'),
+      stickyHeaders:
+        urlParams.has('http_headers_sticky') || this.state.stickyHeaders,
     });
   }
 }

@@ -68,7 +68,9 @@ export default function({ title, variables, specification }: Props) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={4}>There are no {title.toLowerCase()}</TableCell>
+              <TableCell colSpan={4}>
+                There are no {title.toLowerCase()}
+              </TableCell>
             </TableRow>
           )}
         </TableBody>

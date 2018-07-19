@@ -63,14 +63,20 @@ export default class EnumPage extends React.PureComponent<Props> {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.values.map((value) => (
-              <TableRow key={value.name}>
-                <TableCell>
-                  <code>{value.name}</code>
-                </TableCell>
-                <TableCell>{value.docString}</TableCell>
+            {data.values.length > 0 ? (
+              data.values.map((value) => (
+                <TableRow key={value.name}>
+                  <TableCell>
+                    <code>{value.name}</code>
+                  </TableCell>
+                  <TableCell>{value.docString}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={2}>There are no values.</TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </>
