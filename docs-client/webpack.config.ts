@@ -17,11 +17,11 @@
 import path from 'path';
 
 import HtmlWebpackPlugin from 'html-webpack-plugin';
-import webpack from 'webpack';
+import { Configuration } from 'webpack';
 
 const isDev = !!process.env.WEBPACK_SERVE;
 
-const config: webpack.Configuration = {
+const config: Configuration = {
   mode: isDev ? 'development' : 'production',
   devtool: isDev ? 'eval-source-map' : undefined,
   entry: {

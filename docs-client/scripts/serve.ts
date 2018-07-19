@@ -53,21 +53,27 @@ async function proxyToApi(ctx: any, next: any) {
   return proxier(ctx, next);
 }
 
-process.on('SIGINT', () => {
-  process.exit();
-});
-
-serve({
-  config,
-  port: 3000,
-  add: (app, middleware) => {
-    app.use(proxyToApi);
-    app.use(historyFallback);
-    middleware.webpack();
-    middleware.content();
+serve(
+  {},
+  {
+    config,
+    port: 3000,
+    add: (app, middleware) => {
+      app.use(proxyToApi);
+      app.use(historyFallback);
+      middleware.webpack();
+      middleware.content();
+    },
   },
-}).catch((err) => {
-  // tslint:disable-next-line:no-console
-  console.log('Error starting dev server.', err);
-  process.exit(1);
-});
+)
+  .then((result) => {
+    process.on('SIGINT', () => {
+      result.app.stop();
+      process.exit(0);
+    });
+  })
+  .catch((err) => {
+    // tslint:disable-next-line:no-console
+    console.log('Error starting dev server.', err);
+    process.exit(1);
+  });
