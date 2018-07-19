@@ -1,6 +1,5 @@
 {
   "name": "@armeria/docs-client",
-  "version": "0.67.1",
   "description": "The web client to the armeria DocService",
   "license": "Apache-2.0",
   "scripts": {

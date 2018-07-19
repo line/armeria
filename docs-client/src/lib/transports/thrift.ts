@@ -34,7 +34,7 @@ export default class ThriftTransport implements Transport {
       ep.availableMimeTypes.includes(TTEXT_MIME_TYPE),
     );
     if (!endpoint) {
-      throw new Error('Endpoint does not support thrift debug transport');
+      throw new Error('Endpoint does not support Thrift debug transport');
     }
 
     const thriftMethod = endpoint.fragment

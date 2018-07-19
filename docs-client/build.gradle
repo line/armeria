@@ -38,6 +38,8 @@ task copyWeb(type: Copy) {
     into 'build/javaweb/com/linecorp/armeria/server/docs'
 }
 
+tasks.assemble.dependsOn copyWeb
+
 node {
     version = '8.11.3'
     download = true
