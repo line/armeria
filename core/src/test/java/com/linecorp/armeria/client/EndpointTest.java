@@ -288,9 +288,15 @@ public class EndpointTest {
 
     @Test
     public void testToString() {
-        assertThat(Endpoint.of("a").toString()).isNotNull();
-        assertThat(Endpoint.of("a", 80).toString()).isNotNull();
-        assertThat(Endpoint.of("a").withIpAddr("::1").toString()).isNotNull();
+        assertThat(Endpoint.ofGroup("g").toString()).isEqualTo("Endpoint{group:g}");
+        assertThat(Endpoint.of("a").toString()).isEqualTo("Endpoint{a, weight=1000}");
+        assertThat(Endpoint.of("a", 80).toString()).isEqualTo("Endpoint{a:80, weight=1000}");
+        assertThat(Endpoint.of("a").withIpAddr("::1").toString())
+                .isEqualTo("Endpoint{a, ipAddr=::1, weight=1000}");
+
+        // ipAddr is omitted if hostname is an IP address.
+        assertThat(Endpoint.of("127.0.0.1").toString()).isEqualTo("Endpoint{127.0.0.1, weight=1000}");
+        assertThat(Endpoint.of("::1").toString()).isEqualTo("Endpoint{[::1], weight=1000}");
     }
 
     @Test
