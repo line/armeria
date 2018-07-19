@@ -29,6 +29,8 @@ import {
   Specification,
 } from '../../lib/specification';
 
+import Section from '../../components/Section';
+
 interface OwnProps {
   specification: Specification;
 }
@@ -54,31 +56,33 @@ export default class EnumPage extends React.PureComponent<Props> {
         <Typography variant="body1" paragraph>
           {data.docString}
         </Typography>
-        <Typography variant="title">Values</Typography>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Description</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.values.length > 0 ? (
-              data.values.map((value) => (
-                <TableRow key={value.name}>
-                  <TableCell>
-                    <code>{value.name}</code>
-                  </TableCell>
-                  <TableCell>{value.docString}</TableCell>
-                </TableRow>
-              ))
-            ) : (
+        <Section>
+          <Typography variant="title">Values</Typography>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={2}>There are no values.</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Description</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {data.values.length > 0 ? (
+                data.values.map((value) => (
+                  <TableRow key={value.name}>
+                    <TableCell>
+                      <code>{value.name}</code>
+                    </TableCell>
+                    <TableCell>{value.docString}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2}>There are no values.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Section>
       </>
     );
   }

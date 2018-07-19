@@ -38,6 +38,7 @@ import jsonPrettify from '../../lib/json-prettify';
 import { simpleName, Specification } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 
+import Section from '../../components/Section';
 import VariableList from '../../components/VariableList';
 
 interface State {
@@ -98,90 +99,92 @@ export default class MethodPage extends React.PureComponent<Props, State> {
         <Typography variant="body1" paragraph>
           {method.docString}
         </Typography>
-        <VariableList
-          title="Parameters"
-          variables={method.parameters}
-          specification={specification}
-        />
-        <Typography variant="title">Return Type</Typography>
-        <Table>
-          <TableBody>
-            <TableRow>
-              <TableCell>
-                <code>
-                  {specification.getTypeSignatureHtml(
-                    method.returnTypeSignature,
-                  )}
-                </code>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-        {method.exceptionTypeSignatures.length > 0 && (
-          <>
-            <Typography variant="body1" paragraph />
-            <Typography variant="title">Exceptions</Typography>
-            <Table>
-              <TableBody>
-                {method.exceptionTypeSignatures.length > 0 ? (
-                  method.exceptionTypeSignatures.map((exception) => (
-                    <TableRow key={exception}>
-                      <TableCell>
-                        <code>
-                          {specification.getTypeSignatureHtml(exception)}
-                        </code>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell>There are no exceptions</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </>
-        )}
-        <Typography variant="body1" paragraph />
-        <Typography variant="title">Endpoints</Typography>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Hostname</TableCell>
-              <TableCell>Path</TableCell>
-              <TableCell>MIME types</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {method.endpoints.map((endpoint) => (
-              <TableRow key={`${endpoint.hostnamePattern}/${endpoint.path}`}>
-                <TableCell>{endpoint.hostnamePattern}</TableCell>
-                <TableCell>{endpoint.path}</TableCell>
+        <Section>
+          <VariableList
+            title="Parameters"
+            variables={method.parameters}
+            specification={specification}
+          />
+        </Section>
+        <Section>
+          <Typography variant="title">Return Type</Typography>
+          <Table>
+            <TableBody>
+              <TableRow>
                 <TableCell>
-                  <List dense>
-                    {endpoint.availableMimeTypes.map((mimeType) => (
-                      <ListItem key={mimeType}>
-                        <ListItemText
-                          primary={mimeType}
-                          primaryTypographyProps={{
-                            style: {
-                              fontWeight:
-                                mimeType === endpoint.defaultMimeType
-                                  ? 'bold'
-                                  : 'normal',
-                            },
-                          }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
+                  <code>
+                    {specification.getTypeSignatureHtml(
+                      method.returnTypeSignature,
+                    )}
+                  </code>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+        </Section>
+        <Section>
+          <Typography variant="title">Exceptions</Typography>
+          <Table>
+            <TableBody>
+              {method.exceptionTypeSignatures.length > 0 ? (
+                method.exceptionTypeSignatures.map((exception) => (
+                  <TableRow key={exception}>
+                    <TableCell>
+                      <code>
+                        {specification.getTypeSignatureHtml(exception)}
+                      </code>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell>There are no exceptions</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Section>
+        <Section>
+          <Typography variant="title">Endpoints</Typography>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Hostname</TableCell>
+                <TableCell>Path</TableCell>
+                <TableCell>MIME types</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {method.endpoints.map((endpoint) => (
+                <TableRow key={`${endpoint.hostnamePattern}/${endpoint.path}`}>
+                  <TableCell>{endpoint.hostnamePattern}</TableCell>
+                  <TableCell>{endpoint.path}</TableCell>
+                  <TableCell>
+                    <List dense>
+                      {endpoint.availableMimeTypes.map((mimeType) => (
+                        <ListItem key={mimeType}>
+                          <ListItemText
+                            primary={mimeType}
+                            primaryTypographyProps={{
+                              style: {
+                                fontWeight:
+                                  mimeType === endpoint.defaultMimeType
+                                    ? 'bold'
+                                    : 'normal',
+                              },
+                            }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Section>
         {TRANSPORTS.getDebugTransport(method) && (
-          <>
+          <Section>
             <Typography variant="body1" paragraph />
             <Typography variant="title" paragraph>
               Debug
@@ -246,7 +249,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                 </SyntaxHighlighter>
               </Grid>
             </Grid>
-          </>
+          </Section>
         )}
       </>
     );

@@ -26,6 +26,8 @@ import {
   Specification,
 } from '../../lib/specification';
 
+import Section from '../../components/Section';
+
 interface OwnProps {
   specification: Specification;
 }
@@ -51,13 +53,13 @@ export default class StructPage extends React.PureComponent<Props> {
         <Typography variant="body1" paragraph>
           {data.docString}
         </Typography>
-        {data.fields.length > 0 && (
+        <Section>
           <VariableList
             title="Fields"
             variables={data.fields}
             specification={specification}
           />
-        )}
+        </Section>
       </>
     );
   }
