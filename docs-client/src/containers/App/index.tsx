@@ -15,6 +15,7 @@
  */
 
 import AppBar from '@material-ui/core/AppBar';
+import CssBaseline from '@material-ui/core/CssBaseline';
 import Drawer from '@material-ui/core/Drawer';
 import Hidden from '@material-ui/core/Hidden';
 import IconButton from '@material-ui/core/IconButton';
@@ -62,10 +63,12 @@ const styles = (theme: Theme) =>
       position: 'relative',
     },
     content: {
-      flexGrow: 1,
       backgroundColor: theme.palette.background.default,
+      flexGrow: 1,
+      height: '100vh',
+      minWidth: 0, // So the Typography noWrap works,
+      overflowY: 'auto',
       padding: theme.spacing.unit * 3,
-      minWidth: 0, // So the Typography noWrap works
     },
     toolbar: theme.mixins.toolbar,
   });
@@ -213,6 +216,7 @@ class App extends React.PureComponent<Props, State> {
 
     return (
       <div className={classes.root}>
+        <CssBaseline />
         <AppBar className={classes.appBar}>
           <Toolbar>
             <Hidden mdUp>
