@@ -39,10 +39,7 @@ task checkWeb(type: YarnTask) {
     inputs.dir('src')
     inputs.file('package.json')
     inputs.file('yarn.lock')
-    // Hackily set the output to an unrelated file, this let's the task be
-    // up-to-date when the sources don't change even though it has no real
-    // outputs.
-    outputs.file('tsconfig.json')
+    outputs.upToDateWhen { true }
 }
 
 task copyWeb(type: Copy) {
