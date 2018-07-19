@@ -59,6 +59,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
@@ -211,6 +212,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         p.addLast(sslHandler);
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
+            private boolean handshakeFailed;
+
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (!(evt instanceof SslHandshakeCompletionEvent)) {
@@ -221,6 +224,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 final SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
                 if (!handshakeEvent.isSuccess()) {
                     // The connection will be closed automatically by SslHandler.
+                    logger.warn("{} TLS handshake failed:", ctx.channel(), handshakeEvent.cause());
+                    handshakeFailed = true;
                     return;
                 }
 
@@ -255,6 +260,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                if (handshakeFailed &&
+                    cause instanceof DecoderException &&
+                    cause.getCause() instanceof SSLException) {
+                    // Swallow an SSLException raised after handshake failure.
+                    return;
+                }
+
                 Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
                 ctx.close();
             }
