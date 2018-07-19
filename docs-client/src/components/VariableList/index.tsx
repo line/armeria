@@ -51,20 +51,26 @@ export default function({ title, variables, specification }: Props) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {variables.map((variable) => (
-            <TableRow key={variable.name}>
-              <TableCell>
-                <code>{variable.name}</code>
-              </TableCell>
-              <TableCell>{variable.requirement}</TableCell>
-              <TableCell>
-                <code>
-                  {specification.getTypeSignatureHtml(variable.typeSignature)}
-                </code>
-              </TableCell>
-              <TableCell>{variable.docString}</TableCell>
+          {variables.length > 0 ? (
+            variables.map((variable) => (
+              <TableRow key={variable.name}>
+                <TableCell>
+                  <code>{variable.name}</code>
+                </TableCell>
+                <TableCell>{variable.requirement}</TableCell>
+                <TableCell>
+                  <code>
+                    {specification.getTypeSignatureHtml(variable.typeSignature)}
+                  </code>
+                </TableCell>
+                <TableCell>{variable.docString}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4}>There are no {title.toLowerCase()}</TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
       <Typography variant="body1" paragraph />

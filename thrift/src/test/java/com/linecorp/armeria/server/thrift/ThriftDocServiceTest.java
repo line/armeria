@@ -116,7 +116,6 @@ public class ThriftDocServiceTest {
 
     @Test
     public void testOk() throws Exception {
-        Thread.sleep(Long.MAX_VALUE);
         final Set<SerializationFormat> allThriftFormats = ThriftSerializationFormats.values();
         final List<Entry> entries = ImmutableList.of(
                 new EntryBuilder(HelloService.class)
