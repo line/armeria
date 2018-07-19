@@ -248,7 +248,6 @@ class App extends React.PureComponent<Props, State> {
             onClose={this.toggleMobileDrawer}
             classes={{ paper: classes.drawerPaper }}
           >
-            <div className={classes.toolbar} />
             <AppDrawer
               specification={specification}
               navigateTo={(url: string) => this.navigateTo(url)}
