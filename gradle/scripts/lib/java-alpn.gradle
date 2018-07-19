@@ -1,3 +1,8 @@
+// JDK 9 does not require Jetty ALPN agent at all.
+if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+    return
+}
+
 configure(projectsWithFlags('java')) {
     // Use Jetty ALPN agent if dependencyManagement mentions it.
     if (managedVersions.containsKey('org.mortbay.jetty.alpn:jetty-alpn-agent')) {
