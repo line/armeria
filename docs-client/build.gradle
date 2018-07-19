@@ -31,6 +31,20 @@ task buildWeb(type: YarnTask) {
     outputs.dir('build/web')
 }
 
+task checkWeb(type: YarnTask) {
+    dependsOn 'yarn'
+
+    args = ['run', 'check']
+
+    inputs.dir('src')
+    inputs.file('package.json')
+    inputs.file('yarn.lock')
+    // Hackily set the output to an unrelated file, this let's the task be
+    // up-to-date when the sources don't change even though it has no real
+    // outputs.
+    outputs.file('tsconfig.json')
+}
+
 task copyWeb(type: Copy) {
     dependsOn buildWeb
 
@@ -39,6 +53,7 @@ task copyWeb(type: Copy) {
 }
 
 tasks.assemble.dependsOn copyWeb
+tasks.check.dependsOn checkWeb
 
 node {
     version = '8.11.3'

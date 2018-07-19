@@ -3,7 +3,9 @@
   "description": "The web client to the armeria DocService",
   "license": "Apache-2.0",
   "scripts": {
+    "prebuild": "yarn run check",
     "build": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" webpack",
+    "check": "tsc --project . && tslint --project .",
     "start": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" ts-node ./scripts/serve"
   },
   "dependencies": {
