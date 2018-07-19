@@ -11,6 +11,7 @@
   "dependencies": {
     "@babel/polyfill": "7.0.0-beta.54",
     "@material-ui/core": "1.4.0",
+    "@material-ui/icons": "1.1.0",
     "jsonminify": "0.4.1",
     "react": "16.4.1",
     "react-dom": "16.4.1",

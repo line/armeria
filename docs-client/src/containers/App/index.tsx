@@ -16,6 +16,8 @@
 
 import AppBar from '@material-ui/core/AppBar';
 import Drawer from '@material-ui/core/Drawer';
+import Hidden from '@material-ui/core/Hidden';
+import IconButton from '@material-ui/core/IconButton';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -28,6 +30,7 @@ import {
 } from '@material-ui/core/styles';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
+import MenuIcon from '@material-ui/icons/Menu';
 import React from 'react';
 import { hot } from 'react-hot-loader';
 import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
@@ -68,13 +71,114 @@ const styles = (theme: Theme) =>
   });
 
 interface State {
+  mobileDrawerOpen: boolean;
   specification?: Specification;
 }
 
 type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
 
+interface AppDrawerProps {
+  specification: Specification;
+  navigateTo: (url: string) => void;
+}
+
+function AppDrawer({ navigateTo, specification }: AppDrawerProps) {
+  return (
+    <List component="nav">
+      {specification.getServices().length > 0 && (
+        <>
+          <ListItem>
+            <ListItemText disableTypography>
+              <Typography variant="headline">Services</Typography>
+            </ListItemText>
+          </ListItem>
+          {specification.getServices().map((service) => (
+            <React.Fragment key={service.name}>
+              <ListSubheader>{simpleName(service.name)}</ListSubheader>
+              {service.methods.map((method) => (
+                <ListItem
+                  key={method.name}
+                  button
+                  onClick={() =>
+                    navigateTo(`/methods/${service.name}/${method.name}`)
+                  }
+                >
+                  <ListItemText inset>
+                    <code>{method.name}()</code>
+                  </ListItemText>
+                </ListItem>
+              ))}
+            </React.Fragment>
+          ))}
+        </>
+      )}
+      {specification.getEnums().length > 0 && (
+        <>
+          <ListItem>
+            <ListItemText disableTypography>
+              <Typography variant="headline">Enums</Typography>
+            </ListItemText>
+          </ListItem>
+          {specification.getEnums().map((enm) => (
+            <ListItem
+              key={enm.name}
+              button
+              onClick={() => navigateTo(`/enums/${enm.name}`)}
+            >
+              <ListItemText inset>
+                <code>{simpleName(enm.name)}</code>
+              </ListItemText>
+            </ListItem>
+          ))}
+        </>
+      )}
+      {specification.getStructs().length > 0 && (
+        <>
+          <ListItem>
+            <ListItemText disableTypography>
+              <Typography variant="headline">Structs</Typography>
+            </ListItemText>
+          </ListItem>
+          {specification.getStructs().map((struct) => (
+            <ListItem
+              key={struct.name}
+              button
+              onClick={() => navigateTo(`/structs/${struct.name}`)}
+            >
+              <ListItemText inset>
+                <code>{simpleName(struct.name)}</code>
+              </ListItemText>
+            </ListItem>
+          ))}
+        </>
+      )}
+      {specification.getExceptions().length > 0 && (
+        <>
+          <ListItem>
+            <ListItemText disableTypography>
+              <Typography variant="headline">Exceptions</Typography>
+            </ListItemText>
+          </ListItem>
+          {specification.getExceptions().map((struct) => (
+            <ListItem
+              key={struct.name}
+              button
+              onClick={() => navigateTo(`/structs/${struct.name}`)}
+            >
+              <ListItemText inset>
+                <code>{simpleName(struct.name)}</code>
+              </ListItemText>
+            </ListItem>
+          ))}
+        </>
+      )}
+    </List>
+  );
+}
+
 class App extends React.PureComponent<Props, State> {
   public state: State = {
+    mobileDrawerOpen: false,
     specification: undefined,
   };
 
@@ -111,110 +215,38 @@ class App extends React.PureComponent<Props, State> {
       <div className={classes.root}>
         <AppBar className={classes.appBar}>
           <Toolbar>
+            <Hidden mdUp>
+              <IconButton color="inherit" onClick={this.toggleMobileDrawer}>
+                <MenuIcon />
+              </IconButton>
+            </Hidden>
             <Typography variant="title" color="inherit" noWrap>
               Armeria documentation service
             </Typography>
           </Toolbar>
         </AppBar>
-        <Drawer variant="permanent" classes={{ paper: classes.drawerPaper }}>
-          <div className={classes.toolbar} />
-          <List component="nav">
-            {specification.getServices().length > 0 && (
-              <>
-                <ListItem>
-                  <ListItemText disableTypography>
-                    <Typography variant="headline">Services</Typography>
-                  </ListItemText>
-                </ListItem>
-                {specification.getServices().map((service) => (
-                  <React.Fragment key={service.name}>
-                    <ListSubheader>{simpleName(service.name)}</ListSubheader>
-                    {service.methods.map((method) => (
-                      <ListItem
-                        key={method.name}
-                        button
-                        onClick={this.navigateTo.bind(
-                          this,
-                          `/methods/${service.name}/${method.name}`,
-                        )}
-                      >
-                        <ListItemText inset>
-                          <code>{method.name}()</code>
-                        </ListItemText>
-                      </ListItem>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </>
-            )}
-            {specification.getEnums().length > 0 && (
-              <>
-                <ListItem>
-                  <ListItemText disableTypography>
-                    <Typography variant="headline">Enums</Typography>
-                  </ListItemText>
-                </ListItem>
-                {specification.getEnums().map((enm) => (
-                  <ListItem
-                    key={enm.name}
-                    button
-                    onClick={this.navigateTo.bind(this, `/enums/${enm.name}`)}
-                  >
-                    <ListItemText inset>
-                      <code>{simpleName(enm.name)}</code>
-                    </ListItemText>
-                  </ListItem>
-                ))}
-              </>
-            )}
-            {specification.getStructs().length > 0 && (
-              <>
-                <ListItem>
-                  <ListItemText disableTypography>
-                    <Typography variant="headline">Structs</Typography>
-                  </ListItemText>
-                </ListItem>
-                {specification.getStructs().map((struct) => (
-                  <ListItem
-                    key={struct.name}
-                    button
-                    onClick={this.navigateTo.bind(
-                      this,
-                      `/structs/${struct.name}`,
-                    )}
-                  >
-                    <ListItemText inset>
-                      <code>{simpleName(struct.name)}</code>
-                    </ListItemText>
-                  </ListItem>
-                ))}
-              </>
-            )}
-            {specification.getExceptions().length > 0 && (
-              <>
-                <ListItem>
-                  <ListItemText disableTypography>
-                    <Typography variant="headline">Exceptions</Typography>
-                  </ListItemText>
-                </ListItem>
-                {specification.getExceptions().map((struct) => (
-                  <ListItem
-                    key={struct.name}
-                    button
-                    onClick={this.navigateTo.bind(
-                      this,
-                      `/structs/${struct.name}`,
-                    )}
-                  >
-                    <ListItemText inset>
-                      <code>{simpleName(struct.name)}</code>
-                    </ListItemText>
-                  </ListItem>
-                ))}
-              </>
-            )}
-          </List>
-        </Drawer>
+        <Hidden smDown>
+          <Drawer variant="permanent" classes={{ paper: classes.drawerPaper }}>
+            <div className={classes.toolbar} />
+            <AppDrawer
+              specification={specification}
+              navigateTo={(url: string) => this.navigateTo(url)}
+            />
+          </Drawer>
+        </Hidden>
+        <Hidden mdUp>
+          <Drawer
+            variant="temporary"
+            open={this.state.mobileDrawerOpen}
+            classes={{ paper: classes.drawerPaper }}
+          >
+            <div className={classes.toolbar} />
+            <AppDrawer
+              specification={specification}
+              navigateTo={(url: string) => this.navigateTo(url)}
+            />
+          </Drawer>
+        </Hidden>
         <main className={classes.content}>
           <div className={classes.toolbar} />
           <Route exact path="/" component={HomePage} />
@@ -248,6 +280,9 @@ class App extends React.PureComponent<Props, State> {
       ? `${to}?${params.toString()}`
       : to;
     this.props.history.push(url);
+    this.setState({
+      mobileDrawerOpen: false,
+    });
   }
 
   private fetchSpecification = async () => {
@@ -255,6 +290,12 @@ class App extends React.PureComponent<Props, State> {
     const specification: SpecificationData = await httpResponse.json();
     this.setState({
       specification: new Specification(specification),
+    });
+  };
+
+  private toggleMobileDrawer = () => {
+    this.setState({
+      mobileDrawerOpen: !this.state.mobileDrawerOpen,
     });
   };
 }

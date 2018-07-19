@@ -386,11 +386,11 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     const urlParams = new URLSearchParams(this.props.location.search);
     const urlDebugRequest = urlParams.has('args')
       ? jsonPrettify(urlParams.get('args')!)
-      : null;
+      : undefined;
 
     const urlHeaders = urlParams.has('http_headers')
       ? jsonPrettify(urlParams.get('http_headers')!)
-      : null;
+      : undefined;
 
     const stateHeaders = this.state.stickyHeaders
       ? this.state.additionalHeaders
@@ -401,7 +401,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
         ? JSON.stringify(service.exampleHttpHeaders[0], null, 2)
         : undefined;
 
-    const hasHeaders = !!urlHeaders || service.exampleHttpHeaders.length > 0;
+    const hasHeaders = !!(urlHeaders || stateHeaders || exampleHeaders);
     this.setState({
       debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
       debugResponse: '',
