@@ -505,10 +505,11 @@ public final class Endpoint implements Comparable<Endpoint> {
 
     @Override
     public String toString() {
-        final ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
+        final ToStringHelper helper = MoreObjects.toStringHelper(this);
         helper.addValue(authority());
         if (!isGroup()) {
-            if (hostType == null) {
+            if (hostType == HostType.HOSTNAME_AND_IPv4 ||
+                hostType == HostType.HOSTNAME_AND_IPv6) {
                 helper.add("ipAddr", ipAddr);
             }
             helper.add("weight", weight);
