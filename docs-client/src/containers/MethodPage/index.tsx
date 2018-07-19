@@ -160,7 +160,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                 <TableCell>
                   <List dense>
                     {endpoint.availableMimeTypes.map((mimeType) => (
-                      <ListItem>
+                      <ListItem key={mimeType}>
                         <ListItemText
                           primary={mimeType}
                           primaryTypographyProps={{

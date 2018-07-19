@@ -127,10 +127,11 @@ class App extends React.PureComponent<Props, State> {
                   </ListItemText>
                 </ListItem>
                 {specification.getServices().map((service) => (
-                  <>
+                  <React.Fragment key={service.name}>
                     <ListSubheader>{simpleName(service.name)}</ListSubheader>
                     {service.methods.map((method) => (
                       <ListItem
+                        key={method.name}
                         button
                         onClick={this.navigateTo.bind(
                           this,
@@ -142,7 +143,7 @@ class App extends React.PureComponent<Props, State> {
                         </ListItemText>
                       </ListItem>
                     ))}
-                  </>
+                  </React.Fragment>
                 ))}
               </>
             )}
