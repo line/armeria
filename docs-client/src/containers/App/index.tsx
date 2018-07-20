@@ -71,10 +71,15 @@ const styles = (theme: Theme) =>
       height: '100vh',
       minWidth: 0, // So the Typography noWrap works,
       overflowY: 'auto',
-      padding: theme.spacing.unit * 3,
+      padding: theme.spacing.unit * 2,
     },
     methodHeader: {
       backgroundColor: theme.palette.background.paper,
+    },
+    title: {
+      [theme.breakpoints.up('md')]: {
+        marginLeft: theme.spacing.unit * 3,
+      },
     },
     toolbar: theme.mixins.toolbar,
   });
@@ -102,26 +107,31 @@ function AppDrawer({ classes, navigateTo, specification }: AppDrawerProps) {
             </ListItemText>
           </ListItem>
           {specification.getServices().map((service) => (
-            <li key={service.name}>
-              <ul>
-                <ListSubheader className={classes.methodHeader}>
+            <div key={service.name}>
+              <ListSubheader className={classes.methodHeader}>
+                <Typography variant="title">
                   {simpleName(service.name)}
-                </ListSubheader>
-                {service.methods.map((method) => (
-                  <ListItem
-                    key={`${service.name}/${method.name}`}
-                    button
-                    onClick={() =>
-                      navigateTo(`/methods/${service.name}/${method.name}`)
-                    }
+                </Typography>
+              </ListSubheader>
+              {service.methods.map((method) => (
+                <ListItem
+                  key={`${service.name}/${method.name}`}
+                  button
+                  onClick={() =>
+                    navigateTo(`/methods/${service.name}/${method.name}`)
+                  }
+                >
+                  <ListItemText
+                    inset
+                    primaryTypographyProps={{
+                      variant: 'body1',
+                    }}
                   >
-                    <ListItemText inset>
-                      <code>{method.name}()</code>
-                    </ListItemText>
-                  </ListItem>
-                ))}
-              </ul>
-            </li>
+                    <code>{method.name}()</code>
+                  </ListItemText>
+                </ListItem>
+              ))}
+            </div>
           ))}
         </>
       )}
@@ -138,7 +148,12 @@ function AppDrawer({ classes, navigateTo, specification }: AppDrawerProps) {
               button
               onClick={() => navigateTo(`/enums/${enm.name}`)}
             >
-              <ListItemText inset>
+              <ListItemText
+                inset
+                primaryTypographyProps={{
+                  variant: 'body1',
+                }}
+              >
                 <code>{simpleName(enm.name)}</code>
               </ListItemText>
             </ListItem>
@@ -158,7 +173,12 @@ function AppDrawer({ classes, navigateTo, specification }: AppDrawerProps) {
               button
               onClick={() => navigateTo(`/structs/${struct.name}`)}
             >
-              <ListItemText inset>
+              <ListItemText
+                inset
+                primaryTypographyProps={{
+                  variant: 'body1',
+                }}
+              >
                 <code>{simpleName(struct.name)}</code>
               </ListItemText>
             </ListItem>
@@ -178,7 +198,12 @@ function AppDrawer({ classes, navigateTo, specification }: AppDrawerProps) {
               button
               onClick={() => navigateTo(`/structs/${struct.name}`)}
             >
-              <ListItemText inset>
+              <ListItemText
+                inset
+                primaryTypographyProps={{
+                  variant: 'body1',
+                }}
+              >
                 <code>{simpleName(struct.name)}</code>
               </ListItemText>
             </ListItem>
@@ -228,13 +253,18 @@ class App extends React.PureComponent<Props, State> {
       <div className={classes.root}>
         <CssBaseline />
         <AppBar className={classes.appBar}>
-          <Toolbar>
+          <Toolbar disableGutters>
             <Hidden mdUp>
               <IconButton color="inherit" onClick={this.toggleMobileDrawer}>
                 <MenuIcon />
               </IconButton>
             </Hidden>
-            <Typography variant="title" color="inherit" noWrap>
+            <Typography
+              className={classes.title}
+              variant="title"
+              color="inherit"
+              noWrap
+            >
               Armeria documentation service
             </Typography>
           </Toolbar>
@@ -255,6 +285,9 @@ class App extends React.PureComponent<Props, State> {
             open={this.state.mobileDrawerOpen}
             onClose={this.toggleMobileDrawer}
             classes={{ paper: classes.drawerPaper }}
+            ModalProps={{
+              keepMounted: true,
+            }}
           >
             <AppDrawer
               classes={classes}
