@@ -58,7 +58,7 @@ public class RetryingRpcClientTest {
     private static final RetryStrategy<RpcRequest, RpcResponse> retryAlways =
             (request, response) -> {
                 final CompletableFuture<Backoff> future = new CompletableFuture<>();
-                response.whenComplete((unused1, unused2) -> future.complete(Backoff.withoutDelay()));
+                response.whenComplete((unused1, unused2) -> future.complete(Backoff.fixed(500)));
                 return future;
             };
 
