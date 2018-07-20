@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -56,9 +57,22 @@ public final class Routers {
      * It consists of several router implementations which use one of Trie and List. It also includes
      * cache mechanism to improve its performance.
      */
-    public static Router<ServiceConfig> ofVirtualHost(Iterable<ServiceConfig> configs) {
+    public static Router<ServiceConfig> ofVirtualHost(VirtualHost virtualHost, Iterable<ServiceConfig> configs,
+                                                      RejectedPathMappingHandler rejectionHandler) {
+        requireNonNull(virtualHost, "virtualHost");
         requireNonNull(configs, "configs");
-        return wrapVirtualHostRouter(defaultRouter(configs, ServiceConfig::pathMapping));
+        requireNonNull(rejectionHandler, "rejectionHandler");
+
+        final BiConsumer<PathMapping, PathMapping> rejectionConsumer = (mapping, existingMapping) -> {
+            try {
+                rejectionHandler.handleDuplicatePathMapping(virtualHost, mapping, existingMapping);
+            } catch (Exception e) {
+                logger.warn("Unexpected exception from a {}:",
+                            RejectedPathMappingHandler.class.getSimpleName(), e);
+            }
+        };
+
+        return wrapVirtualHostRouter(defaultRouter(configs, ServiceConfig::pathMapping, rejectionConsumer));
     }
 
     /**
@@ -68,8 +82,21 @@ public final class Routers {
             List<CompositeServiceEntry<I, O>> entries) {
         requireNonNull(entries, "entries");
 
-        final Router<CompositeServiceEntry<I, O>> delegate =
-                wrapCompositeServiceRouter(defaultRouter(entries, CompositeServiceEntry::pathMapping));
+        final Router<CompositeServiceEntry<I, O>> delegate = wrapCompositeServiceRouter(defaultRouter(
+                entries, CompositeServiceEntry::pathMapping,
+                (mapping, existingMapping) -> {
+                    final String a = mapping.toString();
+                    final String b = existingMapping.toString();
+                    if (a.equals(b)) {
+                        throw new IllegalStateException(
+                                "Your composite service has a duplicate path mapping: " + a);
+                    }
+
+                    throw new IllegalStateException(
+                            "Your composite service has path mappings with a conflict: " +
+                            a + " vs. " + b);
+                }));
+
         return new CompositeRouter<>(delegate, result ->
                 result.isPresent() ? PathMapped.of(result.mapping(), result.mappingResult(),
                                                    result.value().service())
@@ -83,16 +110,19 @@ public final class Routers {
      * transformed to a {@link Router}.
      */
     private static <V> Router<V> defaultRouter(Iterable<V> values,
-                                               Function<V, PathMapping> pathMappingResolver) {
-        return new CompositeRouter<>(routers(values, pathMappingResolver), Function.identity());
+                                               Function<V, PathMapping> pathMappingResolver,
+                                               BiConsumer<PathMapping, PathMapping> rejectionHandler) {
+        return new CompositeRouter<>(routers(values, pathMappingResolver, rejectionHandler),
+                                     Function.identity());
     }
 
     /**
      * Returns a list of {@link Router}s.
      */
     @VisibleForTesting
-    static <V> List<Router<V>> routers(Iterable<V> values, Function<V, PathMapping> pathMappingResolver) {
-        rejectDuplicateMapping(values, pathMappingResolver);
+    static <V> List<Router<V>> routers(Iterable<V> values, Function<V, PathMapping> pathMappingResolver,
+                                       BiConsumer<PathMapping, PathMapping> rejectionHandler) {
+        rejectDuplicateMapping(values, pathMappingResolver, rejectionHandler);
 
         final ImmutableList.Builder<Router<V>> builder = ImmutableList.builder();
         final List<V> group = new ArrayList<>();
@@ -122,7 +152,8 @@ public final class Routers {
     }
 
     private static <V> void rejectDuplicateMapping(
-            Iterable<V> values, Function<V, PathMapping> pathMappingResolver) {
+            Iterable<V> values, Function<V, PathMapping> pathMappingResolver,
+            BiConsumer<PathMapping, PathMapping> rejectionHandler) {
 
         final Map<String, List<PathMapping>> triePath2mappings = new HashMap<>();
         for (V v : values) {
@@ -146,7 +177,7 @@ public final class Routers {
                 if (!(mapping instanceof HttpHeaderPathMapping)) {
                     assert mapping.complexity() == 0;
                     assert existingMapping.complexity() == 0;
-                    rejectDuplicateMapping(mapping, existingMapping);
+                    rejectionHandler.accept(mapping, existingMapping);
                     return;
                 }
 
@@ -170,23 +201,11 @@ public final class Routers {
                     continue;
                 }
 
-                rejectDuplicateMapping(mapping, existingMapping);
+                rejectionHandler.accept(mapping, existingMapping);
                 return;
             }
 
             existingMappings.add(mapping);
-        }
-    }
-
-    private static void rejectDuplicateMapping(PathMapping mapping, PathMapping existingMapping) {
-        final String a = mapping.toString();
-        final String b = existingMapping.toString();
-        if (a.equals(b)) {
-            throw new IllegalStateException("Your server has a duplicate service mapping: " + a);
-        } else {
-            throw new IllegalStateException(
-                    "Your server has the service mappings that conflict with each other: " +
-                    a + " vs. " + b);
         }
     }
 
