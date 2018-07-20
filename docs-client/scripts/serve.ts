@@ -20,6 +20,8 @@ import serve from 'webpack-serve';
 
 import config from '../webpack.config';
 
+import { docServiceDebug } from '../src/lib/header-provider';
+
 // tslint:disable-next-line:no-var-requires
 const proxy = require('koa-proxies');
 
@@ -48,7 +50,7 @@ const proxier = proxy('/', {
 
 async function proxyToApi(ctx: any, next: any) {
   if (
-    ctx.method !== 'POST' &&
+    !ctx.request.header[docServiceDebug] &&
     !ctx.path.endsWith('specification.json') &&
     !ctx.path.endsWith('injected.js')
   ) {

@@ -57,6 +57,7 @@ export default class StructPage extends React.PureComponent<Props> {
           <VariableList
             title="Fields"
             variables={data.fields}
+            containsLocation={false}
             specification={specification}
           />
         </Section>

@@ -312,9 +312,15 @@ public final class DocServiceBuilder {
             return exampleRequest.toString();
         }
 
-        for (DocServicePlugin generator : DocService.plugins) {
-            final Optional<String> result =
-                    generator.serializeExampleRequest(serviceName, methodName, exampleRequest);
+        for (DocServicePlugin plugin : DocService.plugins) {
+            // Skip if the plugin does not support it.
+            if (plugin.supportedExampleRequestTypes().stream()
+                      .noneMatch(type -> type.isInstance(exampleRequest))) {
+                continue;
+            }
+
+            final Optional<String> result = plugin.serializeExampleRequest(serviceName, methodName,
+                                                                           exampleRequest);
             if (result.isPresent()) {
                 return result.get();
             }

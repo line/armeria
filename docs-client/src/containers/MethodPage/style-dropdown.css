@@ -14,22 +14,8 @@
  * under the License.
  */
 
-/**
- * A pluggable provider of HTTP headers to issue with debug requests. The
- * headers will be added to the request before any headers present in the
- * debug form itself.
- */
-export type HeaderProvider = () => Promise<{ [name: string]: string }>;
-
-export const providers: HeaderProvider[] = [];
-
-export const docServiceDebug = 'doc-service-debug';
-
-/**
- * Register a function that returns a {@link Promise} that resolves
- * headers to inject into debug requests. Accessible as
- * {@code window.armeria.registerHeaderProvider}.
- */
-export function registerHeaderProvider(provider: HeaderProvider) {
-  providers.push(provider);
+.Dropdown-root > * {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
 }

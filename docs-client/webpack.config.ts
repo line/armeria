@@ -17,7 +17,7 @@
 import path from 'path';
 
 import HtmlWebpackPlugin from 'html-webpack-plugin';
-import { Configuration } from 'webpack';
+import { Configuration, EnvironmentPlugin } from 'webpack';
 
 const isDev = !!process.env.WEBPACK_SERVE;
 
@@ -87,6 +87,7 @@ const config: Configuration = {
     new HtmlWebpackPlugin({
       template: './src/index.html',
     }),
+    new EnvironmentPlugin(['WEBPACK_SERVE']),
   ],
 };
 

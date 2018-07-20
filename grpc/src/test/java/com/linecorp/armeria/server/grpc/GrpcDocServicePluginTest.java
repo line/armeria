@@ -28,7 +28,6 @@ import java.util.function.Function;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -52,7 +51,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceWithPathMappings;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
-import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -106,13 +105,14 @@ public class GrpcDocServicePluginTest {
                                               ReconnectServiceGrpc.SERVICE_NAME);
 
         services.get(TestServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
-            assertThat(e.path()).isEqualTo("/armeria.grpc.testing.TestService/" + m.name());
+            assertThat(e.pathMapping()).isEqualTo("/armeria.grpc.testing.TestService/" + m.name());
         }));
         services.get(UnitTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
-            assertThat(e.path()).isEqualTo("/test/armeria.grpc.testing.UnitTestService/" + m.name());
+            assertThat(e.pathMapping()).isEqualTo("/test/armeria.grpc.testing.UnitTestService/" + m.name());
         }));
         services.get(ReconnectServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
-            assertThat(e.path()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" + m.name());
+            assertThat(e.pathMapping()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" +
+                                                  m.name());
         }));
     }
 
@@ -148,12 +148,12 @@ public class GrpcDocServicePluginTest {
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
                         ImmutableList.of(
-                                new EndpointInfo("*", "/foo/", "",
-                                                 GrpcSerializationFormats.PROTO,
-                                                 ImmutableSet.of(GrpcSerializationFormats.PROTO)),
-                                new EndpointInfo("*", "/debug/foo/", "",
-                                                 GrpcSerializationFormats.JSON,
-                                                 ImmutableSet.of(GrpcSerializationFormats.JSON)))));
+                                new EndpointInfoBuilder("*", "/foo/")
+                                        .availableFormats(GrpcSerializationFormats.PROTO)
+                                        .build(),
+                                new EndpointInfoBuilder("*", "/debug/foo/")
+                                        .availableFormats(GrpcSerializationFormats.JSON)
+                                        .build())));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
         assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
         assertThat(methodInfo.returnTypeSignature().namedTypeDescriptor())
@@ -167,12 +167,12 @@ public class GrpcDocServicePluginTest {
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
         assertThat(methodInfo.docString()).isNull();
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
-                new EndpointInfo("*", "/foo/UnaryCall", "",
-                                 GrpcSerializationFormats.PROTO,
-                                 ImmutableSet.of(GrpcSerializationFormats.PROTO)),
-                new EndpointInfo("*", "/debug/foo/UnaryCall", "",
-                                 GrpcSerializationFormats.JSON,
-                                 ImmutableSet.of(GrpcSerializationFormats.JSON)));
+                new EndpointInfoBuilder("*", "/foo/UnaryCall")
+                        .availableFormats(GrpcSerializationFormats.PROTO)
+                        .build(),
+                new EndpointInfoBuilder("*", "/debug/foo/UnaryCall")
+                        .availableFormats(GrpcSerializationFormats.JSON)
+                        .build());
     }
 
     @Test
@@ -181,12 +181,12 @@ public class GrpcDocServicePluginTest {
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
                         ImmutableList.of(
-                                new EndpointInfo("*", "/foo", "a",
-                                                 GrpcSerializationFormats.PROTO,
-                                                 ImmutableSet.of(GrpcSerializationFormats.PROTO)),
-                                new EndpointInfo("*", "/debug/foo", "b",
-                                                 GrpcSerializationFormats.JSON,
-                                                 ImmutableSet.of(GrpcSerializationFormats.JSON)))));
+                                new EndpointInfoBuilder("*", "/foo")
+                                        .fragment("a").availableFormats(GrpcSerializationFormats.PROTO)
+                                        .build(),
+                                new EndpointInfoBuilder("*", "/debug/foo")
+                                        .fragment("b").availableFormats(GrpcSerializationFormats.JSON)
+                                        .build())));
 
         final Map<String, MethodInfo> functions = service
                 .methods()

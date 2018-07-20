@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -70,7 +71,10 @@ import com.linecorp.armeria.server.file.HttpFileService;
  */
 public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final int SPECIFICATION_INDEX = 0;
+
+    private static final ObjectMapper jsonMapper = new ObjectMapper()
+            .setSerializationInclusion(Include.NON_ABSENT);
 
     static final List<DocServicePlugin> plugins = Streams.stream(ServiceLoader.load(
             DocServicePlugin.class, DocService.class.getClassLoader())).collect(toImmutableList());
@@ -142,11 +146,12 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                               .collect(toImmutableList());
 
                 ServiceSpecification spec = generate(services);
+
                 spec = addDocStrings(spec, services);
                 spec = addExamples(spec);
 
-                vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
-                                             .writeValueAsBytes(spec));
+                vfs(SPECIFICATION_INDEX).setContent(jsonMapper.writerWithDefaultPrettyPrinter()
+                                                              .writeValueAsBytes(spec));
             }
         });
     }
@@ -203,12 +208,14 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                               method.endpoints(),
                               method.exampleHttpHeaders(),
                               method.exampleRequests(),
+                              method.httpMethod(),
                               docString(service.name() + '/' + method.name(), method.docString(), docStrings));
     }
 
     private static FieldInfo addParameterDocString(ServiceInfo service, MethodInfo method, FieldInfo field,
                                                    Map<String, String> docStrings) {
         return new FieldInfo(field.name(),
+                             field.location(),
                              field.requirement(),
                              field.typeSignature(),
                              docString(service.name() + '/' + method.name() + '/' + field.name(),
@@ -248,6 +255,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
     private static FieldInfo addFieldDocString(NamedTypeInfo parent, FieldInfo field,
                                                Map<String, String> docStrings) {
         return new FieldInfo(field.name(),
+                             field.location(),
                              field.requirement(),
                              field.typeSignature(),
                              docString(parent.name() + '/' + field.name(), field.docString(), docStrings));
@@ -280,18 +288,17 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 // Reconstruct MethodInfos with the examples.
                 service.methods().stream().map(m -> new MethodInfo(
                         m.name(), m.returnTypeSignature(), m.parameters(), m.exceptionTypeSignatures(),
-                        m.endpoints(), Iterables.concat(m.exampleHttpHeaders(),
-                                                        exampleHttpHeaders.get(m.name())),
-                        Iterables.concat(m.exampleRequests(),
-                                         exampleRequests.get(m.name())),
-                        m.docString()))::iterator,
+                        m.endpoints(),
+                        Iterables.concat(m.exampleHttpHeaders(), exampleHttpHeaders.get(m.name())),
+                        Iterables.concat(m.exampleRequests(), exampleRequests.get(m.name())),
+                        m.httpMethod(), m.docString()))::iterator,
                 Iterables.concat(service.exampleHttpHeaders(),
                                  exampleHttpHeaders.get("")),
                 service.docString());
     }
 
-    DocServiceVfs vfs() {
-        return (DocServiceVfs) ((HttpFileService) serviceAt(0)).config().vfs();
+    private DocServiceVfs vfs(int index) {
+        return (DocServiceVfs) ((HttpFileService) serviceAt(index)).config().vfs();
     }
 
     private static Set<ServiceConfig> findSupportedServices(
@@ -321,9 +328,13 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
             return DocService.class.getSimpleName();
         }
 
-        void setSpecification(byte[] content) {
+        void setContent(byte[] content) {
+            setContent(content, MediaType.JSON_UTF_8);
+        }
+
+        void setContent(byte[] content, MediaType mediaType) {
             assert entry == Entry.NONE;
-            entry = new ByteArrayEntry("/", MediaType.JSON_UTF_8, content);
+            entry = new ByteArrayEntry("/", mediaType, content);
         }
     }
 }

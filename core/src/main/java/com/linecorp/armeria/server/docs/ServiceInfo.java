@@ -70,7 +70,8 @@ public final class ServiceInfo {
 
         requireNonNull(methods, "methods");
 
-        this.methods = ImmutableSortedSet.copyOf(comparing(MethodInfo::name), methods);
+        this.methods = ImmutableSortedSet.copyOf(comparing(MethodInfo::name)
+                                                         .thenComparing(MethodInfo::httpMethod), methods);
         this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
                                          .map(HttpHeaders::copyOf)
                                          .map(HttpHeaders::asImmutable)

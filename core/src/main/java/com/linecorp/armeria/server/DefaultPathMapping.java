@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.internal.PathMappingUtil.createLoggerName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -128,7 +129,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
         paramNameArray = paramNames.toArray(EMPTY_NAMES);
         this.paramNames = ImmutableSet.copyOf(paramNames);
 
-        loggerName = loggerName(pathPattern);
+        loggerName = createLoggerName(pathPattern);
     }
 
     /**

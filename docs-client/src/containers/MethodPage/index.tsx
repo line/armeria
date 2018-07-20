@@ -15,6 +15,7 @@
  */
 
 import 'react-dropdown/style.css';
+import './style-dropdown.css';
 
 import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
@@ -42,8 +43,14 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
 
 import jsonPrettify from '../../lib/json-prettify';
-import { simpleName, Specification } from '../../lib/specification';
+import {
+  endpointPathString,
+  isPrefixOrRegexMapping,
+  simpleName,
+  Specification,
+} from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
+import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
 
 import Section from '../../components/Section';
 import VariableList from '../../components/VariableList';
@@ -51,6 +58,12 @@ import VariableList from '../../components/VariableList';
 interface State {
   debugRequest: string;
   debugResponse: string;
+  additionalQueriesOpen: boolean;
+  additionalQueries: string;
+  endpointPathOpen: boolean;
+  endpointPath: string;
+  regexPathPrefix: string;
+  originalPath: string;
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
   exampleHeaders: Option[];
@@ -68,6 +81,12 @@ export default class MethodPage extends React.PureComponent<Props, State> {
   public state: State = {
     debugRequest: '',
     debugResponse: '',
+    additionalQueriesOpen: false,
+    additionalQueries: '',
+    endpointPathOpen: false,
+    endpointPath: '',
+    regexPathPrefix: '',
+    originalPath: '',
     additionalHeadersOpen: false,
     additionalHeaders: '',
     exampleHeaders: [],
@@ -100,6 +119,10 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       return <>Not found.</>;
     }
 
+    const isAnnotatedHttpService = TRANSPORTS.getDebugTransport(
+      method,
+    )!.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
+
     return (
       <>
         <Typography variant="headline" paragraph>
@@ -112,6 +135,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
           <VariableList
             title="Parameters"
             variables={method.parameters}
+            containsLocation={isAnnotatedHttpService}
             specification={specification}
           />
         </Section>
@@ -165,9 +189,11 @@ export default class MethodPage extends React.PureComponent<Props, State> {
             </TableHead>
             <TableBody>
               {method.endpoints.map((endpoint) => (
-                <TableRow key={`${endpoint.hostnamePattern}/${endpoint.path}`}>
+                <TableRow
+                  key={`${endpoint.hostnamePattern}/${endpoint.pathMapping}`}
+                >
                   <TableCell>{endpoint.hostnamePattern}</TableCell>
-                  <TableCell>{endpoint.path}</TableCell>
+                  <TableCell>{endpointPathString(endpoint)}</TableCell>
                   <TableCell>
                     <List dense>
                       {endpoint.availableMimeTypes.map((mimeType) => (
@@ -210,6 +236,63 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                     className: 'code',
                   }}
                 />
+                {isAnnotatedHttpService &&
+                  ((!isPrefixOrRegexMapping(method) && (
+                    <>
+                      <Typography variant="body1" paragraph />
+                      <Button
+                        color="secondary"
+                        onClick={this.onAddHttpQueriesClick}
+                      >
+                        Add HTTP queries
+                      </Button>
+                      <Typography variant="body1" paragraph />
+                      {this.state.additionalQueriesOpen && (
+                        <>
+                          <TextField
+                            multiline
+                            fullWidth
+                            rows={1}
+                            value={this.state.additionalQueries}
+                            onChange={this.onQueriesFormChange}
+                            inputProps={{
+                              className: 'code',
+                            }}
+                          />
+                        </>
+                      )}
+                    </>
+                  )) ||
+                    (isPrefixOrRegexMapping(method) && (
+                      <>
+                        <Typography variant="body1" paragraph />
+                        <Button
+                          color="secondary"
+                          onClick={this.onInsertEndpointPathClick}
+                        >
+                          Insert the endpoint path
+                        </Button>
+                        <Typography variant="body1" paragraph />
+                        {this.state.endpointPathOpen && (
+                          <>
+                            <TextField
+                              multiline
+                              fullWidth
+                              rows={1}
+                              value={this.state.endpointPath}
+                              onChange={this.onEndpointPathChange.bind(
+                                this,
+                                method.endpoints[0].regexPathPrefix,
+                                method.endpoints[0].pathMapping,
+                              )}
+                              inputProps={{
+                                className: 'code',
+                              }}
+                            />
+                          </>
+                        )}
+                      </>
+                    )))}
                 <Typography variant="body1" paragraph />
                 <Button color="secondary" onClick={this.onEditHttpHeadersClick}>
                   Edit HTTP headers
@@ -301,9 +384,39 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     });
   };
 
+  private onQueriesFormChange = (e: ChangeEvent<HTMLInputElement>) => {
+    this.setState({
+      additionalQueries: e.target.value,
+    });
+  };
+
+  private onEndpointPathChange = (
+    regexPathPrefix: string,
+    originalPath: string,
+    e: ChangeEvent<HTMLInputElement>,
+  ) => {
+    this.setState({
+      regexPathPrefix,
+      originalPath,
+      endpointPath: e.target.value,
+    });
+  };
+
   private onStickyHeadersChange = () => {
     this.setState({
       stickyHeaders: !this.state.stickyHeaders,
+    });
+  };
+
+  private onAddHttpQueriesClick = () => {
+    this.setState({
+      additionalQueriesOpen: !this.state.additionalQueriesOpen,
+    });
+  };
+
+  private onInsertEndpointPathClick = () => {
+    this.setState({
+      endpointPathOpen: !this.state.endpointPathOpen,
     });
   };
 
@@ -333,6 +446,8 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
   private onSubmit = () => {
     const args = this.state.debugRequest;
+    const endpointPath = this.state.endpointPath;
+    const queries = this.state.additionalQueries;
     const headers = this.state.additionalHeaders;
     const params = new URLSearchParams(this.props.location.search);
 
@@ -354,6 +469,73 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     // For some reason jsonMinify minifies {} as empty string, so work around it.
     const minifiedArgs = jsonMinify(args) || '{}';
     params.set('args', minifiedArgs);
+
+    if (endpointPath) {
+      const method = this.getMethod()!;
+      // This method contains endpointPath from the debug form so it is annotated HTTP service.
+      // Annotated HTTP service has only one endpoint.
+      const endpoint = method.endpoints[0];
+      const regexPathPrefix = endpoint.regexPathPrefix;
+      const originalPath = endpoint.pathMapping;
+
+      if (regexPathPrefix) {
+        // Prefix adding path mapping.
+        if (!endpointPath.startsWith(regexPathPrefix)) {
+          this.setState({
+            debugResponse: `The path should start with prefix path: ${regexPathPrefix}`,
+          });
+          return;
+        }
+
+        if (!originalPath.startsWith('regex:')) {
+          this.setState({
+            debugResponse: `The path should start with 'regex:'. path: ${originalPath}`,
+          });
+          return;
+        }
+
+        // Remove the prefix part excluding ending '/'.
+        const regexPart = endpointPath.substr(regexPathPrefix.length - 1);
+        const regex = originalPath.substr('regex:'.length);
+        const regExp = new RegExp(regex);
+
+        if (!regExp.test(regexPart)) {
+          this.setState({
+            debugResponse: `Endpoint path: ${endpointPath} (expected: prefix=${regexPathPrefix} regex=${regex})`,
+          });
+          return;
+        }
+      } else if (originalPath.startsWith('prefix:')) {
+        // Prefix path mapping.
+        const prefix = originalPath.substr('prefix:'.length);
+        if (!endpointPath.startsWith(prefix)) {
+          this.setState({
+            debugResponse: `The path: '${endpointPath}' should start with prefix: ${prefix}`,
+          });
+          return;
+        }
+      } else {
+        // Regex path mapping
+        if (!originalPath.startsWith('regex:')) {
+          // Should be regex path mapping.
+          this.setState({
+            debugResponse: `The path should start with 'regex:'. path: ${originalPath}`,
+          });
+          return;
+        }
+        const regex = originalPath.substr('regex:'.length);
+        const regExp = new RegExp(regex);
+        if (!regExp.test(endpointPath)) {
+          this.setState({
+            debugResponse: `Endpoint path: ${endpointPath} (expected: ${regex})`,
+          });
+          return;
+        }
+      }
+      params.set('endpointPath', endpointPath);
+    } else if (queries) {
+      params.set('queries', queries);
+    }
 
     if (headers) {
       try {
@@ -399,6 +581,13 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     if (!argsText) {
       return;
     }
+
+    const endpointPathText = params.get('endpointPath');
+    const endpointPath = endpointPathText ? endpointPathText : '';
+
+    const queriesText = params.get('queries');
+    const queries = queriesText ? queriesText : '';
+
     const headersText = params.get('http_headers');
     const headers = headersText ? JSON.parse(headersText) : {};
 
@@ -406,7 +595,13 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     const transport = TRANSPORTS.getDebugTransport(method)!;
     let debugResponse;
     try {
-      debugResponse = await transport.send(method, argsText, headers);
+      debugResponse = await transport.send(
+        method,
+        argsText,
+        headers,
+        endpointPath,
+        queries,
+      );
     } catch (e) {
       debugResponse = e.toString();
     }
@@ -487,6 +682,10 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       exampleHeaders,
       debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
       debugResponse: '',
+      additionalQueries: '',
+      endpointPath: '',
+      regexPathPrefix: '',
+      originalPath: '',
       additionalHeaders:
         urlHeaders ||
         stateHeaders ||

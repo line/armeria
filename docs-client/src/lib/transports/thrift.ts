@@ -47,7 +47,7 @@ export default class ThriftTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    const httpResponse = await fetch(endpoint.path, {
+    const httpResponse = await fetch(endpoint.pathMapping, {
       headers: hdrs,
       method: 'POST',
       body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,

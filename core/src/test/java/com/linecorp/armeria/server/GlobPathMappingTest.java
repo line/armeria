@@ -142,7 +142,7 @@ public class GlobPathMappingTest {
         final GlobPathMapping pattern = compile(glob);
         for (String p: paths) {
             if (!pattern.apply(create(p)).isPresent()) {
-                Assert.fail('\'' + p + "' does not match '" + glob + "' or '" + pattern.asRegex() + "'.");
+                Assert.fail('\'' + p + "' does not match '" + glob + "' or '" + pattern.regex() + "'.");
             }
         }
     }
@@ -151,7 +151,7 @@ public class GlobPathMappingTest {
         final GlobPathMapping pattern = compile(glob);
         for (String p: paths) {
             if (pattern.apply(create(p)).isPresent()) {
-                Assert.fail('\'' + p + "' matches '" + glob + "' or '" + pattern.asRegex() + "'.");
+                Assert.fail('\'' + p + "' matches '" + glob + "' or '" + pattern.regex() + "'.");
             }
         }
     }
