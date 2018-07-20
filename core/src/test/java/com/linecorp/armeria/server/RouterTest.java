@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import org.assertj.core.util.Lists;
@@ -40,6 +41,10 @@ import com.linecorp.armeria.common.MediaType;
 public class RouterTest {
     private static final Logger logger = LoggerFactory.getLogger(RouterTest.class);
 
+    private static final BiConsumer<PathMapping, PathMapping> REJECT = (a, b) -> {
+        throw new IllegalStateException("duplicate path mapping: " + a + "vs. " + b);
+    };
+
     @Test
     public void testRouters() {
         final List<PathMapping> mappings = Lists.newArrayList(
@@ -53,7 +58,7 @@ public class RouterTest {
                 PathMapping.of("glob:/h/**/z"),     // router 4
                 PathMapping.of("prefix:/i")         // router 5
         );
-        final List<Router<PathMapping>> routers = Routers.routers(mappings, Function.identity());
+        final List<Router<PathMapping>> routers = Routers.routers(mappings, Function.identity(), REJECT);
         assertThat(routers.size()).isEqualTo(5);
 
         // Map of a path string and a router index
@@ -97,7 +102,7 @@ public class RouterTest {
         assertThat(Routers.routers(ImmutableList.of(PathMapping.of("/foo/:bar"),
                                                     PathMapping.ofRegex("not-trie-compatible"),
                                                     PathMapping.of("/bar/:baz")),
-                                   Function.identity())).hasSize(3);
+                                   Function.identity(), REJECT)).hasSize(3);
 
         testDuplicateMappings(PathMapping.of("/foo/:bar"),
                               PathMapping.ofRegex("not-trie-compatible"),
@@ -166,12 +171,12 @@ public class RouterTest {
     }
 
     private static void testDuplicateMappings(PathMapping... mappings) {
-        assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(mappings), Function.identity()))
+        assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(mappings), Function.identity(), REJECT))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageMatching(".*(?:conflict with each other|duplicate service mapping).*");
+                .hasMessageStartingWith("duplicate path mapping:");
     }
 
     private static void testNonDuplicateMappings(PathMapping... mappings) {
-        Routers.routers(ImmutableList.copyOf(mappings), Function.identity());
+        Routers.routers(ImmutableList.copyOf(mappings), Function.identity(), REJECT);
     }
 }
