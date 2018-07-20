@@ -166,6 +166,18 @@ final class HttpHeaderPathMapping implements PathMapping {
         return pathStringMapping.triePath();
     }
 
+    Optional<String> regex() {
+        if (pathStringMapping instanceof GlobPathMapping) {
+            return Optional.of(((GlobPathMapping) pathStringMapping).asRegex().pattern());
+        }
+
+        if (pathStringMapping instanceof RegexPathMapping) {
+            return Optional.of(((RegexPathMapping) pathStringMapping).asRegex().pattern());
+        }
+
+        return Optional.empty();
+    }
+
     @Override
     public int complexity() {
         return complexity;

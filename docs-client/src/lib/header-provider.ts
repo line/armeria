@@ -23,6 +23,8 @@ export type HeaderProvider = () => Promise<{ [name: string]: string }>;
 
 export const providers: HeaderProvider[] = [];
 
+export const docServiceDebug = 'doc-service-debug';
+
 /**
  * Register a function that returns a {@link Promise} that resolves
  * headers to inject into debug requests. Accessible as

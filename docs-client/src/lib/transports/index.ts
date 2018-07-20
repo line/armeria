@@ -16,12 +16,14 @@
 
 import { Method } from '../specification';
 
+import AnnotatedHttpTransport from './annotated-http';
 import GrpcUnframedTransport from './grpc-unframed';
 import ThriftTransport from './thrift';
 import Transport from './transport';
 
 const grpcUnframedTransport = new GrpcUnframedTransport();
 const thriftTransport = new ThriftTransport();
+const annotatedHttpTransport = new AnnotatedHttpTransport();
 
 export class Transports {
   public getDebugTransport(method: Method): Transport | undefined {
@@ -37,6 +39,9 @@ export class Transports {
       }
       if (thriftTransport.supportsMimeType(mimeType)) {
         return thriftTransport;
+      }
+      if (annotatedHttpTransport.supportsMimeType(mimeType)) {
+        return annotatedHttpTransport;
       }
     }
     return undefined;

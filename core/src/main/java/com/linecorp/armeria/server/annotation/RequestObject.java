@@ -72,4 +72,10 @@ import java.lang.annotation.Target;
         ElementType.CONSTRUCTOR,
         ElementType.FIELD
 })
-public @interface RequestObject {}
+public @interface RequestObject {
+
+    /**
+     * The description of the parameter.
+     */
+    String description() default "";
+}

@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -61,7 +60,6 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EnumInfo;
-import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
@@ -242,9 +240,13 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
-        final Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor().get();
+        final Optional<Object> namedTypeDescriptor = typeSignature.namedTypeDescriptor();
+        if (!namedTypeDescriptor.isPresent()) {
+            throw new IllegalArgumentException("cannot create named type from: " + typeSignature);
+        }
+        final Class<?> type = (Class<?>) namedTypeDescriptor.get();
         if (type.isEnum()) {
-            return newEnumInfo(type);
+            return EnumInfo.of(type);
         }
 
         if (TException.class.isAssignableFrom(type)) {
@@ -257,26 +259,6 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         @SuppressWarnings("unchecked")
         final Class<? extends TBase<?, ?>> castType = (Class<? extends TBase<?, ?>>) type;
         return newStructInfo(castType);
-    }
-
-    @VisibleForTesting
-    static EnumInfo newEnumInfo(Class<?> enumClass) {
-        requireNonNull(enumClass, "enumClass");
-
-        final List<EnumValueInfo> values = new ArrayList<>();
-        final Field[] fields = enumClass.getDeclaredFields();
-        for (Field field : fields) {
-            if (field.isEnumConstant()) {
-                try {
-                    values.add(new EnumValueInfo(String.valueOf(field.get(null))));
-                } catch (IllegalAccessException ignored) {
-                    // Skip inaccessible fields.
-                }
-            }
-        }
-
-        final String name = enumClass.getName();
-        return new EnumInfo(name, values);
     }
 
     @VisibleForTesting

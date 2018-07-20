@@ -181,6 +181,12 @@ io.reactivex.rxjava2:
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
+io.swagger.core.v3:
+  swagger-annotations: { version: &SWAGGER_VERSION '2.0.2' }
+  swagger-core: { version: *SWAGGER_VERSION }
+  swagger-integration: { version: *SWAGGER_VERSION }
+  swagger-models: { version: *SWAGGER_VERSION }
+
 io.zipkin.brave:
   brave:
     version: '5.5.0'

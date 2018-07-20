@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
@@ -38,6 +40,28 @@ public final class EnumInfo implements NamedTypeInfo {
     private final List<EnumValueInfo> values;
     @Nullable
     private final String docString;
+
+    /**
+     * Creates an {@link EnumInfo} from the specified {@link Class}.
+     */
+    public static EnumInfo of(Class<?> enumClass) {
+        requireNonNull(enumClass, "enumClass");
+
+        final List<EnumValueInfo> values = new ArrayList<>();
+        final Field[] fields = enumClass.getDeclaredFields();
+        for (Field field : fields) {
+            if (field.isEnumConstant()) {
+                try {
+                    values.add(new EnumValueInfo(String.valueOf(field.get(null))));
+                } catch (IllegalAccessException ignored) {
+                    // Skip inaccessible fields.
+                }
+            }
+        }
+
+        final String name = enumClass.getName();
+        return new EnumInfo(name, values);
+    }
 
     /**
      * Creates a new instance.

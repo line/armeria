@@ -19,6 +19,12 @@ import { Link } from 'react-router-dom';
 
 type DocString = string | JSX.Element;
 
+export enum EndpointPathMapping {
+  Default = 'DEFAULT',
+  Prefix = 'PREFIX',
+  Regex = 'REGEX',
+}
+
 interface HasDocString {
   docString?: DocString;
 }
@@ -46,6 +52,8 @@ export interface Method {
   endpoints: Endpoint[];
   exampleHttpHeaders: { [name: string]: string }[];
   exampleRequests: string[];
+  httpMethod: string;
+  endpointPathMapping: EndpointPathMapping;
   docString?: DocString;
 }
 
@@ -85,17 +93,28 @@ export interface SpecificationData {
   enums: Enum[];
   structs: Struct[];
   exceptions: Struct[];
-  exampleHttpHeaders: any[];
+  exampleHttpHeaders: { [name: string]: string }[];
 }
 
-export function simpleName(fullName: string) {
+export function simpleName(fullName: string): string {
   const lastDotIdx = fullName.lastIndexOf('.');
   return lastDotIdx >= 0 ? fullName.substring(lastDotIdx + 1) : fullName;
 }
 
-export function packageName(fullName: string) {
+export function packageName(fullName: string): string {
   const lastDotIdx = fullName.lastIndexOf('.');
   return lastDotIdx >= 0 ? fullName.substring(0, lastDotIdx) : fullName;
+}
+
+export function methodKey(
+  serviceName: string,
+  methodName: string,
+  httpMethod: string,
+): string {
+  if (httpMethod != null) {
+    return `${serviceName}/${methodName}/${httpMethod}`;
+  }
+  return `${serviceName}/${methodName}`;
 }
 
 interface NamedObject {
@@ -152,6 +171,10 @@ export class Specification {
 
   public getStructByName(name: string): Struct | undefined {
     return this.structsByName.get(name);
+  }
+
+  public getExampleHttpHeaders(): { [name: string]: string }[] {
+    return this.data.exampleHttpHeaders;
   }
 
   public getTypeSignatureHtml(typeSignature: string) {

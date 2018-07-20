@@ -60,7 +60,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 /**
  * A {@link Service} which is defined by {@link Path} or HTTP method annotations.
  */
-final class AnnotatedHttpService implements HttpService {
+public class AnnotatedHttpService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpService.class);
 
     static final ServiceLoader<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
@@ -74,15 +74,18 @@ final class AnnotatedHttpService implements HttpService {
     private final AggregationStrategy aggregationStrategy;
     private final List<ExceptionHandlerFunction> exceptionHandlers;
     private final List<ResponseConverterFunction> responseConverters;
+
     @Nullable
     private final ResponseConverterFunction providedResponseConverter;
+    private final HttpHeaderPathMapping pathMapping;
 
     private final ResponseType responseType;
 
     AnnotatedHttpService(Object object, Method method,
                          List<AnnotatedValueResolver> resolvers,
                          List<ExceptionHandlerFunction> exceptionHandlers,
-                         List<ResponseConverterFunction> responseConverters) {
+                         List<ResponseConverterFunction> responseConverters,
+                         HttpHeaderPathMapping pathMapping) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -93,6 +96,7 @@ final class AnnotatedHttpService implements HttpService {
 
         aggregationStrategy = AggregationStrategy.from(resolvers);
         providedResponseConverter = fromProvider(method);
+        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
 
         final Class<?> returnType = method.getReturnType();
         if (providedResponseConverter != null) {
@@ -145,6 +149,22 @@ final class AnnotatedHttpService implements HttpService {
         return Void.class;
     }
 
+    Object object() {
+        return object;
+    }
+
+    Method method() {
+        return method;
+    }
+
+    List<AnnotatedValueResolver> annotatedValueResolvers() {
+        return resolvers;
+    }
+
+    HttpHeaderPathMapping pathMapping() {
+        return pathMapping;
+    }
+
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         return HttpResponse.from(serve0(ctx, req));
@@ -155,7 +175,7 @@ final class AnnotatedHttpService implements HttpService {
      * required to be aggregated. If the return type of the method is not a {@link CompletionStage} or
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
-    public CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
+    private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<AggregatedHttpMessage> f =
                 aggregationRequired(aggregationStrategy, req) ? req.aggregate()
                                                               : CompletableFuture.completedFuture(null);

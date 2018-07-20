@@ -214,7 +214,7 @@ final class AnnotatedHttpServiceFactory {
         }
 
         final Class<?> clazz = object.getClass();
-        final PathMapping pathMapping = new HttpHeaderPathMapping(
+        final HttpHeaderPathMapping pathMapping = new HttpHeaderPathMapping(
                 pathStringMapping(pathPrefix, method, methodAnnotations),
                 methods, consumableMediaTypes(method, clazz), producibleMediaTypes(method, clazz));
 
@@ -262,7 +262,8 @@ final class AnnotatedHttpServiceFactory {
                         "They would not be automatically injected: " + missing);
         }
         return new AnnotatedHttpServiceElement(pathMapping,
-                                               new AnnotatedHttpService(object, method, resolvers, eh, res),
+                                               new AnnotatedHttpService(object, method, resolvers, eh,
+                                                                        res, pathMapping),
                                                decorator(method, clazz));
     }
 

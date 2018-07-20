@@ -48,4 +48,9 @@ public @interface Header {
      * The name of the HTTP request header to bind to.
      */
     String value() default DefaultValues.UNSPECIFIED;
+
+    /**
+     * The description of the HTTP request header.
+     */
+    String description() default "";
 }

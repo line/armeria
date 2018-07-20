@@ -39,8 +39,13 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
 
 import jsonPrettify from '../../lib/json-prettify';
-import { simpleName, Specification } from '../../lib/specification';
+import {
+  EndpointPathMapping,
+  simpleName,
+  Specification,
+} from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
+import AnnotatedHttpTransport from '../../lib/transports/annotated-http';
 
 import Section from '../../components/Section';
 import VariableList from '../../components/VariableList';
@@ -48,6 +53,11 @@ import VariableList from '../../components/VariableList';
 interface State {
   debugRequest: string;
   debugResponse: string;
+  additionalQueriesOpen: boolean;
+  additionalQueries: string;
+  endpointPathOpen: boolean;
+  endpointPath: string;
+  endpointPathMapping: EndpointPathMapping;
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
   stickyHeaders: boolean;
@@ -64,6 +74,11 @@ export default class MethodPage extends React.PureComponent<Props, State> {
   public state: State = {
     debugRequest: '',
     debugResponse: '',
+    additionalQueriesOpen: false,
+    additionalQueries: '',
+    endpointPathOpen: false,
+    endpointPath: '',
+    endpointPathMapping: EndpointPathMapping.Default,
     additionalHeadersOpen: false,
     additionalHeaders: '',
     stickyHeaders: false,
@@ -205,6 +220,64 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                     className: 'code',
                   }}
                 />
+                {TRANSPORTS.getDebugTransport(method) instanceof
+                  AnnotatedHttpTransport &&
+                  ((method.endpointPathMapping === EndpointPathMapping.Default && (
+                    <>
+                      <Typography variant="body1" paragraph />
+                      <Button
+                        color="secondary"
+                        onClick={this.onAddHttpQueriesClick}
+                      >
+                        Add HTTP queries
+                      </Button>
+                      <Typography variant="body1" paragraph />
+                      {this.state.additionalQueriesOpen && (
+                        <>
+                          <TextField
+                            multiline
+                            fullWidth
+                            rows={1}
+                            value={this.state.additionalQueries}
+                            onChange={this.onQueriesFormChange}
+                            inputProps={{
+                              className: 'code',
+                            }}
+                          />
+                        </>
+                      )}
+                    </>
+                  )) ||
+                    ((method.endpointPathMapping === EndpointPathMapping.Prefix ||
+                      method.endpointPathMapping === EndpointPathMapping.Regex) && (
+                      <>
+                        <Typography variant="body1" paragraph />
+                        <Button
+                          color="secondary"
+                          onClick={this.onInsertEndpointPathClick}
+                        >
+                          Insert the endpoint path
+                        </Button>
+                        <Typography variant="body1" paragraph />
+                        {this.state.endpointPathOpen && (
+                          <>
+                            <TextField
+                              multiline
+                              fullWidth
+                              rows={1}
+                              value={this.state.endpointPath}
+                              onChange={this.onEndpointPathChange.bind(
+                                this,
+                                method.endpointPathMapping,
+                              )}
+                              inputProps={{
+                                className: 'code',
+                              }}
+                            />
+                          </>
+                        )}
+                      </>
+                    )))}
                 <Typography variant="body1" paragraph />
                 <Button color="secondary" onClick={this.onEditHttpHeadersClick}>
                   Edit HTTP headers
@@ -281,9 +354,37 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     });
   };
 
+  private onQueriesFormChange = (e: ChangeEvent<HTMLInputElement>) => {
+    this.setState({
+      additionalQueries: e.target.value,
+    });
+  };
+
+  private onEndpointPathChange = (
+    pathMapping: EndpointPathMapping,
+    e: ChangeEvent<HTMLInputElement>,
+  ) => {
+    this.setState({
+      endpointPathMapping: pathMapping,
+      endpointPath: e.target.value,
+    });
+  };
+
   private onStickyHeadersChange = () => {
     this.setState({
       stickyHeaders: !this.state.stickyHeaders,
+    });
+  };
+
+  private onAddHttpQueriesClick = () => {
+    this.setState({
+      additionalQueriesOpen: !this.state.additionalQueriesOpen,
+    });
+  };
+
+  private onInsertEndpointPathClick = () => {
+    this.setState({
+      endpointPathOpen: !this.state.endpointPathOpen,
     });
   };
 
@@ -313,6 +414,9 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
   private onSubmit = () => {
     const args = this.state.debugRequest;
+    const endpointPath = this.state.endpointPath;
+    const endpointPathMapping = this.state.endpointPathMapping;
+    const queries = this.state.additionalQueries;
     const headers = this.state.additionalHeaders;
     const params = new URLSearchParams(this.props.location.search);
 
@@ -334,6 +438,29 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     // For some reason jsonMinify minifies {} as empty string, so work around it.
     const minifiedArgs = jsonMinify(args) || '{}';
     params.set('args', minifiedArgs);
+
+    if (endpointPath) {
+      const method = this.getMethod()!;
+      // This method contains endpointPath from the debug form so it is annotated http service.
+      // Annotated http service has only one endpoint.
+      const endpoint = method.endpoints[0].path;
+      if (
+        endpointPathMapping === EndpointPathMapping.Prefix &&
+        !endpointPath.startsWith(endpoint)
+      ) {
+        const newEndpointPath =
+          endpoint +
+          (endpointPath.charAt(0) === '/'
+            ? endpointPath.substr(1, endpointPath.length)
+            : endpointPath);
+        params.set('endpointPath', newEndpointPath);
+      } else {
+        params.set('endpointPath', endpointPath);
+      }
+      // TODO handle when the regex is not matched
+    } else if (queries) {
+      params.set('queries', queries);
+    }
 
     if (headers) {
       try {
@@ -379,6 +506,13 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     if (!argsText) {
       return;
     }
+
+    const endpointPathText = params.get('endpointPath');
+    const endpointPath = endpointPathText ? endpointPathText : '';
+
+    const queriesText = params.get('queries');
+    const queries = queriesText ? queriesText : '';
+
     const headersText = params.get('http_headers');
     const headers = headersText ? JSON.parse(headersText) : {};
 
@@ -386,7 +520,13 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     const transport = TRANSPORTS.getDebugTransport(method)!;
     let debugResponse;
     try {
-      debugResponse = await transport.send(method, argsText, headers);
+      debugResponse = await transport.send(
+        method,
+        argsText,
+        headers,
+        endpointPath,
+        queries,
+      );
     } catch (e) {
       debugResponse = e.toString();
     }
@@ -431,15 +571,28 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       ? this.state.additionalHeaders
       : undefined;
 
-    const exampleHeaders =
-      service.exampleHttpHeaders.length > 0
-        ? JSON.stringify(service.exampleHttpHeaders[0], null, 2)
-        : undefined;
+    let exampleHeaders;
+    if (method.exampleHttpHeaders.length > 0) {
+      exampleHeaders = JSON.stringify(method.exampleHttpHeaders[0], null, 2);
+    } else if (service.exampleHttpHeaders.length > 0) {
+      exampleHeaders = JSON.stringify(service.exampleHttpHeaders[0], null, 2);
+    } else if (this.props.specification.getExampleHttpHeaders().length > 0) {
+      exampleHeaders = JSON.stringify(
+        this.props.specification.getExampleHttpHeaders()[0],
+        null,
+        2,
+      );
+    } else {
+      exampleHeaders = undefined;
+    }
 
     const hasHeaders = !!(urlHeaders || stateHeaders || exampleHeaders);
     this.setState({
       debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
       debugResponse: '',
+      additionalQueries: '',
+      endpointPath: '',
+      endpointPathMapping: EndpointPathMapping.Default,
       additionalHeaders: urlHeaders || stateHeaders || exampleHeaders || '',
       additionalHeadersOpen: hasHeaders,
       stickyHeaders:

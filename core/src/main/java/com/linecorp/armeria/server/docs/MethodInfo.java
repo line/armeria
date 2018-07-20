@@ -36,12 +36,13 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.server.Service;
 
 /**
  * Metadata about a function of a {@link Service}.
  */
-public final class MethodInfo {
+public class MethodInfo {
 
     // FIXME(trustin): Return types and exception types should also have docstrings like params have them.
 
@@ -52,6 +53,8 @@ public final class MethodInfo {
     private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHttpHeaders;
     private final List<String> exampleRequests;
+    private final HttpMethod httpMethod;
+    private final EndpointPathMapping endpointPathMapping;
     @Nullable
     private final String docString;
 
@@ -63,8 +66,21 @@ public final class MethodInfo {
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints) {
+        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+             HttpMethod.POST, EndpointPathMapping.DEFAULT, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public MethodInfo(String name,
+                      TypeSignature returnTypeSignature,
+                      Iterable<FieldInfo> parameters,
+                      Iterable<TypeSignature> exceptionTypeSignatures,
+                      Iterable<EndpointInfo> endpoints, HttpMethod httpMethod,
+                      EndpointPathMapping endpointPathMapping, @Nullable String docString) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures,
-             endpoints, ImmutableList.of(), ImmutableList.of(), null);
+             endpoints, ImmutableList.of(), ImmutableList.of(), httpMethod, endpointPathMapping, docString);
     }
 
     /**
@@ -77,8 +93,9 @@ public final class MethodInfo {
                       Iterable<EndpointInfo> endpoints,
                       Iterable<HttpHeaders> exampleHttpHeaders,
                       Iterable<String> exampleRequests,
+                      HttpMethod httpMethod,
+                      EndpointPathMapping endpointPathMapping,
                       @Nullable String docString) {
-
         this.name = requireNonNull(name, "name");
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
@@ -95,6 +112,8 @@ public final class MethodInfo {
                                          .map(HttpHeaders::asImmutable)
                                          .collect(toImmutableList());
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
+        this.httpMethod = requireNonNull(httpMethod, "httpMethod");
+        this.endpointPathMapping = requireNonNull(endpointPathMapping, "endpointPathMapping");
         this.docString = Strings.emptyToNull(docString);
     }
 
@@ -156,6 +175,22 @@ public final class MethodInfo {
     }
 
     /**
+     * Returns the HTTP method of this method.
+     */
+    @JsonProperty
+    public HttpMethod httpMethod() {
+        return httpMethod;
+    }
+
+    /**
+     * Returns the {@link EndpointPathMapping} of this method.
+     */
+    @JsonProperty
+    public EndpointPathMapping endpointPathMapping() {
+        return endpointPathMapping;
+    }
+
+    /**
      * Returns the documentation string of the function.
      */
     @JsonProperty
@@ -176,26 +211,31 @@ public final class MethodInfo {
         }
 
         final MethodInfo that = (MethodInfo) o;
-        return name.equals(that.name) &&
-               returnTypeSignature.equals(that.returnTypeSignature) &&
-               parameters.equals(that.parameters) &&
-               exceptionTypeSignatures.equals(that.exceptionTypeSignatures) &&
-               endpoints.equals(that.endpoints);
+        return name().equals(that.name()) &&
+               returnTypeSignature().equals(that.returnTypeSignature()) &&
+               parameters().equals(that.parameters()) &&
+               exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
+               endpoints().equals(that.endpoints()) &&
+               Objects.equals(httpMethod(), that.httpMethod()) &&
+               endpointPathMapping().equals(that.endpointPathMapping());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints);
+        return Objects.hash(name(), returnTypeSignature(), parameters(), exceptionTypeSignatures(),
+                            endpoints(), httpMethod(), endpointPathMapping());
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("name", name)
-                          .add("returnTypeSignature", returnTypeSignature)
-                          .add("parameters", parameters)
-                          .add("exceptionTypeSignatures", exceptionTypeSignatures)
-                          .add("endpoints", endpoints)
+        return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("name", name())
+                          .add("returnTypeSignature", returnTypeSignature())
+                          .add("parameters", parameters())
+                          .add("exceptionTypeSignatures", exceptionTypeSignatures())
+                          .add("endpoints", endpoints())
+                          .add("httpMethod", httpMethod())
+                          .add("endpointPathMapping", endpointPathMapping())
                           .toString();
     }
 }

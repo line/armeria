@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -33,8 +34,11 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -45,6 +49,9 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin;
+import com.linecorp.armeria.server.AnnotatedHttpService;
+import com.linecorp.armeria.server.AnnotatedOpenApiReader;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
@@ -56,6 +63,8 @@ import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.file.AbstractHttpVfs;
 import com.linecorp.armeria.server.file.HttpFileService;
+
+import io.swagger.v3.oas.models.OpenAPI;
 
 /**
  * An {@link HttpService} that provides information about the {@link Service}s running in a
@@ -70,10 +79,21 @@ import com.linecorp.armeria.server.file.HttpFileService;
  */
 public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper jsonMapper = new ObjectMapper()
+            .setSerializationInclusion(Include.NON_ABSENT);
 
-    static final List<DocServicePlugin> plugins = Streams.stream(ServiceLoader.load(
-            DocServicePlugin.class, DocService.class.getClassLoader())).collect(toImmutableList());
+    private static final ObjectMapper yamlMapper = new YAMLMapper()
+            .setSerializationInclusion(Include.NON_ABSENT);
+
+    static final List<DocServicePlugin> plugins;
+
+    static {
+        final Builder<DocServicePlugin> builder = ImmutableList.builder();
+        Streams.stream(ServiceLoader.load(DocServicePlugin.class, DocService.class.getClassLoader()))
+               .forEach(builder::add);
+        builder.add(new AnnotatedHttpDocServicePlugin());
+        plugins = builder.build();
+    }
 
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders;
     private final Map<String, ListMultimap<String, String>> exampleRequests;
@@ -96,6 +116,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers) {
 
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
+              ofExact("/openapi.json", HttpFileService.forVfs(new DocServiceVfs())),
+              ofExact("/openapi.yaml", HttpFileService.forVfs(new DocServiceVfs())),
               ofExact("/injected.js",
                       (ctx, req) -> HttpResponse.of(MediaType.JAVASCRIPT_UTF_8,
                                                     injectedScriptSuppliers.stream()
@@ -142,11 +164,21 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                               .collect(toImmutableList());
 
                 ServiceSpecification spec = generate(services);
+
                 spec = addDocStrings(spec, services);
                 spec = addExamples(spec);
 
-                vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
-                                             .writeValueAsBytes(spec));
+                vfs(0).setContent(jsonMapper.writerWithDefaultPrettyPrinter()
+                                            .writeValueAsBytes(spec));
+
+                if (services.stream().anyMatch(sc -> sc.service()
+                                                       .as(AnnotatedHttpService.class).isPresent())) {
+                    final OpenAPI openAPI = generateOpenApi(services);
+                    vfs(1).setContent(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(openAPI));
+                    // There's no media type defined for yaml and OpenAPI specification, so just use
+                    // MediaType.JSON_UTF_8 for now.
+                    vfs(2).setContent(yamlMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(openAPI));
+                }
             }
         });
     }
@@ -157,6 +189,14 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                        .map(plugin -> plugin.generateSpecification(
                                findSupportedServices(plugin, services)))
                        .collect(toImmutableList()));
+    }
+
+    private static OpenAPI generateOpenApi(List<ServiceConfig> serviceConfigs) {
+        final List<AnnotatedHttpService> services =
+                serviceConfigs.stream().map(sc -> sc.service().as(AnnotatedHttpService.class))
+                              .filter(Optional::isPresent).map(Optional::get)
+                              .collect(toImmutableList());
+        return AnnotatedOpenApiReader.read(services);
     }
 
     private static ServiceSpecification addDocStrings(ServiceSpecification spec, List<ServiceConfig> services) {
@@ -203,6 +243,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                               method.endpoints(),
                               method.exampleHttpHeaders(),
                               method.exampleRequests(),
+                              method.httpMethod(),
+                              method.endpointPathMapping(),
                               docString(service.name() + '/' + method.name(), method.docString(), docStrings));
     }
 
@@ -284,14 +326,15 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                                                         exampleHttpHeaders.get(m.name())),
                         Iterables.concat(m.exampleRequests(),
                                          exampleRequests.get(m.name())),
+                        m.httpMethod(), m.endpointPathMapping(),
                         m.docString()))::iterator,
                 Iterables.concat(service.exampleHttpHeaders(),
                                  exampleHttpHeaders.get("")),
                 service.docString());
     }
 
-    DocServiceVfs vfs() {
-        return (DocServiceVfs) ((HttpFileService) serviceAt(0)).config().vfs();
+    private DocServiceVfs vfs(int index) {
+        return (DocServiceVfs) ((HttpFileService) serviceAt(index)).config().vfs();
     }
 
     private static Set<ServiceConfig> findSupportedServices(
@@ -321,7 +364,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
             return DocService.class.getSimpleName();
         }
 
-        void setSpecification(byte[] content) {
+        void setContent(byte[] content) {
             assert entry == Entry.NONE;
             entry = new ByteArrayEntry("/", MediaType.JSON_UTF_8, content);
         }

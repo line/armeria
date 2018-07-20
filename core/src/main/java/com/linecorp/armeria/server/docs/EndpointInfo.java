@@ -43,6 +43,7 @@ public final class EndpointInfo {
 
     private final String hostnamePattern;
     private final String path;
+    private final EndpointPathMapping pathMapping;
     @Nullable
     private final String fragment;
     private final MediaType defaultMimeType;
@@ -53,7 +54,16 @@ public final class EndpointInfo {
      */
     public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
                         SerializationFormat defaultFormat, Iterable<SerializationFormat> availableFormats) {
-        this(hostnamePattern, path, fragment, defaultFormat.mediaType(),
+        this(hostnamePattern, path, EndpointPathMapping.DEFAULT, fragment, defaultFormat, availableFormats);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public EndpointInfo(String hostnamePattern, String path, EndpointPathMapping pathMapping,
+                        @Nullable String fragment, SerializationFormat defaultFormat,
+                        Iterable<SerializationFormat> availableFormats) {
+        this(hostnamePattern, path, pathMapping, fragment, defaultFormat.mediaType(),
              Streams.stream(availableFormats).map(SerializationFormat::mediaType)::iterator);
     }
 
@@ -62,9 +72,19 @@ public final class EndpointInfo {
      */
     public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
                         MediaType defaultMimeType, Iterable<MediaType> availableMimeTypes) {
+        this(hostnamePattern, path, EndpointPathMapping.DEFAULT, fragment, defaultMimeType, availableMimeTypes);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public EndpointInfo(String hostnamePattern, String path, EndpointPathMapping pathMapping,
+                        @Nullable String fragment,
+                        MediaType defaultMimeType, Iterable<MediaType> availableMimeTypes) {
 
         this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
         this.path = requireNonNull(path, "path");
+        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.fragment = Strings.emptyToNull(fragment);
         this.defaultMimeType = requireNonNull(defaultMimeType, "defaultFormat");
 
@@ -87,6 +107,14 @@ public final class EndpointInfo {
     @JsonProperty
     public String path() {
         return path;
+    }
+
+    /**
+     * Returns the {@link EndpointPathMapping} of this endpoint.
+     */
+    @JsonProperty
+    public EndpointPathMapping pathMapping() {
+        return pathMapping;
     }
 
     /**

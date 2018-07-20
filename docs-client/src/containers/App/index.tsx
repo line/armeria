@@ -46,6 +46,7 @@ import MethodPage from '../MethodPage';
 import StructPage from '../StructPage';
 
 import {
+  methodKey,
   simpleName,
   Specification,
   SpecificationData,
@@ -86,6 +87,69 @@ const styles = (theme: Theme) =>
       },
     },
     toolbar: theme.mixins.toolbar,
+    options: {
+      background: '#FF8E53',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
+    get: {
+      background: '#6abe45',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
+    head: {
+      background: '#FE6B8B',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
+    post: {
+      background: '#1e91ca',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
+    put: {
+      background: '#824ea0',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
+    patch: {
+      background: '#e6cc1d',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
+    delete: {
+      background: '#ec1d23',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
   });
 
 interface State {
@@ -102,6 +166,7 @@ type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
 interface AppDrawerProps extends WithStyles<typeof styles> {
   specification: Specification;
   navigateTo: (url: string) => void;
+  httpMethod: (httpMethod: string) => string;
   servicesOpen: boolean;
   enumsOpen: boolean;
   structsOpen: boolean;
@@ -112,6 +177,7 @@ interface AppDrawerProps extends WithStyles<typeof styles> {
 function AppDrawer({
   classes,
   navigateTo,
+  httpMethod,
   specification,
   servicesOpen,
   enumsOpen,
@@ -140,12 +206,28 @@ function AppDrawer({
                 {service.methods.map((method) => (
                   <ListItem
                     dense
-                    key={`${service.name}/${method.name}`}
+                    key={methodKey(
+                      service.name,
+                      method.name,
+                      method.httpMethod,
+                    )}
                     button
                     onClick={() =>
-                      navigateTo(`/methods/${service.name}/${method.name}`)
+                      navigateTo(
+                        '/methods/' +
+                          methodKey(
+                            service.name,
+                            method.name,
+                            method.httpMethod,
+                          ),
+                      )
                     }
                   >
+                    {method.httpMethod && (
+                      <Typography className={httpMethod(method.httpMethod)}>
+                        {method.httpMethod}
+                      </Typography>
+                    )}
                     <ListItemText
                       inset
                       primaryTypographyProps={{
@@ -321,6 +403,7 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={this.navigateTo}
+              httpMethod={this.httpMethod}
               servicesOpen={this.state.servicesOpen}
               enumsOpen={this.state.enumsOpen}
               structsOpen={this.state.structsOpen}
@@ -343,6 +426,7 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={this.navigateTo}
+              httpMethod={this.httpMethod}
               servicesOpen={this.state.servicesOpen}
               enumsOpen={this.state.enumsOpen}
               structsOpen={this.state.structsOpen}
@@ -387,6 +471,33 @@ class App extends React.PureComponent<Props, State> {
     this.setState({
       mobileDrawerOpen: false,
     });
+  };
+
+  private httpMethod = (httpMethod: string) => {
+    const classes = this.props.classes;
+    if (httpMethod === 'OPTIONS') {
+      return classes.options;
+    }
+    if (httpMethod === 'GET') {
+      return classes.get;
+    }
+    if (httpMethod === 'HEAD') {
+      return classes.head;
+    }
+    if (httpMethod === 'POST') {
+      return classes.post;
+    }
+    if (httpMethod === 'PUT') {
+      return classes.put;
+    }
+    if (httpMethod === 'PATCH') {
+      return classes.patch;
+    }
+    if (httpMethod === 'DELETE') {
+      return classes.delete;
+    }
+
+    throw new Error(`unsupported http method: ${httpMethod}`);
   };
 
   private fetchSpecification = async () => {

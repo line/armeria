@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newEnumInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newExceptionInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newFieldInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newServiceInfo;
@@ -93,14 +92,14 @@ public class ThriftDocServicePluginTest {
 
         assertThat(services).containsOnlyKeys(HelloService.class.getName(), FooService.class.getName());
 
-        // Ensure each service contains all endpoints and example HTTP headers.
+        // Ensure each service contains the endpoint and does not have example HTTP headers.
         final ServiceInfo helloServiceInfo = services.get(HelloService.class.getName());
         assertThat(helloServiceInfo.exampleHttpHeaders()).isEmpty();
 
         final ServiceInfo fooServiceInfo = services.get(FooService.class.getName());
         assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
 
-        // Ensure the example request exists as well.
+        // Ensure the example request is empty as well.
         final Map<String, MethodInfo> methods =
                 fooServiceInfo.methods().stream()
                               .collect(toImmutableMap(MethodInfo::name, Function.identity()));
@@ -115,7 +114,7 @@ public class ThriftDocServicePluginTest {
 
     @Test
     public void testNewEnumInfo() throws Exception {
-        final EnumInfo enumInfo = newEnumInfo(FooEnum.class);
+        final EnumInfo enumInfo = EnumInfo.of(FooEnum.class);
 
         assertThat(enumInfo).isEqualTo(new EnumInfo(FooEnum.class.getName(),
                                                     Arrays.asList(new EnumValueInfo("VAL1"),
@@ -152,7 +151,7 @@ public class ThriftDocServicePluginTest {
         assertThat(bar1.parameters()).isEmpty();
         assertThat(bar1.returnTypeSignature()).isEqualTo(TypeSignature.ofBase("void"));
         assertThat(bar1.exceptionTypeSignatures()).hasSize(1);
-        assertThat(bar1.exampleRequests().isEmpty());
+        assertThat(bar1.exampleRequests()).isEmpty();
         assertThat(bar1.endpoints()).containsExactlyInAnyOrder(
                 new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
                                  ImmutableSet.of(ThriftSerializationFormats.TEXT)),
