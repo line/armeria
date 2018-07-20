@@ -109,8 +109,8 @@ function AppDrawer({ classes, navigateTo, specification }: AppDrawerProps) {
           {specification.getServices().map((service) => (
             <div key={service.name}>
               <ListSubheader className={classes.methodHeader}>
-                <Typography variant="title">
-                  {simpleName(service.name)}
+                <Typography variant="subheading">
+                  <code>{simpleName(service.name)}</code>
                 </Typography>
               </ListSubheader>
               {service.methods.map((method) => (
