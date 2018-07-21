@@ -16,16 +16,16 @@
 
 import { Method } from '../specification';
 
-import { Transport } from './index';
+import Transport from './transport';
 
 const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
 
-export default class ThriftTransport implements Transport {
+export default class ThriftTransport extends Transport {
   public supportsMimeType(mimeType: string): boolean {
     return mimeType === TTEXT_MIME_TYPE;
   }
 
-  public async send(
+  protected async doSend(
     method: Method,
     bodyJson: string,
     headers: { [name: string]: string },

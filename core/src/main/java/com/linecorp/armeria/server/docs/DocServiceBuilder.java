@@ -18,7 +18,9 @@ package com.linecorp.armeria.server.docs;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,6 +44,7 @@ public final class DocServiceBuilder {
 
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders = new HashMap<>();
     private final Map<String, ListMultimap<String, String>> exampleRequests = new HashMap<>();
+    private final List<String> injectedScripts = new ArrayList<>();
 
     /**
      * Adds the example {@link HttpHeaders} which are applicable to any services.
@@ -241,6 +244,46 @@ public final class DocServiceBuilder {
         return this;
     }
 
+    /**
+     * Adds a Javascript script to inject into the end of the debug page HTML. This can be used to customize
+     * the debug page (e.g., to provide a HeaderProvider for enabling authentication based on local storage).
+     * All scripts are concatenated into the content of a single script tag.
+     *
+     * <p>A common use case is to provide authentication of debug requests using a local storage access token,
+     * e.g., <pre>{@code
+     *   armeria.registerHeaderProvider(function() {
+     *     // Replace with fetching accesstoken using your favorite auth library.
+     *     return Promise.resolve({ authorization: 'accesstoken' });
+     *   });
+     * }</pre>
+     */
+    public DocServiceBuilder injectedScript(String... scripts) {
+        requireNonNull(scripts, "scripts");
+        return injectedScript(ImmutableList.copyOf(scripts));
+    }
+
+    /**
+     * Adds a Javascript script to inject into the end of the debug page HTML. This can be used to customize
+     * the debug page (e.g., to provide a HeaderProvider for enabling authentication based on local storage).
+     * All scripts are concatenated into the content of a single script tag.
+     *
+     * <p>A common use case is to provide authentication of debug requests using a local storage access token,
+     * e.g., <pre>{@code
+     *   armeria.registerHeaderProvider(function() {
+     *     // Replace with fetching accesstoken using your favorite auth library.
+     *     return Promise.resolve({ authorization: 'accesstoken' });
+     *   });
+     * }</pre>
+     */
+    public DocServiceBuilder injectedScript(Iterable<String> scripts) {
+        requireNonNull(scripts, "scripts");
+        for (String s : scripts) {
+            requireNonNull(s, "scripts contains null.");
+            injectedScripts.add(s);
+        }
+        return this;
+    }
+
     private void exampleRequest0(String serviceName, String methodName, String serializedExampleRequest) {
         exampleRequests.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
                        .put(methodName, serializedExampleRequest);
@@ -310,6 +353,6 @@ public final class DocServiceBuilder {
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
-        return new DocService(exampleHttpHeaders, exampleRequests);
+        return new DocService(exampleHttpHeaders, exampleRequests,  String.join("\n", injectedScripts));
     }
 }
