@@ -26,7 +26,6 @@ import java.util.Base64.Encoder;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -167,18 +166,22 @@ public class HttpAuthServiceTest {
             // AuthService fails when building a success message.
             sb.service(
                     "/on_success_exception",
-                    ok.decorate(service -> new HttpAuthService(service) {
-                        @Override
-                        protected CompletionStage<Boolean> authorize(HttpRequest request,
-                                                                     ServiceRequestContext ctx) {
-                            return completedFuture(true);
-                        }
+                    ok.decorate(new HttpAuthServiceBuilder().add((ctx, req) -> completedFuture(true))
+                                                            .onSuccess((delegate, ctx, req) -> {
+                                                                throw new AnticipatedException("bug!");
+                                                            })
+                                                            .newDecorator())
+                      .decorate(LoggingService.newDecorator()));
 
-                        @Override
-                        protected HttpResponse onSuccess(ServiceRequestContext ctx, HttpRequest req) {
-                            throw new AnticipatedException("bug!");
-                        }
-                    }).decorate(LoggingService.newDecorator()));
+            // AuthService fails when building a failure message.
+            sb.service(
+                    "/on_failure_exception",
+                    ok.decorate(new HttpAuthServiceBuilder().add((ctx, req) -> completedFuture(false))
+                                                            .onFailure((delegate, ctx, req, cause) -> {
+                                                                throw new AnticipatedException("bug!");
+                                                            })
+                                                            .newDecorator())
+                      .decorate(LoggingService.newDecorator()));
         }
     };
 
@@ -350,6 +353,16 @@ public class HttpAuthServiceTest {
     public void testOnSuccessException() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/on_success_exception")))) {
+                assertThat(res.getStatusLine().toString()).isEqualTo(
+                        "HTTP/1.1 500 Internal Server Error");
+            }
+        }
+    }
+
+    @Test
+    public void testOnFailureException() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/on_failure_exception")))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo(
                         "HTTP/1.1 500 Internal Server Error");
             }
