@@ -147,7 +147,7 @@ public final class HttpAuthServiceBuilder {
 
     /**
      * Sets the {@link AuthFailureHandler} which handles the requests with failed authorization.
-     * By default, the cause of authorization failure is logged at WARN level (if any) and a
+     * By default, an exception thrown during authorization is logged at WARN level (if any) and a
      * {@code 401 Unauthorized} response will be sent.
      */
     public HttpAuthServiceBuilder onFailure(AuthFailureHandler<HttpRequest, HttpResponse> failureHandler) {

@@ -163,6 +163,20 @@ public class HttpAuthServiceTest {
                     }).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
+            // Authorizer returns a future that resolves to null.
+            sb.service(
+                    "/authorizer_resolve_null",
+                    ok.decorate(new HttpAuthServiceBuilder().add((ctx, data) -> completedFuture(null))
+                                                            .newDecorator())
+                      .decorate(LoggingService.newDecorator()));
+
+            // Authorizer returns null.
+            sb.service(
+                    "/authorizer_null",
+                    ok.decorate(new HttpAuthServiceBuilder().add((ctx, data) -> null)
+                                                            .newDecorator())
+                      .decorate(LoggingService.newDecorator()));
+
             // AuthService fails when building a success message.
             sb.service(
                     "/on_success_exception",
@@ -344,6 +358,24 @@ public class HttpAuthServiceTest {
     public void testAuthorizerException() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/authorizer_exception")))) {
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
+            }
+        }
+    }
+
+    @Test
+    public void testAuthorizerResolveNull() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/authorizer_resolve_null")))) {
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
+            }
+        }
+    }
+
+    @Test
+    public void testAuthorizerNull() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/authorizer_null")))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
         }

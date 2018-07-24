@@ -18,14 +18,12 @@ package com.linecorp.armeria.server.auth;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -81,29 +79,20 @@ public final class HttpAuthService extends SimpleDecoratingService<HttpRequest, 
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(authorize(ctx, req).handleAsync((result, t) -> {
+        return HttpResponse.from(AuthorizerUtil.authorize(authorizer, ctx, req).handleAsync((result, cause) -> {
             try {
-                if (t != null || !result) {
-                    return failureHandler.authFailed(delegate(), ctx, req, t);
-                } else {
-                    return successHandler.authSucceeded(delegate(), ctx, req);
+                if (cause == null) {
+                    if (result != null) {
+                        return result ? successHandler.authSucceeded(delegate(), ctx, req)
+                                      : failureHandler.authFailed(delegate(), ctx, req, null);
+                    }
+                    cause = AuthorizerUtil.newNullResultException(authorizer);
                 }
+
+                return failureHandler.authFailed(delegate(), ctx, req, cause);
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(e);
             }
         }, ctx.contextAwareEventLoop()));
-    }
-
-    /**
-     * Determines if the specified {@link HttpRequest} is authorized for this service. If the result resolves
-     * to {@code true}, the request is authorized, or {@code false} otherwise. If the future resolves
-     * exceptionally, the request will not be authorized.
-     */
-    private CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest req) {
-        try {
-            return authorizer.authorize(ctx, req);
-        } catch (Throwable cause) {
-            return CompletableFutures.exceptionallyCompletedFuture(cause);
-        }
     }
 }

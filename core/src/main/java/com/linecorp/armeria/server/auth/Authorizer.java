@@ -54,11 +54,13 @@ public interface Authorizer<T> {
 
             @Override
             public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data) {
-                return self.authorize(ctx, data).thenComposeAsync(result -> {
-                    if (result != null && result) {
-                        return CompletableFuture.completedFuture(true);
+                return AuthorizerUtil.authorize(self, ctx, data).thenComposeAsync(result -> {
+                    if (result == null) {
+                        throw AuthorizerUtil.newNullResultException(self);
+                    } else {
+                        return result ? CompletableFuture.completedFuture(true)
+                                      : AuthorizerUtil.authorize(nextAuthorizer, ctx, data);
                     }
-                    return nextAuthorizer.authorize(ctx, data);
                 }, ctx.contextAwareEventLoop());
             }
 
