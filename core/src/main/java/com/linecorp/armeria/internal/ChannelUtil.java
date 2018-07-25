@@ -24,8 +24,27 @@ import com.google.common.collect.ImmutableList;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 
 public final class ChannelUtil {
+
+    private static final Class<? extends EventLoopGroup> EPOLL_EVENT_LOOP_CLASS;
+
+    static {
+        try {
+            //noinspection unchecked
+            EPOLL_EVENT_LOOP_CLASS = (Class<? extends EventLoopGroup>)
+                    Class.forName("io.netty.channel.epoll.EpollEventLoop", false,
+                                  EpollEventLoopGroup.class.getClassLoader());
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to locate EpollEventLoop class", e);
+        }
+    }
+
+    public static Class<? extends EventLoopGroup> epollEventLoopClass() {
+        return EPOLL_EVENT_LOOP_CLASS;
+    }
 
     public static CompletableFuture<Void> close(Iterable<? extends Channel> channels) {
         final List<Channel> channelsCopy = ImmutableList.copyOf(channels);

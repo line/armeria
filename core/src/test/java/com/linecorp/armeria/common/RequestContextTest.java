@@ -38,8 +38,8 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -53,12 +53,12 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.testing.common.EventLoopRule;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
@@ -69,12 +69,8 @@ import io.netty.util.concurrent.Promise;
 
 public class RequestContextTest {
 
-    private static final EventLoop eventLoop = new DefaultEventLoop();
-
-    @AfterClass
-    public static void stopEventLoop() {
-        eventLoop.shutdownGracefully();
-    }
+    @ClassRule
+    public static final EventLoopRule eventLoop = new EventLoopRule();
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
@@ -89,7 +85,7 @@ public class RequestContextTest {
 
     @Test
     public void contextAwareEventExecutor() throws Exception {
-        when(channel.eventLoop()).thenReturn(eventLoop);
+        when(channel.eventLoop()).thenReturn(eventLoop.get());
         final RequestContext context = createContext();
         final Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());
         final EventExecutor executor = context.contextAwareEventLoop();
@@ -125,7 +121,7 @@ public class RequestContextTest {
         progressivePromise.addListener(f -> checkCallback(18, context, callbacksCalled, latch));
         progressivePromise.setSuccess("success");
         latch.await();
-        eventLoop.shutdownGracefully().sync();
+        eventLoop.get().shutdownGracefully().sync();
         assertThat(callbacksCalled).containsExactlyElementsOf(IntStream.rangeClosed(1, 18).boxed()::iterator);
     }
 
@@ -308,7 +304,7 @@ public class RequestContextTest {
 
         try (SafeCloseable ignored = context2.push()) {
             thrown.expect(IllegalStateException.class);
-            context.makeContextAware((Runnable) () -> Assert.fail()).run();
+            context.makeContextAware((Runnable) Assert::fail).run();
         }
     }
 

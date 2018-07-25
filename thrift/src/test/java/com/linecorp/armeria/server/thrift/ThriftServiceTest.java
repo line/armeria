@@ -32,7 +32,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nonnull;
@@ -41,9 +40,8 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -71,10 +69,9 @@ import com.linecorp.armeria.service.test.thrift.main.Name;
 import com.linecorp.armeria.service.test.thrift.main.NameService;
 import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
+import com.linecorp.armeria.testing.common.EventLoopRule;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -112,7 +109,8 @@ public class ThriftServiceTest {
     private static final String BAR = "bar";
     private static final String BAZ = "baz";
 
-    private static EventLoop eventLoop;
+    @ClassRule
+    public static final EventLoopRule eventLoop = new EventLoopRule();
 
     @Parameters(name = "{0}")
     public static Collection<SerializationFormat> parameters() throws Exception {
@@ -131,16 +129,6 @@ public class ThriftServiceTest {
 
     public ThriftServiceTest(SerializationFormat defaultSerializationFormat) {
         this.defaultSerializationFormat = defaultSerializationFormat;
-    }
-
-    @BeforeClass
-    public static void setupLoop() {
-        eventLoop = new DefaultEventLoop(Executors.newSingleThreadExecutor());
-    }
-
-    @AfterClass
-    public static void closeLoop() {
-        eventLoop.shutdownGracefully();
     }
 
     @Before
@@ -648,7 +636,7 @@ public class ThriftServiceTest {
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
-        when(ctx.eventLoop()).thenReturn(eventLoop);
+        when(ctx.eventLoop()).thenReturn(eventLoop.get());
         final DefaultRequestLog reqLogBuilder = new DefaultRequestLog(ctx);
 
         when(ctx.blockingTaskExecutor()).thenReturn(ImmediateEventExecutor.INSTANCE);

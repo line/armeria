@@ -25,9 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -35,35 +34,21 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.testing.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
-import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.EventLoop;
 
 @SuppressWarnings("unchecked")  // Allow using the same tests for writers and non-writers
 public abstract class AbstractStreamMessageTest {
 
     static final List<Integer> TEN_INTEGERS = IntStream.range(0, 10).boxed().collect(toImmutableList());
 
-    private static EventLoop eventLoop;
-
-    @BeforeClass
-    public static void startEventLoop() {
-        eventLoop = new DefaultEventLoop();
-    }
-
-    @AfterClass
-    public static void stopEventLoop() {
-        eventLoop.shutdownGracefully().syncUninterruptibly();
-    }
-
-    EventLoop eventLoop() {
-        return eventLoop;
-    }
+    @ClassRule
+    public static final EventLoopRule eventLoop = new EventLoopRule();
 
     abstract <T> StreamMessage<T> newStream(List<T> inputs);
 
@@ -136,7 +121,7 @@ public abstract class AbstractStreamMessageTest {
     public void flowControlled_writeThenDemandThenProcess_eventLoop() throws Exception {
         final StreamMessage<Integer> stream = newStream(streamValues());
         writeTenIntegers(stream);
-        eventLoop().submit(
+        eventLoop.get().submit(
                 () ->
                         stream.subscribe(new ResultCollectingSubscriber() {
                             private Subscription subscription;
@@ -152,7 +137,7 @@ public abstract class AbstractStreamMessageTest {
                                 subscription.request(1);
                                 super.onNext(value);
                             }
-                        }, eventLoop())).syncUninterruptibly();
+                        }, eventLoop.get())).syncUninterruptibly();
         assertSuccess();
     }
 

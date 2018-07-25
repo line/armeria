@@ -60,7 +60,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
         // Repeat to increase the chance of reproduction.
         for (int i = 0; i < 8192; i++) {
             final StreamMessageAndWriter<Integer> stream = newStreamWriter(TEN_INTEGERS);
-            eventLoop().execute(stream::close);
+            eventLoop.get().execute(stream::close);
             stream.subscribe(new Subscriber<Object>() {
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -82,7 +82,7 @@ public abstract class AbstractStreamMessageAndWriterTest extends AbstractStreamM
                 public void onComplete() {
                     queue.add("onComplete");
                 }
-            }, eventLoop());
+            }, eventLoop.get());
 
             assertThat(queue.poll(5, TimeUnit.SECONDS)).isEqualTo("onSubscribe");
             assertThat(queue.poll(5, TimeUnit.SECONDS)).isEqualTo("onComplete");

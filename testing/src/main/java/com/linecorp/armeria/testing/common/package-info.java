@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,14 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+/**
+ * Common testing utilities.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.testing.common;
 
-import java.util.List;
-
-public class EventLoopStreamMessageTest extends AbstractStreamMessageAndWriterTest {
-
-    @Override
-    <T> StreamMessageAndWriter<T> newStreamWriter(List<T> unused) {
-        return new EventLoopStreamMessage<>(eventLoop.get());
-    }
-}
+import com.linecorp.armeria.common.util.NonNullByDefault;
