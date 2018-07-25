@@ -66,14 +66,6 @@ public class UnframedGrpcServiceTest {
         }
     }
 
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock
-    private ServiceRequestContext ctx;
-
-    private static EventLoop eventLoop;
-
     @BeforeClass
     public static void setUpClass() {
         eventLoop = new DefaultEventLoop(Executors.newSingleThreadExecutor());
@@ -84,10 +76,17 @@ public class UnframedGrpcServiceTest {
         eventLoop.shutdownGracefully().syncUninterruptibly();
     }
 
+    private static TestService testService = new TestService();
+    private static EventLoop eventLoop;
+
+    @Rule
+    public MockitoRule mocks = MockitoJUnit.rule();
+
+    @Mock
+    private ServiceRequestContext ctx;
+
     @Mock
     private HttpRequest request;
-
-    private static TestService testService = new TestService();
 
     private UnframedGrpcService unframedGrpcService;
 
@@ -131,7 +130,8 @@ public class UnframedGrpcServiceTest {
     public void statusCancelled() throws Exception {
         TestService spyTestService = spy(testService);
         doThrow(Status.CANCELLED.withDescription("grpc error message").asRuntimeException())
-                .when(spyTestService).emptyCall(any(), any());
+                .when(spyTestService)
+                .emptyCall(any(), any());
         unframedGrpcService =
                 (UnframedGrpcService) new GrpcServiceBuilder().addService(spyTestService)
                                                               .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
