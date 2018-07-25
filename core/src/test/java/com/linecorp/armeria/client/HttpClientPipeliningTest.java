@@ -37,10 +37,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.common.EventLoopRule;
 import com.linecorp.armeria.testing.server.ServerRule;
-
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 
 public class HttpClientPipeliningTest {
 
@@ -86,7 +84,8 @@ public class HttpClientPipeliningTest {
     };
 
     // Client-side configuration
-    private static EventLoopGroup eventLoopGroup;
+    @ClassRule
+    public static final EventLoopRule eventLoopGroup = new EventLoopRule();
     private static ClientFactory factoryWithPipelining;
     private static ClientFactory factoryWithoutPipelining;
 
@@ -94,14 +93,13 @@ public class HttpClientPipeliningTest {
     public static void initClientFactory() {
         // Ensure only a single event loop is used so that there's only one connection pool.
         // Note: Each event loop has its own connection pool.
-        eventLoopGroup = new NioEventLoopGroup(1);
         factoryWithPipelining = new ClientFactoryBuilder()
-                .workerGroup(eventLoopGroup, false)
+                .workerGroup(eventLoopGroup.get(), false)
                 .useHttp1Pipelining(true)
                 .build();
 
         factoryWithoutPipelining = new ClientFactoryBuilder()
-                .workerGroup(eventLoopGroup, false)
+                .workerGroup(eventLoopGroup.get(), false)
                 .useHttp1Pipelining(false)
                 .build();
     }
@@ -111,7 +109,6 @@ public class HttpClientPipeliningTest {
         ForkJoinPool.commonPool().execute(() -> {
             factoryWithPipelining.close();
             factoryWithoutPipelining.close();
-            eventLoopGroup.shutdownGracefully();
         });
     }
 
