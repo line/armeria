@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletionException;
@@ -91,7 +92,7 @@ public class AuthorizerTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCause(expected);
         verify(a, times(1)).authorize(serviceCtx, "data");
-        verify(b, never()).authorize(any(), any());
+        verifyZeroInteractions(b);
     }
 
     /**
@@ -108,7 +109,7 @@ public class AuthorizerTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(NullPointerException.class);
         verify(a, times(1)).authorize(serviceCtx, "data");
-        verify(b, never()).authorize(any(), any());
+        verifyZeroInteractions(b);
     }
 
     @Test
