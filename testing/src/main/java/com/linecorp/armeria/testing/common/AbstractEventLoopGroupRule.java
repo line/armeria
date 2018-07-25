@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.testing.common;
 
+import javax.annotation.Nullable;
+
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
@@ -24,14 +26,30 @@ import io.netty.channel.EventLoopGroup;
 
 abstract class AbstractEventLoopGroupRule extends ExternalResource {
 
-    private final EventLoopGroup group;
+    private final int numThreads;
+    private final String threadNamePrefix;
+    private final boolean useDaemonThreads;
+
+    @Nullable
+    private volatile EventLoopGroup group;
 
     AbstractEventLoopGroupRule(int numThreads, String threadNamePrefix, boolean useDaemonThreads) {
-        group = EventLoopGroups.newEventLoopGroup(numThreads, threadNamePrefix, useDaemonThreads);
+        this.numThreads = numThreads;
+        this.threadNamePrefix = threadNamePrefix;
+        this.useDaemonThreads = useDaemonThreads;
     }
 
     EventLoopGroup group() {
+        final EventLoopGroup group = this.group;
+        if (group == null) {
+            throw new IllegalStateException(EventLoopGroup.class.getSimpleName() + " not initialized");
+        }
         return group;
+    }
+
+    @Override
+    protected void before() throws Throwable {
+        group = EventLoopGroups.newEventLoopGroup(numThreads, threadNamePrefix, useDaemonThreads);
     }
 
     /**
@@ -40,6 +58,10 @@ abstract class AbstractEventLoopGroupRule extends ExternalResource {
      */
     @Override
     protected void after() {
-        group.shutdownGracefully();
+        final EventLoopGroup group = this.group;
+        if (group != null) {
+            this.group = null;
+            group.shutdownGracefully();
+        }
     }
 }
