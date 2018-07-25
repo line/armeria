@@ -73,7 +73,7 @@ import io.netty.buffer.ByteBufHolder;
 class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse>
         implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
 
-    private static String LINE_SEPARATOR = "\n";
+    private static char LINE_SEPARATOR = '\n';
 
     private final Map<String, MethodDescriptor<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
