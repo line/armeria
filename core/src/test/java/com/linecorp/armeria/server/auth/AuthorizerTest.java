@@ -34,34 +34,29 @@ import javax.annotation.Nullable;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.EventLoop;
+import com.linecorp.armeria.testing.common.EventLoopRule;
 
 public class AuthorizerTest {
 
-    @Nullable
-    private static EventLoop eventLoop;
+    @ClassRule
+    public static final EventLoopRule eventLoop = new EventLoopRule();
+
     @Nullable
     private static ServiceRequestContext serviceCtx;
 
     @BeforeClass
-    public static void setEventLoop() {
-        eventLoop = new DefaultEventLoop();
+    public static void setServiceContext() {
         serviceCtx = mock(ServiceRequestContext.class);
-        when(serviceCtx.contextAwareEventLoop()).thenReturn(eventLoop);
+        when(serviceCtx.contextAwareEventLoop()).thenReturn(eventLoop.get());
     }
 
     @AfterClass
-    public static void clearEventLoop() {
+    public static void clearServiceContext() {
         serviceCtx = null;
-        if (eventLoop != null) {
-            eventLoop.shutdownGracefully();
-            eventLoop = null;
-        }
     }
 
     @Test
