@@ -27,12 +27,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -51,6 +49,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CompressorRegistry;
@@ -61,8 +60,6 @@ import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
 
 // TODO(anuraag): Currently only grpc-protobuf has been published so we only test proto here.
@@ -72,17 +69,8 @@ public class ArmeriaServerCallTest {
 
     private static final int MAX_MESSAGE_BYTES = 1024;
 
-    private static EventLoop eventLoop;
-
-    @BeforeClass
-    public static void setUpClass() {
-        eventLoop = new DefaultEventLoop(Executors.newSingleThreadExecutor());
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        eventLoop.shutdownGracefully().syncUninterruptibly();
-    }
+    @ClassRule
+    public static final EventLoopRule eventLoop = new EventLoopRule();
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
@@ -110,8 +98,8 @@ public class ArmeriaServerCallTest {
     public void setUp() {
         completionFuture = new CompletableFuture<>();
         when(res.completionFuture()).thenReturn(completionFuture);
-        when(ctx.eventLoop()).thenReturn(eventLoop);
-        when(ctx.contextAwareEventLoop()).thenReturn(eventLoop);
+        when(ctx.eventLoop()).thenReturn(eventLoop.get());
+        when(ctx.contextAwareEventLoop()).thenReturn(eventLoop.get());
 
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         call = new ArmeriaServerCall<>(
@@ -139,7 +127,7 @@ public class ArmeriaServerCallTest {
         call.close(Status.ABORTED, new Metadata());
 
         // messageRead is always called from the event loop.
-        eventLoop.submit(() -> {
+        eventLoop.get().submit(() -> {
             call.messageRead(new ByteBufOrStream(GrpcTestUtil.requestByteBuf()));
 
             verify(listener, never()).onMessage(any());
@@ -181,7 +169,7 @@ public class ArmeriaServerCallTest {
         call.close(Status.ABORTED, new Metadata());
 
         // messageRead is always called from the event loop.
-        eventLoop.submit(() -> {
+        eventLoop.get().submit(() -> {
             call.messageRead(new ByteBufOrStream(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true)));
 
             verify(listener, never()).onMessage(any());
