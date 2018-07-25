@@ -65,14 +65,14 @@ public class AuthorizerTest {
 
     @Test
     public void orElseFirst() {
-        final Authorizer<Object> a = newMock();
+        final Authorizer<String> a = newMock();
         when(a.authorize(any(), any())).thenReturn(completedFuture(true));
-        final Authorizer<Object> b = newMock();
+        final Authorizer<String> b = newMock();
 
-        final Boolean result = a.orElse(b).authorize(serviceCtx, new Object())
+        final Boolean result = a.orElse(b).authorize(serviceCtx, "data")
                                 .toCompletableFuture().join();
         assertThat(result).isTrue();
-        verify(a, times(1)).authorize(any(), any());
+        verify(a, times(1)).authorize(serviceCtx, "data");
         verify(b, never()).authorize(any(), any());
     }
 
@@ -83,14 +83,14 @@ public class AuthorizerTest {
     @Test
     public void orElseFirstException() {
         final Exception expected = new Exception();
-        final Authorizer<Object> a = newMock();
+        final Authorizer<String> a = newMock();
         when(a.authorize(any(), any())).thenReturn(exceptionallyCompletedFuture(expected));
-        final Authorizer<Object> b = newMock();
+        final Authorizer<String> b = newMock();
 
-        assertThatThrownBy(() -> a.orElse(b).authorize(serviceCtx, new Object()).toCompletableFuture().join())
+        assertThatThrownBy(() -> a.orElse(b).authorize(serviceCtx, "data").toCompletableFuture().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(expected);
-        verify(a, times(1)).authorize(any(), any());
+        verify(a, times(1)).authorize(serviceCtx, "data");
         verify(b, never()).authorize(any(), any());
     }
 
@@ -100,29 +100,29 @@ public class AuthorizerTest {
      */
     @Test
     public void orElseFirstNull() {
-        final Authorizer<Object> a = newMock();
+        final Authorizer<String> a = newMock();
         when(a.authorize(any(), any())).thenReturn(completedFuture(null));
-        final Authorizer<Object> b = newMock();
+        final Authorizer<String> b = newMock();
 
-        assertThatThrownBy(() -> a.orElse(b).authorize(serviceCtx, new Object()).toCompletableFuture().join())
+        assertThatThrownBy(() -> a.orElse(b).authorize(serviceCtx, "data").toCompletableFuture().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(NullPointerException.class);
-        verify(a, times(1)).authorize(any(), any());
+        verify(a, times(1)).authorize(serviceCtx, "data");
         verify(b, never()).authorize(any(), any());
     }
 
     @Test
     public void orElseSecond() {
-        final Authorizer<Object> a = newMock();
+        final Authorizer<String> a = newMock();
         when(a.authorize(any(), any())).thenReturn(completedFuture(false));
-        final Authorizer<Object> b = newMock();
+        final Authorizer<String> b = newMock();
         when(b.authorize(any(), any())).thenReturn(completedFuture(true));
 
-        final Boolean result = a.orElse(b).authorize(serviceCtx, new Object())
+        final Boolean result = a.orElse(b).authorize(serviceCtx, "data")
                                 .toCompletableFuture().join();
         assertThat(result).isTrue();
-        verify(a, times(1)).authorize(any(), any());
-        verify(b, times(1)).authorize(any(), any());
+        verify(a, times(1)).authorize(serviceCtx, "data");
+        verify(b, times(1)).authorize(serviceCtx, "data");
     }
 
     @Test
@@ -140,9 +140,9 @@ public class AuthorizerTest {
         assertThat(a.orElse(b).orElse(c.orElse(d)).toString()).isEqualTo("[A, B, C, D]");
     }
 
-    private static Authorizer<Object> newMock() {
+    private static Authorizer<String> newMock() {
         @SuppressWarnings("unchecked")
-        final Authorizer<Object> mock = mock(Authorizer.class);
+        final Authorizer<String> mock = mock(Authorizer.class);
         when(mock.orElse(any())).thenCallRealMethod();
         return mock;
     }
