@@ -15,17 +15,19 @@
  */
 package com.linecorp.armeria.server.auth;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
 
@@ -63,18 +65,15 @@ public class AuthorizerTest {
 
     @Test
     public void orElseFirst() {
-        final AtomicBoolean executedA = new AtomicBoolean();
-        final Authorizer<Object> a = (ctx, data) -> {
-            checkState(executedA.compareAndSet(false, true),
-                       "The first authorizer was invoked more than once.");
-            return completedFuture(true);
-        };
-        final Authorizer<Object> b = (ctx, data) -> exceptionallyCompletedFuture(new AssertionError());
+        final Authorizer<Object> a = newMock();
+        when(a.authorize(any(), any())).thenReturn(completedFuture(true));
+        final Authorizer<Object> b = newMock();
 
         final Boolean result = a.orElse(b).authorize(serviceCtx, new Object())
                                 .toCompletableFuture().join();
         assertThat(result).isTrue();
-        assertThat(executedA).isTrue();
+        verify(a, times(1)).authorize(any(), any());
+        verify(b, never()).authorize(any(), any());
     }
 
     /**
@@ -84,28 +83,46 @@ public class AuthorizerTest {
     @Test
     public void orElseFirstException() {
         final Exception expected = new Exception();
-        final Authorizer<Object> a = (ctx, data) -> exceptionallyCompletedFuture(expected);
-        final Authorizer<Object> b = (ctx, data) -> exceptionallyCompletedFuture(new AssertionError());
+        final Authorizer<Object> a = newMock();
+        when(a.authorize(any(), any())).thenReturn(exceptionallyCompletedFuture(expected));
+        final Authorizer<Object> b = newMock();
 
         assertThatThrownBy(() -> a.orElse(b).authorize(serviceCtx, new Object()).toCompletableFuture().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(expected);
+        verify(a, times(1)).authorize(any(), any());
+        verify(b, never()).authorize(any(), any());
+    }
+
+    /**
+     * When the first {@link Authorizer} returns a {@link CompletionStage} that fulfills with {@code null},
+     * the second {@link Authorizer} shouldn't be invoked.
+     */
+    @Test
+    public void orElseFirstNull() {
+        final Authorizer<Object> a = newMock();
+        when(a.authorize(any(), any())).thenReturn(completedFuture(null));
+        final Authorizer<Object> b = newMock();
+
+        assertThatThrownBy(() -> a.orElse(b).authorize(serviceCtx, new Object()).toCompletableFuture().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(NullPointerException.class);
+        verify(a, times(1)).authorize(any(), any());
+        verify(b, never()).authorize(any(), any());
     }
 
     @Test
     public void orElseSecond() {
-        final AtomicBoolean executedA = new AtomicBoolean();
-        final Authorizer<Object> a = (ctx, data) -> {
-            checkState(executedA.compareAndSet(false, true),
-                       "The first authorizer was invoked more than once.");
-            return completedFuture(false);
-        };
-        final Authorizer<Object> b = (ctx, data) -> completedFuture(true);
+        final Authorizer<Object> a = newMock();
+        when(a.authorize(any(), any())).thenReturn(completedFuture(false));
+        final Authorizer<Object> b = newMock();
+        when(b.authorize(any(), any())).thenReturn(completedFuture(true));
 
         final Boolean result = a.orElse(b).authorize(serviceCtx, new Object())
                                 .toCompletableFuture().join();
         assertThat(result).isTrue();
-        assertThat(executedA).isTrue();
+        verify(a, times(1)).authorize(any(), any());
+        verify(b, times(1)).authorize(any(), any());
     }
 
     @Test
@@ -121,6 +138,13 @@ public class AuthorizerTest {
         assertThat(a.orElse(b).orElse(c).toString()).isEqualTo("[A, B, C]");
         // (A + B) + (C + D)
         assertThat(a.orElse(b).orElse(c.orElse(d)).toString()).isEqualTo("[A, B, C, D]");
+    }
+
+    private static Authorizer<Object> newMock() {
+        @SuppressWarnings("unchecked")
+        final Authorizer<Object> mock = mock(Authorizer.class);
+        when(mock.orElse(any())).thenCallRealMethod();
+        return mock;
     }
 
     private static final class AuthorizerWithToString implements Authorizer<Object> {
