@@ -144,8 +144,8 @@ public class UnframedGrpcServiceTest {
         AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
         assertThat(aggregatedHttpMessage.headers().status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
         assertThat(aggregatedHttpMessage.content().toStringUtf8())
-                .isEqualTo("http-status: 499, Client Closed Request\r\n" +
-                           "Caused by: \r\n" +
+                .isEqualTo("http-status: 499, Client Closed Request\n" +
+                           "Caused by: \n" +
                            "grpc-status: 1, CANCELLED, grpc error message");
     }
 }

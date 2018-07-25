@@ -73,7 +73,7 @@ import io.netty.buffer.ByteBufHolder;
 class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse>
         implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
 
-    private static String LINE_SEPARATOR = "\r\n";
+    private static String LINE_SEPARATOR = "\n";
 
     private final Map<String, MethodDescriptor<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
@@ -224,7 +224,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
         if (grpcStatus.getCode() != Status.OK.getCode()) {
-            HttpStatus httpStatus = GrpcStatus.fromGrpcStatusCode(grpcStatus.getCode());
+            HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
             final StringBuilder message = new StringBuilder("http-status: " + httpStatus.code());
             message.append(", ").append(httpStatus.reasonPhrase()).append(LINE_SEPARATOR);
             message.append("Caused by: ").append(LINE_SEPARATOR);

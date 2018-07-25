@@ -262,6 +262,8 @@ public final class HttpStatus implements Comparable<HttpStatus> {
 
     /**
      * 499 Client Closed Request.
+     *
+     * @see <a href="https://httpstatuses.com/499">499 CLIENT CLOSED REQUEST</a>
      */
     public static final HttpStatus CLIENT_CLOSED_REQUEST =
             newConstant(499, "Client Closed Request");
