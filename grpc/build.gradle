@@ -6,6 +6,7 @@ dependencies {
 
     compile 'org.curioswitch.curiostack:protobuf-jackson'
 
+    testCompile 'com.google.api:gax-grpc'
     testCompile 'io.grpc:grpc-okhttp'
     testCompile 'io.grpc:grpc-testing'
 }

@@ -39,6 +39,7 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
+import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -71,6 +72,8 @@ import io.netty.buffer.ByteBufHolder;
  */
 class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse>
         implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+
+    private static final char LINE_SEPARATOR = '\n';
 
     private final Map<String, MethodDescriptor<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
@@ -221,13 +224,21 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
         if (grpcStatus.getCode() != Status.OK.getCode()) {
-            final StringBuilder message = new StringBuilder("grpc-status: " + grpcStatusCode);
+            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
+            final StringBuilder message = new StringBuilder("http-status: " + httpStatus.code());
+            message.append(", ").append(httpStatus.reasonPhrase()).append(LINE_SEPARATOR);
+            message.append("Caused by: ").append(LINE_SEPARATOR);
+            message.append("grpc-status: ")
+                   .append(grpcStatusCode)
+                   .append(", ")
+                   .append(grpcStatus.getCode().name());
             final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
             }
+
             res.complete(HttpResponse.of(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    httpStatus,
                     MediaType.PLAIN_TEXT_UTF_8,
                     message.toString()));
             return;
