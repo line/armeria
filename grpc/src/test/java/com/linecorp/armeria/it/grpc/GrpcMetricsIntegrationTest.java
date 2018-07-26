@@ -168,7 +168,7 @@ public class GrpcMetricsIntegrationTest {
         assertThat(findServerMeter("UnaryCall2", "responseLength", COUNT, "httpStatus", "200")).contains(4.0);
         assertThat(findServerMeter("UnaryCall2", "responseLength", COUNT, "httpStatus", "500")).contains(3.0);
         assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL, "httpStatus", "200")).contains(0.0);
-        assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL, "httpStatus", "500")).contains(42.0);
+        assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL, "httpStatus", "500")).contains(225.0);
     }
 
     private static Optional<Double> findServerMeter(

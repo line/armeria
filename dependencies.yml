@@ -34,6 +34,9 @@ com.github.ben-manes.caffeine:
 com.github.jengelman.gradle.plugins:
   shadow: { version: '2.0.3' }
 
+com.google.api:
+  gax-grpc: { version: '1.29.0' }
+
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 

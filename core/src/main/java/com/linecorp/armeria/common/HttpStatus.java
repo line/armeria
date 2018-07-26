@@ -261,6 +261,14 @@ public final class HttpStatus implements Comparable<HttpStatus> {
             newConstant(431, "Request Header Fields Too Large");
 
     /**
+     * 499 Client Closed Request.
+     *
+     * @see <a href="https://httpstatuses.com/499">499 CLIENT CLOSED REQUEST</a>
+     */
+    public static final HttpStatus CLIENT_CLOSED_REQUEST =
+            newConstant(499, "Client Closed Request");
+
+    /**
      * 500 Internal Server Error.
      */
     public static final HttpStatus INTERNAL_SERVER_ERROR = newConstant(500, "Internal Server Error");

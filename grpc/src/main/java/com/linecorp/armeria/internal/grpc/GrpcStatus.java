@@ -38,6 +38,7 @@ import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.HttpStatus;
 
 import io.grpc.Status;
 import io.grpc.Status.Code;
@@ -81,6 +82,46 @@ public final class GrpcStatus {
             return Status.DEADLINE_EXCEEDED.withCause(t);
         }
         return s;
+    }
+
+    /**
+     * Maps GRPC status codes to http status, as defined in upstream grpc-gateway
+     * <a href="https://github.com/grpc-ecosystem/grpc-gateway/blob/master/third_party/googleapis/google/rpc/code.proto">code.proto</a>.
+     */
+    public static HttpStatus grpcCodeToHttpStatus(Status.Code grpcStatusCode) {
+        switch (grpcStatusCode) {
+            case OK:
+                return HttpStatus.OK;
+            case CANCELLED:
+                return HttpStatus.CLIENT_CLOSED_REQUEST;
+            case UNKNOWN:
+            case INTERNAL:
+            case DATA_LOSS:
+                return HttpStatus.INTERNAL_SERVER_ERROR;
+            case INVALID_ARGUMENT:
+            case FAILED_PRECONDITION:
+            case OUT_OF_RANGE:
+                return HttpStatus.BAD_REQUEST;
+            case DEADLINE_EXCEEDED:
+                return HttpStatus.GATEWAY_TIMEOUT;
+            case NOT_FOUND:
+                return HttpStatus.NOT_FOUND;
+            case ALREADY_EXISTS:
+            case ABORTED:
+                return HttpStatus.CONFLICT;
+            case PERMISSION_DENIED:
+                return HttpStatus.FORBIDDEN;
+            case UNAUTHENTICATED:
+                return HttpStatus.UNAUTHORIZED;
+            case RESOURCE_EXHAUSTED:
+                return HttpStatus.TOO_MANY_REQUESTS;
+            case UNIMPLEMENTED:
+                return HttpStatus.NOT_IMPLEMENTED;
+            case UNAVAILABLE:
+                return HttpStatus.SERVICE_UNAVAILABLE;
+            default:
+                return HttpStatus.UNKNOWN;
+        }
     }
 
     /**
