@@ -117,7 +117,9 @@ public class ArmeriaServerCallTest {
                 "gzip");
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
-        when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
+        final DefaultRequestLog log = new DefaultRequestLog(ctx);
+        when(ctx.log()).thenReturn(log);
+        when(ctx.logBuilder()).thenReturn(log);
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         when(ctx.attr(GrpcUnsafeBufferUtil.BUFFERS)).thenReturn(buffersAttr);
     }

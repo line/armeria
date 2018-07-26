@@ -72,6 +72,7 @@ import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.Codec;
@@ -263,7 +264,8 @@ public class GrpcServiceServerTest {
                     .addService(new UnitTestServiceImpl())
                     .enableUnframedRequests(true)
                     .supportedSerializationFormats(GrpcSerializationFormats.values())
-                    .build());
+                    .build()
+                    .decorate(LoggingService.newDecorator()));
         }
     };
 
