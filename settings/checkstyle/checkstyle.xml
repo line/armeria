@@ -25,10 +25,17 @@
 
   <!-- Copyright headers -->
   <module name="RegexpSingleline">
+    <property name="id" value="CopyrightHeader"/>
     <property name="format" value="^(?:\s|\*)*Copyright\s+[0-9]+\s+LINE Corporation\s*$"/>
     <property name="minimum" value="1"/>
     <property name="maximum" value="1"/>
     <property name="message" value="missing copyright header"/>
+  </module>
+  <module name="RegexpSingleline">
+    <property name="id" value="NoCopyrightHeader"/>
+    <property name="format" value="^(?:\s|/|\*)*copyright"/>
+    <property name="ignoreCase" value="true"/>
+    <property name="message" value="A copyright header must not appear in examples."/>
   </module>
   <!-- All packages must be annotated with @NonNullByDefault -->
   <module name="RegexpSingleline">

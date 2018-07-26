@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
-import java.util.Arrays;
-import java.util.Collections;
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
@@ -91,7 +93,16 @@ public class HttpHealthCheckService extends AbstractHttpService
      * @param healthCheckers the additional {@link HealthChecker}s
      */
     public HttpHealthCheckService(HealthChecker... healthCheckers) {
-        this.healthCheckers = Collections.unmodifiableList(Arrays.asList(healthCheckers));
+        this(ImmutableList.copyOf(requireNonNull(healthCheckers, "healthCheckers")));
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param healthCheckers the additional {@link HealthChecker}s
+     */
+    public HttpHealthCheckService(Iterable<? extends HealthChecker> healthCheckers) {
+        this.healthCheckers = ImmutableList.copyOf(requireNonNull(healthCheckers, "healthCheckers"));
         serverHealth = new SettableHealthChecker();
         serverHealthUpdater = new ServerHealthUpdater();
     }

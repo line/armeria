@@ -27,12 +27,14 @@ includeWithFlags ':zipkin',                     'java', 'publish', 'relocate'
 includeWithFlags ':zookeeper',                  'java', 'publish', 'relocate'
 
 // Unpublished Java projects
-includeWithFlags ':benchmarks',                 'java'
-includeWithFlags ':it:server',                  'java', 'relocate'
-includeWithFlags ':it:spring:boot-tomcat',      'java', 'relocate'
-includeWithFlags ':it:spring:boot-tomcat8.5',   'java', 'relocate'
-includeWithFlags ':testing-internal',           'java', 'relocate'
-includeWithFlags ':spring:boot-tomcat-sample',  'java', 'relocate'
+includeWithFlags ':benchmarks',               'java'
+includeWithFlags ':it:server',                'java', 'relocate'
+includeWithFlags ':it:spring:boot-tomcat',    'java', 'relocate'
+includeWithFlags ':it:spring:boot-tomcat8.5', 'java', 'relocate'
+includeWithFlags ':testing-internal',         'java', 'relocate'
 
 // Site generation project
 includeWithFlags ':site'
+
+// Examples
+includeWithFlags ':examples:spring-boot-tomcat', 'java'

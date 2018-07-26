@@ -346,4 +346,6 @@ org.springframework.boot:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
+  spring-boot-configuration-processor: { version: *SPRING_BOOT_VERSION }
   spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }
