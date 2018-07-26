@@ -224,7 +224,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
         if (grpcStatus.getCode() != Status.OK.getCode()) {
-            HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
+            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
             final StringBuilder message = new StringBuilder("http-status: " + httpStatus.code());
             message.append(", ").append(httpStatus.reasonPhrase()).append(LINE_SEPARATOR);
             message.append("Caused by: ").append(LINE_SEPARATOR);

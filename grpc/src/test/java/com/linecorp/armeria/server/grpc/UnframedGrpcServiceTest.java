@@ -23,11 +23,9 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -46,16 +44,16 @@ import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.common.EventLoopRule;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.EventLoop;
 
 public class UnframedGrpcServiceTest {
 
-    private static final int MAX_MESSAGE_BYTES = 1024;
+    @ClassRule
+    public static final EventLoopRule eventLoop = new EventLoopRule();
 
     private static class TestService extends TestServiceImplBase {
 
@@ -66,18 +64,8 @@ public class UnframedGrpcServiceTest {
         }
     }
 
-    @BeforeClass
-    public static void setUpClass() {
-        eventLoop = new DefaultEventLoop(Executors.newSingleThreadExecutor());
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        eventLoop.shutdownGracefully().syncUninterruptibly();
-    }
-
-    private static TestService testService = new TestService();
-    private static EventLoop eventLoop;
+    private static final TestService testService = new TestService();
+    private static final int MAX_MESSAGE_BYTES = 1024;
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
@@ -93,8 +81,8 @@ public class UnframedGrpcServiceTest {
     @Before
     public void setUp() {
         when(ctx.mappedPath()).thenReturn("/armeria.grpc.testing.TestService/EmptyCall");
-        when(ctx.eventLoop()).thenReturn(eventLoop);
-        when(ctx.contextAwareEventLoop()).thenReturn(eventLoop);
+        when(ctx.eventLoop()).thenReturn(eventLoop.get());
+        when(ctx.contextAwareEventLoop()).thenReturn(eventLoop.get());
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
 

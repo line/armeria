@@ -86,7 +86,6 @@ public final class GrpcStatus {
 
     /**
      * Maps GRPC status codes to http status, as defined in upstream grpc-gateway
-     *
      * <a href="https://github.com/grpc-ecosystem/grpc-gateway/blob/master/third_party/googleapis/google/rpc/code.proto">code.proto</a>.
      */
     public static HttpStatus grpcCodeToHttpStatus(Status.Code grpcStatusCode) {
