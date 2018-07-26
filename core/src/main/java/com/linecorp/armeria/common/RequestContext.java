@@ -186,7 +186,7 @@ public interface RequestContext extends AttributeMap {
      * Returns the {@link Executor} that is handling the current {@link Request}.
      */
     default Executor executor() {
-        // The implementation is the same as contextAwareEventLoop but we expose as an Executor as well given
+        // The implementation is the same as eventLoop but we expose as an Executor as well given
         // how much easier it is to write tests for an Executor (i.e.,
         // when(ctx.executor()).thenReturn(MoreExecutors.directExecutor()));
         return eventLoop();
