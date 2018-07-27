@@ -66,6 +66,10 @@ public final class Flags {
     private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
                                                           value -> OpenSsl.isAvailable() || !value);
 
+    private static final int DEFAULT_NUM_MAX_CONNECTIONS = 10000; // from Tomcat default maxConnections
+    private static final int NUM_MAX_CONNECTIONS =
+            getInt("numMaxConnections", DEFAULT_NUM_MAX_CONNECTIONS, value -> value > 0);
+
     private static final int DEFAULT_NUM_COMMON_WORKERS = NUM_CPU_CORES * 2;
     private static final int NUM_COMMON_WORKERS =
             getInt("numCommonWorkers", DEFAULT_NUM_COMMON_WORKERS, value -> value > 0);
@@ -236,6 +240,17 @@ public final class Flags {
      */
     public static boolean useOpenSsl() {
         return USE_OPENSSL;
+    }
+
+    /**
+     * Returns the default server-side maximum number of connections.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_NUM_MAX_CONNECTIONS}. Specify the
+     * {@code -Dcom.linecorp.armeria.numMaxConnections=<integer>} JVM option to override
+     * the default value.
+     */
+    public static int numMaxConnections() {
+        return NUM_MAX_CONNECTIONS;
     }
 
     /**
