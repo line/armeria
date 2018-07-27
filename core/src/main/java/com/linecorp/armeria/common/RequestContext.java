@@ -183,6 +183,16 @@ public interface RequestContext extends AttributeMap {
     Iterator<Attribute<?>> attrs();
 
     /**
+     * Returns the {@link Executor} that is handling the current {@link Request}.
+     */
+    default Executor executor() {
+        // The implementation is the same as eventLoop but we expose as an Executor as well given
+        // how much easier it is to write tests for an Executor (i.e.,
+        // when(ctx.executor()).thenReturn(MoreExecutors.directExecutor()));
+        return eventLoop();
+    }
+
+    /**
      * Returns the {@link EventLoop} that is handling the current {@link Request}.
      */
     EventLoop eventLoop();
@@ -199,11 +209,22 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Returns an {@link EventLoop} that will make sure this {@link RequestContext} is set as the current
+     * Returns an {@link Executor} that will make sure this {@link RequestContext} is set as the current
      * context before executing any callback. This should almost always be used for executing asynchronous
      * callbacks in service code to make sure features that require the {@link RequestContext} work properly.
      * Most asynchronous libraries like {@link CompletableFuture} provide methods that accept an
      * {@link Executor} to run callbacks on.
+     */
+    default Executor contextAwareExecutor() {
+        // The implementation is the same as contextAwareEventLoop but we expose as an Executor as well given
+        // how common it is to use only as an Executor and it becomes much easier to write tests for an
+        // Executor (i.e., when(ctx.contextAwareExecutor()).thenReturn(MoreExecutors.directExecutor()));
+        return contextAwareEventLoop();
+    }
+
+    /**
+     * Returns an {@link EventLoop} that will make sure this {@link RequestContext} is set as the current
+     * context before executing any callback.
      */
     default EventLoop contextAwareEventLoop() {
         return new RequestContextAwareEventLoop(this, eventLoop());
