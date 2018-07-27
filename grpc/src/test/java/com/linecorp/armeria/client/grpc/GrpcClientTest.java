@@ -817,7 +817,7 @@ public class GrpcClientTest {
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
-        checkRequestLogException((rpcReq, cause) -> {
+        checkRequestLogError((rpcReq, headers, cause) -> {
             assertThat(rpcReq.params()).containsExactly(request);
             assertResponseTimeoutExceptionOrDeadlineExceeded(cause);
         });
@@ -852,13 +852,15 @@ public class GrpcClientTest {
         assertThat(Status.fromThrowable(recorder.getError()).getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
-        checkRequestLogException((rpcReq, cause) -> {
+        checkRequestLogError((rpcReq, headers, cause) -> {
             assertThat(rpcReq.params()).containsExactly(request);
             assertResponseTimeoutExceptionOrDeadlineExceeded(cause);
         });
     }
 
-    private static void assertResponseTimeoutExceptionOrDeadlineExceeded(Throwable cause) {
+    private static void assertResponseTimeoutExceptionOrDeadlineExceeded(@Nullable Throwable cause) {
+        assertThat(cause).isNotNull();
+
         // Both exceptions can be raised when a timeout occurs due to timing issues,
         // and the first triggered one wins.
         if (cause instanceof ResponseTimeoutException) {
@@ -1028,10 +1030,10 @@ public class GrpcClientTest {
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.UNIMPLEMENTED.getCode());
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+        checkRequestLogError((rpcReq, headers, cause) -> {
             assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
-            assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.UNIMPLEMENTED);
+            assertThat(headers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(
+                    String.valueOf(Status.UNIMPLEMENTED.getCode().value()));
         });
     }
 
@@ -1044,10 +1046,10 @@ public class GrpcClientTest {
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.UNIMPLEMENTED.getCode());
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+        checkRequestLogError((rpcReq, headers, cause) -> {
             assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
-            assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.UNIMPLEMENTED);
+            assertThat(headers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(
+                    String.valueOf(Status.UNIMPLEMENTED.getCode().value()));
         });
     }
 
@@ -1127,7 +1129,7 @@ public class GrpcClientTest {
         checker.check(rpcReq, rpcRes, grpcStatus);
     }
 
-    private void checkRequestLogException(RequestLogExceptionChecker checker) throws Exception {
+    private void checkRequestLogError(RequestLogErrorChecker checker) throws Exception {
         final RequestLog log = requestLogQueue.take();
         assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
 
@@ -1135,10 +1137,7 @@ public class GrpcClientTest {
         assertThat(rpcReq).isNotNull();
         assertThat(rpcReq.serviceType()).isEqualTo(GrpcLogUtil.class);
 
-        final Throwable cause = log.responseCause();
-        assertThat(cause).isNotNull();
-
-        checker.check(rpcReq, cause);
+        checker.check(rpcReq, log.responseHeaders(), log.responseCause());
     }
 
     @FunctionalInterface
@@ -1146,7 +1145,8 @@ public class GrpcClientTest {
         void check(RpcRequest rpcReq, RpcResponse rpcRes, @Nullable Status grpcStatus) throws Exception;
     }
 
-    private interface RequestLogExceptionChecker {
-        void check(RpcRequest rpcReq, Throwable cause) throws Exception;
+    @FunctionalInterface
+    private interface RequestLogErrorChecker {
+        void check(RpcRequest rpcReq, HttpHeaders headers, @Nullable Throwable cause) throws Exception;
     }
 }
