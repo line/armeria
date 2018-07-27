@@ -867,7 +867,7 @@ public class GrpcClientTest {
         if (cause instanceof StatusException) {
             assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
         }
-        fail("cause must be a ResponseTimeoutException or a StatusException.");
+        fail("cause must be a ResponseTimeoutException or a StatusException: ", cause);
     }
 
     // NB: It's unclear when anyone would set a negative timeout, and trying to set the negative timeout
