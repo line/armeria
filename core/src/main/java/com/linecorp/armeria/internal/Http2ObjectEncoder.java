@@ -18,8 +18,6 @@ package com.linecorp.armeria.internal;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
@@ -44,9 +42,8 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
     protected ChannelFuture doWriteHeaders(
             ChannelHandlerContext ctx, int id, int streamId, HttpHeaders headers, boolean endStream) {
 
-        final ChannelFuture future = validateStream(ctx, streamId);
-        if (future != null) {
-            return future;
+        if (!isWritable(streamId)) {
+            return ctx.newFailedFuture(ClosedPublisherException.get());
         }
 
         return encoder.writeHeaders(
@@ -57,10 +54,10 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
     protected ChannelFuture doWriteData(
             ChannelHandlerContext ctx, int id, int streamId, HttpData data, boolean endStream) {
 
-        final ChannelFuture future = validateStream(ctx, streamId);
-        if (future != null) {
+        if (!isWritable(streamId)) {
             ReferenceCountUtil.safeRelease(data);
-            return future;
+            return data.isEmpty() ? ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                                  : ctx.newFailedFuture(ClosedPublisherException.get());
         }
 
         if (!encoder.connection().streamMayHaveExisted(streamId)) {
@@ -75,40 +72,35 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
 
     @Override
     protected ChannelFuture doWriteReset(ChannelHandlerContext ctx, int id, int streamId, Http2Error error) {
-        final ChannelFuture future = validateStream(ctx, streamId);
-        if (future != null) {
-            return future;
-        }
-
         if (encoder.connection().streamMayHaveExisted(streamId)) {
             return encoder.writeRstStream(ctx, streamId, error.code(), ctx.newPromise());
-        } else {
-            // Tried to send a RST frame for a non-existent stream. This can happen when a client-side
-            // subscriber terminated its response stream even before the first frame of the stream is sent.
-            // In this case, we don't need to send a RST stream.
-            return ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
         }
+
+        // Tried to send a RST frame for a non-existent stream. This can happen when a client-side
+        // subscriber terminated its response stream even before the first frame of the stream is sent.
+        // In this case, we don't need to send a RST stream.
+        return ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
     }
 
-    @Nullable
-    private ChannelFuture validateStream(ChannelHandlerContext ctx, int streamId) {
+    /**
+     * Returns {@code true} if the encoder can write something to the specified {@code streamId}.
+     */
+    private boolean isWritable(int streamId) {
         final Http2Stream stream = encoder.connection().stream(streamId);
         if (stream != null) {
             switch (stream.state()) {
                 case RESERVED_LOCAL:
                 case OPEN:
                 case HALF_CLOSED_REMOTE:
-                    break;
+                    return true;
                 default:
                     // The response has been sent already.
-                    return ctx.newFailedFuture(ClosedPublisherException.get());
+                    return false;
             }
-        } else if (encoder.connection().streamMayHaveExisted(streamId)) {
-            // Stream has been removed because it has been closed completely.
-            return ctx.newFailedFuture(ClosedPublisherException.get());
         }
 
-        return null;
+        // Return false if the stream has been completely closed and removed.
+        return !encoder.connection().streamMayHaveExisted(streamId);
     }
 
     @Override

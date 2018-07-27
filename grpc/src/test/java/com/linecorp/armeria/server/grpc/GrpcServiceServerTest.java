@@ -570,7 +570,8 @@ public class GrpcServiceServerTest {
             assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StreamClientCancels");
             assertThat(rpcReq.params()).containsExactly(SimpleRequest.getDefaultInstance());
             assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.UNKNOWN);
+            assertThat(grpcStatus.getCode()).isEqualTo(protocol.startsWith("h2") ? Code.CANCELLED
+                                                                                 : Code.UNKNOWN);
         });
     }
 

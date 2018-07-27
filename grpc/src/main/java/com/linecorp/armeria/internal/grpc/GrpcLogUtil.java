@@ -32,6 +32,14 @@ public final class GrpcLogUtil {
     /**
      * Returns a {@link RpcRequest} corresponding to the given {@link MethodDescriptor}.
      */
+    public static RpcRequest rpcRequest(MethodDescriptor<?, ?> method) {
+        // See below to learn why we use GrpcLogUtil.class here.
+        return RpcRequest.of(GrpcLogUtil.class, method.getFullMethodName());
+    }
+
+    /**
+     * Returns a {@link RpcRequest} corresponding to the given {@link MethodDescriptor}.
+     */
     public static RpcRequest rpcRequest(MethodDescriptor<?, ?> method, Object message) {
         // We don't actually use the RpcRequest for request processing since it doesn't fit well with streaming.
         // We still populate it with a reasonable method name for use in logging. The service type is currently

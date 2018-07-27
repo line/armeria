@@ -382,6 +382,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     public void endOfStream() {
         clientStreamClosed = true;
         if (!closeCalled) {
+            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
+            }
+
             try (SafeCloseable ignored = ctx.push()) {
                 listener.onHalfClose();
             } catch (Throwable t) {

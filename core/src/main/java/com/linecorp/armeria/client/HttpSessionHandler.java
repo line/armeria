@@ -125,9 +125,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean invoke(ClientRequestContext ctx, HttpRequest req, DecodedHttpResponse res) {
-        if (!res.isOpen()) {
-            // The response has been closed even before its request is sent.
-            req.abort();
+        if (handleEarlyCancellation(ctx, req, res)) {
             return true;
         }
 
@@ -155,6 +153,36 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         } else {
             return true;
         }
+    }
+
+    private boolean handleEarlyCancellation(ClientRequestContext ctx, HttpRequest req,
+                                            DecodedHttpResponse res) {
+        if (res.isOpen()) {
+            return false;
+        }
+
+        // The response has been closed even before its request is sent.
+        assert protocol != null;
+
+        req.abort();
+        ctx.logBuilder().startRequest(channel, protocol);
+        ctx.logBuilder().requestHeaders(req.headers());
+        req.completionFuture().whenComplete((unused, cause) -> {
+            if (cause == null) {
+                ctx.logBuilder().endRequest();
+            } else {
+                ctx.logBuilder().endRequest(cause);
+            }
+        });
+        res.completionFuture().whenComplete((unused, cause) -> {
+            if (cause == null) {
+                ctx.logBuilder().endResponse();
+            } else {
+                ctx.logBuilder().endResponse(cause);
+            }
+        });
+
+        return true;
     }
 
     @Override
