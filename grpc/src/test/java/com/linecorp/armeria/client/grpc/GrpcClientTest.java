@@ -817,7 +817,8 @@ public class GrpcClientTest {
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
-        checkRequestLogError((rpcReq, headers, cause) -> {
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
             assertThat(rpcReq.params()).containsExactly(request);
             assertResponseTimeoutExceptionOrDeadlineExceeded(cause);
         });
@@ -852,7 +853,8 @@ public class GrpcClientTest {
         assertThat(Status.fromThrowable(recorder.getError()).getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
-        checkRequestLogError((rpcReq, headers, cause) -> {
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
             assertThat(rpcReq.params()).containsExactly(request);
             assertResponseTimeoutExceptionOrDeadlineExceeded(cause);
         });
@@ -1031,7 +1033,8 @@ public class GrpcClientTest {
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.UNIMPLEMENTED.getCode());
 
-        checkRequestLogError((rpcReq, headers, cause) -> {
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
             assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
             assertThat(headers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(
                     String.valueOf(Status.UNIMPLEMENTED.getCode().value()));
@@ -1047,8 +1050,11 @@ public class GrpcClientTest {
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.UNIMPLEMENTED.getCode());
 
-        checkRequestLogError((rpcReq, headers, cause) -> {
-            assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            // rpcReq may be null depending on timing.
+            if (rpcReq != null) {
+                assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
+            }
             assertThat(headers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(
                     String.valueOf(Status.UNIMPLEMENTED.getCode().value()));
         });
@@ -1135,10 +1141,11 @@ public class GrpcClientTest {
         assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
 
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
-        assertThat(rpcReq).isNotNull();
-        assertThat(rpcReq.serviceType()).isEqualTo(GrpcLogUtil.class);
+        if (rpcReq != null) {
+            assertThat(rpcReq.serviceType()).isEqualTo(GrpcLogUtil.class);
+        }
 
-        checker.check(rpcReq, log.responseHeaders(), log.responseCause());
+        checker.check(log.responseHeaders(), rpcReq, log.responseCause());
     }
 
     @FunctionalInterface
@@ -1148,6 +1155,7 @@ public class GrpcClientTest {
 
     @FunctionalInterface
     private interface RequestLogErrorChecker {
-        void check(RpcRequest rpcReq, HttpHeaders headers, @Nullable Throwable cause) throws Exception;
+        void check(HttpHeaders headers, @Nullable RpcRequest rpcReq,
+                   @Nullable Throwable cause) throws Exception;
     }
 }
