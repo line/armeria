@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
@@ -115,7 +116,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     // Only set once.
     @Nullable
     private ServerCall.Listener<I> listener;
-
+    @Nullable
+    private O firstResponse;
     @Nullable
     private final String clientAcceptEncoding;
 
@@ -240,6 +242,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(sendHeadersCalled, "sendHeaders has not been called");
         checkState(!closeCalled, "call is closed");
 
+        if (firstResponse == null) {
+            firstResponse = message;
+        }
+
         try {
             res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
             res.onDemand(() -> {
@@ -357,6 +363,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             throw new UncheckedIOException(e);
         }
 
+        if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+            ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
+        }
+
         if (unsafeWrapRequestBuffers && message.buf() != null) {
             GrpcUnsafeBufferUtil.storeBuffer(message.buf(), request, ctx);
         }
@@ -372,6 +382,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     public void endOfStream() {
         clientStreamClosed = true;
         if (!closeCalled) {
+            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
+            }
+
             try (SafeCloseable ignored = ctx.push()) {
                 listener.onHalfClose();
             } catch (Throwable t) {
@@ -400,7 +414,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 clientStreamClosed = true;
             }
             messageFramer.close();
-            ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus), null);
+            ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             if (newStatus.isOk()) {
                 try (SafeCloseable ignored = ctx.push()) {
                     listener.onComplete();
