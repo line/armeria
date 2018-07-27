@@ -530,7 +530,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         private void verifySize() {
             if (count > maxMessageSize) {
-                throw Status.INTERNAL.withDescription(String.format(
+                throw Status.RESOURCE_EXHAUSTED.withDescription(String.format(
                         "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
                         debugString, maxMessageSize, count)).asRuntimeException();
             }
