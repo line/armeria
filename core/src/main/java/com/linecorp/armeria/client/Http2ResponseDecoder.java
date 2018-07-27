@@ -201,7 +201,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         try {
-            res.write(HttpData.of(data));
+            // If this tryWrite() returns false, it means the response stream has been closed due to
+            // disconnection or by the response consumer. We do not need to handle such cases here because
+            // it will be notified to the response consumer anyway.
+            res.tryWrite(HttpData.of(data));
         } catch (Throwable t) {
             res.close(t);
             throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");

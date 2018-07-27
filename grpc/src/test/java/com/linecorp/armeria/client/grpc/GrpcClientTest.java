@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.grpc;
 import static com.linecorp.armeria.grpc.testing.Messages.PayloadType.COMPRESSABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -29,18 +30,24 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.annotation.Nullable;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 import org.mockito.ArgumentCaptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Throwables;
 import com.google.protobuf.ByteString;
@@ -48,6 +55,8 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.DecoratingClientFunction;
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.logging.LoggingClientBuilder;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -55,6 +64,10 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -70,6 +83,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
 import com.linecorp.armeria.grpc.testing.UnimplementedServiceGrpc;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
@@ -84,13 +98,12 @@ import io.grpc.ClientCall;
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 
 public class GrpcClientTest {
-
-    private static final Logger logger = LoggerFactory.getLogger(GrpcClientTest.class);
 
     /**
      * Must be at least {@link #unaryPayloadLength()}, plus some to account for encoding overhead.
@@ -139,17 +152,29 @@ public class GrpcClientTest {
         }
     };
 
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+
+    private final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
     private TestServiceBlockingStub blockingStub;
     private TestServiceStub asyncStub;
 
     @Before
     public void setUp() {
+        requestLogQueue.clear();
+        final DecoratingClientFunction<HttpRequest, HttpResponse> requestLogRecorder = (delegate, ctx, req) -> {
+            ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
+            return delegate.execute(ctx, req);
+        };
+
         blockingStub = new ClientBuilder("gproto+" + server.httpUri("/"))
                 .defaultMaxResponseLength(MAX_MESSAGE_SIZE)
                 .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
+                .decorator(HttpRequest.class, HttpResponse.class, requestLogRecorder)
                 .build(TestServiceBlockingStub.class);
         asyncStub = new ClientBuilder("gproto+" + server.httpUri("/"))
                 .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
+                .decorator(HttpRequest.class, HttpResponse.class, requestLogRecorder)
                 .build(TestServiceStub.class);
     }
 
@@ -159,13 +184,17 @@ public class GrpcClientTest {
         SERVER_TRAILERS_CAPTURE.set(null);
     }
 
-    @Test(timeout = 10000)
-    public void emptyUnary() {
+    @Test
+    public void emptyUnary() throws Exception {
         assertThat(blockingStub.emptyCall(EMPTY)).isEqualTo(EMPTY);
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(EMPTY);
+            assertThat(rpcRes.get()).isEqualTo(EMPTY);
+        });
     }
 
-    @Test(timeout = 10000)
-    public void largeUnary() {
+    @Test
+    public void largeUnary() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setResponseSize(314159)
@@ -181,9 +210,13 @@ public class GrpcClientTest {
                               .build();
 
         assertThat(blockingStub.unaryCall(request)).isEqualTo(goldenResponse);
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(rpcRes.get()).isEqualTo(goldenResponse);
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void largeUnary_unsafe() {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
@@ -199,16 +232,16 @@ public class GrpcClientTest {
                                                  .setBody(ByteString.copyFrom(new byte[314159])))
                               .build();
 
-        TestServiceStub stub = new ClientBuilder("gproto+" + server.httpUri("/"))
+        final TestServiceStub stub = new ClientBuilder("gproto+" + server.httpUri("/"))
                 .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
                 .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
                 .build(TestServiceStub.class);
         stub.unaryCall(request, new StreamObserver<SimpleResponse>() {
             @Override
             public void onNext(SimpleResponse value) {
-                RequestContext ctx = RequestContext.current();
+                final RequestContext ctx = RequestContext.current();
                 assertThat(value).isEqualTo(goldenResponse);
-                ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
+                final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
                 assertThat(buf.refCnt()).isNotZero();
                 GrpcUnsafeBufferUtil.releaseBuffer(value, ctx);
                 assertThat(buf.refCnt()).isZero();
@@ -224,7 +257,7 @@ public class GrpcClientTest {
         });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void serverStreaming() throws Exception {
         final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
@@ -266,9 +299,14 @@ public class GrpcClientTest {
         recorder.awaitCompletion();
         assertSuccess(recorder);
         assertThat(recorder.getValues()).containsExactlyElementsOf(goldenResponses);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void clientStreaming() throws Exception {
         final List<StreamingInputCallRequest> requests = Arrays.asList(
                 StreamingInputCallRequest.newBuilder()
@@ -301,9 +339,14 @@ public class GrpcClientTest {
         requestObserver.onCompleted();
         assertThat(responseObserver.firstValue().get()).isEqualTo(goldenResponse);
         responseObserver.awaitCompletion();
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(requests.get(0));
+            assertThat(rpcRes.get()).isEqualTo(goldenResponse);
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void pingPong() throws Exception {
         final List<StreamingOutputCallRequest> requests = Arrays.asList(
                 StreamingOutputCallRequest.newBuilder()
@@ -378,18 +421,28 @@ public class GrpcClientTest {
         }
         requestObserver.onCompleted();
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo("Completed");
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(requests.get(0));
+            assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void emptyStream() throws Exception {
         final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
         final StreamObserver<StreamingOutputCallRequest> requestObserver
                 = asyncStub.fullDuplexCall(responseObserver);
         requestObserver.onCompleted();
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).isEmpty();
+            assertThat(rpcRes.get()).isNull();
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void cancelAfterBegin() throws Exception {
         final StreamRecorder<StreamingInputCallResponse> responseObserver = StreamRecorder.create();
         final StreamObserver<StreamingInputCallRequest> requestObserver =
@@ -398,9 +451,16 @@ public class GrpcClientTest {
         responseObserver.awaitCompletion();
         assertThat(responseObserver.getValues()).isEmpty();
         assertThat(Status.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
+
+        final RequestLog log = requestLogQueue.take();
+        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+        final Throwable cause = ((RpcResponse) log.responseContent()).cause();
+        assertThat(cause).isInstanceOf(StatusException.class);
+        assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.CANCELLED);
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void cancelAfterFirstResponse() throws Exception {
         final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
@@ -412,8 +472,7 @@ public class GrpcClientTest {
         final StreamingOutputCallResponse goldenResponse =
                 StreamingOutputCallResponse.newBuilder()
                                            .setPayload(Payload.newBuilder()
-                                                              .setType(
-                                                                      COMPRESSABLE)
+                                                              .setType(COMPRESSABLE)
                                                               .setBody(ByteString.copyFrom(new byte[31415])))
                                            .build();
 
@@ -426,9 +485,14 @@ public class GrpcClientTest {
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).hasSize(1);
         assertThat(Status.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(grpcStatus.getCode()).isEqualTo(Code.CANCELLED);
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void fullDuplexCallShouldSucceed() throws Exception {
         // Build the request.
         final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
@@ -464,9 +528,14 @@ public class GrpcClientTest {
             assertThat(length).withFailMessage("comparison failed at index " + ix)
                               .isEqualTo(expectedSize);
         }
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(requests.get(0));
+            assertThat(rpcRes.get()).isEqualTo(recorder.getValues().get(0));
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void halfDuplexCallShouldSucceed() throws Exception {
         // Build the request.
         final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
@@ -502,9 +571,14 @@ public class GrpcClientTest {
             assertThat(length).withFailMessage("comparison failed at index " + ix)
                               .isEqualTo(expectedSize);
         }
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(requests.get(0));
+            assertThat(rpcRes.get()).isEqualTo(recorder.getValues().get(0));
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void serverStreamingShouldBeFlowControlled() throws Exception {
         final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
@@ -571,10 +645,15 @@ public class GrpcClientTest {
                                    .isEqualTo(goldenResponses.get(1));
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(Status.OK);
         call.cancel("Cancelled after all of the requests are done", null);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
+        });
     }
 
-    @Test(timeout = 30000)
-    public void veryLargeRequest() {
+    @Test
+    public void veryLargeRequest() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setPayload(Payload.newBuilder()
@@ -590,10 +669,15 @@ public class GrpcClientTest {
                                                  .setBody(ByteString.copyFrom(new byte[10])))
                               .build();
         assertThat(blockingStub.unaryCall(request)).isEqualTo(goldenResponse);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(rpcRes.get()).isEqualTo(goldenResponse);
+        });
     }
 
-    @Test(timeout = 30000)
-    public void veryLargeResponse() {
+    @Test
+    public void veryLargeResponse() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setResponseSize(unaryPayloadLength())
@@ -606,10 +690,15 @@ public class GrpcClientTest {
                                                  .setBody(ByteString.copyFrom(new byte[unaryPayloadLength()])))
                               .build();
         assertThat(blockingStub.unaryCall(request)).isEqualTo(goldenResponse);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(rpcRes.get()).isEqualTo(goldenResponse);
+        });
     }
 
-    @Test(timeout = 10000)
-    public void exchangeHeadersUnaryCall() {
+    @Test
+    public void exchangeHeadersUnaryCall() throws Exception {
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
@@ -622,9 +711,14 @@ public class GrpcClientTest {
         // Assert that our side channel object is echoed back in both headers and trailers
         assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(EMPTY);
+            assertThat(rpcRes.get()).isEqualTo(EMPTY);
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void exchangeHeadersStreamingCall() throws Exception {
         final TestServiceStub stub =
                 Clients.newDerivedClient(
@@ -661,9 +755,14 @@ public class GrpcClientTest {
         // Assert that our side channel object is echoed back in both headers and trailers
         assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(requests.get(0));
+            assertThat(rpcRes.get()).isEqualTo(recorder.getValues().get(0));
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void sendsTimeoutHeader() {
         final long configuredTimeoutMinutes = 100;
         final TestServiceBlockingStub stub =
@@ -697,10 +796,12 @@ public class GrpcClientTest {
                 .next();
     }
 
-    @Test(timeout = 10000)
-    public void deadlineExceeded() {
+    @Test
+    public void deadlineExceeded() throws Exception {
         // warm up the channel and JVM
         blockingStub.emptyCall(Empty.getDefaultInstance());
+        requestLogQueue.take();
+
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
@@ -715,12 +816,20 @@ public class GrpcClientTest {
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
+
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertResponseTimeoutExceptionOrDeadlineExceeded(cause);
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void deadlineExceededServerStreaming() throws Exception {
         // warm up the channel and JVM
         blockingStub.emptyCall(Empty.getDefaultInstance());
+        requestLogQueue.take();
+
         final ResponseParameters.Builder responseParameters = ResponseParameters.newBuilder()
                                                                                 .setSize(1)
                                                                                 .setIntervalUs(20000);
@@ -743,6 +852,27 @@ public class GrpcClientTest {
         assertThat(recorder.getError()).isNotNull();
         assertThat(Status.fromThrowable(recorder.getError()).getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
+
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertResponseTimeoutExceptionOrDeadlineExceeded(cause);
+        });
+    }
+
+    private static void assertResponseTimeoutExceptionOrDeadlineExceeded(@Nullable Throwable cause) {
+        assertThat(cause).isNotNull();
+
+        // Both exceptions can be raised when a timeout occurs due to timing issues,
+        // and the first triggered one wins.
+        if (cause instanceof ResponseTimeoutException) {
+            return;
+        }
+        if (cause instanceof StatusException) {
+            assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+            return;
+        }
+        fail("cause must be a ResponseTimeoutException or a StatusException: ", cause);
     }
 
     // NB: It's unclear when anyone would set a negative timeout, and trying to set the negative timeout
@@ -750,7 +880,7 @@ public class GrpcClientTest {
     // easier to understand the compatibility test coverage - not sure why the gRPC test doesn't fail but it
     // doesn't seem worth investigating too hard on this one.
     @Ignore
-    @Test(timeout = 10000)
+    @Test
     public void deadlineInPast() {
         // Test once with idle channel and once with active channel
         final TestServiceGrpc.TestServiceBlockingStub stub =
@@ -770,7 +900,7 @@ public class GrpcClientTest {
         assertThat(((StatusRuntimeException) t).getStatus().getCode());
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void maxInboundSize_exact() {
         final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
@@ -785,13 +915,14 @@ public class GrpcClientTest {
         stub.streamingOutputCall(request).next();
     }
 
-    @Test(timeout = 10000)
-    public void maxInboundSize_tooBig() {
+    @Test
+    public void maxInboundSize_tooBig() throws Exception {
         final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(ResponseParameters.newBuilder().setSize(1))
                                           .build();
         final int size = blockingStub.streamingOutputCall(request).next().getSerializedSize();
+        requestLogQueue.take();
 
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
@@ -801,9 +932,15 @@ public class GrpcClientTest {
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
         assertThat(Throwables.getStackTraceAsString(t)).contains("exceeds maximum");
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(grpcStatus).isNotNull();
+            assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
+        });
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void maxOutboundSize_exact() {
         // set at least one field to ensure the size is non-zero.
         final StreamingOutputCallRequest request =
@@ -818,8 +955,8 @@ public class GrpcClientTest {
         stub.streamingOutputCall(request).next();
     }
 
-    @Test(timeout = 10000)
-    public void maxOutboundSize_tooBig() {
+    @Test
+    public void maxOutboundSize_tooBig() throws Exception {
         // set at least one field to ensure the size is non-zero.
         final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
@@ -834,10 +971,16 @@ public class GrpcClientTest {
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode()).isEqualTo(Code.CANCELLED);
         assertThat(Throwables.getStackTraceAsString(t)).contains("message too large");
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(grpcStatus).isNotNull();
+            assertThat(grpcStatus.getCode()).isEqualTo(Code.CANCELLED);
+        });
     }
 
-    @Test(timeout = 10000)
-    public void statusCodeAndMessage() {
+    @Test
+    public void statusCodeAndMessage() throws Exception {
         final int errorCode = 2;
         final String errorMessage = "test status message";
         final EchoStatus responseStatus = EchoStatus.newBuilder()
@@ -873,29 +1016,52 @@ public class GrpcClientTest {
         assertThat(Status.fromThrowable(captor.getValue()).getCode()).isEqualTo(Status.UNKNOWN.getCode());
         assertThat(Status.fromThrowable(captor.getValue()).getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(simpleRequest);
+            assertThat(grpcStatus).isNotNull();
+            assertThat(grpcStatus.getCode()).isEqualTo(Code.UNKNOWN);
+            assertThat(grpcStatus.getDescription()).isEqualTo(errorMessage);
+        });
     }
 
     /** Sends an rpc to an unimplemented method within TestService. */
-    @Test(timeout = 10000)
-    public void unimplementedMethod() {
+    @Test
+    public void unimplementedMethod() throws Exception {
         final Throwable t = catchThrowable(() -> blockingStub.unimplementedCall(Empty.getDefaultInstance()));
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.UNIMPLEMENTED.getCode());
+
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
+            assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
+            assertThat(headers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(
+                    String.valueOf(Status.UNIMPLEMENTED.getCode().value()));
+        });
     }
 
-    @Test(timeout = 10000)
-    public void unimplementedService() {
+    @Test
+    public void unimplementedService() throws Exception {
         final UnimplementedServiceGrpc.UnimplementedServiceBlockingStub stub =
                 UnimplementedServiceGrpc.newBlockingStub(asyncStub.getChannel());
         final Throwable t = catchThrowable(() -> stub.unimplementedCall(Empty.getDefaultInstance()));
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
                 .isEqualTo(Status.UNIMPLEMENTED.getCode());
+
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            // rpcReq may be null depending on timing.
+            if (rpcReq != null) {
+                assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
+            }
+            assertThat(headers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(
+                    String.valueOf(Status.UNIMPLEMENTED.getCode().value()));
+        });
     }
 
     /** Start a fullDuplexCall which the server will not respond, and verify the deadline expires. */
-    @Test(timeout = 10000)
+    @Test
     public void timeoutOnSleepingServer() throws Exception {
         final TestServiceStub stub = Clients.newDerivedClient(
                 asyncStub,
@@ -948,5 +1114,48 @@ public class GrpcClientTest {
 
     private static int operationTimeoutMillis() {
         return 5000;
+    }
+
+    private void checkRequestLog(RequestLogChecker checker) throws Exception {
+        final RequestLog log = requestLogQueue.take();
+        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+
+        final RpcRequest rpcReq = (RpcRequest) log.requestContent();
+        final RpcResponse rpcRes = (RpcResponse) log.responseContent();
+        assertThat(rpcReq).isNotNull();
+        assertThat((Object) rpcRes).isNotNull();
+        assertThat(rpcReq.serviceType()).isEqualTo(GrpcLogUtil.class);
+
+        final Status grpcStatus;
+        if (rpcRes.cause() != null) {
+            grpcStatus = ((StatusException) rpcRes.cause()).getStatus();
+        } else {
+            grpcStatus = null;
+        }
+
+        checker.check(rpcReq, rpcRes, grpcStatus);
+    }
+
+    private void checkRequestLogError(RequestLogErrorChecker checker) throws Exception {
+        final RequestLog log = requestLogQueue.take();
+        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+
+        final RpcRequest rpcReq = (RpcRequest) log.requestContent();
+        if (rpcReq != null) {
+            assertThat(rpcReq.serviceType()).isEqualTo(GrpcLogUtil.class);
+        }
+
+        checker.check(log.responseHeaders(), rpcReq, log.responseCause());
+    }
+
+    @FunctionalInterface
+    private interface RequestLogChecker {
+        void check(RpcRequest rpcReq, RpcResponse rpcRes, @Nullable Status grpcStatus) throws Exception;
+    }
+
+    @FunctionalInterface
+    private interface RequestLogErrorChecker {
+        void check(HttpHeaders headers, @Nullable RpcRequest rpcReq,
+                   @Nullable Throwable cause) throws Exception;
     }
 }

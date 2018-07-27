@@ -84,7 +84,9 @@ public class UnframedGrpcServiceTest {
         when(ctx.eventLoop()).thenReturn(eventLoop.get());
         when(ctx.contextAwareEventLoop()).thenReturn(eventLoop.get());
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
-        when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
+        final DefaultRequestLog log = new DefaultRequestLog(ctx);
+        when(ctx.log()).thenReturn(log);
+        when(ctx.logBuilder()).thenReturn(log);
 
         when(request.headers())
                 .thenReturn(HttpHeaders.of(HttpMethod.POST, "/armeria.grpc.testing.TestService/EmptyCall")

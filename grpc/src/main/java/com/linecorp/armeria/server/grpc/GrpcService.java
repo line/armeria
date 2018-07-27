@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
-import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
@@ -142,8 +141,6 @@ public final class GrpcService extends AbstractHttpService
                             false));
         }
 
-        ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method.getMethodDescriptor()), null);
-
         final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
         if (timeoutHeader != null) {
             try {
@@ -154,12 +151,16 @@ public final class GrpcService extends AbstractHttpService
             }
         }
 
+        ctx.logBuilder().deferRequestContent();
+        ctx.logBuilder().deferResponseContent();
+
         final HttpResponseWriter res = HttpResponse.streaming();
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
             ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, EMPTY_METADATA));
             req.subscribe(call.messageReader(), ctx.eventLoop(), true);
+            req.completionFuture().whenCompleteAsync(call.messageReader(), ctx.eventLoop());
         }
         return res;
     }
