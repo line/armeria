@@ -868,6 +868,7 @@ public class GrpcClientTest {
         }
         if (cause instanceof StatusException) {
             assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+            return;
         }
         fail("cause must be a ResponseTimeoutException or a StatusException: ", cause);
     }
