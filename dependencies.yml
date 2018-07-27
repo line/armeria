@@ -88,14 +88,14 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard.metrics:
   metrics-core:
-    version: &DROPWIZARD_VERSION '4.0.2'
+    version: &DROPWIZARD_VERSION '4.0.3'
     javadocs:
     - https://metrics.dropwizard.io/4.0.0/apidocs/
   metrics-json: { version: *DROPWIZARD_VERSION }
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.13.1'
+    version: &GRPC_VERSION '1.13.2'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -119,23 +119,23 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.5'
+    version: &MICROMETER_VERSION '1.0.6'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.5/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.6/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.5/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.6/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.5/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.6/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.27.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.28.Final' }
   netty-codec-haproxy: { version: *NETTY_VERSION }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
@@ -155,13 +155,13 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.1.16'
+    version: '2.1.17'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.1.2'
+    version: &BRAVE_VERSION '5.1.4'
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.1.2/
 
@@ -194,7 +194,7 @@ log4j:
   log4j: { version: '1.2.17' }
 
 me.champeau.gradle:
-  jmh-gradle-plugin: { version: '0.4.6' }
+  jmh-gradle-plugin: { version: '0.4.7' }
 
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '1.31.1' }
@@ -228,9 +228,9 @@ org.apache.httpcomponents:
 
 org.apache.kafka:
   kafka-clients:
-    version: '1.1.0'
+    version: '1.1.1'
     javadocs:
-    - https://kafka.apache.org/0100/javadoc/
+    - https://kafka.apache.org/11/javadoc/
 
 org.apache.thrift:
   libthrift:
@@ -251,7 +251,7 @@ org.apache.tomcat.embed:
 
 org.apache.zookeeper:
   zookeeper:
-    version: '3.4.12'
+    version: '3.4.13'
     exclusions:
     - jline:jline
     - log4j:log4j
@@ -261,7 +261,7 @@ org.assertj:
   assertj-core: { version: '3.10.0' }
 
 org.awaitility:
-  awaitility: { version: '3.1.1' }
+  awaitility: { version: '3.1.2' }
 
 org.bouncycastle:
   bcprov-jdk15on:
@@ -300,7 +300,7 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.10.Final' }
+  hibernate-validator: { version: '6.0.11.Final' }
 
 org.jctools:
   jctools-core:
@@ -310,7 +310,7 @@ org.jctools:
       to: com.linecorp.armeria.internal.shaded.jctools
 
 org.mockito:
-  mockito-core: { version: '2.19.0' }
+  mockito-core: { version: '2.20.1' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.7' }
