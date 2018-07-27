@@ -179,9 +179,10 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiConsumer<Void
         if (cancelled) {
             return;
         }
-        if (cause == null) {
-            closeDeframer();
-        } else {
+
+        closeDeframer();
+
+        if (cause != null) {
             transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
         }
     }

@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.grpc;
 import static com.linecorp.armeria.grpc.testing.Messages.PayloadType.COMPRESSABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -231,16 +232,16 @@ public class GrpcClientTest {
                                                  .setBody(ByteString.copyFrom(new byte[314159])))
                               .build();
 
-        TestServiceStub stub = new ClientBuilder("gproto+" + server.httpUri("/"))
+        final TestServiceStub stub = new ClientBuilder("gproto+" + server.httpUri("/"))
                 .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
                 .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
                 .build(TestServiceStub.class);
         stub.unaryCall(request, new StreamObserver<SimpleResponse>() {
             @Override
             public void onNext(SimpleResponse value) {
-                RequestContext ctx = RequestContext.current();
+                final RequestContext ctx = RequestContext.current();
                 assertThat(value).isEqualTo(goldenResponse);
-                ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
+                final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
                 assertThat(buf.refCnt()).isNotZero();
                 GrpcUnsafeBufferUtil.releaseBuffer(value, ctx);
                 assertThat(buf.refCnt()).isZero();
@@ -818,7 +819,7 @@ public class GrpcClientTest {
 
         checkRequestLogException((rpcReq, cause) -> {
             assertThat(rpcReq.params()).containsExactly(request);
-            assertThat(cause).isInstanceOf(ResponseTimeoutException.class);
+            assertResponseTimeoutExceptionOrDeadlineExceeded(cause);
         });
     }
 
@@ -853,8 +854,20 @@ public class GrpcClientTest {
 
         checkRequestLogException((rpcReq, cause) -> {
             assertThat(rpcReq.params()).containsExactly(request);
-            assertThat(cause).isInstanceOf(ResponseTimeoutException.class);
+            assertResponseTimeoutExceptionOrDeadlineExceeded(cause);
         });
+    }
+
+    private static void assertResponseTimeoutExceptionOrDeadlineExceeded(Throwable cause) {
+        // Both exceptions can be raised when a timeout occurs due to timing issues,
+        // and the first triggered one wins.
+        if (cause instanceof ResponseTimeoutException) {
+            return;
+        }
+        if (cause instanceof StatusException) {
+            assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+        }
+        fail("cause must be a ResponseTimeoutException or a StatusException.");
     }
 
     // NB: It's unclear when anyone would set a negative timeout, and trying to set the negative timeout
@@ -1122,25 +1135,10 @@ public class GrpcClientTest {
         assertThat(rpcReq).isNotNull();
         assertThat(rpcReq.serviceType()).isEqualTo(GrpcLogUtil.class);
 
-        assertThat(log.responseContent()).isNull();
-
         final Throwable cause = log.responseCause();
         assertThat(cause).isNotNull();
 
         checker.check(rpcReq, cause);
-    }
-
-    private void checkRequestLogStatus(RequestLogStatusChecker checker) throws Exception {
-        final RequestLog log = requestLogQueue.take();
-        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
-
-        final RpcRequest rpcReq = (RpcRequest) log.requestContent();
-        final RpcResponse rpcRes = (RpcResponse) log.responseContent();
-        assertThat(rpcReq).isNull();
-        assertThat((Object) rpcRes).isNotNull();
-
-        assertThat(rpcRes.cause()).isNotNull();
-        checker.check(((StatusException) rpcRes.cause()).getStatus());
     }
 
     @FunctionalInterface
@@ -1150,10 +1148,5 @@ public class GrpcClientTest {
 
     private interface RequestLogExceptionChecker {
         void check(RpcRequest rpcReq, Throwable cause) throws Exception;
-    }
-
-    @FunctionalInterface
-    private interface RequestLogStatusChecker {
-        void check(Status grpcStatus) throws Exception;
     }
 }
