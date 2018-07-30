@@ -18,15 +18,7 @@ import { Method } from '../specification';
 
 import GrpcUnframedTransport from './grpc-unframed';
 import ThriftTransport from './thrift';
-
-export interface Transport {
-  supportsMimeType(mimeType: string): boolean;
-  send(
-    method: Method,
-    bodyJson: string,
-    headers: { [name: string]: string },
-  ): Promise<string>;
-}
+import Transport from './transport';
 
 const grpcUnframedTransport = new GrpcUnframedTransport();
 const thriftTransport = new ThriftTransport();

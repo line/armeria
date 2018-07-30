@@ -47,7 +47,11 @@ const proxier = proxy('/', {
 });
 
 async function proxyToApi(ctx: any, next: any) {
-  if (ctx.method !== 'POST' && !ctx.path.endsWith('specification.json')) {
+  if (
+    ctx.method !== 'POST' &&
+    !ctx.path.endsWith('specification.json') &&
+    !ctx.path.endsWith('injected.js')
+  ) {
     return next();
   }
   return proxier(ctx, next);

@@ -14,27 +14,20 @@
  * under the License.
  */
 
-import '@babel/polyfill';
-import 'typeface-roboto';
-import 'typeface-roboto-mono';
+/**
+ * A pluggable provider of HTTP headers to issue with debug requests. The
+ * headers will be added to the request before any headers present in the
+ * debug form itself.
+ */
+export type HeaderProvider = () => Promise<{ [name: string]: string }>;
 
-import React from 'react';
-import ReactDOM from 'react-dom';
-import { HashRouter } from 'react-router-dom';
+export const providers: HeaderProvider[] = [];
 
-import App from './containers/App';
-
-import { registerHeaderProvider } from './lib/header-provider';
-
-import './index.css';
-
-(window as any).armeria = {
-  registerHeaderProvider,
-};
-
-ReactDOM.render(
-  <HashRouter>
-    <App />
-  </HashRouter>,
-  document.getElementById('app'),
-);
+/**
+ * Register a function that returns a {@link Promise} that resolves
+ * headers to inject into debug requests. Accessible as
+ * {@code window.armeria.registerHeaderProvider}.
+ */
+export function registerHeaderProvider(provider: HeaderProvider) {
+  providers.push(provider);
+}
