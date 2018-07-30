@@ -276,3 +276,9 @@ This product depends on ZooKeeper JUnit, distributed by Peter Nerg:
 
   * License: licenses/LICENSE.zookeeper-junit.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/pnerg/zookeeper-junit
+
+DocService Client Web Dependencies
+==================================
+
+This product depends on the work of many library authors for its DocService webapp client.
+The full list of libraries and their licenses can be found at licenses/web-licenses.txt

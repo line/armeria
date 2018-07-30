@@ -33,6 +33,9 @@ includeWithFlags ':it:spring:boot-tomcat',    'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat8.5', 'java', 'relocate'
 includeWithFlags ':testing-internal',         'java', 'relocate'
 
+// Unpublished non-Java projects
+includeWithFlags ':docs-client'
+
 // Site generation project
 includeWithFlags ':site'
 
