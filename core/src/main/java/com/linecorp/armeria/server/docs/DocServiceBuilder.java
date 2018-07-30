@@ -246,7 +246,7 @@ public final class DocServiceBuilder {
 
     /**
      * Adds Javascript scripts to inject into the {@code <head />} of the debug page HTML. This can be used to
-     * customizethe debug page (e.g., to provide a HeaderProvider for enabling authentication based on local
+     * customize the debug page (e.g., to provide a HeaderProvider for enabling authentication based on local
      * storage). All scripts are concatenated into the content of a single script tag.
      *
      * <p>A common use case is to provide authentication of debug requests using a local storage access token,
@@ -264,7 +264,7 @@ public final class DocServiceBuilder {
 
     /**
      * Adds Javascript scripts to inject into the {@code <head />} of the debug page HTML. This can be used to
-     * customizethe debug page (e.g., to provide a HeaderProvider for enabling authentication based on local
+     * customize the debug page (e.g., to provide a HeaderProvider for enabling authentication based on local
      * storage). All scripts are concatenated into the content of a single script tag.
      *
      * <p>A common use case is to provide authentication of debug requests using a local storage access token,
