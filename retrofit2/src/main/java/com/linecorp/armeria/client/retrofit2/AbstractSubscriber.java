@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.client.retrofit2;
 
 import java.io.IOException;
+import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 
@@ -38,50 +40,50 @@ import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import okio.Buffer;
+import okio.BufferedSource;
 
-final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
-
+abstract class AbstractSubscriber implements Subscriber<HttpObject> {
     private static final long NO_CONTENT_LENGTH = -1;
-
+    private final Response.Builder responseBuilder = new Response.Builder();
     private final ArmeriaCall armeriaCall;
     private final Callback callback;
-    private final Request request;
-    private final Response.Builder responseBuilder = new Response.Builder();
-    private final Buffer responseDataBuffer = new Buffer();
+    private final Executor callbackExecutor;
     @Nullable
     private Subscription subscription;
+    private boolean callbackCalled;
     private boolean nonInformationalHeadersStarted;
     @Nullable
     private String contentType;
     private long contentLength = NO_CONTENT_LENGTH;
-    private boolean callbackCalled;
 
-    ArmeriaCallSubscriber(ArmeriaCall armeriaCall, Callback callback, Request request) {
+    AbstractSubscriber(ArmeriaCall armeriaCall, Request request, Callback callback, Executor callbackExecutor) {
         this.armeriaCall = armeriaCall;
         this.callback = callback;
-        this.request = request;
+        this.callbackExecutor = callbackExecutor;
+        responseBuilder.request(request)
+                       .protocol(Protocol.HTTP_1_1);
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
+    public final void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
         if (armeriaCall.isCanceled()) {
-            safeOnFailure(newCanceledException());
+            onCancelled();
             subscription.cancel();
             return;
         }
-        subscription.request(Long.MAX_VALUE);
+        onSubscribe0();
     }
 
     @Override
-    public void onNext(HttpObject httpObject) {
+    public final void onNext(HttpObject httpObject) {
         if (armeriaCall.isCanceled()) {
-            safeOnFailure(newCanceledException());
+            onCancelled();
             subscription.cancel();
             return;
         }
         if (httpObject instanceof HttpHeaders) {
+            onHttpHeaders();
             final HttpHeaders headers = (HttpHeaders) httpObject;
             final HttpStatus status = headers.status();
             if (!nonInformationalHeadersStarted) { // If not received a non-informational header yet
@@ -96,66 +98,81 @@ final class ArmeriaCallSubscriber implements Subscriber<HttpObject> {
 
             headers.forEach(header -> responseBuilder.addHeader(header.getKey().toString(),
                                                                 header.getValue()));
-
             if (contentType == null) {
                 contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
             }
-
             if (contentLength == NO_CONTENT_LENGTH) {
                 contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, NO_CONTENT_LENGTH);
             }
-
             return;
         }
 
         final HttpData data = (HttpData) httpObject;
-        responseDataBuffer.write(data.array(), data.offset(), data.length());
+        onHttpData(data);
     }
 
     @Override
-    public void onError(Throwable throwable) {
+    public final void onError(Throwable throwable) {
         if (armeriaCall.tryFinish()) {
-            safeOnFailure(new IOException(throwable.getMessage(), throwable));
+            onError0(new IOException(throwable.getMessage(), throwable));
         } else {
-            safeOnFailure(newCanceledException());
+            onError0(newCancelledException());
         }
     }
 
     @Override
-    public void onComplete() {
+    public final void onComplete() {
         if (armeriaCall.tryFinish()) {
-            responseBuilder.body(ResponseBody.create(
-                    Strings.isNullOrEmpty(contentType) ? null : MediaType.parse(contentType),
-                    contentLength, responseDataBuffer));
-            responseBuilder.request(request);
-            responseBuilder.protocol(Protocol.HTTP_1_1);
-            safeOnResponse(responseBuilder.build());
+            onComplete0();
         } else {
-            safeOnFailure(newCanceledException());
+            onError0(newCancelledException());
         }
     }
 
-    private void safeOnFailure(IOException e) {
+    void request(long n) {
+        assert subscription != null;
+        subscription.request(n);
+    }
+
+    void safeOnFailure(IOException e) {
         if (callbackCalled) {
             return;
         }
         callbackCalled = true;
-        callback.onFailure(armeriaCall, e);
+        callbackExecutor.execute(() -> callback.onFailure(armeriaCall, e));
     }
 
-    private void safeOnResponse(Response response) {
+    void safeOnResponse(BufferedSource content) {
         if (callbackCalled) {
             return;
         }
         callbackCalled = true;
-        try {
-            callback.onResponse(armeriaCall, response);
-        } catch (IOException e) {
-            callback.onFailure(armeriaCall, e);
-        }
+        callbackExecutor.execute(() -> {
+            try {
+                callback.onResponse(armeriaCall, responseBuilder
+                        .body(ResponseBody.create(Strings.isNullOrEmpty(contentType) ?
+                                                  null : MediaType.parse(contentType),
+                                                  contentLength, content))
+                        .build());
+            } catch (IOException e) {
+                callback.onFailure(armeriaCall, e);
+            }
+        });
     }
 
-    private static IOException newCanceledException() {
-        return new IOException("Canceled");
+    abstract void onSubscribe0();
+
+    abstract void onCancelled();
+
+    abstract void onHttpHeaders();
+
+    abstract void onHttpData(HttpData data);
+
+    abstract void onError0(IOException e);
+
+    abstract void onComplete0();
+
+    static IOException newCancelledException() {
+        return new IOException("cancelled");
     }
 }
