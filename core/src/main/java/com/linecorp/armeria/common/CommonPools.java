@@ -52,7 +52,7 @@ public final class CommonPools {
 
     /**
      * Returns the default common blocking task {@link Executor} which is used for
-     * running a potentially long-running tasks which may block I/O threads.
+     * potentially long-running tasks which may block I/O threads.
      */
     public static Executor blockingTaskExecutor() {
         return BLOCKING_TASK_EXECUTOR;
