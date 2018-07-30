@@ -66,6 +66,10 @@ public final class Flags {
     private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
                                                           value -> OpenSsl.isAvailable() || !value);
 
+    private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
+    private static final int MAX_NUM_CONNECTIONS =
+            getInt("maxNumConnections", DEFAULT_MAX_NUM_CONNECTIONS, value -> value > 0);
+
     private static final int DEFAULT_NUM_COMMON_WORKERS = NUM_CPU_CORES * 2;
     private static final int NUM_COMMON_WORKERS =
             getInt("numCommonWorkers", DEFAULT_NUM_COMMON_WORKERS, value -> value > 0);
@@ -236,6 +240,17 @@ public final class Flags {
      */
     public static boolean useOpenSsl() {
         return USE_OPENSSL;
+    }
+
+    /**
+     * Returns the default server-side maximum number of connections.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_MAX_NUM_CONNECTIONS}. Specify the
+     * {@code -Dcom.linecorp.armeria.maxNumConnections=<integer>} JVM option to override
+     * the default value.
+     */
+    public static int maxNumConnections() {
+        return MAX_NUM_CONNECTIONS;
     }
 
     /**

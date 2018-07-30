@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -116,9 +117,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  */
 public final class ServerBuilder {
 
-    // Use Integer.MAX_VALUE not to limit open connections by default.
-    private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
-
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
@@ -147,7 +145,7 @@ public final class ServerBuilder {
     private boolean shutdownWorkerGroupOnStop;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
-    private int maxNumConnections = DEFAULT_MAX_NUM_CONNECTIONS;
+    private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
     private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
@@ -401,6 +399,11 @@ public final class ServerBuilder {
     public ServerBuilder maxNumConnections(int maxNumConnections) {
         this.maxNumConnections = ServerConfig.validateMaxNumConnections(maxNumConnections);
         return this;
+    }
+
+    @VisibleForTesting
+    int maxNumConnections() {
+        return maxNumConnections;
     }
 
     /**
