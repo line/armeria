@@ -1,0 +1,42 @@
+plugins {
+    id 'com.moowork.node' version '1.2.0'
+}
+
+apply plugin: 'base'
+
+task buildWeb(type: YarnTask) {
+    dependsOn 'yarn'
+
+    args = ['run', 'build']
+
+    inputs.dir('src')
+    inputs.file('package.json')
+    inputs.file('yarn.lock')
+    outputs.dir('build/web')
+}
+
+task checkWeb(type: YarnTask) {
+    dependsOn 'yarn'
+
+    args = ['run', 'check']
+
+    inputs.dir('src')
+    inputs.file('package.json')
+    inputs.file('yarn.lock')
+    outputs.upToDateWhen { true }
+}
+
+task copyWeb(type: Copy) {
+    dependsOn buildWeb
+
+    from 'build/web'
+    into 'build/javaweb/com/linecorp/armeria/server/docs'
+}
+
+tasks.assemble.dependsOn copyWeb
+tasks.check.dependsOn checkWeb
+
+node {
+    version = '8.11.3'
+    download = true
+}

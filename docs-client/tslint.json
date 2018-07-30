@@ -1,0 +1,30 @@
+{
+  "extends": [
+    "tslint:latest",
+    "tslint-config-airbnb",
+    "tslint-react",
+    "tslint-config-prettier"
+  ],
+  "rules": {
+    "array-type": false,
+    "cyclomatic-complexity": false,
+    "function-name": false,
+    "import-name": false,
+    "interface-name": false,
+    "jsx-boolean-value": false,
+    "jsx-no-lambda": false,
+    "no-implicit-dependencies": false,
+    "no-submodule-imports": false,
+    "object-literal-sort-keys": false,
+    "prettier": [
+      true,
+      {
+        "arrowParens": "always",
+        "singleQuote": true,
+        "trailingComma": "all"
+      }
+    ],
+    "variable-name": false
+  },
+  "rulesDirectory": [ "tslint-plugin-prettier" ]
+}
