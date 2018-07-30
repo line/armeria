@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
@@ -27,6 +28,12 @@ public class ServerBuilderTest {
         final ServerBuilder sb = new ServerBuilder();
         sb.http(8080);
         assertDuplicatePort(() -> sb.https(8080));
+    }
+
+    @Test
+    public void numMaxConnections() {
+        final ServerBuilder sb = new ServerBuilder();
+        assertThat(sb.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
     }
 
     private static void assertDuplicatePort(ThrowingCallable callable) {
