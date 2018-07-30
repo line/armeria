@@ -33,7 +33,7 @@ public class ServerBuilderTest {
     @Test
     public void numMaxConnections() {
         final ServerBuilder sb = new ServerBuilder();
-        assertThat(sb.getMaxNumConnections()).isEqualTo(10000);
+        assertThat(sb.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
     }
 
     private static void assertDuplicatePort(ThrowingCallable callable) {
