@@ -33,6 +33,7 @@ import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import MenuIcon from '@material-ui/icons/Menu';
 import React from 'react';
+import Helmet from 'react-helmet';
 import { hot } from 'react-hot-loader';
 import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
 
@@ -251,6 +252,9 @@ class App extends React.PureComponent<Props, State> {
 
     return (
       <div className={classes.root}>
+        <Helmet>
+          <script src="injected.js" />
+        </Helmet>
         <CssBaseline />
         <AppBar className={classes.appBar}>
           <Toolbar disableGutters>

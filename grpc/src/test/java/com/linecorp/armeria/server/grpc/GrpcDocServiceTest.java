@@ -67,6 +67,12 @@ public class GrpcDocServiceTest {
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
                                                   .findServiceByName("ReconnectService");
 
+    private static final String INJECTED_HEADER_PROVIDER1 =
+            "armeria.registerHeaderProvider(function() { return Promise.resolve({ 'foo': 'bar' }); });";
+
+    private static final String INJECTED_HEADER_PROVIDER2 =
+            "armeria.registerHeaderProvider(function() { return Promise.resolve({ 'cat': 'dog' }); });";
+
     private static class TestService extends TestServiceImplBase {
 
         @Override
@@ -101,6 +107,7 @@ public class GrpcDocServiceTest {
                                                          Payload.newBuilder()
                                                                 .setBody(ByteString.copyFromUtf8("world")))
                                                  .build())
+                            .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
                             .build()
                             .decorate(LoggingService.newDecorator()));
             sb.serviceUnder("/", new GrpcServiceBuilder()
@@ -162,6 +169,13 @@ public class GrpcDocServiceTest {
                 final String actualJsonString = writer.writeValueAsString(actualJson);
                 final String expectedJsonString = writer.writeValueAsString(expectedJson);
                 assertThat(actualJsonString).isEqualTo(expectedJsonString);
+            }
+
+            final HttpGet injectedJsReq = new HttpGet(server.uri("/docs/injected.js"));
+            try (CloseableHttpResponse res = hc.execute(injectedJsReq)) {
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity()))
+                        .isEqualTo(INJECTED_HEADER_PROVIDER1 + '\n' + INJECTED_HEADER_PROVIDER2);
             }
         }
     }

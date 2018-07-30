@@ -81,16 +81,19 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      * Creates a new instance.
      */
     public DocService() {
-        this(ImmutableMap.of(), ImmutableMap.of());
+        this(ImmutableMap.of(), ImmutableMap.of(), "");
     }
 
     /**
-     * Creates a new instance with example HTTP headers and example requests.
+     * Creates a new instance with example HTTP headers and example requests and injected scripts.
      */
     DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders,
-               Map<String, ListMultimap<String, String>> exampleRequests) {
+               Map<String, ListMultimap<String, String>> exampleRequests,
+               String injectedScripts) {
 
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
+              ofExact("/injected.js",
+                      (ctx, req) -> HttpResponse.of(MediaType.JAVASCRIPT_UTF_8, injectedScripts)),
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
         this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
