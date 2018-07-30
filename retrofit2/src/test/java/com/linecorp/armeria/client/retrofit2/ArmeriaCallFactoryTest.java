@@ -19,6 +19,9 @@ import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.ROU
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,11 +35,15 @@ import javax.annotation.Nullable;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
@@ -70,6 +77,7 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 import retrofit2.http.Url;
 
+@RunWith(Parameterized.class)
 public class ArmeriaCallFactoryTest {
     public static class Pojo {
         @Nullable
@@ -173,7 +181,7 @@ public class ArmeriaCallFactoryTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                "{\"name\":\"Cony\", \"age\":26}");
+                                           "{\"name\":\"Cony\", \"age\":26}");
                 }
             })
               .serviceUnder("/pathWithName", new AbstractHttpService() {
@@ -185,8 +193,8 @@ public class ArmeriaCallFactoryTest {
                                   .parameters();
                           final String fullPath = PathAndQuery.parse(req.path()).path();
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                      "{\"name\":\"" + fullPath.replace("/pathWithName/", "") + "\", " +
-                                      "\"age\":" + params.get("age").get(0) + '}');
+                                                 "{\"name\":\"" + fullPath.replace("/pathWithName/", "") +
+                                                 "\", \"age\":" + params.get("age").get(0) + '}');
                       }));
                   }
               })
@@ -194,15 +202,15 @@ public class ArmeriaCallFactoryTest {
                   @Override
                   protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                       return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                  "{\"name\":\"Leonard\", \"age\":21}");
+                                             "{\"name\":\"Leonard\", \"age\":21}");
                   }
               })
               .service("/pojos", new AbstractHttpService() {
                   @Override
                   protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                       return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                  "[{\"name\":\"Cony\", \"age\":26}," +
-                                  "{\"name\":\"Leonard\", \"age\":21}]");
+                                             "[{\"name\":\"Cony\", \"age\":26}," +
+                                             "{\"name\":\"Leonard\", \"age\":21}]");
                   }
               })
               .service("/queryString", new AbstractHttpService() {
@@ -212,8 +220,8 @@ public class ArmeriaCallFactoryTest {
                           final Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
                                   .parameters();
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                      "{\"name\":\"" + params.get("name").get(0) + "\", " +
-                                      "\"age\":" + params.get("age").get(0) + '}');
+                                                 "{\"name\":\"" + params.get("name").get(0) + "\", " +
+                                                 "\"age\":" + params.get("age").get(0) + '}');
                       }));
                   }
               })
@@ -223,8 +231,8 @@ public class ArmeriaCallFactoryTest {
                       return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                                          MediaType.PLAIN_TEXT_UTF_8,
-                                          Throwables.getStackTraceAsString(cause));
+                                                     MediaType.PLAIN_TEXT_UTF_8,
+                                                     Throwables.getStackTraceAsString(cause));
                           }
                           final String text = aReq.content().toStringUtf8();
                           final Pojo request;
@@ -232,8 +240,8 @@ public class ArmeriaCallFactoryTest {
                               request = OBJECT_MAPPER.readValue(text, Pojo.class);
                           } catch (IOException e) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                                          MediaType.PLAIN_TEXT_UTF_8,
-                                          Throwables.getStackTraceAsString(e));
+                                                     MediaType.PLAIN_TEXT_UTF_8,
+                                                     Throwables.getStackTraceAsString(e));
                           }
                           assertThat(request).isEqualTo(new Pojo("Cony", 26));
                           return HttpResponse.of(HttpStatus.OK);
@@ -246,15 +254,15 @@ public class ArmeriaCallFactoryTest {
                       return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                                          MediaType.PLAIN_TEXT_UTF_8,
-                                          Throwables.getStackTraceAsString(cause));
+                                                     MediaType.PLAIN_TEXT_UTF_8,
+                                                     Throwables.getStackTraceAsString(cause));
                           }
                           final Map<String, List<String>> params = new QueryStringDecoder(
                                   aReq.content().toStringUtf8(), false)
                                   .parameters();
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                      "{\"name\":\"" + params.get("name").get(0) + "\", " +
-                                      "\"age\":" + params.get("age").get(0) + '}');
+                                                 "{\"name\":\"" + params.get("name").get(0) + "\", " +
+                                                 "\"age\":" + params.get("age").get(0) + '}');
                       }));
                   }
               })
@@ -264,8 +272,8 @@ public class ArmeriaCallFactoryTest {
                       return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                                          MediaType.PLAIN_TEXT_UTF_8,
-                                          Throwables.getStackTraceAsString(cause));
+                                                     MediaType.PLAIN_TEXT_UTF_8,
+                                                     Throwables.getStackTraceAsString(cause));
                           }
                           final Map<String, List<String>> params = new QueryStringDecoder(
                                   aReq.content().toStringUtf8(), false)
@@ -284,15 +292,28 @@ public class ArmeriaCallFactoryTest {
                                              "{\"name\":\"Cony\", \"age\":26}");
                   }
               });
+            sb.defaultRequestTimeout(Duration.of(30, ChronoUnit.SECONDS));
         }
     };
 
+    @Parameters(name = "{index}: streaming={0}")
+    public static Collection<Boolean> parameters() {
+        return ImmutableList.of(true, false);
+    }
+
+    private final boolean streaming;
+
     private Service service;
+
+    public ArmeriaCallFactoryTest(boolean streaming) {
+        this.streaming = streaming;
+    }
 
     @Before
     public void setUp() {
         service = new ArmeriaRetrofitBuilder()
                 .baseUrl(server.uri("/"))
+                .streaming(streaming)
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()

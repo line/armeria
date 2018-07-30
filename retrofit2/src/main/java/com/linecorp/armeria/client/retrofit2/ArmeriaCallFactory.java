@@ -59,13 +59,16 @@ final class ArmeriaCallFactory implements Factory {
     private final ClientFactory clientFactory;
     private final BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator;
     private final String baseAuthority;
+    private final SubscriberFactory subscriberFactory;
 
     ArmeriaCallFactory(HttpClient baseHttpClient,
                        ClientFactory clientFactory,
-                       BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
+                       BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator,
+                       SubscriberFactory subscriberFactory) {
         this.baseHttpClient = baseHttpClient;
         this.clientFactory = clientFactory;
         this.configurator = configurator;
+        this.subscriberFactory = subscriberFactory;
         baseAuthority = baseHttpClient.uri().getAuthority();
         httpClients.put(baseAuthority, baseHttpClient);
     }
@@ -207,7 +210,7 @@ final class ArmeriaCallFactory implements Factory {
         @Override
         public void enqueue(Callback callback) {
             createRequest();
-            httpResponse.subscribe(new ArmeriaCallSubscriber(this, callback, request));
+            httpResponse.subscribe(callFactory.subscriberFactory.create(this, callback, request));
         }
 
         @Override
