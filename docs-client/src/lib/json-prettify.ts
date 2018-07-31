@@ -43,6 +43,10 @@ function doPrettify(ch: string, indentation: number): [string, number] {
 
 // A modified version of JSON.minify() by Kyle Simpson that prettifies a JSON string without fully parsing it.
 export default function prettify(json: string) {
+  if (json === '{}') {
+    return json;
+  }
+
   const tokenizer = /"|\n|\r/g;
   const new_str = [];
   let in_string = false;
