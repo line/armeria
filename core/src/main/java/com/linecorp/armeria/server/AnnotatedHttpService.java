@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.FallthroughException;
@@ -124,7 +123,7 @@ final class AnnotatedHttpService implements HttpService {
      * Invokes the service method with arguments.
      */
     private Object invoke(ServiceRequestContext ctx, HttpRequest req, @Nullable AggregatedHttpMessage message) {
-        try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
+        try (SafeCloseable ignored = ctx.push(false)) {
             final ResolverContext resolverContext = new ResolverContext(ctx, req, message);
             final Object[] arguments = toArguments(resolvers, resolverContext);
             return method.invoke(object, arguments);
@@ -144,7 +143,7 @@ final class AnnotatedHttpService implements HttpService {
             return HttpResponse.of((AggregatedHttpMessage) result);
         }
 
-        try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
+        try (SafeCloseable ignored = ctx.push(false)) {
             for (final ResponseConverterFunction func : responseConverters) {
                 try {
                     return func.convertResponse(ctx, result);
