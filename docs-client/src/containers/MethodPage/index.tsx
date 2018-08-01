@@ -298,7 +298,10 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     }
     // Do not round-trip through JSON.parse to minify the text so as to not lose numeric precision.
     // See: https://github.com/line/armeria/issues/273
-    params.set('args', jsonMinify(args));
+
+    // For some reason jsonMinify minifies {} as empty string, so work around it.
+    const minifiedArgs = jsonMinify(args) || '{}';
+    params.set('args', minifiedArgs);
 
     if (headers) {
       try {
