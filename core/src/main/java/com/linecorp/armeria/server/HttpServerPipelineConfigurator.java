@@ -37,6 +37,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
@@ -78,6 +79,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * Configures Netty {@link ChannelPipeline} to serve HTTP/1 and 2 requests.
@@ -168,7 +170,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         assert sslContexts != null;
-        p.addLast(new SniHandler(sslContexts));
+        p.addLast(new HttpsSniHandler(sslContexts));
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
     }
@@ -475,6 +477,33 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private String addAfter(ChannelPipeline p, String baseName, ChannelHandler handler) {
             p.addAfter(baseName, null, handler);
             return p.context(handler).name();
+        }
+    }
+
+    /**
+     * An {@link SniHandler} that calls {@link ChannelUtil#configureSslHandler(SslHandler)}
+     * so that an {@link SslHandler} is configured correctly.
+     */
+    private static class HttpsSniHandler extends SniHandler {
+        HttpsSniHandler(DomainNameMapping<SslContext> sslContexts) {
+            super(sslContexts);
+        }
+
+        @Override
+        protected void replaceHandler(ChannelHandlerContext ctx, String hostname, SslContext sslContext) {
+            SslHandler sslHandler = null;
+            try {
+                sslHandler = sslContext.newHandler(ctx.alloc());
+                ctx.pipeline().replace(this, SslHandler.class.getName(),
+                                       ChannelUtil.configureSslHandler(sslHandler));
+                sslHandler = null;
+            } finally {
+                // Since the SslHandler was not inserted into the pipeline,
+                // the ownership of the SSLEngine was not transferred to the SslHandler.
+                if (sslHandler != null) {
+                    ReferenceCountUtil.safeRelease(sslHandler.engine());
+                }
+            }
         }
     }
 }

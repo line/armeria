@@ -20,12 +20,16 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
+
 import com.google.common.collect.ImmutableList;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.handler.ssl.SslHandler;
 
 public final class ChannelUtil {
 
@@ -65,6 +69,20 @@ public final class ChannelUtil {
         }
 
         return future;
+    }
+
+    /**
+     * Configures the specified {@link SslHandler} with the common settings.
+     */
+    public static SslHandler configureSslHandler(SslHandler sslHandler) {
+        // Set endpoint identification algorithm so that JDK's default X509TrustManager implementation
+        // performs host name checks. Without this, the X509TrustManager implementation will never raise
+        // a CertificateException even if the domain name or IP address mismatches.
+        final SSLEngine engine = sslHandler.engine();
+        final SSLParameters params = engine.getSSLParameters();
+        params.setEndpointIdentificationAlgorithm("HTTPS");
+        engine.setSSLParameters(params);
+        return sslHandler;
     }
 
     private ChannelUtil() {}

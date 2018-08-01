@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ClientCodec;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
@@ -209,7 +210,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final SslHandler sslHandler = sslCtx.newHandler(ch.alloc(),
                                                         remoteAddr.getHostString(),
                                                         remoteAddr.getPort());
-        p.addLast(sslHandler);
+        p.addLast(ChannelUtil.configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
             private boolean handshakeFailed;
