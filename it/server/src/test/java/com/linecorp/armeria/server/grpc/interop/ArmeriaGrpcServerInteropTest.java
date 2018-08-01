@@ -42,7 +42,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ServerInterceptors;
 import io.grpc.internal.testing.TestUtils;
 import io.grpc.netty.GrpcSslContexts;
-import io.grpc.okhttp.NegotiationType;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.okhttp.internal.Platform;
 import io.grpc.testing.integration.AbstractInteropTest;
@@ -125,7 +124,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
             final int port = server.httpsPort();
             return OkHttpChannelBuilder
                     .forAddress("localhost", port)
-                    .negotiationType(NegotiationType.TLS)
+                    .useTransportSecurity()
                     .maxInboundMessageSize(16 * 1024 * 1024)
                     .connectionSpec(ConnectionSpec.MODERN_TLS)
                     .overrideAuthority("example.com:" + port)

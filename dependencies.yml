@@ -95,7 +95,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.13.2'
+    version: &GRPC_VERSION '1.14.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -149,7 +149,7 @@ io.netty:
 
 io.prometheus:
   simpleclient_common:
-    version: '0.4.0'
+    version: '0.5.0'
     javadocs:
     - https://prometheus.github.io/client_java/
 
@@ -161,7 +161,7 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.1.4'
+    version: &BRAVE_VERSION '5.1.5'
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.1.2/
 
@@ -310,7 +310,7 @@ org.jctools:
       to: com.linecorp.armeria.internal.shaded.jctools
 
 org.mockito:
-  mockito-core: { version: '2.20.1' }
+  mockito-core: { version: '2.21.0' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.7' }
@@ -344,7 +344,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.0.3.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.0.4.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
