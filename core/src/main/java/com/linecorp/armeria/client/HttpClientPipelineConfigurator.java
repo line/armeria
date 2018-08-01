@@ -31,7 +31,9 @@ import java.net.SocketAddress;
 import java.util.List;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -45,7 +47,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ClientCodec;
 import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
@@ -210,7 +211,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final SslHandler sslHandler = sslCtx.newHandler(ch.alloc(),
                                                         remoteAddr.getHostString(),
                                                         remoteAddr.getPort());
-        p.addLast(ChannelUtil.configureSslHandler(sslHandler));
+        p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
             private boolean handshakeFailed;
@@ -272,6 +273,20 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 ctx.close();
             }
         });
+    }
+
+    /**
+     * Configures the specified {@link SslHandler} with common settings.
+     */
+    private static SslHandler configureSslHandler(SslHandler sslHandler) {
+        // Set endpoint identification algorithm so that JDK's default X509TrustManager implementation
+        // performs host name checks. Without this, the X509TrustManager implementation will never raise
+        // a CertificateException even if the domain name or IP address mismatches.
+        final SSLEngine engine = sslHandler.engine();
+        final SSLParameters params = engine.getSSLParameters();
+        params.setEndpointIdentificationAlgorithm("HTTPS");
+        engine.setSSLParameters(params);
+        return sslHandler;
     }
 
     // refer https://http2.github.io/http2-spec/#discover-http
