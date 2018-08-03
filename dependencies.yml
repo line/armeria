@@ -8,6 +8,12 @@ ch.qos.logback:
     javadocs:
     - https://logback.qos.ch/apidocs/
 
+com.auth0:
+  java-jwt:
+    version: '3.4.0'
+    javadocs:
+    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.4.0/
+
 com.fasterxml.jackson.core:
   jackson-annotations:
     version: &JACKSON_VERSION '2.9.6'
@@ -203,6 +209,9 @@ net.javacrumbs.json-unit:
 net.sf.proguard:
   proguard-gradle: { version: '6.0.3' }
 
+net.shibboleth.utilities:
+  java-support: { version: '7.3.0' }
+
 org.apache.curator:
   curator-recipes:
     version: '4.0.1'
@@ -309,6 +318,9 @@ org.jctools:
     - from: org.jctools
       to: com.linecorp.armeria.internal.shaded.jctools
 
+org.jsoup:
+  jsoup: { version: '1.11.3' }
+
 org.mockito:
   mockito-core: { version: '2.21.0' }
 
@@ -318,6 +330,15 @@ org.mortbay.jetty.alpn:
 org.openjdk.jmh:
   jmh-core: { version: &JMH_VERSION '1.21' }
   jmh-generator-annprocess: { version: *JMH_VERSION }
+
+org.opensaml:
+  opensaml-core: { version: &OPENSAML_VERSION '3.3.0' }
+  opensaml-saml-api: { version: *OPENSAML_VERSION }
+  opensaml-saml-impl: { version: *OPENSAML_VERSION }
+  opensaml-messaging-api: { version: *OPENSAML_VERSION }
+  opensaml-messaging-impl: { version: *OPENSAML_VERSION }
+  opensaml-soap-api: { version: *OPENSAML_VERSION }
+  opensaml-soap-impl: { version: *OPENSAML_VERSION }
 
 org.reactivestreams:
   reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.2' }
