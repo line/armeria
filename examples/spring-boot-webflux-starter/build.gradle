@@ -1,0 +1,6 @@
+dependencies {
+    compile project(':spring:boot-webflux-starter')
+
+    testCompile 'junit:junit'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+}

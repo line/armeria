@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring;
+package com.linecorp.armeria.internal.spring;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static org.springframework.util.ReflectionUtils.findMethod;

@@ -1,0 +1,9 @@
+server:
+  address: 127.0.0.1
+  ssl:
+    # Armeria will use a self-signed certificate when there's no keystore configuration.
+    enabled: true
+
+logging:
+  level:
+    ROOT: DEBUG

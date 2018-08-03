@@ -169,6 +169,9 @@ io.netty:
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
   netty-tcnative-boringssl-static: { version: '2.0.19.Final' }
 
+io.projectreactor:
+  reactor-test: { version: '3.2.2.RELEASE' }
+
 io.prometheus:
   simpleclient_common:
     version: '0.5.0'
@@ -387,6 +390,10 @@ org.springframework.boot:
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-webflux:
+    version: *SPRING_BOOT_VERSION
+    exclusions:
+    - org.springframework.boot:spring-boot-starter-reactor-netty
   spring-boot-configuration-processor: { version: *SPRING_BOOT_VERSION }
   spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }
 

@@ -45,7 +45,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
 
     private final HttpEncodingType encodingType;
     private final Predicate<MediaType> encodableContentTypePredicate;
-    private final int minBytesToForceChunkedAndEncoding;
+    private final long minBytesToForceChunkedAndEncoding;
 
     @Nullable
     private ByteArrayOutputStream encodedStream;
@@ -59,7 +59,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             HttpResponse delegate,
             HttpEncodingType encodingType,
             Predicate<MediaType> encodableContentTypePredicate,
-            int minBytesToForceChunkedAndEncoding) {
+            long minBytesToForceChunkedAndEncoding) {
         super(delegate);
         this.encodingType = requireNonNull(encodingType, "encodingType");
         this.encodableContentTypePredicate = requireNonNull(encodableContentTypePredicate,

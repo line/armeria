@@ -1,0 +1,11 @@
+spring.profiles.active: local
+server:
+  address: 127.0.0.1
+  port: 8080
+  ssl:
+    enabled: false
+    # Use the following properties in order to configure TLS.
+    #enabled: true
+    #key-store: classpath:keystore.jks
+    #key-store-password: secret
+    #key-password: another-secret

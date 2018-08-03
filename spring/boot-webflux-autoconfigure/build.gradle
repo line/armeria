@@ -1,0 +1,41 @@
+configurations {
+    // TODO(hyangtack) The followings are not transitive dependencies and they are not in testRuntime
+    //                 dependencies. Need to figure out why they are included in shadedTestRuntime dependencies.
+    // Exclude jetty from shadedTest.
+    shadedTestRuntime.exclude group: 'org.eclipse.jetty'
+    shadedTestRuntime.exclude group: 'org.eclipse.jetty.http2'
+}
+
+dependencies {
+    compile(project(':thrift')) {
+        ext.optional = true // To let a user choose between thrift and thrift0.9.
+    }
+    compile project(':logback')
+
+    compile 'io.micrometer:micrometer-registry-prometheus'
+    compile 'io.dropwizard.metrics:metrics-json'
+    compile 'javax.inject:javax.inject'
+    compile 'javax.validation:validation-api'
+    compile 'org.springframework.boot:spring-boot-starter-actuator'
+    compile 'org.springframework.boot:spring-boot-starter-webflux'
+
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    testCompile "io.projectreactor:reactor-test"
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    testCompile 'org.hibernate.validator:hibernate-validator'
+}
+
+// Copy common files from boot-autoconfigure module to gen-src directory in order to use them as a source set.
+task copyFiles(type: Copy) {
+    from "${rootProject.projectDir}/spring/boot-autoconfigure/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+    include '**/*RegistrationBean.java'
+    include '**/ArmeriaConfigurationUtil.java'
+    include '**/ArmeriaServerConfigurator.java'
+    include '**/ArmeriaSettings.java'
+    include '**/MeterIdPrefixFunctionFactory.java'
+    include '**/ThriftServiceUtils.java'
+}
+
+tasks.compileJava.dependsOn(copyFiles)
