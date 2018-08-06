@@ -296,6 +296,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
   private onCopy = () => {
     const response = this.state.debugResponse;
     const textArea = document.createElement('textarea');
+    textArea.style.opacity = '0.0';
     textArea.value = response;
     document.body.appendChild(textArea);
     textArea.focus();
