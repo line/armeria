@@ -250,7 +250,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Clear response">
-                  <IconButton onClick={this.onDelete}>
+                  <IconButton onClick={this.onClear}>
                     <DeleteSweepIcon />
                   </IconButton>
                 </Tooltip>
@@ -305,9 +305,9 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     document.body.removeChild(textArea);
   };
 
-  private onDelete = () => {
+  private onClear = () => {
     this.setState({
-      debugResponse: ``,
+      debugResponse:  '',
     });
   };
 
