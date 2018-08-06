@@ -307,7 +307,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
   private onClear = () => {
     this.setState({
-      debugResponse:  '',
+      debugResponse: '',
     });
   };
 
