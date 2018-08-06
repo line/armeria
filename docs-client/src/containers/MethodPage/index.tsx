@@ -15,9 +15,12 @@
  */
 
 import Button from '@material-ui/core/Button';
+import ContentCopyIcon from '@material-ui/icons/ContentCopy';
+import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Grid from '@material-ui/core/Grid';
+import IconButton from '@material-ui/core/IconButton';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -27,6 +30,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import TextField from '@material-ui/core/TextField';
+import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import jsonMinify from 'jsonminify';
 import React, { ChangeEvent } from 'react';
@@ -186,11 +190,11 @@ export default class MethodPage extends React.PureComponent<Props, State> {
         {TRANSPORTS.getDebugTransport(method) && (
           <Section>
             <Typography variant="body1" paragraph />
-            <Typography variant="title" paragraph>
-              Debug
-            </Typography>
             <Grid container spacing={16}>
               <Grid item xs={12} sm={6}>
+                <Typography variant="title" paragraph>
+                  Debug
+                </Typography>
                 <TextField
                   multiline
                   fullWidth
@@ -240,6 +244,20 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                 </Button>
               </Grid>
               <Grid item xs={12} sm={6}>
+                <Tooltip title="Copy response">
+                  <IconButton
+                      onClick={this.onCopy}
+                    >
+                    <ContentCopyIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Clear response">
+                  <IconButton
+                      onClick={this.onDelete}
+                    >
+                    <DeleteSweepIcon />
+                  </IconButton>
+                </Tooltip>
                 <SyntaxHighlighter
                   language="json"
                   style={githubGist}
@@ -276,6 +294,23 @@ export default class MethodPage extends React.PureComponent<Props, State> {
   private onEditHttpHeadersClick = () => {
     this.setState({
       additionalHeadersOpen: !this.state.additionalHeadersOpen,
+    });
+  };
+
+  private onCopy = () => {
+    const response = this.state.debugResponse;
+    const textArea = document.createElement('textarea');
+    textArea.value = response;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+  };
+
+  private onDelete = () => {
+    this.setState({
+      debugResponse: ``,
     });
   };
 
