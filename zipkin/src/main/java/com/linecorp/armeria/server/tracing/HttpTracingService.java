@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server.tracing;
 
+import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.TRACE_CONTEXT_KEY;
+import static com.linecorp.armeria.internal.tracing.SpanContextUtil.ensureScopeUsesRequestContext;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -35,7 +38,6 @@ import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.propagation.TraceContext;
 import brave.propagation.TraceContextOrSamplingFlags;
-import io.netty.util.concurrent.FastThreadLocal;
 
 /**
  * Decorates a {@link Service} to trace inbound {@link HttpRequest}s using
@@ -46,13 +48,12 @@ import io.netty.util.concurrent.FastThreadLocal;
  */
 public class HttpTracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
-    private static final FastThreadLocal<SpanInScope> SPAN_IN_THREAD = new FastThreadLocal<>();
-
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.
      */
     public static Function<Service<HttpRequest, HttpResponse>, HttpTracingService>
     newDecorator(Tracing tracing) {
+        ensureScopeUsesRequestContext(tracing);
         return service -> new HttpTracingService(service, tracing);
     }
 
@@ -82,7 +83,8 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
         final String method = ctx.method().name();
         span.kind(Kind.SERVER).name(method).start();
 
-        SpanContextUtil.setupContext(SPAN_IN_THREAD, ctx, span, tracer);
+        // Ensure the trace context propagates to children
+        ctx.onChild((oldCtx, newCtx) -> newCtx.attr(TRACE_CONTEXT_KEY).set(oldCtx.attr(TRACE_CONTEXT_KEY).get()));
 
         ctx.log().addListener(log -> SpanContextUtil.closeSpan(span, log), RequestLogAvailability.COMPLETE);
 

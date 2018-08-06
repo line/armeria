@@ -16,32 +16,32 @@
 
 package com.linecorp.armeria.internal.tracing;
 
-import com.linecorp.armeria.common.RequestContext;
+import java.util.Collections;
+
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 
 import brave.Span;
-import brave.Tracer;
-import brave.Tracer.SpanInScope;
-import io.netty.util.concurrent.FastThreadLocal;
+import brave.Tracing;
+import brave.propagation.CurrentTraceContext;
+import brave.propagation.TraceContext;
 
-/**
- * Utility for pushing and popping a {@link Span} via a {@link RequestContext}.
- */
 public final class SpanContextUtil {
 
-    /**
-     * Sets up the {@link RequestContext} to push and pop the {@link Span} whenever it is entered/exited.
-     */
-    public static void setupContext(FastThreadLocal<SpanInScope> threadLocalSpan, RequestContext ctx, Span span,
-                                    Tracer tracer) {
-        ctx.onEnter(unused -> threadLocalSpan.set(tracer.withSpanInScope(span)));
-        ctx.onExit(unused -> {
-            final SpanInScope spanInScope = threadLocalSpan.get();
-            if (spanInScope != null) {
-                spanInScope.close();
-                threadLocalSpan.remove();
-            }
-        });
+    public static void ensureScopeUsesRequestContext(Tracing tracing) {
+        PingPongExtra extra = new PingPongExtra();
+        // trace contexts are not recorded until Tracer.toSpan, so this won't end up as junk data
+        TraceContext dummyContext = TraceContext.newBuilder().traceId(1).spanId(1)
+                                                .extra(Collections.singletonList(extra)).build();
+        boolean scopeUsesRequestContext;
+        try (CurrentTraceContext.Scope scope = tracing.currentTraceContext().newScope(dummyContext)) {
+            scopeUsesRequestContext = extra.isPong();
+        }
+        if (!scopeUsesRequestContext) {
+            throw new IllegalStateException("Please initialize Tracing.Builder.currentTraceContext("
+                                            + "new " + RequestContextCurrentTraceContext.class.getSimpleName()
+                                            + "()");
+        }
     }
 
     /**

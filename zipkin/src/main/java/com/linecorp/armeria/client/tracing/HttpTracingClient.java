@@ -16,12 +16,18 @@
 
 package com.linecorp.armeria.client.tracing;
 
+import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.TRACE_CONTEXT_KEY;
+import static com.linecorp.armeria.internal.tracing.SpanContextUtil.ensureScopeUsesRequestContext;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -40,7 +46,6 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.propagation.TraceContext;
-import io.netty.util.concurrent.FastThreadLocal;
 import zipkin2.Endpoint;
 
 /**
@@ -51,8 +56,7 @@ import zipkin2.Endpoint;
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  */
 public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
-
-    private static final FastThreadLocal<SpanInScope> SPAN_IN_THREAD = new FastThreadLocal<>();
+    private static final Logger logger = LoggerFactory.getLogger(HttpTracingClient.class);
 
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
@@ -68,6 +72,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(
             Tracing tracing,
             @Nullable String remoteServiceName) {
+        ensureScopeUsesRequestContext(tracing);
         return delegate -> new HttpTracingClient(delegate, tracing, remoteServiceName);
     }
 
@@ -100,7 +105,8 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         final String method = ctx.method().name();
         span.kind(Kind.CLIENT).name(method).start();
 
-        SpanContextUtil.setupContext(SPAN_IN_THREAD, ctx, span, tracer);
+        // Ensure the trace context propagates to children
+        ctx.onChild((oldCtx, newCtx) -> newCtx.attr(TRACE_CONTEXT_KEY).set(oldCtx.attr(TRACE_CONTEXT_KEY).get()));
 
         ctx.log().addListener(log -> finishSpan(span, log), RequestLogAvailability.COMPLETE);
 
