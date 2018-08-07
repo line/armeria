@@ -84,6 +84,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     @Override
+    @Nullable
     public TraceContext get() {
         if (!ensureCurrentRequestContextOrWarnOnce()) {
             return null;
