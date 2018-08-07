@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.TRACE_CONTEXT_KEY;
 import static com.linecorp.armeria.internal.tracing.SpanContextUtil.ensureScopeUsesRequestContext;
 
 import java.net.InetAddress;
@@ -37,6 +36,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
 
@@ -106,7 +106,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         span.kind(Kind.CLIENT).name(method).start();
 
         // Ensure the trace context propagates to children
-        ctx.onChild((oldCtx, newCtx) -> newCtx.attr(TRACE_CONTEXT_KEY).set(oldCtx.attr(TRACE_CONTEXT_KEY).get()));
+        ctx.onChild(RequestContextCurrentTraceContext::copy);
 
         ctx.log().addListener(log -> finishSpan(span, log), RequestLogAvailability.COMPLETE);
 

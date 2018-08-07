@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.tracing;
 
-import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.TRACE_CONTEXT_KEY;
 import static com.linecorp.armeria.internal.tracing.SpanContextUtil.ensureScopeUsesRequestContext;
 
 import java.util.function.Function;
@@ -25,6 +24,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
 import com.linecorp.armeria.server.Service;
@@ -84,7 +84,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
         span.kind(Kind.SERVER).name(method).start();
 
         // Ensure the trace context propagates to children
-        ctx.onChild((oldCtx, newCtx) -> newCtx.attr(TRACE_CONTEXT_KEY).set(oldCtx.attr(TRACE_CONTEXT_KEY).get()));
+        ctx.onChild(RequestContextCurrentTraceContext::copy);
 
         ctx.log().addListener(log -> SpanContextUtil.closeSpan(span, log), RequestLogAvailability.COMPLETE);
 

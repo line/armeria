@@ -22,10 +22,8 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.tracing.PingPongExtra;
-import com.linecorp.armeria.server.tracing.HttpTracingService;
 
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.TraceContext;
@@ -42,13 +40,23 @@ import io.netty.util.AttributeKey;
  */
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {
 
-    static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
-
-    /** Shared so {@link HttpTracingService} and {@link HttpTracingClient} can mark the attribute inherited */
-    public static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
+    public static final CurrentTraceContext INSTANCE = new RequestContextCurrentTraceContext();
+    private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
+    private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.newInstance("trace-context");
 
-    public static final CurrentTraceContext INSTANCE = new RequestContextCurrentTraceContext();
+    /**
+     * Use this to ensure the trace context propagates to children.
+     *
+     * <p>Ex.
+     * <pre>{@code
+     *  // Ensure the trace context propagates to children
+     * ctx.onChild(RequestContextCurrentTraceContext::copy);
+     * }</pre>
+     */
+    public static void copy(RequestContext src, RequestContext dst) {
+        dst.attr(TRACE_CONTEXT_KEY).set(src.attr(TRACE_CONTEXT_KEY).get());
+    }
 
     @Override
     public TraceContext get() {
