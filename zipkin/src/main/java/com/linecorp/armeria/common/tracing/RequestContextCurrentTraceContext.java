@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.tracing;
 
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -86,10 +85,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     @Override
     @Nullable
     public TraceContext get() {
-        if (!ensureCurrentRequestContextOrWarnOnce()) {
-            return null;
-        }
-        return RequestContext.current().attr(TRACE_CONTEXT_KEY).get();
+        Attribute<TraceContext> traceContextAttribute = getTraceContextAttributeOrWarnOnce();
+        return traceContextAttribute != null ? traceContextAttribute.get() : null;
     }
 
     @Override
@@ -99,13 +96,12 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return Scope.NOOP;
         }
 
-        if (!ensureCurrentRequestContextOrWarnOnce()) {
+        Attribute<TraceContext> traceContextAttribute = getTraceContextAttributeOrWarnOnce();
+        if (traceContextAttribute == null) {
             return INCOMPLETE_CONFIGURATION_SCOPE;
         }
 
-        final Attribute<TraceContext> contextAttribute = RequestContext.current().attr(TRACE_CONTEXT_KEY);
-        final TraceContext previous = contextAttribute.get();
-        contextAttribute.set(currentSpan);
+        final TraceContext previous = traceContextAttribute.getAndSet(currentSpan);
 
         // Don't remove the outer-most context (client or server request)
         if (previous == null) {
@@ -117,7 +113,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         class RequestContextTraceContextScope implements Scope {
             @Override
             public void close() {
-                contextAttribute.set(previous);
+                traceContextAttribute.set(previous);
             }
         }
 
@@ -125,19 +121,19 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     /** Armeria code should always have a request context available, and this won't work without it. */
-    private static boolean ensureCurrentRequestContextOrWarnOnce() {
-        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE) != null;
+    private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
+        return RequestContext.mapCurrent(r -> r.attr(TRACE_CONTEXT_KEY), LogRequestContextWarningOnce.INSTANCE);
     }
 
     private RequestContextCurrentTraceContext() {
     }
 
-    private enum LogRequestContextWarningOnce implements Supplier<RequestContext> {
+    private enum LogRequestContextWarningOnce implements Supplier<Attribute<TraceContext>> {
 
         INSTANCE;
 
         @Override
-        public RequestContext get() {
+        public Attribute<TraceContext> get() {
             ClassLoaderHack.loadMe();
             return null;
         }

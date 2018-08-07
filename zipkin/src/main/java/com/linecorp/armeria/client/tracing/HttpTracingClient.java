@@ -25,9 +25,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
@@ -56,7 +53,6 @@ import zipkin2.Endpoint;
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  */
 public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
-    private static final Logger logger = LoggerFactory.getLogger(HttpTracingClient.class);
 
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.

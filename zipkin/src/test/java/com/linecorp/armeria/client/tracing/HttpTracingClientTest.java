@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.tracing;
 
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -68,9 +69,13 @@ public class HttpTracingClientTest {
         Tracing.current().close();
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
-        HttpTracingClient.newDecorator(Tracing.newBuilder().build());
+        assertThatThrownBy(() -> HttpTracingClient.newDecorator(Tracing.newBuilder().build()))
+                .isInstanceOf(IllegalStateException.class).hasMessage(
+                "Tracing.currentTraceContext is not a RequestContextCurrentTraceContext scope. " +
+                "Please call Tracing.Builder.currentTraceContext(RequestContextCurrentTraceContext.INSTANCE)."
+        );
     }
 
     @Test
