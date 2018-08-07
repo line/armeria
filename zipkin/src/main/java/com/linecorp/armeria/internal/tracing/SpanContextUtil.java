@@ -45,7 +45,7 @@ public final class SpanContextUtil {
             throw new IllegalStateException(
                     "Tracing.currentTraceContext is not a " + RequestContextCurrentTraceContext.class
                             .getSimpleName() + " scope. " +
-                    "Please call Tracing.Builder.currentTraceContext" + RequestContextCurrentTraceContext.class
+                    "Please call Tracing.Builder.currentTraceContext(" + RequestContextCurrentTraceContext.class
                             .getSimpleName() + ".INSTANCE).");
         }
     }
