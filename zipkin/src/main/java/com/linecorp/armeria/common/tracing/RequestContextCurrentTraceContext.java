@@ -16,29 +16,39 @@
 
 package com.linecorp.armeria.common.tracing;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.tracing.LogRequestContextWarningOnce;
 import com.linecorp.armeria.internal.tracing.PingPongExtra;
+import com.linecorp.armeria.server.tracing.HttpTracingService;
 
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.TraceContext;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
- * {@link brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext) Tracing
- * context} implemented with {@link com.linecorp.armeria.common.RequestContext}.
+ * {@linkplain brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext) Tracing
+ * context} implemented with {@linkplain com.linecorp.armeria.common.RequestContext}.
  *
- * <p>This is an alternative to synchronizing brave's try/finally style with request scope lifecycle hooks such
- * as {@link RequestContext#onEnter(Consumer)} and {@link RequestContext#onExit(Consumer)}. Instead, this defers
- * control to Armeria, which manages the attribute {@link #TRACE_CONTEXT_KEY}.
+ * <p>This {@link CurrentTraceContext} stores/loads the trace context into/from a
+ * {@link RequestContext}'s attribute so that there's no need for thread local variables
+ * which can lead to unpredictable behavior in asynchronous programming.
  */
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {
 
+    static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
+
+    /** Shared so {@link HttpTracingService} and {@link HttpTracingClient} can mark the attribute inherited */
     public static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.newInstance("trace-context");
+
+    public static final CurrentTraceContext INSTANCE = new RequestContextCurrentTraceContext();
 
     @Override
     public TraceContext get() {
@@ -57,8 +67,9 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return Scope.NOOP;
         }
 
-        final TraceContext previous = RequestContext.current().attr(TRACE_CONTEXT_KEY).get();
-        RequestContext.current().attr(TRACE_CONTEXT_KEY).set(currentSpan);
+        final Attribute<TraceContext> contextAttribute = RequestContext.current().attr(TRACE_CONTEXT_KEY);
+        final TraceContext previous = contextAttribute.get();
+        contextAttribute.set(currentSpan);
 
         // Don't remove the outer-most context (client or server request)
         if (previous == null) { return Scope.NOOP; }
@@ -67,15 +78,42 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         class RequestContextTraceContextScope implements CurrentTraceContext.Scope {
             @Override
             public void close() {
-                RequestContext.current().attr(TRACE_CONTEXT_KEY).set(previous);
+                contextAttribute.set(previous);
             }
         }
         return new RequestContextTraceContextScope();
     }
 
     /** Armeria code should always have a request context available, and this won't work without it. */
-    static boolean hasCurrentRequestContextOrWarnOnce() {
-        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE)
-               == null;
+    private static boolean hasCurrentRequestContextOrWarnOnce() {
+        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE) == null;
+    }
+
+    private RequestContextCurrentTraceContext() {
+    }
+
+    private enum LogRequestContextWarningOnce implements Supplier<RequestContext> {
+
+        INSTANCE;
+
+        @Override
+        public RequestContext get() {
+            ClassLoaderHack.loadMe();
+            return null;
+        }
+
+        /**
+         * This won't be referenced until {@link #get()} is called. If there's only one classloader, the initializer
+         * will only be called once.
+         */
+        static class ClassLoaderHack {
+            static void loadMe() {
+            }
+
+            static {
+                logger.warn("Attempted to propagate trace context, but no request context available. " +
+                            "Did you remember to use RequestContext.contextAwareExecutor() or RequestContext.makeContextAware()");
+            }
+        }
     }
 }

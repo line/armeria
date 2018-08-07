@@ -193,7 +193,7 @@ public class HttpTracingIntegrationTest {
 
     private static Tracing newTracing(String name) {
         return Tracing.newBuilder()
-                      .currentTraceContext(new RequestContextCurrentTraceContext())
+                      .currentTraceContext(RequestContextCurrentTraceContext.INSTANCE)
                       .localServiceName(name)
                       .spanReporter(spanReporter)
                       .sampler(Sampler.ALWAYS_SAMPLE)
