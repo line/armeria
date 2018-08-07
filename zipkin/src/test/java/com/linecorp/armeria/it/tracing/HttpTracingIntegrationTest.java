@@ -65,6 +65,7 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.tracing.HttpTracingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
+import brave.ScopedSpan;
 import brave.Tracing;
 import brave.sampler.Sampler;
 import zipkin2.Span;
@@ -136,14 +137,17 @@ public class HttpTracingIntegrationTest {
                     final HttpResponse res = HttpResponse.from(responseFuture);
                     transformAsync(spanAware,
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
-                                           i -> executorService.submit(RequestContext.current().makeContextAware(() -> {
-                                               brave.Span span = Tracing.currentTracer().nextSpan().start();
-                                               try {
-                                                   return null;
-                                               } finally {
-                                                   span.finish();
-                                               }
-                                           }))).collect(toImmutableList())),
+                                           i -> executorService.submit(
+                                                   RequestContext.current().makeContextAware(() -> {
+                                                       ScopedSpan span = Tracing.currentTracer()
+                                                                                .startScopedSpan("aloha");
+                                                       try {
+                                                           return null;
+                                                       } finally {
+                                                           span.finish();
+                                                       }
+                                                   })
+                                           )).collect(toImmutableList())),
                                    RequestContext.current().contextAwareExecutor())
                             .addListener(() -> {
                                 responseFuture.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "Lee"));

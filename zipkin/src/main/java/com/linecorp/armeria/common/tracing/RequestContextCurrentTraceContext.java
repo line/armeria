@@ -95,7 +95,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     public Scope newScope(@Nullable TraceContext currentSpan) {
         // Handle inspection added to ensure we can fail-fast if this isn't installed.
         if (currentSpan != null && PingPongExtra.maybeSetPong(currentSpan)) {
-            return INCOMPLETE_CONFIGURATION_SCOPE;
+            return Scope.NOOP;
         }
 
         if (!ensureCurrentRequestContextOrWarnOnce()) {
@@ -107,7 +107,9 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         contextAttribute.set(currentSpan);
 
         // Don't remove the outer-most context (client or server request)
-        if (previous == null) { return INITIAL_REQUEST_SCOPE; }
+        if (previous == null) {
+            return INITIAL_REQUEST_SCOPE;
+        }
 
         // Removes sub-spans (i.e. local spans) from the current context when Brave's scope does.
         // If an asynchronous sub-span, it may still complete later.
@@ -117,6 +119,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
                 contextAttribute.set(previous);
             }
         }
+
         return new RequestContextTraceContextScope();
     }
 
@@ -139,8 +142,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
 
         /**
-         * This won't be referenced until {@link #get()} is called. If there's only one classloader, the initializer
-         * will only be called once.
+         * This won't be referenced until {@link #get()} is called. If there's only one classloader, the
+         * initializer will only be called once.
          */
         static class ClassLoaderHack {
             static void loadMe() {
@@ -148,7 +151,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
             static {
                 logger.warn("Attempted to propagate trace context, but no request context available. " +
-                            "Did you remember to use RequestContext.contextAwareExecutor() or RequestContext.makeContextAware()");
+                            "Did you remember to use RequestContext.contextAwareExecutor() or " +
+                            "RequestContext.makeContextAware()");
             }
         }
     }

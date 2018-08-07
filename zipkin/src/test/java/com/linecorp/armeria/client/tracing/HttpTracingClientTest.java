@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.tracing.HelloService;
+import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 
 import brave.Tracing;
@@ -65,6 +66,17 @@ public class HttpTracingClientTest {
     @After
     public void tearDown() {
         Tracing.current().close();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
+        HttpTracingClient.newDecorator(Tracing.newBuilder().build());
+    }
+
+    @Test
+    public void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
+        HttpTracingClient.newDecorator(
+                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.INSTANCE).build());
     }
 
     @Test(timeout = 20000)

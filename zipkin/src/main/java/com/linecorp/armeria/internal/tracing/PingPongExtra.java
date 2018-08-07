@@ -18,9 +18,11 @@ package com.linecorp.armeria.internal.tracing;
 
 import brave.propagation.TraceContext;
 
-/** Hack to allow us to peek inside a current trace context implementation */
+/** Hack to allow us to peek inside a current trace context implementation. */
 public final class PingPongExtra {
-    /** If the input includes only this extra, set {@link #isPong() pong = true} */
+    /**
+     * If the input includes only this extra, set {@link #isPong() pong = true}.
+     */
     public static boolean maybeSetPong(TraceContext context) {
         if (context.extra().size() == 1) {
             Object extra = context.extra().get(0);
@@ -34,7 +36,7 @@ public final class PingPongExtra {
 
     private boolean pong;
 
-    boolean isPong() {
+    public boolean isPong() {
         return pong;
     }
 }

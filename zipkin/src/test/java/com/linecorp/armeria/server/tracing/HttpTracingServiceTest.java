@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.tracing.HelloService;
+import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -56,6 +58,22 @@ public class HttpTracingServiceTest {
     private static final String TEST_SERVICE = "test-service";
 
     private static final String TEST_METHOD = "hello";
+
+    @After
+    public void tearDown() {
+        Tracing.current().close();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
+        HttpTracingService.newDecorator(Tracing.newBuilder().build());
+    }
+
+    @Test
+    public void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
+        HttpTracingService.newDecorator(
+                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.INSTANCE).build());
+    }
 
     @Test(timeout = 20000)
     public void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
