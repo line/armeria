@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 
 import brave.Span;
 import brave.Tracing;
-import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 
 public final class SpanContextUtil {
@@ -38,7 +38,7 @@ public final class SpanContextUtil {
         final TraceContext dummyContext = TraceContext.newBuilder().traceId(1).spanId(1)
                                                       .extra(Collections.singletonList(extra)).build();
         final boolean scopeUsesRequestContext;
-        try (CurrentTraceContext.Scope scope = tracing.currentTraceContext().newScope(dummyContext)) {
+        try (Scope scope = tracing.currentTraceContext().newScope(dummyContext)) {
             scopeUsesRequestContext = extra.isPong();
         }
         if (!scopeUsesRequestContext) {

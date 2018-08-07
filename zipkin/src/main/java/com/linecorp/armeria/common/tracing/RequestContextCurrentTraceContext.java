@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.tracing;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +47,29 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.newInstance("trace-context");
 
+    private static final Scope INCOMPLETE_CONFIGURATION_SCOPE = new Scope() {
+        @Override
+        public void close() {
+        }
+
+        @Override
+        public String toString() {
+            return "IncompleteConfigurationScope";
+        }
+    };
+
+    private static final Scope INITIAL_REQUEST_SCOPE = new Scope() {
+        @Override
+        public void close() {
+            // Don't remove the outer-most context (client or server request)
+        }
+
+        @Override
+        public String toString() {
+            return "InitialRequestScope";
+        }
+    };
+
     /**
      * Use this to ensure the trace context propagates to children.
      *
@@ -60,19 +85,21 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
     @Override
     public TraceContext get() {
-        if (hasCurrentRequestContextOrWarnOnce()) {
+        if (!ensureCurrentRequestContextOrWarnOnce()) {
             return null;
         }
         return RequestContext.current().attr(TRACE_CONTEXT_KEY).get();
     }
 
     @Override
-    public CurrentTraceContext.Scope newScope(TraceContext currentSpan) {
+    public Scope newScope(@Nullable TraceContext currentSpan) {
         // Handle inspection added to ensure we can fail-fast if this isn't installed.
-        if (PingPongExtra.maybeSetPong(currentSpan)) { return Scope.NOOP; }
+        if (currentSpan != null && PingPongExtra.maybeSetPong(currentSpan)) {
+            return INCOMPLETE_CONFIGURATION_SCOPE;
+        }
 
-        if (hasCurrentRequestContextOrWarnOnce()) {
-            return Scope.NOOP;
+        if (!ensureCurrentRequestContextOrWarnOnce()) {
+            return INCOMPLETE_CONFIGURATION_SCOPE;
         }
 
         final Attribute<TraceContext> contextAttribute = RequestContext.current().attr(TRACE_CONTEXT_KEY);
@@ -80,10 +107,11 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         contextAttribute.set(currentSpan);
 
         // Don't remove the outer-most context (client or server request)
-        if (previous == null) { return Scope.NOOP; }
+        if (previous == null) { return INITIAL_REQUEST_SCOPE; }
 
-        // Allow sub-spans (aka local spans) to close when Brave's scope does.
-        class RequestContextTraceContextScope implements CurrentTraceContext.Scope {
+        // Removes sub-spans (i.e. local spans) from the current context when Brave's scope does.
+        // If an asynchronous sub-span, it may still complete later.
+        class RequestContextTraceContextScope implements Scope {
             @Override
             public void close() {
                 contextAttribute.set(previous);
@@ -93,8 +121,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     /** Armeria code should always have a request context available, and this won't work without it. */
-    private static boolean hasCurrentRequestContextOrWarnOnce() {
-        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE) == null;
+    private static boolean ensureCurrentRequestContextOrWarnOnce() {
+        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE) != null;
     }
 
     private RequestContextCurrentTraceContext() {

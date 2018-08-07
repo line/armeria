@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,25 +16,25 @@
 
 package com.linecorp.armeria.internal.tracing;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Collections;
+
+import org.junit.Test;
+
 import brave.propagation.TraceContext;
 
-/** Hack to allow us to peek inside a current trace context implementation */
-public final class PingPongExtra {
-    /** If the input includes only this extra, set {@link #isPong() pong = true} */
-    public static boolean maybeSetPong(TraceContext context) {
-        if (context.extra().size() == 1) {
-            Object extra = context.extra().get(0);
-            if (extra instanceof PingPongExtra) {
-                ((PingPongExtra) extra).pong = true;
-                return true;
-            }
-        }
-        return false;
-    }
+public class PingPongExtraTest {
 
-    private boolean pong;
+    @Test
+    public void shouldSetPongIfOnlyExtra() {
+        final PingPongExtra extra = new PingPongExtra();
 
-    boolean isPong() {
-        return pong;
+        final TraceContext context = TraceContext.newBuilder().traceId(1).spanId(1)
+                                                 .extra(Collections.singletonList(extra)).build();
+
+        PingPongExtra.maybeSetPong(context);
+
+        assertThat(extra.isPong()).isTrue();
     }
 }
