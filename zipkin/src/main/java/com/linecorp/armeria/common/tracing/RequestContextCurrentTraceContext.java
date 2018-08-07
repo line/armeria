@@ -113,7 +113,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         class RequestContextTraceContextScope implements Scope {
             @Override
             public void close() {
-                traceContextAttribute.set(previous);
+                // re-lookup the attribute to avoid holding a reference to the request if this scope is leaked
+                getTraceContextAttributeOrWarnOnce().set(previous);
             }
         }
 
