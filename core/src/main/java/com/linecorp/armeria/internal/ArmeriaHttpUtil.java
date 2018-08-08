@@ -271,8 +271,8 @@ public final class ArmeriaHttpUtil {
     /**
      * Converts the specified Netty HTTP/2 into Armeria HTTP/2 headers.
      */
-    public static HttpHeaders toArmeria(Http2Headers headers) {
-        final HttpHeaders converted = new DefaultHttpHeaders(false, headers.size());
+    public static HttpHeaders toArmeria(Http2Headers headers, boolean endOfStream) {
+        final HttpHeaders converted = new DefaultHttpHeaders(false, headers.size(), endOfStream);
         StringJoiner cookieJoiner = null;
         for (Entry<CharSequence, CharSequence> e : headers) {
             final AsciiString name = AsciiString.of(e.getKey());

@@ -105,6 +105,16 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
+    public void endOfStreamSet() {
+        final Http2Headers in = new DefaultHttp2Headers();
+        final HttpHeaders out = toArmeria(in, true);
+        assertThat(out.isEndOfStream()).isTrue();
+
+        final HttpHeaders out2 = toArmeria(in, false);
+        assertThat(out2.isEndOfStream()).isFalse();
+    }
+
+    @Test
     public void inboundCookiesMustBeMergedForHttp2() {
         final Http2Headers in = new DefaultHttp2Headers();
 
@@ -114,7 +124,7 @@ public class ArmeriaHttpUtilTest {
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
-        final HttpHeaders out = toArmeria(in);
+        final HttpHeaders out = toArmeria(in, false);
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
