@@ -24,6 +24,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.tracing.HttpTracingService;
@@ -36,7 +38,7 @@ import io.netty.util.AttributeKey;
 
 /**
  * {@linkplain brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext) Tracing
- * context} implemented with {@linkplain com.linecorp.armeria.common.RequestContext}.
+ * context} implemented with {@link com.linecorp.armeria.common.RequestContext}.
  *
  * <p>This {@link CurrentTraceContext} stores/loads the trace context into/from a
  * {@link RequestContext}'s attribute so that there's no need for thread local variables
@@ -45,8 +47,8 @@ import io.netty.util.AttributeKey;
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {
 
     /**
-     * Use this singleton when building a {@linkplain brave.Tracing} instance for use with
-     * {@linkplain HttpTracingService} or {@linkplain HttpTracingClient}.
+     * Use this singleton when building a {@link brave.Tracing} instance for use with
+     * {@link HttpTracingService} or {@link HttpTracingClient}.
      *
      * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
      */
@@ -79,8 +81,9 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     };
 
     /**
-     * Trace context scopes are often wrapped, for example to decorate MDC. This creates a dummy scope to
-     * ensure {@link RequestContextCurrentTraceContext#INSTANCE} is configured, even if it is wrapped.
+     * Ensures the specified {@link Tracing} uses a {@link RequestContextCurrentTraceContext}.
+     *
+     * @throws IllegalStateException if {@code tracing} does not use {@link RequestContextCurrentTraceContext}
      */
     public static void ensureScopeUsesRequestContext(Tracing tracing) {
         final PingPongExtra extra = new PingPongExtra();
@@ -187,11 +190,12 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     /** Hack to allow us to peek inside a current trace context implementation. */
+    @VisibleForTesting
     static final class PingPongExtra {
         /**
          * If the input includes only this extra, set {@link #isPong() pong = true}.
          */
-        public static boolean maybeSetPong(TraceContext context) {
+        static boolean maybeSetPong(TraceContext context) {
             if (context.extra().size() == 1) {
                 Object extra = context.extra().get(0);
                 if (extra instanceof PingPongExtra) {
@@ -204,7 +208,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
         private boolean pong;
 
-        public boolean isPong() {
+        boolean isPong() {
             return pong;
         }
     }
