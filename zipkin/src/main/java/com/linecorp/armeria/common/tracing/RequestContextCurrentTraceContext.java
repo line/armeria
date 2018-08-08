@@ -156,7 +156,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     /** Armeria code should always have a request context available, and this won't work without it. */
-    private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
+    @Nullable private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
         return RequestContext.mapCurrent(r -> r.attr(TRACE_CONTEXT_KEY), LogRequestContextWarningOnce.INSTANCE);
     }
 
@@ -168,6 +168,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         INSTANCE;
 
         @Override
+        @Nullable
         public Attribute<TraceContext> get() {
             ClassLoaderHack.loadMe();
             return null;
