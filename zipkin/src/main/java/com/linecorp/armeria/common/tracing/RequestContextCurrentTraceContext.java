@@ -85,7 +85,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     @Override
     @Nullable
     public TraceContext get() {
-        Attribute<TraceContext> traceContextAttribute = getTraceContextAttributeOrWarnOnce();
+        final Attribute<TraceContext> traceContextAttribute = getTraceContextAttributeOrWarnOnce();
         return traceContextAttribute != null ? traceContextAttribute.get() : null;
     }
 
@@ -96,7 +96,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return Scope.NOOP;
         }
 
-        Attribute<TraceContext> traceContextAttribute = getTraceContextAttributeOrWarnOnce();
+        final Attribute<TraceContext> traceContextAttribute = getTraceContextAttributeOrWarnOnce();
         if (traceContextAttribute == null) {
             return INCOMPLETE_CONFIGURATION_SCOPE;
         }
