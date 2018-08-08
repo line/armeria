@@ -54,7 +54,7 @@ public class HttpProxyIntegrationTest {
 
                 HttpHeaders trailers = new DefaultHttpHeaders(true, 1, true)
                         .set(HttpHeaderNames.of("armeria-message"), "error");
-                assertThat(headers.isEndOfStream()).isTrue();
+                assertThat(trailers.isEndOfStream()).isTrue();
 
                 writer.write(headers);
                 writer.write(trailers);
