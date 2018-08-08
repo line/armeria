@@ -12,7 +12,7 @@ com.auth0:
   java-jwt:
     version: '3.4.0'
     javadocs:
-    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.4.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.4.0/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
