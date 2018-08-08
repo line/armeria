@@ -16,39 +16,11 @@
 
 package com.linecorp.armeria.internal.tracing;
 
-import java.util.Collections;
-
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 
 import brave.Span;
-import brave.Tracing;
-import brave.propagation.CurrentTraceContext.Scope;
-import brave.propagation.TraceContext;
 
 public final class SpanContextUtil {
-
-    /**
-     * Trace context scopes are often wrapped, for example to decorate MDC. This creates a dummy scope to
-     * ensure {@link RequestContextCurrentTraceContext#INSTANCE} is configured, even if it is wrapped.
-     */
-    public static void ensureScopeUsesRequestContext(Tracing tracing) {
-        final PingPongExtra extra = new PingPongExtra();
-        // trace contexts are not recorded until Tracer.toSpan, so this won't end up as junk data
-        final TraceContext dummyContext = TraceContext.newBuilder().traceId(1).spanId(1)
-                                                      .extra(Collections.singletonList(extra)).build();
-        final boolean scopeUsesRequestContext;
-        try (Scope scope = tracing.currentTraceContext().newScope(dummyContext)) {
-            scopeUsesRequestContext = extra.isPong();
-        }
-        if (!scopeUsesRequestContext) {
-            throw new IllegalStateException(
-                    "Tracing.currentTraceContext is not a " + RequestContextCurrentTraceContext.class
-                            .getSimpleName() + " scope. " +
-                    "Please call Tracing.Builder.currentTraceContext(" + RequestContextCurrentTraceContext.class
-                            .getSimpleName() + ".INSTANCE).");
-        }
-    }
 
     /**
      * Adds logging tags to the provided {@link Span} and closes it.

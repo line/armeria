@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static com.linecorp.armeria.internal.tracing.SpanContextUtil.ensureScopeUsesRequestContext;
+import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

@@ -32,9 +32,9 @@ import org.mockito.junit.MockitoRule;
 import org.mockito.stubbing.Answer;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.PingPongExtra;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
-import com.linecorp.armeria.internal.tracing.PingPongExtra;
 
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Scope;
@@ -146,5 +146,17 @@ public class RequestContextCurrentTraceContextTest {
             assertThat(traceContextScope).hasToString("NoopScope");
             assertThat(extra.isPong()).isTrue();
         }
+    }
+
+    @Test
+    public void shouldSetPongIfOnlyExtra() {
+        final PingPongExtra extra = new PingPongExtra();
+
+        final TraceContext context = TraceContext.newBuilder().traceId(1).spanId(1)
+                                                 .extra(Collections.singletonList(extra)).build();
+
+        PingPongExtra.maybeSetPong(context);
+
+        assertThat(extra.isPong()).isTrue();
     }
 }

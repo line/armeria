@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.tracing;
 
+import java.util.Collections;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -23,9 +24,11 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.tracing.PingPongExtra;
+import com.linecorp.armeria.server.tracing.HttpTracingService;
 
+import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.TraceContext;
 import io.netty.util.Attribute;
@@ -41,10 +44,16 @@ import io.netty.util.AttributeKey;
  */
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {
 
+    /**
+     * Use this singleton when building a {@linkplain brave.Tracing} instance for use with
+     * {@linkplain HttpTracingService} or {@linkplain HttpTracingClient}.
+     *
+     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
+     */
     public static final CurrentTraceContext INSTANCE = new RequestContextCurrentTraceContext();
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
-            AttributeKey.newInstance("trace-context");
+            AttributeKey.valueOf(RequestContextCurrentTraceContext.class, "TRACE_CONTEXT");
 
     private static final Scope INCOMPLETE_CONFIGURATION_SCOPE = new Scope() {
         @Override
@@ -68,6 +77,28 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return "InitialRequestScope";
         }
     };
+
+    /**
+     * Trace context scopes are often wrapped, for example to decorate MDC. This creates a dummy scope to
+     * ensure {@link RequestContextCurrentTraceContext#INSTANCE} is configured, even if it is wrapped.
+     */
+    public static void ensureScopeUsesRequestContext(Tracing tracing) {
+        final PingPongExtra extra = new PingPongExtra();
+        // trace contexts are not recorded until Tracer.toSpan, so this won't end up as junk data
+        final TraceContext dummyContext = TraceContext.newBuilder().traceId(1).spanId(1)
+                                                      .extra(Collections.singletonList(extra)).build();
+        final boolean scopeUsesRequestContext;
+        try (Scope scope = tracing.currentTraceContext().newScope(dummyContext)) {
+            scopeUsesRequestContext = extra.isPong();
+        }
+        if (!scopeUsesRequestContext) {
+            throw new IllegalStateException(
+                    "Tracing.currentTraceContext is not a " + RequestContextCurrentTraceContext.class
+                            .getSimpleName() + " scope. " +
+                    "Please call Tracing.Builder.currentTraceContext(" + RequestContextCurrentTraceContext.class
+                            .getSimpleName() + ".INSTANCE).");
+        }
+    }
 
     /**
      * Use this to ensure the trace context propagates to children.
@@ -149,9 +180,32 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
             static {
                 logger.warn("Attempted to propagate trace context, but no request context available. " +
-                            "Did you remember to use RequestContext.contextAwareExecutor() or " +
-                            "RequestContext.makeContextAware()");
+                            "Did you forget to use RequestContext.contextAwareExecutor() or " +
+                            "RequestContext.makeContextAware()?");
             }
+        }
+    }
+
+    /** Hack to allow us to peek inside a current trace context implementation. */
+    static final class PingPongExtra {
+        /**
+         * If the input includes only this extra, set {@link #isPong() pong = true}.
+         */
+        public static boolean maybeSetPong(TraceContext context) {
+            if (context.extra().size() == 1) {
+                Object extra = context.extra().get(0);
+                if (extra instanceof PingPongExtra) {
+                    ((PingPongExtra) extra).pong = true;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean pong;
+
+        public boolean isPong() {
+            return pong;
         }
     }
 }
