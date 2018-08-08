@@ -19,6 +19,20 @@ configure(projectsWithFlags('java')) {
 
     archivesBaseName = project.ext.artifactId
 
+    // Delete the generated source directory on clean.
+    ext {
+        genSrcDir = "${projectDir}/gen-src"
+    }
+    clean {
+        delete project.ext.genSrcDir
+    }
+
+    // Add the generated source directories to the source sets.
+    project.sourceSets.all { sourceSet ->
+        sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/java")
+        sourceSet.resources.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/resources")
+    }
+
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
         def task = delegate

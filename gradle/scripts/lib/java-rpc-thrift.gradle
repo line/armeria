@@ -46,8 +46,6 @@ configure(projectsWithFlags('java')) {
                 includeDirs.each { inputs.dir it }
                 outputs.dir javaOutputDir
                 outputs.dir jsonOutputDir
-                project.sourceSets[scope].java.srcDir javaOutputDir
-                project.sourceSets[scope].resources.srcDir jsonOutputDir
 
                 doFirst {
                     def actualThriftPath

@@ -4,17 +4,6 @@ allprojects {
     }
 }
 
-configure(projectsWithFlags('java')) {
-    ext {
-        genSrcDir = "${projectDir}/gen-src"
-    }
-
-    // Delete the generated source directory on clean.
-    clean {
-        delete project.ext.genSrcDir
-    }
-}
-
 static boolean hasSourceDirectory(Project project, String name) {
     return new File(project.projectDir, 'src').listFiles(new FileFilter() {
         @Override

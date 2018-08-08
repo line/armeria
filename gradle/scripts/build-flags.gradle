@@ -7,6 +7,7 @@ apply from: "${libDir}/common-info.gradle"
 apply from: "${libDir}/common-publish.gradle"
 apply from: "${libDir}/common-release.gradle"
 apply from: "${libDir}/common-wrapper.gradle"
+apply from: "${libDir}/common-misc.gradle"
 
 if (!projectsWithFlags('bom').isEmpty()) {
     apply from: "${libDir}/bom.gradle"
@@ -16,7 +17,6 @@ if (!projectsWithFlags('java').isEmpty()) {
     apply from: "${libDir}/java.gradle"
     apply from: "${libDir}/java-javadoc.gradle"
     apply from: "${libDir}/java-alpn.gradle"
-    apply from: "${libDir}/java-rpc.gradle"
     apply from: "${libDir}/java-rpc-thrift.gradle"
 
     if (projectsWithFlags('java').find { it.ext.hasSourceDirectory('proto') }) {

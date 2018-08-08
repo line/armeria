@@ -242,11 +242,16 @@ All projects will get the following extension properties:
 
 - `copyrightFooter` - the copyright footer HTML fragment generated from
   `inceptionYear`, `authorUrl` and `authorName` in `gradle.properties`
-
   - e.g. `&copy; Copyright 2015&ndash;2018 <a href="https://john.doe.com/">John Doe</a>. All rights reserved.`
-
 - `gitPath` - the path to the `git` command. `null` if Git is not available.
 - `executeGit(...args)` - executes a Git command with the specified arguments
+- `hasSourceDirectory(name)` - tells if the project has any source directory that matches `<projectDir>/src/*/<name>`, e.g.
+
+  ```java
+  if (project.ext.hasSourceDirectory('thrift')) {
+      println "${project} contains Thrift source files."
+  }
+  ```
 
 ## Using flags
 
