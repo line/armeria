@@ -46,18 +46,31 @@ public class HttpProxyIntegrationTest {
     public static ServerRule backendServer = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/", ((ctx, req) -> {
+            sb.service("/trailers", ((ctx, req) -> {
                 HttpResponseWriter writer = HttpResponse.streaming();
 
                 HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
                 assertThat(headers.isEndOfStream()).isFalse();
 
-                HttpHeaders trailers = new DefaultHttpHeaders()
+                HttpHeaders trailers = new DefaultHttpHeaders(true, 1, true)
                         .set(HttpHeaderNames.of("armeria-message"), "error");
-                // Armeria will automatically set endOfStream for trailers.
-                assertThat(headers.isEndOfStream()).isFalse();
+                assertThat(headers.isEndOfStream()).isTrue();
 
                 writer.write(headers);
+                writer.write(trailers);
+                writer.close();
+
+                return writer;
+            }));
+
+            sb.service("/trailers-only", ((ctx, req) -> {
+                HttpResponseWriter writer = HttpResponse.streaming();
+
+                HttpHeaders trailers = new DefaultHttpHeaders(true, 1, true)
+                        .status(HttpStatus.OK)
+                        .set(HttpHeaderNames.of("armeria-message"), "error");
+                assertThat(trailers.isEndOfStream()).isTrue();
+
                 writer.write(trailers);
                 writer.close();
 
@@ -72,9 +85,14 @@ public class HttpProxyIntegrationTest {
     public static ServerRule frontendServer = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/", (ctx, req) -> {
+            sb.service("/trailers", (ctx, req) -> {
                 HttpClient client = HttpClient.of(backendServer.uri("/"));
-                return client.get("/");
+                return client.get("/trailers");
+            });
+
+            sb.service("/trailers-only", (ctx, req) -> {
+                HttpClient client = HttpClient.of(backendServer.uri("/"));
+                return client.get("/trailers-only");
             });
 
             sb.decorator(LoggingService.newDecorator());
@@ -89,7 +107,7 @@ public class HttpProxyIntegrationTest {
         AtomicBoolean complete = new AtomicBoolean();
         AtomicReference<Throwable> error = new AtomicReference<>();
 
-        client.get("/").subscribe(new Subscriber<HttpObject>() {
+        client.get("/trailers").subscribe(new Subscriber<HttpObject>() {
             @Override
             public void onSubscribe(Subscription s) {
                 s.request(Long.MAX_VALUE);
@@ -103,6 +121,45 @@ public class HttpProxyIntegrationTest {
                 } else {
                     assertThat(obj.isEndOfStream()).isTrue();
                 }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                error.set(t);
+                complete.set(true);
+            }
+
+            @Override
+            public void onComplete() {
+                complete.set(true);
+            }
+        });
+
+        await().untilTrue(complete);
+        Throwable raisedError = error.get();
+        if (raisedError != null) {
+            throw raisedError;
+        }
+    }
+
+    @Test
+    public void proxyWithTrailersOnly() throws Throwable {
+        HttpClient client = HttpClient.of(frontendServer.uri("/"));
+
+        AtomicBoolean complete = new AtomicBoolean();
+        AtomicReference<Throwable> error = new AtomicReference<>();
+
+        client.get("/trailers-only").subscribe(new Subscriber<HttpObject>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpObject obj) {
+                // No data frames.
+                assertThat(obj).isInstanceOf(HttpHeaders.class);
+                assertThat(obj.isEndOfStream()).isTrue();
             }
 
             @Override
