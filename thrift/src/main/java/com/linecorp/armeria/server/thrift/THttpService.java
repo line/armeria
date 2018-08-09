@@ -42,7 +42,6 @@ import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -64,6 +63,7 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
@@ -425,7 +425,7 @@ public final class THttpService extends AbstractHttpService {
                 if (Flags.verboseResponses()) {
                     errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                MediaType.PLAIN_TEXT_UTF_8,
-                                               Throwables.getStackTraceAsString(cause));
+                                               Exceptions.traceText(cause));
                 } else {
                     errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                 }
@@ -510,7 +510,7 @@ public final class THttpService extends AbstractHttpService {
                 if (Flags.verboseResponses()) {
                     errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                                "Failed to decode a %s header: %s", serializationFormat,
-                                               Throwables.getStackTraceAsString(e));
+                                               Exceptions.traceText(e));
                 } else {
                     errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                                "Failed to decode a %s header", serializationFormat);
@@ -744,9 +744,8 @@ public final class THttpService extends AbstractHttpService {
             if (Flags.verboseResponses()) {
                 appException = new TApplicationException(
                         TApplicationException.INTERNAL_ERROR,
-                        "internal server error:" + System.lineSeparator() +
-                        "---- BEGIN server-side trace ----" + System.lineSeparator() +
-                        Throwables.getStackTraceAsString(cause) +
+                        "\n---- BEGIN server-side trace ----\n" +
+                        Exceptions.traceText(cause) +
                         "---- END server-side trace ----");
             } else {
                 appException = new TApplicationException(TApplicationException.INTERNAL_ERROR);

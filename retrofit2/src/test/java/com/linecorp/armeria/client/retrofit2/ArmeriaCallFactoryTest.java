@@ -42,7 +42,6 @@ import org.junit.runners.Parameterized.Parameters;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -53,6 +52,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -232,7 +232,7 @@ public class ArmeriaCallFactoryTest {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                      MediaType.PLAIN_TEXT_UTF_8,
-                                                     Throwables.getStackTraceAsString(cause));
+                                                     Exceptions.traceText(cause));
                           }
                           final String text = aReq.content().toStringUtf8();
                           final Pojo request;
@@ -241,7 +241,7 @@ public class ArmeriaCallFactoryTest {
                           } catch (IOException e) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                      MediaType.PLAIN_TEXT_UTF_8,
-                                                     Throwables.getStackTraceAsString(e));
+                                                     Exceptions.traceText(e));
                           }
                           assertThat(request).isEqualTo(new Pojo("Cony", 26));
                           return HttpResponse.of(HttpStatus.OK);
@@ -255,7 +255,7 @@ public class ArmeriaCallFactoryTest {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                      MediaType.PLAIN_TEXT_UTF_8,
-                                                     Throwables.getStackTraceAsString(cause));
+                                                     Exceptions.traceText(cause));
                           }
                           final Map<String, List<String>> params = new QueryStringDecoder(
                                   aReq.content().toStringUtf8(), false)
@@ -273,7 +273,7 @@ public class ArmeriaCallFactoryTest {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                      MediaType.PLAIN_TEXT_UTF_8,
-                                                     Throwables.getStackTraceAsString(cause));
+                                                     Exceptions.traceText(cause));
                           }
                           final Map<String, List<String>> params = new QueryStringDecoder(
                                   aReq.content().toStringUtf8(), false)

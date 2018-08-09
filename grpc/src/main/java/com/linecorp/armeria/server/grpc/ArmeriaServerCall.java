@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.Flags;
@@ -51,6 +50,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
@@ -472,11 +472,11 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (Flags.verboseResponses()) {
             final Throwable cause = status.getCause();
             if (cause != null) {
-                final String trace = Throwables.getStackTraceAsString(cause);
+                final String trace = Exceptions.traceText(cause);
                 if (Strings.isNullOrEmpty(description)) {
                     return "Caused by: " + trace;
                 } else {
-                    return description + System.lineSeparator() + "Caused by: " + trace;
+                    return description + "\nCaused by: " + trace;
                 }
             }
         }

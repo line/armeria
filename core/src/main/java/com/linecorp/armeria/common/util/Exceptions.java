@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CompletionException;
@@ -191,6 +193,7 @@ public final class Exceptions {
      *         e.g. {@code return Exceptions.throwUnsafely(...);} vs.
      *              {@code Exceptions.throwUnsafely(...); return null;}
      */
+    @SuppressWarnings("ReturnOfNull")
     public static <T> T throwUnsafely(Throwable cause) {
         doThrowUnsafely(requireNonNull(cause, "cause"));
         return null; // Never reaches here.
@@ -222,14 +225,89 @@ public final class Exceptions {
     }
 
     /**
-     * Returns the stack trace of the specified {@code exception} as a {@link String} instead.
-     *
-     * @deprecated Use {@link Throwables#getStackTraceAsString(Throwable)}.
+     * Converts the stack trace of the specified {@code exception} into a {@link String}.
+     * This method always uses {@code '\n'} as a line delimiter, unlike
+     * {@link Throwable#printStackTrace(PrintWriter)} or {@link Throwables#getStackTraceAsString(Throwable)}.
      */
-    @Deprecated
     public static String traceText(Throwable exception) {
-        return Throwables.getStackTraceAsString(exception);
+        final StackTraceWriter writer = new StackTraceWriter();
+        exception.printStackTrace(writer);
+        return writer.toString();
     }
 
     private Exceptions() {}
+
+    private static final class StackTraceWriter extends PrintWriter {
+        StackTraceWriter() {
+            super(new StringWriter(512));
+        }
+
+        @Override
+        public String toString() {
+            return out.toString();
+        }
+
+        @Override
+        public void println() {
+            try {
+                out.write('\n');
+            } catch (IOException e) {
+                setError();
+            }
+        }
+
+        @Override
+        public void println(boolean x) {
+            print(x);
+            println();
+        }
+
+        @Override
+        public void println(char x) {
+            print(x);
+            println();
+        }
+
+        @Override
+        public void println(int x) {
+            print(x);
+            println();
+        }
+
+        @Override
+        public void println(long x) {
+            print(x);
+            println();
+        }
+
+        @Override
+        public void println(float x) {
+            print(x);
+            println();
+        }
+
+        @Override
+        public void println(double x) {
+            print(x);
+            println();
+        }
+
+        @Override
+        public void println(char[] x) {
+            print(x);
+            println();
+        }
+
+        @Override
+        public void println(String x) {
+            print(x);
+            println();
+        }
+
+        @Override
+        public void println(Object x) {
+            print(x);
+            println();
+        }
+    }
 }
