@@ -48,6 +48,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -420,10 +421,15 @@ public final class THttpService extends AbstractHttpService {
         ctx.logBuilder().deferRequestContent();
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
-                responseFuture.complete(
-                        HttpResponse.of(
-                                HttpStatus.INTERNAL_SERVER_ERROR,
-                                MediaType.PLAIN_TEXT_UTF_8, Throwables.getStackTraceAsString(cause)));
+                final HttpResponse errorRes;
+                if (!Flags.verboseResponses()) {
+                    errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+                } else {
+                    errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                               MediaType.PLAIN_TEXT_UTF_8,
+                                               Throwables.getStackTraceAsString(cause));
+                }
+                responseFuture.complete(errorRes);
                 return;
             }
 
@@ -498,12 +504,19 @@ public final class THttpService extends AbstractHttpService {
             try {
                 header = inProto.readMessageBegin();
             } catch (Exception e) {
-                logger.debug("{} Failed to decode Thrift header:", ctx, e);
-                httpRes.complete(
-                        HttpResponse.of(
-                                HttpStatus.BAD_REQUEST,
-                                MediaType.PLAIN_TEXT_UTF_8,
-                                "Failed to decode Thrift header: " + Throwables.getStackTraceAsString(e)));
+                logger.debug("{} Failed to decode a {} header:", ctx, serializationFormat, e);
+
+                final HttpResponse errorRes;
+                if (!Flags.verboseResponses()) {
+                    errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                               "Failed to decode a %s header", serializationFormat);
+                } else {
+                    errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                               "Failed to decode a %s header: %s", serializationFormat,
+                                               Throwables.getStackTraceAsString(e));
+                }
+
+                httpRes.complete(errorRes);
                 return;
             }
 
@@ -728,12 +741,19 @@ public final class THttpService extends AbstractHttpService {
         if (cause instanceof TApplicationException) {
             appException = (TApplicationException) cause;
         } else {
-            appException = new TApplicationException(
-                    TApplicationException.INTERNAL_ERROR,
-                    "internal server error:" + System.lineSeparator() +
-                    "---- BEGIN server-side trace ----" + System.lineSeparator() +
-                    Throwables.getStackTraceAsString(cause) +
-                    "---- END server-side trace ----");
+            if (!Flags.verboseResponses()) {
+                appException = new TApplicationException(TApplicationException.INTERNAL_ERROR);
+            } else {
+                appException = new TApplicationException(
+                        TApplicationException.INTERNAL_ERROR,
+                        "internal server error:" + System.lineSeparator() +
+                        "---- BEGIN server-side trace ----" + System.lineSeparator() +
+                        Throwables.getStackTraceAsString(cause) +
+                        "---- END server-side trace ----");
+            }
+
+            // Causes are not sent over the wire but just used for RequestLog.
+            appException.initCause(cause);
         }
 
         final ByteBuf buf = ctx.alloc().buffer(128);
