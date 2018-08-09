@@ -31,7 +31,7 @@ import org.junit.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.google.common.base.Throwables;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -172,7 +172,7 @@ public class DeferredStreamMessageTest {
 
             @Override
             public void onError(Throwable t) {
-                streamed.add("onError: " + Throwables.getStackTraceAsString(t));
+                streamed.add("onError: " + Exceptions.traceText(t));
             }
 
             @Override

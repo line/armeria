@@ -27,7 +27,7 @@ import org.junit.Test;
 public class ExceptionsTest {
 
     @Test
-    public void peelTest() {
+    public void testPeel() {
         final IllegalArgumentException originalException = new IllegalArgumentException();
 
         // There's nothing to peel.
@@ -54,5 +54,16 @@ public class ExceptionsTest {
         final ExceptionInInitializerError exceptionInInitializerError = new ExceptionInInitializerError(
                 executionException);
         assertThat(Exceptions.peel(exceptionInInitializerError)).isSameAs(originalException);
+    }
+
+    /**
+     * Should pass on both Windows and *nix because {@link Exceptions#traceText(Throwable)} is expected to
+     * always use {@code '\n'} as a line delimiter.
+     */
+    @Test
+    public void testTraceText() {
+        final String trace = Exceptions.traceText(new Exception("foo"));
+        assertThat(trace).startsWith(Exception.class.getName() + ": foo\n" +
+                                     "\tat " + ExceptionsTest.class.getName());
     }
 }

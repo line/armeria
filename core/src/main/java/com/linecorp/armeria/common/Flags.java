@@ -59,7 +59,9 @@ public final class Flags {
 
     private static final int NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
 
-    private static final boolean VERBOSE_EXCEPTION = getBoolean("verboseExceptions", false);
+    private static final boolean VERBOSE_EXCEPTIONS = getBoolean("verboseExceptions", false);
+
+    private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
     private static final boolean USE_EPOLL = getBoolean("useEpoll", Epoll.isAvailable(),
                                                         value -> Epoll.isAvailable() || !value);
@@ -215,7 +217,19 @@ public final class Flags {
      * JVM option to enable it.
      */
     public static boolean verboseExceptions() {
-        return VERBOSE_EXCEPTION;
+        return VERBOSE_EXCEPTIONS;
+    }
+
+    /**
+     * Returns whether the verbose response mode is enabled. When enabled, the server responses will contain
+     * the exception type and its full stack trace, which may be useful for debugging while potentially
+     * insecure. When disabled, the server responses will not expose such server-side details to the client.
+     *
+     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.verboseResponses=true}
+     * JVM option to enable it.
+     */
+    public static boolean verboseResponses() {
+        return VERBOSE_RESPONSES;
     }
 
     /**

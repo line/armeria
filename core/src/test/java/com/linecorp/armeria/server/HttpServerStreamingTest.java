@@ -42,7 +42,6 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -64,6 +63,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -322,7 +322,7 @@ public class HttpServerStreamingTest {
                             HttpResponse.of(
                                     HttpStatus.INTERNAL_SERVER_ERROR,
                                     MediaType.PLAIN_TEXT_UTF_8,
-                                    Throwables.getStackTraceAsString(cause)));
+                                    Exceptions.traceText(cause)));
                 }
 
                 @Override
