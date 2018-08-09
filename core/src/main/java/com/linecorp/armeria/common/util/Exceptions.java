@@ -237,6 +237,10 @@ public final class Exceptions {
 
     private Exceptions() {}
 
+    /**
+     * A variant of {@link PrintWriter} that 1) is backed by a {@link StringWriter}, 2) removes locking,
+     * 3) always uses {@code '\n'} as a line delimiter.
+     */
     private static final class StackTraceWriter extends PrintWriter {
         StackTraceWriter() {
             super(new StringWriter(512));
@@ -245,6 +249,57 @@ public final class Exceptions {
         @Override
         public String toString() {
             return out.toString();
+        }
+
+        @Override
+        public void flush() {}
+
+        @Override
+        public void close() {}
+
+        @Override
+        public void write(int c) {
+            try {
+                out.write(c);
+            } catch (IOException e) {
+                setError();
+            }
+        }
+
+        @Override
+        public void write(char[] buf, int off, int len) {
+            try {
+                out.write(buf, off, len);
+            } catch (IOException e) {
+                setError();
+            }
+        }
+
+        @Override
+        public void write(char[] buf) {
+            try {
+                out.write(buf);
+            } catch (IOException e) {
+                setError();
+            }
+        }
+
+        @Override
+        public void write(String s, int off, int len) {
+            try {
+                out.write(s, off, len);
+            } catch (IOException e) {
+                setError();
+            }
+        }
+
+        @Override
+        public void write(String s) {
+            try {
+                out.write(s);
+            } catch (IOException e) {
+                setError();
+            }
         }
 
         @Override
