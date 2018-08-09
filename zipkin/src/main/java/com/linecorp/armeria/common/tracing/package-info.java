@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,22 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.tracing;
+/**
+ * Common classes for distributed tracing support based on <a href="https://github.com/openzipkin/brave">Brave</a>.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.common.tracing;
 
-import com.linecorp.armeria.common.logging.RequestLog;
-
-import brave.Span;
-
-public final class SpanContextUtil {
-
-    /**
-     * Adds logging tags to the provided {@link Span} and closes it.
-     * The span cannot be used further after this method has been called.
-     */
-    public static void closeSpan(Span span, RequestLog log) {
-        SpanTags.addTags(span, log);
-        span.finish();
-    }
-
-    private SpanContextUtil() {}
-}
+import com.linecorp.armeria.common.util.NonNullByDefault;
