@@ -422,12 +422,12 @@ public final class THttpService extends AbstractHttpService {
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 final HttpResponse errorRes;
-                if (!Flags.verboseResponses()) {
-                    errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-                } else {
+                if (Flags.verboseResponses()) {
                     errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                MediaType.PLAIN_TEXT_UTF_8,
                                                Throwables.getStackTraceAsString(cause));
+                } else {
+                    errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                 }
                 responseFuture.complete(errorRes);
                 return;
@@ -507,13 +507,13 @@ public final class THttpService extends AbstractHttpService {
                 logger.debug("{} Failed to decode a {} header:", ctx, serializationFormat, e);
 
                 final HttpResponse errorRes;
-                if (!Flags.verboseResponses()) {
-                    errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
-                                               "Failed to decode a %s header", serializationFormat);
-                } else {
+                if (Flags.verboseResponses()) {
                     errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                                "Failed to decode a %s header: %s", serializationFormat,
                                                Throwables.getStackTraceAsString(e));
+                } else {
+                    errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                               "Failed to decode a %s header", serializationFormat);
                 }
 
                 httpRes.complete(errorRes);
@@ -741,15 +741,15 @@ public final class THttpService extends AbstractHttpService {
         if (cause instanceof TApplicationException) {
             appException = (TApplicationException) cause;
         } else {
-            if (!Flags.verboseResponses()) {
-                appException = new TApplicationException(TApplicationException.INTERNAL_ERROR);
-            } else {
+            if (Flags.verboseResponses()) {
                 appException = new TApplicationException(
                         TApplicationException.INTERNAL_ERROR,
                         "internal server error:" + System.lineSeparator() +
                         "---- BEGIN server-side trace ----" + System.lineSeparator() +
                         Throwables.getStackTraceAsString(cause) +
                         "---- END server-side trace ----");
+            } else {
+                appException = new TApplicationException(TApplicationException.INTERNAL_ERROR);
             }
 
             // Causes are not sent over the wire but just used for RequestLog.
