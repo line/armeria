@@ -37,7 +37,6 @@ import org.junit.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
@@ -60,6 +59,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -206,7 +206,7 @@ public class HttpClientIntegrationTest {
                         if (cause != null) {
                             return HttpResponse.of(
                                     HttpStatus.INTERNAL_SERVER_ERROR,
-                                    MediaType.PLAIN_TEXT_UTF_8, Throwables.getStackTraceAsString(cause));
+                                    MediaType.PLAIN_TEXT_UTF_8, Exceptions.traceText(cause));
                         }
 
                         return HttpResponse.of(

@@ -49,7 +49,6 @@ import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 import org.mockito.ArgumentCaptor;
 
-import com.google.common.base.Throwables;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -69,6 +68,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.ResponseParameters;
@@ -931,7 +931,7 @@ public class GrpcClientTest {
         final Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
-        assertThat(Throwables.getStackTraceAsString(t)).contains("exceeds maximum");
+        assertThat(Exceptions.traceText(t)).contains("exceeds maximum");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(request);
@@ -970,7 +970,7 @@ public class GrpcClientTest {
         final Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode()).isEqualTo(Code.CANCELLED);
-        assertThat(Throwables.getStackTraceAsString(t)).contains("message too large");
+        assertThat(Exceptions.traceText(t)).contains("message too large");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(request);

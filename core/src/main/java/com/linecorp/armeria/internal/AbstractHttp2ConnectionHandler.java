@@ -21,7 +21,8 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Throwables;
+
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -110,7 +111,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         buf.append(", message: ");
         buf.append(MoreObjects.firstNonNull(message, "n/a"));
         buf.append(", cause: ");
-        buf.append(cause != null ? Throwables.getStackTraceAsString(cause) : "n/a");
+        buf.append(cause != null ? Exceptions.traceText(cause) : "n/a");
 
         return buf.toString();
     }

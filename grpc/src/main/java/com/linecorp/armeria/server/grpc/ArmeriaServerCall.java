@@ -40,6 +40,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -49,6 +50,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
@@ -455,12 +457,30 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                     .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto");
         }
         trailers.add(GrpcHeaderNames.GRPC_STATUS, Integer.toString(status.getCode().value()));
-        if (status.getDescription() != null) {
-            trailers.add(GrpcHeaderNames.GRPC_MESSAGE,
-                         StatusMessageEscaper.escape(status.getDescription()));
+
+        final String description = statusToDescription(status);
+        if (description != null) {
+            trailers.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(description));
         }
 
         return trailers;
+    }
+
+    @Nullable
+    private static String statusToDescription(Status status) {
+        final String description = status.getDescription();
+        if (Flags.verboseResponses()) {
+            final Throwable cause = status.getCause();
+            if (cause != null) {
+                final String trace = Exceptions.traceText(cause);
+                if (Strings.isNullOrEmpty(description)) {
+                    return "Caused by: " + trace;
+                } else {
+                    return description + "\nCaused by: " + trace;
+                }
+            }
+        }
+        return description;
     }
 
     HttpStreamReader messageReader() {
