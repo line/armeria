@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.BitSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -36,6 +35,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import it.unimi.dsi.fastutil.bytes.ByteArrayList;
 
 /**
  * A parser of the raw path and query components of an HTTP path. Performs validation and allows caching of
@@ -43,14 +43,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  */
 public final class PathAndQuery {
 
-    /**
-     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
-     *
-     * <p>Should allow the asterisk character in the path, query, or fragment components of a URL(RFC2396).
-     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
-     */
-    private static final Pattern PROHIBITED_PATH_PATTERN =
-            Pattern.compile("^/[^/]*:[^/]*/|[|<>\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
+    private static final PathAndQuery ROOT_PATH_QUERY = new PathAndQuery("/", null);
 
     private static final BitSet ALLOWED_PATH_CHARS = new BitSet();
     private static final BitSet ALLOWED_QUERY_CHARS = new BitSet();
@@ -68,6 +61,9 @@ public final class PathAndQuery {
             ALLOWED_QUERY_CHARS.set(allowedQueryChars.charAt(i));
         }
     }
+
+    private static final ByteArrayList EMPTY_QUERY = new ByteArrayList(0);
+    private static final ByteArrayList ROOT_PATH = new ByteArrayList(new byte[] { '/' });
 
     @Nullable
     private static final Cache<String, PathAndQuery> CACHE =
@@ -179,11 +175,11 @@ public final class PathAndQuery {
 
     @Nullable
     private static PathAndQuery splitPathAndQuery(@Nullable final String pathAndQuery) {
-        final CharSequence path;
-        final CharSequence query;
+        final ByteArrayList path;
+        final ByteArrayList query;
 
         if (pathAndQuery == null) {
-            return new PathAndQuery("/", null);
+            return ROOT_PATH_QUERY;
         }
 
         // Split by the first '?'.
@@ -205,13 +201,13 @@ public final class PathAndQuery {
             query = null;
         }
 
-        if (path.charAt(0) != '/') {
+        if (path.getByte(0) != '/') {
             // Do not accept a relative path.
             return null;
         }
 
         // Reject the prohibited patterns.
-        if (PROHIBITED_PATH_PATTERN.matcher(path).find()) {
+        if (firstPathComponentContainsColon(path) || pathContainsDoubleDots(path)) {
             return null;
         }
 
@@ -220,14 +216,14 @@ public final class PathAndQuery {
     }
 
     @Nullable
-    private static CharSequence decodePercentsAndEncodeToUtf8(String value, int start, int end,
-                                                              boolean isPath) {
+    private static ByteArrayList decodePercentsAndEncodeToUtf8(String value, int start, int end,
+                                                          boolean isPath) {
         final int length = end - start;
         if (length == 0) {
-            return isPath ? "/" : "";
+            return isPath ? ROOT_PATH : EMPTY_QUERY;
         }
 
-        final StringBuilder buf = new StringBuilder(length * 3 / 2);
+        final ByteArrayList buf = new ByteArrayList(length * 3 / 2);
         int lastCP = 0;
         for (final CodePointIterator i = new CodePointIterator(value, start, end); i.hasNextCodePoint();) {
             final int pos = i.position();
@@ -257,7 +253,7 @@ public final class PathAndQuery {
             }
 
             if (cp == '+' && !isPath) {
-                buf.append(' ');
+                buf.add((byte) ' ');
                 lastCP = '+';
                 continue;
             }
@@ -267,34 +263,34 @@ public final class PathAndQuery {
                     return null;
                 }
             } else if (cp <= 0x7ff) {
-                buf.append((char) ((cp >>> 6) | 0b110_00000));
-                buf.append((char) (cp & 0b111111 | 0b10_000000));
+                buf.add((byte) ((cp >>> 6) | 0b110_00000));
+                buf.add((byte) (cp & 0b111111 | 0b10_000000));
             } else if (cp <= 0xffff) {
-                buf.append((char) ((cp >>> 12) | 0b1110_0000));
-                buf.append((char) (((cp >>> 6) & 0b111111) | 0b10_000000));
-                buf.append((char) ((cp & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp >>> 12) | 0b1110_0000));
+                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
             } else if (cp <= 0x1fffff) {
-                buf.append((char) ((cp >>> 18) | 0b11110_000));
-                buf.append((char) (((cp >>> 12) & 0b111111) | 0b10_000000));
-                buf.append((char) (((cp >>> 6) & 0b111111) | 0b10_000000));
-                buf.append((char) ((cp & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp >>> 18) | 0b11110_000));
+                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
             } else if (cp <= 0x3ffffff) {
                 // A valid unicode character will never reach here, but for completeness.
                 // http://unicode.org/mail-arch/unicode-ml/Archives-Old/UML018/0330.html
-                buf.append((char) ((cp >>> 24) | 0b111110_00));
-                buf.append((char) (((cp >>> 18) & 0b111111) | 0b10_000000));
-                buf.append((char) (((cp >>> 12) & 0b111111) | 0b10_000000));
-                buf.append((char) (((cp >>> 6) & 0b111111) | 0b10_000000));
-                buf.append((char) ((cp & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp >>> 24) | 0b111110_00));
+                buf.add((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
             } else {
                 // A valid unicode character will never reach here, but for completeness.
                 // http://unicode.org/mail-arch/unicode-ml/Archives-Old/UML018/0330.html
-                buf.append((char) ((cp >>> 30) | 0b1111110_0));
-                buf.append((char) (((cp >>> 24) & 0b111111) | 0b10_000000));
-                buf.append((char) (((cp >>> 18) & 0b111111) | 0b10_000000));
-                buf.append((char) (((cp >>> 12) & 0b111111) | 0b10_000000));
-                buf.append((char) (((cp >>> 6) & 0b111111) | 0b10_000000));
-                buf.append((char) ((cp & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp >>> 30) | 0b1111110_0));
+                buf.add((byte) (((cp >>> 24) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
             }
 
             lastCP = cp;
@@ -303,7 +299,7 @@ public final class PathAndQuery {
         return buf;
     }
 
-    private static boolean appendOneByte(StringBuilder buf, int cp, int lastCP, boolean isPath) {
+    private static boolean appendOneByte(ByteArrayList buf, int cp, int lastCP, boolean isPath) {
         if (cp == 0x7F || (cp >>> 5 == 0)) {
             // Reject the prohibited control characters: 0x00..0x1F and 0x7F
             return false;
@@ -311,12 +307,12 @@ public final class PathAndQuery {
 
         if (cp == '/' && isPath) {
             if (lastCP != '/') {
-                buf.append('/');
+                buf.add((byte) '/');
             } else {
                 // Remove the consecutive slashes: '/path//with///consecutive////slashes'.
             }
         } else {
-            buf.append((char) cp);
+            buf.add((byte) cp);
         }
 
         return true;
@@ -328,27 +324,66 @@ public final class PathAndQuery {
                ch >= 'A' && ch <= 'F';
     }
 
-    private static String encodeToPercents(CharSequence value, boolean isPath) {
+    /**
+     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
+     *
+     * <p>Should allow the asterisk character in the path, query, or fragment components of a URL(RFC2396).
+     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
+     */
+    private static boolean firstPathComponentContainsColon(ByteArrayList path) {
+        final int length = path.size();
+        for (int i = 1; i < length; i++) {
+            final byte b = path.getByte(i);
+            if (b == '/') {
+                break;
+            }
+            if (b == ':') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean pathContainsDoubleDots(ByteArrayList path) {
+        final int length = path.size();
+        byte b0 = 0;
+        byte b1 = 0;
+        byte b2 = '/';
+        for (int i = 1; i < length; i++) {
+            final byte b3 = path.getByte(i);
+            if (b3 == '/' && b2 == '.' && b1 == '.' && b0 == '/') {
+                return true;
+            }
+            b0 = b1;
+            b1 = b2;
+            b2 = b3;
+        }
+
+        return b0 == '/' && b1 == '.' && b2 == '.';
+    }
+
+    private static String encodeToPercents(ByteArrayList value, boolean isPath) {
         final BitSet allowedChars = isPath ? ALLOWED_PATH_CHARS : ALLOWED_QUERY_CHARS;
-        final int length = value.length();
+        final int length = value.size();
         boolean needsEncoding = false;
         for (int i = 0; i < length; i++) {
-            if (!allowedChars.get(value.charAt(i))) {
+            if (!allowedChars.get(value.getByte(i) & 0xFF)) {
                 needsEncoding = true;
                 break;
             }
         }
 
         if (!needsEncoding) {
-            return value.toString();
+            // Deprecated, but it fits perfect for our use case.
+            //noinspection deprecation
+            return new String(value.elements(), 0, 0, value.size());
         }
 
         final StringBuilder buf = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
-            final char b = value.charAt(i);
-            assert (b & 0xFF00) == 0; // decodePercentsAndEncodeToUtf8() makes this assertion true.
+            final int b = value.getByte(i) & 0xFF;
             if (allowedChars.get(b)) {
-                buf.append(b);
+                buf.append((char) b);
             } else if (b == '+' && !isPath) {
                 buf.append("%2B");
             } else if (b == ' ') {
