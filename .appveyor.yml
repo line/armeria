@@ -12,6 +12,7 @@ build_script:
 test: off
 
 cache:
+  - "%USERPROFILE%\\AppData\\Local\\Yarn\\cache"
   - "%USERPROFILE%\\.gradle\\wrapper\\dists"
   - "%USERPROFILE%\\.gradle\\caches\\jars-3"
   - "%USERPROFILE%\\.gradle\\caches\\modules-2"
