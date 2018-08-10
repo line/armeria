@@ -35,7 +35,8 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import it.unimi.dsi.fastutil.bytes.ByteArrayList;
+import it.unimi.dsi.fastutil.Arrays;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 /**
  * A parser of the raw path and query components of an HTTP path. Performs validation and allows caching of
@@ -62,8 +63,8 @@ public final class PathAndQuery {
         }
     }
 
-    private static final ByteArrayList EMPTY_QUERY = new ByteArrayList(0);
-    private static final ByteArrayList ROOT_PATH = new ByteArrayList(new byte[] { '/' });
+    private static final Bytes EMPTY_QUERY = new Bytes(0);
+    private static final Bytes ROOT_PATH = new Bytes(new byte[] { '/' });
 
     @Nullable
     private static final Cache<String, PathAndQuery> CACHE =
@@ -175,8 +176,8 @@ public final class PathAndQuery {
 
     @Nullable
     private static PathAndQuery splitPathAndQuery(@Nullable final String pathAndQuery) {
-        final ByteArrayList path;
-        final ByteArrayList query;
+        final Bytes path;
+        final Bytes query;
 
         if (pathAndQuery == null) {
             return ROOT_PATH_QUERY;
@@ -201,7 +202,7 @@ public final class PathAndQuery {
             query = null;
         }
 
-        if (path.getByte(0) != '/') {
+        if (path.data[0] != '/') {
             // Do not accept a relative path.
             return null;
         }
@@ -216,14 +217,14 @@ public final class PathAndQuery {
     }
 
     @Nullable
-    private static ByteArrayList decodePercentsAndEncodeToUtf8(String value, int start, int end,
+    private static Bytes decodePercentsAndEncodeToUtf8(String value, int start, int end,
                                                           boolean isPath) {
         final int length = end - start;
         if (length == 0) {
             return isPath ? ROOT_PATH : EMPTY_QUERY;
         }
 
-        final ByteArrayList buf = new ByteArrayList(length * 3 / 2);
+        final Bytes buf = new Bytes(Math.max(length * 3 / 2, 4));
         int lastCP = 0;
         for (final CodePointIterator i = new CodePointIterator(value, start, end); i.hasNextCodePoint();) {
             final int pos = i.position();
@@ -253,6 +254,7 @@ public final class PathAndQuery {
             }
 
             if (cp == '+' && !isPath) {
+                buf.ensure(1);
                 buf.add((byte) ' ');
                 lastCP = '+';
                 continue;
@@ -263,13 +265,16 @@ public final class PathAndQuery {
                     return null;
                 }
             } else if (cp <= 0x7ff) {
+                buf.ensure(2);
                 buf.add((byte) ((cp >>> 6) | 0b110_00000));
                 buf.add((byte) (cp & 0b111111 | 0b10_000000));
             } else if (cp <= 0xffff) {
+                buf.ensure(3);
                 buf.add((byte) ((cp >>> 12) | 0b1110_0000));
                 buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
                 buf.add((byte) ((cp & 0b111111) | 0b10_000000));
             } else if (cp <= 0x1fffff) {
+                buf.ensure(4);
                 buf.add((byte) ((cp >>> 18) | 0b11110_000));
                 buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
                 buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
@@ -277,6 +282,7 @@ public final class PathAndQuery {
             } else if (cp <= 0x3ffffff) {
                 // A valid unicode character will never reach here, but for completeness.
                 // http://unicode.org/mail-arch/unicode-ml/Archives-Old/UML018/0330.html
+                buf.ensure(5);
                 buf.add((byte) ((cp >>> 24) | 0b111110_00));
                 buf.add((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
                 buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
@@ -285,6 +291,7 @@ public final class PathAndQuery {
             } else {
                 // A valid unicode character will never reach here, but for completeness.
                 // http://unicode.org/mail-arch/unicode-ml/Archives-Old/UML018/0330.html
+                buf.ensure(6);
                 buf.add((byte) ((cp >>> 30) | 0b1111110_0));
                 buf.add((byte) (((cp >>> 24) & 0b111111) | 0b10_000000));
                 buf.add((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
@@ -299,7 +306,7 @@ public final class PathAndQuery {
         return buf;
     }
 
-    private static boolean appendOneByte(ByteArrayList buf, int cp, int lastCP, boolean isPath) {
+    private static boolean appendOneByte(Bytes buf, int cp, int lastCP, boolean isPath) {
         if (cp == 0x7F || (cp >>> 5 == 0)) {
             // Reject the prohibited control characters: 0x00..0x1F and 0x7F
             return false;
@@ -307,11 +314,13 @@ public final class PathAndQuery {
 
         if (cp == '/' && isPath) {
             if (lastCP != '/') {
+                buf.ensure(1);
                 buf.add((byte) '/');
             } else {
                 // Remove the consecutive slashes: '/path//with///consecutive////slashes'.
             }
         } else {
+            buf.ensure(1);
             buf.add((byte) cp);
         }
 
@@ -330,10 +339,10 @@ public final class PathAndQuery {
      * <p>Should allow the asterisk character in the path, query, or fragment components of a URL(RFC2396).
      * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
      */
-    private static boolean firstPathComponentContainsColon(ByteArrayList path) {
-        final int length = path.size();
+    private static boolean firstPathComponentContainsColon(Bytes path) {
+        final int length = path.length;
         for (int i = 1; i < length; i++) {
-            final byte b = path.getByte(i);
+            final byte b = path.data[i];
             if (b == '/') {
                 break;
             }
@@ -344,13 +353,13 @@ public final class PathAndQuery {
         return false;
     }
 
-    private static boolean pathContainsDoubleDots(ByteArrayList path) {
-        final int length = path.size();
+    private static boolean pathContainsDoubleDots(Bytes path) {
+        final int length = path.length;
         byte b0 = 0;
         byte b1 = 0;
         byte b2 = '/';
         for (int i = 1; i < length; i++) {
-            final byte b3 = path.getByte(i);
+            final byte b3 = path.data[i];
             if (b3 == '/' && b2 == '.' && b1 == '.' && b0 == '/') {
                 return true;
             }
@@ -362,12 +371,12 @@ public final class PathAndQuery {
         return b0 == '/' && b1 == '.' && b2 == '.';
     }
 
-    private static String encodeToPercents(ByteArrayList value, boolean isPath) {
+    private static String encodeToPercents(Bytes value, boolean isPath) {
         final BitSet allowedChars = isPath ? ALLOWED_PATH_CHARS : ALLOWED_QUERY_CHARS;
-        final int length = value.size();
+        final int length = value.length;
         boolean needsEncoding = false;
         for (int i = 0; i < length; i++) {
-            if (!allowedChars.get(value.getByte(i) & 0xFF)) {
+            if (!allowedChars.get(value.data[i] & 0xFF)) {
                 needsEncoding = true;
                 break;
             }
@@ -376,12 +385,12 @@ public final class PathAndQuery {
         if (!needsEncoding) {
             // Deprecated, but it fits perfect for our use case.
             //noinspection deprecation
-            return new String(value.elements(), 0, 0, value.size());
+            return new String(value.data, 0, 0, length);
         }
 
         final StringBuilder buf = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
-            final int b = value.getByte(i) & 0xFF;
+            final int b = value.data[i] & 0xFF;
             if (allowedChars.get(b)) {
                 buf.append((char) b);
             } else if (b == '+' && !isPath) {
@@ -407,6 +416,37 @@ public final class PathAndQuery {
             buf.append((char) ('0' + nibble));
         } else {
             buf.append((char) ('A' + nibble - 10));
+        }
+    }
+
+    private static final class Bytes {
+        byte[] data;
+        int length;
+
+        Bytes(int initialCapacity) {
+            data = new byte[initialCapacity];
+        }
+
+        Bytes(byte[] data) {
+            this.data = data;
+            length = data.length;
+        }
+
+        void add(byte b) {
+            data[length++] = b;
+        }
+
+        void ensure(int numBytes) {
+            int newCapacity = length + numBytes;
+            if (newCapacity <= data.length) {
+                return;
+            }
+
+            newCapacity =
+                    (int) Math.max(Math.min((long) data.length + (data.length >> 1), Arrays.MAX_ARRAY_SIZE),
+                                   newCapacity);
+
+            data = ByteArrays.forceCapacity(data, newCapacity, length);
         }
     }
 
