@@ -516,8 +516,9 @@ public class ArmeriaCallFactoryTest {
     public void customPath() throws Exception {
         assertThat(service.customPath("Foo", 23).get()).isEqualTo(new Pojo("Foo", 23));
         assertThat(service.customPath("Foo+Bar", 24).get()).isEqualTo(new Pojo("Foo+Bar", 24));
-        assertThat(service.customPath("Foo+Bar/Hoge", 24).get()).isEqualTo(new Pojo("Foo+Bar%2FHoge", 24));
-        assertThat(service.customPath("Foo%2BBar", 24).get()).isEqualTo(new Pojo("Foo%252BBar", 24));
+        assertThat(service.customPath("Foo+Bar/Hoge", 24).get()).isEqualTo(new Pojo("Foo+Bar/Hoge", 24));
+        assertThat(service.customPath("Foo+Bar%2fHoge", 24).get()).isEqualTo(new Pojo("Foo+Bar%252fHoge", 24));
+        assertThat(service.customPath("Foo%2bBar", 24).get()).isEqualTo(new Pojo("Foo%252bBar", 24));
     }
 
     @Test
