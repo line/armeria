@@ -14,6 +14,7 @@ notifications:
 cache:
   directories:
   - "$HOME/.cache/install-jdk"
+  - "$HOME/.cache/yarn"
   - "$HOME/.gradle/wrapper/dists"
   - "$HOME/.gradle/caches/jars-3"
   - "$HOME/.gradle/caches/modules-2"
