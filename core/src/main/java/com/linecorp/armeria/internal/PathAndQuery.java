@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.internal;
 
+import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
+import java.util.BitSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -28,13 +29,14 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import it.unimi.dsi.fastutil.Arrays;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 /**
  * A parser of the raw path and query components of an HTTP path. Performs validation and allows caching of
@@ -42,16 +44,27 @@ import io.micrometer.core.instrument.MeterRegistry;
  */
 public final class PathAndQuery {
 
-    /**
-     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
-     *
-     * <p>Should allow the asterisk character in the path, query, or fragment components of a URL(RFC2396).
-     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
-     */
-    private static final Pattern PROHIBITED_PATH_PATTERN =
-            Pattern.compile("^/[^/]*:[^/]*/|[|<>\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
+    private static final PathAndQuery ROOT_PATH_QUERY = new PathAndQuery("/", null);
 
-    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
+    private static final BitSet ALLOWED_PATH_CHARS = new BitSet();
+    private static final BitSet ALLOWED_QUERY_CHARS = new BitSet();
+
+    static {
+        final String allowedPathChars =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=";
+        for (int i = 0; i < allowedPathChars.length(); i++) {
+            ALLOWED_PATH_CHARS.set(allowedPathChars.charAt(i));
+        }
+
+        final String allowedQueryChars =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*,;=";
+        for (int i = 0; i < allowedQueryChars.length(); i++) {
+            ALLOWED_QUERY_CHARS.set(allowedQueryChars.charAt(i));
+        }
+    }
+
+    private static final Bytes EMPTY_QUERY = new Bytes(0);
+    private static final Bytes ROOT_PATH = new Bytes(new byte[] { '/' });
 
     @Nullable
     private static final Cache<String, PathAndQuery> CACHE =
@@ -95,8 +108,8 @@ public final class PathAndQuery {
      *         {@link String} is not an absolute path or invalid.
      */
     @Nullable
-    public static PathAndQuery parse(String rawPath) {
-        if (CACHE != null) {
+    public static PathAndQuery parse(@Nullable String rawPath) {
+        if (CACHE != null && rawPath != null) {
             final PathAndQuery parsed = CACHE.getIfPresent(rawPath);
             if (parsed != null) {
                 return parsed;
@@ -109,8 +122,8 @@ public final class PathAndQuery {
      * Stores this {@link PathAndQuery} into cache for the given raw path. This should be used by callers when
      * the parsed result was valid (e.g., when a server is able to successfully handle the parsed path).
      */
-    public void storeInCache(String rawPath) {
-        if (CACHE != null) {
+    public void storeInCache(@Nullable String rawPath) {
+        if (CACHE != null && rawPath != null) {
             CACHE.put(rawPath, this);
         }
     }
@@ -162,70 +175,153 @@ public final class PathAndQuery {
     }
 
     @Nullable
-    private static PathAndQuery splitPathAndQuery(final String pathAndQuery) {
-        final String path;
-        final String query;
+    private static PathAndQuery splitPathAndQuery(@Nullable final String pathAndQuery) {
+        final Bytes path;
+        final Bytes query;
 
-        if (Strings.isNullOrEmpty(pathAndQuery)) {
-            // e.g. http://example.com
-            path = "/";
-            query = null;
-        } else if (pathAndQuery.charAt(0) != '/') {
-            // Do not accept a relative path.
-            return null;
-        } else {
-            // Split by the first '?'.
-            final int queryPos = pathAndQuery.indexOf('?');
-            if (queryPos >= 0) {
-                path = pathAndQuery.substring(0, queryPos);
-                query = pathAndQuery.substring(queryPos + 1);
-            } else {
-                path = pathAndQuery;
-                query = null;
-            }
+        if (pathAndQuery == null) {
+            return ROOT_PATH_QUERY;
         }
 
-        // Make sure the path and the query are encoded correctly. i.e. Do not pass poorly encoded paths
-        // and queries to services. However, do not pass the decoded paths and queries to the services,
-        // so that users have more control over the encoding.
-        if (!isValidEncoding(path) ||
-            !isValidEncoding(query)) {
+        // Split by the first '?'.
+        final int queryPos = pathAndQuery.indexOf('?');
+        if (queryPos >= 0) {
+            if ((path = decodePercentsAndEncodeToUtf8(
+                    pathAndQuery, 0, queryPos, true)) == null) {
+                return null;
+            }
+            if ((query = decodePercentsAndEncodeToUtf8(
+                    pathAndQuery, queryPos + 1, pathAndQuery.length(), false)) == null) {
+                return null;
+            }
+        } else {
+            if ((path = decodePercentsAndEncodeToUtf8(
+                    pathAndQuery, 0, pathAndQuery.length(), true)) == null) {
+                return null;
+            }
+            query = null;
+        }
+
+        if (path.data[0] != '/') {
+            // Do not accept a relative path.
             return null;
         }
 
         // Reject the prohibited patterns.
-        if (PROHIBITED_PATH_PATTERN.matcher(path).find()) {
+        if (firstPathComponentContainsColon(path) || pathContainsDoubleDots(path)) {
             return null;
         }
 
-        // Work around the case where a client sends a path such as '/path//with///consecutive////slashes'.
-        return new PathAndQuery(CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/"), query);
+        return new PathAndQuery(encodeToPercents(path, true),
+                                query != null ? encodeToPercents(query, false) : null);
     }
 
-    @SuppressWarnings("DuplicateBooleanBranch")
-    private static boolean isValidEncoding(@Nullable String value) {
-        if (value == null) {
-            return true;
+    @Nullable
+    private static Bytes decodePercentsAndEncodeToUtf8(String value, int start, int end,
+                                                          boolean isPath) {
+        final int length = end - start;
+        if (length == 0) {
+            return isPath ? ROOT_PATH : EMPTY_QUERY;
         }
 
-        final int length = value.length();
-        for (int i = 0; i < length; i++) {
-            final char ch = value.charAt(i);
-            if (ch != '%') {
+        final Bytes buf = new Bytes(Math.max(length * 3 / 2, 4));
+        int lastCP = 0;
+        for (final CodePointIterator i = new CodePointIterator(value, start, end); i.hasNextCodePoint();) {
+            final int pos = i.position();
+            final int cp = i.nextCodePoint();
+
+            if (cp == '%') {
+                final int hexEnd = pos + 3;
+                if (hexEnd > end) {
+                    // '%' or '%x' (must be followed by two hexadigits)
+                    return null;
+                }
+
+                final char digit1 = value.charAt(pos + 1);
+                final char digit2 = value.charAt(pos + 2);
+                if (!isHexadigit(digit1) || !isHexadigit(digit2)) {
+                    // The first or second digit is not hexadecimal.
+                    return null;
+                }
+
+                final int decoded = (decodeHexNibble(digit1) << 4) | decodeHexNibble(digit2);
+                if (!appendOneByte(buf, decoded, lastCP, isPath)) {
+                    return null;
+                }
+                i.position(hexEnd);
+                lastCP = decoded;
                 continue;
             }
 
-            final int end = i + 3;
-            if (end > length) {
-                // '%' or '%x' (must be followed by two hexadigits)
-                return false;
+            if (cp == '+' && !isPath) {
+                buf.ensure(1);
+                buf.add((byte) ' ');
+                lastCP = '+';
+                continue;
             }
 
-            if (!isHexadigit(value.charAt(++i)) ||
-                !isHexadigit(value.charAt(++i))) {
-                // The first or second digit is not hexadecimal.
-                return false;
+            if (cp <= 0x7F) {
+                if (!appendOneByte(buf, cp, lastCP, isPath)) {
+                    return null;
+                }
+            } else if (cp <= 0x7ff) {
+                buf.ensure(2);
+                buf.add((byte) ((cp >>> 6) | 0b110_00000));
+                buf.add((byte) (cp & 0b111111 | 0b10_000000));
+            } else if (cp <= 0xffff) {
+                buf.ensure(3);
+                buf.add((byte) ((cp >>> 12) | 0b1110_0000));
+                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
+            } else if (cp <= 0x1fffff) {
+                buf.ensure(4);
+                buf.add((byte) ((cp >>> 18) | 0b11110_000));
+                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
+            } else if (cp <= 0x3ffffff) {
+                // A valid unicode character will never reach here, but for completeness.
+                // http://unicode.org/mail-arch/unicode-ml/Archives-Old/UML018/0330.html
+                buf.ensure(5);
+                buf.add((byte) ((cp >>> 24) | 0b111110_00));
+                buf.add((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
+            } else {
+                // A valid unicode character will never reach here, but for completeness.
+                // http://unicode.org/mail-arch/unicode-ml/Archives-Old/UML018/0330.html
+                buf.ensure(6);
+                buf.add((byte) ((cp >>> 30) | 0b1111110_0));
+                buf.add((byte) (((cp >>> 24) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
             }
+
+            lastCP = cp;
+        }
+
+        return buf;
+    }
+
+    private static boolean appendOneByte(Bytes buf, int cp, int lastCP, boolean isPath) {
+        if (cp == 0x7F || (cp >>> 5 == 0)) {
+            // Reject the prohibited control characters: 0x00..0x1F and 0x7F
+            return false;
+        }
+
+        if (cp == '/' && isPath) {
+            if (lastCP != '/') {
+                buf.ensure(1);
+                buf.add((byte) '/');
+            } else {
+                // Remove the consecutive slashes: '/path//with///consecutive////slashes'.
+            }
+        } else {
+            buf.ensure(1);
+            buf.add((byte) cp);
         }
 
         return true;
@@ -235,5 +331,161 @@ public final class PathAndQuery {
         return ch >= '0' && ch <= '9' ||
                ch >= 'a' && ch <= 'f' ||
                ch >= 'A' && ch <= 'F';
+    }
+
+    /**
+     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
+     *
+     * <p>Should allow the asterisk character in the path, query, or fragment components of a URL(RFC2396).
+     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
+     */
+    private static boolean firstPathComponentContainsColon(Bytes path) {
+        final int length = path.length;
+        for (int i = 1; i < length; i++) {
+            final byte b = path.data[i];
+            if (b == '/') {
+                break;
+            }
+            if (b == ':') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean pathContainsDoubleDots(Bytes path) {
+        final int length = path.length;
+        byte b0 = 0;
+        byte b1 = 0;
+        byte b2 = '/';
+        for (int i = 1; i < length; i++) {
+            final byte b3 = path.data[i];
+            if (b3 == '/' && b2 == '.' && b1 == '.' && b0 == '/') {
+                return true;
+            }
+            b0 = b1;
+            b1 = b2;
+            b2 = b3;
+        }
+
+        return b0 == '/' && b1 == '.' && b2 == '.';
+    }
+
+    private static String encodeToPercents(Bytes value, boolean isPath) {
+        final BitSet allowedChars = isPath ? ALLOWED_PATH_CHARS : ALLOWED_QUERY_CHARS;
+        final int length = value.length;
+        boolean needsEncoding = false;
+        for (int i = 0; i < length; i++) {
+            if (!allowedChars.get(value.data[i] & 0xFF)) {
+                needsEncoding = true;
+                break;
+            }
+        }
+
+        if (!needsEncoding) {
+            // Deprecated, but it fits perfect for our use case.
+            //noinspection deprecation
+            return new String(value.data, 0, 0, length);
+        }
+
+        final StringBuilder buf = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            final int b = value.data[i] & 0xFF;
+            if (allowedChars.get(b)) {
+                buf.append((char) b);
+            } else if (b == '+' && !isPath) {
+                buf.append("%2B");
+            } else if (b == ' ') {
+                if (isPath) {
+                    buf.append("%20");
+                } else {
+                    buf.append('+');
+                }
+            } else {
+                buf.append('%');
+                appendHexNibble(buf, b >>> 4);
+                appendHexNibble(buf, b & 0xF);
+            }
+        }
+
+        return buf.toString();
+    }
+
+    private static void appendHexNibble(StringBuilder buf, int nibble) {
+        if (nibble < 10) {
+            buf.append((char) ('0' + nibble));
+        } else {
+            buf.append((char) ('A' + nibble - 10));
+        }
+    }
+
+    private static final class Bytes {
+        byte[] data;
+        int length;
+
+        Bytes(int initialCapacity) {
+            data = new byte[initialCapacity];
+        }
+
+        Bytes(byte[] data) {
+            this.data = data;
+            length = data.length;
+        }
+
+        void add(byte b) {
+            data[length++] = b;
+        }
+
+        void ensure(int numBytes) {
+            int newCapacity = length + numBytes;
+            if (newCapacity <= data.length) {
+                return;
+            }
+
+            newCapacity =
+                    (int) Math.max(Math.min((long) data.length + (data.length >> 1), Arrays.MAX_ARRAY_SIZE),
+                                   newCapacity);
+
+            data = ByteArrays.forceCapacity(data, newCapacity, length);
+        }
+    }
+
+    private static final class CodePointIterator {
+        private final CharSequence str;
+        private final int end;
+        private int pos;
+
+        CodePointIterator(CharSequence str, int start, int end) {
+            this.str = str;
+            this.end = end;
+            pos = start;
+        }
+
+        int position() {
+            return pos;
+        }
+
+        void position(int pos) {
+            this.pos = pos;
+        }
+
+        boolean hasNextCodePoint() {
+            return pos < end;
+        }
+
+        int nextCodePoint() {
+            assert pos < end;
+
+            final char c1 = str.charAt(pos++);
+            if (Character.isHighSurrogate(c1) && pos < end) {
+                final char c2 = str.charAt(pos);
+                if (Character.isLowSurrogate(c2)) {
+                    pos++;
+                    return Character.toCodePoint(c1, c2);
+                }
+            }
+
+            return c1;
+        }
     }
 }
