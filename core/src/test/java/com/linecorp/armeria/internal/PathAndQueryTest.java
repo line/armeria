@@ -164,5 +164,23 @@ public class PathAndQueryTest {
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/%20");
         assertThat(res.query()).isEqualTo("+");
+
+        final PathAndQuery res2 = PathAndQuery.parse("/%20?%20");
+        assertThat(res2).isNotNull();
+        assertThat(res2.path()).isEqualTo("/%20");
+        assertThat(res2.query()).isEqualTo("+");
+    }
+
+    @Test
+    public void plus() {
+        final PathAndQuery res = PathAndQuery.parse("/+?+");
+        assertThat(res).isNotNull();
+        assertThat(res.path()).isEqualTo("/+");
+        assertThat(res.query()).isEqualTo("+");
+
+        final PathAndQuery res2 = PathAndQuery.parse("/%2b?%2b");
+        assertThat(res2).isNotNull();
+        assertThat(res2.path()).isEqualTo("/+");
+        assertThat(res2.query()).isEqualTo("%2B");
     }
 }

@@ -52,13 +52,20 @@ public final class PathAndQuery {
     private static final Pattern PROHIBITED_PATH_PATTERN =
             Pattern.compile("^/[^/]*:[^/]*/|[|<>\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
 
-    private static final BitSet ALLOWED_CHARS = new BitSet();
+    private static final BitSet ALLOWED_PATH_CHARS = new BitSet();
+    private static final BitSet ALLOWED_QUERY_CHARS = new BitSet();
 
     static {
-        final String allowedChars =
+        final String allowedPathChars =
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=";
-        for (int i = 0; i < allowedChars.length(); i++) {
-            ALLOWED_CHARS.set(allowedChars.charAt(i));
+        for (int i = 0; i < allowedPathChars.length(); i++) {
+            ALLOWED_PATH_CHARS.set(allowedPathChars.charAt(i));
+        }
+
+        final String allowedQueryChars =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*,;=";
+        for (int i = 0; i < allowedQueryChars.length(); i++) {
+            ALLOWED_QUERY_CHARS.set(allowedQueryChars.charAt(i));
         }
     }
 
@@ -249,6 +256,12 @@ public final class PathAndQuery {
                 continue;
             }
 
+            if (cp == '+' && !isPath) {
+                buf.append(' ');
+                lastCP = '+';
+                continue;
+            }
+
             if (cp <= 0x7F) {
                 if (!appendOneByte(buf, cp, lastCP, isPath)) {
                     return null;
@@ -316,10 +329,11 @@ public final class PathAndQuery {
     }
 
     private static String encodeToPercents(CharSequence value, boolean isPath) {
+        final BitSet allowedChars = isPath ? ALLOWED_PATH_CHARS : ALLOWED_QUERY_CHARS;
         final int length = value.length();
         boolean needsEncoding = false;
         for (int i = 0; i < length; i++) {
-            if (!ALLOWED_CHARS.get(value.charAt(i))) {
+            if (!allowedChars.get(value.charAt(i))) {
                 needsEncoding = true;
                 break;
             }
@@ -333,8 +347,10 @@ public final class PathAndQuery {
         for (int i = 0; i < length; i++) {
             final char b = value.charAt(i);
             assert (b & 0xFF00) == 0; // decodePercentsAndEncodeToUtf8() makes this assertion true.
-            if (ALLOWED_CHARS.get(b)) {
+            if (allowedChars.get(b)) {
                 buf.append(b);
+            } else if (b == '+' && !isPath) {
+                buf.append("%2B");
             } else if (b == ' ') {
                 if (isPath) {
                     buf.append("%20");
