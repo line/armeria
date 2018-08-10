@@ -59,6 +59,14 @@ public class PathAndQueryTest {
         assertThat(PathAndQuery.parse("/%2E./")).isNull();
         assertThat(PathAndQuery.parse("/foo/.%2e")).isNull();
         assertThat(PathAndQuery.parse("/foo/%2E./")).isNull();
+
+        // Not the double dots we are looking for.
+        final PathAndQuery res = PathAndQuery.parse("/..a");
+        assertThat(res).isNotNull();
+        assertThat(res.path()).isEqualTo("/..a");
+        final PathAndQuery res2 = PathAndQuery.parse("/a..");
+        assertThat(res2).isNotNull();
+        assertThat(res2.path()).isEqualTo("/a..");
     }
 
     @Test
