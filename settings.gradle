@@ -41,4 +41,5 @@ includeWithFlags ':docs-client'
 includeWithFlags ':site'
 
 // Examples
-includeWithFlags ':examples:spring-boot-tomcat', 'java'
+includeWithFlags ':examples:annotated-http-service', 'java'
+includeWithFlags ':examples:spring-boot-tomcat',     'java'
