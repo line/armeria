@@ -41,14 +41,14 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '2.0.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.29.0' }
+  gax-grpc: { version: '1.30.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '25.1-jre'
+    version: &GUAVA_VERSION '26.0-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -161,7 +161,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.1.17'
+    version: '2.2.0'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -280,7 +280,7 @@ org.bouncycastle:
       to: com.linecorp.armeria.internal.shaded.bouncycastle
 
 org.checkerframework:
-  checker-compat-qual: { version: '2.5.3' }
+  checker-compat-qual: { version: '2.5.4' }
 
 org.curioswitch.curiostack:
   protobuf-jackson: { version: '0.2.1' }
