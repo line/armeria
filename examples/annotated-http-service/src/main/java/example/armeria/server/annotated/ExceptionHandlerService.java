@@ -16,6 +16,9 @@ import example.armeria.server.annotated.ExceptionHandlerService.GlobalExceptionH
 
 /**
  * Examples how to use {@link ExceptionHandler}.
+ *
+ * @see <a href="https://line.github.io/armeria/server-annotated-service.html#handling-exceptions">
+ *      Handling exceptions</a>
  */
 @LoggingDecorator(
         requestLogLevel = LogLevel.INFO,            // Log every request sent to this service at INFO level.
@@ -88,6 +91,7 @@ public class ExceptionHandlerService {
             if (cause instanceof GloballyGeneralException) {
                 return HttpResponse.of(HttpStatus.FORBIDDEN);
             }
+            // To the next exception handler.
             return ExceptionHandlerFunction.fallthrough();
         }
     }
@@ -101,6 +105,7 @@ public class ExceptionHandlerService {
             if (cause instanceof LocallyGeneralException) {
                 return HttpResponse.of(HttpStatus.BAD_REQUEST);
             }
+            // To the next exception handler.
             return ExceptionHandlerFunction.fallthrough();
         }
     }

@@ -26,6 +26,9 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 
 /**
  * Examples how to use {@link RequestConverter} and {@link ResponseConverter}.
+ *
+ * @see <a href="https://line.github.io/armeria/server-annotated-service.html#conversion-between-an-http-message-and-a-java-object">
+ *      Conversion between an HTTP message and a Java object</a>
  */
 @LoggingDecorator(
         requestLogLevel = LogLevel.INFO,            // Log every request sent to this service at INFO level.

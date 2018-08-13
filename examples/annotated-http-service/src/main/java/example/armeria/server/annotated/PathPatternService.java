@@ -7,6 +7,10 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 
 /**
  * Examples how to use path patterns provided by Armeria.
+ *
+ *
+ * @see <a href="https://line.github.io/armeria/server-annotated-service.html#mapping-http-service-methods">
+ *      Mapping HTTP service methods</a>
  */
 @LoggingDecorator(
         requestLogLevel = LogLevel.INFO,            // Log every request sent to this service at INFO level.

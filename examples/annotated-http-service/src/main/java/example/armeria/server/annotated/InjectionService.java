@@ -20,6 +20,9 @@ import io.netty.handler.codec.http.cookie.Cookie;
 
 /**
  * Examples how to use {@link Param}, {@link Header} and {@link Cookies}.
+ *
+ * @see <a href="https://line.github.io/armeria/server-annotated-service.html#parameter-injection">
+ *      Parameter injection</a>
  */
 @LoggingDecorator(
         requestLogLevel = LogLevel.INFO,            // Log every request sent to this service at INFO level.
