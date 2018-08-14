@@ -68,7 +68,10 @@ task release(
                     "Git repository is not clean:${System.lineSeparator()}${gitStatusOut}")
         }
 
-        def tag = "$rootProject.name-$releaseVersion"
+        def tag = project.findProperty("tag")
+        if (tag == null) {
+            tag = "$rootProject.name-$releaseVersion"
+        }
 
         def gradlePropsFile = project.file("${project.projectDir}/gradle.properties")
         def gradlePropsContent = gradlePropsFile.getText('ISO-8859-1')
