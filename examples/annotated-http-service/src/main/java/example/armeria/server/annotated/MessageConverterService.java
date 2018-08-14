@@ -1,5 +1,8 @@
 package example.armeria.server.annotated;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -82,6 +85,24 @@ public class MessageConverterService {
     @ProducesJson
     public Response json3(@RequestObject Request request) {
         return new Response(Response.SUCCESS, request.name());
+    }
+
+    /**
+     * Returns a {@link CompletionStage} object. The {@link JacksonResponseConverterFunction} will
+     * be executed after the future is completed with the {@link Response} object.
+     *
+     * <p>Note that the {@link ServiceRequestContext} of the request is also automatically injected. See
+     * <a href="https://line.github.io/armeria/server-annotated-service.html#other-classes-automatically-injected">
+     * Other classes automatically injected</a> for more information.
+     */
+    @Post("/obj/future")
+    @ProducesJson
+    public CompletionStage<Response> json4(@RequestObject Request request,
+                                           ServiceRequestContext ctx) {
+        final CompletableFuture<Response> future = new CompletableFuture<>();
+        ctx.blockingTaskExecutor()
+           .submit(() -> future.complete(new Response(Response.SUCCESS, request.name())));
+        return future;
     }
 
     /**
