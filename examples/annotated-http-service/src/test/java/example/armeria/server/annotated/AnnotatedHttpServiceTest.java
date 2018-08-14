@@ -95,7 +95,8 @@ public class AnnotatedHttpServiceTest {
         // JSON
         for (final String path : ImmutableList.of("/messageConverter/node/node",
                                                   "/messageConverter/node/obj",
-                                                  "/messageConverter/obj/obj")) {
+                                                  "/messageConverter/obj/obj",
+                                                  "/messageConverter/obj/future")) {
             res = client.execute(HttpHeaders.of(HttpMethod.POST, path)
                                             .contentType(MediaType.JSON_UTF_8),
                                  "{\"name\":\"armeria\"}").aggregate().join();
