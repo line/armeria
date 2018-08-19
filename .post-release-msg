@@ -7,7 +7,7 @@
 
    https://oss.sonatype.org/
 
-3. Close the milestone and set its release date at:
+3. Close the milestone and set its due date with the date of the release at:
 
    https://github.com/line/armeria/milestones
 
