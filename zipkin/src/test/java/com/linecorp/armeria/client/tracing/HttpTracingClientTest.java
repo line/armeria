@@ -81,7 +81,7 @@ public class HttpTracingClientTest {
     @Test
     public void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
         HttpTracingClient.newDecorator(
-                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.INSTANCE).build());
+                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.DEFAULT).build());
     }
 
     @Test(timeout = 20000)

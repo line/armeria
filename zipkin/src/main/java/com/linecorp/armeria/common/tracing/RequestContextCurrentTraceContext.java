@@ -50,7 +50,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * Use this singleton when building a {@link brave.Tracing} instance for use with
      * {@link HttpTracingService} or {@link HttpTracingClient}.
      *
-     * <p>If you need to customize the context, use {@linkplain #newBuilder()} instead.
+     * <p>If you need to customize the context, use {@link #newBuilder()} instead.
      *
      * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
      */
@@ -62,7 +62,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * @deprecated Please use {@link #DEFAULT} or {@link #newBuilder()} to customize an instance.
      */
     @Deprecated
-    public static final CurrentTraceContext INSTANCE = new RequestContextCurrentTraceContext(new Builder());
+    public static final CurrentTraceContext INSTANCE = DEFAULT;
 
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
