@@ -7,7 +7,7 @@
 
    https://oss.sonatype.org/
 
-3. Close the milestone and set its release date at:
+3. Close the milestone and set its due date with the date of the release at:
 
    https://github.com/line/armeria/milestones
 
@@ -23,4 +23,12 @@
    rsync -aiP --exclude '.*' ../upstream-armeria/site/build/site/ .
    git add -A .
    git commit --amend -m 'Deploy the web site'
+   git push --force
+
+6. Copy the examples to armeria-examples using the script:
+
+   cd ../armeria-examples
+   ./update-examples.sh ${releaseVersion} ../upstream-armeria
+   git add -A .
+   git commit -m 'Update Armeria version to ${releaseVersion}'
    git push --force
