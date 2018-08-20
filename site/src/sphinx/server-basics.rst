@@ -160,7 +160,7 @@ You can also add an HTTPS port with your certificate and its private key files:
 PROXY protocol
 --------------
 
-Armeria supports both text (v1) and binary (v2) versions of `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt/>`_.
+Armeria supports both text (v1) and binary (v2) versions of `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>`_.
 If your server is behind a load balancer such as `HAProxy <https://www.haproxy.org/>`_ and
 `AWS ELB <https://aws.amazon.com/elasticloadbalancing/>`_, you could consider enabling the PROXY protocol:
 
