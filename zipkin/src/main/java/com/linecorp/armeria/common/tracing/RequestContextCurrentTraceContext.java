@@ -50,9 +50,20 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * Use this singleton when building a {@link brave.Tracing} instance for use with
      * {@link HttpTracingService} or {@link HttpTracingClient}.
      *
+     * <p>If you need to customize the context, use {@link #newBuilder()} instead.
+     *
      * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
      */
-    public static final CurrentTraceContext INSTANCE = new RequestContextCurrentTraceContext();
+    public static final CurrentTraceContext DEFAULT = new RequestContextCurrentTraceContext(new Builder());
+
+    /**
+     * Singleton retained for backwards compatibility, but replaced by {@link #DEFAULT}.
+     *
+     * @deprecated Please use {@link #DEFAULT} or {@link #newBuilder()} to customize an instance.
+     */
+    @Deprecated
+    public static final CurrentTraceContext INSTANCE = DEFAULT;
+
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.valueOf(RequestContextCurrentTraceContext.class, "TRACE_CONTEXT");
@@ -79,6 +90,27 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return "InitialRequestScope";
         }
     };
+
+    static final class Builder extends CurrentTraceContext.Builder {
+
+        @Override
+        public CurrentTraceContext build() {
+            return new RequestContextCurrentTraceContext(this);
+        }
+
+        Builder() {
+        }
+    }
+
+    /**
+     * Use this when you need customizations such as log integration via
+     * {@linkplain Builder#addScopeDecorator(ScopeDecorator)}.
+     *
+     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
+     */
+    public static CurrentTraceContext.Builder newBuilder() {
+        return new Builder();
+    }
 
     /**
      * Ensures the specified {@link Tracing} uses a {@link RequestContextCurrentTraceContext}.
@@ -160,7 +192,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         return RequestContext.mapCurrent(r -> r.attr(TRACE_CONTEXT_KEY), LogRequestContextWarningOnce.INSTANCE);
     }
 
-    private RequestContextCurrentTraceContext() {
+    private RequestContextCurrentTraceContext(Builder builder) {
+        super(builder);
     }
 
     private enum LogRequestContextWarningOnce implements Supplier<Attribute<TraceContext>> {
