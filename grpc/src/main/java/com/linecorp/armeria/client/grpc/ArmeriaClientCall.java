@@ -164,7 +164,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(req.headers(), compressor);
         listener = responseListener;
         final HttpResponse res;
-        try {
+        try (SafeCloseable ignored = ctx.push()) {
             res = httpClient.execute(ctx, req);
         } catch (Exception e) {
             close(Status.fromThrowable(e));
@@ -245,7 +245,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             req.write(messageFramer.writePayload(serialized));
             req.onDemand(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    try {
+                    try (SafeCloseable ignored = ctx.push()) {
                         listener.onReady();
                     } catch (Throwable t) {
                         close(Status.fromThrowable(t));
