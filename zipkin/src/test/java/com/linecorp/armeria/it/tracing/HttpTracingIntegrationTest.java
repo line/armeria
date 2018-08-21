@@ -67,6 +67,8 @@ import com.linecorp.armeria.testing.server.ServerRule;
 
 import brave.ScopedSpan;
 import brave.Tracing;
+import brave.propagation.CurrentTraceContext;
+import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
 import zipkin2.Span;
 import zipkin2.reporter.Reporter;
@@ -196,8 +198,12 @@ public class HttpTracingIntegrationTest {
     }
 
     private static Tracing newTracing(String name) {
+        final CurrentTraceContext currentTraceContext =
+                RequestContextCurrentTraceContext.newBuilder()
+                                                 .addScopeDecorator(StrictScopeDecorator.create())
+                                                 .build();
         return Tracing.newBuilder()
-                      .currentTraceContext(RequestContextCurrentTraceContext.INSTANCE)
+                      .currentTraceContext(currentTraceContext)
                       .localServiceName(name)
                       .spanReporter(spanReporter)
                       .sampler(Sampler.ALWAYS_SAMPLE)

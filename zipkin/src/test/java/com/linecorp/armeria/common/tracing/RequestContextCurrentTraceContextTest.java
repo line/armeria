@@ -51,7 +51,7 @@ public class RequestContextCurrentTraceContextTest {
     @Mock(answer = Answers.CALLS_REAL_METHODS)
     RequestContext mockRequestContext2;
 
-    final CurrentTraceContext currentTraceContext = RequestContextCurrentTraceContext.INSTANCE;
+    final CurrentTraceContext currentTraceContext = RequestContextCurrentTraceContext.DEFAULT;
     final DefaultAttributeMap attrs1 = new DefaultAttributeMap();
     final DefaultAttributeMap attrs2 = new DefaultAttributeMap();
     final TraceContext traceContext = TraceContext.newBuilder().traceId(1).spanId(1).build();
