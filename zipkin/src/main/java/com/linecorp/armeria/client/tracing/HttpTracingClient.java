@@ -43,7 +43,6 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.propagation.TraceContext;
-import zipkin2.Endpoint;
 
 /**
  * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
@@ -120,10 +119,14 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
 
         final SocketAddress remoteAddress = log.context().remoteAddress();
         final InetAddress address;
+        final int port;
         if (remoteAddress instanceof InetSocketAddress) {
-            address = ((InetSocketAddress) remoteAddress).getAddress();
+            final InetSocketAddress socketAddress = (InetSocketAddress) remoteAddress;
+            address = socketAddress.getAddress();
+            port = socketAddress.getPort();
         } else {
             address = null;
+            port = 0;
         }
 
         final String remoteServiceName;
@@ -140,10 +143,11 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
             }
         }
 
-        if (remoteServiceName == null && address == null) {
-            return;
+        if (remoteServiceName != null) {
+            span.remoteServiceName(remoteServiceName);
         }
-
-        span.remoteEndpoint(Endpoint.newBuilder().serviceName(remoteServiceName).ip(address).build());
+        if (address != null) {
+            span.remoteIpAndPort(address.getHostAddress(), port);
+        }
     }
 }
