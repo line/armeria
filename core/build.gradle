@@ -43,6 +43,7 @@ sourceSets {
 
 // Run HttpServerStreamingTest separately with memory constraint.
 tasks.test.exclude '**/HttpServerStreamingTest**'
+tasks.shadedTest.exclude '**/HttpServerStreamingTest**'
 task testStreaming(type: Test,
                    group: 'Verification',
                    description: 'Runs the streaming tests.') {

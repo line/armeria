@@ -154,7 +154,7 @@ public abstract class AbstractThriftOverHttpTest {
 
     @AfterClass
     public static void destroy() throws Exception {
-        server.stop();
+        server.stop().get();
     }
 
     @Before
