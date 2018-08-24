@@ -97,12 +97,6 @@ public final class Server implements AutoCloseable {
     @Nullable
     private ServerBootstrap serverBootstrap;
 
-    /**
-     * A handler that is shared by all ports and channels to be able to keep
-     * track of all requests being processed by the server.
-     */
-    private volatile GracefulShutdownSupport gracefulShutdownSupport = GracefulShutdownSupport.disabled();
-
     Server(ServerConfig config, @Nullable DomainNameMapping<SslContext> sslContexts) {
         this.config = requireNonNull(config, "config");
         this.sslContexts = sslContexts;
@@ -269,16 +263,14 @@ public final class Server implements AutoCloseable {
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, ServerListener> {
 
+        private volatile GracefulShutdownSupport gracefulShutdownSupport = GracefulShutdownSupport.disabled();
+
         ServerStartStopSupport() {
             super(GlobalEventExecutor.INSTANCE);
         }
 
         @Override
         protected CompletionStage<Void> doStart() throws Exception {
-            final CompletableFuture<Void> future = new CompletableFuture<>();
-            // Initialize the server sockets asynchronously.
-            final List<ServerPort> ports = config().ports();
-            final AtomicInteger remainingPorts = new AtomicInteger(ports.size());
             if (config().gracefulShutdownQuietPeriod().isZero()) {
                 gracefulShutdownSupport = GracefulShutdownSupport.disabled();
             } else {
@@ -287,6 +279,10 @@ public final class Server implements AutoCloseable {
                                                        config().blockingTaskExecutor());
             }
 
+            // Initialize the server sockets asynchronously.
+            final CompletableFuture<Void> future = new CompletableFuture<>();
+            final List<ServerPort> ports = config().ports();
+            final AtomicInteger remainingPorts = new AtomicInteger(ports.size());
             for (final ServerPort p: ports) {
                 doStart(p).addListener(new ServerPortStartListener(remainingPorts, future, p));
             }
@@ -333,7 +329,7 @@ public final class Server implements AutoCloseable {
         @Override
         protected CompletionStage<Void> doStop() throws Exception {
             final CompletableFuture<Void> future = new CompletableFuture<>();
-            final GracefulShutdownSupport gracefulShutdownSupport = Server.this.gracefulShutdownSupport;
+            final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             if (gracefulShutdownSupport.completedQuietPeriod()) {
                 doStop(future, null);
                 return future;
