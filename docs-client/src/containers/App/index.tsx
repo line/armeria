@@ -15,6 +15,7 @@
  */
 
 import AppBar from '@material-ui/core/AppBar';
+import Collapse from '@material-ui/core/Collapse';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Drawer from '@material-ui/core/Drawer';
 import Hidden from '@material-ui/core/Hidden';
@@ -31,6 +32,8 @@ import {
 } from '@material-ui/core/styles';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
+import ExpandLess from '@material-ui/icons/ExpandLess';
+import ExpandMore from '@material-ui/icons/ExpandMore';
 import MenuIcon from '@material-ui/icons/Menu';
 import React from 'react';
 import Helmet from 'react-helmet';
@@ -88,6 +91,10 @@ const styles = (theme: Theme) =>
 interface State {
   mobileDrawerOpen: boolean;
   specification?: Specification;
+  servicesState: boolean;
+  enumsState: boolean;
+  structsState: boolean;
+  exceptionsState: boolean;
 }
 
 type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
@@ -95,120 +102,144 @@ type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
 interface AppDrawerProps extends WithStyles<typeof styles> {
   specification: Specification;
   navigateTo: (url: string) => void;
+  state: State;
+  handleCollapse: (itemName: string) => void;
 }
 
-function AppDrawer({ classes, navigateTo, specification }: AppDrawerProps) {
+function AppDrawer({
+  classes,
+  navigateTo,
+  specification,
+  state,
+  handleCollapse,
+}: AppDrawerProps) {
   return (
     <List component="nav">
       {specification.getServices().length > 0 && (
         <>
-          <ListItem>
+          <ListItem button onClick={() => handleCollapse('services')}>
             <ListItemText disableTypography>
               <Typography variant="headline">Services</Typography>
             </ListItemText>
+            {state.servicesState ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          {specification.getServices().map((service) => (
-            <div key={service.name}>
-              <ListSubheader className={classes.methodHeader}>
-                <Typography variant="subheading">
-                  <code>{simpleName(service.name)}</code>
-                </Typography>
-              </ListSubheader>
-              {service.methods.map((method) => (
-                <ListItem
-                  key={`${service.name}/${method.name}`}
-                  button
-                  onClick={() =>
-                    navigateTo(`/methods/${service.name}/${method.name}`)
-                  }
-                >
-                  <ListItemText
-                    inset
-                    primaryTypographyProps={{
-                      variant: 'body1',
-                    }}
+          <Collapse in={state.servicesState} timeout="auto" unmountOnExit>
+            {specification.getServices().map((service) => (
+              <div key={service.name}>
+                <ListSubheader className={classes.methodHeader}>
+                  <Typography variant="subheading">
+                    <code>{simpleName(service.name)}</code>
+                  </Typography>
+                </ListSubheader>
+                {service.methods.map((method) => (
+                  <ListItem
+                    dense
+                    key={`${service.name}/${method.name}`}
+                    button
+                    onClick={() =>
+                      navigateTo(`/methods/${service.name}/${method.name}`)
+                    }
                   >
-                    <code>{method.name}()</code>
-                  </ListItemText>
-                </ListItem>
-              ))}
-            </div>
-          ))}
+                    <ListItemText
+                      inset
+                      primaryTypographyProps={{
+                        variant: 'body1',
+                      }}
+                    >
+                      <code>{method.name}()</code>
+                    </ListItemText>
+                  </ListItem>
+                ))}
+              </div>
+            ))}
+          </Collapse>
         </>
       )}
       {specification.getEnums().length > 0 && (
         <>
-          <ListItem>
+          <ListItem button onClick={() => handleCollapse('enums')}>
             <ListItemText disableTypography>
               <Typography variant="headline">Enums</Typography>
             </ListItemText>
+            {state.enumsState ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          {specification.getEnums().map((enm) => (
-            <ListItem
-              key={enm.name}
-              button
-              onClick={() => navigateTo(`/enums/${enm.name}`)}
-            >
-              <ListItemText
-                inset
-                primaryTypographyProps={{
-                  variant: 'body1',
-                }}
+          <Collapse in={state.enumsState} timeout="auto" unmountOnExit>
+            {specification.getEnums().map((enm) => (
+              <ListItem
+                dense
+                key={enm.name}
+                button
+                onClick={() => navigateTo(`/enums/${enm.name}`)}
               >
-                <code>{simpleName(enm.name)}</code>
-              </ListItemText>
-            </ListItem>
-          ))}
+                <ListItemText
+                  inset
+                  primaryTypographyProps={{
+                    variant: 'body1',
+                  }}
+                >
+                  <code>{simpleName(enm.name)}</code>
+                </ListItemText>
+              </ListItem>
+            ))}
+          </Collapse>
         </>
       )}
       {specification.getStructs().length > 0 && (
         <>
-          <ListItem>
+          <ListItem button onClick={() => handleCollapse('structs')}>
             <ListItemText disableTypography>
               <Typography variant="headline">Structs</Typography>
             </ListItemText>
+            {state.structsState ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          {specification.getStructs().map((struct) => (
-            <ListItem
-              key={struct.name}
-              button
-              onClick={() => navigateTo(`/structs/${struct.name}`)}
-            >
-              <ListItemText
-                inset
-                primaryTypographyProps={{
-                  variant: 'body1',
-                }}
+          <Collapse in={state.structsState} timeout="auto" unmountOnExit>
+            {specification.getStructs().map((struct) => (
+              <ListItem
+                dense
+                key={struct.name}
+                button
+                onClick={() => navigateTo(`/structs/${struct.name}`)}
               >
-                <code>{simpleName(struct.name)}</code>
-              </ListItemText>
-            </ListItem>
-          ))}
+                <ListItemText
+                  inset
+                  primaryTypographyProps={{
+                    variant: 'body1',
+                  }}
+                >
+                  <code>{simpleName(struct.name)}</code>
+                </ListItemText>
+              </ListItem>
+            ))}
+          </Collapse>
         </>
       )}
       {specification.getExceptions().length > 0 && (
         <>
-          <ListItem>
+          <ListItem button onClick={() => handleCollapse('exceptions')}>
             <ListItemText disableTypography>
               <Typography variant="headline">Exceptions</Typography>
             </ListItemText>
+            {state.exceptionsState ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          {specification.getExceptions().map((struct) => (
-            <ListItem
-              key={struct.name}
-              button
-              onClick={() => navigateTo(`/structs/${struct.name}`)}
-            >
-              <ListItemText
-                inset
-                primaryTypographyProps={{
-                  variant: 'body1',
-                }}
+          <Collapse in={state.exceptionsState} timeout="auto" unmountOnExit>
+            {specification.getExceptions().map((struct) => (
+              <ListItem
+                dense
+                key={struct.name}
+                button
+                onClick={() => navigateTo(`/structs/${struct.name}`)}
               >
-                <code>{simpleName(struct.name)}</code>
-              </ListItemText>
-            </ListItem>
-          ))}
+                <ListItemText
+                  inset
+                  primaryTypographyProps={{
+                    variant: 'body1',
+                  }}
+                >
+                  <code>{simpleName(struct.name)}</code>
+                </ListItemText>
+              </ListItem>
+            ))}
+          </Collapse>
         </>
       )}
     </List>
@@ -219,6 +250,10 @@ class App extends React.PureComponent<Props, State> {
   public state: State = {
     mobileDrawerOpen: false,
     specification: undefined,
+    servicesState: true,
+    enumsState: true,
+    structsState: true,
+    exceptionsState: true,
   };
 
   public componentWillMount() {
@@ -280,6 +315,10 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={(url: string) => this.navigateTo(url)}
+              state={this.state}
+              handleCollapse={(itemName: string) =>
+                this.handleCollapse(itemName)
+              }
             />
           </Drawer>
         </Hidden>
@@ -297,6 +336,10 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={(url: string) => this.navigateTo(url)}
+              state={this.state}
+              handleCollapse={(itemName: string) =>
+                this.handleCollapse(itemName)
+              }
             />
           </Drawer>
         </Hidden>
@@ -351,6 +394,31 @@ class App extends React.PureComponent<Props, State> {
       mobileDrawerOpen: !this.state.mobileDrawerOpen,
     });
   };
+
+  private handleCollapse(itemName: string) {
+    switch (itemName) {
+      case 'services':
+        this.setState({
+          servicesState: !this.state.servicesState,
+        });
+        break;
+      case 'enums':
+        this.setState({
+          enumsState: !this.state.enumsState,
+        });
+        break;
+      case 'structs':
+        this.setState({
+          structsState: !this.state.structsState,
+        });
+        break;
+      case 'exceptions':
+        this.setState({
+          exceptionsState: !this.state.exceptionsState,
+        });
+        break;
+    }
+  }
 }
 
 export default hot(module)(withRouter(withStyles(styles)(App)));
