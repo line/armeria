@@ -314,7 +314,7 @@ class App extends React.PureComponent<Props, State> {
             <AppDrawer
               classes={classes}
               specification={specification}
-              navigateTo={(url: string) => this.navigateTo(url)}
+              navigateTo={this.navigateTo}
               state={this.state}
               handleCollapse={this.handleCollapse}
             />
@@ -333,11 +333,9 @@ class App extends React.PureComponent<Props, State> {
             <AppDrawer
               classes={classes}
               specification={specification}
-              navigateTo={(url: string) => this.navigateTo(url)}
+              navigateTo={this.navigateTo}
               state={this.state}
-              handleCollapse={(itemName: string) =>
-                this.handleCollapse(itemName)
-              }
+              handleCollapse={this.handleCollapse}
             />
           </Drawer>
         </Hidden>
@@ -367,7 +365,7 @@ class App extends React.PureComponent<Props, State> {
     );
   }
 
-  private navigateTo(to: string) {
+  private navigateTo = (to: string) => {
     const params = new URLSearchParams(this.props.location.search);
     params.delete('args');
     const url = params.has('http_headers_sticky')
@@ -377,7 +375,7 @@ class App extends React.PureComponent<Props, State> {
     this.setState({
       mobileDrawerOpen: false,
     });
-  }
+  };
 
   private fetchSpecification = async () => {
     const httpResponse = await fetch('specification.json');
@@ -416,7 +414,7 @@ class App extends React.PureComponent<Props, State> {
         });
         break;
     }
-  }
+  };
 }
 
 export default hot(module)(withRouter(withStyles(styles)(App)));
