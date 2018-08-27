@@ -102,7 +102,10 @@ type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
 interface AppDrawerProps extends WithStyles<typeof styles> {
   specification: Specification;
   navigateTo: (url: string) => void;
-  state: State;
+  servicesOpen: boolean;
+  enumsOpen: boolean;
+  structsOpen: boolean;
+  exceptionsOpen: boolean;
   handleCollapse: (itemName: string) => void;
 }
 
@@ -110,7 +113,10 @@ function AppDrawer({
   classes,
   navigateTo,
   specification,
-  state,
+  servicesOpen,
+  enumsOpen,
+  structsOpen,
+  exceptionsOpen,
   handleCollapse,
 }: AppDrawerProps) {
   return (
@@ -121,9 +127,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Services</Typography>
             </ListItemText>
-            {state.servicesOpen ? <ExpandLess /> : <ExpandMore />}
+            {servicesOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={state.servicesOpen} timeout="auto" unmountOnExit>
+          <Collapse in={servicesOpen} timeout="auto">
             {specification.getServices().map((service) => (
               <div key={service.name}>
                 <ListSubheader className={classes.methodHeader}>
@@ -161,9 +167,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Enums</Typography>
             </ListItemText>
-            {state.enumsOpen ? <ExpandLess /> : <ExpandMore />}
+            {enumsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={state.enumsOpen} timeout="auto" unmountOnExit>
+          <Collapse in={enumsOpen} timeout="auto">
             {specification.getEnums().map((enm) => (
               <ListItem
                 dense
@@ -190,9 +196,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Structs</Typography>
             </ListItemText>
-            {state.structsOpen ? <ExpandLess /> : <ExpandMore />}
+            {structsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={state.structsOpen} timeout="auto" unmountOnExit>
+          <Collapse in={structsOpen} timeout="auto">
             {specification.getStructs().map((struct) => (
               <ListItem
                 dense
@@ -219,9 +225,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Exceptions</Typography>
             </ListItemText>
-            {state.exceptionsOpen ? <ExpandLess /> : <ExpandMore />}
+            {exceptionsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={state.exceptionsOpen} timeout="auto" unmountOnExit>
+          <Collapse in={exceptionsOpen} timeout="auto">
             {specification.getExceptions().map((struct) => (
               <ListItem
                 dense
@@ -315,7 +321,10 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={this.navigateTo}
-              state={this.state}
+              servicesOpen={this.state.servicesOpen}
+              enumsOpen={this.state.enumsOpen}
+              structsOpen={this.state.structsOpen}
+              exceptionsOpen={this.state.exceptionsOpen}
               handleCollapse={this.handleCollapse}
             />
           </Drawer>
@@ -334,7 +343,10 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={this.navigateTo}
-              state={this.state}
+              servicesOpen={this.state.servicesOpen}
+              enumsOpen={this.state.enumsOpen}
+              structsOpen={this.state.structsOpen}
+              exceptionsOpen={this.state.exceptionsOpen}
               handleCollapse={this.handleCollapse}
             />
           </Drawer>
