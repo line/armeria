@@ -91,10 +91,10 @@ const styles = (theme: Theme) =>
 interface State {
   mobileDrawerOpen: boolean;
   specification?: Specification;
-  servicesState: boolean;
-  enumsState: boolean;
-  structsState: boolean;
-  exceptionsState: boolean;
+  servicesOpen: boolean;
+  enumsOpen: boolean;
+  structsOpen: boolean;
+  exceptionsOpen: boolean;
 }
 
 type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
@@ -121,9 +121,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Services</Typography>
             </ListItemText>
-            {state.servicesState ? <ExpandLess /> : <ExpandMore />}
+            {state.servicesOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={state.servicesState} timeout="auto" unmountOnExit>
+          <Collapse in={state.servicesOpen} timeout="auto" unmountOnExit>
             {specification.getServices().map((service) => (
               <div key={service.name}>
                 <ListSubheader className={classes.methodHeader}>
@@ -161,9 +161,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Enums</Typography>
             </ListItemText>
-            {state.enumsState ? <ExpandLess /> : <ExpandMore />}
+            {state.enumsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={state.enumsState} timeout="auto" unmountOnExit>
+          <Collapse in={state.enumsOpen} timeout="auto" unmountOnExit>
             {specification.getEnums().map((enm) => (
               <ListItem
                 dense
@@ -190,9 +190,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Structs</Typography>
             </ListItemText>
-            {state.structsState ? <ExpandLess /> : <ExpandMore />}
+            {state.structsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={state.structsState} timeout="auto" unmountOnExit>
+          <Collapse in={state.structsOpen} timeout="auto" unmountOnExit>
             {specification.getStructs().map((struct) => (
               <ListItem
                 dense
@@ -219,9 +219,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Exceptions</Typography>
             </ListItemText>
-            {state.exceptionsState ? <ExpandLess /> : <ExpandMore />}
+            {state.exceptionsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={state.exceptionsState} timeout="auto" unmountOnExit>
+          <Collapse in={state.exceptionsOpen} timeout="auto" unmountOnExit>
             {specification.getExceptions().map((struct) => (
               <ListItem
                 dense
@@ -250,10 +250,10 @@ class App extends React.PureComponent<Props, State> {
   public state: State = {
     mobileDrawerOpen: false,
     specification: undefined,
-    servicesState: true,
-    enumsState: true,
-    structsState: true,
-    exceptionsState: true,
+    servicesOpen: true,
+    enumsOpen: true,
+    structsOpen: true,
+    exceptionsOpen: true,
   };
 
   public componentWillMount() {
@@ -316,9 +316,7 @@ class App extends React.PureComponent<Props, State> {
               specification={specification}
               navigateTo={(url: string) => this.navigateTo(url)}
               state={this.state}
-              handleCollapse={(itemName: string) =>
-                this.handleCollapse(itemName)
-              }
+              handleCollapse={this.handleCollapse}
             />
           </Drawer>
         </Hidden>
@@ -395,26 +393,26 @@ class App extends React.PureComponent<Props, State> {
     });
   };
 
-  private handleCollapse(itemName: string) {
+  private handleCollapse = (itemName: string) => {
     switch (itemName) {
       case 'services':
         this.setState({
-          servicesState: !this.state.servicesState,
+          servicesOpen: !this.state.servicesOpen,
         });
         break;
       case 'enums':
         this.setState({
-          enumsState: !this.state.enumsState,
+          enumsOpen: !this.state.enumsOpen,
         });
         break;
       case 'structs':
         this.setState({
-          structsState: !this.state.structsState,
+          structsOpen: !this.state.structsOpen,
         });
         break;
       case 'exceptions':
         this.setState({
-          exceptionsState: !this.state.exceptionsState,
+          exceptionsOpen: !this.state.exceptionsOpen,
         });
         break;
     }
