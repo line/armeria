@@ -23,7 +23,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.BindException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -317,8 +316,7 @@ public class ServerTest {
                 .service("/", (ctx, res) -> HttpResponse.of(""))
                 .build();
         assertThatThrownBy(() -> duplicatedPortServer.start().join())
-                .hasCauseInstanceOf(BindException.class)
-                .hasMessageContaining("Address already in use");
+                .hasCauseInstanceOf(IOException.class);
     }
 
     private static void testSimple(
