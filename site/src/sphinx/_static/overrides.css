@@ -267,9 +267,13 @@ code .plural-suffix {
 /* highlightjs style begins */
 div.hljs {
   background: inherit;
+  padding: 0;
 }
 pre.hljs {
   background: rgba(0, 0, 0, 0.01); /* 1% darker background */
+}
+td.hljs-ln-numbers, td.hljs-ln-code {
+  line-height: 1.067em;
 }
 td.hljs-ln-numbers {
   -webkit-touch-callout: none;
