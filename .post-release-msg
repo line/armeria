@@ -30,5 +30,5 @@
    cd ../armeria-examples
    ./update-examples.sh ${releaseVersion} ../upstream-armeria
    git add -A .
-   git commit -m 'Update Armeria version to ${releaseVersion}'
+   git commit -m 'Update Armeria to ${releaseVersion}'
    git push
