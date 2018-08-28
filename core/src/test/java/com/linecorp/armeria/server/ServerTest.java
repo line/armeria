@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
@@ -306,6 +307,16 @@ public class ServerTest {
     @Test
     public void testUnsupportedMethod() throws Exception {
         testSimple("WHOA / HTTP/1.1", "HTTP/1.1 405 Method Not Allowed");
+    }
+
+    @Test
+    public void duplicatedPort() {
+        Server duplicatedPortServer = new ServerBuilder()
+                .http(server.httpPort())
+                .service("/", (ctx, res) -> HttpResponse.of(""))
+                .build();
+        assertThatThrownBy(() -> duplicatedPortServer.start().join())
+                .hasCauseInstanceOf(IOException.class);
     }
 
     private static void testSimple(

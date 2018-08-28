@@ -397,6 +397,12 @@ public final class Server implements AutoCloseable {
                     }
 
                     workerShutdownFuture.addListener(unused5 -> {
+                        // If starts to shutdown before initializing serverChannels, completes the future
+                        // immediately.
+                        if (serverChannels.size() == 0) {
+                            future.complete(null);
+                            return;
+                        }
                         // Shut down all boss groups and wait until they are terminated.
                         final AtomicInteger remainingBossGroups = new AtomicInteger(serverChannels.size());
                         serverChannels.forEach(ch -> {
