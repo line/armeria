@@ -26,37 +26,37 @@ import io.reactivex.internal.observers.BasicFuseableObserver;
 final class RequestContextObserver<T> extends BasicFuseableObserver<T, T> {
     private final RequestContext assemblyContext;
 
-    RequestContextObserver(Observer<? super T> actual, RequestContext assemblyContext) {
-        super(actual);
+    RequestContextObserver(Observer<? super T> downstream, RequestContext assemblyContext) {
+        super(downstream);
         this.assemblyContext = assemblyContext;
     }
 
     @Override
     public void onNext(T t) {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onNext(t);
+            downstream.onNext(t);
         }
     }
 
     @Override
     public void onError(Throwable t) {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onError(t);
+            downstream.onError(t);
         }
     }
 
     @Override
     public void onComplete() {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onComplete();
+            downstream.onComplete();
         }
     }
 
     @Override
     public int requestFusion(int mode) {
-        final QueueDisposable<T> qs = this.qs;
-        if (qs != null) {
-            final int m = qs.requestFusion(mode);
+        final QueueDisposable<T> qd = this.qd;
+        if (qd != null) {
+            final int m = qd.requestFusion(mode);
             sourceMode = m;
             return m;
         }
@@ -65,6 +65,6 @@ final class RequestContextObserver<T> extends BasicFuseableObserver<T, T> {
 
     @Override
     public T poll() throws Exception {
-        return qs.poll();
+        return qd.poll();
     }
 }
