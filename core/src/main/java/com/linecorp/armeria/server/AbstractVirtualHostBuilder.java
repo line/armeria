@@ -92,15 +92,15 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
             process = Runtime.getRuntime().exec("hostname");
             final String line = new BufferedReader(new InputStreamReader(process.getInputStream())).readLine();
             if (line == null) {
-                logger.warn("The 'hostname' command returned nothing; " +
-                            "using InetAddress.getLocalHost() instead");
+                logger.debug("The 'hostname' command returned nothing; " +
+                             "using InetAddress.getLocalHost() instead");
             } else {
                 hostname = normalizeDefaultHostname(line.trim());
-                logger.info("Hostname: {} (via 'hostname' command)", hostname);
+                logger.info("Hostname: {} (from 'hostname' command)", hostname);
             }
         } catch (Exception e) {
-            logger.warn("Failed to get the hostname using the 'hostname' command; " +
-                        "using InetAddress.getLocalHost() instead", e);
+            logger.debug("Failed to get the hostname using the 'hostname' command; " +
+                         "using InetAddress.getLocalHost() instead", e);
         } finally {
             if (process != null) {
                 process.destroy();
@@ -110,7 +110,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         if (hostname == null) {
             try {
                 hostname = normalizeDefaultHostname(InetAddress.getLocalHost().getHostName());
-                logger.info("Hostname: {} (via InetAddress.getLocalHost())", hostname);
+                logger.info("Hostname: {} (from InetAddress.getLocalHost())", hostname);
             } catch (Exception e) {
                 hostname = "localhost";
                 logger.warn("Failed to get the hostname using InetAddress.getLocalHost(); " +
