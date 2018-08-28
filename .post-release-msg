@@ -20,7 +20,7 @@
    cd ../site-armeria
    git checkout gh-pages
    rm -fr .buildinfo .doctrees .gradle *
-   rsync -aiP --exclude '.*' ../upstream-armeria/site/build/site/ .
+   rsync -aiP --exclude '.*' --exclude 'fonts' ../upstream-armeria/site/build/site/ .
    git add -A .
    git commit --amend -m 'Deploy the web site'
    git push --force
@@ -31,4 +31,4 @@
    ./update-examples.sh ${releaseVersion} ../upstream-armeria
    git add -A .
    git commit -m 'Update Armeria version to ${releaseVersion}'
-   git push --force
+   git push
