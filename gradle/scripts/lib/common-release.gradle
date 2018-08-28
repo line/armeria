@@ -106,7 +106,7 @@ task release(
         def postReleaseMessageFile = new File("${rootDir}", '.post-release-msg')
         if (postReleaseMessageFile.exists()) {
             println '-' * (tag.length() + 8)
-            print new SimpleTemplateEngine().createTemplate(postReleaseMessageFile).make([tag: tag])
+            print new SimpleTemplateEngine().createTemplate(postReleaseMessageFile).make([tag: tag, releaseVersion: releaseVersion])
         }
     }
 }
