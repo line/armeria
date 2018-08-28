@@ -83,6 +83,9 @@ public final class Tomcat90ProtocolHandler implements ProtocolHandler {
     public void destroy() {}
 
     @Override
+    public void closeServerSocketGraceful() {}
+
+    @Override
     public boolean isAprRequired() {
         return false;
     }

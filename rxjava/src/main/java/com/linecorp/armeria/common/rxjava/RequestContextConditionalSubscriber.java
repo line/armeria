@@ -27,37 +27,37 @@ final class RequestContextConditionalSubscriber<T> extends BasicFuseableConditio
 
     private final RequestContext assemblyContext;
 
-    RequestContextConditionalSubscriber(ConditionalSubscriber<? super T> actual,
+    RequestContextConditionalSubscriber(ConditionalSubscriber<? super T> downstream,
                                         RequestContext assemblyContext) {
-        super(actual);
+        super(downstream);
         this.assemblyContext = assemblyContext;
     }
 
     @Override
     public boolean tryOnNext(T t) {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            return actual.tryOnNext(t);
+            return downstream.tryOnNext(t);
         }
     }
 
     @Override
     public void onNext(T t) {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onNext(t);
+            downstream.onNext(t);
         }
     }
 
     @Override
     public void onError(Throwable t) {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onError(t);
+            downstream.onError(t);
         }
     }
 
     @Override
     public void onComplete() {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onComplete();
+            downstream.onComplete();
         }
     }
 

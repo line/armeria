@@ -141,7 +141,7 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.28.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.29.Final' }
   netty-codec-haproxy: { version: *NETTY_VERSION }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
@@ -151,7 +151,7 @@ io.netty:
     - https://netty.io/4.1/api/
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.12.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.14.Final' }
 
 io.prometheus:
   simpleclient_common:
@@ -161,7 +161,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.0'
+    version: '2.2.1'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -191,7 +191,7 @@ junit:
     - https://junit.org/junit4/javadoc/4.12/
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.2.2' }
+  sphinx-gradle-plugin: { version: '2.2.3' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -252,7 +252,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.10'
+    version: &TOMCAT_VERSION '9.0.11'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -267,7 +267,7 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.10.0' }
+  assertj-core: { version: '3.11.0' }
 
 org.awaitility:
   awaitility: { version: '3.1.2' }
@@ -309,7 +309,7 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.11.Final' }
+  hibernate-validator: { version: '6.0.12.Final' }
 
 org.jctools:
   jctools-core:

@@ -28,29 +28,29 @@ final class RequestContextSubscriber<T> extends BasicFuseableSubscriber<T, T> {
 
     private final RequestContext assemblyContext;
 
-    RequestContextSubscriber(Subscriber<? super T> actual, RequestContext assemblyContext) {
-        super(actual);
+    RequestContextSubscriber(Subscriber<? super T> downstream, RequestContext assemblyContext) {
+        super(downstream);
         this.assemblyContext = assemblyContext;
     }
 
     @Override
     public void onNext(T t) {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onNext(t);
+            downstream.onNext(t);
         }
     }
 
     @Override
     public void onError(Throwable t) {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onError(t);
+            downstream.onError(t);
         }
     }
 
     @Override
     public void onComplete() {
         try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
-            actual.onComplete();
+            downstream.onComplete();
         }
     }
 
