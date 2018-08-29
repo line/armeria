@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -214,23 +215,24 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void close() {
-            if (cancelTimeout()) {
-                delegate.close();
-                logBuilder.endResponse();
-            }
-
-            if (request != null) {
-                request.abort();
-            }
+            close0(null, this::closeAction);
         }
 
         @Override
         public void close(Throwable cause) {
+            close0(cause, this::closeAction);
+        }
+
+        void onSubscriptionCancelled() {
+            close0(null, this::cancelAction);
+        }
+
+        private void close0(@Nullable Throwable cause,
+                            Consumer<Throwable> actionOnTimeoutCancelled) {
             if (cancelTimeout()) {
-                delegate.close(cause);
-                logBuilder.endResponse(cause);
+                actionOnTimeoutCancelled.accept(cause);
             } else {
-                if (!Exceptions.isExpected(cause)) {
+                if (cause != null && !Exceptions.isExpected(cause)) {
                     logger.warn("Unexpected exception:", cause);
                 }
             }
@@ -238,6 +240,20 @@ abstract class HttpResponseDecoder {
             if (request != null) {
                 request.abort();
             }
+        }
+
+        private void closeAction(@Nullable Throwable cause) {
+            if (cause != null) {
+                delegate.close(cause);
+                logBuilder.endResponse(cause);
+            } else {
+                delegate.close();
+                logBuilder.endResponse();
+            }
+        }
+
+        private void cancelAction(@Nullable Throwable cause) {
+            logBuilder.endResponse();
         }
 
         @Override

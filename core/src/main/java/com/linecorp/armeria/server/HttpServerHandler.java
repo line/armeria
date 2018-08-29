@@ -420,6 +420,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
             }), eventLoop).exceptionally(CompletionActions::log);
 
+            // Set the response to the request in order to be able to immediately abort the response
+            // when the peer cancels the stream.
+            req.setResponse(res);
+
             assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =
                     new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, accessLogWriter);
