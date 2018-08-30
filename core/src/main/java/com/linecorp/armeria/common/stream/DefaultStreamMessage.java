@@ -67,7 +67,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, SubscriptionImpl>
             subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                    DefaultStreamMessage.class, SubscriptionImpl.class, "subscription");
+            DefaultStreamMessage.class, SubscriptionImpl.class, "subscription");
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, State> stateUpdater =
@@ -376,9 +376,19 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
         }
 
+        tryClose(cause);
+    }
+
+    /**
+     * Returns {@code true} if the state is successfully changed from {@link State#OPEN} to
+     * {@link State#CLOSED} and a close event is propagated.
+     */
+    protected final boolean tryClose(Throwable cause) {
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(new CloseEvent(cause));
+            return true;
         }
+        return false;
     }
 
     private boolean setState(State oldState, State newState) {

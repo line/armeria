@@ -124,6 +124,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
      */
     void setResponse(HttpResponse response) {
         if (isResponseAborted) {
+            // This means that we already tried to close the request, so abort the response immediately.
             if (!response.isComplete()) {
                 response.abort();
             }
@@ -138,10 +139,11 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
      * @see Http2RequestDecoder#onRstStreamRead(ChannelHandlerContext, int, long)
      */
     void abortResponse(Throwable cause) {
-        if (response != null && !response.isComplete()) {
+        isResponseAborted = true;
+        // Try to close the request first, then abort the response if it is already closed.
+        if (!tryClose(cause) &&
+            response != null && !response.isComplete()) {
             response.abort();
         }
-        isResponseAborted = true;
-        close(cause);
     }
 }
