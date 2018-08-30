@@ -380,8 +380,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     /**
-     * Returns {@code true} if the state is successfully changed from {@link State#OPEN} to
-     * {@link State#CLOSED} and a close event is propagated.
+     * Tries to close the stream with the specified {@code cause}.
+     *
+     * @return {@code true} if the stream has been closed by this method call.
+     *         {@code false} if the stream has been closed already by other party.
      */
     protected final boolean tryClose(Throwable cause) {
         if (setState(State.OPEN, State.CLOSED)) {

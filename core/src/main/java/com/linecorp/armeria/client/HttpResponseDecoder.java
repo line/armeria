@@ -213,22 +213,22 @@ abstract class HttpResponseDecoder {
             return delegate.onDemand(task);
         }
 
+        void onSubscriptionCancelled() {
+            close(null, this::cancelAction);
+        }
+
         @Override
         public void close() {
-            close0(null, this::closeAction);
+            close(null, this::closeAction);
         }
 
         @Override
         public void close(Throwable cause) {
-            close0(cause, this::closeAction);
+            close(cause, this::closeAction);
         }
 
-        void onSubscriptionCancelled() {
-            close0(null, this::cancelAction);
-        }
-
-        private void close0(@Nullable Throwable cause,
-                            Consumer<Throwable> actionOnTimeoutCancelled) {
+        private void close(@Nullable Throwable cause,
+                           Consumer<Throwable> actionOnTimeoutCancelled) {
             if (cancelTimeout()) {
                 actionOnTimeoutCancelled.accept(cause);
             } else {
