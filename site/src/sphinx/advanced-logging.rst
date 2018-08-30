@@ -27,7 +27,7 @@ For example, the following configuration:
         <export>remote.ip</export>
         <export>tls.cipher</export>
         <export>req.http_headers.user-agent</export>
-        <export>attrs.req_id:com.example.AttrKeys#SOME_VALUE</export>
+        <export>attrs.some_value:com.example.AttrKeys#SOME_VALUE</export>
         <!-- ... or alternatively:
         <exports>remote.ip, remote.port, tls.cipher,
                  req.http_headers.user-agent,
