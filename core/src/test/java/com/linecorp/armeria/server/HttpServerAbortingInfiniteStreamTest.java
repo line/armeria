@@ -47,6 +47,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 @RunWith(Parameterized.class)
@@ -87,8 +89,13 @@ public class HttpServerAbortingInfiniteStreamTest {
                 writer.completionFuture().whenComplete((unused, cause) -> {
                     // We are not expecting that this stream is successfully finished.
                     if (cause != null) {
+                        if (protocol == H1C) {
+                            assertThat(cause).isInstanceOf(CancelledSubscriptionException.class);
+                        } else {
+                            assertThat(cause).isInstanceOf(AbortedStreamException.class);
+                        }
                         if (isCompleted.compareAndSet(false, true)) {
-                            logger.debug("Infinite stream is completed");
+                            logger.debug("Infinite stream is completed", cause);
                         }
                     }
                 });
