@@ -66,6 +66,7 @@ import com.linecorp.armeria.server.tracing.HttpTracingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import brave.ScopedSpan;
+import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
@@ -125,14 +126,23 @@ public class HttpTracingIntegrationTest {
                     final ListenableFuture<List<Object>> spanAware = allAsList(IntStream.range(1, 3).mapToObj(
                             i -> executorService.submit(
                                     RequestContext.current().makeContextAware(() -> {
+                                        if (i == 2) {
+                                            countDownLatch.countDown();
+                                            countDownLatch.await();
+                                        }
                                         brave.Span span = Tracing.currentTracer().nextSpan().start();
-                                        countDownLatch.countDown();
-                                        countDownLatch.await();
-                                        try {
-                                            return null;
+                                        try (SpanInScope spanInScope =
+                                                     Tracing.currentTracer().withSpanInScope(span)) {
+                                            if (i == 1) {
+                                                countDownLatch.countDown();
+                                                countDownLatch.await();
+                                                // to wait second task get span.
+                                                Thread.sleep(1000L);
+                                            }
                                         } finally {
                                             span.finish();
                                         }
+                                        return null;
                                     }))).collect(toImmutableList()));
 
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
@@ -313,6 +323,7 @@ public class HttpTracingIntegrationTest {
         poolHttpClient.get("pool").aggregate().get();
         final Span[] spans = spanReporter.take(5);
         assertThat(Arrays.stream(spans).map(Span::traceId).collect(toImmutableSet())).hasSize(1);
+        assertThat(Arrays.stream(spans).map(Span::parentId).collect(toImmutableSet())).hasSize(1);
     }
 
     private static Span findSpan(Span[] spans, String serviceName) {

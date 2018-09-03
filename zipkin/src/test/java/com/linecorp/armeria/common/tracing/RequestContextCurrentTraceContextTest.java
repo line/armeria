@@ -20,7 +20,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,6 +48,7 @@ import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.ConcurrentSet;
 
 public class RequestContextCurrentTraceContextTest {
     @Rule
@@ -86,6 +94,42 @@ public class RequestContextCurrentTraceContextTest {
         try (SafeCloseable requestContextScope = mockRequestContext.push()) {
             assertThat(currentTraceContext.get()).isNull();
         }
+    }
+
+    @Test
+    public void newScopeInPool() throws Exception {
+        final Set<Long> parendIds = new ConcurrentSet<>();
+        final List<Future<?>> futures = new ArrayList<>();
+        final Random random = new Random();
+        final ExecutorService executorService = Executors.newCachedThreadPool();
+        try (SafeCloseable requestContextScope = mockRequestContext.push()) {
+            try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
+                for (int i = 0; i < 100; i++) {
+                    futures.add(executorService.submit(() -> {
+                        // makeContextAware
+                        try (SafeCloseable requestContextScopeInPool = mockRequestContext.push()) {
+                            final long parentId = currentTraceContext.get().spanId();
+                            parendIds.add(parentId);
+                            try (Scope scope = currentTraceContext.newScope(
+                                    TraceContext.newBuilder()
+                                                .traceId(1)
+                                                .parentId(parentId)
+                                                .spanId(random.nextInt())
+                                                .build())) {
+                                Thread.sleep(random.nextInt(100));
+                            } catch (InterruptedException ignored) {
+                            }
+                        }
+                    }));
+                }
+            }
+        }
+        // Wait all task finished
+        for (Future<?> future : futures) {
+            future.get();
+        }
+        // All tasks should has only 1 root parent(id=1)
+        assertThat(parendIds).containsExactly(1L);
     }
 
     @Test
