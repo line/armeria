@@ -137,6 +137,6 @@ public class HttpServerAbortingInfiniteStreamTest {
             public void onComplete() {}
         });
 
-        await().atMost(3, TimeUnit.SECONDS).untilTrue(isCompleted);
+        await().atMost(5, TimeUnit.SECONDS).untilTrue(isCompleted);
     }
 }
