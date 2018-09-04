@@ -73,18 +73,13 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
         resWrapper.completionFuture().whenComplete((unused, cause) -> {
-            if (cause != null) {
-                // Ensure that the resWrapper is closed.
-                // This is needed in case the response is aborted by the client.
-                resWrapper.close(cause);
+            // Cancel timeout future and abort the request if it exists.
+            resWrapper.onSubscriptionCancelled();
 
+            if (cause != null) {
                 // Disconnect when the response has been closed with an exception because there's no way
                 // to recover from it in HTTP/1.
                 channel().close();
-            } else {
-                // Ensure that the resWrapper is closed.
-                // This is needed in case the response is aborted by the client.
-                resWrapper.close();
             }
         });
 

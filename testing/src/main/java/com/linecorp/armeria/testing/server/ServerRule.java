@@ -227,6 +227,22 @@ public abstract class ServerRule extends ExternalResource {
         // This will ensure that the server has started.
         server();
 
+        return format.uriText() + '+' + uri(protocol, path);
+    }
+
+    /**
+     * Returns the URI for the {@link Server} of the specified protocol.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open a port of the protocol.
+     */
+    public String uri(SessionProtocol protocol, String path) {
+        requireNonNull(protocol, "protocol");
+        requireNonNull(path, "path");
+
+        // This will ensure that the server has started.
+        server();
+
         final int port;
         if (!protocol.isTls() && hasHttp()) {
             port = httpPort();
@@ -236,7 +252,7 @@ public abstract class ServerRule extends ExternalResource {
             throw new IllegalStateException("can't find the specified port");
         }
 
-        return format.uriText() + '+' + protocol.uriText() + "://127.0.0.1:" + port + path;
+        return protocol.uriText() + "://127.0.0.1:" + port + path;
     }
 
     /**
