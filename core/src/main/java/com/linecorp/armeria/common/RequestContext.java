@@ -151,6 +151,12 @@ public interface RequestContext extends AttributeMap {
     String path();
 
     /**
+     * Returns the absolute path part of the current {@link Request} URI, excluding the query part,
+     * decoded in UTF-8.
+     */
+    String decodedPath();
+
+    /**
      * Returns the query part of the current {@link Request} URI, without the leading {@code '?'},
      * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      */

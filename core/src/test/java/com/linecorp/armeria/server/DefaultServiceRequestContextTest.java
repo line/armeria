@@ -22,7 +22,6 @@ import static org.mockito.Mockito.mock;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -49,7 +48,7 @@ public class DefaultServiceRequestContextTest {
         final ServiceRequestContext originalCtx = new DefaultServiceRequestContext(
                 virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),
                 SessionProtocol.H2,
-                mappingCtx, PathMappingResult.of("/foo", null, ImmutableMap.of()),
+                mappingCtx, PathMappingResult.of("/foo"),
                 mock(Request.class), null, null);
 
         setAdditionalHeaders(originalCtx);

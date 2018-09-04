@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
@@ -165,6 +166,8 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
 
         private final PathMapping pathMapping;
         private final String mappedPath;
+        @Nullable
+        private String decodedMappedPath;
 
         CompositeServiceRequestContext(ServiceRequestContext delegate, PathMapping pathMapping,
                                        String mappedPath) {
@@ -195,6 +198,16 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         @Override
         public String mappedPath() {
             return mappedPath;
+        }
+
+        @Override
+        public String decodedMappedPath() {
+            final String decodedMappedPath = this.decodedMappedPath;
+            if (decodedMappedPath != null) {
+                return decodedMappedPath;
+            }
+
+            return this.decodedMappedPath = ArmeriaHttpUtil.decodePath(mappedPath);
         }
     }
 }

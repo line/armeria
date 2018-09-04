@@ -252,14 +252,14 @@ public final class PathAndQuery {
                     return null;
                 }
 
-                final char digit1 = value.charAt(pos + 1);
-                final char digit2 = value.charAt(pos + 2);
-                if (!isHexadigit(digit1) || !isHexadigit(digit2)) {
+                final int digit1 = decodeHexNibble(value.charAt(pos + 1));
+                final int digit2 = decodeHexNibble(value.charAt(pos + 2));
+                if (digit1 < 0 || digit2 < 0) {
                     // The first or second digit is not hexadecimal.
                     return null;
                 }
 
-                final int decoded = (decodeHexNibble(digit1) << 4) | decodeHexNibble(digit2);
+                final int decoded = (digit1 << 4) | digit2;
                 if (isPath) {
                     if (appendOneByte(buf, decoded, wasSlash, isPath)) {
                         wasSlash = decoded == '/';
@@ -373,12 +373,6 @@ public final class PathAndQuery {
         }
 
         return true;
-    }
-
-    private static boolean isHexadigit(char ch) {
-        return ch >= '0' && ch <= '9' ||
-               ch >= 'a' && ch <= 'f' ||
-               ch >= 'A' && ch <= 'F';
     }
 
     /**

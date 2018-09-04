@@ -42,7 +42,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
                 // Use 'utf-8' charset by default.
                 final Charset charset = mediaType.charset().orElse(StandardCharsets.UTF_8);
                 return HttpResponse.of(HttpStatus.OK, mediaType.withCharset(charset),
-                                       charset.encode(String.valueOf(result)).array());
+                                       String.valueOf(result).getBytes(charset));
             }
         } else if (result instanceof CharSequence) {
             return HttpResponse.of(((CharSequence) result).toString());

@@ -674,6 +674,8 @@ public class AnnotatedHttpServiceTest {
             testBody(hc, get("/1/int-async/42"), "Integer: 43");
             testBody(hc, post("/1/long/42"), "Number[42]");
             testBody(hc, get("/1/string/blah"), "String: blah");
+            testBody(hc, get("/1/string/%F0%90%8D%88"), "String: \uD800\uDF48", // 𐍈
+                     StandardCharsets.UTF_8);
 
             // Get a requested path as typed string from ServiceRequestContext or HttpRequest
             testBody(hc, get("/1/path/ctx/async/1"), "String[/1/path/ctx/async/1]");
