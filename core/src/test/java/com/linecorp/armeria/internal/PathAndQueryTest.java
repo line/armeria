@@ -215,6 +215,20 @@ public class PathAndQueryTest {
     }
 
     @Test
+    public void semicolon() {
+        final PathAndQuery res = PathAndQuery.parse("/;?a=b;c=d");
+        assertThat(res).isNotNull();
+        assertThat(res.path()).isEqualTo("/;");
+        assertThat(res.query()).isEqualTo("a=b;c=d");
+
+        // '%26' in a query string should never be decoded into '&'.
+        final PathAndQuery res2 = PathAndQuery.parse("/%3b?a=b%3Bc=d");
+        assertThat(res2).isNotNull();
+        assertThat(res2.path()).isEqualTo("/;");
+        assertThat(res2.query()).isEqualTo("a=b%3Bc=d");
+    }
+
+    @Test
     public void equal() {
         final PathAndQuery res = PathAndQuery.parse("/=?a=b=1");
         assertThat(res).isNotNull();

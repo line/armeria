@@ -70,12 +70,17 @@ public final class PathAndQuery {
      * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
      * {@code "%26"}.
      */
-    private static final int ENCODED_AMPERSAND = 0xFF;
+    private static final int ENCODED_AMPERSAND = 0xFD;
+    /**
+     * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
+     * {@code "%3B"}.
+     */
+    private static final int ENCODED_SEMICOLON = 0xFE;
     /**
      * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
      * {@code "%3D"}.
      */
-    private static final int ENCODED_EQUAL = 0xFE;
+    private static final int ENCODED_EQUAL = 0xFF;
 
     @Nullable
     private static final Cache<String, PathAndQuery> CACHE =
@@ -269,6 +274,12 @@ public final class PathAndQuery {
                         buf.ensure(1);
                         buf.add((byte) ENCODED_AMPERSAND);
                         wasSlash = false;
+                    } else if (decoded == ';') {
+                        // Insert a special mark 'ENCODED_SEMICOLON' so we can distinguish ';' and '%3D'
+                        // in a query string. We will encode 'ENCODED_SEMICOLON' back into '%3D' later.
+                        buf.ensure(1);
+                        buf.add((byte) ENCODED_SEMICOLON);
+                        wasSlash = false;
                     } else if (decoded == '=') {
                         // Insert a special mark 'ENCODED_EQUAL' so we can distinguish '=' and '%3D'
                         // in a query string. We will encode 'ENCODED_EQUAL' back into '%3D' later.
@@ -440,6 +451,8 @@ public final class PathAndQuery {
                 }
             } else if (b == ENCODED_AMPERSAND) {
                 buf.append("%26");
+            } else if (b == ENCODED_SEMICOLON) {
+                buf.append("%3B");
             } else if (b == ENCODED_EQUAL) {
                 buf.append("%3D");
             } else {

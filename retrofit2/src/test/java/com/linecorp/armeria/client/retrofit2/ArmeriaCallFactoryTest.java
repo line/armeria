@@ -350,6 +350,12 @@ public class ArmeriaCallFactoryTest {
         Pojo response = service.queryString("Foo+Bar", 33).get();
         assertThat(response).isEqualTo(new Pojo("Foo+Bar", 33));
 
+        response = service.queryString("Foo&name=Bar", 34).get();
+        assertThat(response).isEqualTo(new Pojo("Foo&name=Bar", 34));
+
+        response = service.queryString("Foo;Bar", 33).get();
+        assertThat(response).isEqualTo(new Pojo("Foo;Bar", 33));
+
         response = service.queryString("Foo%2BBar", 33).get();
         assertThat(response).isEqualTo(new Pojo("Foo%2BBar", 33));
 
@@ -364,9 +370,6 @@ public class ArmeriaCallFactoryTest {
 
         response = service.queryStringEncoded("Foo+Bar", 33).get();
         assertThat(response).isEqualTo(new Pojo("Foo Bar", 33));
-
-        response = service.queryString("Foo&name=Bar", 34).get();
-        assertThat(response).isEqualTo(new Pojo("Foo&name=Bar", 34));
 
         response = service.queryStringEncoded("Foo&name=Bar", 33).get();
         assertThat(response).isEqualTo(new Pojo("Foo&name=Bar", 33));
