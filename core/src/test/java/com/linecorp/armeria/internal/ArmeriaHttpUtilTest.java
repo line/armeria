@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.decodePath;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setHttp2Authority;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toArmeria;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp1;
@@ -52,6 +53,23 @@ public class ArmeriaHttpUtilTest {
         assertThat(concatPaths("/a", "b")).isEqualTo("/a/b");
         assertThat(concatPaths("/a", "/b")).isEqualTo("/a/b");
         assertThat(concatPaths("/a/", "/b")).isEqualTo("/a/b");
+    }
+
+    @Test
+    public void testDecodePath() throws Exception {
+        // Fast path
+        final String pathThatDoesNotNeedDecode = "/foo_bar_baz";
+        assertThat(decodePath(pathThatDoesNotNeedDecode)).isSameAs(pathThatDoesNotNeedDecode);
+
+        // Slow path
+        assertThat(decodePath("/foo%20bar\u007fbaz")).isEqualTo("/foo bar\u007fbaz");
+        assertThat(decodePath("/%C2%A2")).isEqualTo("/¢"); // Valid UTF-8 sequence
+        assertThat(decodePath("/%20\u0080")).isEqualTo("/ �"); // Unallowed character
+        assertThat(decodePath("/%")).isEqualTo("/�"); // No digit
+        assertThat(decodePath("/%1")).isEqualTo("/�"); // Only a single digit
+        assertThat(decodePath("/%G0")).isEqualTo("/�"); // First digit is not hex.
+        assertThat(decodePath("/%0G")).isEqualTo("/�"); // Second digit is not hex.
+        assertThat(decodePath("/%C3%28")).isEqualTo("/�("); // Invalid UTF-8 sequence
     }
 
     @Test

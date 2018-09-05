@@ -237,13 +237,15 @@ public final class ArmeriaHttpUtil {
             return path;
         }
 
+        // Decode percent-encoded characters.
+        // An invalid character is replaced with 0xFF, which will be replaced into '�' by UTF-8 decoder.
         final int len = path.length();
         final byte[] buf = new byte[len];
         int dstLen = 0;
         for (int i = 0; i < len; i++) {
             final char ch = path.charAt(i);
             if (ch != '%') {
-                buf[dstLen++] = (byte) (ch <= 0x7f ? ch : '?');
+                buf[dstLen++] = (byte) ((ch & 0xFF80) == 0 ? ch : 0xFF);
                 continue;
             }
 
@@ -251,7 +253,7 @@ public final class ArmeriaHttpUtil {
             final int hexEnd = i + 3;
             if (hexEnd > len) {
                 // '%' or '%x' (must be followed by two hexadigits)
-                buf[dstLen++] = '?';
+                buf[dstLen++] = (byte) 0xFF;
                 break;
             }
 
@@ -259,7 +261,7 @@ public final class ArmeriaHttpUtil {
             final int digit2 = decodeHexNibble(path.charAt(++i));
             if (digit1 < 0 || digit2 < 0) {
                 // The first or second digit is not hexadecimal.
-                buf[dstLen++] = '?';
+                buf[dstLen++] = (byte) 0xFF;
             } else {
                 buf[dstLen++] = (byte) ((digit1 << 4) | digit2);
             }
