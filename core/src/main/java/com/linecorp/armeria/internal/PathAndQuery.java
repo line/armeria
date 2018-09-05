@@ -66,6 +66,22 @@ public final class PathAndQuery {
     private static final Bytes EMPTY_QUERY = new Bytes(0);
     private static final Bytes ROOT_PATH = new Bytes(new byte[] { '/' });
 
+    /**
+     * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
+     * {@code "%26"}.
+     */
+    private static final int ENCODED_AMPERSAND = 0xFD;
+    /**
+     * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
+     * {@code "%3B"}.
+     */
+    private static final int ENCODED_SEMICOLON = 0xFE;
+    /**
+     * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
+     * {@code "%3D"}.
+     */
+    private static final int ENCODED_EQUAL = 0xFF;
+
     @Nullable
     private static final Cache<String, PathAndQuery> CACHE =
             Flags.parsedPathCacheSpec().map(PathAndQuery::buildCache).orElse(null);
@@ -217,15 +233,14 @@ public final class PathAndQuery {
     }
 
     @Nullable
-    private static Bytes decodePercentsAndEncodeToUtf8(String value, int start, int end,
-                                                          boolean isPath) {
+    private static Bytes decodePercentsAndEncodeToUtf8(String value, int start, int end, boolean isPath) {
         final int length = end - start;
         if (length == 0) {
             return isPath ? ROOT_PATH : EMPTY_QUERY;
         }
 
         final Bytes buf = new Bytes(Math.max(length * 3 / 2, 4));
-        int lastCP = 0;
+        boolean wasSlash = false;
         for (final CodePointIterator i = new CodePointIterator(value, start, end); i.hasNextCodePoint();) {
             final int pos = i.position();
             final int cp = i.nextCodePoint();
@@ -245,26 +260,59 @@ public final class PathAndQuery {
                 }
 
                 final int decoded = (decodeHexNibble(digit1) << 4) | decodeHexNibble(digit2);
-                if (!appendOneByte(buf, decoded, lastCP, isPath)) {
-                    return null;
+                if (isPath) {
+                    if (appendOneByte(buf, decoded, wasSlash, isPath)) {
+                        wasSlash = decoded == '/';
+                    } else {
+                        return null;
+                    }
+                } else {
+                    // If query:
+                    if (decoded == '&') {
+                        // Insert a special mark 'ENCODED_AMPERSAND' so we can distinguish '&' and '%26'
+                        // in a query string. We will encode 'ENCODED_AMPERSAND' back into '%26' later.
+                        buf.ensure(1);
+                        buf.add((byte) ENCODED_AMPERSAND);
+                        wasSlash = false;
+                    } else if (decoded == ';') {
+                        // Insert a special mark 'ENCODED_SEMICOLON' so we can distinguish ';' and '%3D'
+                        // in a query string. We will encode 'ENCODED_SEMICOLON' back into '%3D' later.
+                        buf.ensure(1);
+                        buf.add((byte) ENCODED_SEMICOLON);
+                        wasSlash = false;
+                    } else if (decoded == '=') {
+                        // Insert a special mark 'ENCODED_EQUAL' so we can distinguish '=' and '%3D'
+                        // in a query string. We will encode 'ENCODED_EQUAL' back into '%3D' later.
+                        buf.ensure(1);
+                        buf.add((byte) ENCODED_EQUAL);
+                        wasSlash = false;
+                    } else if (appendOneByte(buf, decoded, wasSlash, isPath)) {
+                        wasSlash = decoded == '/';
+                    } else {
+                        return null;
+                    }
                 }
+
                 i.position(hexEnd);
-                lastCP = decoded;
                 continue;
             }
 
             if (cp == '+' && !isPath) {
                 buf.ensure(1);
                 buf.add((byte) ' ');
-                lastCP = '+';
+                wasSlash = false;
                 continue;
             }
 
             if (cp <= 0x7F) {
-                if (!appendOneByte(buf, cp, lastCP, isPath)) {
+                if (!appendOneByte(buf, cp, wasSlash, isPath)) {
                     return null;
                 }
-            } else if (cp <= 0x7ff) {
+                wasSlash = cp == '/';
+                continue;
+            }
+
+            if (cp <= 0x7ff) {
                 buf.ensure(2);
                 buf.add((byte) ((cp >>> 6) | 0b110_00000));
                 buf.add((byte) (cp & 0b111111 | 0b10_000000));
@@ -300,20 +348,20 @@ public final class PathAndQuery {
                 buf.add((byte) ((cp & 0b111111) | 0b10_000000));
             }
 
-            lastCP = cp;
+            wasSlash = false;
         }
 
         return buf;
     }
 
-    private static boolean appendOneByte(Bytes buf, int cp, int lastCP, boolean isPath) {
+    private static boolean appendOneByte(Bytes buf, int cp, boolean wasSlash, boolean isPath) {
         if (cp == 0x7F || (cp >>> 5 == 0)) {
             // Reject the prohibited control characters: 0x00..0x1F and 0x7F
             return false;
         }
 
         if (cp == '/' && isPath) {
-            if (lastCP != '/') {
+            if (!wasSlash) {
                 buf.ensure(1);
                 buf.add((byte) '/');
             } else {
@@ -401,6 +449,12 @@ public final class PathAndQuery {
                 } else {
                     buf.append('+');
                 }
+            } else if (b == ENCODED_AMPERSAND) {
+                buf.append("%26");
+            } else if (b == ENCODED_SEMICOLON) {
+                buf.append("%3B");
+            } else if (b == ENCODED_EQUAL) {
+                buf.append("%3D");
             } else {
                 buf.append('%');
                 appendHexNibble(buf, b >>> 4);
