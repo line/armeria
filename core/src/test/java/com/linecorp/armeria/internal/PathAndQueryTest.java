@@ -189,14 +189,56 @@ public class PathAndQueryTest {
 
     @Test
     public void plus() {
-        final PathAndQuery res = PathAndQuery.parse("/+?+");
+        final PathAndQuery res = PathAndQuery.parse("/+?a+b=c+d");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/+");
-        assertThat(res.query()).isEqualTo("+");
+        assertThat(res.query()).isEqualTo("a+b=c+d");
 
-        final PathAndQuery res2 = PathAndQuery.parse("/%2b?%2b");
+        final PathAndQuery res2 = PathAndQuery.parse("/%2b?a%2bb=c%2bd");
         assertThat(res2).isNotNull();
         assertThat(res2.path()).isEqualTo("/+");
-        assertThat(res2.query()).isEqualTo("%2B");
+        assertThat(res2.query()).isEqualTo("a%2Bb=c%2Bd");
+    }
+
+    @Test
+    public void ampersand() {
+        final PathAndQuery res = PathAndQuery.parse("/&?a=1&a=2&b=3");
+        assertThat(res).isNotNull();
+        assertThat(res.path()).isEqualTo("/&");
+        assertThat(res.query()).isEqualTo("a=1&a=2&b=3");
+
+        // '%26' in a query string should never be decoded into '&'.
+        final PathAndQuery res2 = PathAndQuery.parse("/%26?a=1%26a=2&b=3");
+        assertThat(res2).isNotNull();
+        assertThat(res2.path()).isEqualTo("/&");
+        assertThat(res2.query()).isEqualTo("a=1%26a=2&b=3");
+    }
+
+    @Test
+    public void semicolon() {
+        final PathAndQuery res = PathAndQuery.parse("/;?a=b;c=d");
+        assertThat(res).isNotNull();
+        assertThat(res.path()).isEqualTo("/;");
+        assertThat(res.query()).isEqualTo("a=b;c=d");
+
+        // '%3B' in a query string should never be decoded into ';'.
+        final PathAndQuery res2 = PathAndQuery.parse("/%3b?a=b%3Bc=d");
+        assertThat(res2).isNotNull();
+        assertThat(res2.path()).isEqualTo("/;");
+        assertThat(res2.query()).isEqualTo("a=b%3Bc=d");
+    }
+
+    @Test
+    public void equal() {
+        final PathAndQuery res = PathAndQuery.parse("/=?a=b=1");
+        assertThat(res).isNotNull();
+        assertThat(res.path()).isEqualTo("/=");
+        assertThat(res.query()).isEqualTo("a=b=1");
+
+        // '%26' in a query string should never be decoded into '&'.
+        final PathAndQuery res2 = PathAndQuery.parse("/%3D?a%3db=1");
+        assertThat(res2).isNotNull();
+        assertThat(res2.path()).isEqualTo("/=");
+        assertThat(res2.query()).isEqualTo("a%3Db=1");
     }
 }
