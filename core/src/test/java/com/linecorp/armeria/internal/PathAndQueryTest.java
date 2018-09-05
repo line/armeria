@@ -221,7 +221,7 @@ public class PathAndQueryTest {
         assertThat(res.path()).isEqualTo("/;");
         assertThat(res.query()).isEqualTo("a=b;c=d");
 
-        // '%26' in a query string should never be decoded into '&'.
+        // '%3B' in a query string should never be decoded into ';'.
         final PathAndQuery res2 = PathAndQuery.parse("/%3b?a=b%3Bc=d");
         assertThat(res2).isNotNull();
         assertThat(res2.path()).isEqualTo("/;");
