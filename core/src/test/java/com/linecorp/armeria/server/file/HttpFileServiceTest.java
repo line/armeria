@@ -157,6 +157,15 @@ public class HttpFileServiceTest {
     }
 
     @Test
+    public void testClassPathGetUtf8() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/%C2%A2.txt")))) {
+                assert200Ok(res, "text/plain", "¢");
+            }
+        }
+    }
+
+    @Test
     public void testClassPathOrElseGet() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal();
              CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.txt")))) {
@@ -311,6 +320,20 @@ public class HttpFileServiceTest {
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert404NotFound(res);
+            }
+        }
+    }
+
+    @Test
+    public void testFileSystemGetUtf8() throws Exception {
+        final File barFile = new File(tmpDir, "¢.txt");
+        final String expectedContentA = "¢";
+        Files.write(barFile.toPath(), expectedContentA.getBytes(StandardCharsets.UTF_8));
+
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            final HttpUriRequest req = new HttpGet(newUri("/fs/%C2%A2.txt"));
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assert200Ok(res, "text/plain", expectedContentA);
             }
         }
     }

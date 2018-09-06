@@ -29,7 +29,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -192,11 +191,12 @@ final class DefaultPathMapping extends AbstractPathMapping {
             return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
         }
 
-        final ImmutableMap.Builder<String, String> pathParams = ImmutableMap.builder();
+        final PathMappingResultBuilder builder =
+                new PathMappingResultBuilder(mappingCtx.path(), mappingCtx.query());
         for (int i = 0; i < paramNameArray.length; i++) {
-            pathParams.put(paramNameArray[i], matcher.group(i + 1));
+            builder.rawParam(paramNameArray[i], matcher.group(i + 1));
         }
-        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(), pathParams.build());
+        return builder.build();
     }
 
     @Override

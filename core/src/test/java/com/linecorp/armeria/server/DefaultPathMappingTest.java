@@ -74,6 +74,15 @@ public class DefaultPathMappingTest {
     }
 
     @Test
+    public void utf8() {
+        final DefaultPathMapping m = new DefaultPathMapping("/{foo}");
+        final PathMappingResult res = m.apply(create("/%C2%A2"));
+        assertThat(res.path()).isEqualTo("/%C2%A2");
+        assertThat(res.decodedPath()).isEqualTo("/¢");
+        assertThat(res.pathParams()).containsEntry("foo", "¢").hasSize(1);
+    }
+
+    @Test
     public void testVariables() throws Exception {
         final DefaultPathMapping ppe =
                 new DefaultPathMapping("/service/{value}/test/:value2/something/{value3}");
