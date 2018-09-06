@@ -39,6 +39,7 @@ import com.linecorp.armeria.internal.DefaultAttributeMap;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
+import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -50,6 +51,8 @@ public class RequestContextCurrentTraceContextTest {
     RequestContext mockRequestContext;
     @Mock(answer = Answers.CALLS_REAL_METHODS)
     RequestContext mockRequestContext2;
+    @Mock
+    EventLoop eventLoop;
 
     final CurrentTraceContext currentTraceContext = RequestContextCurrentTraceContext.DEFAULT;
     final DefaultAttributeMap attrs1 = new DefaultAttributeMap();
@@ -58,6 +61,10 @@ public class RequestContextCurrentTraceContextTest {
 
     @Before
     public void setup() {
+        when(mockRequestContext.eventLoop()).thenReturn(eventLoop);
+        when(mockRequestContext2.eventLoop()).thenReturn(eventLoop);
+        when(eventLoop.inEventLoop()).thenReturn(true);
+
         when(mockRequestContext.attr(isA(AttributeKey.class))).thenAnswer(
                 (Answer<Attribute>) invocation -> attrs1.attr(invocation.getArgument(0)));
         when(mockRequestContext2.attr(isA(AttributeKey.class))).thenAnswer(
@@ -112,11 +119,35 @@ public class RequestContextCurrentTraceContextTest {
 
         try (SafeCloseable requestContextScope = mockRequestContext.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
+                assertThat(traceContextScope).hasToString("InitialRequestScope");
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
 
                 try (Scope traceContextScope2 = currentTraceContext.newScope(traceContext2)) {
+                    assertThat(traceContextScope2).hasToString("RequestContextTraceContextScope");
                     assertThat(currentTraceContext.get()).isEqualTo(traceContext2);
                 }
+                assertThat(currentTraceContext.get()).isEqualTo(traceContext);
+            }
+            // the first scope is attached to the request context and cleared when that's destroyed
+            assertThat(currentTraceContext.get()).isEqualTo(traceContext);
+        }
+    }
+
+    @Test
+    public void newScope_notOnEventLoop() {
+        final TraceContext traceContext2 = TraceContext.newBuilder().traceId(1).spanId(2).build();
+
+        try (SafeCloseable requestContextScope = mockRequestContext.push()) {
+            try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
+                assertThat(traceContextScope).hasToString("InitialRequestScope");
+                assertThat(currentTraceContext.get()).isEqualTo(traceContext);
+
+                when(eventLoop.inEventLoop()).thenReturn(false);
+                try (Scope traceContextScope2 = currentTraceContext.newScope(traceContext2)) {
+                    assertThat(traceContextScope2).hasToString("ThreadLocalScope");
+                    assertThat(currentTraceContext.get()).isEqualTo(traceContext2);
+                }
+                when(eventLoop.inEventLoop()).thenReturn(true);
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
             }
             // the first scope is attached to the request context and cleared when that's destroyed
