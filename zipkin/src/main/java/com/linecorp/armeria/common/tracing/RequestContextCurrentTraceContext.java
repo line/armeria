@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.tracing;
 
 import java.util.Collections;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -67,6 +68,9 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.valueOf(RequestContextCurrentTraceContext.class, "TRACE_CONTEXT");
+
+    // Thread-local for storing TraceContext when invoking callbacks off the request thread.
+    private static final ThreadLocal<TraceContext> THREAD_LOCAL_CONTEXT = new ThreadLocal<>();
 
     private static final Scope INCOMPLETE_CONFIGURATION_SCOPE = new Scope() {
         @Override
@@ -148,11 +152,27 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         dst.attr(TRACE_CONTEXT_KEY).set(src.attr(TRACE_CONTEXT_KEY).get());
     }
 
+    private RequestContextCurrentTraceContext(Builder builder) {
+        super(builder);
+    }
+
     @Override
     @Nullable
     public TraceContext get() {
-        final Attribute<TraceContext> traceContextAttribute = getTraceContextAttributeOrWarnOnce();
-        return traceContextAttribute != null ? traceContextAttribute.get() : null;
+        final RequestContext ctx = getRequestContextOrWarnOnce();
+        if (ctx == null) {
+            return null;
+        }
+        if (ctx.eventLoop().inEventLoop()) {
+            return ctx.attr(TRACE_CONTEXT_KEY).get();
+        } else {
+            final TraceContext threadLocalContext = THREAD_LOCAL_CONTEXT.get();
+            if (threadLocalContext != null) {
+                return threadLocalContext;
+            }
+            // First span on a non-request thread will use the request's TraceContext as a parent.
+            return ctx.attr(TRACE_CONTEXT_KEY).get();
+        }
     }
 
     @Override
@@ -162,10 +182,23 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return Scope.NOOP;
         }
 
-        final Attribute<TraceContext> traceContextAttribute = getTraceContextAttributeOrWarnOnce();
-        if (traceContextAttribute == null) {
+        final RequestContext ctx = getRequestContextOrWarnOnce();
+        if (ctx == null) {
             return INCOMPLETE_CONFIGURATION_SCOPE;
         }
+
+        if (ctx.eventLoop().inEventLoop()) {
+            return createScopeForRequestThread(ctx, currentSpan);
+        } else {
+            // The RequestContext is the canonical thread-local storage for the thread processing the request.
+            // However, when creating spans on other threads (e.g., a thread-pool), we must use separate
+            // thread-local storage to prevent threads from replacing the same trace context.
+            return createScopeForNonRequestThread(currentSpan);
+        }
+    }
+
+    private static Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
+        final Attribute<TraceContext> traceContextAttribute = ctx.attr(TRACE_CONTEXT_KEY);
 
         final TraceContext previous = traceContextAttribute.getAndSet(currentSpan);
 
@@ -182,27 +215,56 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
                 // re-lookup the attribute to avoid holding a reference to the request if this scope is leaked
                 getTraceContextAttributeOrWarnOnce().set(previous);
             }
+
+            @Override
+            public String toString() {
+                return "RequestContextTraceContextScope";
+            }
         }
 
         return new RequestContextTraceContextScope();
     }
 
+    private static Scope createScopeForNonRequestThread(@Nullable TraceContext currentSpan) {
+        final TraceContext previous = THREAD_LOCAL_CONTEXT.get();
+        THREAD_LOCAL_CONTEXT.set(currentSpan);
+        class ThreadLocalScope implements Scope {
+            @Override
+            public void close() {
+                THREAD_LOCAL_CONTEXT.set(previous);
+            }
+
+            @Override
+            public String toString() {
+                return "ThreadLocalScope";
+            }
+        }
+
+        return new ThreadLocalScope();
+    }
+
+    /** Armeria code should always have a request context available, and this won't work without it. */
+    @Nullable
+    private static RequestContext getRequestContextOrWarnOnce() {
+        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);
+    }
+
     /** Armeria code should always have a request context available, and this won't work without it. */
     @Nullable private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
-        return RequestContext.mapCurrent(r -> r.attr(TRACE_CONTEXT_KEY), LogRequestContextWarningOnce.INSTANCE);
+        final RequestContext ctx = getRequestContextOrWarnOnce();
+        if (ctx == null) {
+            return null;
+        }
+        return ctx.attr(TRACE_CONTEXT_KEY);
     }
 
-    private RequestContextCurrentTraceContext(Builder builder) {
-        super(builder);
-    }
-
-    private enum LogRequestContextWarningOnce implements Supplier<Attribute<TraceContext>> {
+    private enum LogRequestContextWarningOnce implements Supplier<RequestContext> {
 
         INSTANCE;
 
         @Override
         @Nullable
-        public Attribute<TraceContext> get() {
+        public RequestContext get() {
             ClassLoaderHack.loadMe();
             return null;
         }
