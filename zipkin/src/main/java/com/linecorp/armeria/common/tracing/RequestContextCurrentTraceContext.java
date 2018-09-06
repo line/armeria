@@ -251,8 +251,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
     /** Armeria code should always have a request context available, and this won't work without it. */
     @Nullable private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
-        final RequestContext ctx = RequestContext.mapCurrent(
-                Function.identity(), LogRequestContextWarningOnce.INSTANCE);
+        final RequestContext ctx = getRequestContextOrWarnOnce();
         if (ctx == null) {
             return null;
         }
