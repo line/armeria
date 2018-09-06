@@ -159,14 +159,14 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     @Override
     @Nullable
     public TraceContext get() {
-        RequestContext ctx = getRequestContextOrWarnOnce();
+        final RequestContext ctx = getRequestContextOrWarnOnce();
         if (ctx == null) {
             return null;
         }
         if (ctx.eventLoop().inEventLoop()) {
             return ctx.attr(TRACE_CONTEXT_KEY).get();
         } else {
-            TraceContext threadLocalContext = THREAD_LOCAL_CONTEXT.get();
+            final TraceContext threadLocalContext = THREAD_LOCAL_CONTEXT.get();
             if (threadLocalContext != null) {
                 return threadLocalContext;
             }
@@ -182,7 +182,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return Scope.NOOP;
         }
 
-        RequestContext ctx = getRequestContextOrWarnOnce();
+        final RequestContext ctx = getRequestContextOrWarnOnce();
         if (ctx == null) {
             return INCOMPLETE_CONFIGURATION_SCOPE;
         }
@@ -251,7 +251,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
     /** Armeria code should always have a request context available, and this won't work without it. */
     @Nullable private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
-        RequestContext ctx = RequestContext.mapCurrent(
+        final RequestContext ctx = RequestContext.mapCurrent(
                 Function.identity(), LogRequestContextWarningOnce.INSTANCE);
         if (ctx == null) {
             return null;
