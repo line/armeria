@@ -116,10 +116,16 @@ public interface ServiceRequestContext extends RequestContext {
     ExecutorService blockingTaskExecutor();
 
     /**
-     * Returns the path with its context path removed. This method can be useful for a reusable service bound
-     * at various path prefixes.
+     * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable
+     * service bound at various path prefixes.
      */
     String mappedPath();
+
+    /**
+     * Returns the {@link #decodedPath()} with its context path removed. This method can be useful for
+     * a reusable service bound at various path prefixes.
+     */
+    String decodedMappedPath();
 
     /**
      * Returns the negotiated producible media type. If the media type negotiation is not used for the

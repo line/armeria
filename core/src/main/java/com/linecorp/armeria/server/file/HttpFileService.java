@@ -208,7 +208,7 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     private Entry getEntry(ServiceRequestContext ctx, HttpRequest req) {
-        final String mappedPath = ctx.mappedPath();
+        final String decodedMappedPath = ctx.decodedMappedPath();
 
         final EnumSet<FileServiceContentEncoding> supportedEncodings =
                 EnumSet.noneOf(FileServiceContentEncoding.class);
@@ -228,13 +228,13 @@ public final class HttpFileService extends AbstractHttpService {
             }
         }
 
-        final Entry entry = getEntryWithSupportedEncodings(mappedPath, supportedEncodings);
+        final Entry entry = getEntryWithSupportedEncodings(decodedMappedPath, supportedEncodings);
 
         if (entry.lastModifiedMillis() == 0) {
-            if (mappedPath.charAt(mappedPath.length() - 1) == '/') {
+            if (decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/') {
                 // Try index.html if it was a directory access.
                 final Entry indexEntry = getEntryWithSupportedEncodings(
-                        mappedPath + "index.html", supportedEncodings);
+                        decodedMappedPath + "index.html", supportedEncodings);
                 if (indexEntry.lastModifiedMillis() != 0) {
                     return indexEntry;
                 }

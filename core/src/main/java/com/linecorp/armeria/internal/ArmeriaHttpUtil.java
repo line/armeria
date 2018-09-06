@@ -37,11 +37,13 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
+import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.length;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -224,6 +226,48 @@ public final class ArmeriaHttpUtil {
         // Need to insert '/' between path1 and path2.
         return new StringBuilder(path1.length() + path2.length() + 1)
                 .append(path1).append('/').append(path2).toString();
+    }
+
+    /**
+     * Decodes a percent-encoded path string.
+     */
+    public static String decodePath(String path) {
+        if (path.indexOf('%') < 0) {
+            // No need to decoded; not percent-encoded
+            return path;
+        }
+
+        // Decode percent-encoded characters.
+        // An invalid character is replaced with 0xFF, which will be replaced into '�' by UTF-8 decoder.
+        final int len = path.length();
+        final byte[] buf = new byte[len];
+        int dstLen = 0;
+        for (int i = 0; i < len; i++) {
+            final char ch = path.charAt(i);
+            if (ch != '%') {
+                buf[dstLen++] = (byte) ((ch & 0xFF80) == 0 ? ch : 0xFF);
+                continue;
+            }
+
+            // Decode a percent-encoded character.
+            final int hexEnd = i + 3;
+            if (hexEnd > len) {
+                // '%' or '%x' (must be followed by two hexadigits)
+                buf[dstLen++] = (byte) 0xFF;
+                break;
+            }
+
+            final int digit1 = decodeHexNibble(path.charAt(++i));
+            final int digit2 = decodeHexNibble(path.charAt(++i));
+            if (digit1 < 0 || digit2 < 0) {
+                // The first or second digit is not hexadecimal.
+                buf[dstLen++] = (byte) 0xFF;
+            } else {
+                buf[dstLen++] = (byte) ((digit1 << 4) | digit2);
+            }
+        }
+
+        return new String(buf, 0, dstLen, StandardCharsets.UTF_8);
     }
 
     /**

@@ -23,7 +23,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 final class RegexPathMapping extends AbstractPathMapping {
@@ -63,7 +62,7 @@ final class RegexPathMapping extends AbstractPathMapping {
             return PathMappingResult.empty();
         }
 
-        ImmutableMap.Builder<String, String> builder = null;
+        PathMappingResultBuilder builder = null;
         for (String name : paramNames) {
             final String value = matcher.group(name);
             if (value == null) {
@@ -71,13 +70,12 @@ final class RegexPathMapping extends AbstractPathMapping {
             }
 
             if (builder == null) {
-                builder = ImmutableMap.builder();
+                builder = new PathMappingResultBuilder(mappingCtx.path(), mappingCtx.query());
             }
-            builder.put(name, value);
+            builder.rawParam(name, value);
         }
 
-        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(),
-                                    builder != null ? builder.build() : ImmutableMap.of());
+        return builder != null ? builder.build() : PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
     }
 
     @Override

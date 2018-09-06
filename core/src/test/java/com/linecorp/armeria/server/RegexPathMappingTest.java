@@ -54,4 +54,13 @@ public class RegexPathMappingTest {
         assertThat(result.query()).isEqualTo("size=512");
         assertThat(result.pathParams()).containsEntry("fileName", "images/avatar.jpg").hasSize(1);
     }
+
+    @Test
+    public void utf8() {
+        final PathMapping mapping = ofRegex("^/(?<foo>.*)$");
+        final PathMappingResult result = mapping.apply(create("/%C2%A2"));
+        assertThat(result.path()).isEqualTo("/%C2%A2");
+        assertThat(result.decodedPath()).isEqualTo("/¢");
+        assertThat(result.pathParams()).containsEntry("foo", "¢").hasSize(1);
+    }
 }

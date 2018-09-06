@@ -23,7 +23,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 final class GlobPathMapping extends AbstractPathMapping {
@@ -89,13 +88,14 @@ final class GlobPathMapping extends AbstractPathMapping {
             return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
         }
 
-        final ImmutableMap.Builder<String, String> params = ImmutableMap.builder();
+        final PathMappingResultBuilder builder =
+                new PathMappingResultBuilder(mappingCtx.path(), mappingCtx.query());
         for (int i = 1; i <= numParams; i++) {
             final String value = firstNonNull(m.group(i), "");
-            params.put(int2str(i - 1), value);
+            builder.rawParam(int2str(i - 1), value);
         }
 
-        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(), params.build());
+        return builder.build();
     }
 
     @Override

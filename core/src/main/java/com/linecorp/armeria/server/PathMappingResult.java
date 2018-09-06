@@ -25,6 +25,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
  * The result returned by {@link PathMapping#apply(PathMappingContext)}.
@@ -34,7 +35,8 @@ public final class PathMappingResult {
     static final int LOWEST_SCORE = Integer.MIN_VALUE;
     static final int HIGHEST_SCORE = Integer.MAX_VALUE;
 
-    private static final PathMappingResult EMPTY = new PathMappingResult(null, null, null, LOWEST_SCORE);
+    private static final PathMappingResult EMPTY =
+            new PathMappingResult(null, null, ImmutableMap.of(), LOWEST_SCORE);
 
     /**
      * The {@link PathMappingResult} whose {@link #isPresent()} returns {@code false}. It is returned by
@@ -42,6 +44,13 @@ public final class PathMappingResult {
      */
     public static PathMappingResult empty() {
         return EMPTY;
+    }
+
+    /**
+     * Creates a new instance with the specified {@code path}, without a query or any path parameters.
+     */
+    public static PathMappingResult of(String path) {
+        return of(path, null);
     }
 
     /**
@@ -54,8 +63,8 @@ public final class PathMappingResult {
     /**
      * Creates a new instance with the specified {@code path}, {@code query} and the extracted path parameters.
      */
-    public static PathMappingResult of(String path, @Nullable String query, Map<String, String> pathParams) {
-        return of(path, query, pathParams, LOWEST_SCORE);
+    public static PathMappingResult of(String path, @Nullable String query, Map<String, String> rawPathParams) {
+        return of(path, query, rawPathParams, LOWEST_SCORE);
     }
 
     /**
@@ -63,10 +72,10 @@ public final class PathMappingResult {
      * and the score.
      */
     public static PathMappingResult of(String path, @Nullable String query,
-                                       Map<String, String> pathParams, int score) {
+                                       Map<String, String> rawPathParams, int score) {
         requireNonNull(path, "path");
-        requireNonNull(pathParams, "pathParams");
-        return new PathMappingResult(path, query, pathParams, score);
+        requireNonNull(rawPathParams, "rawPathParams");
+        return new PathMappingResult(path, query, rawPathParams, score);
     }
 
     @Nullable
@@ -79,15 +88,16 @@ public final class PathMappingResult {
     private int score;
     @Nullable
     private MediaType negotiatedResponseMediaType;
+    @Nullable
+    private String decodedPath;
 
-    private PathMappingResult(@Nullable String path, @Nullable String query,
-                              @Nullable Map<String, String> pathParams, int score) {
-        assert path == null && query == null && pathParams == null ||
-               path != null && pathParams != null;
+    PathMappingResult(@Nullable String path, @Nullable String query,
+                      Map<String, String> pathParams, int score) {
+        assert path != null || query == null && pathParams.isEmpty();
 
         this.path = path;
         this.query = query;
-        this.pathParams = pathParams != null ? ImmutableMap.copyOf(pathParams) : null;
+        this.pathParams = ImmutableMap.copyOf(pathParams);
         this.score = score;
     }
 
@@ -106,6 +116,21 @@ public final class PathMappingResult {
     public String path() {
         ensurePresence();
         return path;
+    }
+
+    /**
+     * Returns the path mapped by the {@link PathMapping}, decoded in UTF-8.
+     *
+     * @throws IllegalStateException if there's no match
+     */
+    public String decodedPath() {
+        ensurePresence();
+        final String decodedPath = this.decodedPath;
+        if (decodedPath != null) {
+            return decodedPath;
+        }
+
+        return this.decodedPath = ArmeriaHttpUtil.decodePath(path);
     }
 
     /**

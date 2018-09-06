@@ -129,6 +129,15 @@ public class GlobPathMappingTest {
                 .hasSize(2);
     }
 
+    @Test
+    public void utf8() throws Exception {
+        final PathMapping m = ofGlob("/foo/*");
+        final PathMappingResult res = m.apply(create("/foo/%C2%A2"));
+        assertThat(res.path()).isEqualTo("/foo/%C2%A2");
+        assertThat(res.decodedPath()).isEqualTo("/foo/¢");
+        assertThat(res.pathParams()).containsEntry("0", "¢").hasSize(1);
+    }
+
     private static void pass(String glob, String... paths) {
         final GlobPathMapping pattern = compile(glob);
         for (String p: paths) {

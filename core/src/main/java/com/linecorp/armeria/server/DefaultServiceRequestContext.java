@@ -19,11 +19,13 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
@@ -129,6 +131,26 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                 cfg.server().config().serviceLoggerPrefix() + '.' + loggerName));
     }
 
+    @Nonnull
+    @Override
+    public <A extends SocketAddress> A remoteAddress() {
+        final Channel ch = channel();
+        assert ch != null;
+        @SuppressWarnings("unchecked")
+        final A addr = (A) ch.remoteAddress();
+        return addr;
+    }
+
+    @Nonnull
+    @Override
+    public <A extends SocketAddress> A localAddress() {
+        final Channel ch = channel();
+        assert ch != null;
+        @SuppressWarnings("unchecked")
+        final A addr = (A) ch.localAddress();
+        return addr;
+    }
+
     @Override
     public ServiceRequestContext newDerivedContext() {
         return newDerivedContext(request());
@@ -215,6 +237,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public String mappedPath() {
         return pathMappingResult.path();
+    }
+
+    @Override
+    public String decodedMappedPath() {
+        return pathMappingResult.decodedPath();
     }
 
     @Nullable

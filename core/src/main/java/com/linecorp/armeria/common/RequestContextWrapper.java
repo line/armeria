@@ -92,6 +92,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
+    public String decodedPath() {
+        return delegate().decodedPath();
+    }
+
+    @Override
     public String query() {
         return delegate().query();
     }
