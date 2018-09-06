@@ -47,7 +47,7 @@ public final class PathMappingResult {
     }
 
     /**
-     * Creates a new instance with the specified {@code path}, without a query any path parameters.
+     * Creates a new instance with the specified {@code path}, without a query or any path parameters.
      */
     public static PathMappingResult of(String path) {
         return of(path, null);

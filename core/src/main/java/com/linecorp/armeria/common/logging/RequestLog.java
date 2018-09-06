@@ -172,7 +172,7 @@ public interface RequestLog {
     /**
      * Returns the absolute path part of the current {@link Request} URI, excluding the query part,
      * decoded in UTF-8.
-     * This method is a shortcut to {@code context().path()}.
+     * This method is a shortcut to {@code context().decodedPath()}.
      * This method returns non-{@code null} regardless the current {@link RequestLogAvailability}.
      */
     default String decodedPath() {
