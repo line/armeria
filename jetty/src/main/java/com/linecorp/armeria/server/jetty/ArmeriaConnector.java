@@ -51,6 +51,8 @@ final class ArmeriaConnector extends ContainerLifeCycle implements Connector {
     private final ArmeriaConnectionFactory connectionFactory;
     private final Collection<ConnectionFactory> connectionFactories;
 
+    private volatile boolean isShutdown;
+
     ArmeriaConnector(Server server) {
         this.server = server;
         executor = server.getThreadPool();
@@ -149,7 +151,13 @@ final class ArmeriaConnector extends ContainerLifeCycle implements Connector {
 
     @Override
     public Future<Void> shutdown() {
+        isShutdown = true;
         return GlobalEventExecutor.INSTANCE.newSucceededFuture(null);
+    }
+
+    @Override
+    public boolean isShutdown() {
+        return isShutdown;
     }
 
     private static final class ArmeriaConnectionFactory implements ConnectionFactory {

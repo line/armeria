@@ -151,7 +151,7 @@ io.netty:
     - https://netty.io/4.1/api/
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.14.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.15.Final' }
 
 io.prometheus:
   simpleclient_common:
@@ -161,7 +161,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.1'
+    version: '2.2.2'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -280,7 +280,7 @@ org.bouncycastle:
       to: com.linecorp.armeria.internal.shaded.bouncycastle
 
 org.checkerframework:
-  checker-compat-qual: { version: '2.5.4' }
+  checker-compat-qual: { version: '2.5.5' }
 
 org.curioswitch.curiostack:
   protobuf-jackson: { version: '0.2.1' }
@@ -289,7 +289,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.11.v20180605' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.12.v20180830' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
