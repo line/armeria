@@ -19,8 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
-import java.util.function.BiConsumer;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 
@@ -47,50 +45,18 @@ public final class AsyncMethodCallbacks {
      */
     public static <T> void transfer(CompletionStage<T> src, AsyncMethodCallback<? super T> dest) {
         requireNonNull(src, "src");
-        src.whenComplete(callback(dest));
-    }
-
-    /**
-     * Adds a callback that transfers the outcome of the specified {@link CompletionStage} to the specified
-     * {@link AsyncMethodCallback}. The callback methods of {@link AsyncMethodCallback} will be invoked by
-     * the default asynchronous execution facility of the {@link CompletionStage}.
-     *
-     * <pre>{@code
-     * > public class MyThriftService implements ThriftService.AsyncIface {
-     * >     @Override
-     * >     public void myServiceMethod(AsyncMethodCallback<MyResult> callback) {
-     * >         final CompletableFuture<MyResult> future = ...;
-     * >         AsyncMethodCallbacks.transferAsync(future, callback);
-     * >     }
-     * > }
-     * }</pre>
-     */
-    public static <T> void transferAsync(CompletionStage<T> src, AsyncMethodCallback<? super T> dest) {
-        requireNonNull(src, "src");
-        src.whenCompleteAsync(callback(dest));
-    }
-
-    /**
-     * Adds a callback that transfers the outcome of the specified {@link CompletionStage} to the specified
-     * {@link AsyncMethodCallback}. The callback methods of {@link AsyncMethodCallback} will be invoked by
-     * the specified {@link Executor}.
-     *
-     * <pre>{@code
-     * > public class MyThriftService implements ThriftService.AsyncIface {
-     * >     @Override
-     * >     public void myServiceMethod(AsyncMethodCallback<MyResult> callback) {
-     * >         final CompletableFuture<MyResult> future = ...;
-     * >         AsyncMethodCallbacks.transferAsync(future, callback, executor);
-     * >     }
-     * > }
-     * }</pre>
-     */
-    public static <T> void transferAsync(
-            CompletionStage<T> src, AsyncMethodCallback<? super T> dest, Executor executor) {
-
-        requireNonNull(src, "src");
-        requireNonNull(executor, "executor");
-        src.whenCompleteAsync(callback(dest), executor);
+        requireNonNull(dest, "dest");
+        src.whenComplete((res, cause) -> {
+            try {
+                if (cause != null) {
+                    invokeOnError(dest, cause);
+                } else {
+                    dest.onComplete(res);
+                }
+            } catch (Exception e) {
+                CompletionActions.log(e);
+            }
+        });
     }
 
     /**
@@ -105,21 +71,6 @@ public final class AsyncMethodCallbacks {
         } else {
             callback.onError(new CompletionException(cause.toString(), cause));
         }
-    }
-
-    private static <T> BiConsumer<T, Throwable> callback(AsyncMethodCallback<? super T> dest) {
-        requireNonNull(dest, "dest");
-        return (res, cause) -> {
-            try {
-                if (cause != null) {
-                    invokeOnError(dest, cause);
-                } else {
-                    dest.onComplete(res);
-                }
-            } catch (Exception e) {
-                CompletionActions.log(e);
-            }
-        };
     }
 
     private AsyncMethodCallbacks() {}

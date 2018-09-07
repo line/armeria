@@ -17,7 +17,6 @@ package com.linecorp.armeria.common.thrift;
 
 import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.isA;
@@ -27,8 +26,6 @@ import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.Test;
@@ -74,32 +71,5 @@ public class AsyncMethodCallbacksTest {
         doThrow(new AnticipatedException()).when(callback).onComplete(any());
         AsyncMethodCallbacks.transfer(completedFuture("foo"), callback);
         verify(callback, only()).onComplete("foo");
-    }
-
-    @Test
-    public void transferAsync_ExecutorUnspecified() {
-        @SuppressWarnings("unchecked")
-        final AsyncMethodCallback<String> callback = mock(AsyncMethodCallback.class);
-        AsyncMethodCallbacks.transferAsync(completedFuture("foo"), callback);
-
-        await().untilAsserted(() -> {
-            verify(callback, only()).onComplete("foo");
-        });
-    }
-
-    @Test
-    public void transferAsync_ExecutorSpecified() throws Exception {
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
-        try {
-            @SuppressWarnings("unchecked")
-            final AsyncMethodCallback<String> callback = mock(AsyncMethodCallback.class);
-            AsyncMethodCallbacks.transferAsync(completedFuture("foo"), callback, executor);
-
-            await().untilAsserted(() -> {
-                verify(callback, only()).onComplete("foo");
-            });
-        } finally {
-            executor.shutdownNow();
-        }
     }
 }
