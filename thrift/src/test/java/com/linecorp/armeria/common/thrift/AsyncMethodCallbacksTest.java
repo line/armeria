@@ -23,8 +23,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.CompletionException;
@@ -44,8 +43,7 @@ public class AsyncMethodCallbacksTest {
         final AsyncMethodCallback<String> callback = mock(AsyncMethodCallback.class);
         AsyncMethodCallbacks.transfer(completedFuture("foo"), callback);
 
-        verify(callback, times(1)).onComplete("foo");
-        verify(callback, never()).onError(any());
+        verify(callback, only()).onComplete("foo");
     }
 
     @Test
@@ -54,8 +52,7 @@ public class AsyncMethodCallbacksTest {
         final AsyncMethodCallback<String> callback = mock(AsyncMethodCallback.class);
         AsyncMethodCallbacks.transfer(exceptionallyCompletedFuture(new AnticipatedException()), callback);
 
-        verify(callback, never()).onComplete(any());
-        verify(callback, times(1)).onError(isA(AnticipatedException.class));
+        verify(callback, only()).onError(isA(AnticipatedException.class));
     }
 
     @Test
@@ -64,8 +61,7 @@ public class AsyncMethodCallbacksTest {
         final AsyncMethodCallback<String> callback = mock(AsyncMethodCallback.class);
         AsyncMethodCallbacks.transfer(exceptionallyCompletedFuture(new Throwable("foo")), callback);
 
-        verify(callback, never()).onComplete(any());
-        verify(callback, times(1)).onError(argThat(argument -> {
+        verify(callback, only()).onError(argThat(argument -> {
             return argument instanceof CompletionException &&
                    "foo".equals(argument.getCause().getMessage());
         }));
@@ -77,6 +73,7 @@ public class AsyncMethodCallbacksTest {
         final AsyncMethodCallback<String> callback = mock(AsyncMethodCallback.class);
         doThrow(new AnticipatedException()).when(callback).onComplete(any());
         AsyncMethodCallbacks.transfer(completedFuture("foo"), callback);
+        verify(callback, only()).onComplete("foo");
     }
 
     @Test
@@ -86,8 +83,7 @@ public class AsyncMethodCallbacksTest {
         AsyncMethodCallbacks.transferAsync(completedFuture("foo"), callback);
 
         await().untilAsserted(() -> {
-            verify(callback, times(1)).onComplete("foo");
-            verify(callback, never()).onError(any());
+            verify(callback, only()).onComplete("foo");
         });
     }
 
@@ -100,8 +96,7 @@ public class AsyncMethodCallbacksTest {
             AsyncMethodCallbacks.transferAsync(completedFuture("foo"), callback, executor);
 
             await().untilAsserted(() -> {
-                verify(callback, times(1)).onComplete("foo");
-                verify(callback, never()).onError(any());
+                verify(callback, only()).onComplete("foo");
             });
         } finally {
             executor.shutdownNow();
