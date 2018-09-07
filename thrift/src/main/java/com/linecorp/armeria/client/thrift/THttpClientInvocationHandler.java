@@ -16,11 +16,8 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
@@ -33,7 +30,7 @@ import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.thrift.AsyncMethodCallbacks;
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class THttpClientInvocationHandler implements InvocationHandler, ClientBuilderParams {
@@ -131,14 +128,7 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
             }
 
             if (callback != null) {
-                reply.handle(voidFunction((result, cause) -> {
-                    if (cause == null) {
-                        callback.onComplete(result);
-                    } else {
-                        invokeOnError(callback, cause);
-                    }
-                })).exceptionally(CompletionActions::log);
-
+                AsyncMethodCallbacks.transfer(reply, callback);
                 return null;
             } else {
                 try {
@@ -149,16 +139,11 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
             }
         } catch (Throwable cause) {
             if (callback != null) {
-                invokeOnError(callback, cause);
+                AsyncMethodCallbacks.invokeOnError(callback, cause);
                 return null;
             } else {
                 throw cause;
             }
         }
-    }
-
-    private static void invokeOnError(AsyncMethodCallback<Object> callback, Throwable cause) {
-        callback.onError(cause instanceof Exception ? (Exception) cause
-                                                    : new UndeclaredThrowableException(cause));
     }
 }
