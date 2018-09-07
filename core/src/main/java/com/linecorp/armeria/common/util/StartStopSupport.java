@@ -118,13 +118,16 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
                              .thenComposeAsync(unused -> start(failIfStarted), executor);
         }
 
+        assert state == State.STOPPED : "state: " + state;
+        state = State.STARTING;
+
         // Attempt to start.
         final CompletableFuture<V> startFuture = new CompletableFuture<>();
+        boolean submitted = false;
         try {
             executor.execute(() -> {
                 try {
-                    assert state == State.STOPPED;
-                    enter(State.STARTING, null);
+                    notifyListeners(State.STARTING, null);
                     final CompletionStage<V> f = doStart();
                     if (f == null) {
                         throw new IllegalStateException("doStart() returned null.");
@@ -141,8 +144,13 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
                     startFuture.completeExceptionally(e);
                 }
             });
+            submitted = true;
         } catch (Exception e) {
             return exceptionallyCompletedFuture(e);
+        } finally {
+            if (!submitted) {
+                state = State.STOPPED;
+            }
         }
 
         final CompletableFuture<V> future = startFuture.handleAsync((result, cause) -> {
@@ -189,13 +197,16 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
                 return castFuture;
         }
 
+        assert state == State.STARTED || rollback : "state: " + state + ", rollback: " + rollback;
+        final State oldState = state;
+        state = State.STOPPING;
+
         final CompletableFuture<Void> stopFuture = new CompletableFuture<>();
+        boolean submitted = false;
         try {
             executor.execute(() -> {
                 try {
-                    assert state == State.STARTED || rollback;
-                    enter(State.STOPPING, null);
-
+                    notifyListeners(State.STOPPING, null);
                     final CompletionStage<Void> f = doStop();
                     if (f == null) {
                         throw new IllegalStateException("doStop() returned null.");
@@ -212,8 +223,13 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
                     stopFuture.completeExceptionally(e);
                 }
             });
+            submitted = true;
         } catch (Exception e) {
             return exceptionallyCompletedFuture(e);
+        } finally {
+            if (!submitted) {
+                state = oldState;
+            }
         }
 
         final CompletableFuture<Void> future = stopFuture.whenCompleteAsync(
@@ -259,7 +275,10 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
             assert this.state != state : "transition to the same state: " + state;
             this.state = state;
         }
+        notifyListeners(state, value);
+    }
 
+    private void notifyListeners(State state, @Nullable V value) {
         for (L l : listeners) {
             try {
                 switch (state) {
