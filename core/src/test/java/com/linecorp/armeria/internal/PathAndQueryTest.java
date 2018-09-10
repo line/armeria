@@ -85,18 +85,30 @@ public class PathAndQueryTest {
 
         // Escaped
         assertThat(PathAndQuery.parse("/%00")).isNull();
+        assertThat(PathAndQuery.parse("/a%09b")).isNull();
+        assertThat(PathAndQuery.parse("/a%0ab")).isNull();
         assertThat(PathAndQuery.parse("/a%0db")).isNull();
         assertThat(PathAndQuery.parse("/a%7fb")).isNull();
 
         // With query string
         assertThat(PathAndQuery.parse("/\0?c")).isNull();
+        assertThat(PathAndQuery.parse("/a\tb?c")).isNull();
         assertThat(PathAndQuery.parse("/a\nb?c")).isNull();
+        assertThat(PathAndQuery.parse("/a\rb?c")).isNull();
         assertThat(PathAndQuery.parse("/a\u007fb?c")).isNull();
 
         // With query string with control chars
         assertThat(PathAndQuery.parse("/?\0")).isNull();
-        assertThat(PathAndQuery.parse("/?a\nb")).isNull();
+        assertThat(PathAndQuery.parse("/?%00")).isNull();
         assertThat(PathAndQuery.parse("/?a\u007fb")).isNull();
+        assertThat(PathAndQuery.parse("/?a%7Fb")).isNull();
+        // However, 0x0A, 0x0D, 0x09 should be accepted in a query string.
+        assertThat(PathAndQuery.parse("/?a\tb").query()).isEqualTo("a%09b");
+        assertThat(PathAndQuery.parse("/?a\nb").query()).isEqualTo("a%0Ab");
+        assertThat(PathAndQuery.parse("/?a\rb").query()).isEqualTo("a%0Db");
+        assertThat(PathAndQuery.parse("/?a%09b").query()).isEqualTo("a%09b");
+        assertThat(PathAndQuery.parse("/?a%0Ab").query()).isEqualTo("a%0Ab");
+        assertThat(PathAndQuery.parse("/?a%0Db").query()).isEqualTo("a%0Db");
     }
 
     @Test
