@@ -355,9 +355,19 @@ public final class PathAndQuery {
     }
 
     private static boolean appendOneByte(Bytes buf, int cp, boolean wasSlash, boolean isPath) {
-        if (cp == 0x7F || (cp >>> 5 == 0)) {
-            // Reject the prohibited control characters: 0x00..0x1F and 0x7F
+        if (cp == 0x7F) {
+            // Reject the control character: 0x7F
             return false;
+        }
+
+        if (cp >>> 5 == 0) {
+            // Reject the control characters: 0x00..0x1F
+            if (isPath) {
+                return false;
+            } else if (cp != 0x0A && cp != 0x0D && cp != 0x09) {
+                // .. except 0x0A (LF), 0x0D (CR) and 0x09 (TAB) because they are used in a form.
+                return false;
+            }
         }
 
         if (cp == '/' && isPath) {
