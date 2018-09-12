@@ -82,7 +82,7 @@ public class HttpHealthCheckedEndpointGroupBuilder {
     }
 
     /**
-     * Sets the {@link Function} that customizes a {@link HttpClient} for health check.
+     * Sets the {@link Function} that customizes an {@link HttpClient} for health check.
      * <pre>{@code
      * new HttpHealthCheckedEndpointGroupBuilder(delegate, healthCheckPath)
      *     .withClientOptions(op -> op.defaultResponseTimeout(Duration.ofSeconds(1)))
