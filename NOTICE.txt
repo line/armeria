@@ -222,6 +222,11 @@ This product depends on Netty, distributed by Netty.io:
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
   * Homepage: https://netty.io/
 
+This product depends on OpenSAML, distributed by Shibboleth Project:
+
+  * License: licenses/LICENSE.opensaml.al20.txt (Apache License v2.0)
+  * Homepage: https://wiki.shibboleth.net/confluence/display/OS30/Home
+
 This product depends on protobuf-jackson, distributed by Choko:
 
   * License: licenses/LICENSE.protobuf-jackson.mit.txt (MIT License)
