@@ -54,7 +54,6 @@ public class MethodInfo {
     private final List<HttpHeaders> exampleHttpHeaders;
     private final List<String> exampleRequests;
     private final HttpMethod httpMethod;
-    private final EndpointPathMapping endpointPathMapping;
     @Nullable
     private final String docString;
 
@@ -67,7 +66,7 @@ public class MethodInfo {
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
-             HttpMethod.POST, EndpointPathMapping.DEFAULT, null);
+             HttpMethod.POST, null);
     }
 
     /**
@@ -78,9 +77,9 @@ public class MethodInfo {
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints, HttpMethod httpMethod,
-                      EndpointPathMapping endpointPathMapping, @Nullable String docString) {
+                      @Nullable String docString) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures,
-             endpoints, ImmutableList.of(), ImmutableList.of(), httpMethod, endpointPathMapping, docString);
+             endpoints, ImmutableList.of(), ImmutableList.of(), httpMethod, docString);
     }
 
     /**
@@ -94,7 +93,6 @@ public class MethodInfo {
                       Iterable<HttpHeaders> exampleHttpHeaders,
                       Iterable<String> exampleRequests,
                       HttpMethod httpMethod,
-                      EndpointPathMapping endpointPathMapping,
                       @Nullable String docString) {
         this.name = requireNonNull(name, "name");
 
@@ -113,7 +111,6 @@ public class MethodInfo {
                                          .collect(toImmutableList());
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
-        this.endpointPathMapping = requireNonNull(endpointPathMapping, "endpointPathMapping");
         this.docString = Strings.emptyToNull(docString);
     }
 
@@ -183,14 +180,6 @@ public class MethodInfo {
     }
 
     /**
-     * Returns the {@link EndpointPathMapping} of this method.
-     */
-    @JsonProperty
-    public EndpointPathMapping endpointPathMapping() {
-        return endpointPathMapping;
-    }
-
-    /**
      * Returns the documentation string of the function.
      */
     @JsonProperty
@@ -216,14 +205,13 @@ public class MethodInfo {
                parameters().equals(that.parameters()) &&
                exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
                endpoints().equals(that.endpoints()) &&
-               Objects.equals(httpMethod(), that.httpMethod()) &&
-               endpointPathMapping().equals(that.endpointPathMapping());
+               Objects.equals(httpMethod(), that.httpMethod());
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(name(), returnTypeSignature(), parameters(), exceptionTypeSignatures(),
-                            endpoints(), httpMethod(), endpointPathMapping());
+                            endpoints(), httpMethod());
     }
 
     @Override
@@ -235,7 +223,6 @@ public class MethodInfo {
                           .add("exceptionTypeSignatures", exceptionTypeSignatures())
                           .add("endpoints", endpoints())
                           .add("httpMethod", httpMethod())
-                          .add("endpointPathMapping", endpointPathMapping())
                           .toString();
     }
 }

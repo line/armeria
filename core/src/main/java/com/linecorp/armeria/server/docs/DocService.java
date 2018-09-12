@@ -79,6 +79,10 @@ import io.swagger.v3.oas.models.OpenAPI;
  */
 public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
+    private static final int SPECIFICATION_INDEX = 0;
+    private static final int OPENAPI_JSON_INDEX = 1;
+    private static final int OPENAPI_YAML_INDEX = 2;
+
     private static final ObjectMapper jsonMapper = new ObjectMapper()
             .setSerializationInclusion(Include.NON_ABSENT);
 
@@ -168,16 +172,19 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 spec = addDocStrings(spec, services);
                 spec = addExamples(spec);
 
-                vfs(0).setContent(jsonMapper.writerWithDefaultPrettyPrinter()
-                                            .writeValueAsBytes(spec));
+                vfs(SPECIFICATION_INDEX).setContent(jsonMapper.writerWithDefaultPrettyPrinter()
+                                                              .writeValueAsBytes(spec));
 
                 if (services.stream().anyMatch(sc -> sc.service()
                                                        .as(AnnotatedHttpService.class).isPresent())) {
                     final OpenAPI openAPI = generateOpenApi(services);
-                    vfs(1).setContent(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(openAPI));
+                    vfs(OPENAPI_JSON_INDEX).setContent(
+                            jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(openAPI));
                     // There's no media type defined for yaml and OpenAPI specification, so just use
-                    // MediaType.JSON_UTF_8 for now.
-                    vfs(2).setContent(yamlMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(openAPI));
+                    // application/x-yaml until it's defined.
+                    vfs(OPENAPI_YAML_INDEX).setContent(
+                            yamlMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(openAPI),
+                    MediaType.create("application", "x-yaml"));
                 }
             }
         });
@@ -244,7 +251,6 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                               method.exampleHttpHeaders(),
                               method.exampleRequests(),
                               method.httpMethod(),
-                              method.endpointPathMapping(),
                               docString(service.name() + '/' + method.name(), method.docString(), docStrings));
     }
 
@@ -322,12 +328,10 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 // Reconstruct MethodInfos with the examples.
                 service.methods().stream().map(m -> new MethodInfo(
                         m.name(), m.returnTypeSignature(), m.parameters(), m.exceptionTypeSignatures(),
-                        m.endpoints(), Iterables.concat(m.exampleHttpHeaders(),
-                                                        exampleHttpHeaders.get(m.name())),
-                        Iterables.concat(m.exampleRequests(),
-                                         exampleRequests.get(m.name())),
-                        m.httpMethod(), m.endpointPathMapping(),
-                        m.docString()))::iterator,
+                        m.endpoints(),
+                        Iterables.concat(m.exampleHttpHeaders(), exampleHttpHeaders.get(m.name())),
+                        Iterables.concat(m.exampleRequests(), exampleRequests.get(m.name())),
+                        m.httpMethod(), m.docString()))::iterator,
                 Iterables.concat(service.exampleHttpHeaders(),
                                  exampleHttpHeaders.get("")),
                 service.docString());
@@ -365,8 +369,12 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         }
 
         void setContent(byte[] content) {
+            setContent(content, MediaType.JSON_UTF_8);
+        }
+
+        void setContent(byte[] content, MediaType mediaType) {
             assert entry == Entry.NONE;
-            entry = new ByteArrayEntry("/", MediaType.JSON_UTF_8, content);
+            entry = new ByteArrayEntry("/", mediaType, content);
         }
     }
 }

@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.HEADER_PARAM;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.PATH_PARAM;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.QUERY_PARAM;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.endpointPath;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.extractParameter;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.isHidden;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,8 +33,6 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -55,47 +52,6 @@ public class AnnotatedHttpDocServiceUtilTest {
         when(hiddenMethod.object()).thenReturn(new HiddenMethod());
         when(hiddenMethod.method()).thenReturn(HiddenMethod.class.getDeclaredMethods()[0]);
         assertThat(isHidden(hiddenMethod)).isTrue();
-    }
-
-    @Test
-    public void testEndpointPath() {
-        HttpHeaderPathMapping mapping = newHttpHeaderPathMapping(PathMapping.of("/path"));
-        String endpointPath = endpointPath(mapping, true);
-        assertThat(endpointPath).isEqualTo("/path");
-
-        mapping = newHttpHeaderPathMapping(PathMapping.of("exact:/:foo/bar"));
-        endpointPath = endpointPath(mapping, true);
-        assertThat(endpointPath).isEqualTo("/:foo/bar");
-
-        mapping = newHttpHeaderPathMapping(PathMapping.of("prefix:/bar/baz"));
-        endpointPath = endpointPath(mapping, true);
-        assertThat(endpointPath).isEqualTo("/bar/baz/");
-
-        mapping = newHttpHeaderPathMapping(PathMapping.of("glob:/home/*/files/**"));
-        endpointPath = endpointPath(mapping, true);
-        assertThat(endpointPath).isEqualTo("^/home/([^/]+)/files/(.*)$");
-        endpointPath = endpointPath(mapping, false);
-        assertThat(endpointPath).isNull();
-
-        mapping = newHttpHeaderPathMapping(PathMapping.of("glob:/foo"));
-        endpointPath = endpointPath(mapping, false);
-        assertThat(endpointPath).isEqualTo("/foo");
-
-        mapping = newHttpHeaderPathMapping(PathMapping.of("regex:^/files/(?<filePath>.*)$"));
-        endpointPath = endpointPath(mapping, true);
-        assertThat(endpointPath).isEqualTo("^/files/(?<filePath>.*)$");
-        endpointPath = endpointPath(mapping, false);
-        assertThat(endpointPath).isNull();
-
-        mapping = newHttpHeaderPathMapping(PathMapping.of("/service/{value}/test/:value2/something"));
-        endpointPath = endpointPath(mapping, true);
-        assertThat(endpointPath).isEqualTo("/service/{value}/test/{value2}/something");
-    }
-
-    private static HttpHeaderPathMapping newHttpHeaderPathMapping(PathMapping pathMapping) {
-        return new HttpHeaderPathMapping(pathMapping, ImmutableSet.of(HttpMethod.GET),
-                                         ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
-                                         ImmutableList.of(MediaType.JSON_UTF_8));
     }
 
     @Test

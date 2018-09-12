@@ -207,6 +207,14 @@ public interface PathMapping {
     }
 
     /**
+     * Returns the regular expression of this path mapping if this {@link PathMapping} is created with the
+     * regular expression.
+     */
+    default Optional<String> regex() {
+        return Optional.empty();
+    }
+
+    /**
      * Returns the complexity of this path mapping. It would be increased if this path mapping has
      * more conditions to check.
      */

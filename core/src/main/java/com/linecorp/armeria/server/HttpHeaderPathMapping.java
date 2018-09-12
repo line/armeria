@@ -166,16 +166,14 @@ final class HttpHeaderPathMapping implements PathMapping {
         return pathStringMapping.triePath();
     }
 
-    Optional<String> regex() {
-        if (pathStringMapping instanceof GlobPathMapping) {
-            return Optional.of(((GlobPathMapping) pathStringMapping).asRegex().pattern());
-        }
-
-        if (pathStringMapping instanceof RegexPathMapping) {
-            return Optional.of(((RegexPathMapping) pathStringMapping).asRegex().pattern());
-        }
-
-        return Optional.empty();
+    /**
+     * Returns the regular expression of this path mapping if this {@link PathMapping} is created with the
+     * regular expression. Please note that this regex does not include the {@code pathPrefix} if this is
+     * created with prefix adding path mapping. You should call {@link #prefix()} to retrieve that.
+     */
+    @Override
+    public Optional<String> regex() {
+        return pathStringMapping.regex();
     }
 
     @Override

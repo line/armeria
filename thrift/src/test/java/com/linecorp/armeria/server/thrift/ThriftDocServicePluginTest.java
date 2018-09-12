@@ -46,7 +46,7 @@ import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
-import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
@@ -70,7 +70,7 @@ public class ThriftDocServicePluginTest {
     private final DocServicePlugin generator = new ThriftDocServicePlugin();
 
     @Test
-    public void servicesTest() throws Exception {
+    public void servicesTest() {
         final ServiceConfig helloService = new ServiceConfig(
                 new VirtualHostBuilder().build(),
                 PathMapping.ofExact("/hello"),
@@ -108,12 +108,12 @@ public class ThriftDocServicePluginTest {
         final MethodInfo bar4 = methods.get("bar4");
         assertThat(bar4.exampleRequests()).isEmpty();
         assertThat(bar4.endpoints())
-                .containsExactly(new EndpointInfo("*", "/foo", "", ThriftSerializationFormats.COMPACT,
-                                                  ImmutableSet.of(ThriftSerializationFormats.COMPACT)));
+                .containsExactly(new EndpointInfoBuilder("*", "/foo")
+                                         .defaultFormat(ThriftSerializationFormats.COMPACT).build());
     }
 
     @Test
-    public void testNewEnumInfo() throws Exception {
+    public void testNewEnumInfo() {
         final EnumInfo enumInfo = EnumInfo.of(FooEnum.class);
 
         assertThat(enumInfo).isEqualTo(new EnumInfo(FooEnum.class.getName(),
@@ -123,7 +123,7 @@ public class ThriftDocServicePluginTest {
     }
 
     @Test
-    public void testNewExceptionInfo() throws Exception {
+    public void testNewExceptionInfo() {
         final ExceptionInfo exception = newExceptionInfo(FooServiceException.class);
 
         assertThat(exception).isEqualTo(new ExceptionInfo(
@@ -135,13 +135,17 @@ public class ThriftDocServicePluginTest {
     }
 
     @Test
-    public void testNewServiceInfo() throws Exception {
+    public void testNewServiceInfo() {
         final ServiceInfo service =
                 newServiceInfo(FooService.class, ImmutableList.of(
-                        new EndpointInfo("*", "/foo", "a", ThriftSerializationFormats.BINARY,
-                                         ImmutableSet.of(ThriftSerializationFormats.BINARY)),
-                        new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
-                                         ImmutableSet.of(ThriftSerializationFormats.TEXT))));
+                        new EndpointInfoBuilder("*", "/foo")
+                                .fragment("a")
+                                .defaultFormat(ThriftSerializationFormats.BINARY)
+                                .build(),
+                        new EndpointInfoBuilder("*", "/debug/foo")
+                                .fragment("b")
+                                .defaultFormat(ThriftSerializationFormats.TEXT)
+                                .build()));
 
         final Map<String, MethodInfo> methods =
                 service.methods().stream().collect(toImmutableMap(MethodInfo::name, Function.identity()));
@@ -153,10 +157,14 @@ public class ThriftDocServicePluginTest {
         assertThat(bar1.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar1.exampleRequests()).isEmpty();
         assertThat(bar1.endpoints()).containsExactlyInAnyOrder(
-                new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
-                                 ImmutableSet.of(ThriftSerializationFormats.TEXT)),
-                new EndpointInfo("*", "/foo", "a", ThriftSerializationFormats.BINARY,
-                                 ImmutableSet.of(ThriftSerializationFormats.BINARY)));
+                new EndpointInfoBuilder("*", "/foo")
+                        .fragment("a")
+                        .defaultFormat(ThriftSerializationFormats.BINARY)
+                        .build(),
+                new EndpointInfoBuilder("*", "/debug/foo")
+                        .fragment("b")
+                        .defaultFormat(ThriftSerializationFormats.TEXT)
+                        .build());
 
         final TypeSignature string = TypeSignature.ofBase("string");
         final MethodInfo bar2 = methods.get("bar2");

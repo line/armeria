@@ -59,6 +59,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -114,11 +115,11 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
                     final PathMapping pathMapping = c.pathMapping();
                     final String path = pathMapping.exactPath().orElse(pathMapping.prefix().orElse(null));
                     if (path != null) {
-                        builder.endpoint(new EndpointInfo(
-                                c.virtualHost().hostnamePattern(),
-                                path, serviceName,
-                                service.defaultSerializationFormat(),
-                                service.allowedSerializationFormats()));
+                        builder.endpoint(new EndpointInfoBuilder(c.virtualHost().hostnamePattern(), path)
+                                                 .fragment(serviceName)
+                                                 .defaultFormat(service.defaultSerializationFormat())
+                                                 .availableFormats(service.allowedSerializationFormats())
+                                                 .build());
                     }
                 }
             });

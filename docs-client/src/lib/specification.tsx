@@ -19,12 +19,6 @@ import { Link } from 'react-router-dom';
 
 type DocString = string | JSX.Element;
 
-export enum EndpointPathMapping {
-  Default = 'DEFAULT',
-  Prefix = 'PREFIX',
-  Regex = 'REGEX',
-}
-
 interface HasDocString {
   docString?: DocString;
 }
@@ -41,6 +35,7 @@ export interface Endpoint {
   path: string;
   defaultMimeType: string;
   availableMimeTypes: string[];
+  regexPathPrefix?: string;
   fragment?: string;
 }
 
@@ -53,7 +48,6 @@ export interface Method {
   exampleHttpHeaders: { [name: string]: string }[];
   exampleRequests: string[];
   httpMethod: string;
-  endpointPathMapping: EndpointPathMapping;
   docString?: DocString;
 }
 
@@ -115,6 +109,29 @@ export function methodKey(
     return `${serviceName}/${methodName}/${httpMethod}`;
   }
   return `${serviceName}/${methodName}`;
+}
+
+export function endpointPathString(endpoint: Endpoint): string {
+  if (!endpoint.regexPathPrefix) {
+    return endpoint.path;
+  }
+  return `prefix:${endpoint.regexPathPrefix} ${endpoint.path}`;
+}
+
+export function isPrefixOrRegexMapping(method: Method): boolean {
+  const endpoints = method.endpoints;
+  if (endpoints.length !== 1) {
+    throw new Error(`
+    Endpoints size should be 1 to determine prefix or regex. size: ${
+      endpoints.length
+    }`);
+  }
+  const endpoint = endpoints[0];
+  return (
+    !!endpoint.regexPathPrefix ||
+    endpoint.path.startsWith('prefix:') ||
+    endpoint.path.startsWith('regex:')
+  );
 }
 
 interface NamedObject {

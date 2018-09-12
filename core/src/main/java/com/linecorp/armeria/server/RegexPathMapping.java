@@ -18,11 +18,11 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
 final class RegexPathMapping extends AbstractPathMapping {
@@ -109,9 +109,9 @@ final class RegexPathMapping extends AbstractPathMapping {
         return meterTag;
     }
 
-    @VisibleForTesting
-    Pattern asRegex() {
-        return regex;
+    @Override
+    public Optional<String> regex() {
+        return Optional.of(regex.pattern());
     }
 
     @Override

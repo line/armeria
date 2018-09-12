@@ -25,6 +25,12 @@ import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.PrefixAddingPathM
 public class PrefixAddingPathMappingTest {
 
     @Test
+    public void prefix() {
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).prefix().get())
+                .isEqualTo("/foo/");
+    }
+
+    @Test
     public void testLoggerName() {
         assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).loggerName())
                 .isEqualTo("foo.bar.__");

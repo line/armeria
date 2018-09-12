@@ -30,10 +30,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -43,50 +41,27 @@ public final class EndpointInfo {
 
     private final String hostnamePattern;
     private final String path;
-    private final EndpointPathMapping pathMapping;
+
+    @Nullable
+    private final String regexPathPrefix;
     @Nullable
     private final String fragment;
+    @Nullable
     private final MediaType defaultMimeType;
     private final Set<MediaType> availableMimeTypes;
 
     /**
      * Creates a new instance.
      */
-    public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
-                        SerializationFormat defaultFormat, Iterable<SerializationFormat> availableFormats) {
-        this(hostnamePattern, path, EndpointPathMapping.DEFAULT, fragment, defaultFormat, availableFormats);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public EndpointInfo(String hostnamePattern, String path, EndpointPathMapping pathMapping,
-                        @Nullable String fragment, SerializationFormat defaultFormat,
-                        Iterable<SerializationFormat> availableFormats) {
-        this(hostnamePattern, path, pathMapping, fragment, defaultFormat.mediaType(),
-             Streams.stream(availableFormats).map(SerializationFormat::mediaType)::iterator);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
-                        MediaType defaultMimeType, Iterable<MediaType> availableMimeTypes) {
-        this(hostnamePattern, path, EndpointPathMapping.DEFAULT, fragment, defaultMimeType, availableMimeTypes);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public EndpointInfo(String hostnamePattern, String path, EndpointPathMapping pathMapping,
-                        @Nullable String fragment,
-                        MediaType defaultMimeType, Iterable<MediaType> availableMimeTypes) {
+    public EndpointInfo(String hostnamePattern, String path, @Nullable String regexPathPrefix,
+                        @Nullable String fragment, @Nullable MediaType defaultMimeType,
+                        Iterable<MediaType> availableMimeTypes) {
 
         this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
         this.path = requireNonNull(path, "path");
-        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
+        this.regexPathPrefix = Strings.emptyToNull(regexPathPrefix);
         this.fragment = Strings.emptyToNull(fragment);
-        this.defaultMimeType = requireNonNull(defaultMimeType, "defaultFormat");
+        this.defaultMimeType = defaultMimeType;
 
         this.availableMimeTypes = ImmutableSortedSet.copyOf(
                 Comparator.comparing(MediaType::toString),
@@ -110,11 +85,14 @@ public final class EndpointInfo {
     }
 
     /**
-     * Returns the {@link EndpointPathMapping} of this endpoint.
+     * Returns the prefix of this endpoint when the {@link #path()} returns regular expression string of
+     * endpoint, otherwise {@code null}.
      */
     @JsonProperty
-    public EndpointPathMapping pathMapping() {
-        return pathMapping;
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public String regexPathPrefix() {
+        return regexPathPrefix;
     }
 
     /**
@@ -131,6 +109,8 @@ public final class EndpointInfo {
      * Returns the default MIME type of this endpoint.
      */
     @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
     public MediaType defaultMimeType() {
         return defaultMimeType;
     }
@@ -161,16 +141,18 @@ public final class EndpointInfo {
         final EndpointInfo that = (EndpointInfo) obj;
         return hostnamePattern.equals(that.hostnamePattern) &&
                path.equals(that.path) &&
+               Objects.equals(regexPathPrefix, that.regexPathPrefix) &&
                Objects.equals(fragment, that.fragment) &&
-               defaultMimeType.equals(that.defaultMimeType) &&
+               Objects.equals(defaultMimeType, that.defaultMimeType) &&
                availableMimeTypes.equals(that.availableMimeTypes);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("hostnamePattern", hostnamePattern)
                           .add("path", path)
+                          .add("regexPathPrefix", regexPathPrefix)
                           .add("fragment", fragment)
                           .add("defaultMimeType", defaultMimeType)
                           .add("availableMimeTypes", availableMimeTypes)

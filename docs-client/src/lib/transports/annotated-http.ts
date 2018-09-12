@@ -18,9 +18,37 @@ import { Method } from '../specification';
 
 import Transport from './transport';
 
-const JSON_MIME_TYPE = 'application/json';
+const JSON_MIME_TYPE = 'application/json; charset=utf-8';
 
 export default class AnnotatedHttpTransport extends Transport {
+  private static newPath(
+    endpointPath: string,
+    bodyJson: string,
+    queries: string | undefined,
+  ): string {
+    let newPath = endpointPath;
+    const parsed = JSON.parse(bodyJson);
+    const myRegexp = /(?:\{\w+\})/g;
+    let match = myRegexp.exec(newPath);
+    while (match != null) {
+      const pathParam = match[0].substring(1, match[0].length - 1); // Remove '{' and '}'.
+      const pathParamValue = parsed[pathParam];
+      if (pathParamValue == null) {
+        throw new Error(`The body should contain path parameter: ${pathParam}`);
+      }
+      newPath = newPath.replace(match[0], pathParamValue);
+      match = myRegexp.exec(newPath);
+    }
+    if (queries && queries.length > 1) {
+      if (queries.charAt(0) === '?') {
+        newPath += queries;
+      } else {
+        newPath += '?' + queries;
+      }
+    }
+    return newPath;
+  }
+
   public supportsMimeType(mimeType: string): boolean {
     return mimeType === JSON_MIME_TYPE;
   }
@@ -50,12 +78,12 @@ export default class AnnotatedHttpTransport extends Transport {
     const newPath = encodeURI(
       endpointPath
         ? endpointPath
-        : this.newPath(endpoint.path, bodyJson, queries),
+        : AnnotatedHttpTransport.newPath(endpoint.path, bodyJson, queries),
     );
-    let sendBody = bodyJson;
-    if (method.httpMethod === 'GET' || method.httpMethod === 'HEAD') {
-      sendBody = '';
-    }
+    const sendBody =
+      method.httpMethod === 'GET' || method.httpMethod === 'HEAD'
+        ? null
+        : bodyJson;
     const httpResponse = await fetch(newPath, {
       headers: hdrs,
       method: method.httpMethod,
@@ -63,33 +91,5 @@ export default class AnnotatedHttpTransport extends Transport {
     });
     const response = await httpResponse.text();
     return response.length > 0 ? response : 'No response really?';
-  }
-
-  private newPath(
-    endpointPath: string,
-    bodyJson: string,
-    queries: string | undefined,
-  ): string {
-    let newPath = endpointPath;
-    const parsed = JSON.parse(bodyJson);
-    const myRegexp = /(?:\{\w+\})/g;
-    let match = myRegexp.exec(newPath);
-    while (match != null) {
-      const pathParam = match[0].substring(1, match[0].length - 1); // Remove '{' and '}'.
-      const pathParamValue = parsed[pathParam];
-      if (pathParamValue == null) {
-        throw new Error(`The body should contain path parameter: ${pathParam}`);
-      }
-      newPath = newPath.replace(match[0], pathParamValue);
-      match = myRegexp.exec(newPath);
-    }
-    if (queries && queries.length > 1) {
-      if (queries.charAt(0) === '?') {
-        newPath += queries;
-      } else {
-        newPath += '?' + queries;
-      }
-    }
-    return newPath;
   }
 }

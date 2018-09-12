@@ -17,8 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.endpointPath;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.extractParameter;
+import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.isHidden;
 import static java.util.Objects.requireNonNull;
 
@@ -94,7 +94,7 @@ public final class AnnotatedOpenApiReader {
         }
 
         final HttpHeaderPathMapping pathMapping = service.pathMapping();
-        final String operationPath = endpointPath(pathMapping, false);
+        final String operationPath = endpointPath(pathMapping);
         if (isNullOrEmpty(operationPath)) {
             return;
         }
@@ -115,6 +115,17 @@ public final class AnnotatedOpenApiReader {
         pathMapping.supportedMethods().forEach(
                 httpMethod -> setPathItemOperation(pathItem, httpMethod, operation));
         openApi.path(operationPath, pathItem);
+    }
+
+    @Nullable
+    private static String endpointPath(HttpHeaderPathMapping pathMapping) {
+        if (pathMapping.prefix().isPresent()) {
+            if (pathMapping.regex().isPresent()) { // Does not support regex.
+                return null;
+            }
+            return pathMapping.prefix().get();
+        }
+        return getNormalizedTriePath(pathMapping);
     }
 
     @VisibleForTesting

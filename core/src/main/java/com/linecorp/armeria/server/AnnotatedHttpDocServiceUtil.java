@@ -53,6 +53,10 @@ final class AnnotatedHttpDocServiceUtil {
     @VisibleForTesting
     static final String PATH_PARAM = "path";
 
+    /**
+     * Returns {@code true} if the class or the method of the specified {@link AnnotatedHttpService} is
+     * annotated with {@link Hidden}.
+     */
     static boolean isHidden(AnnotatedHttpService service) {
         requireNonNull(service, "service");
         final Class<?> clazz = service.object().getClass();
@@ -73,41 +77,30 @@ final class AnnotatedHttpDocServiceUtil {
     }
 
     @Nullable
-    static String endpointPath(HttpHeaderPathMapping pathMapping, boolean regexSupported) {
+    static String getNormalizedTriePath(HttpHeaderPathMapping pathMapping) {
         requireNonNull(pathMapping, "pathMapping");
-        if (pathMapping.prefix().isPresent()) {
-            return pathMapping.prefix().get();
-        }
-
         final Optional<String> triePath = pathMapping.triePath();
-        if (triePath.isPresent()) {
-            final String path = pathMapping.triePath().get();
-            int beginIndex = 0;
 
-            final StringBuilder sb = new StringBuilder();
-            for (String paramName : pathMapping.paramNames()) {
-                final int colonIndex = path.substring(beginIndex).indexOf(':') + beginIndex;
-                sb.append(path, beginIndex, colonIndex);
-                sb.append('{');
-                sb.append(paramName);
-                sb.append('}');
-                beginIndex = colonIndex + 1;
-            }
-            if (beginIndex < path.length()) {
-                sb.append(path, beginIndex, path.length());
-            }
-
-            return sb.toString();
+        if (!triePath.isPresent()) {
+            return null;
         }
 
-        if (regexSupported) {
-            final Optional<String> regex = pathMapping.regex();
-            if (regex.isPresent()) {
-                return regex.get();
-            }
-        }
+        final String path = triePath.get();
+        int beginIndex = 0;
 
-        return null;
+        final StringBuilder sb = new StringBuilder();
+        for (String paramName : pathMapping.paramNames()) {
+            final int colonIndex = path.substring(beginIndex).indexOf(':') + beginIndex;
+            sb.append(path, beginIndex, colonIndex);
+            sb.append('{');
+            sb.append(paramName);
+            sb.append('}');
+            beginIndex = colonIndex + 1;
+        }
+        if (beginIndex < path.length()) {
+            sb.append(path, beginIndex, path.length());
+        }
+        return sb.toString();
     }
 
     @Nullable

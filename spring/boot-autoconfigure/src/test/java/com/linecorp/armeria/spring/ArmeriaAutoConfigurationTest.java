@@ -208,7 +208,7 @@ public class ArmeriaAutoConfigurationTest {
         final AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(msg.content().toStringUtf8())
-                .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[1].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
     }
 
     @Test

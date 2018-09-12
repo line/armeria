@@ -34,6 +34,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -771,6 +772,21 @@ final class AnnotatedHttpServiceFactory {
         @Override
         public String meterTag() {
             return meterTag;
+        }
+
+        @Override
+        public Optional<String> prefix() {
+            return Optional.of(pathPrefix);
+        }
+
+        /**
+         * Returns the regular expression of this path mapping if this {@link PathMapping} is created with the
+         * regular expression. Please note that this regex does not include the {@code pathPrefix} specified
+         * when this is created. You should call {@link #prefix()} to retrieve that.
+         */
+        @Override
+        public Optional<String> regex() {
+            return mapping.regex();
         }
 
         @Override

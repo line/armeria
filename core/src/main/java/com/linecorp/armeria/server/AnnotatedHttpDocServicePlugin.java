@@ -18,12 +18,9 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.endpointPath;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.extractParameter;
+import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.isHidden;
-import static com.linecorp.armeria.server.docs.EndpointPathMapping.DEFAULT;
-import static com.linecorp.armeria.server.docs.EndpointPathMapping.PREFIX;
-import static com.linecorp.armeria.server.docs.EndpointPathMapping.REGEX;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
@@ -40,6 +37,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,7 +50,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.EndpointPathMapping;
+import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -121,10 +120,9 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         if (isHidden(service)) {
             return;
         }
-
         final HttpHeaderPathMapping pathMapping = service.pathMapping();
-        final String endpointPath = endpointPath(pathMapping, true);
-        if (isNullOrEmpty(endpointPath)) {
+        final EndpointInfo endpoint = endpointInfo(pathMapping, hostnamePattern);
+        if (endpoint == null) {
             return;
         }
 
@@ -133,16 +131,59 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final TypeSignature returnTypeSignature = toTypeSignature(method.getGenericReturnType());
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
         final List<TypeSignature> exceptions = exceptions(method);
-        final EndpointInfo endpoint = endpointInfo(pathMapping, endpointPath, hostnamePattern);
 
         final Class<?> clazz = service.object().getClass();
         pathMapping.supportedMethods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
                             name, returnTypeSignature, fieldInfos, exceptions,
-                            ImmutableList.of(endpoint), httpMethod, endpoint.pathMapping(), description(method));
+                            ImmutableList.of(endpoint), httpMethod, description(method));
                     methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
                 });
+    }
+
+    @Nullable
+    @VisibleForTesting
+    static EndpointInfo endpointInfo(HttpHeaderPathMapping pathMapping, String hostnamePattern) {
+        final String endpointPath;
+        String regexPathPrefix = null;
+        if (pathMapping.prefix().isPresent()) {
+            if (pathMapping.regex().isPresent()) { // PrefixAddingPathMapping.
+                regexPathPrefix = pathMapping.prefix().get();
+                endpointPath = RegexPathMapping.PREFIX + pathMapping.regex().get();
+            } else { // PrefixPathMapping.
+                endpointPath = PrefixPathMapping.PREFIX + pathMapping.prefix().get();
+            }
+        } else {
+            endpointPath = getNormalizedTriePathOrRegex(pathMapping);
+        }
+
+        if (isNullOrEmpty(endpointPath)) {
+            return null;
+        }
+
+        final EndpointInfoBuilder builder = new EndpointInfoBuilder(hostnamePattern, endpointPath);
+        if (!isNullOrEmpty(regexPathPrefix)) {
+            builder.regexPathPrefix(regexPathPrefix);
+        }
+
+        builder.defaultMimeType(MediaType.JSON_UTF_8);
+        final List<MediaType> consumeTypes = pathMapping.consumeTypes();
+        if (!consumeTypes.isEmpty()) {
+            builder.availableMimeTypes(consumeTypes);
+        }
+
+        return builder.build();
+    }
+
+    @Nullable
+    private static String getNormalizedTriePathOrRegex(HttpHeaderPathMapping pathMapping) {
+        final String normalizedTriePath = getNormalizedTriePath(pathMapping);
+        if (normalizedTriePath != null) {
+            return normalizedTriePath;
+        }
+        final Optional<String> regex = pathMapping.regex();
+        return regex.map(s -> RegexPathMapping.PREFIX + s).orElse(null);
     }
 
     @VisibleForTesting
@@ -246,37 +287,6 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         }
 
         return exceptionBuilder.build();
-    }
-
-    private static EndpointInfo endpointInfo(HttpHeaderPathMapping pathMapping, String endpointPath,
-                                             String hostnamePattern) {
-
-        final EndpointPathMapping endpointPathMapping;
-        if (pathMapping.prefix().isPresent()) {
-            endpointPathMapping = PREFIX;
-        } else {
-            final Optional<String> triePath = pathMapping.triePath();
-            if (triePath.isPresent() && triePath.get().startsWith("^")) {
-                endpointPathMapping = REGEX;
-            } else {
-                endpointPathMapping = DEFAULT;
-            }
-        }
-
-        final List<MediaType> consumeTypes = pathMapping.consumeTypes();
-        if (consumeTypes.isEmpty()) {
-            return new EndpointInfo(hostnamePattern, endpointPath, endpointPathMapping, "", MediaType.JSON,
-                                    ImmutableList.of(MediaType.JSON));
-        }
-
-        if (consumeTypes.contains(MediaType.JSON)) {
-            return new EndpointInfo(hostnamePattern, endpointPath, endpointPathMapping, "", MediaType.JSON,
-                                    consumeTypes);
-        }
-
-        final Builder<MediaType> builder = ImmutableList.builder();
-        return new EndpointInfo(hostnamePattern, endpointPath, endpointPathMapping, "", MediaType.JSON,
-                                builder.add(MediaType.JSON).addAll(consumeTypes).build());
     }
 
     private static String description(Method method) {

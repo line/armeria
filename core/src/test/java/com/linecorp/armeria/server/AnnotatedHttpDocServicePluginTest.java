@@ -21,6 +21,7 @@ import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.INT32;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.INT64;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.STRING;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.VOID;
+import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.endpointInfo;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.newExceptionInfo;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,13 +42,16 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Iterables;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.AnnotatedHttpServiceElement;
+import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
@@ -108,6 +112,90 @@ public class AnnotatedHttpDocServicePluginTest {
     }
 
     @Test
+    public void testNewEndpointInfo() {
+        final String hostnamePattern = "*";
+
+        HttpHeaderPathMapping mapping = newHttpHeaderPathMapping(PathMapping.of("/path"));
+        EndpointInfo endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "/path")
+                                                   .defaultMimeType(MediaType.JSON_UTF_8)
+                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                                                   .build());
+
+        mapping = newHttpHeaderPathMapping(PathMapping.of("exact:/:foo/bar"));
+        endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "/:foo/bar")
+                                                   .defaultMimeType(MediaType.JSON_UTF_8)
+                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                                                   .build());
+
+        mapping = newHttpHeaderPathMapping(PathMapping.of("prefix:/bar/baz"));
+        endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "prefix:/bar/baz/")
+                                                   .defaultMimeType(MediaType.JSON_UTF_8)
+                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                                                   .build());
+
+        mapping = newHttpHeaderPathMapping(PathMapping.of("glob:/home/*/files/**"));
+        endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "regex:^/home/([^/]+)/files/(.*)$")
+                                                   .defaultMimeType(MediaType.JSON_UTF_8)
+                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                                                   .build());
+
+        mapping = newHttpHeaderPathMapping(PathMapping.of("glob:/foo"));
+        endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "/foo")
+                                                   .defaultMimeType(MediaType.JSON_UTF_8)
+                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                                                   .build());
+
+        mapping = newHttpHeaderPathMapping(PathMapping.of("regex:^/files/(?<filePath>.*)$"));
+        endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "regex:^/files/(?<filePath>.*)$")
+                                                   .defaultMimeType(MediaType.JSON_UTF_8)
+                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                                                   .build());
+
+        mapping = newHttpHeaderPathMapping(PathMapping.of("/service/{value}/test/:value2/something"));
+        endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(
+                new EndpointInfoBuilder("*", "/service/{value}/test/{value2}/something")
+                        .defaultMimeType(MediaType.JSON_UTF_8)
+                        .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                        .build());
+
+        // PrefixAddingPathMapping
+
+        mapping = newHttpHeaderPathMapping(
+                new PrefixAddingPathMapping("/glob/", PathMapping.of("glob:/home/*/files/**")));
+        endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(
+                new EndpointInfoBuilder("*", "regex:^/home/([^/]+)/files/(.*)$")
+                        .regexPathPrefix("/glob/")
+                        .defaultMimeType(MediaType.JSON_UTF_8)
+                        .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                        .build());
+
+        mapping = newHttpHeaderPathMapping(
+                new PrefixAddingPathMapping("/prefix: regex:/",
+                                            PathMapping.of("regex:^/files/(?<filePath>.*)$")));
+        endpointInfo = endpointInfo(mapping, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(
+                new EndpointInfoBuilder("*", "regex:^/files/(?<filePath>.*)$")
+                        .regexPathPrefix("/prefix: regex:/")
+                        .defaultMimeType(MediaType.JSON_UTF_8)
+                        .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8)
+                        .build());
+    }
+
+    private static HttpHeaderPathMapping newHttpHeaderPathMapping(PathMapping pathMapping) {
+        return new HttpHeaderPathMapping(pathMapping, ImmutableSet.of(HttpMethod.GET),
+                                         ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
+                                         ImmutableList.of(MediaType.JSON_UTF_8));
+    }
+
+    @Test
     public void testNewExceptionInfo() {
         final ExceptionInfo exception = newExceptionInfo(FooException.class);
         assertThat(exception).isEqualTo(new ExceptionInfo(FooException.class.getName(), ImmutableList.of(
@@ -150,9 +238,8 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(Iterables.get(fooMethod.exceptionTypeSignatures(), 0)).isEqualTo(
                 TypeSignature.ofNamed(FooException.class));
 
-        assertThat(fooMethod.endpoints()).containsExactly(new EndpointInfo("*", "/foo", "",
-                                                                           MediaType.JSON,
-                                                                           ImmutableSet.of(MediaType.JSON)));
+        assertThat(fooMethod.endpoints()).containsExactly(
+                new EndpointInfoBuilder("*", "/foo").defaultMimeType(MediaType.JSON).build());
         final ServiceInfo barServiceInfo = services.get(BarClass.class.getName());
     }
 
