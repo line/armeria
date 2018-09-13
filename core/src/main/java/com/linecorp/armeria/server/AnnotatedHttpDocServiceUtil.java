@@ -133,7 +133,8 @@ final class AnnotatedHttpDocServiceUtil {
             parameter = new Parameter();
             parameter.setIn(COOKIE_PARAM);
             final String elementName = resolver.httpElementName();
-            parameter.setName(elementName != null ? elementName : "cookie"); // TODO Provide a proper name
+            // TODO(minwoox) Provide a proper name for the cookie.
+            parameter.setName(elementName != null ? elementName : "cookie");
         } else {
             // The parameter is one of following:
             // - ServiceRequestContext

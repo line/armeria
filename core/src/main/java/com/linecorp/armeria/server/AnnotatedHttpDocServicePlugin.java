@@ -204,7 +204,8 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 } else if (Set.class.isAssignableFrom(containerType)) {
                     signature = TypeSignature.ofSet(resolver.elementType());
                 } else {
-                    throw new IllegalArgumentException();
+                    throw new IllegalStateException(
+                            "Only List and Set for fields are supported. containerType:" + containerType);
                 }
             } else {
                 signature = toTypeSignature(resolver.elementType());
@@ -273,7 +274,7 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         assert type instanceof Class : "type: " + type;
         final Class<?> clazz = (Class<?>) type;
         if (clazz.isArray()) {
-            throw new IllegalArgumentException("array is not supported: " + clazz);
+            throw new IllegalStateException("array is not supported: " + clazz);
         }
 
         return TypeSignature.ofNamed(clazz);
@@ -328,7 +329,7 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final Field[] declaredFields = type.getDeclaredFields();
         for (Field declaredField : declaredFields) {
             if (shouldContain(declaredField)) {
-                // Set the requirement as DEFAULT because it's hard to define the field in a Exception
+                // Set the requirement as DEFAULT because it's hard to determine the field in a Exception
                 // is required or not.
                 builder.add(new FieldInfo(declaredField.getName(), FieldRequirement.DEFAULT,
                                           toTypeSignature(declaredField.getGenericType())));

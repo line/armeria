@@ -89,7 +89,7 @@ public class AnnotatedHttpDocServicePluginTest {
 
         // Array is not supported.
         assertThatThrownBy(() -> toTypeSignature(int[].class))
-                .isExactlyInstanceOf(IllegalArgumentException.class);
+                .isExactlyInstanceOf(IllegalStateException.class);
 
         // Container types.
 

@@ -66,9 +66,9 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.tags.Tag;
 
 /**
- * A utility class that parses {@link AnnotatedHttpService} and build a {@link OpenAPI} from it.
+ * A utility class that parses {@link AnnotatedHttpService} and builds an {@link OpenAPI} from it.
  * This class uses annotations defined in Armeria such as {@link Param}, {@link Header}, {@link Produces},
- * {@link Consumes}, etc, and in Swagger as well.
+ * {@link Consumes}, etc, as well as the annotations is Swagger.
  *
  * @see <a href="https://github.com/OAI/OpenAPI-Specification/blob/3.0.1/versions/3.0.1.md#oasObject">
  *     OpenAPI specification</a>
@@ -80,7 +80,7 @@ public final class AnnotatedOpenApiReader {
     /**
      * Returns an {@link OpenAPI} by reading the annotations in the specified {@link AnnotatedHttpService}s.
      */
-    public static OpenAPI read(List<AnnotatedHttpService> services) {
+    public static OpenAPI read(Iterable<AnnotatedHttpService> services) {
         requireNonNull(services, "services");
         final OpenAPI openApi = new OpenAPI();
         openApi.components(new Components());
@@ -242,7 +242,7 @@ public final class AnnotatedOpenApiReader {
         AnnotationsUtils.getExternalDocumentation(extDocAnnotation).ifPresent(extDoc -> {
             if (isNullOrEmpty(extDoc.getUrl())) {
                 throw new IllegalArgumentException(
-                        "the URL is required for the documentation: " + extDoc);
+                        "A URL is required for external documentation: " + extDoc);
             }
             operation.setExternalDocs(extDoc);
         });
