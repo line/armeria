@@ -132,7 +132,7 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
         final Context ctx;
         try {
             ctx = (Context) Class.forName(host.getContextClass(), true, getClass().getClassLoader())
-                                 .newInstance();
+                                 .getDeclaredConstructor().newInstance();
         } catch (Exception e) {
             throw new TomcatServiceException("failed to create a new context: " + config, e);
         }
