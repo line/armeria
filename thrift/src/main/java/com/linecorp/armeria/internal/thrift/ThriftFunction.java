@@ -276,7 +276,7 @@ public final class ThriftFunction {
             @SuppressWarnings("unchecked")
             final Class<TBase<?, ?>> resultType =
                     (Class<TBase<?, ?>>) Class.forName(resultTypeName, false, funcClass.getClassLoader());
-            return resultType.newInstance();
+            return resultType.getDeclaredConstructor().newInstance();
         } catch (ClassNotFoundException ignored) {
             // Oneway function does not have a result type.
             return null;
@@ -313,7 +313,7 @@ public final class ThriftFunction {
             @SuppressWarnings("unchecked")
             final Class<TBase<?, ?>> argsType =
                     (Class<TBase<?, ?>>) Class.forName(argsTypeName, false, funcClass.getClassLoader());
-            return argsType.newInstance();
+            return argsType.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
             throw new IllegalStateException("cannot determine the args class of method: " + methodName, e);
         }

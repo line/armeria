@@ -162,8 +162,10 @@ final class RequestContextExporterBuilder {
     private Function<?, String> newStringifier(String mdcKey, String className) {
         final Function<?, String> stringifier;
         try {
-            stringifier = (Function<?, String>) Class.forName(
-                    className, true, getClass().getClassLoader()).newInstance();
+            stringifier = (Function<?, String>)
+                    Class.forName(className, true, getClass().getClassLoader())
+                         .getDeclaredConstructor()
+                         .newInstance();
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to instantiate a stringifier function: " +
                                                mdcKey, e);

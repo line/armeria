@@ -249,8 +249,10 @@ final class AccessLogFormats {
     private static Function<Object, String> newStringifier(String attrName, String className) {
         final Function<Object, String> stringifier;
         try {
-            stringifier = (Function<Object, String>) Class.forName(
-                    className, true, AccessLogFormats.class.getClassLoader()).newInstance();
+            stringifier = (Function<Object, String>)
+                    Class.forName(className, true, AccessLogFormats.class.getClassLoader())
+                         .getDeclaredConstructor()
+                         .newInstance();
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to instantiate a stringifier function: " +
                                                attrName, e);
