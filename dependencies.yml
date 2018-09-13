@@ -41,7 +41,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '2.0.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.30.0' }
+  gax-grpc: { version: '1.31.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -101,7 +101,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.14.0'
+    version: &GRPC_VERSION '1.15.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -117,6 +117,7 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
+    - io.grpc:grpc-alts
   grpc-netty-shaded: { version: *GRPC_VERSION }
   grpc-okhttp: { version: *GRPC_VERSION }
   grpc-protobuf: { version: *GRPC_VERSION }
@@ -167,9 +168,9 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.2.0'
+    version: &BRAVE_VERSION '5.3.1'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.2.0/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.3.1/
 
 it.unimi.dsi:
   fastutil:
@@ -252,7 +253,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.11'
+    version: &TOMCAT_VERSION '9.0.12'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -267,7 +268,7 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.11.0' }
+  assertj-core: { version: '3.11.1' }
 
 org.awaitility:
   awaitility: { version: '3.1.2' }
@@ -309,7 +310,7 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.12.Final' }
+  hibernate-validator: { version: '6.0.13.Final' }
 
 org.jctools:
   jctools-core:
@@ -322,7 +323,7 @@ org.jsoup:
   jsoup: { version: '1.11.3' }
 
 org.mockito:
-  mockito-core: { version: '2.21.0' }
+  mockito-core: { version: '2.22.0' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.7' }
@@ -365,7 +366,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.0.4.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.0.5.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }

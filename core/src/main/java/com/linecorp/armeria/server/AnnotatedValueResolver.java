@@ -442,7 +442,7 @@ final class AnnotatedValueResolver {
                 assert resolver.containerType() != null;
                 @SuppressWarnings("unchecked")
                 final Collection<Object> resolvedValues =
-                        (Collection<Object>) resolver.containerType().newInstance();
+                        (Collection<Object>) resolver.containerType().getDeclaredConstructor().newInstance();
 
                 // Do not convert value here because the element type is String.
                 if (values != null && !values.isEmpty()) {

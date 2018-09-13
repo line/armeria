@@ -191,7 +191,7 @@ public class AnnotatedValueResolverTest {
     @Test
     @SuppressWarnings("unchecked")
     public void ofSetterBean() throws Exception {
-        final SetterBean bean = SetterBean.class.newInstance();
+        final SetterBean bean = SetterBean.class.getDeclaredConstructor().newInstance();
         getAllMethods(SetterBean.class).forEach(method -> testMethod(method, bean));
         testBean(bean);
     }
