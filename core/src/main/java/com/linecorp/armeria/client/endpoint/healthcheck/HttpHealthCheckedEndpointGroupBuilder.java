@@ -21,9 +21,12 @@ import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndp
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -38,6 +41,7 @@ public class HttpHealthCheckedEndpointGroupBuilder {
     private SessionProtocol protocol = SessionProtocol.HTTP;
     private Duration retryInterval = DEFAULT_HEALTHCHECK_RETRY_INTERVAL;
     private ClientFactory clientFactory = ClientFactory.DEFAULT;
+    private Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator = Function.identity();
 
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroupBuilder}. Health check requests for the delegate
@@ -78,11 +82,25 @@ public class HttpHealthCheckedEndpointGroupBuilder {
     }
 
     /**
+     * Sets the {@link Function} that customizes an {@link HttpClient} for health check.
+     * <pre>{@code
+     * new HttpHealthCheckedEndpointGroupBuilder(delegate, healthCheckPath)
+     *     .withClientOptions(op -> op.defaultResponseTimeout(Duration.ofSeconds(1)))
+     *     .build();
+     * }</pre>
+     */
+    public HttpHealthCheckedEndpointGroupBuilder withClientOptions(
+            Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
+        this.configurator = requireNonNull(configurator, "configurator");
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link HttpHealthCheckedEndpointGroup} based on the contents of the
      * {@link HttpHealthCheckedEndpointGroupBuilder}.
      */
     public HttpHealthCheckedEndpointGroup build() {
         return new HttpHealthCheckedEndpointGroup(clientFactory, delegate, protocol, healthCheckPath,
-                                                  retryInterval);
+                                                  retryInterval, configurator);
     }
 }
