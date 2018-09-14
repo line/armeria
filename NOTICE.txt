@@ -262,6 +262,11 @@ This product depends on Spring Boot, distributed by Pivotal Software, Inc:
   * License: licenses/LICENSE.spring.al20.txt (Apache License v2.0)
   * Homepage: https://spring.io/
 
+This product depends on Swagger Core V3, distributed by SmartBear Software:
+
+  * License: licenses/LICENSE.swagger.al20.txt (Apache License v2.0)
+  * Homepage: https://swagger.io/
+
 This product depends on Apache Thrift, distributed by Apache Software Foundation:
 
   * License: licenses/LICENSE.thrift.al20.txt (Apache License v2.0)

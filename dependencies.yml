@@ -182,7 +182,7 @@ io.reactivex.rxjava2:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.swagger.core.v3:
-  swagger-annotations: { version: &SWAGGER_VERSION '2.0.2' }
+  swagger-annotations: { version: &SWAGGER_VERSION '2.0.4' }
   swagger-core: { version: *SWAGGER_VERSION }
   swagger-integration: { version: *SWAGGER_VERSION }
   swagger-models: { version: *SWAGGER_VERSION }
