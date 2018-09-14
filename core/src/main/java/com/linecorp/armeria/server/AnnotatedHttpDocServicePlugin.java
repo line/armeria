@@ -48,6 +48,8 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.server.AnnotatedHttpService;
+import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;

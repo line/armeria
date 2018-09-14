@@ -40,8 +40,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.internal.server.AnnotatedHttpService;
+import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -73,7 +76,7 @@ import io.swagger.v3.oas.models.servers.ServerVariables;
 import io.swagger.v3.oas.models.tags.Tag;
 
 /**
- * A utility class that parses {@link AnnotatedHttpService} and builds an {@link OpenAPI} from it.
+ * A utility class that parses annotated HTTP services and builds an {@link OpenAPI} from it.
  * This class uses annotations defined in Armeria such as {@link Param}, {@link Header}, {@link Produces},
  * {@link Consumes}, etc, as well as the annotations is Swagger.
  *
@@ -87,12 +90,14 @@ public final class AnnotatedOpenApiReader {
     private static final Pattern PATH_VARIABLE_PATTERN = Pattern.compile("(?:\\{\\w+\\})");
 
     /**
-     * Returns an {@link OpenAPI} by reading the annotations in the specified {@link AnnotatedHttpService}s.
+     * Returns an {@link OpenAPI} by reading the annotations in the specified annotated HTTP services.
      */
-    public static OpenAPI read(Iterable<AnnotatedHttpService> services) {
-        requireNonNull(services, "services");
+    public static OpenAPI read(Iterable<ServiceConfig> serviceConfigs) {
+        requireNonNull(serviceConfigs, "serviceConfigs");
         final OpenAPI openApi = new OpenAPI().components(new Components());
-        services.forEach(service -> fillFromService(openApi, service));
+        Streams.stream(serviceConfigs).map(sc -> sc.service().as(AnnotatedHttpService.class))
+               .filter(Optional::isPresent).map(Optional::get).forEach(
+                service -> fillFromService(openApi, service));
         return openApi;
     }
 

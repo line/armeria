@@ -20,8 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.server.AnnotatedValueResolver.toRequestObjectResolvers;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
-import static com.linecorp.armeria.server.AnnotatedValueResolver.toRequestObjectResolvers;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -58,7 +58,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
-import com.linecorp.armeria.server.AnnotatedValueResolver.NoParameterException;
+import com.linecorp.armeria.internal.server.AnnotatedHttpService;
+import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
+import com.linecorp.armeria.internal.server.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
@@ -93,9 +95,9 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Trace;
 
 /**
- * Builds a list of {@link AnnotatedHttpService}s from a Java object.
+ * Builds a list of annotated HTTP services from a Java object.
  */
-final class AnnotatedHttpServiceFactory {
+public final class AnnotatedHttpServiceFactory {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServiceFactory.class);
 
     /**
@@ -670,7 +672,7 @@ final class AnnotatedHttpServiceFactory {
      * {@link Annotation}.
      */
     @SuppressWarnings("unchecked")
-    static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
+    public static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
         try {
             final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
             return expectedType.cast(instanceCache.computeIfAbsent(clazz, type -> {
@@ -695,7 +697,7 @@ final class AnnotatedHttpServiceFactory {
      * Returns a cached instance of the specified {@link Class}.
      */
     @SuppressWarnings("unchecked")
-    static <T> T getInstance(Class<T> clazz) {
+    public static <T> T getInstance(Class<T> clazz) {
         return (T) instanceCache.computeIfAbsent(clazz, type -> {
             try {
                 final Constructor<? extends T> constructor = clazz.getDeclaredConstructor();

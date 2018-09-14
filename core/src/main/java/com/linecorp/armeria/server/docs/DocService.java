@@ -26,7 +26,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -49,8 +48,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.server.AnnotatedHttpService;
 import com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin;
-import com.linecorp.armeria.server.AnnotatedHttpService;
 import com.linecorp.armeria.server.AnnotatedOpenApiReader;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
@@ -177,7 +176,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
                 if (services.stream().anyMatch(sc -> sc.service()
                                                        .as(AnnotatedHttpService.class).isPresent())) {
-                    final OpenAPI openAPI = generateOpenApi(services);
+                    final OpenAPI openAPI = AnnotatedOpenApiReader.read(services);
                     vfs(OPENAPI_JSON_INDEX).setContent(
                             jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(openAPI));
                     // There's no media type defined for yaml and OpenAPI specification, so just use
@@ -196,14 +195,6 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                        .map(plugin -> plugin.generateSpecification(
                                findSupportedServices(plugin, services)))
                        .collect(toImmutableList()));
-    }
-
-    private static OpenAPI generateOpenApi(List<ServiceConfig> serviceConfigs) {
-        final List<AnnotatedHttpService> services =
-                serviceConfigs.stream().map(sc -> sc.service().as(AnnotatedHttpService.class))
-                              .filter(Optional::isPresent).map(Optional::get)
-                              .collect(toImmutableList());
-        return AnnotatedOpenApiReader.read(services);
     }
 
     private static ServiceSpecification addDocStrings(ServiceSpecification spec, List<ServiceConfig> services) {

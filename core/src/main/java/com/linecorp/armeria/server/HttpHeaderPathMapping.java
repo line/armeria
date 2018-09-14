@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.MediaType;
 /**
  * A {@link PathMapping} based on {@link HttpMethod} and {@link MediaType}.
  */
-final class HttpHeaderPathMapping implements PathMapping {
+public final class HttpHeaderPathMapping implements PathMapping {
 
     private static final List<MediaType> ANY_TYPE = ImmutableList.of(MediaType.ANY_TYPE);
     private static final Joiner loggerNameJoiner = Joiner.on('_');

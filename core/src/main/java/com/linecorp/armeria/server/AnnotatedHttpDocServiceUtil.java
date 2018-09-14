@@ -26,6 +26,8 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.internal.server.AnnotatedHttpService;
+import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -112,7 +114,7 @@ final class AnnotatedHttpDocServiceUtil {
             parameter = new Parameter();
             parameter.setIn(PATH_PARAM);
             parameter.setName(resolver.httpElementName());
-        } else if (resolver.isAnnotationType(Param.class)) { // @Param whose path variable is false is a query.
+        } else if (resolver.annotationType() == Param.class) { // A query param.
             parameter = new Parameter();
             parameter.setIn(QUERY_PARAM);
             if (!resolver.shouldExist()) {
@@ -120,7 +122,7 @@ final class AnnotatedHttpDocServiceUtil {
                 parameter.allowEmptyValue(true);
             }
             parameter.setName(resolver.httpElementName());
-        } else if (resolver.isAnnotationType(Header.class)) {
+        } else if (resolver.annotationType() == Header.class) {
             parameter = new Parameter();
             parameter.setIn(HEADER_PARAM);
             parameter.setName(resolver.httpElementName());

@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
-import static com.linecorp.armeria.server.AnnotatedElementNameUtil.findName;
-import static com.linecorp.armeria.server.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
-import static com.linecorp.armeria.server.AnnotatedHttpServiceTypeUtil.stringToType;
-import static com.linecorp.armeria.server.AnnotatedHttpServiceTypeUtil.validateElementType;
+import static com.linecorp.armeria.internal.server.AnnotatedElementNameUtil.findName;
+import static com.linecorp.armeria.internal.server.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
+import static com.linecorp.armeria.internal.server.AnnotatedHttpServiceTypeUtil.stringToType;
+import static com.linecorp.armeria.internal.server.AnnotatedHttpServiceTypeUtil.validateElementType;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -70,7 +70,9 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.FallthroughException;
-import com.linecorp.armeria.server.AnnotatedBeanFactory.BeanFactoryId;
+import com.linecorp.armeria.internal.server.AnnotatedBeanFactory.BeanFactoryId;
+import com.linecorp.armeria.server.AnnotatedHttpServiceFactory;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
@@ -87,8 +89,9 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.util.AsciiString;
+import javafx.css.converter.EnumConverter;
 
-final class AnnotatedValueResolver {
+public final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
     private static final List<RequestObjectResolver> defaultRequestConverters =
@@ -119,7 +122,8 @@ final class AnnotatedValueResolver {
     /**
      * Returns a list of {@link RequestObjectResolver} that default request converters are added.
      */
-    static List<RequestObjectResolver> toRequestObjectResolvers(List<RequestConverterFunction> converters) {
+    public static List<RequestObjectResolver> toRequestObjectResolvers(
+            List<RequestConverterFunction> converters) {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builder();
         // Wrap every converters received from a user with a default object resolver.
         converters.stream().map(RequestObjectResolver::of).forEach(builder::add);
@@ -131,7 +135,7 @@ final class AnnotatedValueResolver {
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
      * {@link Method}, {@code pathParams} and {@code objectResolvers}.
      */
-    static List<AnnotatedValueResolver> ofServiceMethod(Method method, Set<String> pathParams,
+    public static List<AnnotatedValueResolver> ofServiceMethod(Method method, Set<String> pathParams,
                                                         List<RequestObjectResolver> objectResolvers) {
         return of(method, pathParams, objectResolvers, true, true);
     }
@@ -687,22 +691,22 @@ final class AnnotatedValueResolver {
     }
 
     @Nullable
-    Class<? extends Annotation> annotationType() {
+    public Class<? extends Annotation> annotationType() {
         return annotationType;
     }
 
     @Nullable
-    String httpElementName() {
+    public String httpElementName() {
         // Currently, this is non-null only if the element is one of the HTTP path variable,
         // parameter or header.
         return httpElementName;
     }
 
-    boolean isPathVariable() {
+    public boolean isPathVariable() {
         return isPathVariable;
     }
 
-    boolean shouldExist() {
+    public boolean shouldExist() {
         return shouldExist;
     }
 
@@ -711,12 +715,12 @@ final class AnnotatedValueResolver {
     }
 
     @Nullable
-    Class<?> containerType() {
+    public Class<?> containerType() {
         // 'List' or 'Set'
         return containerType;
     }
 
-    Class<?> elementType() {
+    public Class<?> elementType() {
         return elementType;
     }
 
@@ -726,7 +730,7 @@ final class AnnotatedValueResolver {
     }
 
     @Nullable
-    String description() {
+    public String description() {
         return description;
     }
 
@@ -734,7 +738,7 @@ final class AnnotatedValueResolver {
         return aggregationStrategy;
     }
 
-    boolean hasContainer() {
+    public boolean hasContainer() {
         return containerType != null &&
                (List.class.isAssignableFrom(containerType) || Set.class.isAssignableFrom(containerType));
     }
@@ -1246,7 +1250,7 @@ final class AnnotatedValueResolver {
      * A subtype of {@link NoAnnotatedParameterException} which is raised when no parameters exist in
      * a constructor or method.
      */
-    static class NoParameterException extends NoAnnotatedParameterException {
+    public static class NoParameterException extends NoAnnotatedParameterException {
 
         private static final long serialVersionUID = 3390292442571367102L;
 

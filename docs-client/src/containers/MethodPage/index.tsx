@@ -445,8 +445,8 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
     if (endpointPath) {
       const method = this.getMethod()!;
-      // This method contains endpointPath from the debug form so it is annotated http service.
-      // Annotated http service has only one endpoint.
+      // This method contains endpointPath from the debug form so it is annotated HTTP service.
+      // Annotated HTTP service has only one endpoint.
       const endpoint = method.endpoints[0];
       const regexPathPrefix = endpoint.regexPathPrefix;
       const originalPath = endpoint.path;
