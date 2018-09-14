@@ -28,8 +28,8 @@ export default class AnnotatedHttpTransport extends Transport {
   ): string {
     let newPath = endpointPath;
     const parsed = JSON.parse(bodyJson);
-    const myRegexp = /(?:\{\w+\})/g;
-    let match = myRegexp.exec(newPath);
+    const findingPathParamRegex = /(?:\{\w+\})/g;
+    let match = findingPathParamRegex.exec(newPath);
     while (match != null) {
       const pathParam = match[0].substring(1, match[0].length - 1); // Remove '{' and '}'.
       const pathParamValue = parsed[pathParam];
@@ -37,7 +37,7 @@ export default class AnnotatedHttpTransport extends Transport {
         throw new Error(`The body should contain path parameter: ${pathParam}`);
       }
       newPath = newPath.replace(match[0], pathParamValue);
-      match = myRegexp.exec(newPath);
+      match = findingPathParamRegex.exec(newPath);
     }
     if (queries && queries.length > 1) {
       if (queries.charAt(0) === '?') {

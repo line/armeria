@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
@@ -28,7 +29,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
-import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.docs.DocService;
 
 import io.swagger.v3.core.util.ReflectionUtils;
@@ -124,17 +124,12 @@ final class AnnotatedHttpDocServiceUtil {
             parameter = new Parameter();
             parameter.setIn(HEADER_PARAM);
             parameter.setName(resolver.httpElementName());
-        } else if (resolver.isAnnotationType(RequestObject.class)) {
-            parameter = new Parameter();
-            parameter.setIn(QUERY_PARAM);
-            final String elementName = resolver.httpElementName();
-            parameter.setName(elementName != null ? elementName : resolver.elementType().getName());
         } else if (resolver.elementType() == Cookies.class) {
             parameter = new Parameter();
             parameter.setIn(COOKIE_PARAM);
             final String elementName = resolver.httpElementName();
             // TODO(minwoox) Provide a proper name for the cookie.
-            parameter.setName(elementName != null ? elementName : "cookie");
+            parameter.setName(elementName != null ? elementName : "cookies");
         } else {
             // The parameter is one of following:
             // - ServiceRequestContext
@@ -146,7 +141,9 @@ final class AnnotatedHttpDocServiceUtil {
 
         if (parameter != null) {
             parameter.required(resolver.shouldExist());
-            parameter.setDescription(resolver.description());
+            if (!isNullOrEmpty(resolver.description())) {
+                parameter.setDescription(resolver.description());
+            }
         }
 
         return parameter;

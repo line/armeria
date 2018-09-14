@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.COOKIE_PARAM;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.extractParameter;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
 import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.isHidden;
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -60,9 +63,13 @@ import io.swagger.v3.oas.models.links.Link;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.servers.ServerVariable;
+import io.swagger.v3.oas.models.servers.ServerVariables;
 import io.swagger.v3.oas.models.tags.Tag;
 
 /**
@@ -77,18 +84,20 @@ public final class AnnotatedOpenApiReader {
 
     private static final String DEFAULT_RESPONSE = "default response";
 
+    private static final Pattern PATH_VARIABLE_PATTERN = Pattern.compile("(?:\\{\\w+\\})");
+
     /**
      * Returns an {@link OpenAPI} by reading the annotations in the specified {@link AnnotatedHttpService}s.
      */
     public static OpenAPI read(Iterable<AnnotatedHttpService> services) {
         requireNonNull(services, "services");
-        final OpenAPI openApi = new OpenAPI();
-        openApi.components(new Components());
+        final OpenAPI openApi = new OpenAPI().components(new Components());
         services.forEach(service -> fillFromService(openApi, service));
         return openApi;
     }
 
-    private static void fillFromService(OpenAPI openApi, AnnotatedHttpService service) {
+    @VisibleForTesting
+    static void fillFromService(OpenAPI openApi, AnnotatedHttpService service) {
         if (isHidden(service)) {
             return;
         }
@@ -102,23 +111,18 @@ public final class AnnotatedOpenApiReader {
         final Class<?> clazz = service.object().getClass();
         fillFromOpenApiDefinition(openApi, clazz);
 
-        final Method method = service.method();
-        final Operation operation = operation(openApi, clazz, method, pathMapping);
+        final Operation operation = operation(openApi, clazz, service,
+                                              consumeTypes(pathMapping), produceTypes(pathMapping));
 
-        final List<AnnotatedValueResolver> resolvers = service.annotatedValueResolvers();
-        final List<Parameter> parameters = parameters(resolvers, openApi.getComponents());
-        if (parameters.size() > 0) {
-            parameters.forEach(operation::addParametersItem);
-        }
-
-        final PathItem pathItem = pathItem(openApi.getPaths(), operationPath);
-        pathMapping.supportedMethods().forEach(
-                httpMethod -> setPathItemOperation(pathItem, httpMethod, operation));
+        final PathItem pathItem = pathItem(openApi, operationPath);
         openApi.path(operationPath, pathItem);
+        pathMapping.supportedMethods().forEach(
+                httpMethod -> setPathItemOperation(openApi, pathItem, httpMethod, operation));
     }
 
     @Nullable
-    private static String endpointPath(HttpHeaderPathMapping pathMapping) {
+    @VisibleForTesting
+    static String endpointPath(HttpHeaderPathMapping pathMapping) {
         if (pathMapping.prefix().isPresent()) {
             if (pathMapping.regex().isPresent()) { // Does not support regex.
                 return null;
@@ -137,14 +141,37 @@ public final class AnnotatedOpenApiReader {
 
         AnnotationsUtils.getInfo(definition.info()).ifPresent(openApi::setInfo);
         AnnotationsUtils.getExternalDocumentation(definition.externalDocs())
-                        .ifPresent(openApi::setExternalDocs);
+                        .ifPresent(extDoc -> {
+                            validateExternalDocument(extDoc);
+                            openApi.setExternalDocs(extDoc);
+                        });
 
         final Builder<Tag> builder = ImmutableSet.builder();
-        AnnotationsUtils.getTags(definition.tags(), false).ifPresent(builder::addAll);
+        AnnotationsUtils.getTags(definition.tags(), false).ifPresent(tags -> {
+            tags.forEach(tag -> {
+                final io.swagger.v3.oas.models.ExternalDocumentation externalDocs = tag.getExternalDocs();
+                if (externalDocs != null) {
+                    validateExternalDocument(externalDocs);
+                }
+            });
+            builder.addAll(tags);
+        });
         final ImmutableSet<Tag> newTags = builder.build();
         if (!newTags.isEmpty()) {
             final List<Tag> tags = ImmutableList.copyOf(uniqueTags(openApi.getTags(), newTags));
             openApi.setTags(tags);
+        }
+
+        AnnotationsUtils.getServers(definition.servers()).ifPresent(servers -> {
+            validateServers(servers);
+            openApi.setServers(servers);
+        });
+    }
+
+    private static void validateExternalDocument(io.swagger.v3.oas.models.ExternalDocumentation extDoc) {
+        if (isNullOrEmpty(extDoc.getUrl())) {
+            throw new IllegalStateException(
+                    "A URL is required for external documentation: " + extDoc);
         }
     }
 
@@ -162,31 +189,65 @@ public final class AnnotatedOpenApiReader {
         return tagSet;
     }
 
-    private static Operation operation(OpenAPI openApi, Class<?> clazz, Method method,
-                                       HttpHeaderPathMapping pathMapping) {
+    private static void validateServers(Iterable<io.swagger.v3.oas.models.servers.Server> servers) {
+        for (io.swagger.v3.oas.models.servers.Server server : servers) {
+            final ServerVariables serverVariables = server.getVariables();
+            final Matcher matcher = PATH_VARIABLE_PATTERN.matcher(server.getUrl());
+            while (matcher.find()) {
+                final String group = matcher.group();
+                final String variable = group.substring(1, group.length() - 1);
+                if (!serverVariables.containsKey(variable)) {
+                    throw new IllegalStateException("The path variable:'" + variable + "' in the URL:'" +
+                                                    server.getUrl() +
+                                                    "' is not specified in the server variable.");
+                }
+            }
+
+            for (ServerVariable serverVariable : serverVariables.values()) {
+                if (isNullOrEmpty(serverVariable.getDefault())) {
+                    throw new IllegalStateException(
+                            "Server variable should have default property. server variable:" + serverVariable);
+                }
+            }
+        }
+    }
+
+    @VisibleForTesting
+    static Operation operation(OpenAPI openApi, Class<?> clazz, AnnotatedHttpService service,
+                               String[] consumeTypes, String[] produceTypes) {
         final Operation operation = new Operation();
+        final Method method = service.method();
         operation.setOperationId(uniqueOperationId(openApi, method.getName()));
         setExternalDocs(method, operation);
 
         addTags(method, operation);
-        final String[] produces = produceTypes(pathMapping);
         final io.swagger.v3.oas.annotations.responses.ApiResponse[] classResponses = ReflectionUtils
                 .getRepeatableAnnotationsArray(
                         clazz, io.swagger.v3.oas.annotations.responses.ApiResponse.class);
         if (classResponses != null && classResponses.length > 0) {
-            apiResponses(classResponses, produces, openApi.getComponents()).ifPresent(operation::setResponses);
+            apiResponses(classResponses, produceTypes, openApi.getComponents()).ifPresent(
+                    operation::setResponses);
         }
 
-        setOperationFromAnnotation(openApi, method, operation, produces);
+        setOperationFromAnnotation(openApi, method, operation, consumeTypes, produceTypes);
         final Set<String> classTags = classTags(clazz);
         classTags.stream().filter(t -> operation.getTags() == null ||
                                        (operation.getTags() != null && !operation.getTags().contains(t)))
                  .forEach(operation::addTagsItem);
-        addApiResponsesFromAnnotation(openApi, method, operation, produces);
-        addReturnType(openApi, method, operation, produces);
+
+        addRequestBodyFromAnnotation(openApi, method, operation, consumeTypes);
+        addApiResponsesFromAnnotation(openApi, method, operation, produceTypes);
+        addReturnType(openApi, method, operation, produceTypes);
         if (ReflectionUtils.getAnnotation(method, Deprecated.class) != null) {
             operation.deprecated(true);
         }
+
+        final List<AnnotatedValueResolver> resolvers = service.annotatedValueResolvers();
+        final List<Parameter> parameters = parameters(resolvers, openApi.getComponents());
+        if (parameters.size() > 0) {
+            parameters.forEach(operation::addParametersItem);
+        }
+
         return operation;
     }
 
@@ -240,10 +301,7 @@ public final class AnnotatedOpenApiReader {
         final ExternalDocumentation extDocAnnotation = ReflectionUtils
                 .getAnnotation(method, ExternalDocumentation.class);
         AnnotationsUtils.getExternalDocumentation(extDocAnnotation).ifPresent(extDoc -> {
-            if (isNullOrEmpty(extDoc.getUrl())) {
-                throw new IllegalArgumentException(
-                        "A URL is required for external documentation: " + extDoc);
-            }
+            validateExternalDocument(extDoc);
             operation.setExternalDocs(extDoc);
         });
     }
@@ -260,6 +318,12 @@ public final class AnnotatedOpenApiReader {
         }
     }
 
+    private static String[] consumeTypes(HttpHeaderPathMapping pathMapping) {
+        return pathMapping.consumeTypes().stream()
+                          .map(com.linecorp.armeria.common.MediaType::toString)
+                          .toArray(String[]::new);
+    }
+
     private static String[] produceTypes(HttpHeaderPathMapping pathMapping) {
         return pathMapping.produceTypes().stream()
                           .map(com.linecorp.armeria.common.MediaType::toString)
@@ -268,14 +332,13 @@ public final class AnnotatedOpenApiReader {
 
     private static Optional<ApiResponses> apiResponses(
             io.swagger.v3.oas.annotations.responses.ApiResponse[] apiResponseAnnotations,
-            String[] produces, Components components) {
+            String[] produceTypes, Components components) {
         final ApiResponses apiResponses = new ApiResponses();
         for (io.swagger.v3.oas.annotations.responses.ApiResponse responseAnnotation : apiResponseAnnotations) {
             final ApiResponse apiResponse = new ApiResponse();
             final String description = responseAnnotation.description();
             if (isNullOrEmpty(description)) {
-                throw new IllegalArgumentException(
-                        "the description is required for the response");
+                throw new IllegalStateException("A description is required for the response:" + apiResponse);
             }
             apiResponse.setDescription(description);
             if (responseAnnotation.extensions().length > 0) {
@@ -283,7 +346,7 @@ public final class AnnotatedOpenApiReader {
                                 .forEach(apiResponse::addExtension);
             }
             AnnotationsUtils.getContent(responseAnnotation.content(), new String[0],
-                                        produces, null, components, null)
+                                        produceTypes, null, components, null)
                             .ifPresent(apiResponse::content);
             AnnotationsUtils.getHeaders(responseAnnotation.headers(), null)
                             .ifPresent(apiResponse::headers);
@@ -308,7 +371,7 @@ public final class AnnotatedOpenApiReader {
     }
 
     private static void setOperationFromAnnotation(OpenAPI openApi, Method method, Operation operation,
-                                                   String[] produces) {
+                                                   String[] consumeTypes, String[] produceTypes) {
         final io.swagger.v3.oas.annotations.Operation operationAnnotation =
                 ReflectionUtils.getAnnotation(method, io.swagger.v3.oas.annotations.Operation.class);
         if (operationAnnotation != null) {
@@ -335,10 +398,15 @@ public final class AnnotatedOpenApiReader {
 
             if (operation.getExternalDocs() == null) {
                 AnnotationsUtils.getExternalDocumentation(operationAnnotation.externalDocs())
-                                .ifPresent(operation::setExternalDocs);
+                                .ifPresent(extDoc -> {
+                                    validateExternalDocument(extDoc);
+                                    operation.setExternalDocs(extDoc);
+                                });
             }
+            requestBody(operationAnnotation.requestBody(), consumeTypes, openApi.getComponents())
+                    .ifPresent(operation::setRequestBody);
 
-            apiResponses(operationAnnotation.responses(), produces, openApi.getComponents())
+            apiResponses(operationAnnotation.responses(), produceTypes, openApi.getComponents())
                     .ifPresent(responses -> {
                         if (operation.getResponses() == null) {
                             operation.setResponses(responses);
@@ -347,6 +415,25 @@ public final class AnnotatedOpenApiReader {
                         }
                     });
         }
+    }
+
+    private static Optional<RequestBody> requestBody(
+            io.swagger.v3.oas.annotations.parameters.RequestBody requestBodyAnnotation,
+            String[] consumes, Components components) {
+        final Optional<Content> content = AnnotationsUtils.getContent(requestBodyAnnotation.content(),
+                                                                      new String[0], consumes, null,
+                                                                      components, null);
+        if (!content.isPresent()) {
+            return Optional.empty();
+        }
+
+        final RequestBody requestBody = new RequestBody();
+        requestBody.content(content.get());
+        requestBody.required(requestBodyAnnotation.required());
+        if (!isNullOrEmpty(requestBodyAnnotation.description())) {
+            requestBody.description(requestBodyAnnotation.description());
+        }
+        return Optional.of(requestBody);
     }
 
     private static Set<String> classTags(Class<?> clazz) {
@@ -361,8 +448,21 @@ public final class AnnotatedOpenApiReader {
         return classTagBuilder.build();
     }
 
+    private static void addRequestBodyFromAnnotation(OpenAPI openApi, Method method,
+                                                     Operation operation, String[] consumeTypes) {
+        final io.swagger.v3.oas.annotations.parameters.RequestBody requestBodyAnnotation = ReflectionUtils
+                .getAnnotation(method, io.swagger.v3.oas.annotations.parameters.RequestBody.class);
+
+        if (requestBodyAnnotation == null) {
+            return;
+        }
+
+        requestBody(requestBodyAnnotation, consumeTypes, openApi.getComponents())
+                .ifPresent(operation::setRequestBody);
+    }
+
     private static void addApiResponsesFromAnnotation(OpenAPI openApi, Method method,
-                                                      Operation operation, String[] produces) {
+                                                      Operation operation, String[] produceTypes) {
         final List<io.swagger.v3.oas.annotations.responses.ApiResponse> apiResponseAnnotations =
                 ReflectionUtils.getRepeatableAnnotations(
                         method, io.swagger.v3.oas.annotations.responses.ApiResponse.class);
@@ -373,7 +473,7 @@ public final class AnnotatedOpenApiReader {
 
         apiResponses(apiResponseAnnotations.toArray(
                 new io.swagger.v3.oas.annotations.responses.ApiResponse[apiResponseAnnotations.size()]),
-                     produces, openApi.getComponents())
+                     produceTypes, openApi.getComponents())
                 .ifPresent(responses -> {
                     if (operation.getResponses() == null) {
                         operation.setResponses(responses);
@@ -429,8 +529,7 @@ public final class AnnotatedOpenApiReader {
         }
     }
 
-    static List<Parameter> parameters(
-            List<AnnotatedValueResolver> resolvers, Components components) {
+    static List<Parameter> parameters(List<AnnotatedValueResolver> resolvers, Components components) {
 
         final ImmutableList.Builder<Parameter> builder = ImmutableList.builder();
         for (AnnotatedValueResolver resolver : resolvers) {
@@ -439,31 +538,43 @@ public final class AnnotatedOpenApiReader {
                 continue;
             }
 
-            final AnnotatedType annotatedType = new AnnotatedType().type(resolver.elementType())
-                                                                   .resolveAsRef(true)
-                                                                   .skipOverride(true);
-            final ResolvedSchema resolvedSchema = ModelConverters.getInstance()
-                                                                 .resolveAsResolvedSchema(annotatedType);
-            if (resolvedSchema.schema != null) {
-                parameter.setSchema(resolvedSchema.schema);
-            }
-            final Map<String, Schema> schemaMap = resolvedSchema.referencedSchemas;
-            if (schemaMap != null) {
-                schemaMap.forEach(components::addSchemas);
+            if (parameter.getIn().equals(COOKIE_PARAM)) {
+                parameter.setSchema(new StringSchema());
+            } else {
+                final AnnotatedType annotatedType = new AnnotatedType().type(resolver.elementType())
+                                                                       .resolveAsRef(true)
+                                                                       .skipOverride(true);
+                final ResolvedSchema resolvedSchema = ModelConverters.getInstance()
+                                                                     .resolveAsResolvedSchema(annotatedType);
+                if (resolvedSchema.schema != null) {
+                    parameter.setSchema(resolvedSchema.schema);
+                }
+                final Map<String, Schema> schemaMap = resolvedSchema.referencedSchemas;
+                if (schemaMap != null) {
+                    schemaMap.forEach(components::addSchemas);
+                }
             }
             builder.add(parameter);
         }
         return builder.build();
     }
 
-    private static PathItem pathItem(@Nullable Paths paths, String operationPath) {
+    private static PathItem pathItem(OpenAPI openApi, String operationPath) {
+        final Paths paths = openApi.getPaths();
         if (paths != null && paths.get(operationPath) != null) {
             return paths.get(operationPath);
         }
-        return new PathItem();
+        final PathItem pathItem = new PathItem();
+        openApi.path(operationPath, pathItem);
+        return pathItem;
     }
 
-    private static void setPathItemOperation(PathItem pathItem, HttpMethod method, Operation operation) {
+    private static void setPathItemOperation(OpenAPI openApi, PathItem pathItem, HttpMethod method,
+                                             Operation operation) {
+        if (isOperationIdUsed(openApi, operation.getOperationId())) {
+            operation = copyOperationWithNewId(openApi, operation);
+        }
+
         switch (method) {
             case POST:
                 pathItem.post(operation);
@@ -493,6 +604,20 @@ public final class AnnotatedOpenApiReader {
                 // Do nothing here
                 break;
         }
+    }
+
+    private static Operation copyOperationWithNewId(OpenAPI openApi, Operation operation) {
+        final Operation newOperation = new Operation().deprecated(operation.getDeprecated())
+                                                      .parameters(operation.getParameters())
+                                                      .tags(operation.getTags())
+                                                      .responses(operation.getResponses())
+                                                      .requestBody(operation.getRequestBody())
+                                                      .externalDocs(operation.getExternalDocs())
+                                                      .description(operation.getDescription())
+                                                      .servers(operation.getServers())
+                                                      .summary(operation.getSummary());
+        newOperation.setOperationId(uniqueOperationId(openApi, operation.getOperationId()));
+        return newOperation;
     }
 
     private AnnotatedOpenApiReader() {}
