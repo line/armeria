@@ -21,12 +21,16 @@ import static com.linecorp.armeria.server.AnnotatedValueResolver.toArguments;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.List;
+import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,18 +45,24 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.CollectingSubscriber;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
 /**
  * A {@link Service} which is defined by {@link Path} or HTTP method annotations.
  */
 final class AnnotatedHttpService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpService.class);
+
+    static final ServiceLoader<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
+            ServiceLoader.load(ResponseConverterFunctionProvider.class,
+                               AnnotatedHttpService.class.getClassLoader());
 
     private final Object object;
     private final Method method;
@@ -61,6 +71,8 @@ final class AnnotatedHttpService implements HttpService {
     private final AggregationStrategy aggregationStrategy;
     private final List<ExceptionHandlerFunction> exceptionHandlers;
     private final List<ResponseConverterFunction> responseConverters;
+    @Nullable
+    private final ResponseConverterFunction dedicatedResponseConverter;
 
     private final ResponseType responseType;
 
@@ -77,9 +89,12 @@ final class AnnotatedHttpService implements HttpService {
                 requireNonNull(responseConverters, "responseConverters"));
 
         aggregationStrategy = AggregationStrategy.from(resolvers);
+        dedicatedResponseConverter = resolveDedicatedResponseConverter(method);
 
         final Class<?> returnType = method.getReturnType();
-        if (HttpResponse.class.isAssignableFrom(returnType)) {
+        if (dedicatedResponseConverter != null) {
+            responseType = ResponseType.DEDICATED_RESPONSE_CONVERTER;
+        } else if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
         } else if (CompletionStage.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.COMPLETION_STAGE;
@@ -88,6 +103,43 @@ final class AnnotatedHttpService implements HttpService {
         }
 
         this.method.setAccessible(true);
+    }
+
+    @Nullable
+    private ResponseConverterFunction resolveDedicatedResponseConverter(Method method) {
+        final Type returnType = method.getGenericReturnType();
+
+        if (returnType instanceof ParameterizedType) {
+            final ParameterizedType p = (ParameterizedType) returnType;
+            if (Publisher.class.isAssignableFrom(toClass(p.getRawType())) &&
+                Publisher.class.isAssignableFrom(toClass(p.getActualTypeArguments()[0]))) {
+                throw new IllegalStateException(
+                        "Invalid return type of method '" + method.getName() + "'. " +
+                        "Cannot support '" + p.getActualTypeArguments()[0].getTypeName() +
+                        "' as a generic type of " + Publisher.class.getSimpleName());
+            }
+        }
+
+        for (ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
+            final ResponseConverterFunction func =
+                    provider.createResponseConverterFunction(returnType,
+                                                             this::convertResponse,
+                                                             this::convertException);
+            if (func != null) {
+                return func;
+            }
+        }
+        return null;
+    }
+
+    private static Class<?> toClass(Type type) {
+        if (type instanceof Class) {
+            return (Class<?>) type;
+        }
+        if (type instanceof ParameterizedType) {
+            return (Class<?>) ((ParameterizedType) type).getRawType();
+        }
+        return Void.class;
     }
 
     @Override
@@ -105,16 +157,30 @@ final class AnnotatedHttpService implements HttpService {
                 aggregationRequired(aggregationStrategy, req) ? req.aggregate()
                                                               : CompletableFuture.completedFuture(null);
         switch (responseType) {
+            case DEDICATED_RESPONSE_CONVERTER:
+                return f.thenApply(msg -> {
+                    try {
+                        final Object obj = invoke(ctx, req, msg);
+                        if (obj instanceof HttpResponse) {
+                            return (HttpResponse) obj;
+                        }
+                        assert dedicatedResponseConverter != null;
+                        return new ExceptionFilteredHttpResponse(
+                                ctx, req, dedicatedResponseConverter.convertResponse(ctx, obj));
+                    } catch (Throwable cause) {
+                        return convertException(ctx, req, cause);
+                    }
+                });
             case HTTP_RESPONSE:
                 return f.thenApply(
                         msg -> new ExceptionFilteredHttpResponse(ctx, req,
                                                                  (HttpResponse) invoke(ctx, req, msg)));
             case COMPLETION_STAGE:
                 return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
-                        .handle((result, cause) -> cause == null ? convertResponse(ctx, result)
+                        .handle((result, cause) -> cause == null ? convertResponse(ctx, req, result)
                                                                  : convertException(ctx, req, cause));
             default:
-                return f.thenApplyAsync(msg -> convertResponse(ctx, invoke(ctx, req, msg)),
+                return f.thenApplyAsync(msg -> convertResponse(ctx, req, invoke(ctx, req, msg)),
                                         ctx.blockingTaskExecutor());
         }
     }
@@ -135,14 +201,27 @@ final class AnnotatedHttpService implements HttpService {
     /**
      * Converts the specified {@code result} to {@link HttpResponse}.
      */
-    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
+    private HttpResponse convertResponse(ServiceRequestContext ctx, HttpRequest req,
+                                         @Nullable Object result) {
         if (result instanceof HttpResponse) {
             return (HttpResponse) result;
         }
         if (result instanceof AggregatedHttpMessage) {
             return HttpResponse.of((AggregatedHttpMessage) result);
         }
+        if (result instanceof Publisher) {
+            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+            final Publisher<?> publisher = (Publisher<?>) result;
+            publisher.subscribe(new CollectingSubscriber(ctx, req, future,
+                                                         this::convertResponse,
+                                                         this::convertException));
+            return HttpResponse.from(future);
+        }
 
+        return convertResponse(ctx, result);
+    }
+
+    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
         try (SafeCloseable ignored = ctx.push(false)) {
             for (final ResponseConverterFunction func : responseConverters) {
                 try {
@@ -232,6 +311,6 @@ final class AnnotatedHttpService implements HttpService {
      * Response type classification of the annotated {@link Method}.
      */
     private enum ResponseType {
-        HTTP_RESPONSE, COMPLETION_STAGE, OTHER_OBJECTS
+        DEDICATED_RESPONSE_CONVERTER, HTTP_RESPONSE, COMPLETION_STAGE, OTHER_OBJECTS
     }
 }
