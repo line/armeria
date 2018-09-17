@@ -275,10 +275,7 @@ public class ArmeriaCallFactoryTest {
                                                      MediaType.PLAIN_TEXT_UTF_8,
                                                      Exceptions.traceText(cause));
                           }
-                          final Map<String, List<String>> params = new QueryStringDecoder(
-                                  aReq.content().toStringUtf8(), false)
-                                  .parameters();
-                          assertThat(params).isEmpty();
+                          assertThat(req.headers().contentType()).isNull();
                           return HttpResponse.of(HttpStatus.OK);
                       }));
                   }
