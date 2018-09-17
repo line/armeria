@@ -35,8 +35,11 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
  * A {@link Subscriber} which collects all objects produced by a {@link Publisher} as a list.
+ * The collected objects would be converted to an {@link HttpResponse} using the specified
+ * {@link ResponseConverterFunction} when {@link #onComplete()} is called, then the {@link HttpResponse}
+ * would complete the {@link CompletableFuture} which is given when creating this instance.
  */
-public class CollectingSubscriber implements Subscriber<Object> {
+public class ObjectsToHttpResponseConvertingSubscriber implements Subscriber<Object> {
 
     private final ServiceRequestContext ctx;
     private final HttpRequest req;
@@ -47,10 +50,23 @@ public class CollectingSubscriber implements Subscriber<Object> {
     @Nullable
     private List<Object> objects;
 
-    public CollectingSubscriber(ServiceRequestContext ctx, HttpRequest req,
-                                CompletableFuture<HttpResponse> future,
-                                ResponseConverterFunction configuredResponseConverter,
-                                ExceptionHandlerFunction configuredExceptionHandler) {
+    /**
+     * Creates a new instance.
+     *
+     * @param ctx the {@link ServiceRequestContext} of the {@code req}
+     * @param req the {@link HttpRequest} received by the server
+     * @param future the {@link CompletableFuture} which waits for an {@link HttpResponse}
+     * @param configuredResponseConverter the {@link ResponseConverterFunction} which is used to convert the
+     *                                    collected objects into an {@link HttpResponse} when the
+     *                                    {@link #onComplete()} is invoked
+     * @param configuredExceptionHandler the {@link ExceptionHandlerFunction} which is used to convert the
+     *                                   {@link Throwable} into an {@link HttpResponse} when the
+     *                                   {@link #onError(Throwable)} is invoked
+     */
+    public ObjectsToHttpResponseConvertingSubscriber(ServiceRequestContext ctx, HttpRequest req,
+                                                     CompletableFuture<HttpResponse> future,
+                                                     ResponseConverterFunction configuredResponseConverter,
+                                                     ExceptionHandlerFunction configuredExceptionHandler) {
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = requireNonNull(req, "req");
         this.future = requireNonNull(future, "future");

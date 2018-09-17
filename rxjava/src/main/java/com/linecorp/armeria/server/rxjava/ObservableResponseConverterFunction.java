@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.CollectingSubscriber;
+import com.linecorp.armeria.internal.ObjectsToHttpResponseConvertingSubscriber;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -62,9 +62,10 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
         if (result instanceof ObservableSource) {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final ObservableSource<?> observable = (ObservableSource<?>) result;
-            final CollectingSubscriber subscriber =
-                    new CollectingSubscriber(ctx, ctx.request(), future,
-                                             configuredResponseConverter, configuredExceptionHandler);
+            final ObjectsToHttpResponseConvertingSubscriber subscriber =
+                    new ObjectsToHttpResponseConvertingSubscriber(ctx, ctx.request(), future,
+                                                                  configuredResponseConverter,
+                                                                  configuredExceptionHandler);
             observable.subscribe(new Observer<Object>() {
                 @Override
                 public void onSubscribe(Disposable d) {}

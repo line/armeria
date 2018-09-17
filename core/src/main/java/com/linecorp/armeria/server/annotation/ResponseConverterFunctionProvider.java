@@ -29,14 +29,16 @@ import com.linecorp.armeria.common.HttpResponse;
 public interface ResponseConverterFunctionProvider {
 
     /**
-     * Creates a new {@link ResponseConverterFunction} instance.
+     * Creates a new {@link ResponseConverterFunction} instance if possible.
+     * The {@code configuredResponseConverter} and {@code configuredExceptionHandler} are originally
+     * configured {@link ResponseConverterFunction} and {@link ExceptionHandlerFunction} which would be used
+     * if this provider did not return a new {@link ResponseConverterFunction}.
      *
      * @param responseType the return {@link Type} of the annotated HTTP service method
-     * @param configuredResponseConverter the function which converts an object to an {@link HttpResponse}
-     *                                    using the configured {@link ResponseConverterFunction}s
-     * @param configuredExceptionHandler the function which converts a {@link Throwable} to an
-     *                                   {@link HttpResponse} using the configured
-     *                                   {@link ExceptionHandlerFunction}s
+     * @param configuredResponseConverter the {@link ResponseConverterFunction} which converts an object
+     *                                    into an {@link HttpResponse}
+     * @param configuredExceptionHandler the {@link ExceptionHandlerFunction} which converts a {@link Throwable}
+     *                                   into an {@link HttpResponse}
      */
     @Nullable
     ResponseConverterFunction createResponseConverterFunction(
