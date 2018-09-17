@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.rxjava;
+package com.linecorp.armeria.server.rxjava;
 
 import static java.util.Objects.requireNonNull;
 
@@ -26,8 +26,6 @@ import com.linecorp.armeria.internal.CollectingSubscriber;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider.GeneralExceptionConverter;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider.GeneralResponseConverter;
 
 import io.reactivex.ObservableSource;
 import io.reactivex.Observer;
@@ -39,23 +37,23 @@ import io.reactivex.disposables.Disposable;
  */
 public class ObservableResponseConverterFunction implements ResponseConverterFunction {
 
-    private final GeneralResponseConverter generalResponseConverter;
-    private final GeneralExceptionConverter generalExceptionConverter;
+    private final ResponseConverterFunction configuredResponseConverter;
+    private final ExceptionHandlerFunction configuredExceptionHandler;
 
     /**
      * Creates a new {@link ResponseConverterFunction} instance.
      *
-     * @param generalResponseConverter the function which converts an object with the configured
-     *                                 {@link ResponseConverterFunction}s
-     * @param generalExceptionConverter the function which converts a {@link Throwable} with the configured
-     *                                  {@link ExceptionHandlerFunction}s
+     * @param configuredResponseConverter the function which converts an object with the configured
+     *                                    {@link ResponseConverterFunction}s
+     * @param configuredExceptionHandler the function which converts a {@link Throwable} with the configured
+     *                                   {@link ExceptionHandlerFunction}s
      */
-    public ObservableResponseConverterFunction(GeneralResponseConverter generalResponseConverter,
-                                               GeneralExceptionConverter generalExceptionConverter) {
-        this.generalResponseConverter =
-                requireNonNull(generalResponseConverter, "generalResponseConverter");
-        this.generalExceptionConverter =
-                requireNonNull(generalExceptionConverter, "generalExceptionConverter");
+    public ObservableResponseConverterFunction(ResponseConverterFunction configuredResponseConverter,
+                                               ExceptionHandlerFunction configuredExceptionHandler) {
+        this.configuredResponseConverter =
+                requireNonNull(configuredResponseConverter, "configuredResponseConverter");
+        this.configuredExceptionHandler =
+                requireNonNull(configuredExceptionHandler, "configuredExceptionHandler");
     }
 
     @Override
@@ -66,7 +64,7 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
             final ObservableSource<?> observable = (ObservableSource<?>) result;
             final CollectingSubscriber subscriber =
                     new CollectingSubscriber(ctx, ctx.request(), future,
-                                             generalResponseConverter, generalExceptionConverter);
+                                             configuredResponseConverter, configuredExceptionHandler);
             observable.subscribe(new Observer<Object>() {
                 @Override
                 public void onSubscribe(Disposable d) {}

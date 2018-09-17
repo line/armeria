@@ -19,9 +19,7 @@ import java.lang.reflect.Type;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A {@link ResponseConverterFunction} provider interface which creates a new
@@ -33,33 +31,16 @@ public interface ResponseConverterFunctionProvider {
     /**
      * Creates a new {@link ResponseConverterFunction} instance.
      *
-     * @param responseType the return {@link Type} type of the annotated HTTP service method
-     * @param generalResponseConverter the function which converts an object to an {@link HttpResponse}
-     *                                 using the configured {@link ResponseConverterFunction}s
-     * @param generalExceptionConverter the function which converts a {@link Throwable} to an
-     *                                  {@link HttpResponse} using the configured
-     *                                  {@link ExceptionHandlerFunction}s
+     * @param responseType the return {@link Type} of the annotated HTTP service method
+     * @param configuredResponseConverter the function which converts an object to an {@link HttpResponse}
+     *                                    using the configured {@link ResponseConverterFunction}s
+     * @param configuredExceptionHandler the function which converts a {@link Throwable} to an
+     *                                   {@link HttpResponse} using the configured
+     *                                   {@link ExceptionHandlerFunction}s
      */
     @Nullable
     ResponseConverterFunction createResponseConverterFunction(
             Type responseType,
-            GeneralResponseConverter generalResponseConverter,
-            GeneralExceptionConverter generalExceptionConverter);
-
-    /**
-     * Convert an object to an {@link HttpResponse} using the configured {@link ResponseConverterFunction}s.
-     */
-    @FunctionalInterface
-    interface GeneralResponseConverter {
-        HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result);
-    }
-
-    /**
-     * Convert a {@link Throwable} to an {@link HttpResponse} using the configured
-     * {@link ResponseConverterFunction}s.
-     */
-    @FunctionalInterface
-    interface GeneralExceptionConverter {
-        HttpResponse convertException(ServiceRequestContext ctx, HttpRequest req, Throwable cause);
-    }
+            ResponseConverterFunction configuredResponseConverter,
+            ExceptionHandlerFunction configuredExceptionHandler);
 }

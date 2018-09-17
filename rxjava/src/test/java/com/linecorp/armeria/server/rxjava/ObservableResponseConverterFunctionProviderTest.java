@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.rxjava;
+package com.linecorp.armeria.server.rxjava;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,10 +29,11 @@ import org.junit.Test;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider.GeneralExceptionConverter;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider.GeneralResponseConverter;
 
 import io.reactivex.Observable;
 
@@ -52,15 +53,15 @@ public class ObservableResponseConverterFunctionProviderTest {
     }
 
     @Test
-    public void shouldRaiseIllegalStateException() throws NoSuchMethodException {
+    public void shouldFailOnObservableOfObservable() throws NoSuchMethodException {
         final ObservableResponseConverterFunctionProvider provider =
                 new ObservableResponseConverterFunctionProvider();
         final Type returnType = Sample.class.getMethod("unsupported")
                                             .getGenericReturnType();
         assertThatThrownBy(
                 () -> provider.createResponseConverterFunction(returnType,
-                                                               new DummyGeneralResponseConverter(),
-                                                               new DummyGeneralExceptionConverter()))
+                                                               new DummyResponseConverter(),
+                                                               new DummyExceptionHandler()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Cannot support 'io.reactivex.Observable<java.lang.Object>'");
     }
@@ -72,16 +73,16 @@ public class ObservableResponseConverterFunctionProviderTest {
         }
     }
 
-    private static class DummyGeneralResponseConverter implements GeneralResponseConverter {
+    private static class DummyResponseConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
             return HttpResponse.of(HttpStatus.OK);
         }
     }
 
-    private static class DummyGeneralExceptionConverter implements GeneralExceptionConverter {
+    private static class DummyExceptionHandler implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse convertException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

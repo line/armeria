@@ -30,8 +30,8 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider.GeneralExceptionConverter;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider.GeneralResponseConverter;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
  * A {@link Subscriber} which collects all objects produced by a {@link Publisher} as a list.
@@ -41,21 +41,23 @@ public class CollectingSubscriber implements Subscriber<Object> {
     private final ServiceRequestContext ctx;
     private final HttpRequest req;
     private final CompletableFuture<HttpResponse> future;
-    private final GeneralResponseConverter generalResponseConverter;
-    private final GeneralExceptionConverter generalExceptionConverter;
+    private final ResponseConverterFunction configuredResponseConverter;
+    private final ExceptionHandlerFunction configuredExceptionHandler;
 
     @Nullable
     private List<Object> objects;
 
     public CollectingSubscriber(ServiceRequestContext ctx, HttpRequest req,
                                 CompletableFuture<HttpResponse> future,
-                                GeneralResponseConverter generalResponseConverter,
-                                GeneralExceptionConverter generalExceptionConverter) {
+                                ResponseConverterFunction configuredResponseConverter,
+                                ExceptionHandlerFunction configuredExceptionHandler) {
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = requireNonNull(req, "req");
         this.future = requireNonNull(future, "future");
-        this.generalResponseConverter = requireNonNull(generalResponseConverter, "generalResponseConverter");
-        this.generalExceptionConverter = requireNonNull(generalExceptionConverter, "generalExceptionConverter");
+        this.configuredResponseConverter = requireNonNull(configuredResponseConverter,
+                                                          "configuredResponseConverter");
+        this.configuredExceptionHandler = requireNonNull(configuredExceptionHandler,
+                                                         "configuredExceptionHandler");
     }
 
     @Override
@@ -73,7 +75,7 @@ public class CollectingSubscriber implements Subscriber<Object> {
 
     @Override
     public void onError(Throwable t) {
-        future.complete(generalExceptionConverter.convertException(ctx, req, t));
+        future.complete(configuredExceptionHandler.handleException(ctx, req, t));
     }
 
     @Override
@@ -94,6 +96,10 @@ public class CollectingSubscriber implements Subscriber<Object> {
                     break;
             }
         }
-        future.complete(generalResponseConverter.convertResponse(ctx, obj));
+        try {
+            future.complete(configuredResponseConverter.convertResponse(ctx, obj));
+        } catch (Exception e) {
+            onError(e);
+        }
     }
 }

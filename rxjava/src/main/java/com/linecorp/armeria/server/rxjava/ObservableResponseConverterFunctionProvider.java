@@ -13,13 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.rxjava;
+package com.linecorp.armeria.server.rxjava;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
@@ -31,8 +32,8 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
     @Override
     public ResponseConverterFunction createResponseConverterFunction(
             Type returnType,
-            GeneralResponseConverter generalResponseConverter,
-            GeneralExceptionConverter generalExceptionConverter) {
+            ResponseConverterFunction configuredResponseConverter,
+            ExceptionHandlerFunction configuredExceptionHandler) {
 
         if (!ObservableSource.class.isAssignableFrom(toClass(returnType))) {
             return null;
@@ -48,8 +49,8 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
             }
         }
 
-        return new ObservableResponseConverterFunction(generalResponseConverter,
-                                                       generalExceptionConverter);
+        return new ObservableResponseConverterFunction(configuredResponseConverter,
+                                                       configuredExceptionHandler);
     }
 
     private static Class<?> toClass(Type type) {

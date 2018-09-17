@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.CollectingSubscriber;
@@ -93,7 +94,7 @@ final class AnnotatedHttpService implements HttpService {
 
         final Class<?> returnType = method.getReturnType();
         if (dedicatedResponseConverter != null) {
-            responseType = ResponseType.DEDICATED_RESPONSE_CONVERTER;
+            responseType = ResponseType.HANDLED_BY_SPI;
         } else if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
         } else if (CompletionStage.class.isAssignableFrom(returnType)) {
@@ -157,7 +158,7 @@ final class AnnotatedHttpService implements HttpService {
                 aggregationRequired(aggregationStrategy, req) ? req.aggregate()
                                                               : CompletableFuture.completedFuture(null);
         switch (responseType) {
-            case DEDICATED_RESPONSE_CONVERTER:
+            case HANDLED_BY_SPI:
                 return f.thenApply(msg -> {
                     try {
                         final Object obj = invoke(ctx, req, msg);
@@ -247,8 +248,7 @@ final class AnnotatedHttpService implements HttpService {
     /**
      * Returns an {@link HttpResponse} which is created by {@link ExceptionHandlerFunction}.
      */
-    private HttpResponse convertException(ServiceRequestContext ctx, HttpRequest req,
-                                          Throwable cause) {
+    private HttpResponse convertException(RequestContext ctx, HttpRequest req, Throwable cause) {
         final Throwable peeledCause = Exceptions.peel(cause);
         for (final ExceptionHandlerFunction func : exceptionHandlers) {
             try {
@@ -311,6 +311,6 @@ final class AnnotatedHttpService implements HttpService {
      * Response type classification of the annotated {@link Method}.
      */
     private enum ResponseType {
-        DEDICATED_RESPONSE_CONVERTER, HTTP_RESPONSE, COMPLETION_STAGE, OTHER_OBJECTS
+        HANDLED_BY_SPI, HTTP_RESPONSE, COMPLETION_STAGE, OTHER_OBJECTS
     }
 }
