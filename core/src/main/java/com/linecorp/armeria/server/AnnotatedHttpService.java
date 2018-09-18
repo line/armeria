@@ -46,8 +46,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.ObjectsToHttpResponseConvertingSubscriber;
 import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.internal.ObjectsToHttpResponseConvertingSubscriber;
 import com.linecorp.armeria.server.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -73,7 +73,7 @@ final class AnnotatedHttpService implements HttpService {
     private final List<ExceptionHandlerFunction> exceptionHandlers;
     private final List<ResponseConverterFunction> responseConverters;
     @Nullable
-    private final ResponseConverterFunction dedicatedResponseConverter;
+    private final ResponseConverterFunction providedResponseConverter;
 
     private final ResponseType responseType;
 
@@ -90,10 +90,10 @@ final class AnnotatedHttpService implements HttpService {
                 requireNonNull(responseConverters, "responseConverters"));
 
         aggregationStrategy = AggregationStrategy.from(resolvers);
-        dedicatedResponseConverter = resolveDedicatedResponseConverter(method);
+        providedResponseConverter = fromProvider(method);
 
         final Class<?> returnType = method.getReturnType();
-        if (dedicatedResponseConverter != null) {
+        if (providedResponseConverter != null) {
             responseType = ResponseType.HANDLED_BY_SPI;
         } else if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
@@ -107,7 +107,7 @@ final class AnnotatedHttpService implements HttpService {
     }
 
     @Nullable
-    private ResponseConverterFunction resolveDedicatedResponseConverter(Method method) {
+    private ResponseConverterFunction fromProvider(Method method) {
         final Type returnType = method.getGenericReturnType();
 
         if (returnType instanceof ParameterizedType) {
@@ -165,9 +165,9 @@ final class AnnotatedHttpService implements HttpService {
                         if (obj instanceof HttpResponse) {
                             return (HttpResponse) obj;
                         }
-                        assert dedicatedResponseConverter != null;
+                        assert providedResponseConverter != null;
                         return new ExceptionFilteredHttpResponse(
-                                ctx, req, dedicatedResponseConverter.convertResponse(ctx, obj));
+                                ctx, req, providedResponseConverter.convertResponse(ctx, obj));
                     } catch (Throwable cause) {
                         return convertException(ctx, req, cause);
                     }

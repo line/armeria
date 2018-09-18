@@ -29,10 +29,10 @@ import com.linecorp.armeria.common.HttpResponse;
 public interface ResponseConverterFunctionProvider {
 
     /**
-     * Creates a new {@link ResponseConverterFunction} instance if possible.
-     * The {@code configuredResponseConverter} and {@code configuredExceptionHandler} are originally
-     * configured {@link ResponseConverterFunction} and {@link ExceptionHandlerFunction} which would be used
-     * if this provider did not return a new {@link ResponseConverterFunction}.
+     * Returns a {@link ResponseConverterFunction} instance if there is a function which can convert
+     * the {@code responseType}, otherwise return {@code null}. The {@code configuredResponseConverter}
+     * and {@code configuredExceptionHandler} are originally configured {@link ResponseConverterFunction}
+     * and {@link ExceptionHandlerFunction} which would be used if this provider returns {@code null}.
      *
      * @param responseType the return {@link Type} of the annotated HTTP service method
      * @param configuredResponseConverter the {@link ResponseConverterFunction} which converts an object
