@@ -152,7 +152,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        final Http1ObjectEncoder responseEncoder = new Http1ObjectEncoder(true, false);
+        final Http1ObjectEncoder responseEncoder = new Http1ObjectEncoder(p.channel(), true, false);
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
         configureIdleTimeoutHandler(p);
@@ -368,13 +368,14 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
+            final Channel ch = ctx.channel();
             final ChannelPipeline p = ctx.pipeline();
-            final Http1ObjectEncoder writer = new Http1ObjectEncoder(true, true);
+            final Http1ObjectEncoder writer = new Http1ObjectEncoder(ch, true, true);
             p.addLast(new HttpServerCodec(
                     config.defaultMaxHttp1InitialLineLength(),
                     config.defaultMaxHttp1HeaderSize(),
                     config.defaultMaxHttp1ChunkSize()));
-            p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS, writer));
+            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
             configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer,
                                             SessionProtocol.H1, proxiedAddresses));
