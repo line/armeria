@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
@@ -32,18 +33,23 @@ import io.netty.util.ReferenceCountUtil;
 
 public final class Http2ObjectEncoder extends HttpObjectEncoder {
 
+    private final ChannelHandlerContext ctx;
     private final Http2ConnectionEncoder encoder;
 
-    public Http2ObjectEncoder(Http2ConnectionEncoder encoder) {
+    public Http2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder) {
+        this.ctx = requireNonNull(ctx, "ctx");
         this.encoder = requireNonNull(encoder, "encoder");
     }
 
     @Override
-    protected ChannelFuture doWriteHeaders(
-            ChannelHandlerContext ctx, int id, int streamId, HttpHeaders headers, boolean endStream) {
+    protected Channel channel() {
+        return ctx.channel();
+    }
 
+    @Override
+    protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream) {
         if (!isWritable(streamId)) {
-            return ctx.newFailedFuture(ClosedPublisherException.get());
+            return newFailedFuture(ClosedPublisherException.get());
         }
 
         return encoder.writeHeaders(
@@ -51,27 +57,25 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected ChannelFuture doWriteData(
-            ChannelHandlerContext ctx, int id, int streamId, HttpData data, boolean endStream) {
-
+    protected ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
         if (!isWritable(streamId)) {
             ReferenceCountUtil.safeRelease(data);
             return data.isEmpty() ? ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
-                                  : ctx.newFailedFuture(ClosedPublisherException.get());
+                                  : newFailedFuture(ClosedPublisherException.get());
         }
 
         if (!encoder.connection().streamMayHaveExisted(streamId)) {
             // Cannot start a new stream with a DATA frame. It must start with a HEADERS frame.
             ReferenceCountUtil.safeRelease(data);
-            return ctx.newFailedFuture(new IllegalStateException(
+            return newFailedFuture(new IllegalStateException(
                     "cannot start a new stream " + streamId + " with a DATA frame"));
         }
 
-        return encoder.writeData(ctx, streamId, toByteBuf(ctx, data), 0, endStream, ctx.newPromise());
+        return encoder.writeData(ctx, streamId, toByteBuf(data), 0, endStream, ctx.newPromise());
     }
 
     @Override
-    protected ChannelFuture doWriteReset(ChannelHandlerContext ctx, int id, int streamId, Http2Error error) {
+    protected ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
         if (encoder.connection().streamMayHaveExisted(streamId)) {
             return encoder.writeRstStream(ctx, streamId, error.code(), ctx.newPromise());
         }

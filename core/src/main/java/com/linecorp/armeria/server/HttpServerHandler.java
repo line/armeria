@@ -260,10 +260,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
         if (responseEncoder == null) {
-            responseEncoder = new Http2ObjectEncoder(handler.encoder());
+            responseEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
         } else if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
-            responseEncoder = new Http2ObjectEncoder(handler.encoder());
+            responseEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
         }
     }
 
@@ -566,15 +566,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         logBuilder.startResponse();
         assert responseEncoder != null;
         ChannelFuture future = responseEncoder.writeHeaders(
-                ctx, req.id(), req.streamId(), res.headers(), contentAndTrailingHeadersEmpty);
+                req.id(), req.streamId(), res.headers(), contentAndTrailingHeadersEmpty);
         logBuilder.responseHeaders(res.headers());
         if (!contentAndTrailingHeadersEmpty) {
             future = responseEncoder.writeData(
-                    ctx, req.id(), req.streamId(), res.content(), trailingHeadersEmpty);
+                    req.id(), req.streamId(), res.content(), trailingHeadersEmpty);
             logBuilder.increaseResponseLength(res.content().length());
             if (!trailingHeadersEmpty) {
                 future = responseEncoder.writeHeaders(
-                        ctx, req.id(), req.streamId(), res.trailingHeaders(), true);
+                        req.id(), req.streamId(), res.trailingHeaders(), true);
             }
         }
 

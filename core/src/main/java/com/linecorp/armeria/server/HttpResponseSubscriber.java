@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
@@ -271,7 +270,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
         if (wroteNothing(state)) {
             logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
-            responseEncoder.writeReset(ctx, req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
+            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
             return;
         }
 
@@ -281,12 +280,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     }
 
     private void write(HttpObject o, boolean endOfStream) {
-        final Channel ch = ctx.channel();
         if (endOfStream) {
             setDone();
         }
 
-        ch.eventLoop().execute(() -> write0(o, endOfStream));
+        ctx.channel().eventLoop().execute(() -> write0(o, endOfStream));
     }
 
     private void write0(HttpObject o, boolean endOfStream) {
@@ -295,11 +293,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         if (o instanceof HttpData) {
             final HttpData data = (HttpData) o;
             wroteEmptyData = data.isEmpty();
-            future = responseEncoder.writeData(ctx, req.id(), req.streamId(), data, endOfStream);
+            future = responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream);
             logBuilder().increaseResponseLength(data.length());
         } else if (o instanceof HttpHeaders) {
             wroteEmptyData = false;
-            future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
+            future = responseEncoder.writeHeaders(req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
         } else {
             // Should never reach here because we did validation in onNext().
             throw new Error();
@@ -370,14 +368,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         if (wroteNothing(oldState)) {
             // Did not write anything yet; we can send an error response instead of resetting the stream.
             if (content.isEmpty()) {
-                future = responseEncoder.writeHeaders(ctx, id, streamId, headers, true);
+                future = responseEncoder.writeHeaders(id, streamId, headers, true);
             } else {
-                responseEncoder.writeHeaders(ctx, id, streamId, headers, false);
-                future = responseEncoder.writeData(ctx, id, streamId, content, true);
+                responseEncoder.writeHeaders(id, streamId, headers, false);
+                future = responseEncoder.writeData(id, streamId, content, true);
             }
         } else {
             // Wrote something already; we have to reset/cancel the stream.
-            future = responseEncoder.writeReset(ctx, id, streamId, error);
+            future = responseEncoder.writeReset(id, streamId, error);
         }
 
         addCallbackAndFlush(cause, oldState, future);
@@ -388,7 +386,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         subscription.cancel();
 
         final ChannelFuture future =
-                responseEncoder.writeReset(ctx, req.id(), req.streamId(), Http2Error.CANCEL);
+                responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL);
 
         addCallbackAndFlush(cause, oldState, future);
     }

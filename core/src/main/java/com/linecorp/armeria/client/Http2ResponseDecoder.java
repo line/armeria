@@ -81,8 +81,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                 final int streamId = idToStreamId(id);
                 if (conn.streamMayHaveExisted(streamId)) {
                     final ChannelHandlerContext ctx = channel().pipeline().lastContext();
-                    encoder.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.newPromise());
-                    ctx.flush();
+                    if (ctx != null) {
+                        encoder.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.newPromise());
+                        ctx.flush();
+                    } else {
+                        // The pipeline has been cleaned up due to disconnection.
+                    }
                 }
             }
         }, channel().eventLoop());
@@ -147,7 +151,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             // it will be notified to the response consumer anyway.
             if (!res.tryWrite(converted)) {
                 // Schedule only when the response stream is still open.
-                res.scheduleTimeout(ctx);
+                res.scheduleTimeout(ctx.channel().eventLoop());
             }
         } catch (Throwable t) {
             res.close(t);
