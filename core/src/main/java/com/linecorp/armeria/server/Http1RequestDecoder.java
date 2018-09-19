@@ -116,7 +116,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 if (msg instanceof HttpRequest) {
                     final HttpRequest nettyReq = (HttpRequest) msg;
                     if (!nettyReq.decoderResult().isSuccess()) {
-                        fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
+                        fail(id, HttpResponseStatus.BAD_REQUEST);
                         return;
                     }
 
@@ -124,7 +124,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Validate the method.
                     if (!HttpMethod.isSupported(nettyReq.method().name())) {
-                        fail(ctx, id, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                        fail(id, HttpResponseStatus.METHOD_NOT_ALLOWED);
                         return;
                     }
 
@@ -136,11 +136,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         try {
                             contentLength = Long.parseLong(contentLengthStr);
                         } catch (NumberFormatException ignored) {
-                            fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
+                            fail(id, HttpResponseStatus.BAD_REQUEST);
                             return;
                         }
                         if (contentLength < 0) {
-                            fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
+                            fail(id, HttpResponseStatus.BAD_REQUEST);
                             return;
                         }
 
@@ -149,9 +149,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         contentEmpty = true;
                     }
 
-                    if (!handle100Continue(ctx, id, nettyReq, nettyHeaders)) {
+                    if (!handle100Continue(id, nettyReq, nettyHeaders)) {
                         ctx.pipeline().fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
-                        fail(ctx, id, HttpResponseStatus.EXPECTATION_FAILED);
+                        fail(id, HttpResponseStatus.EXPECTATION_FAILED);
                         return;
                     }
 
@@ -173,7 +173,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     ctx.fireChannelRead(req);
                 } else {
-                    fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
+                    fail(id, HttpResponseStatus.BAD_REQUEST);
                     return;
                 }
             }
@@ -182,7 +182,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
+                    fail(id, HttpResponseStatus.BAD_REQUEST);
                     req.close(new ProtocolViolationException(decoderResult.cause()));
                     return;
                 }
@@ -193,7 +193,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     req.increaseTransferredBytes(dataLength);
                     final long maxContentLength = req.maxRequestLength();
                     if (maxContentLength > 0 && req.transferredBytes() > maxContentLength) {
-                        fail(ctx, id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+                        fail(id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
                         req.close(ContentTooLargeException.get());
                         return;
                     }
@@ -214,12 +214,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
         } catch (URISyntaxException e) {
-            fail(ctx, id, HttpResponseStatus.BAD_REQUEST);
+            fail(id, HttpResponseStatus.BAD_REQUEST);
             if (req != null) {
                 req.close(e);
             }
         } catch (Throwable t) {
-            fail(ctx, id, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            fail(id, HttpResponseStatus.INTERNAL_SERVER_ERROR);
             if (req != null) {
                 req.close(t);
             } else {
@@ -230,9 +230,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
-    private boolean handle100Continue(ChannelHandlerContext ctx, int id,
-                                      HttpRequest nettyReq, HttpHeaders nettyHeaders) {
-
+    private boolean handle100Continue(int id, HttpRequest nettyReq, HttpHeaders nettyHeaders) {
         if (nettyReq.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
             // Ignore HTTP/1.0 requests.
             return true;
@@ -250,14 +248,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
 
         // Send a '100 Continue' response.
-        writer.writeHeaders(ctx, id, 1, CONTINUE_RESPONSE, false);
+        writer.writeHeaders(id, 1, CONTINUE_RESPONSE, false);
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         nettyHeaders.remove(HttpHeaderNames.EXPECT);
         return true;
     }
 
-    private void fail(ChannelHandlerContext ctx, int id, HttpResponseStatus status) {
+    private void fail(int id, HttpResponseStatus status) {
         discarding = true;
         req = null;
 
@@ -267,8 +265,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         headers.set(HttpHeaderNames.CONNECTION, "close");
         headers.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
         headers.setInt(HttpHeaderNames.CONTENT_LENGTH, data.length());
-        writer.writeHeaders(ctx, id, 1, headers, false);
-        writer.writeData(ctx, id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
+        writer.writeHeaders(id, 1, headers, false);
+        writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
     }
 
     @Override

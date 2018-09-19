@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -139,7 +139,7 @@ abstract class HttpResponseDecoder {
             return delegate.completionFuture();
         }
 
-        void scheduleTimeout(ChannelHandlerContext ctx) {
+        void scheduleTimeout(EventLoop eventLoop) {
             if (responseTimeoutFuture != null || responseTimeoutMillis <= 0 || !isOpen()) {
                 // No need to schedule a response timeout if:
                 // - the timeout has been scheduled already,
@@ -148,7 +148,7 @@ abstract class HttpResponseDecoder {
                 return;
             }
 
-            responseTimeoutFuture = ctx.channel().eventLoop().schedule(
+            responseTimeoutFuture = eventLoop.schedule(
                     this, responseTimeoutMillis, TimeUnit.MILLISECONDS);
         }
 

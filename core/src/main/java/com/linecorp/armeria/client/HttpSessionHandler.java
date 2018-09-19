@@ -197,7 +197,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        active = ctx.channel().isActive();
+        active = channel.isActive();
     }
 
     @Override
@@ -236,17 +236,17 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                requestEncoder = new Http1ObjectEncoder(false, protocol.isTls());
+                requestEncoder = new Http1ObjectEncoder(channel, false, protocol.isTls());
                 responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
             } else if (protocol == H2 || protocol == H2C) {
                 final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-                requestEncoder = new Http2ObjectEncoder(handler.encoder());
+                requestEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
                 responseDecoder = ctx.pipeline().get(Http2ClientConnectionHandler.class).responseDecoder();
             } else {
                 throw new Error(); // Should never reach here.
             }
 
-            if (!sessionPromise.trySuccess(ctx.channel())) {
+            if (!sessionPromise.trySuccess(channel)) {
                 // Session creation has been failed already; close the connection.
                 ctx.close();
             }
@@ -267,7 +267,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
-        logger.warn("{} Unexpected user event: {}", ctx.channel(), evt);
+        logger.warn("{} Unexpected user event: {}", channel, evt);
     }
 
     @Override
@@ -278,7 +278,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            channelFactory.connect(ctx.channel().remoteAddress(), H1C, sessionPromise);
+            channelFactory.connect(channel.remoteAddress(), H1C, sessionPromise);
         } else {
             // Fail all pending responses.
             failUnfinishedResponses(ClosedSessionException.get());
@@ -292,8 +292,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        Exceptions.logIfUnexpected(logger, ctx.channel(), protocol(), cause);
-        if (ctx.channel().isActive()) {
+        Exceptions.logIfUnexpected(logger, channel, protocol(), cause);
+        if (channel.isActive()) {
             ctx.close();
         }
     }
