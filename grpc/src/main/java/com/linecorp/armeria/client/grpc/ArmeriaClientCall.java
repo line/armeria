@@ -306,11 +306,14 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void close(Status status) {
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+        req.abort();
         responseReader.cancel();
+
         try (SafeCloseable ignored = ctx.push()) {
             listener.onClose(status, EMPTY_METADATA);
         }
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+
         notifyExecutor();
     }
 
