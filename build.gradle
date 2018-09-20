@@ -33,6 +33,8 @@ allprojects {
     }
 
     tasks.withType(Test) {
+        // Do not omit stack frames for easier tracking.
+        jvmArgs '-XX:-OmitStackTraceInFastThrow'
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
