@@ -303,11 +303,17 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             trailersObj = trailers;
         }
         try {
-            res.write(trailersObj);
-            res.close();
+            if (res.tryWrite(trailersObj)) {
+                res.close();
+            }
         } finally {
             closeListener(status);
         }
+    }
+
+    @VisibleForTesting
+    boolean isCloseCalled() {
+        return closeCalled;
     }
 
     @Override
@@ -382,7 +388,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void endOfStream() {
-        clientStreamClosed = true;
+        setClientStreamClosed();
         if (!closeCalled) {
             if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
@@ -411,10 +417,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private void closeListener(Status newStatus) {
         if (!listenerClosed) {
             listenerClosed = true;
-            if (!clientStreamClosed) {
-                messageReader().cancel();
-                clientStreamClosed = true;
-            }
+            setClientStreamClosed();
             messageFramer.close();
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             if (newStatus.isOk()) {
@@ -442,6 +445,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                     res.close(newStatus.asException());
                 }
             }
+        }
+    }
+
+    private void setClientStreamClosed() {
+        if (!clientStreamClosed) {
+            messageReader().cancel();
+            clientStreamClosed = true;
         }
     }
 

@@ -29,6 +29,7 @@ import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -124,6 +125,15 @@ public class ArmeriaServerCallTest {
         when(ctx.attr(GrpcUnsafeBufferUtil.BUFFERS)).thenReturn(buffersAttr);
     }
 
+    @After
+    public void tearDown() {
+        // HttpStreamReader must be invoked from an event loop.
+        eventLoop.get().submit(() -> call.messageReader().cancel()).syncUninterruptibly();
+        if (!call.isCloseCalled()) {
+            call.close(Status.OK, new Metadata());
+        }
+    }
+
     @Test
     public void messageReadAfterClose_byteBuf() {
         call.close(Status.ABORTED, new Metadata());
@@ -146,6 +156,8 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void messageRead_wrappedByteBuf() {
+        tearDown();
+
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
                 TestServiceGrpc.getUnaryCallMethod(),

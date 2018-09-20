@@ -217,7 +217,7 @@ public class GrpcClientTest {
     }
 
     @Test
-    public void largeUnary_unsafe() {
+    public void largeUnary_unsafe() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setResponseSize(314159)
@@ -236,25 +236,41 @@ public class GrpcClientTest {
                 .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
                 .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
                 .build(TestServiceStub.class);
+
+        final BlockingQueue<Object> resultQueue = new LinkedTransferQueue<>();
         stub.unaryCall(request, new StreamObserver<SimpleResponse>() {
             @Override
             public void onNext(SimpleResponse value) {
-                final RequestContext ctx = RequestContext.current();
-                assertThat(value).isEqualTo(goldenResponse);
-                final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
-                assertThat(buf.refCnt()).isNotZero();
-                GrpcUnsafeBufferUtil.releaseBuffer(value, ctx);
-                assertThat(buf.refCnt()).isZero();
+                try {
+                    final RequestContext ctx = RequestContext.current();
+                    assertThat(value).isEqualTo(goldenResponse);
+                    final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
+                    assertThat(buf.refCnt()).isNotZero();
+                    GrpcUnsafeBufferUtil.releaseBuffer(value, ctx);
+                    assertThat(buf.refCnt()).isZero();
+                } catch (Throwable t) {
+                    resultQueue.add(t);
+                }
             }
 
             @Override
             public void onError(Throwable t) {
+                resultQueue.add(t);
             }
 
             @Override
             public void onCompleted() {
+                resultQueue.add("OK");
             }
         });
+
+        final Object result = resultQueue.poll(10, TimeUnit.SECONDS);
+        if (result instanceof Throwable) {
+            Exceptions.throwUnsafely((Throwable) result);
+        } else {
+            assertThat(result).isEqualTo("OK");
+            assertThat(resultQueue.poll(1, TimeUnit.SECONDS)).isNull();
+        }
     }
 
     @Test
