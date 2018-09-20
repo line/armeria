@@ -166,13 +166,17 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
             }
 
             try {
-                final TBase<?, ?> result = f.getResult(impl, args);
                 if (func.isOneWay()) {
                     reply.complete(null);
+                    f.getResult(impl, args);
                 } else {
+                    final TBase<?, ?> result = f.getResult(impl, args);
                     reply.complete(func.getResult(result));
                 }
             } catch (Throwable t) {
+                if (func.isOneWay()) {
+                    throw new RuntimeException(t);
+                }
                 reply.completeExceptionally(t);
             }
         });
