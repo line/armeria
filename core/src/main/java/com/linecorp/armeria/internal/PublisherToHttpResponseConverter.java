@@ -17,8 +17,6 @@ package com.linecorp.armeria.internal;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -26,6 +24,8 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -39,16 +39,18 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * {@link ResponseConverterFunction} when {@link #onComplete()} is called, then the {@link HttpResponse}
  * would complete the {@link CompletableFuture} which is given when creating this instance.
  */
-public class ObjectsToHttpResponseConvertingSubscriber implements Subscriber<Object> {
+public class PublisherToHttpResponseConverter implements Subscriber<Object> {
 
     private final ServiceRequestContext ctx;
     private final HttpRequest req;
     private final CompletableFuture<HttpResponse> future;
-    private final ResponseConverterFunction configuredResponseConverter;
-    private final ExceptionHandlerFunction configuredExceptionHandler;
+    private final ResponseConverterFunction responseConverter;
+    private final ExceptionHandlerFunction exceptionHandler;
 
     @Nullable
-    private List<Object> objects;
+    private Object firstElement;
+    @Nullable
+    private ImmutableList.Builder<Object> listBuilder;
 
     /**
      * Creates a new instance.
@@ -56,24 +58,22 @@ public class ObjectsToHttpResponseConvertingSubscriber implements Subscriber<Obj
      * @param ctx the {@link ServiceRequestContext} of the {@code req}
      * @param req the {@link HttpRequest} received by the server
      * @param future the {@link CompletableFuture} which waits for an {@link HttpResponse}
-     * @param configuredResponseConverter the {@link ResponseConverterFunction} which is used to convert the
-     *                                    collected objects into an {@link HttpResponse} when the
-     *                                    {@link #onComplete()} is invoked
-     * @param configuredExceptionHandler the {@link ExceptionHandlerFunction} which is used to convert the
-     *                                   {@link Throwable} into an {@link HttpResponse} when the
-     *                                   {@link #onError(Throwable)} is invoked
+     * @param responseConverter the {@link ResponseConverterFunction} which is used to convert the
+     *                          collected objects into an {@link HttpResponse} when the {@link #onComplete()}
+     *                          is invoked
+     * @param exceptionHandler the {@link ExceptionHandlerFunction} which is used to convert the
+     *                         {@link Throwable} into an {@link HttpResponse} when the
+     *                         {@link #onError(Throwable)} is invoked
      */
-    public ObjectsToHttpResponseConvertingSubscriber(ServiceRequestContext ctx, HttpRequest req,
-                                                     CompletableFuture<HttpResponse> future,
-                                                     ResponseConverterFunction configuredResponseConverter,
-                                                     ExceptionHandlerFunction configuredExceptionHandler) {
+    public PublisherToHttpResponseConverter(ServiceRequestContext ctx, HttpRequest req,
+                                            CompletableFuture<HttpResponse> future,
+                                            ResponseConverterFunction responseConverter,
+                                            ExceptionHandlerFunction exceptionHandler) {
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = requireNonNull(req, "req");
         this.future = requireNonNull(future, "future");
-        this.configuredResponseConverter = requireNonNull(configuredResponseConverter,
-                                                          "configuredResponseConverter");
-        this.configuredExceptionHandler = requireNonNull(configuredExceptionHandler,
-                                                         "configuredExceptionHandler");
+        this.responseConverter = requireNonNull(responseConverter, "responseConverter");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Override
@@ -83,37 +83,35 @@ public class ObjectsToHttpResponseConvertingSubscriber implements Subscriber<Obj
 
     @Override
     public void onNext(Object o) {
-        if (objects == null) {
-            objects = new ArrayList<>();
+        if (firstElement == null) {
+            firstElement = o;
+        } else {
+            if (listBuilder != null) {
+                listBuilder = ImmutableList.builder();
+                listBuilder.add(firstElement);
+            }
+            listBuilder.add(o);
         }
-        objects.add(o);
     }
 
     @Override
     public void onError(Throwable t) {
-        future.complete(configuredExceptionHandler.handleException(ctx, req, t));
+        future.complete(exceptionHandler.handleException(ctx, req, t));
     }
 
     @Override
     public void onComplete() {
         final Object obj;
-        if (objects == null) {
-            obj = null;
+        if (listBuilder != null) {
+            obj = listBuilder.build();
+            listBuilder = null;
         } else {
-            switch (objects.size()) {
-                case 0:
-                    obj = null;
-                    break;
-                case 1:
-                    obj = objects.get(0);
-                    break;
-                default:
-                    obj = objects;
-                    break;
-            }
+            obj = firstElement;
         }
+        firstElement = null;
+
         try {
-            future.complete(configuredResponseConverter.convertResponse(ctx, obj));
+            future.complete(responseConverter.convertResponse(ctx, obj));
         } catch (Exception e) {
             onError(e);
         }

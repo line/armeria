@@ -32,8 +32,8 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
     @Override
     public ResponseConverterFunction createResponseConverterFunction(
             Type returnType,
-            ResponseConverterFunction configuredResponseConverter,
-            ExceptionHandlerFunction configuredExceptionHandler) {
+            ResponseConverterFunction responseConverter,
+            ExceptionHandlerFunction exceptionHandler) {
 
         if (!ObservableSource.class.isAssignableFrom(toClass(returnType))) {
             return null;
@@ -49,8 +49,7 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
             }
         }
 
-        return new ObservableResponseConverterFunction(configuredResponseConverter,
-                                                       configuredExceptionHandler);
+        return new ObservableResponseConverterFunction(responseConverter, exceptionHandler);
     }
 
     private static Class<?> toClass(Type type) {

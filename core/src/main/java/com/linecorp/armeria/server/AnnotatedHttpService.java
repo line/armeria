@@ -47,7 +47,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.FallthroughException;
-import com.linecorp.armeria.internal.ObjectsToHttpResponseConvertingSubscriber;
+import com.linecorp.armeria.internal.PublisherToHttpResponseConverter;
 import com.linecorp.armeria.server.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -213,9 +213,9 @@ final class AnnotatedHttpService implements HttpService {
         if (result instanceof Publisher) {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final Publisher<?> publisher = (Publisher<?>) result;
-            publisher.subscribe(new ObjectsToHttpResponseConvertingSubscriber(ctx, req, future,
-                                                                              this::convertResponse,
-                                                                              this::convertException));
+            publisher.subscribe(new PublisherToHttpResponseConverter(ctx, req, future,
+                                                                     this::convertResponse,
+                                                                     this::convertException));
             return HttpResponse.from(future);
         }
 

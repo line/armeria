@@ -30,19 +30,18 @@ public interface ResponseConverterFunctionProvider {
 
     /**
      * Returns a {@link ResponseConverterFunction} instance if there is a function which can convert
-     * the {@code responseType}, otherwise return {@code null}. The {@code configuredResponseConverter}
-     * and {@code configuredExceptionHandler} are originally configured {@link ResponseConverterFunction}
+     * the {@code responseType}, otherwise return {@code null}. The {@code responseConverter}
+     * and {@code exceptionHandler} are originally configured {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction} which would be used if this provider returns {@code null}.
      *
      * @param responseType the return {@link Type} of the annotated HTTP service method
-     * @param configuredResponseConverter the {@link ResponseConverterFunction} which converts an object
-     *                                    into an {@link HttpResponse}
-     * @param configuredExceptionHandler the {@link ExceptionHandlerFunction} which converts a {@link Throwable}
-     *                                   into an {@link HttpResponse}
+     * @param responseConverter the {@link ResponseConverterFunction} which converts an object
+     *                          into an {@link HttpResponse}
+     * @param exceptionHandler the {@link ExceptionHandlerFunction} which converts a {@link Throwable}
+     *                         into an {@link HttpResponse}
      */
     @Nullable
-    ResponseConverterFunction createResponseConverterFunction(
-            Type responseType,
-            ResponseConverterFunction configuredResponseConverter,
-            ExceptionHandlerFunction configuredExceptionHandler);
+    ResponseConverterFunction createResponseConverterFunction(Type responseType,
+                                                              ResponseConverterFunction responseConverter,
+                                                              ExceptionHandlerFunction exceptionHandler);
 }
