@@ -16,7 +16,7 @@ com.auth0:
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.6'
+    version: &JACKSON_VERSION '2.9.7'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
@@ -41,7 +41,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '2.0.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.31.0' }
+  gax-grpc: { version: '1.32.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -168,13 +168,13 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.3.1'
+    version: &BRAVE_VERSION '5.3.3'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.3.1/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.3.3/
 
 it.unimi.dsi:
   fastutil:
-    version: '8.2.1'
+    version: '8.2.2'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
