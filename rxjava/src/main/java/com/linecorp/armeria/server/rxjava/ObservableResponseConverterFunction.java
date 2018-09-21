@@ -37,23 +37,21 @@ import io.reactivex.disposables.Disposable;
  */
 public class ObservableResponseConverterFunction implements ResponseConverterFunction {
 
-    private final ResponseConverterFunction configuredResponseConverter;
-    private final ExceptionHandlerFunction configuredExceptionHandler;
+    private final ResponseConverterFunction responseConverter;
+    private final ExceptionHandlerFunction exceptionHandler;
 
     /**
      * Creates a new {@link ResponseConverterFunction} instance.
      *
-     * @param configuredResponseConverter the function which converts an object with the configured
-     *                                    {@link ResponseConverterFunction}s
-     * @param configuredExceptionHandler the function which converts a {@link Throwable} with the configured
-     *                                   {@link ExceptionHandlerFunction}s
+     * @param responseConverter the function which converts an object with the configured
+     *                          {@link ResponseConverterFunction}
+     * @param exceptionHandler the function which converts a {@link Throwable} with the configured
+     *                         {@link ExceptionHandlerFunction}
      */
-    public ObservableResponseConverterFunction(ResponseConverterFunction configuredResponseConverter,
-                                               ExceptionHandlerFunction configuredExceptionHandler) {
-        this.configuredResponseConverter =
-                requireNonNull(configuredResponseConverter, "configuredResponseConverter");
-        this.configuredExceptionHandler =
-                requireNonNull(configuredExceptionHandler, "configuredExceptionHandler");
+    public ObservableResponseConverterFunction(ResponseConverterFunction responseConverter,
+                                               ExceptionHandlerFunction exceptionHandler) {
+        this.responseConverter = requireNonNull(responseConverter, "responseConverter");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Override
@@ -64,8 +62,7 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
             final ObservableSource<?> observable = (ObservableSource<?>) result;
             final PublisherToHttpResponseConverter subscriber =
                     new PublisherToHttpResponseConverter(ctx, ctx.request(), future,
-                                                         configuredResponseConverter,
-                                                         configuredExceptionHandler);
+                                                         responseConverter, exceptionHandler);
             observable.subscribe(new Observer<Object>() {
                 @Override
                 public void onSubscribe(Disposable d) {}

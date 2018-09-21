@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * A {@link Subscriber} which collects all objects produced by a {@link Publisher} as a list.
+ * A {@link Subscriber} which collects all objects produced by a {@link Publisher}.
  * The collected objects would be converted to an {@link HttpResponse} using the specified
  * {@link ResponseConverterFunction} when {@link #onComplete()} is called, then the {@link HttpResponse}
  * would complete the {@link CompletableFuture} which is given when creating this instance.
