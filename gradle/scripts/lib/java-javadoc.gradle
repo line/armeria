@@ -169,7 +169,7 @@ allprojects {
                     conn.disconnect()
                 } catch (e) {
                     tmpListFile.delete()
-                    throw new GradleScriptException("${e}", e)
+                    logger.log(LogLevel.WARN, "Download failed: ${e}", e)
                 }
 
                 return success
