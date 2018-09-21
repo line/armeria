@@ -9,10 +9,10 @@ dependencies {
     compile 'io.dropwizard.metrics:metrics-json'
     compile 'javax.inject:javax.inject'
     compile 'javax.validation:validation-api'
-    compile 'org.springframework.boot:spring-boot-starter:1.5.15.RELEASE'
-    compileOnly 'org.springframework.boot:spring-boot-configuration-processor:1.5.15.RELEASE'
+    compile 'org.springframework.boot:spring-boot-starter:1.5.16.RELEASE'
+    compileOnly 'org.springframework.boot:spring-boot-configuration-processor:1.5.16.RELEASE'
 
-    testCompile 'org.springframework.boot:spring-boot-starter-test:1.5.15.RELEASE'
+    testCompile 'org.springframework.boot:spring-boot-starter-test:1.5.16.RELEASE'
     testCompile 'org.hibernate.validator:hibernate-validator'
 }
 
