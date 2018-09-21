@@ -86,7 +86,7 @@ public class PublisherToHttpResponseConverter implements Subscriber<Object> {
         if (firstElement == null) {
             firstElement = o;
         } else {
-            if (listBuilder != null) {
+            if (listBuilder == null) {
                 listBuilder = ImmutableList.builder();
                 listBuilder.add(firstElement);
             }
