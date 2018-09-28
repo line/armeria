@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +24,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.annotation.ExceptionHandler;
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
+import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpStatusException;
 
 /**
  * A default exception handler is used when a user does not specify exception handlers

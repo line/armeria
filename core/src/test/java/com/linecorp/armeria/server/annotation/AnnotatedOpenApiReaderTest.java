@@ -14,15 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
 import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
-import static com.linecorp.armeria.internal.server.AnnotatedValueResolver.toRequestObjectResolvers;
-import static com.linecorp.armeria.server.AnnotatedOpenApiReader.endpointPath;
-import static com.linecorp.armeria.server.AnnotatedOpenApiReader.fillFromOpenApiDefinition;
-import static com.linecorp.armeria.server.AnnotatedOpenApiReader.fillFromService;
-import static com.linecorp.armeria.server.AnnotatedOpenApiReader.operation;
+import static com.linecorp.armeria.server.annotation.AnnotatedOpenApiReader.endpointPath;
+import static com.linecorp.armeria.server.annotation.AnnotatedOpenApiReader.fillFromOpenApiDefinition;
+import static com.linecorp.armeria.server.annotation.AnnotatedOpenApiReader.fillFromService;
+import static com.linecorp.armeria.server.annotation.AnnotatedOpenApiReader.operation;
+import static com.linecorp.armeria.server.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,18 +49,10 @@ import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.server.AnnotatedHttpService;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
-import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
-import com.linecorp.armeria.server.annotation.ConsumesBinary;
-import com.linecorp.armeria.server.annotation.ConsumesOctetStream;
-import com.linecorp.armeria.server.annotation.Cookies;
-import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.Param;
-import com.linecorp.armeria.server.annotation.Patch;
-import com.linecorp.armeria.server.annotation.Path;
-import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;

@@ -32,8 +32,8 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
  */
 public final class PathMappingResult {
 
-    public static final int LOWEST_SCORE = Integer.MIN_VALUE;
-    public static final int HIGHEST_SCORE = Integer.MAX_VALUE;
+    static final int LOWEST_SCORE = Integer.MIN_VALUE;
+    static final int HIGHEST_SCORE = Integer.MAX_VALUE;
 
     private static final PathMappingResult EMPTY =
             new PathMappingResult(null, null, ImmutableMap.of(), LOWEST_SCORE);
@@ -182,7 +182,7 @@ public final class PathMappingResult {
     /**
      * Sets the new score of this result.
      */
-    public void setScore(int score) {
+    void setScore(int score) {
         ensurePresence();
         this.score = score;
     }
@@ -210,7 +210,7 @@ public final class PathMappingResult {
     /**
      * Sets the negotiated producible media type.
      */
-    public void setNegotiatedResponseMediaType(MediaType negotiatedResponseMediaType) {
+    void setNegotiatedResponseMediaType(MediaType negotiatedResponseMediaType) {
         ensurePresence();
         this.negotiatedResponseMediaType = negotiatedResponseMediaType;
     }

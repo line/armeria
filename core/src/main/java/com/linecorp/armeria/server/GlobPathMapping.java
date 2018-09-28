@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.server.PathMappingPrefixes.GLOB;
 
 import java.util.Optional;
 import java.util.Set;
@@ -26,9 +27,6 @@ import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableSet;
 
 final class GlobPathMapping extends AbstractPathMapping {
-
-    static final String PREFIX = "glob:";
-    static final int PREFIX_LEN = PREFIX.length();
 
     private static final String[] INT_TO_STRING;
 
@@ -68,13 +66,13 @@ final class GlobPathMapping extends AbstractPathMapping {
         }
         this.paramNames = paramNames.build();
 
-        strVal = PREFIX + glob;
+        strVal = GLOB + glob;
 
         // Make the glob pattern as an absolute form to distinguish 'glob:foo' from 'exact:/foo'
         // when generating logger and metric names.
         final String aGlob = glob.startsWith("/") ? glob : "/**/" + glob;
         loggerName = loggerName(aGlob);
-        meterTag = PREFIX + aGlob;
+        meterTag = GLOB + aGlob;
     }
 
     @Override

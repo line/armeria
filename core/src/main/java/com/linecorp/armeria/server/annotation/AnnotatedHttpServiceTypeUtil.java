@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.server;
+package com.linecorp.armeria.server.annotation;
 
 import java.util.ArrayList;
 import java.util.Collection;

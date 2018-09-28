@@ -45,7 +45,7 @@ public abstract class AbstractPathMapping implements PathMapping {
      * @throws NullPointerException if {@code path} is {@code null}
      * @throws IllegalArgumentException if {@code path} is not an absolute path
      */
-    protected static String ensureAbsolutePath(String path, String paramName) {
+    public static String ensureAbsolutePath(String path, String paramName) {
         requireNonNull(path, paramName);
         if (path.isEmpty() || path.charAt(0) != '/') {
             throw new IllegalArgumentException(paramName + ": " + path + " (expected: an absolute path)");
@@ -69,7 +69,10 @@ public abstract class AbstractPathMapping implements PathMapping {
         return "__UNKNOWN__";
     }
 
-    static String loggerName(@Nullable String pathish) {
+    /**
+     * Returns the logger name from the specified {@code pathish}.
+     */
+    public static String loggerName(@Nullable String pathish) {
         if (pathish == null) {
             return "__UNKNOWN__";
         }

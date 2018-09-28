@@ -80,7 +80,7 @@ public final class EndpointInfoBuilder {
     }
 
     /**
-     * Sets the default serialization format.
+     * Sets the default {@link SerializationFormat}.
      */
     public EndpointInfoBuilder defaultFormat(SerializationFormat defaultFormat) {
         requireNonNull(defaultFormat, "defaultFormat");
@@ -108,7 +108,7 @@ public final class EndpointInfoBuilder {
     }
 
     /**
-     * Sets the available serialization formats.
+     * Sets the available {@link SerializationFormat}s.
      */
     public EndpointInfoBuilder availableFormats(SerializationFormat... availableFormats) {
         requireNonNull(availableFormats, "availableFormats");
@@ -116,7 +116,7 @@ public final class EndpointInfoBuilder {
     }
 
     /**
-     * Sets the available serialization formats.
+     * Sets the available {@link SerializationFormat}s.
      */
     public EndpointInfoBuilder availableFormats(Iterable<SerializationFormat> availableFormats) {
         requireNonNull(availableFormats, "availableFormats");

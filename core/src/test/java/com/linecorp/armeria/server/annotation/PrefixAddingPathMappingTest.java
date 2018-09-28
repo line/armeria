@@ -14,13 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
+import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 
 public class PrefixAddingPathMappingTest {
 

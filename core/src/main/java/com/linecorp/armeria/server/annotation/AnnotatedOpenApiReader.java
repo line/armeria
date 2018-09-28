@@ -14,13 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.COOKIE_PARAM;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.extractParameter;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.isHidden;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.COOKIE_PARAM;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.extractParameter;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.isHidden;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
@@ -43,12 +43,8 @@ import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.internal.server.AnnotatedHttpService;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
-import com.linecorp.armeria.server.annotation.Consumes;
-import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.Param;
-import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.ServiceConfig;
 
 import io.swagger.v3.core.converter.AnnotatedType;
 import io.swagger.v3.core.converter.ModelConverters;
@@ -78,7 +74,7 @@ import io.swagger.v3.oas.models.tags.Tag;
 /**
  * A utility class that parses annotated HTTP services and builds an {@link OpenAPI} from it.
  * This class uses annotations defined in Armeria such as {@link Param}, {@link Header}, {@link Produces},
- * {@link Consumes}, etc, as well as the annotations is Swagger.
+ * {@link Consumes}, etc, as well as the annotations in Swagger.
  *
  * @see <a href="https://github.com/OAI/OpenAPI-Specification/blob/3.0.1/versions/3.0.1.md#oasObject">
  *     OpenAPI specification</a>

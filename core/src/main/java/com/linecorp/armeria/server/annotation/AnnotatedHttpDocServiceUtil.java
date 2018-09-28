@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
@@ -26,11 +26,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.internal.server.AnnotatedHttpService;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
-import com.linecorp.armeria.server.annotation.Cookies;
-import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.HttpHeaderPathMapping;
 import com.linecorp.armeria.server.docs.DocService;
 
 import io.swagger.v3.core.util.ReflectionUtils;
@@ -38,7 +34,7 @@ import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.models.parameters.Parameter;
 
 /**
- * A utility class to provide annotation processing from {@link AnnotatedHttpService} to build
+ * A utility class to provide annotation processing in {@link AnnotatedHttpService} to build a
  * {@link DocService}.
  */
 final class AnnotatedHttpDocServiceUtil {

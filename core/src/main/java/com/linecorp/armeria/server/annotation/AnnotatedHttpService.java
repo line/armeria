@@ -14,10 +14,10 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.internal.server;
+package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.server.AnnotatedValueResolver.AggregationStrategy.aggregationRequired;
-import static com.linecorp.armeria.internal.server.AnnotatedValueResolver.toArguments;
+import static com.linecorp.armeria.server.annotation.AnnotatedValueResolver.AggregationStrategy.aggregationRequired;
+import static com.linecorp.armeria.server.annotation.AnnotatedValueResolver.toArguments;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
@@ -49,18 +49,13 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.internal.PublisherToHttpResponseConverter;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver.AggregationStrategy;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpHeaderPathMapping;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
-import com.linecorp.armeria.server.annotation.Path;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.AnnotatedValueResolver.AggregationStrategy;
+import com.linecorp.armeria.server.annotation.AnnotatedValueResolver.ResolverContext;
 
 /**
  * A {@link Service} which is defined by {@link Path} or HTTP method annotations.
@@ -86,11 +81,11 @@ public class AnnotatedHttpService implements HttpService {
 
     private final ResponseType responseType;
 
-    public AnnotatedHttpService(Object object, Method method,
-                                List<AnnotatedValueResolver> resolvers,
-                                List<ExceptionHandlerFunction> exceptionHandlers,
-                                List<ResponseConverterFunction> responseConverters,
-                                HttpHeaderPathMapping pathMapping) {
+    AnnotatedHttpService(Object object, Method method,
+                         List<AnnotatedValueResolver> resolvers,
+                         List<ExceptionHandlerFunction> exceptionHandlers,
+                         List<ResponseConverterFunction> responseConverters,
+                         HttpHeaderPathMapping pathMapping) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -154,19 +149,19 @@ public class AnnotatedHttpService implements HttpService {
         return Void.class;
     }
 
-    public Object object() {
+    Object object() {
         return object;
     }
 
-    public Method method() {
+    Method method() {
         return method;
     }
 
-    public List<AnnotatedValueResolver> annotatedValueResolvers() {
+    List<AnnotatedValueResolver> annotatedValueResolvers() {
         return resolvers;
     }
 
-    public HttpHeaderPathMapping pathMapping() {
+    HttpHeaderPathMapping pathMapping() {
         return pathMapping;
     }
 

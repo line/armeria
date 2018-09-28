@@ -16,15 +16,14 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.PathMappingPrefixes.PREFIX;
+
 import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
 final class PrefixPathMapping extends AbstractPathMapping {
-
-    static final String PREFIX = "prefix:";
-    static final int PREFIX_LEN = PREFIX.length();
 
     private final String prefix;
     private final boolean stripPrefix;

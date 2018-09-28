@@ -14,10 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.server.PathMappingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import org.junit.Test;
 
@@ -29,6 +29,15 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
+import com.linecorp.armeria.server.DefaultPathMappingContext;
+import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.PathMappingContext;
+import com.linecorp.armeria.server.PathMappingResult;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.VirtualHost;
 
 public class HttpHeaderPathMappingTest {
 
@@ -157,5 +166,13 @@ public class HttpHeaderPathMappingTest {
         headers.add(HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, headers, PRODUCIBLE_MEDIA_TYPES);
+    }
+
+    private static VirtualHost virtualHost() {
+        final HttpService service = mock(HttpService.class);
+        final Server server = new ServerBuilder().withVirtualHost("example.com")
+                                                 .serviceUnder("/", service)
+                                                 .and().build();
+        return server.config().findVirtualHost("example.com");
     }
 }

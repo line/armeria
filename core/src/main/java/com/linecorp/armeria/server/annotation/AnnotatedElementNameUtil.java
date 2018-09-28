@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.server;
+package com.linecorp.armeria.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -26,8 +26,6 @@ import com.google.common.base.Ascii;
 import com.google.common.base.CaseFormat;
 
 import com.linecorp.armeria.internal.DefaultValues;
-import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.Param;
 
 final class AnnotatedElementNameUtil {
 

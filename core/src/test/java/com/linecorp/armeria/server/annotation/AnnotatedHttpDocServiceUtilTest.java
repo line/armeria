@@ -14,13 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.HEADER_PARAM;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.PATH_PARAM;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.QUERY_PARAM;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.extractParameter;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.isHidden;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.HEADER_PARAM;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.PATH_PARAM;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.QUERY_PARAM;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.extractParameter;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.isHidden;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,12 +32,6 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-
-import com.linecorp.armeria.internal.server.AnnotatedHttpService;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
-import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.Param;
 
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.models.parameters.Parameter;

@@ -14,14 +14,18 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.server.AnnotatedValueResolver.toRequestObjectResolvers;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
+import static com.linecorp.armeria.server.PathMappingPrefixes.EXACT;
+import static com.linecorp.armeria.server.PathMappingPrefixes.GLOB;
+import static com.linecorp.armeria.server.PathMappingPrefixes.PREFIX;
+import static com.linecorp.armeria.server.PathMappingPrefixes.REGEX;
+import static com.linecorp.armeria.server.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -58,41 +62,14 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
-import com.linecorp.armeria.internal.server.AnnotatedHttpService;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver.NoParameterException;
-import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ConsumeType;
-import com.linecorp.armeria.server.annotation.ConsumeTypes;
-import com.linecorp.armeria.server.annotation.Consumes;
-import com.linecorp.armeria.server.annotation.ConsumesGroup;
-import com.linecorp.armeria.server.annotation.Decorator;
-import com.linecorp.armeria.server.annotation.DecoratorFactory;
-import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
-import com.linecorp.armeria.server.annotation.Decorators;
-import com.linecorp.armeria.server.annotation.Delete;
-import com.linecorp.armeria.server.annotation.ExceptionHandler;
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Head;
-import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.Options;
-import com.linecorp.armeria.server.annotation.Order;
-import com.linecorp.armeria.server.annotation.Patch;
-import com.linecorp.armeria.server.annotation.Path;
-import com.linecorp.armeria.server.annotation.Post;
-import com.linecorp.armeria.server.annotation.ProduceType;
-import com.linecorp.armeria.server.annotation.ProduceTypes;
-import com.linecorp.armeria.server.annotation.Produces;
-import com.linecorp.armeria.server.annotation.ProducesGroup;
-import com.linecorp.armeria.server.annotation.Put;
-import com.linecorp.armeria.server.annotation.RequestConverter;
-import com.linecorp.armeria.server.annotation.RequestConverterFunction;
-import com.linecorp.armeria.server.annotation.RequestObject;
-import com.linecorp.armeria.server.annotation.ResponseConverter;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.AbstractPathMapping;
+import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.PathMappingContext;
+import com.linecorp.armeria.server.PathMappingResult;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.annotation.AnnotatedValueResolver.NoParameterException;
 
 /**
  * Builds a list of annotated HTTP services from a Java object.
@@ -147,8 +124,8 @@ public final class AnnotatedHttpServiceFactory {
      * Returns the list of {@link AnnotatedHttpService} defined by {@link Path} and HTTP method annotations
      * from the specified {@code object}.
      */
-    static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
-                                                  Iterable<?> exceptionHandlersAndConverters) {
+    public static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
+                                                         Iterable<?> exceptionHandlersAndConverters) {
         Builder<ExceptionHandlerFunction> exceptionHandlers = null;
         Builder<RequestConverterFunction> requestConverters = null;
         Builder<ResponseConverterFunction> responseConverters = null;
@@ -426,18 +403,18 @@ public final class AnnotatedHttpServiceFactory {
             return mapping;
         }
 
-        if (pattern.startsWith(ExactPathMapping.PREFIX)) {
+        if (pattern.startsWith(EXACT)) {
             return PathMapping.ofExact(concatPaths(
-                    pathPrefix, pattern.substring(ExactPathMapping.PREFIX_LEN)));
+                    pathPrefix, pattern.substring(EXACT.length())));
         }
 
-        if (pattern.startsWith(PrefixPathMapping.PREFIX)) {
+        if (pattern.startsWith(PREFIX)) {
             return PathMapping.ofPrefix(concatPaths(
-                    pathPrefix, pattern.substring(PrefixPathMapping.PREFIX_LEN)));
+                    pathPrefix, pattern.substring(PREFIX.length())));
         }
 
-        if (pattern.startsWith(GlobPathMapping.PREFIX)) {
-            final String glob = pattern.substring(GlobPathMapping.PREFIX_LEN);
+        if (pattern.startsWith(GLOB)) {
+            final String glob = pattern.substring(GLOB.length());
             if (glob.startsWith("/")) {
                 return PathMapping.ofGlob(concatPaths(pathPrefix, glob));
             } else {
@@ -447,7 +424,7 @@ public final class AnnotatedHttpServiceFactory {
             }
         }
 
-        if (pattern.startsWith(RegexPathMapping.PREFIX)) {
+        if (pattern.startsWith(REGEX)) {
             return new PrefixAddingPathMapping(pathPrefix, mapping);
         }
 
@@ -609,14 +586,13 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns a new decorator which decorates a {@link Service} by {@link FunctionalDecoratingService}
-     * and the specified {@link DecoratingServiceFunction}.
+     * Returns a new decorator which decorates a {@link Service} by the specified
+     * {@link Decorator}.
      */
     @SuppressWarnings("unchecked")
     private static Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> newDecorator(Decorator decorator) {
-        return service -> new FunctionalDecoratingService<>(
-                service, getInstance(decorator, DecoratingServiceFunction.class));
+        return service -> service.decorate(getInstance(decorator, DecoratingServiceFunction.class));
     }
 
     /**
@@ -736,13 +712,14 @@ public final class AnnotatedHttpServiceFactory {
         private final String meterTag;
 
         PrefixAddingPathMapping(String pathPrefix, PathMapping mapping) {
-            assert mapping instanceof GlobPathMapping || mapping instanceof RegexPathMapping
-                    : "unexpected mapping type: " + mapping.getClass().getName();
+            requireNonNull(mapping, "mapping");
+            // mapping should be GlobPathMapping or RegexPathMapping
+            assert mapping.regex().isPresent() : "unexpected mapping type: " + mapping.getClass().getName();
 
-            this.pathPrefix = pathPrefix;
+            this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
             this.mapping = mapping;
             loggerName = loggerName(pathPrefix) + '.' + mapping.loggerName();
-            meterTag = PrefixPathMapping.PREFIX + pathPrefix + ',' + mapping.meterTag();
+            meterTag = PREFIX + pathPrefix + ',' + mapping.meterTag();
         }
 
         @Override
@@ -811,7 +788,7 @@ public final class AnnotatedHttpServiceFactory {
 
         @Override
         public String toString() {
-            return '[' + PrefixPathMapping.PREFIX + pathPrefix + ", " + mapping + ']';
+            return '[' + PREFIX + pathPrefix + ", " + mapping + ']';
         }
     }
 
@@ -854,58 +831,6 @@ public final class AnnotatedHttpServiceFactory {
                               .add("annotation", annotation())
                               .add("decorator", decorator())
                               .add("order", order())
-                              .toString();
-        }
-    }
-
-    /**
-     * Details of an annotated HTTP service method.
-     */
-    static final class AnnotatedHttpServiceElement {
-        /**
-         * Path param extractor with placeholders, e.g., "/const1/{var1}/{var2}/const2"
-         */
-        private final PathMapping pathMapping;
-
-        /**
-         * The {@link AnnotatedHttpService} that will handle the request actually.
-         */
-        private final AnnotatedHttpService service;
-
-        /**
-         * A decorator of the {@link AnnotatedHttpService} which will be evaluated at service registration time.
-         */
-        private final Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> decorator;
-
-        private AnnotatedHttpServiceElement(PathMapping pathMapping,
-                                            AnnotatedHttpService service,
-                                            Function<Service<HttpRequest, HttpResponse>,
-                                                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
-            this.pathMapping = requireNonNull(pathMapping, "pathMapping");
-            this.service = requireNonNull(service, "service");
-            this.decorator = requireNonNull(decorator, "decorator");
-        }
-
-        PathMapping pathMapping() {
-            return pathMapping;
-        }
-
-        AnnotatedHttpService service() {
-            return service;
-        }
-
-        Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> decorator() {
-            return decorator;
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("pathMapping", pathMapping())
-                              .add("service", service())
-                              .add("decorator", decorator())
                               .toString();
         }
     }

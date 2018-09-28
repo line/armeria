@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.PathMappingPrefixes.EXACT;
+import static com.linecorp.armeria.server.PathMappingPrefixes.GLOB;
+import static com.linecorp.armeria.server.PathMappingPrefixes.PREFIX;
+import static com.linecorp.armeria.server.PathMappingPrefixes.REGEX;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
@@ -48,17 +52,17 @@ public interface PathMapping {
     static PathMapping of(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
 
-        if (pathPattern.startsWith(ExactPathMapping.PREFIX)) {
-            return ofExact(pathPattern.substring(ExactPathMapping.PREFIX_LEN));
+        if (pathPattern.startsWith(EXACT)) {
+            return ofExact(pathPattern.substring(EXACT.length()));
         }
-        if (pathPattern.startsWith(PrefixPathMapping.PREFIX)) {
-            return ofPrefix(pathPattern.substring(PrefixPathMapping.PREFIX_LEN));
+        if (pathPattern.startsWith(PREFIX)) {
+            return ofPrefix(pathPattern.substring(PREFIX.length()));
         }
-        if (pathPattern.startsWith(GlobPathMapping.PREFIX)) {
-            return ofGlob(pathPattern.substring(GlobPathMapping.PREFIX_LEN));
+        if (pathPattern.startsWith(GLOB)) {
+            return ofGlob(pathPattern.substring(GLOB.length()));
         }
-        if (pathPattern.startsWith(RegexPathMapping.PREFIX)) {
-            return ofRegex(pathPattern.substring(RegexPathMapping.PREFIX_LEN));
+        if (pathPattern.startsWith(REGEX)) {
+            return ofRegex(pathPattern.substring(REGEX.length()));
         }
         if (!pathPattern.startsWith("/")) {
             throw new IllegalArgumentException(

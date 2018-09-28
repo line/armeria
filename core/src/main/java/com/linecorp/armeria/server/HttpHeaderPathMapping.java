@@ -50,8 +50,11 @@ public final class HttpHeaderPathMapping implements PathMapping {
 
     private final int complexity;
 
-    HttpHeaderPathMapping(PathMapping pathStringMapping, Set<HttpMethod> supportedMethods,
-                          List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+    /**
+     * Creates a new instance.
+     */
+    public HttpHeaderPathMapping(PathMapping pathStringMapping, Set<HttpMethod> supportedMethods,
+                                 List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         this.pathStringMapping = requireNonNull(pathStringMapping, "pathStringMapping");
         this.supportedMethods = requireNonNull(supportedMethods, "supportedMethods");
         this.consumeTypes = requireNonNull(consumeTypes, "consumeTypes");
@@ -181,14 +184,23 @@ public final class HttpHeaderPathMapping implements PathMapping {
         return complexity;
     }
 
+    /**
+     * Returns the {@link Set} of {@link HttpMethod}s that this {@link PathMapping} supports.
+     */
     public Set<HttpMethod> supportedMethods() {
         return supportedMethods;
     }
 
+    /**
+     * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} consumes.
+     */
     public List<MediaType> consumeTypes() {
         return consumeTypes;
     }
 
+    /**
+     * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} produces.
+     */
     public List<MediaType> produceTypes() {
         return produceTypes;
     }

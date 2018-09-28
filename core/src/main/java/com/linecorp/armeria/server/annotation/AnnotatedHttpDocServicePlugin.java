@@ -14,13 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.extractParameter;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServiceUtil.isHidden;
+import static com.linecorp.armeria.server.PathMappingPrefixes.PREFIX;
+import static com.linecorp.armeria.server.PathMappingPrefixes.REGEX;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.extractParameter;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServiceUtil.isHidden;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
@@ -48,8 +50,9 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.server.AnnotatedHttpService;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver;
+import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
@@ -152,9 +155,9 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         if (pathMapping.prefix().isPresent()) {
             if (pathMapping.regex().isPresent()) { // PrefixAddingPathMapping.
                 regexPathPrefix = pathMapping.prefix().get();
-                endpointPath = RegexPathMapping.PREFIX + pathMapping.regex().get();
+                endpointPath = REGEX + pathMapping.regex().get();
             } else { // PrefixPathMapping.
-                endpointPath = PrefixPathMapping.PREFIX + pathMapping.prefix().get();
+                endpointPath = PREFIX + pathMapping.prefix().get();
             }
         } else {
             endpointPath = getNormalizedTriePathOrRegex(pathMapping);
@@ -185,7 +188,7 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             return normalizedTriePath;
         }
         final Optional<String> regex = pathMapping.regex();
-        return regex.map(s -> RegexPathMapping.PREFIX + s).orElse(null);
+        return regex.map(s -> REGEX + s).orElse(null);
     }
 
     @VisibleForTesting
@@ -298,8 +301,8 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         return operationAnnotation != null ? operationAnnotation.description() : "";
     }
 
-    private static ServiceSpecification generate(
-            Map<Class<?>, Set<MethodInfo>> methodInfos) {
+    @VisibleForTesting
+    static ServiceSpecification generate(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final Set<ServiceInfo> serviceInfos = methodInfos
                 .entrySet().stream()
                 .map(entry -> new ServiceInfo(entry.getKey().getName(), entry.getValue()))
@@ -330,7 +333,7 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final Builder<FieldInfo> builder = ImmutableList.builder();
         final Field[] declaredFields = type.getDeclaredFields();
         for (Field declaredField : declaredFields) {
-            if (shouldContain(declaredField)) {
+            if (!declaredField.getName().equals("serialVersionUID")) {
                 // Set the requirement as DEFAULT because it's hard to determine the field in a Exception
                 // is required or not.
                 builder.add(new FieldInfo(declaredField.getName(), FieldRequirement.DEFAULT,
@@ -340,16 +343,12 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         return new ExceptionInfo(type.getName(), builder.build());
     }
 
-    private static boolean shouldContain(Field field) {
-        return !field.getName().equals("serialVersionUID");
-    }
-
     private static StructInfo newStructInfo(Class<?> structClass) {
         final String name = structClass.getName();
 
         final Field[] declaredFields = structClass.getDeclaredFields();
         final List<FieldInfo> fields = Stream.of(declaredFields)
-                                             .filter(AnnotatedHttpDocServicePlugin::shouldContain)
+                                             .filter(field -> !field.getName().equals("serialVersionUID"))
                                              .map(f -> new FieldInfo(f.getName(), FieldRequirement.DEFAULT,
                                                                      toTypeSignature(f.getGenericType())))
                                              .collect(Collectors.toList());

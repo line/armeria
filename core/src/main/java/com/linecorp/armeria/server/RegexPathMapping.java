@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.PathMappingPrefixes.REGEX;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
@@ -26,9 +27,6 @@ import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableSet;
 
 final class RegexPathMapping extends AbstractPathMapping {
-
-    static final String PREFIX = "regex:";
-    static final int PREFIX_LEN = PREFIX.length();
 
     private static final Pattern NAMED_GROUP_PATTERN = Pattern.compile("\\(\\?<([^>]+)>");
 
@@ -41,7 +39,7 @@ final class RegexPathMapping extends AbstractPathMapping {
         this.regex = requireNonNull(regex, "regex");
         paramNames = findParamNames(regex);
         loggerName = toLoggerName(regex);
-        meterTag = PREFIX + regex.pattern();
+        meterTag = REGEX + regex.pattern();
     }
 
     private static Set<String> findParamNames(Pattern regex) {

@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.server;
+package com.linecorp.armeria.server.annotation;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.internal.server.AnnotatedValueResolver.addToFirstIfExists;
+import static com.linecorp.armeria.server.annotation.AnnotatedValueResolver.addToFirstIfExists;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -46,10 +46,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.MapMaker;
 
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver.NoAnnotatedParameterException;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver.RequestObjectResolver;
-import com.linecorp.armeria.internal.server.AnnotatedValueResolver.ResolverContext;
-import com.linecorp.armeria.server.annotation.RequestConverter;
+import com.linecorp.armeria.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
+import com.linecorp.armeria.server.annotation.AnnotatedValueResolver.RequestObjectResolver;
+import com.linecorp.armeria.server.annotation.AnnotatedValueResolver.ResolverContext;
 
 /**
  * A singleton class which manages factories for creating a bean. {@link #register(Class, Set, List)} should

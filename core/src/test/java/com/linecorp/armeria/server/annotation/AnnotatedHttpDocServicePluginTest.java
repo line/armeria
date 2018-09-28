@@ -14,16 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.server.annotation;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.INT32;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.INT64;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.STRING;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.VOID;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.endpointInfo;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.newExceptionInfo;
-import static com.linecorp.armeria.server.AnnotatedHttpDocServicePlugin.toTypeSignature;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServicePlugin.INT32;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServicePlugin.INT64;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServicePlugin.STRING;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServicePlugin.VOID;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServicePlugin.endpointInfo;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServicePlugin.newExceptionInfo;
+import static com.linecorp.armeria.server.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -39,17 +39,16 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeSet;
-import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.AnnotatedHttpServiceElement;
-import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
-import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.VirtualHost;
+import com.linecorp.armeria.server.VirtualHostBuilder;
+import com.linecorp.armeria.server.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
@@ -108,7 +107,8 @@ public class AnnotatedHttpDocServicePluginTest {
 
         // Other than above, every type is named type signature.
         assertThat(toTypeSignature(FieldContainer.class).name())
-                .isEqualTo("com.linecorp.armeria.server.AnnotatedHttpDocServicePluginTest$FieldContainer");
+                .isEqualTo("com.linecorp.armeria.server.annotation." +
+                           "AnnotatedHttpDocServicePluginTest$FieldContainer");
     }
 
     @Test
@@ -248,14 +248,13 @@ public class AnnotatedHttpDocServicePluginTest {
                 "/", new FooClass(), ImmutableList.of());
         final List<AnnotatedHttpServiceElement> barElements = AnnotatedHttpServiceFactory.find(
                 "/", new BarClass(), ImmutableList.of());
-        final Builder<ServiceConfig> builder = ImmutableSet.builder();
-        fooElements.forEach(element -> builder.add(new ServiceConfig(element.pathMapping(),
-                                                                     element.service(), null)));
-        barElements.forEach(element -> builder.add(new ServiceConfig(element.pathMapping(),
-                                                                     element.service(), null)));
-        Set<ServiceConfig> serviceConfigs = builder.build();
-        return new VirtualHost("hostname", "*", null, serviceConfigs,
-                               new MediaTypeSet(ImmutableList.of(MediaType.JSON))).serviceConfigs();
+        final ImmutableList.Builder<ServiceConfig> builder = ImmutableList.builder();
+        final VirtualHost virtualHost = new VirtualHostBuilder("*").build();
+        fooElements.forEach(element -> builder.add(
+                new ServiceConfig(virtualHost, element.pathMapping(), element.service(), null)));
+        barElements.forEach(element -> builder.add(
+                new ServiceConfig(virtualHost, element.pathMapping(), element.service(), null)));
+        return builder.build();
     }
 
     private static class FieldContainer {

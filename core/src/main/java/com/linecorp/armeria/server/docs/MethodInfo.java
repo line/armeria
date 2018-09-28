@@ -42,7 +42,7 @@ import com.linecorp.armeria.server.Service;
 /**
  * Metadata about a function of a {@link Service}.
  */
-public class MethodInfo {
+public final class MethodInfo {
 
     // FIXME(trustin): Return types and exception types should also have docstrings like params have them.
 
