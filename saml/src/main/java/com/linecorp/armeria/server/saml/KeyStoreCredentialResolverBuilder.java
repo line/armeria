@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.saml;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
@@ -33,6 +35,7 @@ import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
  */
 public final class KeyStoreCredentialResolverBuilder {
 
+    private String type = KeyStore.getDefaultType();
     private final String path;
     private final String keystorePassword;
     private final Map<String, String> keyPasswords = new HashMap<>();
@@ -43,6 +46,14 @@ public final class KeyStoreCredentialResolverBuilder {
     public KeyStoreCredentialResolverBuilder(String path, String keystorePassword) {
         this.path = requireNonNull(path, "path");
         this.keystorePassword = requireNonNull(keystorePassword, "keystorePassword");
+    }
+
+    /**
+     * Sets a type of the {@link KeyStore}.
+     */
+    public KeyStoreCredentialResolverBuilder type(String type) {
+        this.type = requireNonNull(type, "type");
+        return this;
     }
 
     /**
@@ -57,14 +68,31 @@ public final class KeyStoreCredentialResolverBuilder {
     }
 
     /**
+     * Adds all key names and their passwords which are specified by the {@code keyPasswords}.
+     */
+    public KeyStoreCredentialResolverBuilder addKeyPasswords(Map<String, String> keyPasswords) {
+        requireNonNull(keyPasswords, "keyPasswords");
+        keyPasswords.forEach(this::addKeyPassword);
+        return this;
+    }
+
+    /**
      * Creates a new {@link KeyStoreCredentialResolver}.
      */
     public CredentialResolver build() throws IOException, GeneralSecurityException {
-        final KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        try (InputStream is = KeyStoreCredentialResolverBuilder.class.getClassLoader()
-                                                                     .getResourceAsStream(path)) {
+        final KeyStore ks = KeyStore.getInstance(type);
+        try (InputStream is = open(path)) {
             ks.load(is, keystorePassword.toCharArray());
         }
         return new KeyStoreCredentialResolver(ks, keyPasswords);
+    }
+
+    private static InputStream open(String path) throws IOException {
+        final File file = new File(path);
+        if (file.isFile() && file.exists()) {
+            return new FileInputStream(file);
+        }
+        return KeyStoreCredentialResolverBuilder.class.getClassLoader()
+                                                      .getResourceAsStream(path);
     }
 }
