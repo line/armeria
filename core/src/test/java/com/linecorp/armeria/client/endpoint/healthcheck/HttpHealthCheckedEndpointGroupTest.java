@@ -114,9 +114,9 @@ public class HttpHealthCheckedEndpointGroupTest {
                     .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 2.0)
                     .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=unhealthy}", 0.0)
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",name=foo}", 1.0)
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portTwo + ",name=foo}", 1.0);
+                                   "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=foo}", 1.0);
         });
 
         serverTwo.stop().get();
@@ -128,9 +128,9 @@ public class HttpHealthCheckedEndpointGroupTest {
                     .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 1.0)
                     .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=unhealthy}", 1.0)
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",name=foo}", 1.0)
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portTwo + ",name=foo}", 0.0);
+                                   "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=foo}", 0.0);
         });
     }
 
@@ -158,9 +158,9 @@ public class HttpHealthCheckedEndpointGroupTest {
                     .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=healthy}", 1.0)
                     .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=unhealthy}", 1.0)
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",name=bar}", 1.0)
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=bar}", 1.0)
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portTwo + ",name=bar}", 0.0);
+                                   "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=bar}", 0.0);
         });
     }
 
@@ -188,7 +188,7 @@ public class HttpHealthCheckedEndpointGroupTest {
                     .containsEntry("armeria.client.endpointGroup.count#value{name=baz,state=healthy}", 3.0)
                     .containsEntry("armeria.client.endpointGroup.count#value{name=baz,state=unhealthy}", 0.0)
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",name=baz}", 1.0);
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=baz}", 1.0);
         });
         serverOne.stop();
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).isEmpty());
@@ -223,7 +223,7 @@ public class HttpHealthCheckedEndpointGroupTest {
                     .containsEntry("armeria.client.endpointGroup.count#value{name=qux,state=healthy}", 1.0)
                     .containsEntry("armeria.client.endpointGroup.count#value{name=qux,state=unhealthy}", 0.0)
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=foo:" + port + ",name=qux}", 1.0);
+                                   "{authority=foo:" + port + ",ip=127.0.0.1,name=qux}", 1.0);
         });
     }
 }
