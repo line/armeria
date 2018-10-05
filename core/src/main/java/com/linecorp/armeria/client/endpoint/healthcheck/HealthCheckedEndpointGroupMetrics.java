@@ -91,7 +91,7 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
                 if (endpoint.hasIpAddr()) {
                     String address = endpoint.ipAddr();
                     assert address != null;
-                    tags.add(Tag.of("address", address));
+                    tags.add(Tag.of("ip", address));
                 }
 
                 registry.gauge(idPrefix.name(), idPrefix.tags(tags),
