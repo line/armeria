@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.MeterBinder;
 
 /**
@@ -60,7 +62,7 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
 
         private final MeterRegistry registry;
         private final MeterIdPrefix idPrefix;
-        private final ConcurrentMap<String, Boolean> healthMap = new ConcurrentHashMap<>();
+        private final ConcurrentMap<Endpoint, Boolean> healthMap = new ConcurrentHashMap<>();
 
         ListenerImpl(MeterRegistry registry, MeterIdPrefix idPrefix) {
             this.registry = registry;
@@ -69,23 +71,31 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
 
         @Override
         public void accept(List<Endpoint> endpoints) {
-            final Map<String, Boolean> endpointsToUpdate = new HashMap<>();
-            endpoints.forEach(e -> endpointsToUpdate.put(e.authority(), true));
+            final Map<Endpoint, Boolean> endpointsToUpdate = new HashMap<>();
+            endpoints.forEach(e -> endpointsToUpdate.put(e, true));
             endpointGroup.allServers.forEach(
-                    conn -> endpointsToUpdate.putIfAbsent(conn.endpoint().authority(), false));
+                    conn -> endpointsToUpdate.putIfAbsent(conn.endpoint(), false));
 
             // Update the previously appeared endpoints.
             healthMap.entrySet().forEach(e -> {
-                final String authority = e.getKey();
+                final Endpoint authority = e.getKey();
                 final Boolean healthy = endpointsToUpdate.remove(authority);
                 e.setValue(Boolean.TRUE.equals(healthy));
             });
 
             // Process the newly appeared endpoints.
-            endpointsToUpdate.forEach((authority, healthy) -> {
-                healthMap.put(authority, healthy);
-                registry.gauge(idPrefix.name(), idPrefix.tags("authority", authority),
-                               this, unused -> healthMap.get(authority) ? 1 : 0);
+            endpointsToUpdate.forEach((endpoint, healthy) -> {
+                healthMap.put(endpoint, healthy);
+                final List<Tag> tags = new ArrayList<>(2);
+                tags.add(Tag.of("authority", endpoint.authority()));
+                if (endpoint.hasIpAddr()) {
+                    final String address = endpoint.ipAddr();
+                    assert address != null;
+                    tags.add(Tag.of("ip", address));
+                }
+
+                registry.gauge(idPrefix.name(), idPrefix.tags(tags),
+                               this, unused -> healthMap.get(endpoint) ? 1 : 0);
             });
         }
     }
