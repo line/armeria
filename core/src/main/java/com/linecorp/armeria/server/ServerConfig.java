@@ -61,6 +61,7 @@ public final class ServerConfig {
 
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnStop;
+    private final Executor startStopExecutor;
     private final int maxNumConnections;
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
@@ -91,7 +92,7 @@ public final class ServerConfig {
     ServerConfig(
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
-            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
+            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
@@ -108,6 +109,7 @@ public final class ServerConfig {
         // Set the primitive properties.
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
         this.shutdownWorkerGroupOnStop = shutdownWorkerGroupOnStop;
+        this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
@@ -349,6 +351,16 @@ public final class ServerConfig {
      */
     public boolean shutdownWorkerGroupOnStop() {
         return shutdownWorkerGroupOnStop;
+    }
+
+    /**
+     * Returns the {@link Executor} which will invoke the callbacks of {@link Server#start()},
+     * {@link Server#stop()} and {@link ServerListener}.
+     *
+     * <p>Note: Kept non-public since it doesn't seem useful for users.</p>
+     */
+    Executor startStopExecutor() {
+        return startStopExecutor;
     }
 
     /**

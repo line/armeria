@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -67,7 +68,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -83,7 +83,7 @@ public final class Server implements AutoCloseable {
     @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
 
-    private final StartStopSupport<Void, ServerListener> startStop = new ServerStartStopSupport();
+    private final StartStopSupport<Void, ServerListener> startStop;
     private final Set<Channel> serverChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<InetSocketAddress, ServerPort> activePorts = new ConcurrentHashMap<>();
     private final Map<InetSocketAddress, ServerPort> unmodifiableActivePorts =
@@ -100,18 +100,18 @@ public final class Server implements AutoCloseable {
     Server(ServerConfig config, @Nullable DomainNameMapping<SslContext> sslContexts) {
         this.config = requireNonNull(config, "config");
         this.sslContexts = sslContexts;
+        startStop = new ServerStartStopSupport(config.startStopExecutor());
+        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
         config.setServer(this);
-
-        // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
-        // add a listener to it.
-        config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
-
-        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
         // Server-wide cache metrics.
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsedPathCache");
         PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
+
+        // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
+        // add a listener to it.
+        config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
     }
 
     /**
@@ -265,8 +265,8 @@ public final class Server implements AutoCloseable {
 
         private volatile GracefulShutdownSupport gracefulShutdownSupport = GracefulShutdownSupport.disabled();
 
-        ServerStartStopSupport() {
-            super(GlobalEventExecutor.INSTANCE);
+        ServerStartStopSupport(Executor startStopExecutor) {
+            super(startStopExecutor);
         }
 
         @Override
