@@ -58,16 +58,24 @@ public final class KeyStoreCredentialResolverBuilder {
     }
 
     /**
+     * Creates a builder with the specified {@code resourcePath} and the default {@link ClassLoader}.
+     */
+    public KeyStoreCredentialResolverBuilder(String resourcePath) {
+        this(resourcePath, null);
+    }
+
+    /**
      * Creates a builder with the specified {@code resourcePath} and {@link ClassLoader}.
      */
-    public KeyStoreCredentialResolverBuilder(String resourcePath, ClassLoader classLoader) {
+    public KeyStoreCredentialResolverBuilder(String resourcePath, @Nullable ClassLoader classLoader) {
         this.resourcePath = requireNonNull(resourcePath, "path");
-        this.classLoader = requireNonNull(classLoader, "classLoader");
+        this.classLoader = classLoader;
         file = null;
     }
 
     /**
-     * Sets a type of the {@link KeyStore}.
+     * Sets a type of the {@link KeyStore}. If not set, the default value retrieved from
+     * {@link KeyStore#getDefaultType()} will be used.
      */
     public KeyStoreCredentialResolverBuilder type(String type) {
         this.type = requireNonNull(type, "type");
@@ -116,6 +124,14 @@ public final class KeyStoreCredentialResolverBuilder {
     private InputStream open() throws IOException {
         if (file != null) {
             return new FileInputStream(file);
+        }
+
+        ClassLoader classLoader = this.classLoader;
+        if (classLoader == null) {
+            classLoader = Thread.currentThread().getContextClassLoader();
+        }
+        if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
         }
 
         assert classLoader != null : "classLoader";
