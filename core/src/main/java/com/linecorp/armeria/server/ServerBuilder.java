@@ -66,6 +66,7 @@ import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -143,6 +144,7 @@ public final class ServerBuilder {
     private VirtualHost defaultVirtualHost;
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
+    private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();
@@ -390,6 +392,16 @@ public final class ServerBuilder {
     public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
         shutdownWorkerGroupOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
+     * Sets the {@link Executor} which will invoke the callbacks of {@link Server#start()},
+     * {@link Server#stop()} and {@link ServerListener}. If not set, {@link GlobalEventExecutor} will be used
+     * by default.
+     */
+    public ServerBuilder startStopExecutor(Executor startStopExecutor) {
+        this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
         return this;
     }
 
@@ -1067,7 +1079,7 @@ public final class ServerBuilder {
 
         final Server server = new Server(new ServerConfig(
                 ports, normalizeDefaultVirtualHost(defaultVirtualHost, defaultSslContext), virtualHosts,
-                workerGroup, shutdownWorkerGroupOnStop, maxNumConnections,
+                workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
