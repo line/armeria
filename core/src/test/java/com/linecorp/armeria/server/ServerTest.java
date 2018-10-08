@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.fail;
@@ -27,7 +28,11 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -61,6 +66,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 
@@ -311,12 +317,41 @@ public class ServerTest {
 
     @Test
     public void duplicatedPort() {
-        Server duplicatedPortServer = new ServerBuilder()
+        final Server duplicatedPortServer = new ServerBuilder()
                 .http(server.httpPort())
                 .service("/", (ctx, res) -> HttpResponse.of(""))
                 .build();
         assertThatThrownBy(() -> duplicatedPortServer.start().join())
                 .hasCauseInstanceOf(IOException.class);
+    }
+
+    @Test
+    public void defaultStartStopExecutor() {
+        final Server server = ServerTest.server.server();
+        final Queue<Thread> threads = new LinkedTransferQueue<>();
+        server.addListener(new ThreadRecordingServerListener(threads));
+
+        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
+        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
+
+        threads.forEach(t -> assertThat(t.getName()).startsWith("globalEventExecutor"));
+    }
+
+    @Test
+    public void customStartStopExecutor() {
+        final Queue<Thread> threads = new LinkedTransferQueue<>();
+        final String prefix = getClass().getName() + "#customStartStopExecutor";
+        final ExecutorService executor = Executors.newSingleThreadExecutor(new DefaultThreadFactory(prefix));
+        final Server server = new ServerBuilder()
+                .startStopExecutor(executor)
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .serverListener(new ThreadRecordingServerListener(threads))
+                .build();
+
+        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
+        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
+
+        threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
     }
 
     private static void testSimple(
@@ -370,6 +405,38 @@ public class ServerTest {
             return HttpResponse.of(
                     HttpHeaders.of(HttpStatus.OK),
                     aReq.content());
+        }
+    }
+
+    private static class ThreadRecordingServerListener implements ServerListener {
+        private final Queue<Thread> threads;
+
+        ThreadRecordingServerListener(Queue<Thread> threads) {
+            this.threads = requireNonNull(threads, "threads");
+        }
+
+        @Override
+        public void serverStarting(Server server) {
+            recordThread();
+        }
+
+        @Override
+        public void serverStarted(Server server) {
+            recordThread();
+        }
+
+        @Override
+        public void serverStopping(Server server) {
+            recordThread();
+        }
+
+        @Override
+        public void serverStopped(Server server) {
+            recordThread();
+        }
+
+        private void recordThread() {
+            threads.add(Thread.currentThread());
         }
     }
 }
