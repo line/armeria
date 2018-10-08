@@ -112,13 +112,13 @@ public class MessageConverterService {
      *
      * <p>If you want to specify converters for every methods in a service class, you can specify them
      * above the class definition as follows:
-     * <pre><code>
-     * {@literal @}RequestConverter(CustomRequestConverter.class)
-     * {@literal @}ResponseConverter(CustomResponseConverter.class)
-     * public class MyAnnotatedService {
-     *     ...
-     * }
-     * </code></pre>
+     * <pre>{@code
+     * > @RequestConverter(CustomRequestConverter.class)
+     * > @ResponseConverter(CustomResponseConverter.class)
+     * > public class MyAnnotatedService {
+     * >     ...
+     * > }
+     * }</pre>
      */
     @Post("/custom")
     @RequestConverter(CustomRequestConverter.class)

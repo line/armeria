@@ -27,6 +27,8 @@ import java.security.KeyStore;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
 
@@ -34,18 +36,33 @@ import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
  * A builder class which creates a new {@link KeyStoreCredentialResolver} instance.
  */
 public final class KeyStoreCredentialResolverBuilder {
+    @Nullable
+    private final File file;
+    @Nullable
+    private final String resourcePath;
+    @Nullable
+    private final ClassLoader classLoader;
 
     private String type = KeyStore.getDefaultType();
-    private final String path;
-    private final String keystorePassword;
+    private String password = "";
     private final Map<String, String> keyPasswords = new HashMap<>();
 
     /**
-     * Creates a builder instance for {@link KeyStoreCredentialResolver}.
+     * Creates a builder with the specified {@link File}.
      */
-    public KeyStoreCredentialResolverBuilder(String path, String keystorePassword) {
-        this.path = requireNonNull(path, "path");
-        this.keystorePassword = requireNonNull(keystorePassword, "keystorePassword");
+    public KeyStoreCredentialResolverBuilder(File file) {
+        this.file = requireNonNull(file, "file");
+        resourcePath = null;
+        classLoader = null;
+    }
+
+    /**
+     * Creates a builder with the specified {@code resourcePath} and {@link ClassLoader}.
+     */
+    public KeyStoreCredentialResolverBuilder(String resourcePath, ClassLoader classLoader) {
+        this.resourcePath = requireNonNull(resourcePath, "path");
+        this.classLoader = requireNonNull(classLoader, "classLoader");
+        file = null;
     }
 
     /**
@@ -53,6 +70,14 @@ public final class KeyStoreCredentialResolverBuilder {
      */
     public KeyStoreCredentialResolverBuilder type(String type) {
         this.type = requireNonNull(type, "type");
+        return this;
+    }
+
+    /**
+     * Sets a password of the {@link KeyStore}.
+     */
+    public KeyStoreCredentialResolverBuilder password(String password) {
+        this.password = requireNonNull(password, "password");
         return this;
     }
 
@@ -81,18 +106,19 @@ public final class KeyStoreCredentialResolverBuilder {
      */
     public CredentialResolver build() throws IOException, GeneralSecurityException {
         final KeyStore ks = KeyStore.getInstance(type);
-        try (InputStream is = open(path)) {
-            ks.load(is, keystorePassword.toCharArray());
+        try (InputStream is = open()) {
+            ks.load(is, password.toCharArray());
         }
         return new KeyStoreCredentialResolver(ks, keyPasswords);
     }
 
-    private static InputStream open(String path) throws IOException {
-        final File file = new File(path);
-        if (file.isFile() && file.exists()) {
+    private InputStream open() throws IOException {
+        if (file != null) {
             return new FileInputStream(file);
         }
-        return KeyStoreCredentialResolverBuilder.class.getClassLoader()
-                                                      .getResourceAsStream(path);
+
+        assert classLoader != null : "classLoader";
+        assert resourcePath != null : "resourcePath";
+        return classLoader.getResourceAsStream(resourcePath);
     }
 }
