@@ -18,12 +18,16 @@ package com.linecorp.armeria.server.saml;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.annotation.Nullable;
 
 import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
@@ -32,17 +36,58 @@ import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
  * A builder class which creates a new {@link KeyStoreCredentialResolver} instance.
  */
 public final class KeyStoreCredentialResolverBuilder {
+    @Nullable
+    private final File file;
+    @Nullable
+    private final String resourcePath;
+    @Nullable
+    private final ClassLoader classLoader;
 
-    private final String path;
-    private final String keystorePassword;
+    private String type = KeyStore.getDefaultType();
+    @Nullable
+    private String password;
     private final Map<String, String> keyPasswords = new HashMap<>();
 
     /**
-     * Creates a builder instance for {@link KeyStoreCredentialResolver}.
+     * Creates a builder with the specified {@link File}.
      */
-    public KeyStoreCredentialResolverBuilder(String path, String keystorePassword) {
-        this.path = requireNonNull(path, "path");
-        this.keystorePassword = requireNonNull(keystorePassword, "keystorePassword");
+    public KeyStoreCredentialResolverBuilder(File file) {
+        this.file = requireNonNull(file, "file");
+        resourcePath = null;
+        classLoader = null;
+    }
+
+    /**
+     * Creates a builder with the specified {@code resourcePath} and the default {@link ClassLoader}.
+     */
+    public KeyStoreCredentialResolverBuilder(String resourcePath) {
+        this(resourcePath, null);
+    }
+
+    /**
+     * Creates a builder with the specified {@code resourcePath} and {@link ClassLoader}.
+     */
+    public KeyStoreCredentialResolverBuilder(String resourcePath, @Nullable ClassLoader classLoader) {
+        this.resourcePath = requireNonNull(resourcePath, "resourcePath");
+        this.classLoader = classLoader;
+        file = null;
+    }
+
+    /**
+     * Sets a type of the {@link KeyStore}. If not set, the default value retrieved from
+     * {@link KeyStore#getDefaultType()} will be used.
+     */
+    public KeyStoreCredentialResolverBuilder type(String type) {
+        this.type = requireNonNull(type, "type");
+        return this;
+    }
+
+    /**
+     * Sets a password of the {@link KeyStore}.
+     */
+    public KeyStoreCredentialResolverBuilder password(@Nullable String password) {
+        this.password = password;
+        return this;
     }
 
     /**
@@ -57,14 +102,40 @@ public final class KeyStoreCredentialResolverBuilder {
     }
 
     /**
+     * Adds all key names and their passwords which are specified by the {@code keyPasswords}.
+     */
+    public KeyStoreCredentialResolverBuilder addKeyPasswords(Map<String, String> keyPasswords) {
+        requireNonNull(keyPasswords, "keyPasswords");
+        keyPasswords.forEach(this::addKeyPassword);
+        return this;
+    }
+
+    /**
      * Creates a new {@link KeyStoreCredentialResolver}.
      */
     public CredentialResolver build() throws IOException, GeneralSecurityException {
-        final KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        try (InputStream is = KeyStoreCredentialResolverBuilder.class.getClassLoader()
-                                                                     .getResourceAsStream(path)) {
-            ks.load(is, keystorePassword.toCharArray());
+        final KeyStore ks = KeyStore.getInstance(type);
+        try (InputStream is = open()) {
+            ks.load(is, password != null ? password.toCharArray() : null);
         }
         return new KeyStoreCredentialResolver(ks, keyPasswords);
+    }
+
+    private InputStream open() throws IOException {
+        if (file != null) {
+            return new FileInputStream(file);
+        }
+
+        ClassLoader classLoader = this.classLoader;
+        if (classLoader == null) {
+            classLoader = Thread.currentThread().getContextClassLoader();
+        }
+        if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
+        }
+
+        assert classLoader != null : "classLoader";
+        assert resourcePath != null : "resourcePath";
+        return classLoader.getResourceAsStream(resourcePath);
     }
 }
