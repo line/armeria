@@ -154,7 +154,7 @@ final class HttpRedirectBindingUtil {
         final byte[] input = encoder.toString().substring(1).getBytes(StandardCharsets.UTF_8);
 
         try {
-            final byte[] decodedSignature = Base64.getDecoder().decode(signature);
+            final byte[] decodedSignature = Base64.getMimeDecoder().decode(signature);
             if (!XMLSigningUtil.verifyWithURI(validationCredential, sigAlg, decodedSignature, input)) {
                 throw new SamlException("failed to validate a signature");
             }
@@ -213,7 +213,7 @@ final class HttpRedirectBindingUtil {
 
         final byte[] base64decoded;
         try {
-            base64decoded = Base64.getDecoder().decode(base64Encoded);
+            base64decoded = Base64.getMimeDecoder().decode(base64Encoded);
         } catch (IllegalArgumentException e) {
             throw new SamlException("failed to decode a deflated base64 string", e);
         }
