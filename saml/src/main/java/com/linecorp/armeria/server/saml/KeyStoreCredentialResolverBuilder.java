@@ -44,7 +44,8 @@ public final class KeyStoreCredentialResolverBuilder {
     private final ClassLoader classLoader;
 
     private String type = KeyStore.getDefaultType();
-    private String password = "";
+    @Nullable
+    private String password;
     private final Map<String, String> keyPasswords = new HashMap<>();
 
     /**
@@ -76,8 +77,8 @@ public final class KeyStoreCredentialResolverBuilder {
     /**
      * Sets a password of the {@link KeyStore}.
      */
-    public KeyStoreCredentialResolverBuilder password(String password) {
-        this.password = requireNonNull(password, "password");
+    public KeyStoreCredentialResolverBuilder password(@Nullable String password) {
+        this.password = password;
         return this;
     }
 
@@ -107,7 +108,7 @@ public final class KeyStoreCredentialResolverBuilder {
     public CredentialResolver build() throws IOException, GeneralSecurityException {
         final KeyStore ks = KeyStore.getInstance(type);
         try (InputStream is = open()) {
-            ks.load(is, password.toCharArray());
+            ks.load(is, password != null ? password.toCharArray() : null);
         }
         return new KeyStoreCredentialResolver(ks, keyPasswords);
     }
