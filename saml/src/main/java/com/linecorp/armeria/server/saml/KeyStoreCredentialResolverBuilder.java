@@ -68,7 +68,7 @@ public final class KeyStoreCredentialResolverBuilder {
      * Creates a builder with the specified {@code resourcePath} and {@link ClassLoader}.
      */
     public KeyStoreCredentialResolverBuilder(String resourcePath, @Nullable ClassLoader classLoader) {
-        this.resourcePath = requireNonNull(resourcePath, "path");
+        this.resourcePath = requireNonNull(resourcePath, "resourcePath");
         this.classLoader = classLoader;
         file = null;
     }
