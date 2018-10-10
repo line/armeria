@@ -41,7 +41,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '2.0.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.32.0' }
+  gax-grpc: { version: '1.33.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -101,7 +101,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.15.0'
+    version: &GRPC_VERSION '1.15.1'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -142,17 +142,23 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.29.Final' }
-  netty-codec-haproxy: { version: *NETTY_VERSION }
-  netty-handler: { version: *NETTY_VERSION }
-  netty-resolver-dns: { version: *NETTY_VERSION }
-  netty-transport:
-    version: *NETTY_VERSION
+  netty-common:
+    version: &NETTY_VERSION '4.1.30.Final'
     javadocs:
     - https://netty.io/4.1/api/
+  netty-buffer: { version: *NETTY_VERSION }
+  netty-codec: { version: *NETTY_VERSION }
+  netty-codec-dns: { version: *NETTY_VERSION }
+  netty-codec-http: { version: *NETTY_VERSION }
+  netty-codec-http2: { version: *NETTY_VERSION }
+  netty-codec-haproxy: { version: *NETTY_VERSION }
+  netty-handler: { version: *NETTY_VERSION }
+  netty-resolver: { version: *NETTY_VERSION }
+  netty-resolver-dns: { version: *NETTY_VERSION }
+  netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.15.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.17.Final' }
 
 io.prometheus:
   simpleclient_common:
@@ -168,9 +174,9 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.3.3'
+    version: '5.4.2'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.3.3/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.4.2/
 
 it.unimi.dsi:
   fastutil:
@@ -284,7 +290,7 @@ org.checkerframework:
   checker-compat-qual: { version: '2.5.5' }
 
 org.curioswitch.curiostack:
-  protobuf-jackson: { version: '0.2.1' }
+  protobuf-jackson: { version: '0.3.0' }
 
 org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
@@ -323,7 +329,7 @@ org.jsoup:
   jsoup: { version: '1.11.3' }
 
 org.mockito:
-  mockito-core: { version: '2.22.0' }
+  mockito-core: { version: '2.23.0' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.7' }
