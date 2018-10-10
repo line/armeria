@@ -19,9 +19,9 @@ import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
 
 /**
- * A logging mode when handling an exception from the annotated HTTP services.
+ * The verbosity of exceptions logged by annotated HTTP services.
  */
-public enum ExceptionLoggingMode {
+public enum ExceptionVerbosity {
     /**
      * Log all exceptions.
      */

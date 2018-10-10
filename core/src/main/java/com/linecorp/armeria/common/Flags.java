@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
-import com.linecorp.armeria.server.annotation.ExceptionLoggingMode;
+import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
@@ -193,10 +193,10 @@ public final class Flags {
             CSV_SPLITTER.splitToList(getNormalized(
                     "cachedHeaders", DEFAULT_CACHED_HEADERS, CharMatcher.ascii()::matchesAllOf));
 
-    private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_LOGGING_MODE = "unhandled";
-    private static final ExceptionLoggingMode ANNOTATED_SERVICE_EXCEPTION_LOGGING_MODE =
-            exceptionLoggingMode("annotatedServiceExceptionLoggingMode",
-                                 DEFAULT_ANNOTATED_SERVICE_EXCEPTION_LOGGING_MODE);
+    private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
+    private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
+            exceptionLoggingMode("annotatedServiceExceptionVerbosity",
+                                 DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
     static {
         if (!Epoll.isAvailable()) {
@@ -532,23 +532,22 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code annotatedServiceExceptionLoggingMode} parameter. It would be used to
-     * log an exception which is raised from annotated HTTP services. If it is set to
-     * {@link ExceptionLoggingMode#ALL}, all exceptions raised from annotated HTTP services are logged as
-     * {@code warn} level. If it is set to {@link ExceptionLoggingMode#UNHANDLED}, exceptions, which are
+     * Returns the verbosity of exceptions logged by annotated HTTP services. If it is set to
+     * {@link ExceptionVerbosity#ALL}, all exceptions raised from annotated HTTP services are logged as
+     * {@code warn} level. If it is set to {@link ExceptionVerbosity#UNHANDLED}, exceptions, which are
      * not handled by {@link ExceptionHandler}s provided by a user and not well-known exceptions,
-     * would be logged as {@code warn} level. If it is set to {@link ExceptionLoggingMode#NONE},
+     * would be logged as {@code warn} level. If it is set to {@link ExceptionVerbosity#NONE},
      * no log would be written.
      *
-     * <p>The default value of this flag is {@value DEFAULT_ANNOTATED_SERVICE_EXCEPTION_LOGGING_MODE}.
+     * <p>The default value of this flag is {@value DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY}.
      * Specify the
-     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionLoggingMode=<mode>} JVM option to override
+     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionVerbosity=<mode>} JVM option to override
      * the default value.
      *
-     * @see ExceptionLoggingMode
+     * @see ExceptionVerbosity
      */
-    public static ExceptionLoggingMode annotatedServiceExceptionLoggingMode() {
-        return ANNOTATED_SERVICE_EXCEPTION_LOGGING_MODE;
+    public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
+        return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
@@ -566,11 +565,11 @@ public final class Flags {
                                   : Optional.of(spec);
     }
 
-    private static ExceptionLoggingMode exceptionLoggingMode(String name, String defaultValue) {
+    private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {
         final String mode = getNormalized(name, defaultValue,
-                                          value -> Arrays.stream(ExceptionLoggingMode.values())
+                                          value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
-        return ExceptionLoggingMode.valueOf(mode.toUpperCase());
+        return ExceptionVerbosity.valueOf(mode.toUpperCase());
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {

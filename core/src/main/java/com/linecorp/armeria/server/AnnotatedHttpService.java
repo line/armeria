@@ -52,7 +52,7 @@ import com.linecorp.armeria.internal.PublisherToHttpResponseConverter;
 import com.linecorp.armeria.server.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.ExceptionLoggingMode;
+import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
@@ -253,7 +253,7 @@ final class AnnotatedHttpService implements HttpService {
     private HttpResponse convertException(RequestContext ctx, HttpRequest req, Throwable cause) {
         final Throwable peeledCause = Exceptions.peel(cause);
 
-        if (Flags.annotatedServiceExceptionLoggingMode() == ExceptionLoggingMode.ALL &&
+        if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
             logger.isWarnEnabled()) {
             logger.warn("An exception from a class '{}' and its method '{}':",
                         object.getClass().getSimpleName(), method.getName(), peeledCause);

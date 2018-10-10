@@ -41,8 +41,6 @@ import com.linecorp.armeria.server.HttpStatusException;
 final class DefaultExceptionHandler implements ExceptionHandlerFunction {
     private static final Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
 
-    private final ExceptionLoggingMode exceptionLoggingMode = Flags.annotatedServiceExceptionLoggingMode();
-
     @Override
     public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
         if (cause instanceof IllegalArgumentException) {
@@ -57,7 +55,7 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
             return ((HttpResponseException) cause).httpResponse();
         }
 
-        if (exceptionLoggingMode == ExceptionLoggingMode.UNHANDLED &&
+        if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
             logger.isWarnEnabled()) {
             logger.warn("No exception handler exists for the cause. {} is handling it.",
                         DefaultExceptionHandler.class.getName(), cause);
