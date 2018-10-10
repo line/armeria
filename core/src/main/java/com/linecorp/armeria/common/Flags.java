@@ -63,8 +63,10 @@ public final class Flags {
 
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
-    private static final boolean USE_EPOLL = getBoolean("useEpoll", Epoll.isAvailable(),
-                                                        value -> Epoll.isAvailable() || !value);
+    private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
+    private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
+                                                        value -> isEpollAvailable() || !value);
+
     private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
                                                           value -> OpenSsl.isAvailable() || !value);
 
@@ -191,9 +193,17 @@ public final class Flags {
                     "cachedHeaders", DEFAULT_CACHED_HEADERS, CharMatcher.ascii()::matchesAllOf));
 
     static {
-        if (!Epoll.isAvailable()) {
-            final Throwable cause = Exceptions.peel(Epoll.unavailabilityCause());
-            logger.info("/dev/epoll not available: {}", cause.toString());
+        if (!isEpollAvailable()) {
+            final Throwable cause = Epoll.unavailabilityCause();
+            if (cause != null) {
+                logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
+            } else {
+                if (HAS_WSLENV) {
+                    logger.info("/dev/epoll not available: WSL not supported");
+                } else {
+                    logger.info("/dev/epoll not available: ?");
+                }
+            }
         } else if (USE_EPOLL) {
             logger.info("Using /dev/epoll");
         }
@@ -206,6 +216,12 @@ public final class Flags {
                         OpenSsl.versionString(),
                         Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         }
+    }
+
+    private static boolean isEpollAvailable() {
+        // Netty epoll transport does not work with WSL (Windows Sybsystem for Linux) yet.
+        // TODO(trustin): Re-enable on WSL if https://github.com/Microsoft/WSL/issues/1982 is resolved.
+        return Epoll.isAvailable() && !HAS_WSLENV;
     }
 
     /**
