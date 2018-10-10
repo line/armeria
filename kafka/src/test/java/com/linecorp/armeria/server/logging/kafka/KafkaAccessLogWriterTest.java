@@ -41,14 +41,6 @@ public class KafkaAccessLogWriterTest {
 
     private static final String TOPIC_NAME = "topic-test";
 
-    private static final class SimpleStructuredLog {
-        private final String name;
-
-        private SimpleStructuredLog(String name) {
-            this.name = name;
-        }
-    }
-
     @Mock
     private Producer<String, String> producer;
 
@@ -69,7 +61,7 @@ public class KafkaAccessLogWriterTest {
 
         final ProducerRecord<String, String> record = captor.getValue();
         assertThat(record.key()).isNull();
-        assertThat(record.value()).isEqualTo(log);
+        assertThat(record.value()).isEqualTo("kawamuray");
     }
 
     @Test
