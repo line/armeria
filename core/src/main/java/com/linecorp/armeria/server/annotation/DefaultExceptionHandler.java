@@ -59,9 +59,8 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
 
         if (exceptionLoggingMode == ExceptionLoggingMode.UNHANDLED &&
             logger.isWarnEnabled()) {
-            logger.warn("No exception handler exists for the cause. " +
-                        DefaultExceptionHandler.class.getName() + " is handling it.",
-                        cause);
+            logger.warn("No exception handler exists for the cause. {} is handling it.",
+                        DefaultExceptionHandler.class.getName(), cause);
         }
 
         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);

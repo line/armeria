@@ -52,7 +52,6 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -71,7 +70,6 @@ import com.linecorp.armeria.server.annotation.Decorators;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.ExceptionLoggingMode;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
@@ -99,8 +97,6 @@ import com.linecorp.armeria.server.annotation.Trace;
 final class AnnotatedHttpServiceFactory {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServiceFactory.class);
 
-    private static final ExceptionLoggingMode exceptionLoggingMode =
-            Flags.annotatedServiceExceptionLoggingMode();
     /**
      * An instance map for reusing converters, exception handlers and decorators.
      */
@@ -260,8 +256,7 @@ final class AnnotatedHttpServiceFactory {
                         "They would not be automatically injected: " + missing);
         }
         return new AnnotatedHttpServiceElement(pathMapping,
-                                               new AnnotatedHttpService(object, method, resolvers, eh, res,
-                                                                        exceptionLoggingMode),
+                                               new AnnotatedHttpService(object, method, resolvers, eh, res),
                                                decorator(method, clazz));
     }
 

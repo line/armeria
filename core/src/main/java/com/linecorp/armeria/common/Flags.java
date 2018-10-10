@@ -43,6 +43,7 @@ import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionLoggingMode;
 
 import io.netty.channel.epoll.Epoll;
@@ -531,13 +532,20 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code annotatedServiceExceptionLoggingMode} parameter which equals to
-     * one of the {@code all}, {@code unhandled} or {@code none}.
+     * Returns the value of the {@code annotatedServiceExceptionLoggingMode} parameter. It would be used to
+     * log an exception which is raised from annotated HTTP services. If it is set to
+     * {@link ExceptionLoggingMode#ALL}, all exceptions raised from annotated HTTP services are logged as
+     * {@code warn} level. If it is set to {@link ExceptionLoggingMode#UNHANDLED}, exceptions, which are
+     * not handled by {@link ExceptionHandler}s provided by a user and not well-known exceptions,
+     * would be logged as {@code warn} level. If it is set to {@link ExceptionLoggingMode#NONE},
+     * no log would be written.
      *
      * <p>The default value of this flag is {@value DEFAULT_ANNOTATED_SERVICE_EXCEPTION_LOGGING_MODE}.
      * Specify the
-     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionLoggingMode=<spec>} JVM option to override
+     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionLoggingMode=<mode>} JVM option to override
      * the default value.
+     *
+     * @see ExceptionLoggingMode
      */
     public static ExceptionLoggingMode annotatedServiceExceptionLoggingMode() {
         return ANNOTATED_SERVICE_EXCEPTION_LOGGING_MODE;

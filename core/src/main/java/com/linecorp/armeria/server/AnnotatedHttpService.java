@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -77,13 +78,11 @@ final class AnnotatedHttpService implements HttpService {
     private final ResponseConverterFunction providedResponseConverter;
 
     private final ResponseType responseType;
-    private final ExceptionLoggingMode exceptionLoggingMode;
 
     AnnotatedHttpService(Object object, Method method,
                          List<AnnotatedValueResolver> resolvers,
                          List<ExceptionHandlerFunction> exceptionHandlers,
-                         List<ResponseConverterFunction> responseConverters,
-                         ExceptionLoggingMode exceptionLoggingMode) {
+                         List<ResponseConverterFunction> responseConverters) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -91,7 +90,6 @@ final class AnnotatedHttpService implements HttpService {
                 requireNonNull(exceptionHandlers, "exceptionHandlers"));
         this.responseConverters = ImmutableList.copyOf(
                 requireNonNull(responseConverters, "responseConverters"));
-        this.exceptionLoggingMode = requireNonNull(exceptionLoggingMode, "exceptionLoggingMode");
 
         aggregationStrategy = AggregationStrategy.from(resolvers);
         providedResponseConverter = fromProvider(method);
@@ -255,9 +253,10 @@ final class AnnotatedHttpService implements HttpService {
     private HttpResponse convertException(RequestContext ctx, HttpRequest req, Throwable cause) {
         final Throwable peeledCause = Exceptions.peel(cause);
 
-        if (exceptionLoggingMode == ExceptionLoggingMode.ALL &&
+        if (Flags.annotatedServiceExceptionLoggingMode() == ExceptionLoggingMode.ALL &&
             logger.isWarnEnabled()) {
-            logger.warn("An exception from {}:", method.getName(), peeledCause);
+            logger.warn("An exception from a class '{}' and its method '{}':",
+                        object.getClass().getSimpleName(), method.getName(), peeledCause);
         }
 
         for (final ExceptionHandlerFunction func : exceptionHandlers) {
