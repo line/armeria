@@ -30,8 +30,7 @@ import com.linecorp.armeria.internal.FallthroughException;
 public interface ExceptionHandlerFunction {
 
     /**
-     * A default exception handler function. It returns an {@link HttpResponse} with
-     * {@code 500 Internal Server Error} status code.
+     * A default exception handler function.
      */
     ExceptionHandlerFunction DEFAULT = new DefaultExceptionHandler();
 

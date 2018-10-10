@@ -52,12 +52,11 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.server.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
@@ -72,6 +71,7 @@ import com.linecorp.armeria.server.annotation.Decorators;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.ExceptionLoggingMode;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
@@ -99,15 +99,12 @@ import com.linecorp.armeria.server.annotation.Trace;
 final class AnnotatedHttpServiceFactory {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServiceFactory.class);
 
+    private static final ExceptionLoggingMode exceptionLoggingMode =
+            Flags.annotatedServiceExceptionLoggingMode();
     /**
      * An instance map for reusing converters, exception handlers and decorators.
      */
     private static final ConcurrentMap<Class<?>, Object> instanceCache = new ConcurrentHashMap<>();
-
-    /**
-     * A default {@link ExceptionHandlerFunction}.
-     */
-    private static final ExceptionHandlerFunction defaultExceptionHandler = new DefaultExceptionHandler();
 
     /**
      * A default {@link ResponseConverterFunction}s.
@@ -221,8 +218,7 @@ final class AnnotatedHttpServiceFactory {
                 methods, consumableMediaTypes(method, clazz), producibleMediaTypes(method, clazz));
 
         final List<ExceptionHandlerFunction> eh =
-                exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
-                                                .add(defaultExceptionHandler).build();
+                exceptionHandlers(method, clazz).addAll(baseExceptionHandlers).build();
         final List<RequestConverterFunction> req =
                 requestConverters(method, clazz).addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
@@ -264,7 +260,8 @@ final class AnnotatedHttpServiceFactory {
                         "They would not be automatically injected: " + missing);
         }
         return new AnnotatedHttpServiceElement(pathMapping,
-                                               new AnnotatedHttpService(object, method, resolvers, eh, res),
+                                               new AnnotatedHttpService(object, method, resolvers, eh, res,
+                                                                        exceptionLoggingMode),
                                                decorator(method, clazz));
     }
 
@@ -777,29 +774,6 @@ final class AnnotatedHttpServiceFactory {
         @Override
         public String toString() {
             return '[' + PrefixPathMapping.PREFIX + pathPrefix + ", " + mapping + ']';
-        }
-    }
-
-    /**
-     * A default exception handler is used when a user does not specify exception handlers
-     * by {@link ExceptionHandler} annotation.
-     */
-    private static class DefaultExceptionHandler implements ExceptionHandlerFunction {
-        @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
-            if (cause instanceof IllegalArgumentException) {
-                return HttpResponse.of(HttpStatus.BAD_REQUEST);
-            }
-
-            if (cause instanceof HttpStatusException) {
-                return HttpResponse.of(((HttpStatusException) cause).httpStatus());
-            }
-
-            if (cause instanceof HttpResponseException) {
-                return ((HttpResponseException) cause).httpResponse();
-            }
-
-            return ExceptionHandlerFunction.DEFAULT.handleException(ctx, req, cause);
         }
     }
 

@@ -51,6 +51,7 @@ import com.linecorp.armeria.internal.PublisherToHttpResponseConverter;
 import com.linecorp.armeria.server.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.ExceptionLoggingMode;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
@@ -76,11 +77,13 @@ final class AnnotatedHttpService implements HttpService {
     private final ResponseConverterFunction providedResponseConverter;
 
     private final ResponseType responseType;
+    private final ExceptionLoggingMode exceptionLoggingMode;
 
     AnnotatedHttpService(Object object, Method method,
                          List<AnnotatedValueResolver> resolvers,
                          List<ExceptionHandlerFunction> exceptionHandlers,
-                         List<ResponseConverterFunction> responseConverters) {
+                         List<ResponseConverterFunction> responseConverters,
+                         ExceptionLoggingMode exceptionLoggingMode) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -88,6 +91,7 @@ final class AnnotatedHttpService implements HttpService {
                 requireNonNull(exceptionHandlers, "exceptionHandlers"));
         this.responseConverters = ImmutableList.copyOf(
                 requireNonNull(responseConverters, "responseConverters"));
+        this.exceptionLoggingMode = requireNonNull(exceptionLoggingMode, "exceptionLoggingMode");
 
         aggregationStrategy = AggregationStrategy.from(resolvers);
         providedResponseConverter = fromProvider(method);
@@ -250,6 +254,12 @@ final class AnnotatedHttpService implements HttpService {
      */
     private HttpResponse convertException(RequestContext ctx, HttpRequest req, Throwable cause) {
         final Throwable peeledCause = Exceptions.peel(cause);
+
+        if (exceptionLoggingMode == ExceptionLoggingMode.ALL &&
+            logger.isWarnEnabled()) {
+            logger.warn("An exception from {}:", method.getName(), peeledCause);
+        }
+
         for (final ExceptionHandlerFunction func : exceptionHandlers) {
             try {
                 final HttpResponse response = func.handleException(ctx, req, peeledCause);
