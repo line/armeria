@@ -532,17 +532,20 @@ public final class Flags {
     }
 
     /**
-     * Returns the verbosity of exceptions logged by annotated HTTP services. If it is set to
-     * {@link ExceptionVerbosity#ALL}, all exceptions raised from annotated HTTP services are logged as
-     * {@code warn} level. If it is set to {@link ExceptionVerbosity#UNHANDLED}, exceptions, which are
-     * not handled by {@link ExceptionHandler}s provided by a user and not well-known exceptions,
-     * would be logged as {@code warn} level. If it is set to {@link ExceptionVerbosity#NONE},
-     * no log would be written.
+     * Returns the verbosity of exceptions logged by annotated HTTP services. The value of this property
+     * is one of the following:
+     * <ul>
+     *     <li>{@link ExceptionVerbosity#ALL} - logging all exceptions raised from annotated HTTP services</li>
+     *     <li>{@link ExceptionVerbosity#UNHANDLED} - logging exceptions which are not handled by
+     *     {@link ExceptionHandler}s provided by a user and are not well-known exceptions
+     *     <li>{@link ExceptionVerbosity#NONE} - no logging exceptions</li>
+     * </ul>
+     * A log message would be written at {@code WARN} level.
      *
      * <p>The default value of this flag is {@value DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY}.
      * Specify the
-     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionVerbosity=<mode>} JVM option to override
-     * the default value.
+     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionVerbosity=<all|unhandled|none>} JVM option
+     * to override the default value.
      *
      * @see ExceptionVerbosity
      */
