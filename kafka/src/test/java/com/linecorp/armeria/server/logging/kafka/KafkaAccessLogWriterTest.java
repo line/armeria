@@ -79,7 +79,8 @@ public class KafkaAccessLogWriterTest {
         when(log.decodedPath()).thenReturn("kyuto");
 
         final KafkaAccessLogWriter<String, String> service =
-                new KafkaAccessLogWriter<>(producer, TOPIC_NAME, RequestLog::decodedPath, RequestLog::authority);
+                new KafkaAccessLogWriter<>(producer, TOPIC_NAME,
+                                           RequestLog::decodedPath, RequestLog::authority);
 
         service.log(log);
 

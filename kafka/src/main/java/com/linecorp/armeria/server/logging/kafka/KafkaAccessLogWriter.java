@@ -51,10 +51,10 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
     /**
      * Creates a new instance.
      *
-     * @param producer a kafka {@link Producer} producer which is used to send logs to Kafka
+     * @param producer a Kafka {@link Producer} which is used to send logs to Kafka
      * @param topic the name of topic which is used to send logs
-     * @param valueExtractor a {@link Function} that extracts a {@code V}-typed record key from
-     *                       a {@link RequestLog} The {@link Function} is allowed to return {@code null}
+     * @param valueExtractor a {@link Function} that extracts a {@code V}-typed record value from
+     *                       a {@link RequestLog}. The {@link Function} is allowed to return {@code null}
      *                       to skip logging for the given {@link RequestLog}.
      */
     public KafkaAccessLogWriter(Producer<K, V> producer, String topic,
@@ -66,13 +66,13 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
     /**
      * Creates a new instance.
      *
-     * @param producer a kafka {@link Producer} producer which is used to send logs to Kafka
+     * @param producer a Kafka {@link Producer} which is used to send logs to Kafka
      * @param topic the name of topic which is used to send logs
      * @param keyExtractor a {@link Function} that extracts a {@code K}-typed record key from
      *                     a {@link RequestLog}. The {@link Function} is allowed to return {@code null}
      *                     to leave the record key unspecified.
-     * @param valueExtractor a {@link Function} that extracts a {@code V}-typed record key from
-     *                       a {@link RequestLog} The {@link Function} is allowed to return {@code null}
+     * @param valueExtractor a {@link Function} that extracts a {@code V}-typed record value from
+     *                       a {@link RequestLog}. The {@link Function} is allowed to return {@code null}
      *                       to skip logging for the given {@link RequestLog}.
      */
     public KafkaAccessLogWriter(Producer<K, V> producer, String topic,

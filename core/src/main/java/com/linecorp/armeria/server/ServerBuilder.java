@@ -572,6 +572,8 @@ public final class ServerBuilder {
 
     /**
      * Sets an access log writer of this {@link Server}. {@link AccessLogWriter#disabled()} is used by default.
+     *
+     * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
     public ServerBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
