@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.logging.kafka.KafkaAccessLogWriter;
 import com.linecorp.armeria.server.logging.structured.StructuredLogBuilder;
 import com.linecorp.armeria.server.logging.structured.StructuredLoggingService;
 
@@ -48,7 +49,10 @@ import com.linecorp.armeria.server.logging.structured.StructuredLoggingService;
  * be lost if an application crashes in unclean way.
  *
  * <p>Refer variety of {@link #newDecorator} methods to see how to enable Kafka based structured logging.
+ *
+ * @deprecated Use {@link KafkaAccessLogWriter}.
  */
+@Deprecated
 public class KafkaStructuredLoggingService<I extends Request, O extends Response, L>
         extends StructuredLoggingService<I, O, L> {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStructuredLoggingService.class);

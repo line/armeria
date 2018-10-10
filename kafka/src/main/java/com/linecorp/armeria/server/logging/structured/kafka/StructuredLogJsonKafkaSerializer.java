@@ -29,7 +29,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * A Kafka {@link Serializer} which serializes anything which are serializable in JSON format.
  * @param <L> the type of structured log which is being serialized
+ * @deprecated Use <a href="https://github.com/daniel-shuy/kafka-jackson-serializer">daniel-shuy/kafka-jackson-serializer</a>.
  */
+@Deprecated
 public class StructuredLogJsonKafkaSerializer<L> implements Serializer<L> {
     private final Serializer<String> stringSerializer = new StringSerializer();
     private final ObjectMapper objectMapper;

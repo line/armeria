@@ -27,13 +27,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -79,7 +78,8 @@ public final class ServerConfig {
 
     private final String serviceLoggerPrefix;
 
-    private final Consumer<RequestLog> accessLogWriter;
+    private final AccessLogWriter accessLogWriter;
+    private final boolean shutdownAccessLogWriterOnStop;
 
     private final int proxyProtocolMaxTlvSize;
 
@@ -98,7 +98,7 @@ public final class ServerConfig {
             int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
-            Consumer<RequestLog> accessLogWriter, int proxyProtocolMaxTlvSize,
+            AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions) {
 
@@ -137,6 +137,7 @@ public final class ServerConfig {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
+        this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
         this.channelOptions = Collections.unmodifiableMap(
                 new Object2ObjectArrayMap<>(requireNonNull(channelOptions, "channelOptions")));
         this.childChannelOptions = Collections.unmodifiableMap(
@@ -472,8 +473,15 @@ public final class ServerConfig {
     /**
      * Returns an access log writer.
      */
-    public Consumer<RequestLog> accessLogWriter() {
+    public AccessLogWriter accessLogWriter() {
         return accessLogWriter;
+    }
+
+    /**
+     * Returns whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
+     */
+    public boolean shutdownAccessLogWriterOnStop() {
+        return shutdownAccessLogWriterOnStop;
     }
 
     /**
@@ -495,7 +503,8 @@ public final class ServerConfig {
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
                     defaultMaxHttp1InitialLineLength(), defaultMaxHttp1HeaderSize(), defaultMaxHttp1ChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(), accessLogWriter(),
+                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(),
+                    accessLogWriter(), shutdownAccessLogWriterOnStop(),
                     channelOptions(), childChannelOptions()
             );
         }
@@ -512,8 +521,8 @@ public final class ServerConfig {
             long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
-            Consumer<RequestLog> accessLogWriter, Map<ChannelOption<?>, ?> channelOptions,
-            Map<ChannelOption<?>, ?> childChannelOptions) {
+            AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
+            Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -591,6 +600,8 @@ public final class ServerConfig {
         buf.append(serviceLoggerPrefix);
         buf.append(", accessLogWriter: ");
         buf.append(accessLogWriter);
+        buf.append(", shutdownAccessLogWriterOnStop: ");
+        buf.append(shutdownAccessLogWriterOnStop);
         buf.append(')');
         buf.append(", channelOptions: ");
         buf.append(channelOptions);

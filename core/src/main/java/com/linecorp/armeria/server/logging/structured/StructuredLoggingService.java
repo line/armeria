@@ -30,6 +30,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * A decorating service which provides support of structured and optionally externalized request/response
@@ -38,7 +39,10 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  * @param <L> the type of the structured log representation
+ *
+ * @deprecated Use {@link AccessLogWriter}.
  */
+@Deprecated
 public abstract class StructuredLoggingService<I extends Request, O extends Response, L>
         extends SimpleDecoratingService<I, O> {
 
