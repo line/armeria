@@ -111,6 +111,11 @@ final class AnnotatedHttpServiceFactory {
                              new ByteArrayResponseConverterFunction());
 
     /**
+     * A default {@link ExceptionHandlerFunction}.
+     */
+    private static final ExceptionHandlerFunction defaultExceptionHandler = new DefaultExceptionHandler();
+
+    /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
      * <ul>
      *   <li>{@link Options} -> {@link HttpMethod#OPTIONS}
@@ -214,7 +219,8 @@ final class AnnotatedHttpServiceFactory {
                 methods, consumableMediaTypes(method, clazz), producibleMediaTypes(method, clazz));
 
         final List<ExceptionHandlerFunction> eh =
-                exceptionHandlers(method, clazz).addAll(baseExceptionHandlers).build();
+                exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
+                                                .add(defaultExceptionHandler).build();
         final List<RequestConverterFunction> req =
                 requestConverters(method, clazz).addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
