@@ -19,23 +19,48 @@ package com.linecorp.armeria.server.annotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpStatusException;
 
 /**
- * A default exception handler function. It returns an {@link HttpResponse} with
- * {@code 500 Internal Server Error} status code.
+ * A default exception handler is used when a user does not specify exception handlers
+ * by {@link ExceptionHandler} annotation. It returns:
+ * <ul>
+ *     <li>an {@link HttpResponse} with {@code 400 Bad Request} status code when the cause is an
+ *     {@link IllegalArgumentException}, or</li>
+ *     <li>an {@link HttpResponse} with the status code that an {@link HttpStatusException} holds, or</li>
+ *     <li>an {@link HttpResponse} that an {@link HttpResponseException} holds, or</li>
+ *     <li>an {@link HttpResponse} with {@code 500 Internal Server Error}.</li>
+ * </ul>
  */
 final class DefaultExceptionHandler implements ExceptionHandlerFunction {
     private static final Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
 
     @Override
     public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
-        logger.warn("No exception handler exists for the cause. " +
-                    DefaultExceptionHandler.class.getName() + " is handling it.",
-                    cause);
+        if (cause instanceof IllegalArgumentException) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST);
+        }
+
+        if (cause instanceof HttpStatusException) {
+            return HttpResponse.of(((HttpStatusException) cause).httpStatus());
+        }
+
+        if (cause instanceof HttpResponseException) {
+            return ((HttpResponseException) cause).httpResponse();
+        }
+
+        if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
+            logger.isWarnEnabled()) {
+            logger.warn("No exception handler exists for the cause. {} is handling it.",
+                        DefaultExceptionHandler.class.getName(), cause);
+        }
+
         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

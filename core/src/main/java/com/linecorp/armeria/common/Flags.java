@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.IntPredicate;
@@ -42,6 +43,8 @@ import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.annotation.ExceptionHandler;
+import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
@@ -191,6 +194,11 @@ public final class Flags {
     private static final List<String> CACHED_HEADERS =
             CSV_SPLITTER.splitToList(getNormalized(
                     "cachedHeaders", DEFAULT_CACHED_HEADERS, CharMatcher.ascii()::matchesAllOf));
+
+    private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
+    private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
+            exceptionLoggingMode("annotatedServiceExceptionVerbosity",
+                                 DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
     static {
         if (!isEpollAvailable()) {
@@ -539,6 +547,28 @@ public final class Flags {
         return COMPOSITE_SERVICE_CACHE_SPEC;
     }
 
+    /**
+     * Returns the verbosity of exceptions logged by annotated HTTP services. The value of this property
+     * is one of the following:
+     * <ul>
+     *     <li>{@link ExceptionVerbosity#ALL} - logging all exceptions raised from annotated HTTP services</li>
+     *     <li>{@link ExceptionVerbosity#UNHANDLED} - logging exceptions which are not handled by
+     *     {@link ExceptionHandler}s provided by a user and are not well-known exceptions
+     *     <li>{@link ExceptionVerbosity#NONE} - no logging exceptions</li>
+     * </ul>
+     * A log message would be written at {@code WARN} level.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY}.
+     * Specify the
+     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionVerbosity=<all|unhandled|none>} JVM option
+     * to override the default value.
+     *
+     * @see ExceptionVerbosity
+     */
+    public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
+        return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
+    }
+
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
         final String spec = get(name, defaultValue, value -> {
             try {
@@ -552,6 +582,13 @@ public final class Flags {
         });
         return "off".equals(spec) ? Optional.empty()
                                   : Optional.of(spec);
+    }
+
+    private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {
+        final String mode = getNormalized(name, defaultValue,
+                                          value -> Arrays.stream(ExceptionVerbosity.values())
+                                                         .anyMatch(v -> v.name().equalsIgnoreCase(value)));
+        return ExceptionVerbosity.valueOf(mode.toUpperCase());
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {
