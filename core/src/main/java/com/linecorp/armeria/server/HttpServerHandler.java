@@ -31,7 +31,6 @@ import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -69,6 +68,7 @@ import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.Unpooled;
@@ -168,7 +168,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private boolean isReading;
     private boolean handledLastRequest;
 
-    private final Consumer<RequestLog> accessLogWriter;
+    private final AccessLogWriter accessLogWriter;
     private final IdentityHashMap<HttpResponse, Boolean> unfinishedResponses;
 
     HttpServerHandler(ServerConfig config,
@@ -585,7 +585,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Respect the first specified cause.
                 logBuilder.endResponse(firstNonNull(cause, f.cause()));
             }
-            reqCtx.log().addListener(accessLogWriter::accept, RequestLogAvailability.COMPLETE);
+            reqCtx.log().addListener(accessLogWriter::log, RequestLogAvailability.COMPLETE);
         });
         return future;
     }

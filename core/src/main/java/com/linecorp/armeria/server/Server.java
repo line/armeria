@@ -55,6 +55,7 @@ import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.internal.TransportType;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.ServerBootstrap;
@@ -270,7 +271,7 @@ public final class Server implements AutoCloseable {
         }
 
         @Override
-        protected CompletionStage<Void> doStart() throws Exception {
+        protected CompletionStage<Void> doStart() {
             if (config().gracefulShutdownQuietPeriod().isZero()) {
                 gracefulShutdownSupport = GracefulShutdownSupport.disabled();
             } else {
@@ -327,7 +328,7 @@ public final class Server implements AutoCloseable {
         }
 
         @Override
-        protected CompletionStage<Void> doStop() throws Exception {
+        protected CompletionStage<Void> doStop() {
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             if (gracefulShutdownSupport.completedQuietPeriod()) {
@@ -400,7 +401,7 @@ public final class Server implements AutoCloseable {
                         // If starts to shutdown before initializing serverChannels, completes the future
                         // immediately.
                         if (serverChannels.size() == 0) {
-                            future.complete(null);
+                            finishDoStop(future);
                             return;
                         }
                         // Shut down all boss groups and wait until they are terminated.
@@ -415,14 +416,26 @@ public final class Server implements AutoCloseable {
                                 }
 
                                 // Boss groups have been terminated completely.
-                                // TODO(trustin): Add shutdownBlockingTaskExecutorOnStop
-                                // TODO(trustin): Count the pending blocking tasks and wait until it goes zero.
-                                future.complete(null);
+                                finishDoStop(future);
                             });
                         });
                     });
                 });
             });
+        }
+
+        private void finishDoStop(CompletableFuture<Void> future) {
+            // TODO(trustin): Add shutdownBlockingTaskExecutorOnStop
+            // TODO(trustin): Count the pending blocking tasks and wait until it goes zero.
+            if (!config.shutdownAccessLogWriterOnStop()) {
+                future.complete(null);
+                return;
+            }
+
+            config.accessLogWriter().shutdown().exceptionally(cause -> {
+                logger.warn("Failed to close the {}:", AccessLogWriter.class.getSimpleName(), cause);
+                return null;
+            }).thenRunAsync(() -> future.complete(null), config.startStopExecutor());
         }
 
         @Override
@@ -480,7 +493,7 @@ public final class Server implements AutoCloseable {
         }
 
         @Override
-        public void operationComplete(ChannelFuture f) throws Exception {
+        public void operationComplete(ChannelFuture f) {
             final Channel ch = f.channel();
             assert ch.eventLoop().inEventLoop();
 

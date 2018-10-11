@@ -22,11 +22,15 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.TextFormatter;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * A representation and constructor of a service log which holds only very common fields that are protocol
  * agnostic.
+ *
+ * @deprecated Use {@link AccessLogWriter}.
  */
+@Deprecated
 public abstract class StructuredLog {
     private final long timestampMillis;
     private final long responseTimeNanos;
