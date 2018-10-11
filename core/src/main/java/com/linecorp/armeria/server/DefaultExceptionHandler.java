@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,8 +24,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.HttpResponseException;
-import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.annotation.ExceptionHandler;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 /**
  * A default exception handler is used when a user does not specify exception handlers
@@ -57,8 +58,7 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
 
         if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
             logger.isWarnEnabled()) {
-            logger.warn("No exception handler exists for the cause. {} is handling it.",
-                        DefaultExceptionHandler.class.getName(), cause);
+            logger.warn("{} Unhandled exception from an annotated service:", ctx, cause);
         }
 
         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);

@@ -255,8 +255,8 @@ final class AnnotatedHttpService implements HttpService {
 
         if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
             logger.isWarnEnabled()) {
-            logger.warn("An exception from a class '{}' and its method '{}':",
-                        object.getClass().getSimpleName(), method.getName(), peeledCause);
+            logger.warn("{} Exception raised by method '{}' in '{}':",
+                        ctx, method.getName(), object.getClass().getSimpleName(), peeledCause);
         }
 
         for (final ExceptionHandlerFunction func : exceptionHandlers) {
@@ -271,11 +271,12 @@ final class AnnotatedHttpService implements HttpService {
             } catch (FallthroughException ignore) {
                 // Do nothing.
             } catch (Exception e) {
-                logger.warn("Unexpected exception from an exception handler {}:",
-                            func.getClass().getName(), e);
+                logger.warn("{} Unexpected exception from an exception handler {}:",
+                            ctx, func.getClass().getName(), e);
             }
         }
-        return ExceptionHandlerFunction.DEFAULT.handleException(ctx, req, peeledCause);
+
+        return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**

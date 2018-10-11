@@ -28,12 +28,6 @@ import com.linecorp.armeria.internal.FallthroughException;
  */
 @FunctionalInterface
 public interface ExceptionHandlerFunction {
-
-    /**
-     * A default exception handler function.
-     */
-    ExceptionHandlerFunction DEFAULT = new DefaultExceptionHandler();
-
     /**
      * Returns an {@link HttpResponse} which would be sent back to the client who sent the {@code req}.
      * Calls {@link ExceptionHandlerFunction#fallthrough()} or throws a {@link FallthroughException} if
