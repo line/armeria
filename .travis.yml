@@ -22,7 +22,6 @@ cache:
 env:
   global:
   - "_JAVA_OPTIONS=-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts"
-  - "GRADLE_OPTS=-Xmx1280m"
 before_install:
 - "./gradlew --version"
 install:
