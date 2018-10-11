@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -52,11 +51,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.logging.AccessLogWriters;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -160,7 +158,8 @@ public final class ServerBuilder {
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
-    private Consumer<RequestLog> accessLogWriter = AccessLogWriters.disabled();
+    private AccessLogWriter accessLogWriter = AccessLogWriter.disabled();
+    private boolean shutdownAccessLogWriterOnStop = true;
 
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -564,21 +563,21 @@ public final class ServerBuilder {
 
     /**
      * Sets the format of this {@link Server}'s access log. The specified {@code accessLogFormat} would be
-     * parsed by {@link AccessLogWriters#custom(String)}.
+     * parsed by {@link AccessLogWriter#custom(String)}.
      */
     public ServerBuilder accessLogFormat(String accessLogFormat) {
-        accessLogWriter = AccessLogWriters.custom(requireNonNull(accessLogFormat, "accessLogFormat"));
-        return this;
+        return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
+                               true);
     }
 
     /**
-     * Sets an access log writer of this {@link Server}. {@link AccessLogWriters#disabled()} is used by default.
+     * Sets an access log writer of this {@link Server}. {@link AccessLogWriter#disabled()} is used by default.
      *
-     * @see AccessLogWriters to find pre-defined access log writers.
+     * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
-    @SuppressWarnings("unchecked")
-    public ServerBuilder accessLogWriter(Consumer<? super RequestLog> accessLogWriter) {
-        this.accessLogWriter = (Consumer<RequestLog>) requireNonNull(accessLogWriter, "accessLogWriter");
+    public ServerBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
+        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
+        shutdownAccessLogWriterOnStop = shutdownOnStop;
         return this;
     }
 
@@ -1083,7 +1082,7 @@ public final class ServerBuilder {
                 idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
-                meterRegistry, serviceLoggerPrefix, accessLogWriter,
+                meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions), sslContexts);
 
         serverListeners.forEach(server::addListener);
@@ -1122,8 +1121,9 @@ public final class ServerBuilder {
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix, accessLogWriter, channelOptions,
-                childChannelOptions
+                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix,
+                accessLogWriter, shutdownAccessLogWriterOnStop,
+                channelOptions, childChannelOptions
         );
     }
 }

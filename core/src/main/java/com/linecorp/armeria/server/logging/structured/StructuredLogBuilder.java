@@ -19,12 +19,16 @@ package com.linecorp.armeria.server.logging.structured;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * An interface that a structured log constructor should implement.
  *
  * @param <L> type of the structured log representation
+ *
+ * @deprecated Use {@link AccessLogWriter}.
  */
+@Deprecated
 @FunctionalInterface
 public interface StructuredLogBuilder<L> {
     /**
