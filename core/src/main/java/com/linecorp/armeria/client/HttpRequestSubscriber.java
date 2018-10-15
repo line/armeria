@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
-import com.linecorp.armeria.common.AbstractRequestContext;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
@@ -57,7 +56,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     enum State {
         NEEDS_TO_WRITE_FIRST_HEADER,
         NEEDS_DATA_OR_TRAILING_HEADERS,
-        DONE
+        DONE_1,
+        DONE_2
     }
 
     private final Channel ch;
@@ -73,6 +73,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
+    private boolean isCompleted;
 
     HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
@@ -93,11 +94,19 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
      */
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
+        // If a message has been sent out, cancel the timeout for starting a request.
+        cancelTimeout();
+
         if (future.isSuccess()) {
-            if (state == State.DONE) {
+            if (isDone()) {
                 // Successfully sent the request; schedule the response timeout.
                 response.scheduleTimeout(ch.eventLoop());
-            } else {
+            }
+
+            // Request more messages regardless whether the state is DONE. It makes the producer have
+            // a chance to produce the last call such as 'onComplete' and 'onError' when there are
+            // no more messages it can produce.
+            if (!isCompleted) {
                 assert subscription != null;
                 subscription.request(1);
             }
@@ -121,15 +130,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final EventLoop eventLoop = ch.eventLoop();
         if (timeoutMillis > 0) {
+            // The timer would be executed if the first message has not been sent out within the timeout.
             timeoutFuture = eventLoop.schedule(
-                    () -> {
-                        if (state == State.NEEDS_TO_WRITE_FIRST_HEADER) {
-                            if (reqCtx instanceof AbstractRequestContext) {
-                                ((AbstractRequestContext) reqCtx).setTimedOut();
-                            }
-                            failAndRespond(WriteTimeoutException.get());
-                        }
-                    },
+                    () -> failAndRespond(WriteTimeoutException.get()),
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
 
@@ -154,13 +157,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         logBuilder.requestHeaders(firstHeaders);
 
         if (request.isEmpty()) {
-            setDone();
+            state = State.DONE_1;
             write0(firstHeaders, true, true);
         } else {
+            state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
             write0(firstHeaders, false, true);
         }
-        state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
-        cancelTimeout();
     }
 
     private HttpHeaders autoFillHeaders(Channel ch) {
@@ -224,28 +226,34 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                     // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
                 }
-                break;
+                write(o, endOfStream, true);
+                return;
             }
-            case DONE:
+            case DONE_1:
+                // Cancel the subscription if any message comes here after the state has been changed to DONE_1.
+                cancelSubscription();
+                ReferenceCountUtil.safeRelease(o);
+                state = State.DONE_2;
+                return;
+
+            case DONE_2:
                 ReferenceCountUtil.safeRelease(o);
                 return;
         }
-
-        write(o, endOfStream, true);
     }
 
     @Override
     public void onError(Throwable cause) {
+        isCompleted = true;
         failAndRespond(cause);
     }
 
     @Override
     public void onComplete() {
-        if (!cancelTimeout()) {
-            return;
-        }
+        isCompleted = true;
+        cancelTimeout();
 
-        if (state != State.DONE) {
+        if (!isDone()) {
             write(HttpData.EMPTY_DATA, true, true);
         }
     }
@@ -258,7 +266,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         if (endOfStream) {
-            setDone();
+            state = State.DONE_1;
         }
 
         ch.eventLoop().execute(() -> write0(o, endOfStream, flush));
@@ -285,11 +293,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (flush) {
             ch.flush();
         }
-
-        if (state == State.DONE) {
-            assert subscription != null;
-            subscription.cancel();
-        }
     }
 
     private int streamId() {
@@ -297,16 +300,20 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private void fail(Throwable cause) {
-        setDone();
+        state = State.DONE_1;
         logBuilder.endRequest(cause);
         logBuilder.endResponse(cause);
+        cancelSubscription();
+    }
+
+    private void cancelSubscription() {
+        isCompleted = true;
         assert subscription != null;
         subscription.cancel();
     }
 
-    private void setDone() {
-        cancelTimeout();
-        state = State.DONE;
+    private boolean isDone() {
+        return state == State.DONE_1 || state == State.DONE_2;
     }
 
     private void failAndRespond(Throwable cause) {
