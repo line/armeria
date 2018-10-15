@@ -55,7 +55,7 @@ jmh {
     }
 
     if (rootProject.hasProperty('jmh.jvmargs')) {
-        jvmArgsAppend = [ String.valueOf(rootProject.findProperty('jmh.jvmargs')) ]
+        jvmArgsAppend = String.valueOf(rootProject.findProperty('jmh.jvmargs')).split(' ').toList()
     }
 
     if (rootProject.hasProperty('jmh.iterations')) {
