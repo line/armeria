@@ -154,6 +154,25 @@ public final class Flags {
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
 
+    private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_WINDOW_SIZE = 1048576; // 1MiB
+    private static final int DEFAULT_HTTP2_INITIAL_WINDOW_SIZE =
+            getInt("defaultHttp2InitialWindowSize",
+                   DEFAULT_DEFAULT_HTTP2_INITIAL_WINDOW_SIZE,
+                   value -> value > 0);
+
+    private static final int DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
+    private static final int DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION =
+            getInt("defaultHttp2MaxStreamsPerConnection",
+                   DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION,
+                   value -> value > 0);
+
+    // from Netty default maxHeaderSize
+    private static final int DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192;
+    private static final int DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE =
+            getInt("defaultHttp2MaxHeaderListSize",
+                   DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE,
+                   value -> value > 0);
+
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
     private static final String DEFAULT_BACKOFF_SPEC =
@@ -456,6 +475,18 @@ public final class Flags {
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
+    }
+
+    public static int defaultHttp2InitialWindowSize() {
+        return DEFAULT_HTTP2_INITIAL_WINDOW_SIZE;
+    }
+
+    public static int defaultHttp2MaxStreamsPerConnection() {
+        return DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION;
+    }
+
+    public static int defaultHttp2MaxHeaderListSize() {
+        return DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE;
     }
 
     /**
