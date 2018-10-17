@@ -56,8 +56,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     enum State {
         NEEDS_TO_WRITE_FIRST_HEADER,
         NEEDS_DATA_OR_TRAILING_HEADERS,
-        DONE_1,
-        DONE_2
+        DONE
     }
 
     private final Channel ch;
@@ -73,7 +72,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
-    private boolean isCompleted;
+    private boolean isSubscriptionCompleted;
 
     HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
@@ -98,7 +97,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         cancelTimeout();
 
         if (future.isSuccess()) {
-            if (isDone()) {
+            if (state == State.DONE) {
                 // Successfully sent the request; schedule the response timeout.
                 response.scheduleTimeout(ch.eventLoop());
             }
@@ -106,7 +105,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             // Request more messages regardless whether the state is DONE. It makes the producer have
             // a chance to produce the last call such as 'onComplete' and 'onError' when there are
             // no more messages it can produce.
-            if (!isCompleted) {
+            if (!isSubscriptionCompleted) {
                 assert subscription != null;
                 subscription.request(1);
             }
@@ -157,7 +156,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         logBuilder.requestHeaders(firstHeaders);
 
         if (request.isEmpty()) {
-            state = State.DONE_1;
+            state = State.DONE;
             write0(firstHeaders, true, true);
         } else {
             state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
@@ -229,14 +228,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 write(o, endOfStream, true);
                 return;
             }
-            case DONE_1:
-                // Cancel the subscription if any message comes here after the state has been changed to DONE_1.
+            case DONE:
+                // Cancel the subscription if any message comes here after the state has been changed to DONE.
                 cancelSubscription();
-                ReferenceCountUtil.safeRelease(o);
-                state = State.DONE_2;
-                return;
-
-            case DONE_2:
                 ReferenceCountUtil.safeRelease(o);
                 return;
         }
@@ -244,16 +238,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     @Override
     public void onError(Throwable cause) {
-        isCompleted = true;
+        isSubscriptionCompleted = true;
         failAndRespond(cause);
     }
 
     @Override
     public void onComplete() {
-        isCompleted = true;
+        isSubscriptionCompleted = true;
         cancelTimeout();
 
-        if (!isDone()) {
+        if (state != State.DONE) {
             write(HttpData.EMPTY_DATA, true, true);
         }
     }
@@ -266,7 +260,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         if (endOfStream) {
-            state = State.DONE_1;
+            state = State.DONE;
         }
 
         ch.eventLoop().execute(() -> write0(o, endOfStream, flush));
@@ -300,20 +294,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private void fail(Throwable cause) {
-        state = State.DONE_1;
+        state = State.DONE;
         logBuilder.endRequest(cause);
         logBuilder.endResponse(cause);
         cancelSubscription();
     }
 
     private void cancelSubscription() {
-        isCompleted = true;
+        isSubscriptionCompleted = true;
         assert subscription != null;
         subscription.cancel();
-    }
-
-    private boolean isDone() {
-        return state == State.DONE_1 || state == State.DONE_2;
     }
 
     private void failAndRespond(Throwable cause) {
