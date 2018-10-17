@@ -509,8 +509,8 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the max concurrent streams per HTTP/2 connection. Unset means there is no limit on
-     * the number of concurrent streams. Note, this differs from {@link #maxNumConnections()},
+     * Sets the maximum number of concurrent streams per HTTP/2 connection. Unset means there is
+     * no limit on the number of concurrent streams. Note, this differs from {@link #maxNumConnections()},
      * which is the maximum number of HTTP/2 connections themselves, not the streams that are
      * multiplexed over each.
      */

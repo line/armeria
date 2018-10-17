@@ -445,7 +445,7 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the max concurrent streams per HTTP/2 connection.
+     * Returns the maximum number of concurrent streams per HTTP/2 connection.
      */
     public int http2MaxStreamsPerConnection() {
         return http2MaxStreamsPerConnection;
