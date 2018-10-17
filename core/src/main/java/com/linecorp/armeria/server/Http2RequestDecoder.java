@@ -58,11 +58,16 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
+    private boolean receivedErrorGoAway;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer) {
         this.cfg = cfg;
         this.writer = writer;
         inboundTrafficController = new InboundTrafficController(channel);
+    }
+
+    boolean receivedErrorGoAway() {
+        return receivedErrorGoAway;
     }
 
     @Override
@@ -163,7 +168,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     }
 
     @Override
-    public void onStreamRemoved(Http2Stream stream) {
+    public void onStreamClosed(Http2Stream stream) {
         final DecodedHttpRequest req = requests.remove(stream.id());
         if (req != null) {
             // Ignored if the stream has already been closed.
@@ -264,5 +269,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
                                   Http2Headers headers, int padding) throws Http2Exception {
         throw connectionError(PROTOCOL_ERROR, "received a PUSH_PROMISE frame which only a server can send");
+    }
+
+    @Override
+    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+        if (errorCode != Http2Error.NO_ERROR.code()) {
+            receivedErrorGoAway = true;
+        }
     }
 }

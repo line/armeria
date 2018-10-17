@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandler;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
@@ -25,13 +26,29 @@ import io.netty.handler.codec.http2.Http2Settings;
 
 final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler {
 
+    private final GracefulShutdownSupport gracefulShutdownSupport;
+    private final Http2RequestDecoder requestDecoder;
+
     Http2ServerConnectionHandler(
-            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-            Http2Settings initialSettings) {
+            ServerConfig config, Channel channel, GracefulShutdownSupport gracefulShutdownSupport,
+            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
 
         super(decoder, encoder, initialSettings);
+
+        this.gracefulShutdownSupport = gracefulShutdownSupport;
+        requestDecoder = new Http2RequestDecoder(config, channel, encoder());
+        connection().addListener(requestDecoder);
+        decoder().frameListener(requestDecoder);
+
+        // Setup post build options
+        gracefulShutdownTimeoutMillis(config.idleTimeoutMillis());
     }
 
     @Override
     protected void onCloseRequest(ChannelHandlerContext ctx) throws Exception {}
+
+    @Override
+    protected boolean needsImmediateDisconnection() {
+        return gracefulShutdownSupport.isShuttingDown() || requestDecoder.receivedErrorGoAway();
+    }
 }

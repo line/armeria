@@ -640,19 +640,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
         final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
-        final Http2Settings http2Settings = http2Settings();
-
-        final Http2ResponseDecoder listener = new Http2ResponseDecoder(conn, ch, encoder);
-        final Http2ClientConnectionHandler handler =
-                new Http2ClientConnectionHandler(decoder, encoder, http2Settings, listener);
-        // Setup post build options
-        handler.gracefulShutdownTimeoutMillis(clientFactory.idleTimeoutMillis());
-
-        return handler;
+        return new Http2ClientConnectionHandler(clientFactory, ch, decoder, encoder, http2Settings());
     }
 
     private Http2Settings http2Settings() {
-        final Http2Settings http2Settings = new Http2Settings();
+        final Http2Settings http2Settings = Http2Settings.defaultSettings();
         if (clientFactory.initialHttp2StreamWindowSize() != DEFAULT_WINDOW_SIZE) {
             http2Settings.initialWindowSize(clientFactory.initialHttp2StreamWindowSize());
         }

@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandler;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
@@ -25,16 +26,23 @@ import io.netty.handler.codec.http2.Http2Settings;
 
 final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler {
 
+    private final HttpClientFactory clientFactory;
     private final Http2ResponseDecoder responseDecoder;
 
     Http2ClientConnectionHandler(
+            HttpClientFactory clientFactory, Channel channel,
             Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-            Http2Settings initialSettings, Http2ResponseDecoder responseDecoder) {
+            Http2Settings initialSettings) {
 
         super(decoder, encoder, initialSettings);
-        this.responseDecoder = responseDecoder;
+
+        this.clientFactory = clientFactory;
+        responseDecoder = new Http2ResponseDecoder(connection(), channel, encoder());
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);
+
+        // Setup post build options
+        gracefulShutdownTimeoutMillis(clientFactory.idleTimeoutMillis());
     }
 
     Http2ResponseDecoder responseDecoder() {
@@ -52,5 +60,10 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     @Override
     protected void onCloseRequest(ChannelHandlerContext ctx) throws Exception {
         HttpSession.get(ctx.channel()).deactivate();
+    }
+
+    @Override
+    protected boolean needsImmediateDisconnection() {
+        return clientFactory.isClosing() || responseDecoder.receivedErrorGoAway();
     }
 }

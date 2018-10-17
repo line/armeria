@@ -37,8 +37,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
 
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.TimeoutException;
 
 import io.grpc.Status;
 import io.grpc.Status.Code;
@@ -78,7 +78,7 @@ public final class GrpcStatus {
         if (t instanceof Http2Exception) {
             return Status.INTERNAL.withCause(t);
         }
-        if (t instanceof ResponseTimeoutException) {
+        if (t instanceof TimeoutException) {
             return Status.DEADLINE_EXCEEDED.withCause(t);
         }
         return s;
