@@ -46,6 +46,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * Marshaller for gRPC method request or response messages to and from {@link ByteBuf}. Will attempt to use
@@ -169,7 +170,11 @@ public class GrpcMessageMarshaller<I, O> {
 
     private ByteBuf serializeProto(Message message) throws IOException {
         if (GrpcSerializationFormats.isProto(serializationFormat)) {
-            final ByteBuf buf = alloc.buffer(message.getSerializedSize());
+            int serializedSize = message.getSerializedSize();
+            if (serializedSize == 0) {
+                return Unpooled.EMPTY_BUFFER;
+            }
+            final ByteBuf buf = alloc.buffer(serializedSize);
             boolean success = false;
             try {
                 message.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, buf.writableBytes())));
@@ -201,6 +206,9 @@ public class GrpcMessageMarshaller<I, O> {
 
     private Message deserializeProto(ByteBuf buf, Message prototype) throws IOException {
         if (GrpcSerializationFormats.isProto(serializationFormat)) {
+            if (!buf.isReadable()) {
+                return prototype.getDefaultInstanceForType();
+            }
             final CodedInputStream stream;
             if (unsafeWrapDeserializedBuffer) {
                 stream = UnsafeByteOperations.unsafeWrap(buf.nioBuffer()).newCodedInput();
