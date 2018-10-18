@@ -68,6 +68,9 @@ public final class ServerConfig {
     private final int defaultMaxHttp1InitialLineLength;
     private final int defaultMaxHttp1HeaderSize;
     private final int defaultMaxHttp1ChunkSize;
+    private final int http2InitialWindowSize;
+    private final int http2MaxStreamsPerConnection;
+    private final int http2MaxHeaderListSize;
 
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
@@ -96,11 +99,15 @@ public final class ServerConfig {
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
+            int http2InitialWindowSize, int http2MaxStreamsPerConnection, int http2MaxHeaderListSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
             AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions) {
+        this.http2InitialWindowSize = http2InitialWindowSize;
+        this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
+        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -428,6 +435,27 @@ public final class ServerConfig {
      */
     public int defaultMaxHttp1ChunkSize() {
         return defaultMaxHttp1ChunkSize;
+    }
+
+    /**
+     * Returns the initial HTTP/2 flow control window size.
+     */
+    public int http2InitialWindowSize() {
+        return http2InitialWindowSize;
+    }
+
+    /**
+     * Returns the maximum number of concurrent streams per HTTP/2 connection.
+     */
+    public int http2MaxStreamsPerConnection() {
+        return http2MaxStreamsPerConnection;
+    }
+
+    /**
+     * Returns the maximum size of headers that can be received.
+     */
+    public int http2MaxHeaderListSize() {
+        return http2MaxHeaderListSize;
     }
 
     /**

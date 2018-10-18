@@ -152,6 +152,9 @@ public final class ServerBuilder {
     private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
     private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
     private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
+    private int http2InitialWindowSize = Flags.defaultHttp2InitialWindowSize();
+    private int http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
+    private int http2MaxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
@@ -492,6 +495,36 @@ public final class ServerBuilder {
      */
     public ServerBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
         this.maxHttp1ChunkSize = validateNonNegative(maxHttp1ChunkSize, "maxHttp1ChunkSize");
+        return this;
+    }
+
+    /**
+     * Sets the initial HTTP/2 flow control window size. Larger values can lower stream warmup time
+     * at the expense of being easier to overload the server. Defaults to
+     * {@link Flags#defaultHttp2InitialWindowSize()}.
+     */
+    public ServerBuilder http2InitialWindowSize(int windowSize) {
+        this.http2InitialWindowSize = validateNonNegative(windowSize, "windowSize");
+        return this;
+    }
+
+    /**
+     * Sets the maximum number of concurrent streams per HTTP/2 connection. Unset means there is
+     * no limit on the number of concurrent streams. Note, this differs from {@link #maxNumConnections()},
+     * which is the maximum number of HTTP/2 connections themselves, not the streams that are
+     * multiplexed over each.
+     */
+    public ServerBuilder http2MaxStreamsPerConnection(int maxStreams) {
+        this.http2MaxStreamsPerConnection = validateNonNegative(maxStreams, "maxStreams");
+        return this;
+    }
+
+    /**
+     * Sets the maximum size of headers that can be received. Defaults to
+     * {@link Flags#defaultHttp2MaxHeaderListSize()}.
+     */
+    public ServerBuilder http2MaxHeaderListSize(int headerListSize) {
+        this.http2MaxHeaderListSize = validateNonNegative(headerListSize, "headerListSize");
         return this;
     }
 
@@ -1081,6 +1114,7 @@ public final class ServerBuilder {
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
+                http2InitialWindowSize, http2MaxStreamsPerConnection, http2MaxHeaderListSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions), sslContexts);
