@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -58,7 +59,6 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -164,12 +164,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
 
-    private int unfinishedRequests;
+    private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
     private boolean handledLastRequest;
 
     private final AccessLogWriter accessLogWriter;
-    private final IdentityHashMap<HttpResponse, Boolean> unfinishedResponses;
 
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
@@ -186,7 +185,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         this.responseEncoder = responseEncoder;
         this.proxiedAddresses = proxiedAddresses;
 
-        unfinishedResponses = new IdentityHashMap<>();
+        unfinishedRequests = new IdentityHashMap<>();
         accessLogWriter = config.accessLogWriter();
     }
 
@@ -197,7 +196,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Override
     public int unfinishedRequests() {
-        return unfinishedRequests;
+        return unfinishedRequests.size();
     }
 
     @Override
@@ -231,7 +230,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             responseEncoder.close();
         }
 
-        unfinishedResponses.keySet().forEach(StreamMessage::abort);
+        unfinishedRequests.forEach((req, res) -> {
+            // Mark the request stream as closed due to disconnection.
+            req.close(ClosedSessionException.get());
+            // XXX(trustin): Should we allow aborting with an exception other than AbortedStreamException?
+            //               (ClosedSessionException in this case.)
+            res.abort();
+        });
     }
 
     @Override
@@ -387,8 +392,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             if (!isTransient) {
                 gracefulShutdownSupport.inc();
             }
-            unfinishedRequests++;
-            unfinishedResponses.put(res, true);
+            unfinishedRequests.put(req, res);
 
             if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), mapped.mapping())) {
                 reqCtx.log().addListener(log -> {
@@ -414,8 +418,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 if (!isTransient) {
                     gracefulShutdownSupport.dec();
                 }
-                unfinishedResponses.remove(res);
-                if (--unfinishedRequests == 0 && handledLastRequest) {
+                unfinishedRequests.remove(req);
+                if (unfinishedRequests.isEmpty() && handledLastRequest) {
                     ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                 }
             }), eventLoop).exceptionally(CompletionActions::log);

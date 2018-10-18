@@ -31,7 +31,7 @@ public final class WriteTimeoutException extends TimeoutException {
 
     /**
      * Returns a {@link WriteTimeoutException} which may be a singleton or a new instance, depending on
-     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static WriteTimeoutException get() {
         return Flags.verboseExceptions() ? new WriteTimeoutException() : INSTANCE;

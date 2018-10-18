@@ -27,10 +27,7 @@ import com.google.common.base.Ticker;
  * Keeps track of pending requests to allow shutdown to happen after a fixed quiet period passes
  * after the last pending request.
  */
-public abstract class GracefulShutdownSupport {
-
-    private static final GracefulShutdownSupport DISABLED =
-            new DisabledGracefulShutdownSupport();
+abstract class GracefulShutdownSupport {
 
     static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor) {
         return create(quietPeriod, blockingTaskExecutor, Ticker.systemTicker());
@@ -40,26 +37,29 @@ public abstract class GracefulShutdownSupport {
         return new DefaultGracefulShutdownSupport(quietPeriod, blockingTaskExecutor, ticker);
     }
 
-    static GracefulShutdownSupport disabled() {
-        return DISABLED;
+    static GracefulShutdownSupport createDisabled() {
+        return new DisabledGracefulShutdownSupport();
     }
-
-    GracefulShutdownSupport() {}
 
     /**
      * Increases the number of pending responses.
      */
-    public abstract void inc();
+    abstract void inc();
 
     /**
      * Decreases the number of pending responses.
      */
-    public abstract void dec();
+    abstract void dec();
 
     /**
      * Returns the number of pending responses.
      */
-    public abstract int pendingResponses();
+    abstract int pendingResponses();
+
+    /**
+     * Returns {@code true} if the graceful shutdown has started (or finished).
+     */
+    abstract boolean isShuttingDown();
 
     /**
      * Indicates the quiet period duration has passed since the last request.
@@ -67,19 +67,28 @@ public abstract class GracefulShutdownSupport {
     abstract boolean completedQuietPeriod();
 
     private static final class DisabledGracefulShutdownSupport extends GracefulShutdownSupport {
-        @Override
-        public void inc() {}
+
+        private volatile boolean shuttingDown;
 
         @Override
-        public void dec() {}
+        void inc() {}
 
         @Override
-        public int pendingResponses() {
+        void dec() {}
+
+        @Override
+        int pendingResponses() {
             return 0;
         }
 
         @Override
+        boolean isShuttingDown() {
+            return shuttingDown;
+        }
+
+        @Override
         boolean completedQuietPeriod() {
+            shuttingDown = true;
             return true;
         }
     }
@@ -107,20 +116,25 @@ public abstract class GracefulShutdownSupport {
         }
 
         @Override
-        public void inc() {
+        void inc() {
             pendingResponses.incrementAndGet();
         }
 
         @Override
-        public void dec() {
+        void dec() {
             lastResTimeNanos = ticker.read();
             updatedLastResTimeNanos = true;
             pendingResponses.decrementAndGet();
         }
 
         @Override
-        public int pendingResponses() {
+        int pendingResponses() {
             return pendingResponses.get();
+        }
+
+        @Override
+        boolean isShuttingDown() {
+            return setShutdownStartTimeNanos;
         }
 
         @Override

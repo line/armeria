@@ -32,7 +32,7 @@ public final class ResponseTimeoutException extends TimeoutException {
 
     /**
      * Returns a {@link ResponseTimeoutException} which may be a singleton or a new instance, depending on
-     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static ResponseTimeoutException get() {
         return Flags.verboseExceptions() ? new ResponseTimeoutException() : INSTANCE;

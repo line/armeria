@@ -184,23 +184,22 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
         final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
+        return new Http2ServerConnectionHandler(
+                config, pipeline.channel(), gracefulShutdownSupport, decoder, encoder, http2Settings());
+    }
+
+    private Http2Settings http2Settings() {
         final Http2Settings settings = new Http2Settings();
-        settings.initialWindowSize(config.http2InitialWindowSize());
-        settings.maxConcurrentStreams(config.http2MaxStreamsPerConnection());
+        final int initialWindowSize = config.http2InitialWindowSize();
+        if (initialWindowSize != Http2CodecUtil.DEFAULT_WINDOW_SIZE) {
+            settings.initialWindowSize(initialWindowSize);
+        }
+        final int maxStreamsPerConnection = config.http2MaxStreamsPerConnection();
+        if (maxStreamsPerConnection != Integer.MAX_VALUE) {
+            settings.maxConcurrentStreams(maxStreamsPerConnection);
+        }
         settings.maxHeaderListSize(config.http2MaxHeaderListSize());
-
-        final Http2ConnectionHandler handler =
-                new Http2ServerConnectionHandler(decoder, encoder, settings);
-
-        // Setup post build options
-        final Http2RequestDecoder listener =
-                new Http2RequestDecoder(config, pipeline.channel(), handler.encoder());
-
-        handler.connection().addListener(listener);
-        handler.decoder().frameListener(listener);
-        handler.gracefulShutdownTimeoutMillis(config.idleTimeoutMillis());
-
-        return handler;
+        return settings;
     }
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {

@@ -454,19 +454,12 @@ public class GrpcServiceServerTest {
 
     @Test
     public void tooLargeRequest_uncompressed() throws Exception {
-        final SimpleRequest request = SimpleRequest.newBuilder()
-                                                   .setPayload(
-                                                     Payload.newBuilder()
-                                                            .setBody(ByteString.copyFrom(
-                                                                    LARGE_PAYLOAD.toByteArray())))
-                                                   .build();
+        final SimpleRequest request = newLargeRequest();
         final StatusRuntimeException t =
                 (StatusRuntimeException) catchThrowable(
                         () -> blockingClient.staticUnaryCall(request));
-        // NB: Since gRPC does not support HTTP/1, it just resets the stream with an HTTP/2 CANCEL error code,
-        // which clients would interpret as Code.CANCELLED. Armeria supports HTTP/1, so more generically returns
-        // an HTTP 500.
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.UNKNOWN);
+
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED);
 
         checkRequestLogStatus(grpcStatus -> {
             assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
@@ -475,23 +468,23 @@ public class GrpcServiceServerTest {
 
     @Test
     public void tooLargeRequest_compressed() throws Exception {
-        final SimpleRequest request = SimpleRequest.newBuilder()
-                                                   .setPayload(
-                                                     Payload.newBuilder()
-                                                            .setBody(ByteString.copyFrom(
-                                                                    LARGE_PAYLOAD.toByteArray())))
-                                                   .build();
+        final SimpleRequest request = newLargeRequest();
         final StatusRuntimeException t =
                 (StatusRuntimeException) catchThrowable(
                         () -> blockingClient.withCompression("gzip").staticUnaryCall(request));
-        // NB: Since gRPC does not support HTTP/1, it just resets the stream with an HTTP/2 CANCEL error code,
-        // which clients would interpret as Code.CANCELLED. Armeria supports HTTP/1, so more generically returns
-        // an HTTP 500.
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.UNKNOWN);
+
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED);
 
         checkRequestLogStatus(grpcStatus -> {
             assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
         });
+    }
+
+    private static SimpleRequest newLargeRequest() {
+        return SimpleRequest.newBuilder()
+                            .setPayload(Payload.newBuilder()
+                                               .setBody(ByteString.copyFrom(LARGE_PAYLOAD.toByteArray())))
+                            .build();
     }
 
     @Test

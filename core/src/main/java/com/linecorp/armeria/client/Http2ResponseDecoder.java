@@ -53,6 +53,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
+    private long goAwayErrorCode = -1; // -1 if not received GOAWAY yet
 
     Http2ResponseDecoder(Http2Connection conn, Channel channel, Http2ConnectionEncoder encoder) {
         super(channel);
@@ -79,7 +80,9 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
                 // Reset the stream.
                 final int streamId = idToStreamId(id);
-                if (conn.streamMayHaveExisted(streamId)) {
+                final int lastStreamId = conn.local().lastStreamKnownByPeer();
+                if (lastStreamId < 0 || // Did not receive a GOAWAY yet or
+                    streamId <= lastStreamId) { // received a GOAWAY and the request's streamId <= lastStreamId
                     final ChannelHandlerContext ctx = channel().pipeline().lastContext();
                     if (ctx != null) {
                         encoder.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.newPromise());
@@ -91,6 +94,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             }
         }, channel().eventLoop());
         return resWrapper;
+    }
+
+    boolean receivedErrorGoAway() {
+        return goAwayErrorCode > Http2Error.NO_ERROR.code();
     }
 
     @Override
@@ -105,7 +112,19 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onStreamClosed(Http2Stream stream) {
         final HttpResponseWrapper res = getResponse(streamIdToId(stream.id()), true);
-        if (res != null) {
+        if (res == null) {
+            return;
+        }
+
+        if (goAwayErrorCode < 0) {
+            res.close(ClosedSessionException.get());
+            return;
+        }
+
+        final int lastStreamId = conn.local().lastStreamKnownByPeer();
+        if (stream.id() > lastStreamId) {
+            res.close(UnprocessedRequestException.get());
+        } else {
             res.close(ClosedSessionException.get());
         }
     }
@@ -117,7 +136,9 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {}
 
     @Override
-    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {}
+    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+        goAwayErrorCode = errorCode;
+    }
 
     @Override
     public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -304,35 +306,68 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     @Override
     public void close() {
+        closed = true;
+
         if (eventLoop.inEventLoop()) {
             // While we'd prefer to block until the pool is actually closed, we cannot block for the channels to
             // close if it was called from the event loop or we would deadlock. In practice, it's rare to call
             // close from an event loop thread, and not a main thread.
-            doClose(false);
+            doCloseAsync();
         } else {
-            eventLoop.submit(() -> doClose(true)).syncUninterruptibly();
+            doCloseSync();
         }
     }
 
-    private void doClose(boolean blocking) {
-        closed = true;
-
+    private void doCloseAsync() {
         if (allChannels.isEmpty()) {
             return;
         }
 
         final List<ChannelFuture> closeFutures = new ArrayList<>(allChannels.size());
         for (Channel ch : allChannels) {
-            if (ch.isOpen()) {
-                // NB: Do not call close() here, because it will trigger the closeFuture listener
-                //     which mutates allChannels.
-                closeFutures.add(ch.closeFuture());
-            }
+            // NB: Do not call close() here, because it will trigger the closeFuture listener
+            //     which mutates allChannels.
+            closeFutures.add(ch.closeFuture());
         }
 
         closeFutures.forEach(f -> f.channel().close());
-        if (blocking) {
-            closeFutures.forEach(ChannelFuture::syncUninterruptibly);
+    }
+
+    private void doCloseSync() {
+        final CountDownLatch outerLatch = eventLoop.submit(() -> {
+            if (allChannels.isEmpty()) {
+                return null;
+            }
+
+            final int numChannels = allChannels.size();
+            final CountDownLatch latch = new CountDownLatch(numChannels);
+            if (numChannels == 0) {
+                return latch;
+            }
+            final List<ChannelFuture> closeFutures = new ArrayList<>(numChannels);
+            for (Channel ch : allChannels) {
+                // NB: Do not call close() here, because it will trigger the closeFuture listener
+                //     which mutates allChannels.
+                final ChannelFuture f = ch.closeFuture();
+                closeFutures.add(f);
+                f.addListener((ChannelFutureListener) future -> latch.countDown());
+            }
+            closeFutures.forEach(f -> f.channel().close());
+            return latch;
+        }).syncUninterruptibly().getNow();
+
+        if (outerLatch != null) {
+            boolean interrupted = false;
+            while (outerLatch.getCount() != 0) {
+                try {
+                    outerLatch.await();
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }

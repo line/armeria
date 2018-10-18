@@ -76,6 +76,7 @@ import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerCall;
 import io.grpc.Status;
+import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
@@ -442,7 +443,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
                 // Transport error, not business logic error, so reset the stream.
                 if (!closeCalled) {
-                    res.close(newStatus.asException());
+                    final StatusException statusException = newStatus.asException();
+                    final Throwable cause = statusException.getCause();
+                    if (cause != null) {
+                        res.close(cause);
+                    } else {
+                        res.abort();
+                    }
                 }
             }
         }

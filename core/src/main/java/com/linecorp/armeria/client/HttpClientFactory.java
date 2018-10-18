@@ -271,6 +271,10 @@ final class HttpClientFactory extends AbstractClientFactory {
         }
     }
 
+    boolean isClosing() {
+        return connectionPoolListener.closed;
+    }
+
     @Override
     public void close() {
         connectionPoolListener.setClosed();

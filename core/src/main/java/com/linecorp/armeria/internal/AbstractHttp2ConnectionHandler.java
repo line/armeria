@@ -22,7 +22,10 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.Server;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -78,16 +81,18 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
 
         handlingConnectionError = true;
 
-        // TODO(trustin): Remove this once Http2ConnectionHandler.goAway() sends better debugData.
-        //                See https://github.com/netty/netty/issues/5160
-        if (http2Ex == null) {
-            http2Ex = new Http2Exception(INTERNAL_ERROR, goAwayDebugData(null, cause), cause);
-        } else if (http2Ex instanceof ClosedStreamCreationException) {
-            final ClosedStreamCreationException e = (ClosedStreamCreationException) http2Ex;
-            http2Ex = new ClosedStreamCreationException(e.error(), goAwayDebugData(e, cause), cause);
-        } else {
-            http2Ex = new Http2Exception(
-                    http2Ex.error(), goAwayDebugData(http2Ex, cause), cause, http2Ex.shutdownHint());
+        if (Flags.verboseResponses()) {
+            // TODO(trustin): Remove this once Http2ConnectionHandler.goAway() sends better debugData.
+            //                See https://github.com/netty/netty/issues/5160
+            if (http2Ex == null) {
+                http2Ex = new Http2Exception(INTERNAL_ERROR, goAwayDebugData(null, cause), cause);
+            } else if (http2Ex instanceof ClosedStreamCreationException) {
+                final ClosedStreamCreationException e = (ClosedStreamCreationException) http2Ex;
+                http2Ex = new ClosedStreamCreationException(e.error(), goAwayDebugData(e, cause), cause);
+            } else {
+                http2Ex = new Http2Exception(
+                        http2Ex.error(), goAwayDebugData(http2Ex, cause), cause, http2Ex.shutdownHint());
+            }
         }
 
         super.onConnectionError(ctx, outbound, cause, http2Ex);
@@ -118,12 +123,16 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        closing = true;
+        if (!closing) {
+            closing = true;
 
-        // TODO(trustin): Remove this line once https://github.com/netty/netty/issues/4210 is fixed.
-        connection().forEachActiveStream(closeAllStreams);
+            if (needsImmediateDisconnection()) {
+                connection().forEachActiveStream(closeAllStreams);
+            }
 
-        onCloseRequest(ctx);
+            onCloseRequest(ctx);
+        }
+
         super.close(ctx, promise);
     }
 
@@ -132,4 +141,15 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
      * streams have been closed.
      */
     protected abstract void onCloseRequest(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Returns {@code true} if the connection has to be closed immediately rather than sending a GOAWAY
+     * frame and waiting for the remaining streams. This method should return {@code true} when:
+     * <ul>
+     *   <li>{@link ClientFactory} is being closed.</li>
+     *   <li>{@link Server} is being stopped.</li>
+     *   <li>Received a GOAWAY frame with non-OK error code.</li>
+     * </ul>
+     */
+    protected abstract boolean needsImmediateDisconnection();
 }

@@ -22,6 +22,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
@@ -47,6 +48,28 @@ public interface RetryStrategy<I extends Request, O extends Response> {
      */
     static <I extends Request, O extends Response> RetryStrategy<I, O> never() {
         return (request, response) -> CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * A {@link RetryStrategy} that retries only on {@link UnprocessedRequestException} with
+     * the {@link #defaultBackoff}..
+     */
+    static RetryStrategy<HttpRequest, HttpResponse> onUnprocessed() {
+        return onUnprocessed(defaultBackoff);
+    }
+
+    /**
+     * A {@link RetryStrategy} that retries only on {@link UnprocessedRequestException} with the specified
+     * {@link Backoff}.
+     */
+    static RetryStrategy<HttpRequest, HttpResponse> onUnprocessed(Backoff backoff) {
+        requireNonNull(backoff, "backoff");
+        return onStatus((status, thrown) -> {
+            if (thrown != null && Exceptions.peel(thrown) instanceof UnprocessedRequestException) {
+                return backoff;
+            }
+            return null;
+        });
     }
 
     /**
@@ -81,6 +104,7 @@ public interface RetryStrategy<I extends Request, O extends Response> {
      */
     static RetryStrategy<HttpRequest, HttpResponse> onStatus(
             BiFunction<HttpStatus, Throwable, Backoff> backoffFunction) {
+        // TODO(trustin): Apply a different backoff for UnprocessedRequestException.
         return new HttpStatusBasedRetryStrategy(backoffFunction);
     }
 

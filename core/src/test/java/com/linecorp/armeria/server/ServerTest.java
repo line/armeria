@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -317,6 +318,9 @@ public class ServerTest {
 
     @Test
     public void duplicatedPort() {
+        // Known to fail on WSL (Windows Subsystem for Linux)
+        assumeTrue(System.getenv("WSLENV") == null);
+
         final Server duplicatedPortServer = new ServerBuilder()
                 .http(server.httpPort())
                 .service("/", (ctx, res) -> HttpResponse.of(""))
