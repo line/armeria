@@ -53,6 +53,11 @@ jmh {
     } else {
         fork = 1
     }
+
+    if (rootProject.hasProperty('jmh.jvmargs')) {
+        jvmArgsAppend = String.valueOf(rootProject.findProperty('jmh.jvmargs')).split(' ').toList()
+    }
+
     if (rootProject.hasProperty('jmh.iterations')) {
         iterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.iterations')))
     }
