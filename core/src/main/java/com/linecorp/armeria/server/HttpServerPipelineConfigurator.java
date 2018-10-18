@@ -184,8 +184,13 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
         final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
+        final Http2Settings settings = new Http2Settings();
+        settings.initialWindowSize(config.http2InitialWindowSize());
+        settings.maxConcurrentStreams(config.http2MaxStreamsPerConnection());
+        settings.maxHeaderListSize(config.http2MaxHeaderListSize());
+
         final Http2ConnectionHandler handler =
-                new Http2ServerConnectionHandler(decoder, encoder, new Http2Settings());
+                new Http2ServerConnectionHandler(decoder, encoder, settings);
 
         // Setup post build options
         final Http2RequestDecoder listener =

@@ -42,6 +42,7 @@ import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.PathMappingContext;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -153,6 +154,25 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
+
+    private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_WINDOW_SIZE = 1024 * 1024; // 1MiB
+    private static final int DEFAULT_HTTP2_INITIAL_WINDOW_SIZE =
+            getInt("defaultHttp2InitialWindowSize",
+                   DEFAULT_DEFAULT_HTTP2_INITIAL_WINDOW_SIZE,
+                   value -> value > 0);
+
+    private static final int DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
+    private static final int DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION =
+            getInt("defaultHttp2MaxStreamsPerConnection",
+                   DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION,
+                   value -> value > 0);
+
+    // from Netty default maxHeaderSize
+    private static final int DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192;
+    private static final int DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE =
+            getInt("defaultHttp2MaxHeaderListSize",
+                   DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE,
+                   value -> value > 0);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
@@ -428,8 +448,8 @@ public final class Flags {
      * so that their lengths never exceed it.
      * Note that this value has effect only if a user did not specify it.
      *
-     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE}.
-     * Specify theb {@code -Dcom.linecorp.armeria.defaultMaxHttp1ChunkSize=<integer>} JVM option
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxHttp1ChunkSize=<integer>} JVM option
      * to override the default value.
      */
     public static int defaultMaxHttp1ChunkSize() {
@@ -456,6 +476,42 @@ public final class Flags {
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
+    }
+
+    /**
+     * Returns the default value of the {@link ServerBuilder#http2InitialWindowSize(int)} option.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_INITIAL_WINDOW_SIZE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2InitialWindowSize=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultHttp2InitialWindowSize() {
+        return DEFAULT_HTTP2_INITIAL_WINDOW_SIZE;
+    }
+
+    /**
+     * Returns the default value of the {@link ServerBuilder#http2MaxStreamsPerConnection(int)} option.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxStreamsPerConnection=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultHttp2MaxStreamsPerConnection() {
+        return DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION;
+    }
+
+    /**
+     * Returns the default value of the {@link ServerBuilder#http2MaxHeaderListSize(int)} option.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxHeaderListSize=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultHttp2MaxHeaderListSize() {
+        return DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE;
     }
 
     /**
