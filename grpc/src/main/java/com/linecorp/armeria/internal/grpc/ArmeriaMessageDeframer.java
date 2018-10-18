@@ -177,9 +177,6 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private boolean endOfStream;
 
     @Nullable
-    private ByteBuf firstFrame;
-
-    @Nullable
     private CompositeByteBuf unprocessed;
 
     private long pendingDeliveries;
@@ -247,16 +244,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 buf = alloc.buffer(data.length());
                 buf.writeBytes(data.array(), data.offset(), data.length());
             }
-            if (unprocessed != null) {
-                unprocessed.addComponent(true, buf);
-            } else if (firstFrame == null) {
-                firstFrame = buf;
-            } else {
-                unprocessed = alloc.compositeBuffer();
-                unprocessed.addComponent(true, firstFrame);
-                unprocessed.addComponent(true, buf);
-                firstFrame = null;
-            }
+            assert unprocessed != null;
+            unprocessed.addComponent(true, buf);
         }
 
         // Indicate that all of the data for this stream has been received.
@@ -271,14 +260,10 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     @Override
     public void close() {
         try {
-            if (firstFrame != null) {
-                firstFrame.release();
-            }
             if (unprocessed != null) {
                 unprocessed.release();
             }
         } finally {
-            firstFrame = null;
             unprocessed = null;
         }
     }
@@ -287,7 +272,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * Indicates whether or not this deframer has been closed.
      */
     public boolean isClosed() {
-        return firstFrame == null && unprocessed == null;
+        return unprocessed == null;
     }
 
     public ArmeriaMessageDeframer decompressor(Decompressor decompressor) {
@@ -344,7 +329,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             final boolean stalled = !hasRequiredBytes();
 
             if (endOfStream && stalled) {
-                final boolean havePartialMessage = readableBuf().isReadable();
+                assert unprocessed != null;
+                final boolean havePartialMessage = unprocessed.isReadable();
                 if (!havePartialMessage) {
                     listener.endOfStream();
                     deliveryStalled = false;
@@ -363,7 +349,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     private boolean hasRequiredBytes() {
-        return readableBuf().readableBytes() >= requiredLength;
+        return unprocessed.readableBytes() >= requiredLength;
     }
 
     /**
@@ -371,8 +357,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * frame length.
      */
     private void readHeader() {
-        final ByteBuf buf = readableBuf();
-        final int type = buf.readUnsignedByte();
+        assert unprocessed != null;
+        final int type = unprocessed.readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
             throw Status.INTERNAL.withDescription(
                     DEBUG_STRING + ": Frame header malformed: reserved bits not zero")
@@ -381,7 +367,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         compressedFlag = (type & COMPRESSED_FLAG_MASK) != 0;
 
         // Update the required length to include the length of the frame.
-        requiredLength = buf.readInt();
+        requiredLength = unprocessed.readInt();
         if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
             throw Status.RESOURCE_EXHAUSTED.withDescription(
                     String.format("%s: Frame size %d exceeds maximum: %d. ",
@@ -407,28 +393,11 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         requiredLength = HEADER_LENGTH;
     }
 
-    private ByteBuf readableBuf() {
-        if (firstFrame != null) {
-            return firstFrame;
-        } else {
-            assert unprocessed != null;
-            return unprocessed;
-        }
-    }
-
     private ByteBuf readBytes(int length) {
-        if (firstFrame != null) {
-            if (firstFrame.readableBytes() == length) {
-                return firstFrame;
-            } else {
-                return firstFrame.retainedSlice(firstFrame.readerIndex(), length);
-            }
-        } else {
-            assert unprocessed != null;
-            final ByteBuf buf = unprocessed.readBytes(length);
-            unprocessed.discardReadComponents();
-            return buf;
-        }
+        assert unprocessed != null;
+        final ByteBuf buf = unprocessed.readBytes(length);
+        unprocessed.discardReadComponents();
+        return buf;
     }
 
     private static ByteBufOrStream getUncompressedBody(ByteBuf buf) {
