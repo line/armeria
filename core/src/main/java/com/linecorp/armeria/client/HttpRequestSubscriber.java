@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
-import com.linecorp.armeria.common.AbstractRequestContext;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
@@ -73,6 +72,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
+    private boolean isSubscriptionCompleted;
 
     HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
@@ -93,11 +93,19 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
      */
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
+        // If a message has been sent out, cancel the timeout for starting a request.
+        cancelTimeout();
+
         if (future.isSuccess()) {
             if (state == State.DONE) {
                 // Successfully sent the request; schedule the response timeout.
                 response.scheduleTimeout(ch.eventLoop());
-            } else {
+            }
+
+            // Request more messages regardless whether the state is DONE. It makes the producer have
+            // a chance to produce the last call such as 'onComplete' and 'onError' when there are
+            // no more messages it can produce.
+            if (!isSubscriptionCompleted) {
                 assert subscription != null;
                 subscription.request(1);
             }
@@ -121,15 +129,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final EventLoop eventLoop = ch.eventLoop();
         if (timeoutMillis > 0) {
+            // The timer would be executed if the first message has not been sent out within the timeout.
             timeoutFuture = eventLoop.schedule(
-                    () -> {
-                        if (state == State.NEEDS_TO_WRITE_FIRST_HEADER) {
-                            if (reqCtx instanceof AbstractRequestContext) {
-                                ((AbstractRequestContext) reqCtx).setTimedOut();
-                            }
-                            failAndRespond(WriteTimeoutException.get());
-                        }
-                    },
+                    () -> failAndRespond(WriteTimeoutException.get()),
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
 
@@ -154,13 +156,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         logBuilder.requestHeaders(firstHeaders);
 
         if (request.isEmpty()) {
-            setDone();
+            state = State.DONE;
             write0(firstHeaders, true, true);
         } else {
+            state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
             write0(firstHeaders, false, true);
         }
-        state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
-        cancelTimeout();
     }
 
     private HttpHeaders autoFillHeaders(Channel ch) {
@@ -224,26 +225,27 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                     // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
                 }
-                break;
+                write(o, endOfStream, true);
+                return;
             }
             case DONE:
+                // Cancel the subscription if any message comes here after the state has been changed to DONE.
+                cancelSubscription();
                 ReferenceCountUtil.safeRelease(o);
                 return;
         }
-
-        write(o, endOfStream, true);
     }
 
     @Override
     public void onError(Throwable cause) {
+        isSubscriptionCompleted = true;
         failAndRespond(cause);
     }
 
     @Override
     public void onComplete() {
-        if (!cancelTimeout()) {
-            return;
-        }
+        isSubscriptionCompleted = true;
+        cancelTimeout();
 
         if (state != State.DONE) {
             write(HttpData.EMPTY_DATA, true, true);
@@ -258,7 +260,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         if (endOfStream) {
-            setDone();
+            state = State.DONE;
         }
 
         ch.eventLoop().execute(() -> write0(o, endOfStream, flush));
@@ -285,11 +287,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (flush) {
             ch.flush();
         }
-
-        if (state == State.DONE) {
-            assert subscription != null;
-            subscription.cancel();
-        }
     }
 
     private int streamId() {
@@ -297,16 +294,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private void fail(Throwable cause) {
-        setDone();
+        state = State.DONE;
         logBuilder.endRequest(cause);
         logBuilder.endResponse(cause);
-        assert subscription != null;
-        subscription.cancel();
+        cancelSubscription();
     }
 
-    private void setDone() {
-        cancelTimeout();
-        state = State.DONE;
+    private void cancelSubscription() {
+        isSubscriptionCompleted = true;
+        assert subscription != null;
+        subscription.cancel();
     }
 
     private void failAndRespond(Throwable cause) {

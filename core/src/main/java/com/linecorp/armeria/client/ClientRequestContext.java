@@ -62,20 +62,20 @@ public interface ClientRequestContext extends RequestContext {
     String fragment();
 
     /**
-     * Returns the amount of time allowed until sending out the current {@link Request} completely.
-     * This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
      */
     long writeTimeoutMillis();
 
     /**
-     * Sets the amount of time allowed until sending out the current {@link Request} completely.
-     * This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeoutMillis(long writeTimeoutMillis);
 
     /**
-     * Sets the amount of time allowed until sending out the current {@link Request} completely.
-     * This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeout(Duration writeTimeout);
 
