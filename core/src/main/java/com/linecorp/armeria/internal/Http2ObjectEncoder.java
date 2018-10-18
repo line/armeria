@@ -26,6 +26,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
@@ -48,63 +49,80 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
 
     @Override
     protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream) {
-        if (!isWritable(streamId)) {
+        if (isStreamPresentAndWritable(streamId)) {
+            // Writing to an existing stream.
+            return encoder.writeHeaders(
+                    ctx, streamId, ArmeriaHttpUtil.toNettyHttp2(headers), 0, endStream, ctx.newPromise());
+        }
+
+        final Http2Connection conn = encoder.connection();
+        if (conn.isServer()) {
+            // One of the following cases:
+            // - Stream has been closed already.
+            // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
             return newFailedFuture(ClosedPublisherException.get());
         }
 
+        if (conn.local().mayHaveCreatedStream(streamId)) {
+            // Stream has been closed.
+            return newFailedFuture(ClosedPublisherException.get());
+        }
+
+        // Client starts a new stream.
         return encoder.writeHeaders(
                 ctx, streamId, ArmeriaHttpUtil.toNettyHttp2(headers), 0, endStream, ctx.newPromise());
     }
 
     @Override
     protected ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
-        if (!isWritable(streamId)) {
+        if (isStreamPresentAndWritable(streamId)) {
+            // Write to an existing stream.
+            return encoder.writeData(ctx, streamId, toByteBuf(data), 0, endStream, ctx.newPromise());
+        }
+
+        if (encoder.connection().local().mayHaveCreatedStream(streamId)) {
+            // Can't write to an outdated (closed) stream.
             ReferenceCountUtil.safeRelease(data);
             return data.isEmpty() ? ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
                                   : newFailedFuture(ClosedPublisherException.get());
         }
 
-        if (!encoder.connection().streamMayHaveExisted(streamId)) {
-            // Cannot start a new stream with a DATA frame. It must start with a HEADERS frame.
-            ReferenceCountUtil.safeRelease(data);
-            return newFailedFuture(new IllegalStateException(
-                    "cannot start a new stream " + streamId + " with a DATA frame"));
-        }
-
-        return encoder.writeData(ctx, streamId, toByteBuf(data), 0, endStream, ctx.newPromise());
+        // Cannot start a new stream with a DATA frame. It must start with a HEADERS frame.
+        ReferenceCountUtil.safeRelease(data);
+        return newFailedFuture(new IllegalStateException(
+                "cannot start a new stream " + streamId + " with a DATA frame"));
     }
 
     @Override
     protected ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
-        if (encoder.connection().streamMayHaveExisted(streamId)) {
+        final Http2Stream stream = encoder.connection().stream(streamId);
+        // Send a RST_STREAM frame only for an active stream which did not send a RST_STREAM frame already.
+        if (stream != null && !stream.isResetSent()) {
             return encoder.writeRstStream(ctx, streamId, error.code(), ctx.newPromise());
         }
 
-        // Tried to send a RST frame for a non-existent stream. This can happen when a client-side
-        // subscriber terminated its response stream even before the first frame of the stream is sent.
-        // In this case, we don't need to send a RST stream.
         return ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
     }
 
     /**
-     * Returns {@code true} if the encoder can write something to the specified {@code streamId}.
+     * Returns {@code true} if the stream with the given {@code streamId} has been created and is writable.
+     * Note that this method will return {@code false} for the stream which was not created yet.
      */
-    private boolean isWritable(int streamId) {
+    private boolean isStreamPresentAndWritable(int streamId) {
         final Http2Stream stream = encoder.connection().stream(streamId);
-        if (stream != null) {
-            switch (stream.state()) {
-                case RESERVED_LOCAL:
-                case OPEN:
-                case HALF_CLOSED_REMOTE:
-                    return true;
-                default:
-                    // The response has been sent already.
-                    return false;
-            }
+        if (stream == null) {
+            return false;
         }
 
-        // Return false if the stream has been completely closed and removed.
-        return !encoder.connection().streamMayHaveExisted(streamId);
+        switch (stream.state()) {
+            case RESERVED_LOCAL:
+            case OPEN:
+            case HALF_CLOSED_REMOTE:
+                return true;
+            default:
+                // The response has been sent already.
+                return false;
+        }
     }
 
     @Override

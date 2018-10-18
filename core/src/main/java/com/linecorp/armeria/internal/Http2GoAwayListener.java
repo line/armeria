@@ -52,9 +52,11 @@ public class Http2GoAwayListener extends Http2ConnectionAdapter {
         onGoAway("Received", lastStreamId, errorCode, debugData);
 
         // Send a GOAWAY back to the peer and close the connection gracefully if we did not send GOAWAY yet.
-        // This will make sure that the connection is always closed after receiving GOAWAY,
-        // because otherwise we have to wait until the peer who sent GOAWAY to us closes the connection.
+        // This makes sure that the connection is closed eventually once we receive GOAWAY.
         if (!goAwaySent) {
+            // This does not close the connection immediately but sends a GOAWAY frame.
+            // The connection will be closed when all streams are closed.
+            // See AbstractHttp2ConnectionHandler.close().
             ch.close();
         }
     }

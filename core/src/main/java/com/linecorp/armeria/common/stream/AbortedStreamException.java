@@ -34,7 +34,7 @@ public final class AbortedStreamException extends RuntimeException {
 
     /**
      * Returns a {@link AbortedStreamException} which may be a singleton or a new instance, depending on
-     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static AbortedStreamException get() {
         return Flags.verboseExceptions() ? new AbortedStreamException() : INSTANCE;

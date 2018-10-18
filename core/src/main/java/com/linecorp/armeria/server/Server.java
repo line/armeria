@@ -264,7 +264,8 @@ public final class Server implements AutoCloseable {
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, ServerListener> {
 
-        private volatile GracefulShutdownSupport gracefulShutdownSupport = GracefulShutdownSupport.disabled();
+        @Nullable
+        private volatile GracefulShutdownSupport gracefulShutdownSupport;
 
         ServerStartStopSupport(Executor startStopExecutor) {
             super(startStopExecutor);
@@ -273,7 +274,7 @@ public final class Server implements AutoCloseable {
         @Override
         protected CompletionStage<Void> doStart() {
             if (config().gracefulShutdownQuietPeriod().isZero()) {
-                gracefulShutdownSupport = GracefulShutdownSupport.disabled();
+                gracefulShutdownSupport = GracefulShutdownSupport.createDisabled();
             } else {
                 gracefulShutdownSupport =
                         GracefulShutdownSupport.create(config().gracefulShutdownQuietPeriod(),
@@ -321,6 +322,9 @@ public final class Server implements AutoCloseable {
 
         private void setupServerMetrics() {
             final MeterRegistry meterRegistry = config().meterRegistry();
+            final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
+            assert gracefulShutdownSupport != null;
+
             meterRegistry.gauge("armeria.server.pendingResponses", gracefulShutdownSupport,
                                 GracefulShutdownSupport::pendingResponses);
             meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
@@ -331,7 +335,8 @@ public final class Server implements AutoCloseable {
         protected CompletionStage<Void> doStop() {
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
-            if (gracefulShutdownSupport.completedQuietPeriod()) {
+            if (gracefulShutdownSupport == null ||
+                gracefulShutdownSupport.completedQuietPeriod()) {
                 doStop(future, null);
                 return future;
             }

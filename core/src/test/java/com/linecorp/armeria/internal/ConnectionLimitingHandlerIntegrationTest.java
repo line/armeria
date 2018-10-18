@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,6 +50,9 @@ public class ConnectionLimitingHandlerIntegrationTest {
 
     @Test
     public void testExceedMaxNumConnections() throws Exception {
+        // Known to fail on WSL (Windows Subsystem for Linux)
+        assumeTrue(System.getenv("WSLENV") == null);
+
         try (Socket s1 = newSocketAndTest()) {
             assertThat(server.server().numConnections()).isEqualTo(1);
 

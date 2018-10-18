@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -42,7 +43,12 @@ final class HttpStatusBasedCircuitBreakerStrategy implements CircuitBreakerStrat
         response.completionFuture().whenComplete(subscriber);
         response.subscribe(subscriber);
 
-        return future.handle(
-                (headers, thrown) -> function.apply(headers != null ? headers.status() : null, thrown));
+        return future.handle((headers, thrown) -> {
+            if (thrown instanceof UnprocessedRequestException) {
+                return null; // Neither success nor failure.
+            }
+
+            return function.apply(headers != null ? headers.status() : null, thrown);
+        });
     }
 }

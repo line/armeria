@@ -71,10 +71,20 @@ public class GracefulShutdownSupportTest {
 
     @Test
     public void testDisabled() {
-        final GracefulShutdownSupport support = GracefulShutdownSupport.disabled();
+        final GracefulShutdownSupport support = GracefulShutdownSupport.createDisabled();
+        assertThat(support.isShuttingDown()).isFalse();
         assertThat(support.completedQuietPeriod()).isTrue();
+        assertThat(support.isShuttingDown()).isTrue();
         support.inc();
         assertThat(support.completedQuietPeriod()).isTrue();
+    }
+
+    @Test
+    public void testIsShutdown() {
+        // completedQuietPeriod() must make isShuttingDown() start to return true.
+        assertThat(support.isShuttingDown()).isFalse();
+        support.completedQuietPeriod();
+        assertThat(support.isShuttingDown()).isTrue();
     }
 
     @Test

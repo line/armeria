@@ -32,7 +32,7 @@ public final class ClosedClientFactoryException extends RuntimeException {
 
     /**
      * Returns a {@link ClosedClientFactoryException} which may be a singleton or a new instance, depending on
-     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static ClosedClientFactoryException get() {
         return Flags.verboseExceptions() ? new ClosedClientFactoryException() : INSTANCE;
