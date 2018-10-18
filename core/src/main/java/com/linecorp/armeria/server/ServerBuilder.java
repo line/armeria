@@ -499,8 +499,8 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the initial HTTP/2 flow control window size. Larger values can stream warmup time at
-     * the expense of being easier to overload the server. Defaults to
+     * Sets the initial HTTP/2 flow control window size. Larger values can lower stream warmup time
+     * at the expense of being easier to overload the server. Defaults to
      * {@link Flags#defaultHttp2InitialWindowSize()}.
      */
     public ServerBuilder http2InitialWindowSize(int windowSize) {
@@ -521,7 +521,7 @@ public final class ServerBuilder {
 
     /**
      * Sets the maximum size of headers that can be received. Defaults to
-     * {@link Flags#defaultHttp2MaxHeaderListSize()} ()}.
+     * {@link Flags#defaultHttp2MaxHeaderListSize()}.
      */
     public ServerBuilder http2MaxHeaderListSize(int headerListSize) {
         this.http2MaxHeaderListSize = validateNonNegative(headerListSize, "headerListSize");
