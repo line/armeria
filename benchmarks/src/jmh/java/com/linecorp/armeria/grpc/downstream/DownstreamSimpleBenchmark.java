@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.grpc.downstream;
 
+import java.time.Duration;
+
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceFutureStub;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
@@ -61,6 +64,8 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
     protected void setUp() throws Exception {
         server = new ServerBuilder()
                 .serviceUnder("/", new GrpcServiceBuilder().addService(new GithubApiService()).build())
+                .defaultRequestTimeout(Duration.ZERO)
+                .meterRegistry(NoopMeterRegistry.get())
                 .build();
         server.start().join();
         final String url = "gproto+http://127.0.0.1:" + port() + '/';
