@@ -246,11 +246,10 @@ public class Http2GoAwayTest {
     }
 
     private static ByteBuf readFrame(InputStream in) throws IOException {
-        // Read a GOAWAY frame.
-        final byte[] goAwayFrameBuf = readBytes(in, 9);
-        final int payloadLength = payloadLength(goAwayFrameBuf);
+        final byte[] frameBuf = readBytes(in, 9);
+        final int payloadLength = payloadLength(frameBuf);
         final ByteBuf buffer = Unpooled.buffer(9 + payloadLength);
-        buffer.writeBytes(goAwayFrameBuf);
+        buffer.writeBytes(frameBuf);
         buffer.writeBytes(in, payloadLength);
         return buffer;
     }

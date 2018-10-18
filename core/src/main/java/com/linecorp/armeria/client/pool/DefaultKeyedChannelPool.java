@@ -306,6 +306,8 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     @Override
     public void close() {
+        closed = true;
+
         if (eventLoop.inEventLoop()) {
             // While we'd prefer to block until the pool is actually closed, we cannot block for the channels to
             // close if it was called from the event loop or we would deadlock. In practice, it's rare to call
@@ -317,8 +319,6 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     }
 
     private void doCloseAsync() {
-        closed = true;
-
         if (allChannels.isEmpty()) {
             return;
         }
@@ -334,11 +334,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     }
 
     private void doCloseSync() {
-        closed = true;
-        if (allChannels.isEmpty()) {
-            return;
-        }
         final CountDownLatch outerLatch = eventLoop.submit(() -> {
+            if (allChannels.isEmpty()) {
+                return null;
+            }
+
             final int numChannels = allChannels.size();
             final CountDownLatch latch = new CountDownLatch(numChannels);
             if (numChannels == 0) {
@@ -355,16 +355,19 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
             closeFutures.forEach(f -> f.channel().close());
             return latch;
         }).syncUninterruptibly().getNow();
-        boolean interrupted = false;
-        while (outerLatch.getCount() != 0) {
-            try {
-                outerLatch.await();
-            } catch (InterruptedException e) {
-                interrupted = true;
+
+        if (outerLatch != null) {
+            boolean interrupted = false;
+            while (outerLatch.getCount() != 0) {
+                try {
+                    outerLatch.await();
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
             }
-        }
-        if (interrupted) {
-            Thread.currentThread().interrupt();
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }
