@@ -42,6 +42,7 @@ import com.linecorp.armeria.testing.common.EventLoopRule;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2FrameTypes;
 
 public class Http2GoAwayTest {
@@ -58,10 +59,7 @@ public class Http2GoAwayTest {
     @Test
     public void streamEndsBeforeGoAway() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
-             ClientFactory clientFactory = new ClientFactoryBuilder()
-                     .useHttp2Preface(true)
-                     .workerGroup(eventLoop.get(), false)
-                     .build()) {
+             ClientFactory clientFactory = newClientFactory()) {
 
             final int port = ss.getLocalPort();
 
@@ -107,9 +105,7 @@ public class Http2GoAwayTest {
     @Test
     public void streamEndsAfterGoAway() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
-             ClientFactory clientFactory = new ClientFactoryBuilder()
-                     .workerGroup(eventLoop.get(), false)
-                     .useHttp2Preface(true).build()) {
+             ClientFactory clientFactory = newClientFactory()) {
 
             final int port = ss.getLocalPort();
 
@@ -156,10 +152,7 @@ public class Http2GoAwayTest {
     @Test
     public void streamGreaterThanLastStreamId() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
-             ClientFactory clientFactory = new ClientFactoryBuilder()
-                     .useHttp2Preface(true)
-                     .workerGroup(eventLoop.get(), false)
-                     .build()) {
+             ClientFactory clientFactory = newClientFactory()) {
 
             final int port = ss.getLocalPort();
 
@@ -211,6 +204,16 @@ public class Http2GoAwayTest {
                 assertThat(in.read()).isEqualTo(-1);
             }
         }
+    }
+
+    private static ClientFactory newClientFactory() {
+        return new ClientFactoryBuilder()
+                .useHttp2Preface(true)
+                // Set the window size to the HTTP/2 default values to simplify the traffic.
+                .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                .workerGroup(eventLoop.get(), false)
+                .build();
     }
 
     private static void handleInitialExchange(InputStream in, BufferedOutputStream out) throws IOException {

@@ -23,6 +23,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -77,9 +78,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandler;
@@ -263,12 +267,28 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             protocol = H2C;
         }
 
-        final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
+        final ChannelPipeline pipeline = ctx.pipeline();
+        final Http2ConnectionHandler handler = pipeline.get(Http2ConnectionHandler.class);
         if (responseEncoder == null) {
             responseEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
         } else if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
             responseEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
+        }
+
+        // Update the connection-level flow-control window size.
+        final int initialWindow = config.http2InitialConnectionWindowSize();
+        if (initialWindow > DEFAULT_WINDOW_SIZE) {
+            incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
+        }
+    }
+
+    private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
+        try {
+            final Http2Connection connection = pipeline.get(Http2ServerConnectionHandler.class).connection();
+            connection.local().flowController().incrementWindowSize(connection.connectionStream(), delta);
+        } catch (Http2Exception e) {
+            logger.warn("Failed to increment local flowController window size: {}", delta, e);
         }
     }
 

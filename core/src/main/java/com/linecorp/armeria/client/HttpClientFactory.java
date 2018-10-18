@@ -75,12 +75,13 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap baseBootstrap;
     private final Consumer<? super SslContextBuilder> sslContextCustomizer;
-    private final int initialHttp2ConnectionWindowSize;
-    private final int initialHttp2StreamWindowSize;
+    private final int http2InitialConnectionWindowSize;
+    private final int http2InitialStreamWindowSize;
     private final int http2MaxFrameSize;
-    private final int maxHttp1InitialLineLength;
-    private final int maxHttp1HeaderSize;
-    private final int maxHttp1ChunkSize;
+    private final long http2MaxHeaderListSize;
+    private final int http1MaxInitialLineLength;
+    private final int http1MaxHeaderSize;
+    private final int http1MaxChunkSize;
     private final long idleTimeoutMillis;
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
@@ -101,9 +102,9 @@ final class HttpClientFactory extends AbstractClientFactory {
             Consumer<? super SslContextBuilder> sslContextCustomizer,
             Function<? super EventLoopGroup,
                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
-            int initialHttp2ConnectionWindowSize, int initialHttp2StreamWindowSize, int http2MaxFrameSize,
-            int maxHttp1InitialLineLength, int maxHttp1HeaderSize, int maxHttp1ChunkSize,
-            long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
+            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize, int http2MaxFrameSize,
+            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
+            int http1MaxChunkSize, long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
             KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener, MeterRegistry meterRegistry) {
 
         @SuppressWarnings("unchecked")
@@ -124,12 +125,13 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.shutdownWorkerGroupOnClose = shutdownWorkerGroupOnClose;
         this.baseBootstrap = baseBootstrap;
         this.sslContextCustomizer = sslContextCustomizer;
-        this.initialHttp2ConnectionWindowSize = initialHttp2ConnectionWindowSize;
-        this.initialHttp2StreamWindowSize = initialHttp2StreamWindowSize;
+        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
+        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxFrameSize = http2MaxFrameSize;
-        this.maxHttp1InitialLineLength = maxHttp1InitialLineLength;
-        this.maxHttp1HeaderSize = maxHttp1HeaderSize;
-        this.maxHttp1ChunkSize = maxHttp1ChunkSize;
+        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+        this.http1MaxInitialLineLength = http1MaxInitialLineLength;
+        this.http1MaxHeaderSize = http1MaxHeaderSize;
+        this.http1MaxChunkSize = http1MaxChunkSize;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.useHttp2Preface = useHttp2Preface;
         this.useHttp1Pipelining = useHttp1Pipelining;
@@ -152,28 +154,32 @@ final class HttpClientFactory extends AbstractClientFactory {
         return sslContextCustomizer;
     }
 
-    int initialHttp2ConnectionWindowSize() {
-        return initialHttp2ConnectionWindowSize;
+    int http2InitialConnectionWindowSize() {
+        return http2InitialConnectionWindowSize;
     }
 
-    int initialHttp2StreamWindowSize() {
-        return initialHttp2StreamWindowSize;
+    int http2InitialStreamWindowSize() {
+        return http2InitialStreamWindowSize;
     }
 
     int http2MaxFrameSize() {
         return http2MaxFrameSize;
     }
 
-    int maxHttp1InitialLineLength() {
-        return maxHttp1InitialLineLength;
+    long http2MaxHeaderListSize() {
+        return http2MaxHeaderListSize;
     }
 
-    int maxHttp1HeaderSize() {
-        return maxHttp1HeaderSize;
+    int http1MaxInitialLineLength() {
+        return http1MaxInitialLineLength;
     }
 
-    int maxHttp1ChunkSize() {
-        return maxHttp1ChunkSize;
+    int http1MaxHeaderSize() {
+        return http1MaxHeaderSize;
+    }
+
+    int http1MaxChunkSize() {
+        return http1MaxChunkSize;
     }
 
     long idleTimeoutMillis() {

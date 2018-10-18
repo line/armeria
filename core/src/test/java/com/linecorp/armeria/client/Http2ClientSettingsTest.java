@@ -46,6 +46,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
+import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2EventAdapter;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -66,9 +67,9 @@ public class Http2ClientSettingsTest {
              ClientFactory clientFactory = new ClientFactoryBuilder()
                      .useHttp2Preface(true)
                      // Client sends a WINDOW_UPDATE frame for connection when it receives 64 * 1024 bytes.
-                     .initialHttp2ConnectionWindowSize(128 * 1024)
+                     .http2InitialConnectionWindowSize(128 * 1024)
                      // Client sends a WINDOW_UPDATE frame for stream when it receives 48 * 1024 bytes.
-                     .initialHttp2StreamWindowSize(96 * 1024)
+                     .http2InitialStreamWindowSize(96 * 1024)
                      .build()) {
 
             final int port = ss.getLocalPort();
@@ -142,6 +143,9 @@ public class Http2ClientSettingsTest {
         try (ServerSocket ss = new ServerSocket(0);
              ClientFactory clientFactory = new ClientFactoryBuilder()
                      .useHttp2Preface(true)
+                     // Set the window size to the HTTP/2 default values to simplify the traffic.
+                     .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                     .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
                      .http2MaxFrameSize(DEFAULT_MAX_FRAME_SIZE * 2) // == 16384 * 2
                      .build()) {
 
@@ -311,6 +315,7 @@ public class Http2ClientSettingsTest {
         final byte[] settingsFrameWithMaxFrameSize = readBytes(in, 21);
         final byte[] expected = {
                 0x00, 0x00, 0x0C, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+                // Note that there is no INITIAL_WINDOW_SIZE here because we specified the default (65535).
                 0x00, 0x05, 0x00, 0x00, (byte) 0x80, 0x00, // MAX_FRAME_SIZE = 32768
                 0x00, 0x06, 0x00, 0x00, (byte) 0x20, 0x00  // MAX_HEADER_LIST_SIZE = 8192
         };

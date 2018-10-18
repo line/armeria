@@ -204,12 +204,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 req.close(ContentTooLargeException.get());
             }
 
-            if (isWritable(streamId)) {
+            final Http2Stream stream = writer.connection().stream(streamId);
+            if (isWritable(stream)) {
                 writeErrorResponse(ctx, streamId, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
             } else {
-                // Cannot write to the stream. Just close it.
-                final Http2Stream stream = writer.connection().stream(streamId);
-                stream.close();
+                // The response has been started already. Abort the request and let the response continue.
+                req.abort();
             }
         } else if (req.isOpen()) {
             try {
@@ -228,11 +228,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         return dataLength + padding;
     }
 
-    private boolean isWritable(int streamId) {
-        switch (writer.connection().stream(streamId).state()) {
+    private static boolean isWritable(Http2Stream stream) {
+        switch (stream.state()) {
             case OPEN:
             case HALF_CLOSED_REMOTE:
-                return true;
+                return !stream.isHeadersSent();
             default:
                 return false;
         }
