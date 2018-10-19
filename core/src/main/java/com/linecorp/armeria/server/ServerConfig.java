@@ -65,12 +65,14 @@ public final class ServerConfig {
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
     private final long defaultMaxRequestLength;
-    private final int defaultMaxHttp1InitialLineLength;
-    private final int defaultMaxHttp1HeaderSize;
-    private final int defaultMaxHttp1ChunkSize;
-    private final int http2InitialWindowSize;
-    private final int http2MaxStreamsPerConnection;
-    private final int http2MaxHeaderListSize;
+    private final int http2InitialConnectionWindowSize;
+    private final int http2InitialStreamWindowSize;
+    private final long http2MaxStreamsPerConnection;
+    private final int http2MaxFrameSize;
+    private final long http2MaxHeaderListSize;
+    private final int http1MaxInitialLineLength;
+    private final int http1MaxHeaderSize;
+    private final int http1MaxChunkSize;
 
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
@@ -98,16 +100,14 @@ public final class ServerConfig {
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
-            int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
-            int http2InitialWindowSize, int http2MaxStreamsPerConnection, int http2MaxHeaderListSize,
+            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
+            long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
+            int http1MaxInitialLineLength, int http1MaxHeaderSize, int http1MaxChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
             AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions) {
-        this.http2InitialWindowSize = http2InitialWindowSize;
-        this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
-        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -121,12 +121,17 @@ public final class ServerConfig {
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
-        this.defaultMaxHttp1InitialLineLength = validateNonNegative(
-                defaultMaxHttp1InitialLineLength, "defaultMaxHttp1InitialLineLength");
-        this.defaultMaxHttp1HeaderSize = validateNonNegative(
-                defaultMaxHttp1HeaderSize, "defaultMaxHttp1HeaderSize");
-        this.defaultMaxHttp1ChunkSize = validateNonNegative(
-                defaultMaxHttp1ChunkSize, "defaultMaxHttp1ChunkSize");
+        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
+        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
+        this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
+        this.http2MaxFrameSize = http2MaxFrameSize;
+        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+        this.http1MaxInitialLineLength = validateNonNegative(
+                http1MaxInitialLineLength, "http1MaxInitialLineLength");
+        this.http1MaxHeaderSize = validateNonNegative(
+                http1MaxHeaderSize, "http1MaxHeaderSize");
+        this.http1MaxChunkSize = validateNonNegative(
+                http1MaxChunkSize, "http1MaxChunkSize");
         this.gracefulShutdownQuietPeriod = validateNonNegative(requireNonNull(
                 gracefulShutdownQuietPeriod), "gracefulShutdownQuietPeriod");
         this.gracefulShutdownTimeout = validateNonNegative(requireNonNull(
@@ -415,46 +420,60 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the default maximum length of an HTTP/1 response initial line.
+     * Returns the maximum length of an HTTP/1 response initial line.
      */
-    public int defaultMaxHttp1InitialLineLength() {
-        return defaultMaxHttp1InitialLineLength;
+    public int http1MaxInitialLineLength() {
+        return http1MaxInitialLineLength;
     }
 
     /**
-     * Returns the default maximum length of all headers in an HTTP/1 response.
+     * Returns the maximum length of all headers in an HTTP/1 response.
      */
-    public int defaultMaxHttp1HeaderSize() {
-        return defaultMaxHttp1HeaderSize;
+    public int http1MaxHeaderSize() {
+        return http1MaxHeaderSize;
     }
 
     /**
-     * Returns the default maximum length of each chunk in an HTTP/1 response content.
+     * Returns the maximum length of each chunk in an HTTP/1 response content.
      * The content or a chunk longer than this value will be split into smaller chunks
      * so that their lengths never exceed it.
      */
-    public int defaultMaxHttp1ChunkSize() {
-        return defaultMaxHttp1ChunkSize;
+    public int http1MaxChunkSize() {
+        return http1MaxChunkSize;
     }
 
     /**
-     * Returns the initial HTTP/2 flow control window size.
+     * Returns the initial connection-level HTTP/2 flow control window size.
      */
-    public int http2InitialWindowSize() {
-        return http2InitialWindowSize;
+    public int http2InitialConnectionWindowSize() {
+        return http2InitialConnectionWindowSize;
+    }
+
+    /**
+     * Returns the initial stream-level HTTP/2 flow control window size.
+     */
+    public int http2InitialStreamWindowSize() {
+        return http2InitialStreamWindowSize;
     }
 
     /**
      * Returns the maximum number of concurrent streams per HTTP/2 connection.
      */
-    public int http2MaxStreamsPerConnection() {
+    public long http2MaxStreamsPerConnection() {
         return http2MaxStreamsPerConnection;
+    }
+
+    /**
+     * Returns the maximum size of HTTP/2 frames that can be received.
+     */
+    public int http2MaxFrameSize() {
+        return http2MaxFrameSize;
     }
 
     /**
      * Returns the maximum size of headers that can be received.
      */
-    public int http2MaxHeaderListSize() {
+    public long http2MaxHeaderListSize() {
         return http2MaxHeaderListSize;
     }
 
@@ -529,7 +548,9 @@ public final class ServerConfig {
                     workerGroup(), shutdownWorkerGroupOnStop(),
                     maxNumConnections(), idleTimeoutMillis(),
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
-                    defaultMaxHttp1InitialLineLength(), defaultMaxHttp1HeaderSize(), defaultMaxHttp1ChunkSize(),
+                    http2InitialConnectionWindowSize(), http2InitialStreamWindowSize(),
+                    http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
+                    http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(),
                     accessLogWriter(), shutdownAccessLogWriterOnStop(),
@@ -545,8 +566,10 @@ public final class ServerConfig {
             @Nullable VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis, long defaultRequestTimeoutMillis,
-            long defaultMaxRequestLength, long defaultMaxHttp1InitialLineLength,
-            long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize, int proxyProtocolMaxTlvSize,
+            long defaultMaxRequestLength, int http2InitialConnectionWindowSize,
+            int http2InitialStreamWindowSize, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
+            long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
+            long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
             AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
@@ -606,12 +629,22 @@ public final class ServerConfig {
         buf.append(defaultRequestTimeoutMillis);
         buf.append("ms, defaultMaxRequestLength: ");
         buf.append(defaultMaxRequestLength);
-        buf.append("B, defaultMaxHttp1InitialLineLength: ");
-        buf.append(defaultMaxHttp1InitialLineLength);
-        buf.append("B, defaultMaxHttp1HeaderSize: ");
-        buf.append(defaultMaxHttp1HeaderSize);
-        buf.append("B, defaultMaxHttp1ChunkSize: ");
-        buf.append(defaultMaxHttp1ChunkSize);
+        buf.append("B, http2InitialConnectionWindowSize: ");
+        buf.append(http2InitialConnectionWindowSize);
+        buf.append("B, http2InitialStreamWindowSize: ");
+        buf.append(http2InitialStreamWindowSize);
+        buf.append("B, http2MaxStreamsPerConnection: ");
+        buf.append(http2MaxStreamsPerConnection);
+        buf.append(", http2MaxFrameSize: ");
+        buf.append(http2MaxFrameSize);
+        buf.append("B, http2MaxHeaderListSize: ");
+        buf.append(http2MaxHeaderListSize);
+        buf.append("B, http1MaxInitialLineLength: ");
+        buf.append(http1MaxInitialLineLength);
+        buf.append("B, http1MaxHeaderSize: ");
+        buf.append(http1MaxHeaderSize);
+        buf.append("B, http1MaxChunkSize: ");
+        buf.append(http1MaxChunkSize);
         buf.append("B, proxyProtocolMaxTlvSize: ");
         buf.append(proxyProtocolMaxTlvSize);
         buf.append("B, gracefulShutdownQuietPeriod: ");

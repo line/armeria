@@ -24,6 +24,8 @@ import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
 import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -149,12 +151,14 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
     private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
-    private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
-    private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
-    private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
-    private int http2InitialWindowSize = Flags.defaultHttp2InitialWindowSize();
-    private int http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
-    private int http2MaxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
+    private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
+    private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
+    private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
+    private int http2MaxFrameSize = Flags.defaultHttp2MaxFrameSize();
+    private long http2MaxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
+    private int http1MaxInitialLineLength = Flags.defaultHttp1MaxInitialLineLength();
+    private int http1MaxHeaderSize = Flags.defaultHttp1MaxHeaderSize();
+    private int http1MaxChunkSize = Flags.defaultHttp1MaxChunkSize();
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
@@ -472,39 +476,34 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the maximum length of an HTTP/1 response initial line.
+     * Sets the initial connection-level HTTP/2 flow control window size. Larger values can lower stream
+     * warmup time at the expense of being easier to overload the server. Defaults to
+     * {@link Flags#defaultHttp2InitialConnectionWindowSize()}.
+     * Note that this setting affects the connection-level window size, not the window size of streams.
+     *
+     * @see #http2InitialStreamWindowSize(int)
      */
-    public ServerBuilder maxHttp1InitialLineLength(int maxHttp1InitialLineLength) {
-        this.maxHttp1InitialLineLength = validateNonNegative(
-                maxHttp1InitialLineLength, "maxHttp1InitialLineLength");
+    public ServerBuilder http2InitialConnectionWindowSize(int http2InitialConnectionWindowSize) {
+        checkArgument(http2InitialConnectionWindowSize > 0,
+                      "http2InitialConnectionWindowSize: %s (expected: > 0)",
+                      http2InitialConnectionWindowSize);
+        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         return this;
     }
 
     /**
-     * Sets the maximum length of all headers in an HTTP/1 response.
+     * Sets the initial stream-level HTTP/2 flow control window size. Larger values can lower stream
+     * warmup time at the expense of being easier to overload the server. Defaults to
+     * {@link Flags#defaultHttp2InitialStreamWindowSize()}.
+     * Note that this setting affects the stream-level window size, not the window size of connections.
+     *
+     * @see #http2InitialConnectionWindowSize(int)
      */
-    public ServerBuilder maxHttp1HeaderSize(int maxHttp1HeaderSize) {
-        this.maxHttp1HeaderSize = validateNonNegative(maxHttp1HeaderSize, "maxHttp1HeaderSize");
-        return this;
-    }
-
-    /**
-     * Sets the maximum length of each chunk in an HTTP/1 response content.
-     * The content or a chunk longer than this value will be split into smaller chunks
-     * so that their lengths never exceed it.
-     */
-    public ServerBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
-        this.maxHttp1ChunkSize = validateNonNegative(maxHttp1ChunkSize, "maxHttp1ChunkSize");
-        return this;
-    }
-
-    /**
-     * Sets the initial HTTP/2 flow control window size. Larger values can lower stream warmup time
-     * at the expense of being easier to overload the server. Defaults to
-     * {@link Flags#defaultHttp2InitialWindowSize()}.
-     */
-    public ServerBuilder http2InitialWindowSize(int windowSize) {
-        this.http2InitialWindowSize = validateNonNegative(windowSize, "windowSize");
+    public ServerBuilder http2InitialStreamWindowSize(int http2InitialStreamWindowSize) {
+        checkArgument(http2InitialStreamWindowSize > 0,
+                      "http2InitialStreamWindowSize: %s (expected: > 0)",
+                      http2InitialStreamWindowSize);
+        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         return this;
     }
 
@@ -514,8 +513,25 @@ public final class ServerBuilder {
      * which is the maximum number of HTTP/2 connections themselves, not the streams that are
      * multiplexed over each.
      */
-    public ServerBuilder http2MaxStreamsPerConnection(int maxStreams) {
-        this.http2MaxStreamsPerConnection = validateNonNegative(maxStreams, "maxStreams");
+    public ServerBuilder http2MaxStreamsPerConnection(long http2MaxStreamsPerConnection) {
+        checkArgument(http2MaxStreamsPerConnection > 0 &&
+                      http2MaxStreamsPerConnection <= 0xFFFFFFFFL,
+                      "http2MaxStreamsPerConnection: %s (expected: a positive 32-bit unsigned integer)",
+                      http2MaxStreamsPerConnection);
+        this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
+        return this;
+    }
+
+    /**
+     * Sets the maximum size of HTTP/2 frame that can be received. Defaults to
+     * {@link Flags#defaultHttp2MaxFrameSize()}.
+     */
+    public ServerBuilder http2MaxFrameSize(int http2MaxFrameSize) {
+        checkArgument(http2MaxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND &&
+                      http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
+                      "http2MaxFramSize: %s (expected: >= %s and <= %s)",
+                      http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
+        this.http2MaxFrameSize = http2MaxFrameSize;
         return this;
     }
 
@@ -523,8 +539,39 @@ public final class ServerBuilder {
      * Sets the maximum size of headers that can be received. Defaults to
      * {@link Flags#defaultHttp2MaxHeaderListSize()}.
      */
-    public ServerBuilder http2MaxHeaderListSize(int headerListSize) {
-        this.http2MaxHeaderListSize = validateNonNegative(headerListSize, "headerListSize");
+    public ServerBuilder http2MaxHeaderListSize(long http2MaxHeaderListSize) {
+        checkArgument(http2MaxHeaderListSize > 0 &&
+                      http2MaxHeaderListSize <= 0xFFFFFFFFL,
+                      "http2MaxHeaderListSize: %s (expected: a positive 32-bit unsigned integer)",
+                      http2MaxHeaderListSize);
+        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of an HTTP/1 response initial line.
+     */
+    public ServerBuilder http1MaxInitialLineLength(int http1MaxInitialLineLength) {
+        this.http1MaxInitialLineLength = validateNonNegative(
+                http1MaxInitialLineLength, "http1MaxInitialLineLength");
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of all headers in an HTTP/1 response.
+     */
+    public ServerBuilder http1MaxHeaderSize(int http1MaxHeaderSize) {
+        this.http1MaxHeaderSize = validateNonNegative(http1MaxHeaderSize, "http1MaxHeaderSize");
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceed it.
+     */
+    public ServerBuilder http1MaxChunkSize(int http1MaxChunkSize) {
+        this.http1MaxChunkSize = validateNonNegative(http1MaxChunkSize, "http1MaxChunkSize");
         return this;
     }
 
@@ -1113,8 +1160,9 @@ public final class ServerBuilder {
                 ports, normalizeDefaultVirtualHost(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
-                maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
-                http2InitialWindowSize, http2MaxStreamsPerConnection, http2MaxHeaderListSize,
+                http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                http2MaxFrameSize, http2MaxHeaderListSize,
+                http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions), sslContexts);
@@ -1153,7 +1201,9 @@ public final class ServerBuilder {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
-                maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
+                http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                http2MaxFrameSize, http2MaxHeaderListSize,
+                http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, meterRegistry, serviceLoggerPrefix,
                 accessLogWriter, shutdownAccessLogWriterOnStop,

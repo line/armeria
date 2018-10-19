@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
@@ -97,12 +96,13 @@ public final class ClientFactoryBuilder {
     private Function<? super EventLoopGroup,
             ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
             DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY;
-    private int initialHttp2ConnectionWindowSize = DEFAULT_WINDOW_SIZE;
-    private int initialHttp2StreamWindowSize = DEFAULT_WINDOW_SIZE;
-    private int http2MaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
-    private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
-    private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
-    private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
+    private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
+    private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
+    private int http2MaxFrameSize = Flags.defaultHttp2MaxFrameSize();
+    private long http2MaxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
+    private int http1MaxInitialLineLength = Flags.defaultHttp1MaxInitialLineLength();
+    private int http1MaxHeaderSize = Flags.defaultHttp1MaxHeaderSize();
+    private int http1MaxChunkSize = Flags.defaultHttp1MaxChunkSize();
 
     // Armeria-related properties:
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
@@ -202,16 +202,16 @@ public final class ClientFactoryBuilder {
      * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>. The HTTP/2 connection is first established with
      * {@value Http2CodecUtil#DEFAULT_WINDOW_SIZE} bytes of connection flow-control window size,
-     * and it is changed if and only if {@code initialHttp2ConnectionWindowSize} is set.
+     * and it is changed if and only if {@code http2InitialConnectionWindowSize} is set.
      * Note that this setting affects the connection-level window size, not the window size of streams.
      *
-     * @see #initialHttp2StreamWindowSize(int)
+     * @see #http2InitialStreamWindowSize(int)
      */
-    public ClientFactoryBuilder initialHttp2ConnectionWindowSize(int initialHttp2ConnectionWindowSize) {
-        checkArgument(initialHttp2ConnectionWindowSize >= DEFAULT_WINDOW_SIZE,
-                      "initialHttp2ConnectionWindowSize: %s (expected: >= %s and <= %s)",
-                      initialHttp2ConnectionWindowSize, DEFAULT_WINDOW_SIZE, MAX_INITIAL_WINDOW_SIZE);
-        this.initialHttp2ConnectionWindowSize = initialHttp2ConnectionWindowSize;
+    public ClientFactoryBuilder http2InitialConnectionWindowSize(int http2InitialConnectionWindowSize) {
+        checkArgument(http2InitialConnectionWindowSize >= DEFAULT_WINDOW_SIZE,
+                      "http2InitialConnectionWindowSize: %s (expected: >= %s and <= %s)",
+                      http2InitialConnectionWindowSize, DEFAULT_WINDOW_SIZE, MAX_INITIAL_WINDOW_SIZE);
+        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         return this;
     }
 
@@ -220,13 +220,13 @@ public final class ClientFactoryBuilder {
      * for HTTP/2 stream-level flow control. Note that this setting affects the window size of all streams,
      * not the connection-level window size.
      *
-     * @see #initialHttp2ConnectionWindowSize(int)
+     * @see #http2InitialConnectionWindowSize(int)
      */
-    public ClientFactoryBuilder initialHttp2StreamWindowSize(int initialHttp2StreamWindowSize) {
-        checkArgument(initialHttp2StreamWindowSize > 0,
-                      "initialHttp2StreamWindowSize: %s (expected: > 0 and <= %s)",
-                      initialHttp2StreamWindowSize, MAX_INITIAL_WINDOW_SIZE);
-        this.initialHttp2StreamWindowSize = initialHttp2StreamWindowSize;
+    public ClientFactoryBuilder http2InitialStreamWindowSize(int http2InitialStreamWindowSize) {
+        checkArgument(http2InitialStreamWindowSize > 0,
+                      "http2InitialStreamWindowSize: %s (expected: > 0 and <= %s)",
+                      http2InitialStreamWindowSize, MAX_INITIAL_WINDOW_SIZE);
+        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         return this;
     }
 
@@ -244,24 +244,37 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * that indicates the maximum size of header list that the client is prepared to accept, in octets.
+     */
+    public ClientFactoryBuilder http2MaxHeaderListSize(long http2MaxHeaderListSize) {
+        checkArgument(http2MaxHeaderListSize > 0 &&
+                      http2MaxHeaderListSize <= 0xFFFFFFFFL,
+                      "http2MaxHeaderListSize: %s (expected: a positive 32-bit unsigned integer)",
+                      http2MaxHeaderListSize);
+        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+        return this;
+    }
+
+    /**
      * Sets the maximum length of an HTTP/1 response initial line.
      */
-    public ClientFactoryBuilder maxHttp1InitialLineLength(int maxHttp1InitialLineLength) {
-        checkArgument(maxHttp1InitialLineLength >= 0,
-                      "maxHttp1InitialLineLength: %s (expected: >= 0)",
-                      maxHttp1InitialLineLength);
-        this.maxHttp1InitialLineLength = maxHttp1InitialLineLength;
+    public ClientFactoryBuilder http1MaxInitialLineLength(int http1MaxInitialLineLength) {
+        checkArgument(http1MaxInitialLineLength >= 0,
+                      "http1MaxInitialLineLength: %s (expected: >= 0)",
+                      http1MaxInitialLineLength);
+        this.http1MaxInitialLineLength = http1MaxInitialLineLength;
         return this;
     }
 
     /**
      * Sets the maximum length of all headers in an HTTP/1 response.
      */
-    public ClientFactoryBuilder maxHttp1HeaderSize(int maxHttp1HeaderSize) {
-        checkArgument(maxHttp1HeaderSize >= 0,
-                      "maxHttp1HeaderSize: %s (expected: >= 0)",
-                      maxHttp1HeaderSize);
-        this.maxHttp1HeaderSize = maxHttp1HeaderSize;
+    public ClientFactoryBuilder http1MaxHeaderSize(int http1MaxHeaderSize) {
+        checkArgument(http1MaxHeaderSize >= 0,
+                      "http1MaxHeaderSize: %s (expected: >= 0)",
+                      http1MaxHeaderSize);
+        this.http1MaxHeaderSize = http1MaxHeaderSize;
         return this;
     }
 
@@ -270,11 +283,11 @@ public final class ClientFactoryBuilder {
      * The content or a chunk longer than this value will be split into smaller chunks
      * so that their lengths never exceed it.
      */
-    public ClientFactoryBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
-        checkArgument(maxHttp1ChunkSize >= 0,
-                      "maxHttp1ChunkSize: %s (expected: >= 0)",
-                      maxHttp1ChunkSize);
-        this.maxHttp1ChunkSize = maxHttp1ChunkSize;
+    public ClientFactoryBuilder http1MaxChunkSize(int http1MaxChunkSize) {
+        checkArgument(http1MaxChunkSize >= 0,
+                      "http1MaxChunkSize: %s (expected: >= 0)",
+                      http1MaxChunkSize);
+        this.http1MaxChunkSize = http1MaxChunkSize;
         return this;
     }
 
@@ -339,18 +352,18 @@ public final class ClientFactoryBuilder {
     public ClientFactory build() {
         return new DefaultClientFactory(new HttpClientFactory(
                 workerGroup, shutdownWorkerGroupOnClose, channelOptions, sslContextCustomizer,
-                addressResolverGroupFactory, initialHttp2ConnectionWindowSize, initialHttp2StreamWindowSize,
-                http2MaxFrameSize, maxHttp1InitialLineLength, maxHttp1HeaderSize,
-                maxHttp1ChunkSize, idleTimeoutMillis, useHttp2Preface,
+                addressResolverGroupFactory, http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
+                http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
+                http1MaxChunkSize, idleTimeoutMillis, useHttp2Preface,
                 useHttp1Pipelining, connectionPoolListener, meterRegistry));
     }
 
     @Override
     public String toString() {
         return toString(this, workerGroup, shutdownWorkerGroupOnClose, channelOptions,
-                        sslContextCustomizer, addressResolverGroupFactory, initialHttp2ConnectionWindowSize,
-                        initialHttp2StreamWindowSize, http2MaxFrameSize, maxHttp1InitialLineLength,
-                        maxHttp1HeaderSize, maxHttp1ChunkSize, idleTimeoutMillis,
+                        sslContextCustomizer, addressResolverGroupFactory, http2InitialConnectionWindowSize,
+                        http2InitialStreamWindowSize, http2MaxFrameSize, http2MaxHeaderListSize,
+                        http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize, idleTimeoutMillis,
                         useHttp2Preface, useHttp1Pipelining, connectionPoolListener, meterRegistry);
     }
 
@@ -361,21 +374,22 @@ public final class ClientFactoryBuilder {
             Consumer<? super SslContextBuilder> sslContextCustomizer,
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
-            int initialHttp2ConnectionWindowSize, int initialHttp2StreamWindowSize, int http2MaxFrameSize,
-            int maxHttp1InitialLineLength, int maxHttp1HeaderSize, int maxHttp1ChunkSize,
-            long idleTimeoutMillis, boolean useHttp2Preface,
-            boolean useHttp1Pipelining, KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener,
+            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize, int http2MaxFrameSize,
+            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
+            int http1MaxChunkSize, long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
+            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener,
             MeterRegistry meterRegistry) {
 
         final ToStringHelper helper = MoreObjects.toStringHelper(self).omitNullValues();
         helper.add("workerGroup", workerGroup + " (shutdownOnClose=" + shutdownWorkerGroupOnClose + ')')
               .add("socketOptions", socketOptions)
-              .add("initialHttp2ConnectionWindowSize", initialHttp2ConnectionWindowSize)
-              .add("initialHttp2StreamWindowSize", initialHttp2StreamWindowSize)
+              .add("http2InitialConnectionWindowSize", http2InitialConnectionWindowSize)
+              .add("http2InitialStreamWindowSize", http2InitialStreamWindowSize)
               .add("http2MaxFrameSize", http2MaxFrameSize)
-              .add("maxHttp1InitialLineLength", maxHttp1InitialLineLength)
-              .add("maxHttp1HeaderSize", maxHttp1HeaderSize)
-              .add("maxHttp1ChunkSize", maxHttp1ChunkSize)
+              .add("http2MaxHeaderListSize", http2MaxHeaderListSize)
+              .add("http1MaxInitialLineLength", http1MaxInitialLineLength)
+              .add("http1MaxHeaderSize", http1MaxHeaderSize)
+              .add("http1MaxChunkSize", http1MaxChunkSize)
               .add("idleTimeoutMillis", idleTimeoutMillis)
               .add("useHttp2Preface", useHttp2Preface)
               .add("useHttp1Pipelining", useHttp1Pipelining);
