@@ -190,14 +190,19 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private Http2Settings http2Settings() {
         final Http2Settings settings = new Http2Settings();
-        final int initialWindowSize = config.http2InitialWindowSize();
+        final int initialWindowSize = config.http2InitialStreamWindowSize();
         if (initialWindowSize != Http2CodecUtil.DEFAULT_WINDOW_SIZE) {
             settings.initialWindowSize(initialWindowSize);
         }
-        final int maxStreamsPerConnection = config.http2MaxStreamsPerConnection();
-        if (maxStreamsPerConnection != Integer.MAX_VALUE) {
-            settings.maxConcurrentStreams(maxStreamsPerConnection);
+
+        final int maxFrameSize = config.http2MaxFrameSize();
+        if (maxFrameSize != Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE) {
+            settings.maxFrameSize(maxFrameSize);
         }
+
+        // Not using the value greater than 2^31-1 because some HTTP/2 client implementations use a signed
+        // 32-bit integer to represent an HTTP/2 SETTINGS parameter value.
+        settings.maxConcurrentStreams(Math.min(config.http2MaxStreamsPerConnection(), Integer.MAX_VALUE));
         settings.maxHeaderListSize(config.http2MaxHeaderListSize());
         return settings;
     }
@@ -376,9 +381,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             final Http1ObjectEncoder writer = new Http1ObjectEncoder(ch, true, true);
             p.addLast(new HttpServerCodec(
-                    config.defaultMaxHttp1InitialLineLength(),
-                    config.defaultMaxHttp1HeaderSize(),
-                    config.defaultMaxHttp1ChunkSize()));
+                    config.http1MaxInitialLineLength(),
+                    config.http1MaxHeaderSize(),
+                    config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
             configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer,
@@ -449,9 +454,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             final HttpServerCodec http1codec = new HttpServerCodec(
-                    config.defaultMaxHttp1InitialLineLength(),
-                    config.defaultMaxHttp1HeaderSize(),
-                    config.defaultMaxHttp1ChunkSize());
+                    config.http1MaxInitialLineLength(),
+                    config.http1MaxHeaderSize(),
+                    config.http1MaxChunkSize());
 
             String baseName = name;
             assert baseName != null;
