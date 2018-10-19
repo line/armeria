@@ -48,7 +48,7 @@ com.google.code.findbugs:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '26.0-jre'
+    version: &GUAVA_VERSION '27.0-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -63,6 +63,12 @@ com.google.guava:
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
+    relocations:
+    - from: com.google.common
+      to: com.linecorp.armeria.internal.shaded.guava
+  # A transitive dependency of Guava which needs relocation as well.
+  failureaccess:
+    version: '1.0'
     relocations:
     - from: com.google.common
       to: com.linecorp.armeria.internal.shaded.guava
@@ -126,17 +132,17 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.6'
+    version: &MICROMETER_VERSION '1.0.7'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.6/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.7/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.6/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.7/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.6/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.7/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -174,9 +180,9 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: '5.4.2'
+    version: '5.4.3'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.4.2/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.4.3/
 
 it.unimi.dsi:
   fastutil:
@@ -372,7 +378,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.0.5.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.0.6.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
