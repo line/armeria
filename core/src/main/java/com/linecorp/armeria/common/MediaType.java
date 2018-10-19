@@ -92,7 +92,7 @@ import com.google.common.collect.Multimaps;
 @JsonDeserialize(using = MediaTypeJsonDeserializer.class)
 public final class MediaType {
 
-    // Forked from Guava at 59ca61a255620bf7e5f55f991c74e8b61e99d765 (26.0)
+    // Forked from Guava at 9704538cd9aa8e4b783b824773cfc76290f572c2 (27.0)
 
     private static final String CHARSET_ATTRIBUTE = "charset";
     private static final ImmutableListMultimap<String, String> UTF_8_CONSTANT_PARAMETERS =
@@ -418,8 +418,21 @@ public final class MediaType {
     public static final MediaType MANIFEST_JSON_UTF_8 =
             createConstantUtf8(APPLICATION_TYPE, "manifest+json");
 
+    /**
+     * Media type for <a href="http://www.opengeospatial.org/standards/kml/">OGC KML (Keyhole Markup
+     * Language)</a>.
+     */
     public static final MediaType KML = createConstant(APPLICATION_TYPE, "vnd.google-earth.kml+xml");
+
+    /**
+     * Media type for <a href="http://www.opengeospatial.org/standards/kml/">OGC KML (Keyhole Markup
+     * Language)</a>, compressed using the ZIP format into KMZ archives.
+     */
     public static final MediaType KMZ = createConstant(APPLICATION_TYPE, "vnd.google-earth.kmz");
+
+    /**
+     * Media type for the <a href="https://tools.ietf.org/html/rfc4155">mbox database format</a>.
+     */
     public static final MediaType MBOX = createConstant(APPLICATION_TYPE, "mbox");
 
     /**
@@ -433,6 +446,12 @@ public final class MediaType {
     public static final MediaType MICROSOFT_POWERPOINT =
             createConstant(APPLICATION_TYPE, "vnd.ms-powerpoint");
     public static final MediaType MICROSOFT_WORD = createConstant(APPLICATION_TYPE, "msword");
+
+    /**
+     * Media type for WASM applications. For more information see <a
+     * href="https://webassembly.org/">the Web Assembly overview</a>.
+     */
+    public static final MediaType WASM_APPLICATION = createConstant(APPLICATION_TYPE, "wasm");
 
     /**
      * Media type for NaCl applications. For more information see <a
