@@ -28,10 +28,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -48,6 +51,7 @@ import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.file.AbstractHttpVfs;
@@ -81,7 +85,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      * Creates a new instance.
      */
     public DocService() {
-        this(ImmutableMap.of(), ImmutableMap.of(), "");
+        this(ImmutableMap.of(), ImmutableMap.of(), ImmutableList.of());
     }
 
     /**
@@ -89,11 +93,14 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      */
     DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders,
                Map<String, ListMultimap<String, String>> exampleRequests,
-               String injectedScripts) {
+               List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers) {
 
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofExact("/injected.js",
-                      (ctx, req) -> HttpResponse.of(MediaType.JAVASCRIPT_UTF_8, injectedScripts)),
+                      (ctx, req) -> HttpResponse.of(MediaType.JAVASCRIPT_UTF_8,
+                                                    injectedScriptSuppliers.stream()
+                                                                           .map(f -> f.apply(ctx, req))
+                                                                           .collect(Collectors.joining("\n")))),
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
         this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
