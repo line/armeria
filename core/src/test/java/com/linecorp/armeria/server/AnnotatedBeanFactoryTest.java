@@ -15,7 +15,9 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.AnnotatedBeanFactory.find;
 import static com.linecorp.armeria.server.AnnotatedBeanFactory.register;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
@@ -28,6 +30,8 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.server.AnnotatedBeanFactory.BeanFactoryId;
 import com.linecorp.armeria.server.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -68,18 +72,20 @@ public class AnnotatedBeanFactoryTest {
         assertThatThrownBy(() -> register(BadRequestBeanMoreThanOneMethodParam.class, vars, resolvers))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only one parameter is allowed to an annotated method");
+    }
 
-        // error: some constructor params not annotated
-        assertThatThrownBy(
-                () -> register(BadRequestBeanSomeConstructorParamWithoutAnnotation.class, vars, resolvers))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported parameter exists");
+    @Test
+    public void shouldBeRegisteredAsUnsupported() {
+        BeanFactoryId id;
 
-        // error: some method params not annotated
-        assertThatThrownBy(
-                () -> register(BadRequestBeanSomeMethodParamWithoutAnnotation.class, vars, resolvers))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported parameter exists");
+        id = register(NotARequestBeanSomeConstructorParamWithoutAnnotation.class, vars, resolvers);
+        assertThat(find(id).isPresent()).isFalse();
+
+        id = register(NotARequestBeanSomeMethodParamWithoutAnnotation.class, vars, resolvers);
+        assertThat(find(id).isPresent()).isFalse();
+
+        id = register(NotARequestBeanBecauseOfInnerClass.class, vars, resolvers);
+        assertThat(find(id).isPresent()).isFalse();
     }
 
     // error test case: more than 1 annotated constructors
@@ -178,17 +184,17 @@ public class AnnotatedBeanFactoryTest {
         }
     }
 
-    // error test case: some constructor parameters are not annotated
-    static class BadRequestBeanSomeConstructorParamWithoutAnnotation {
+    // Not a request bean: some constructor parameters are not annotated
+    static class NotARequestBeanSomeConstructorParamWithoutAnnotation {
         private final String param1;
         private final String param2;
         private final int header1;
         private final int header2;
 
-        BadRequestBeanSomeConstructorParamWithoutAnnotation(@Param("param1") String param1,
-                                                            String param2,
-                                                            @Header("header1") int header1,
-                                                            int header2) {
+        NotARequestBeanSomeConstructorParamWithoutAnnotation(@Param("param1") String param1,
+                                                             String param2,
+                                                             @Header("header1") int header1,
+                                                             int header2) {
             this.param1 = param1;
             this.param2 = param2;
             this.header1 = header1;
@@ -196,8 +202,8 @@ public class AnnotatedBeanFactoryTest {
         }
     }
 
-    // error test case: some method parameters are not annotated
-    static class BadRequestBeanSomeMethodParamWithoutAnnotation {
+    // Not a request bean: some method parameters are not annotated
+    static class NotARequestBeanSomeMethodParamWithoutAnnotation {
         @Nullable
         private String param1;
         @Nullable
@@ -213,6 +219,24 @@ public class AnnotatedBeanFactoryTest {
             this.param2 = param2;
             this.header1 = header1;
             this.header2 = header2;
+        }
+    }
+
+    static class NotARequestBeanBecauseOfInnerClass {
+        private InnerClass innerClass;
+
+        NotARequestBeanBecauseOfInnerClass(InnerClass innerClass) {
+            this.innerClass = innerClass;
+        }
+    }
+
+    static class InnerClass {
+        private HttpRequest httpRequest;
+        private int someValue;
+
+        InnerClass(HttpRequest httpRequest, int someValue) {
+            this.httpRequest = httpRequest;
+            this.someValue = someValue;
         }
     }
 }
