@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.AnnotatedValueResolver.isRequestConverterType;
 import static com.linecorp.armeria.server.AnnotatedValueResolver.toArguments;
-import static com.linecorp.armeria.server.AnnotatedValueResolver.toRequestObjectResolvers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -48,22 +48,23 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AnnotatedValueResolver.NoAnnotatedParameterException;
-import com.linecorp.armeria.server.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
-import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.annotation.RequestBean;
+import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 
 import io.netty.util.AsciiString;
 
 public class AnnotatedValueResolverTest {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolverTest.class);
 
-    static final List<RequestObjectResolver> objectResolvers = toRequestObjectResolvers(ImmutableList.of());
+    static final List<RequestConverterFunction> converters = ImmutableList.of();
 
     // A string which is the same as the parameter will be returned.
     static final Set<String> pathParams = ImmutableSet.of("var1");
@@ -105,6 +106,7 @@ public class AnnotatedValueResolverTest {
         });
 
         when(request.headers()).thenReturn(headers);
+        when(headers.contentType()).thenReturn(MediaType.FORM_DATA);
         when(headers.getAll(any())).thenAnswer(arg -> {
             final Object value = arg.getArguments()[0];
             // Return values for 'Cookie' headers.
@@ -134,7 +136,7 @@ public class AnnotatedValueResolverTest {
         getAllMethods(Service.class).forEach(method -> {
             try {
                 final List<AnnotatedValueResolver> elements =
-                        AnnotatedValueResolver.of(method, pathParams, objectResolvers);
+                        AnnotatedValueResolver.of(method, pathParams, converters, false);
                 elements.forEach(AnnotatedValueResolverTest::testResolver);
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.
@@ -148,9 +150,7 @@ public class AnnotatedValueResolverTest {
         final FieldBean bean = new FieldBean();
 
         getAllFields(FieldBean.class).forEach(field -> {
-            final Optional<AnnotatedValueResolver> resolver =
-                    AnnotatedValueResolver.of(field, pathParams, objectResolvers);
-
+            final Optional<AnnotatedValueResolver> resolver = AnnotatedValueResolver.of(field, pathParams);
             if (resolver.isPresent()) {
                 testResolver(resolver.get());
                 try {
@@ -172,7 +172,7 @@ public class AnnotatedValueResolverTest {
         assertThat(constructors.size()).isOne();
         constructors.forEach(constructor -> {
             final List<AnnotatedValueResolver> elements =
-                    AnnotatedValueResolver.of(constructor, pathParams, objectResolvers);
+                    AnnotatedValueResolver.of(constructor, pathParams, converters, false);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             final ConstructorBean bean;
@@ -204,7 +204,7 @@ public class AnnotatedValueResolverTest {
         final Constructor constructor = Iterables.getFirst(constructors, null);
 
         final List<AnnotatedValueResolver> initArgs =
-                AnnotatedValueResolver.of(constructor, pathParams, objectResolvers);
+                AnnotatedValueResolver.of(constructor, pathParams, converters, false);
         initArgs.forEach(AnnotatedValueResolverTest::testResolver);
         final MixedBean bean = (MixedBean) constructor.newInstance(toArguments(initArgs, resolverContext));
         getAllMethods(MixedBean.class).forEach(method -> testMethod(method, bean));
@@ -214,7 +214,7 @@ public class AnnotatedValueResolverTest {
     private static <T> void testMethod(Method method, T bean) {
         try {
             final List<AnnotatedValueResolver> elements =
-                    AnnotatedValueResolver.of(method, pathParams, objectResolvers);
+                    AnnotatedValueResolver.of(method, pathParams, converters, true);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             method.setAccessible(true);
@@ -230,7 +230,7 @@ public class AnnotatedValueResolverTest {
     private static void testResolver(AnnotatedValueResolver resolver) {
         final Object value = resolver.resolve(resolverContext);
         logger.debug("Element {}: value {}", resolver, value);
-        if (resolver.annotation() == null) {
+        if (resolver.annotationType() == null) {
             assertThat(value).isInstanceOf(resolver.elementType());
 
             // Check whether 'Cookie' header is decoded correctly.
@@ -251,7 +251,7 @@ public class AnnotatedValueResolverTest {
             return;
         }
 
-        if (resolver.annotation().annotationType() == Header.class) {
+        if (resolver.annotationType() == Header.class) {
             if (!resolver.hasContainer()) {
                 if (shouldHttpHeaderExist(resolver)) {
                     // The first element.
@@ -285,7 +285,7 @@ public class AnnotatedValueResolverTest {
             return;
         }
 
-        if (resolver.annotation().annotationType() == Param.class) {
+        if (resolver.annotationType() == Param.class) {
             if (shouldHttpParameterExist(resolver) ||
                 shouldPathVariableExist(resolver)) {
                 assertThat(resolver.httpElementName()).isNotNull();
@@ -313,7 +313,7 @@ public class AnnotatedValueResolverTest {
             return;
         }
 
-        assertThat(resolver.annotation().annotationType()).isEqualTo(RequestObject.class);
+        assertThat(isRequestConverterType(resolver.annotationType())).isTrue();
     }
 
     private static void testEnum(Object value, String name) {
@@ -387,7 +387,7 @@ public class AnnotatedValueResolverTest {
                             @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
                             ServiceRequestContext ctx,
                             HttpRequest request,
-                            @RequestObject OuterBean outerBean,
+                            @RequestBean OuterBean outerBean,
                             Cookies cookies) {}
 
         public void dummy1() {}
@@ -489,7 +489,7 @@ public class AnnotatedValueResolverTest {
 
         HttpRequest request;
 
-        @RequestObject
+        @RequestBean
         OuterBean outerBean;
 
         Cookies cookies;
@@ -616,7 +616,7 @@ public class AnnotatedValueResolverTest {
                         @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
                         ServiceRequestContext ctx,
                         HttpRequest request,
-                        @RequestObject OuterBean outerBean,
+                        @RequestBean OuterBean outerBean,
                         Cookies cookies) {
             this.var1 = var1;
             this.param1 = param1;
@@ -807,7 +807,7 @@ public class AnnotatedValueResolverTest {
             this.request = request;
         }
 
-        void setOuterBean(@RequestObject OuterBean outerBean) {
+        void setOuterBean(@RequestBean OuterBean outerBean) {
             this.outerBean = outerBean;
         }
 
@@ -928,7 +928,7 @@ public class AnnotatedValueResolverTest {
                   @Param CaseInsensitiveEnum enum1,
                   @Param("sensitive") CaseSensitiveEnum enum3,
                   ServiceRequestContext ctx,
-                  @RequestObject OuterBean outerBean,
+                  @RequestBean OuterBean outerBean,
                   Cookies cookies) {
             this.var1 = var1;
             this.param1 = param1;
@@ -1064,17 +1064,17 @@ public class AnnotatedValueResolverTest {
         final InnerBean innerBean1;
 
         // field
-        @RequestObject
+        @RequestBean
         InnerBean innerBean2;
 
         // setter
         InnerBean innerBean3;
 
-        OuterBean(@RequestObject InnerBean innerBean1) {
+        OuterBean(@RequestBean InnerBean innerBean1) {
             this.innerBean1 = innerBean1;
         }
 
-        void setInnerBean3(@RequestObject InnerBean innerBean3) {
+        void setInnerBean3(@RequestBean InnerBean innerBean3) {
             this.innerBean3 = innerBean3;
         }
     }

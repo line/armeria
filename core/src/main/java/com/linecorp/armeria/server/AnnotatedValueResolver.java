@@ -59,6 +59,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 
@@ -72,15 +73,14 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.AnnotatedBeanFactory.BeanFactoryId;
-import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.RequestBean;
+import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
-import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -91,16 +91,23 @@ import io.netty.util.AsciiString;
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
-    private static final List<RequestObjectResolver> defaultRequestConverters =
-            ImmutableList.of((resolverContext, expectedResultType, beanFactoryId) ->
-                                     AnnotatedBeanFactory.find(beanFactoryId)
-                                                         .orElseThrow(RequestConverterFunction::fallthrough)
-                                                         .apply(resolverContext),
-                             RequestObjectResolver.of(new JacksonRequestConverterFunction()),
-                             RequestObjectResolver.of(new StringRequestConverterFunction()),
-                             RequestObjectResolver.of(new ByteArrayRequestConverterFunction()));
-
     private static final Object[] emptyArguments = new Object[0];
+
+    /**
+     * Resolver factories for the automatically injectable types.
+     */
+    private static final Map<Class<?>,
+            BiFunction<AnnotatedElement, Class<?>, AnnotatedValueResolver>> autoInjectableTypes =
+            new ImmutableMap.Builder<Class<?>,
+                    BiFunction<AnnotatedElement, Class<?>, AnnotatedValueResolver>>()
+                    .put(RequestContext.class, AnnotatedValueResolver::ofRequestContext)
+                    .put(ServiceRequestContext.class, AnnotatedValueResolver::ofRequestContext)
+                    .put(Request.class, AnnotatedValueResolver::ofRequest)
+                    .put(HttpRequest.class, AnnotatedValueResolver::ofRequest)
+                    .put(AggregatedHttpMessage.class, AnnotatedValueResolver::ofAggregatedHttpMessage)
+                    .put(HttpParameters.class, AnnotatedValueResolver::ofHttpParameters)
+                    .put(Cookies.class, AnnotatedValueResolver::ofCookies)
+                    .build();
 
     /**
      * Returns an array of arguments which are resolved by each {@link AnnotatedValueResolver} of the
@@ -117,23 +124,13 @@ final class AnnotatedValueResolver {
     }
 
     /**
-     * Returns a list of {@link RequestObjectResolver} that default request converters are added.
-     */
-    static List<RequestObjectResolver> toRequestObjectResolvers(List<RequestConverterFunction> converters) {
-        final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builder();
-        // Wrap every converters received from a user with a default object resolver.
-        converters.stream().map(RequestObjectResolver::of).forEach(builder::add);
-        builder.addAll(defaultRequestConverters);
-        return builder.build();
-    }
-
-    /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
      * {@link Executable}, {@code pathParams} and {@code objectResolvers}. The {@link Executable} can be
      * one of {@link Constructor} or {@link Method}.
      */
     static List<AnnotatedValueResolver> of(Executable constructorOrMethod, Set<String> pathParams,
-                                           List<RequestObjectResolver> objectResolvers) {
+                                           List<RequestConverterFunction> converters,
+                                           boolean applyConverterForNoAnnotation) {
         final Parameter[] parameters = constructorOrMethod.getParameters();
         if (parameters.length == 0) {
             throw new NoParameterException(constructorOrMethod.toGenericString());
@@ -174,7 +171,8 @@ final class AnnotatedValueResolver {
             }
 
             resolver = of(constructorOrMethod,
-                          parameters[0], parameters[0].getType(), pathParams, objectResolvers);
+                          parameters[0], parameters[0].getType(), pathParams, converters,
+                          applyConverterForNoAnnotation);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -201,7 +199,7 @@ final class AnnotatedValueResolver {
         final List<AnnotatedValueResolver> list =
                 resolver.<List<AnnotatedValueResolver>>map(ImmutableList::of).orElseGet(
                         () -> Arrays.stream(parameters)
-                                    .map(p -> of(p, pathParams, objectResolvers))
+                                    .map(p -> of(p, pathParams, converters, applyConverterForNoAnnotation))
                                     .filter(Optional::isPresent)
                                     .map(Optional::get)
                                     .collect(Collectors.toList()));
@@ -217,20 +215,23 @@ final class AnnotatedValueResolver {
 
     /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
-     * {@link Parameter}, {@code pathParams} and {@code objectResolvers}.
+     * {@link Parameter}, {@code pathParams} and {@code converters}.
      */
     static Optional<AnnotatedValueResolver> of(Parameter parameter, Set<String> pathParams,
-                                               List<RequestObjectResolver> objectResolvers) {
-        return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers);
+                                               List<RequestConverterFunction> converters,
+                                               boolean applyConverterForNoAnnotation) {
+        return of(parameter, parameter, parameter.getType(), pathParams, converters,
+                  applyConverterForNoAnnotation);
     }
 
     /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
      * {@link Field}, {@code pathParams} and {@code objectResolvers}.
      */
-    static Optional<AnnotatedValueResolver> of(Field field, Set<String> pathParams,
-                                               List<RequestObjectResolver> objectResolvers) {
-        return of(field, field, field.getType(), pathParams, objectResolvers);
+    static Optional<AnnotatedValueResolver> of(Field field, Set<String> pathParams) {
+        // 'Field' is only used for converting a bean. So we need to pass 'applyConverterForNoAnnotation'
+        // as false.
+        return of(field, field, field.getType(), pathParams, ImmutableList.of(), false);
     }
 
     /**
@@ -239,77 +240,152 @@ final class AnnotatedValueResolver {
      *
      * @param annotatedElement an element which is annotated with a value specifier such as {@link Param} and
      *                         {@link Header}.
-     * @param typeElement      an element which is used for retrieving its type and name.
-     * @param type             a type of the given {@link Parameter} or {@link Field}. It is a type of
-     *                         the specified {@code typeElement} parameter.
-     * @param pathParams       a set of path variables.
-     * @param objectResolvers  a list of {@link RequestObjectResolver} to be evaluated for the objects which
-     *                         are annotated with {@link RequestObject} annotation.
+     * @param typeElement an element which is used for retrieving its type and name.
+     * @param type a type of the given {@link Parameter} or {@link Field}. It is a type of the specified
+     *             {@code typeElement} parameter.
+     * @param pathParams a set of path variables.
+     * @param converters a list of {@link RequestConverterFunction} to be used for generating an object.
+     *                   One of the resolver in the list would create the object to be injected.
+     * @param applyConverterForNoAnnotation a flag which indicates how to handle an element which does not have
+     *                                      any annotation. If it is {@code true}, a list of
+     *                                      {@link RequestConverterFunction} would be applied for creating an
+     *                                      object for the element. Otherwise, the element would be ignored.
      */
     private static Optional<AnnotatedValueResolver> of(AnnotatedElement annotatedElement,
                                                        AnnotatedElement typeElement, Class<?> type,
                                                        Set<String> pathParams,
-                                                       List<RequestObjectResolver> objectResolvers) {
+                                                       List<RequestConverterFunction> converters,
+                                                       boolean applyConverterForNoAnnotation) {
         requireNonNull(annotatedElement, "annotatedElement");
         requireNonNull(typeElement, "typeElement");
         requireNonNull(type, "type");
         requireNonNull(pathParams, "pathParams");
-        requireNonNull(objectResolvers, "objectResolvers");
+        requireNonNull(converters, "objectResolvers");
 
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(param, typeElement);
             if (pathParams.contains(name)) {
-                return Optional.of(ofPathVariable(param, name, annotatedElement, typeElement, type));
+                return Optional.of(ofPathVariable(name, annotatedElement, typeElement, type));
             } else {
-                return Optional.of(ofHttpParameter(param, name, annotatedElement, typeElement, type));
+                return Optional.of(ofHttpParameter(name, annotatedElement, typeElement, type));
             }
         }
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
-            return Optional.of(ofHeader(header, annotatedElement, typeElement, type));
+            return Optional.of(ofHeader(findName(header, typeElement), annotatedElement, typeElement, type));
         }
 
+        if (type == Optional.class) {
+            // Do not allow Optional<?> for the following auto-injectable types:
+            //  - RequestContext and ServiceRequestContext
+            //  - Request and HttpRequest
+            //  - AggregatedHttpMessage
+            //  - HttpParameters
+            //  - Cookies
+            final Type parameterizedType = parameterizedTypeOf(annotatedElement);
+            assert parameterizedType instanceof ParameterizedType : String.valueOf(parameterizedType);
+            final Type actual = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
+            if (autoInjectableTypes.containsKey(actual)) {
+                return Optional.empty();
+            }
+        } else {
+            // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
+            // different from 'typeElement', because it was checked before calling this method.
+            // So, 'typeElement' should be used when finding an injectable type because we need to check
+            // syntactic errors like below:
+            //
+            // void method1(@Default("a") ServiceRequestContext) { ... }
+            //
+            final BiFunction<AnnotatedElement, Class<?>,
+                    AnnotatedValueResolver> factory = autoInjectableTypes.get(type);
+            if (factory != null) {
+                return Optional.of(factory.apply(typeElement, type));
+            }
+        }
+
+        // For backward compatibility.
+        // TODO(hyangtack) This block will be removed once @RequestObject is removed.
         final RequestObject requestObject = annotatedElement.getAnnotation(RequestObject.class);
         if (requestObject != null) {
-            return Optional.of(ofRequestObject(requestObject, annotatedElement, type,
-                                               pathParams, objectResolvers));
+            final BeanFactoryId beanFactoryId = AnnotatedBeanFactory.register(type, pathParams);
+            if (AnnotatedBeanFactory.find(beanFactoryId).isPresent()) {
+                // Can convert into a bean.
+                return Optional.of(ofRequestBean(annotatedElement, type, pathParams, beanFactoryId));
+            } else {
+                // May be converted into an object by the request converters.
+                return Optional.of(
+                        ofRequestConverter(annotatedElement, type,
+                                           addFirstConverterIfAvailable(requestObject.value(), converters)));
+            }
         }
-        // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
-        // different from 'typeElement', because it was checked before calling this method.
-        // So, 'typeElement' should be used when finding an injectable type because we need to check
-        // syntactic errors like below:
-        //
-        // void method1(@Default("a") ServiceRequestContext) { ... }
-        //
-        return Optional.ofNullable(ofInjectableTypes(typeElement, type));
+
+        final RequestBean requestBean = annotatedElement.getAnnotation(RequestBean.class);
+        if (requestBean != null) {
+            // In this case, this element must be registered to AnnotatedBeanFactory.
+            final BeanFactoryId beanFactoryId = AnnotatedBeanFactory.register(type, pathParams);
+            AnnotatedBeanFactory.find(beanFactoryId)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                        "Cannot be registered to " +
+                                        AnnotatedBeanFactory.class.getSimpleName() + ": " + annotatedElement));
+            return Optional.of(ofRequestBean(annotatedElement, type, pathParams, beanFactoryId));
+        }
+
+        final RequestConverter requestConverter = annotatedElement.getAnnotation(RequestConverter.class);
+        if (requestConverter != null) {
+            // If we are analyzing a service method, we need to deal an element, which does not have any
+            // annotation, as a target to be converted by one of request converters.
+            //
+            // A user can optionally specify @RequestConverter in order to specify a converter which
+            // would be applied first, as follows:
+            //
+            // @Get("/")
+            // public HttpResponse get(@RequestConverter(MyRequestConverter.class) MyRequest myRequest) { ... }
+            //
+            return Optional.of(
+                    ofRequestConverter(annotatedElement, type,
+                                       addFirstConverterIfAvailable(requestConverter.value(), converters)));
+        }
+
+        // No annotation but it may be converted into an object by the request converters.
+        if (applyConverterForNoAnnotation) {
+            return Optional.of(ofRequestConverter(annotatedElement, type, converters));
+        } else {
+            // If we are analyzing a class to prepare a bean conversion, we don't need to analyze an element
+            // which is not annotated with one of the following:
+            //  - @Param
+            //  - @Header
+            //  - @RequestBean
+            return Optional.empty();
+        }
     }
 
     private static boolean isAnnotationPresent(AnnotatedElement element) {
         return element.isAnnotationPresent(Param.class) ||
                element.isAnnotationPresent(Header.class) ||
+               element.isAnnotationPresent(RequestBean.class) ||
                element.isAnnotationPresent(RequestObject.class);
     }
 
-    private static AnnotatedValueResolver ofPathVariable(Param param, String name,
+    private static AnnotatedValueResolver ofPathVariable(String name,
                                                          AnnotatedElement annotatedElement,
                                                          AnnotatedElement typeElement, Class<?> type) {
         return builder(annotatedElement, type)
-                .annotation(param)
+                .annotationType(Param.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
                 .supportOptional(true)
                 .pathVariable(true)
-                .resolver(resolver(ctx -> ctx.context().pathParam(name)))
+                .resolver((resolver, ctx) -> resolver.convert(ctx.context().pathParam(name)))
                 .build();
     }
 
-    private static AnnotatedValueResolver ofHttpParameter(Param param, String name,
+    private static AnnotatedValueResolver ofHttpParameter(String name,
                                                           AnnotatedElement annotatedElement,
                                                           AnnotatedElement typeElement, Class<?> type) {
         return builder(annotatedElement, type)
-                .annotation(param)
+                .annotationType(Param.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
                 .supportOptional(true)
@@ -321,12 +397,11 @@ final class AnnotatedValueResolver {
                 .build();
     }
 
-    private static AnnotatedValueResolver ofHeader(Header header,
+    private static AnnotatedValueResolver ofHeader(String name,
                                                    AnnotatedElement annotatedElement,
                                                    AnnotatedElement typeElement, Class<?> type) {
-        final String name = findName(header, typeElement);
         return builder(annotatedElement, type)
-                .annotation(header)
+                .annotationType(Header.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
                 .supportOptional(true)
@@ -338,89 +413,110 @@ final class AnnotatedValueResolver {
                 .build();
     }
 
-    private static AnnotatedValueResolver ofRequestObject(RequestObject requestObject,
-                                                          AnnotatedElement annotatedElement,
-                                                          Class<?> type, Set<String> pathParams,
-                                                          List<RequestObjectResolver> objectResolvers) {
-        final List<RequestObjectResolver> newObjectResolvers;
-        if (requestObject.value() != RequestConverterFunction.class) {
-            // There is a converter which is specified by a user.
-            final RequestConverterFunction requestConverterFunction =
-                    AnnotatedHttpServiceFactory.getInstance(requestObject, RequestConverterFunction.class);
-            newObjectResolvers = ImmutableList.<RequestObjectResolver>builder()
-                    .add(RequestObjectResolver.of(requestConverterFunction))
-                    .addAll(objectResolvers)
-                    .build();
-        } else {
-            newObjectResolvers = objectResolvers;
-        }
-
-        // To do recursive resolution like a bean inside another bean, the original object resolvers should
-        // be passed into the AnnotatedBeanFactory#register.
-        final BeanFactoryId beanFactoryId = AnnotatedBeanFactory.register(type, pathParams, objectResolvers);
-
+    private static AnnotatedValueResolver ofRequestBean(AnnotatedElement annotatedElement,
+                                                        Class<?> type, Set<String> pathParams,
+                                                        BeanFactoryId beanFactoryId) {
         return builder(annotatedElement, type)
-                .annotation(requestObject)
+                .annotationType(RequestBean.class)
                 .aggregation(AggregationStrategy.ALWAYS)
-                .resolver(resolver(newObjectResolvers, beanFactoryId))
+                .resolver((resolver, ctx) -> {
+                    try {
+                        return AnnotatedBeanFactory
+                                .find(beanFactoryId)
+                                .orElseThrow(() -> new IllegalStateException(
+                                        "Not registered bean factory: " + beanFactoryId))
+                                .apply(ctx);
+                    } catch (Exception cause) {
+                        return Exceptions.throwUnsafely(cause);
+                    }
+                })
                 .build();
     }
 
-    @Nullable
-    private static AnnotatedValueResolver ofInjectableTypes(AnnotatedElement annotatedElement, Class<?> type) {
-        if (type == RequestContext.class || type == ServiceRequestContext.class) {
-            return builder(annotatedElement, type)
-                    .resolver((unused, ctx) -> ctx.context())
-                    .build();
-        }
-
-        if (type == Request.class || type == HttpRequest.class) {
-            return builder(annotatedElement, type)
-                    .resolver((unused, ctx) -> ctx.request())
-                    .build();
-        }
-
-        if (type == AggregatedHttpMessage.class) {
-            return builder(annotatedElement, AggregatedHttpMessage.class)
-                    .resolver((unused, ctx) -> ctx.message())
-                    .aggregation(AggregationStrategy.ALWAYS)
-                    .build();
-        }
-
-        if (type == HttpParameters.class) {
-            return builder(annotatedElement, HttpParameters.class)
-                    .resolver((unused, ctx) -> ctx.httpParameters())
-                    .aggregation(AggregationStrategy.FOR_FORM_DATA)
-                    .build();
-        }
-
-        if (type == Cookies.class) {
-            return builder(annotatedElement, Cookies.class)
-                    .resolver((unused, ctx) -> {
-                        final List<String> values = ctx.request().headers().getAll(HttpHeaderNames.COOKIE);
-                        if (values.isEmpty()) {
-                            return Cookies.copyOf(ImmutableSet.of());
+    private static AnnotatedValueResolver ofRequestConverter(AnnotatedElement annotatedElement, Class<?> type,
+                                                             List<RequestConverterFunction> converters) {
+        return builder(annotatedElement, type)
+                .annotationType(RequestConverter.class)
+                .aggregation(AggregationStrategy.ALWAYS)
+                // No 'BeanFactoryId' is supplied because this element would not convert to a bean.
+                .resolver((resolver, ctx) -> {
+                    Object value = null;
+                    final AggregatedHttpMessage message = ctx.message();
+                    assert message != null : "message";
+                    for (final RequestConverterFunction func : converters) {
+                        try {
+                            value = func.convertRequest(ctx.context(), message, resolver.elementType());
+                            break;
+                        } catch (FallthroughException ignore) {
+                            // Do nothing.
+                        } catch (Exception cause) {
+                            Exceptions.throwUnsafely(cause);
                         }
-                        final ImmutableSet.Builder<Cookie> cookies = ImmutableSet.builder();
-                        values.stream()
-                              .map(ServerCookieDecoder.STRICT::decode)
-                              .forEach(cookies::addAll);
-                        return Cookies.copyOf(cookies.build());
-                    })
-                    .build();
-        }
-
-        // Unsupported type.
-        return null;
+                    }
+                    if (value != null) {
+                        return value;
+                    }
+                    throw new IllegalArgumentException("No suitable request converter found for: " +
+                                                       resolver.elementType().getSimpleName());
+                })
+                .build();
     }
 
-    /**
-     * Returns a single value resolver which retrieves a value from the specified {@code getter}
-     * and converts it.
-     */
-    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
-    resolver(Function<ResolverContext, String> getter) {
-        return (resolver, ctx) -> resolver.convert(getter.apply(ctx));
+    private static AnnotatedValueResolver ofRequestContext(AnnotatedElement annotatedElement, Class<?> type) {
+        return builder(annotatedElement, type)
+                .resolver((unused, ctx) -> ctx.context())
+                .build();
+    }
+
+    private static AnnotatedValueResolver ofRequest(AnnotatedElement annotatedElement, Class<?> type) {
+        return builder(annotatedElement, type)
+                .resolver((unused, ctx) -> ctx.request())
+                .build();
+    }
+
+    private static AnnotatedValueResolver ofAggregatedHttpMessage(AnnotatedElement annotatedElement,
+                                                                  Class<?> type) {
+        return builder(annotatedElement, AggregatedHttpMessage.class)
+                .resolver((unused, ctx) -> ctx.message())
+                .aggregation(AggregationStrategy.ALWAYS)
+                .build();
+    }
+
+    private static AnnotatedValueResolver ofHttpParameters(AnnotatedElement annotatedElement, Class<?> type) {
+        return builder(annotatedElement, HttpParameters.class)
+                .resolver((unused, ctx) -> ctx.httpParameters())
+                .aggregation(AggregationStrategy.FOR_FORM_DATA)
+                .build();
+    }
+
+    private static AnnotatedValueResolver ofCookies(AnnotatedElement annotatedElement, Class<?> type) {
+        return builder(annotatedElement, Cookies.class)
+                .resolver((unused, ctx) -> {
+                    final List<String> values = ctx.request().headers().getAll(HttpHeaderNames.COOKIE);
+                    if (values.isEmpty()) {
+                        return Cookies.copyOf(ImmutableSet.of());
+                    }
+                    final ImmutableSet.Builder<Cookie> cookies = ImmutableSet.builder();
+                    values.stream()
+                          .map(ServerCookieDecoder.STRICT::decode)
+                          .forEach(cookies::addAll);
+                    return Cookies.copyOf(cookies.build());
+                })
+                .build();
+    }
+
+    private static List<RequestConverterFunction> addFirstConverterIfAvailable(
+            Class<? extends RequestConverterFunction> clazz, List<RequestConverterFunction> converters) {
+        if (clazz == RequestConverterFunction.class) {
+            return converters;
+        }
+
+        // There is a converter which is specified by a user.
+        final RequestConverterFunction first = AnnotatedHttpServiceFactory.getInstance(clazz);
+        return ImmutableList.<RequestConverterFunction>builder()
+                .add(first)
+                .addAll(converters)
+                .build();
     }
 
     /**
@@ -460,36 +556,27 @@ final class AnnotatedValueResolver {
         };
     }
 
-    /**
-     * Returns a bean resolver which retrieves a value using request converters. If the target element
-     * is an annotated bean, a bean factory of the specified {@link BeanFactoryId} will be used for creating an
-     * instance.
-     */
-    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
-    resolver(List<RequestObjectResolver> objectResolvers, BeanFactoryId beanFactoryId) {
-        return (resolver, ctx) -> {
-            Object value = null;
-            for (final RequestObjectResolver objectResolver : objectResolvers) {
-                try {
-                    value = objectResolver.convert(ctx, resolver.elementType(), beanFactoryId);
-                    break;
-                } catch (FallthroughException ignore) {
-                    // Do nothing.
-                } catch (Throwable cause) {
-                    Exceptions.throwUnsafely(cause);
-                }
-            }
-            if (value != null) {
-                return value;
-            }
-            throw new IllegalArgumentException("No suitable request converter found for a @" +
-                                               RequestObject.class.getSimpleName() + " '" +
-                                               resolver.elementType().getSimpleName() + '\'');
-        };
+    static boolean isRequestConverterType(@Nullable Class<? extends Annotation> type) {
+        if (type == null) {
+            return false;
+        }
+        return type == RequestConverter.class ||
+               type == RequestBean.class;
+    }
+
+    private static Type parameterizedTypeOf(AnnotatedElement element) {
+        if (element instanceof Parameter) {
+            return ((Parameter) element).getParameterizedType();
+        }
+        if (element instanceof Field) {
+            return ((Field) element).getGenericType();
+        }
+        throw new IllegalArgumentException("Unsupported annotated element: " +
+                                           element.getClass().getSimpleName());
     }
 
     @Nullable
-    private final Annotation annotation;
+    private final Class<? extends Annotation> annotationType;
 
     @Nullable
     private final String httpElementName;
@@ -514,14 +601,15 @@ final class AnnotatedValueResolver {
 
     private static final ConcurrentMap<Class<?>, EnumConverter<?>> enumConverters = new MapMaker().makeMap();
 
-    private AnnotatedValueResolver(@Nullable Annotation annotation, @Nullable String httpElementName,
+    private AnnotatedValueResolver(@Nullable Class<? extends Annotation> annotationType,
+                                   @Nullable String httpElementName,
                                    boolean isPathVariable, boolean shouldExist,
                                    boolean shouldWrapValueAsOptional,
                                    @Nullable Class<?> containerType, Class<?> elementType,
                                    @Nullable String defaultValue,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
                                    AggregationStrategy aggregationStrategy) {
-        this.annotation = annotation;
+        this.annotationType = annotationType;
         this.httpElementName = httpElementName;
         this.isPathVariable = isPathVariable;
         this.shouldExist = shouldExist;
@@ -548,15 +636,9 @@ final class AnnotatedValueResolver {
         });
     }
 
-    @VisibleForTesting
     @Nullable
-    Annotation annotation() {
-        return annotation;
-    }
-
-    boolean isAnnotationType(Class<? extends Annotation> target) {
-        return annotation != null &&
-               annotation.annotationType() == target;
+    Class<? extends Annotation> annotationType() {
+        return annotationType;
     }
 
     @Nullable
@@ -639,8 +721,8 @@ final class AnnotatedValueResolver {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("annotation",
-                               annotation != null ? annotation.annotationType().getSimpleName() : "(none)")
+                          .add("annotationType",
+                               annotationType != null ? annotationType.getSimpleName() : "(none)")
                           .add("httpElementName", httpElementName)
                           .add("pathVariable", isPathVariable)
                           .add("shouldExist", shouldExist)
@@ -665,7 +747,7 @@ final class AnnotatedValueResolver {
         private final Type type;
         private AnnotatedElement typeElement;
         @Nullable
-        private Annotation annotation;
+        private Class<? extends Annotation> annotationType;
         @Nullable
         private String httpElementName;
         private boolean pathVariable;
@@ -683,10 +765,16 @@ final class AnnotatedValueResolver {
         }
 
         /**
-         * Sets the annotation which is one of {@link Param}, {@link Header} or {@link RequestObject}.
+         * Sets the annotation type which is one of the following.
+         * <ul>
+         *     <li>{@link Param}</li>
+         *     <li>{@link Header}</li>
+         *     <li>{@link RequestBean}</li>
+         *     <li>{@link RequestConverter}</li>
+         * </ul>
          */
-        private Builder annotation(Annotation annotation) {
-            this.annotation = annotation;
+        private Builder annotationType(Class<? extends Annotation> annotationType) {
+            this.annotationType = annotationType;
             return this;
         }
 
@@ -754,17 +842,6 @@ final class AnnotatedValueResolver {
             return this;
         }
 
-        private static Type parameterizedTypeOf(AnnotatedElement element) {
-            if (element instanceof Parameter) {
-                return ((Parameter) element).getParameterizedType();
-            }
-            if (element instanceof Field) {
-                return ((Field) element).getGenericType();
-            }
-            throw new IllegalArgumentException("Unsupported annotated element: " +
-                                               element.getClass().getSimpleName());
-        }
-
         private static Entry<Class<?>, Class<?>> resolveTypes(Type parameterizedType, Type type,
                                                               boolean unwrapOptionalType) {
             if (unwrapOptionalType) {
@@ -794,17 +871,17 @@ final class AnnotatedValueResolver {
         private AnnotatedValueResolver build() {
             checkArgument(resolver != null, "'resolver' should be specified");
 
-            // Request convert may produce 'Optional<?>' value. But it is different from supporting
-            // 'Optional' type. So if the annotation is 'RequestObject', 'shouldWrapValueAsOptional'
-            // is always set as 'false'.
+            // A request converter may produce 'Optional<?>' value. But it is different from supporting
+            // 'Optional' type. So if the value would be generated by a request converter,
+            // 'shouldWrapValueAsOptional' is always set as 'false'.
             final boolean shouldWrapValueAsOptional = type == Optional.class &&
-                                                      (annotation == null ||
-                                                       annotation.annotationType() != RequestObject.class);
+                                                      !isRequestConverterType(annotationType);
+
             if (!supportOptional && shouldWrapValueAsOptional) {
                 throw new IllegalArgumentException(
-                        '@' + Optional.class.getSimpleName() + " is not supported for: " +
-                        (annotation != null ? annotation.annotationType().getSimpleName()
-                                            : type.getTypeName()));
+                        Optional.class.getSimpleName() + " is not supported for: " +
+                        (annotationType != null ? annotationType.getSimpleName()
+                                                : type.getTypeName()));
             }
 
             final boolean shouldExist;
@@ -833,8 +910,8 @@ final class AnnotatedValueResolver {
                     msg.append(" is redundant for ");
                     if (pathVariable) {
                         msg.append("path variable '").append(httpElementName).append('\'');
-                    } else if (annotation != null) {
-                        msg.append("annotation @").append(annotation.annotationType().getSimpleName());
+                    } else if (annotationType != null) {
+                        msg.append("annotation @").append(annotationType.getSimpleName());
                     } else {
                         msg.append("type '").append(type.getTypeName()).append('\'');
                     }
@@ -857,9 +934,7 @@ final class AnnotatedValueResolver {
             }
 
             final Entry<Class<?>, Class<?>> types;
-            if (annotation != null &&
-                (annotation.annotationType() == Param.class ||
-                 annotation.annotationType() == Header.class)) {
+            if (annotationType == Param.class || annotationType == Header.class) {
                 assert httpElementName != null;
 
                 // The value annotated with @Param or @Header should be converted to the desired type,
@@ -887,7 +962,7 @@ final class AnnotatedValueResolver {
                 types = new SimpleImmutableEntry<>(null, (Class<?>) type);
             }
 
-            return new AnnotatedValueResolver(annotation, httpElementName, pathVariable, shouldExist,
+            return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
                                               shouldWrapValueAsOptional, types.getKey(), types.getValue(),
                                               defaultValue, resolver, aggregation);
         }
@@ -1073,28 +1148,6 @@ final class AnnotatedValueResolver {
             throw new IllegalArgumentException(
                     "unknown enum value: " + str + " (expected: " + enumMap.values() + ')');
         }
-    }
-
-    /**
-     * An interface to make a {@link RequestConverterFunction} be adapted for
-     * {@link AnnotatedValueResolver} internal implementation.
-     */
-    @FunctionalInterface
-    interface RequestObjectResolver {
-        static RequestObjectResolver of(RequestConverterFunction function) {
-            return (resolverContext, expectedResultType, beanFactoryId) -> {
-                final AggregatedHttpMessage message = resolverContext.message();
-                if (message == null) {
-                    throw new IllegalArgumentException(
-                            "Cannot convert this request to an object because it is not aggregated.");
-                }
-                return function.convertRequest(resolverContext.context(), message, expectedResultType);
-            };
-        }
-
-        @Nullable
-        Object convert(ResolverContext resolverContext, Class<?> expectedResultType,
-                       @Nullable BeanFactoryId beanFactoryId) throws Throwable;
     }
 
     /**

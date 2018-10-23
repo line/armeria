@@ -43,7 +43,6 @@ import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
-import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 public class AnnotatedHttpServiceBuilderTest {
@@ -214,19 +213,19 @@ public class AnnotatedHttpServiceBuilderTest {
     public void ofBuiltinRequestConverter() {
         new ServerBuilder().annotatedService(new Object() {
             @Get("/")
-            public void root(@RequestObject String value) {}
+            public void root(String value) {}
         });
         new ServerBuilder().annotatedService(new Object() {
             @Get("/")
-            public void root(@RequestObject byte[] value) {}
+            public void root(byte[] value) {}
         });
         new ServerBuilder().annotatedService(new Object() {
             @Get("/")
-            public void root(@RequestObject JsonNode value) {}
+            public void root(JsonNode value) {}
         });
         new ServerBuilder().annotatedService(new Object() {
             @Get("/")
-            public void root(@RequestObject HttpData value) {}
+            public void root(HttpData value) {}
         });
     }
 

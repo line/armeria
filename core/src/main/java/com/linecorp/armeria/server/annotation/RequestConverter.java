@@ -29,11 +29,10 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
  * an object.
  *
  * @see RequestConverterFunction
- * @see RequestObject
  */
 @Repeatable(RequestConverters.class)
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER })
 public @interface RequestConverter {
 
     /**

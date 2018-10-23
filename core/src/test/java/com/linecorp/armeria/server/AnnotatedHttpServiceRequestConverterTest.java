@@ -50,9 +50,9 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.RequestBean;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
-import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -77,7 +77,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
     public static class MyService1 {
 
         @Post("/convert1")
-        public String convert1(@RequestObject RequestJsonObj1 obj1) {
+        public String convert1(RequestJsonObj1 obj1) {
             assertThat(obj1).isNotNull();
             return obj1.toString();
         }
@@ -86,15 +86,15 @@ public class AnnotatedHttpServiceRequestConverterTest {
         @RequestConverter(TestRequestConverter2.class)
         @RequestConverter(TestRequestConverter1A.class)
         @RequestConverter(TestRequestConverter1.class)
-        public String convert2(@RequestObject RequestJsonObj1 obj1) {
+        public String convert2(RequestJsonObj1 obj1) {
             assertThat(obj1).isNotNull();
             return obj1.toString();
         }
 
         @Post("/convert3")
-        public String convert3(@RequestObject(TestRequestConverterOptional1.class)
+        public String convert3(@RequestConverter(TestRequestConverterOptional1.class)
                                        Optional<RequestJsonObj1> obj1,
-                               @RequestObject(TestRequestConverterOptional2.class)
+                               @RequestConverter(TestRequestConverterOptional2.class)
                                        Optional<RequestJsonObj2> obj2) {
             assertThat(obj1.isPresent()).isTrue();
             assertThat(obj2.isPresent()).isTrue();
@@ -108,7 +108,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Post("/default/bean1/{userName}/{seqNum}")
-        public String defaultBean1ForPost(@RequestObject RequestBean1 bean1)
+        public String defaultBean1ForPost(@RequestBean RequestBean1 bean1)
                 throws JsonProcessingException {
             assertThat(bean1).isNotNull();
             bean1.validate();
@@ -116,7 +116,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean1/{userName}/{seqNum}")
-        public String defaultBean1ForGet(@RequestObject RequestBean1 bean1)
+        public String defaultBean1ForGet(@RequestBean RequestBean1 bean1)
                 throws JsonProcessingException {
             assertThat(bean1).isNotNull();
             bean1.validate();
@@ -124,7 +124,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/bean2/{userName}/{serialNo}")
-        public String defaultBean2ForPost(@RequestObject RequestBean2 bean2)
+        public String defaultBean2ForPost(@RequestBean RequestBean2 bean2)
                 throws JsonProcessingException {
             assertThat(bean2).isNotNull();
             bean2.validate();
@@ -132,7 +132,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean2/{userName}")
-        public String defaultBean2ForGet(@RequestObject RequestBean2 bean2)
+        public String defaultBean2ForGet(@RequestBean RequestBean2 bean2)
                 throws JsonProcessingException {
             assertThat(bean2).isNotNull();
             bean2.validate();
@@ -140,7 +140,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/bean3/{userName}/{departmentNo}")
-        public String defaultBean3ForPost(@RequestObject RequestBean3 bean3)
+        public String defaultBean3ForPost(@RequestBean RequestBean3 bean3)
                 throws JsonProcessingException {
             assertThat(bean3).isNotNull();
             bean3.validate();
@@ -148,7 +148,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean3/{userName}")
-        public String defaultBean3ForGet(@RequestObject RequestBean3 bean3)
+        public String defaultBean3ForGet(@RequestBean RequestBean3 bean3)
                 throws JsonProcessingException {
             assertThat(bean3).isNotNull();
             bean3.validate();
@@ -156,22 +156,22 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/json")
-        public String defaultJson(@RequestObject RequestJsonObj1 obj1,
-                                  @RequestObject RequestJsonObj2 obj2) {
+        public String defaultJson(RequestJsonObj1 obj1,
+                                  RequestJsonObj2 obj2) {
             assertThat(obj1).isNotNull();
             assertThat(obj2).isNotNull();
             return obj2.strVal();
         }
 
         @Post("/default/invalidJson")
-        public String invalidJson(@RequestObject JsonNode node) {
+        public String invalidJson(JsonNode node) {
             // Should never reach here because we are sending invalid JSON.
             throw new Error();
         }
 
         @Post("/default/binary")
-        public byte[] defaultBinary(@RequestObject HttpData obj1,
-                                    @RequestObject byte[] obj2) {
+        public byte[] defaultBinary(HttpData obj1,
+                                    byte[] obj2) {
             assertThat(obj1).isNotNull();
             assertThat(obj2).isNotNull();
             // Actually they have the same byte array.
@@ -180,7 +180,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/text")
-        public String defaultText(@RequestObject String obj1) {
+        public String defaultText(String obj1) {
             assertThat(obj1).isNotNull();
             return obj1;
         }
@@ -465,7 +465,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().toStringUtf8()).isEqualTo(obj1a.toString());
 
-        // Multiple @RequestObject annotated parameters
+        // Multiple @RequestConverter annotated parameters
         response = client.post("/1/convert3", content1).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().toStringUtf8()).isEqualTo(HttpMethod.POST.name());

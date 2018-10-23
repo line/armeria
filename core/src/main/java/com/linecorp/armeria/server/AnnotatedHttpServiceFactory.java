@@ -21,7 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
-import static com.linecorp.armeria.server.AnnotatedValueResolver.toRequestObjectResolvers;
+import static com.linecorp.armeria.server.AnnotatedValueResolver.isRequestConverterType;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.server.AnnotatedValueResolver.NoParameterException;
+import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
@@ -72,6 +73,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
+import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
@@ -85,9 +87,9 @@ import com.linecorp.armeria.server.annotation.ProducesGroup;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
-import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Trace;
 
@@ -101,6 +103,14 @@ final class AnnotatedHttpServiceFactory {
      * An instance map for reusing converters, exception handlers and decorators.
      */
     private static final ConcurrentMap<Class<?>, Object> instanceCache = new ConcurrentHashMap<>();
+
+    /**
+     * A default {@link RequestConverterFunction}s.
+     */
+    private static final List<RequestConverterFunction> defaultRequestConverters =
+            ImmutableList.of(new JacksonRequestConverterFunction(),
+                             new StringRequestConverterFunction(),
+                             new ByteArrayRequestConverterFunction());
 
     /**
      * A default {@link ResponseConverterFunction}s.
@@ -222,15 +232,15 @@ final class AnnotatedHttpServiceFactory {
                 exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
                                                 .add(defaultExceptionHandler).build();
         final List<RequestConverterFunction> req =
-                requestConverters(method, clazz).addAll(baseRequestConverters).build();
+                requestConverters(method, clazz).addAll(baseRequestConverters)
+                                                .addAll(defaultRequestConverters).build();
         final List<ResponseConverterFunction> res =
                 responseConverters(method, clazz).addAll(baseResponseConverters)
                                                  .addAll(defaultResponseConverters).build();
 
         List<AnnotatedValueResolver> resolvers;
         try {
-            resolvers = AnnotatedValueResolver.of(method, pathMapping.paramNames(),
-                                                  toRequestObjectResolvers(req));
+            resolvers = AnnotatedValueResolver.of(method, pathMapping.paramNames(), req, true);
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //
@@ -252,8 +262,8 @@ final class AnnotatedHttpServiceFactory {
             throw new IllegalArgumentException("cannot find path variables: " + missing);
         }
 
-        // Warn unused path variables only if there's no '@RequestObject' annotation.
-        if (resolvers.stream().noneMatch(r -> r.isAnnotationType(RequestObject.class)) &&
+        // Warn unused path variables only if there's no @RequestBean or @RequestConverter type element.
+        if (resolvers.stream().noneMatch(r -> isRequestConverterType(r.annotationType())) &&
             !requiredParamNames.containsAll(expectedParamNames)) {
             final Set<String> missing = Sets.difference(expectedParamNames, requiredParamNames);
             logger.warn("Some path variables of the method '" + method.getName() +
@@ -664,7 +674,8 @@ final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns a cached instance of the specified {@link Class}.
+     * Returns a cached instance of the specified {@link Class} which is specified in the given
+     * {@link Annotation}.
      */
     @SuppressWarnings("unchecked")
     static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
@@ -686,6 +697,23 @@ final class AnnotatedHttpServiceFactory {
                     "A class specified in @" + annotation.getClass().getSimpleName() +
                     " annotation cannot be cast to " + expectedType, e);
         }
+    }
+
+    /**
+     * Returns a cached instance of the specified {@link Class}.
+     */
+    @SuppressWarnings("unchecked")
+    static <T> T getInstance(Class<T> clazz) {
+        return (T) instanceCache.computeIfAbsent(clazz, type -> {
+            try {
+                final Constructor<? extends T> constructor = clazz.getDeclaredConstructor();
+                constructor.setAccessible(true);
+                return constructor.newInstance();
+            } catch (Exception e) {
+                throw new IllegalStateException("A class must have an accessible default constructor: " +
+                                                clazz.getName(), e);
+            }
+        });
     }
 
     /**

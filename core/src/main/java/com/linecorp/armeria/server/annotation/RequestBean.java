@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.annotation;
 
 import java.lang.annotation.ElementType;
@@ -22,22 +21,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies which parameter should be converted by {@link RequestConverterFunction}.
- *
- * @see RequestConverterFunction
- * @see RequestConverter
- * @deprecated No more put {@link RequestObject} on the parameter which needs to be converted by one
- *             of the {@link RequestConverterFunction}s. However, use {@link RequestBean}
- *             if a request needs to be converted into a bean.
+ * Specifies which element should be converted by a bean converter. This annotation can be put on a parameter
+ * of a constructor or method, a field, a method or a constructor.
  */
-@Deprecated
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR })
-public @interface RequestObject {
-
-    /**
-     * {@link RequestConverterFunction} implementation type which is used for converting the annotated
-     * parameter. The specified class must have an accessible default constructor.
-     */
-    Class<? extends RequestConverterFunction> value() default RequestConverterFunction.class;
-}
+public @interface RequestBean {}

@@ -27,7 +27,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * be specified as a value of a {@link RequestConverter} annotation.
  *
  * @see RequestConverter
- * @see RequestObject
  */
 @FunctionalInterface
 public interface RequestConverterFunction {

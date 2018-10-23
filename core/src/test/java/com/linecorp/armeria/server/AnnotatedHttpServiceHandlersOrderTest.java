@@ -39,7 +39,6 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
-import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -71,21 +70,21 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         @Post("/requestConverterOrder")
         @RequestConverter(MethodLevelRequestConverter.class)
         public HttpResponse requestConverterOrder(
-                @RequestObject(ParameterLevelRequestConverter.class) JsonNode node) {
+                @RequestConverter(ParameterLevelRequestConverter.class) JsonNode node) {
             assertThat(node).isNotNull();
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8(node.toString()));
         }
 
         @Post("/responseConverterOrder")
         @ResponseConverter(MethodLevelResponseConverter.class)
-        public String responseConverterOrder(@RequestObject String name) {
+        public String responseConverterOrder(String name) {
             assertThat(name).isEqualTo("foo");
             return "hello " + name;
         }
 
         @Post("/exceptionHandlerOrder")
         @ExceptionHandler(MethodLevelExceptionHandler.class)
-        public HttpResponse exceptionHandlerOrder(@RequestObject String name) {
+        public HttpResponse exceptionHandlerOrder(String name) {
             assertThat(name).isEqualTo("foo");
             final AggregatedHttpMessage message = AggregatedHttpMessage.of(
                     HttpStatus.NOT_IMPLEMENTED, MediaType.PLAIN_TEXT_UTF_8, "hello " + name);

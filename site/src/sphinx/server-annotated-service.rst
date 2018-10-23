@@ -416,8 +416,8 @@ Converting an HTTP request to a Java object
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In some cases like receiving a JSON document from a client, it may be useful to convert the document to
-a Java object automatically. Armeria provides :api:`@RequestConverter` and :api:`@RequestObject`
-annotations so that such conversion can be done conveniently.
+a Java object automatically. Armeria provides :api:`@RequestConverter` annotation so that such conversion
+can be done conveniently.
 You can write your own request converter by implementing :api:`RequestConverterFunction` as follows.
 Similar to the exception handler, you can call ``RequestConverterFunction.fallthrough()`` when your request
 converter is not able to convert the request.
@@ -439,7 +439,7 @@ converter is not able to convert the request.
     }
 
 Then, you can write your service method as follows. Note that a request converter will work on the parameters
-which are annotated with :api:`@RequestObject`.
+which are not annotated and are not automatically injectable types.
 
 .. code-block:: java
 
@@ -447,31 +447,30 @@ which are annotated with :api:`@RequestObject`.
     public class MyAnnotatedService {
 
         @Post("/hello")
-        public HttpResponse hello(@RequestObject MyObject myObject) {
+        public HttpResponse hello(MyObject myObject) {
             // MyRequestConverter will be used to convert a request.
             // ...
         }
 
         @Post("/hola")
         @RequestConverter(MySpanishRequestConverter.class)
-        public HttpResponse hola(@RequestObject MySpanishObject myObject) {
+        public HttpResponse hola(MySpanishObject myObject) {
             // MySpanishRequestConverter will be tried to convert a request first.
             // MyRequestConverter will be used if MySpanishRequestConverter fell through.
             // ...
         }
     }
 
-Armeria also provides built-in request converters such as, a request converter for a Java Bean,
-:api:`JacksonRequestConverterFunction` for a JSON document, :api:`StringRequestConverterFunction`
-for a string and :api:`ByteArrayRequestConverterFunction` for binary data. They will be applied
-after your request converters by default, so you can use these built-in converters by just putting
-:api:`@RequestObject` annotation on the parameters which you want to convert.
+Armeria also provides built-in request converters such as, :api:`JacksonRequestConverterFunction`
+for a JSON document, :api:`StringRequestConverterFunction` for a string and
+:api:`ByteArrayRequestConverterFunction` for binary data. They will be applied after your request converters
+by default, so you can use these built-in converters by just specifying parameters without an annotation.
 
-In some cases, :api:`@RequestObject` annotation may have a request converter as its value.
+In some cases, :api:`@RequestConverter` annotation may be put on the parameter with a converter class.
 Assume that you have a Java class named ``MyRequest`` that it is usually able to be converted by
 ``MyDefaultRequestConverter``. But what if there is only one method which has a parameter of ``MyRequest``
 that you have to convert it differently? In this case, you may specify a request converter with
-:api:`@RequestObject` annotation. In the example, ``MySpecialRequestConverter`` will be used first for
+:api:`@RequestConverter` annotation. In the example, ``MySpecialRequestConverter`` will be used first for
 converting ``MyRequest``.
 
 .. code-block:: java
@@ -480,7 +479,7 @@ converting ``MyRequest``.
     public class MyAnnotatedService {
         @Post("/hello")
         public HttpResponse hello(
-            @RequestObject(MySpecialRequestConverter.class) MyRequest myRequest) { ... }
+            @RequestConverter(MySpecialRequestConverter.class) MyRequest myRequest) { ... }
     }
 
 
@@ -488,13 +487,13 @@ Injecting value of parameters and HTTP headers into a Java object
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Armeria provides a generic built-in request converter for Java objects which is activated by
-putting :api:`@RequestObject` annotation on the parameters which you want to convert.
+putting :api:`@RequestBean` annotation on the parameters which you want to convert.
 
 .. code-block:: java
 
     public class MyAnnotatedService {
         @Post("/hello")
-        public HttpResponse hello(@RequestObject MyRequestObject myRequestObject) { ... }
+        public HttpResponse hello(@RequestBean MyRequestObject myRequestObject) { ... }
     }
 
 Besides the annotated service class, you also need to create ``MyRequestObject`` and put :api:`@Param` or
@@ -517,7 +516,7 @@ or HTTP headers:
         @Header("age") // This field will be injected by the value of HTTP header "age".
         private int age;
 
-        @RequestObject // This field will be injected by another request converter.
+        @RequestBean   // This field will be injected by the bean converter.
         private MyAnotherRequestObject obj;
 
         // You can omit the value of @Param or @Header if you compiled your code with ``-parameters`` javac option.
@@ -541,7 +540,7 @@ or HTTP headers:
 
 The usage of :api:`@Param` or :api:`@Header` annotations on Java object elements is much like
 using them on the parameters of a service method because even you can use :api:`@Default` and
-:api:`@RequestObject` annotations defined there.
+:api:`@RequestBean` annotations defined there.
 Please refer to :ref:`parameter-injection`, and :ref:`header-injection` for more information.
 
 
@@ -1117,5 +1116,5 @@ Then, you can annotate your service method with your annotation as follows.
         @Post("/hello")
         @MyConsumableType  // the same as @Consumes("application/xml")
         @MyProducibleType  // the same as @Produces("application/xml")
-        public MyResponse hello(@RequestObject MyRequest myRequest) { ... }
+        public MyResponse hello(MyRequest myRequest) { ... }
     }
