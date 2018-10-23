@@ -23,12 +23,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Builds a new {@link DocService}.
@@ -44,7 +47,8 @@ public final class DocServiceBuilder {
 
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders = new HashMap<>();
     private final Map<String, ListMultimap<String, String>> exampleRequests = new HashMap<>();
-    private final List<String> injectedScripts = new ArrayList<>();
+    private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers =
+            new ArrayList<>();
 
     /**
      * Adds the example {@link HttpHeaders} which are applicable to any services.
@@ -279,8 +283,20 @@ public final class DocServiceBuilder {
         requireNonNull(scripts, "scripts");
         for (String s : scripts) {
             requireNonNull(s, "scripts contains null.");
-            injectedScripts.add(s);
+            injectedScriptSuppliers.add((unused1, unused2) -> s);
         }
+        return this;
+    }
+
+    /**
+     * Adds a supplier for Javascript scripts to inject into the {@code <head />} of the debug page HTML.
+     * The supplier will be called every request for the initial {@link DocService} HTML. This can be used to
+     * customize the debug page per-request (e.g., to provide a HeaderProvider for enabling authentication based
+     * on an injected timestamped token). All scripts are concatenated into the content of a single script tag.
+     */
+    public DocServiceBuilder injectedScriptSupplier(
+            BiFunction<ServiceRequestContext, HttpRequest, String> supplier) {
+        injectedScriptSuppliers.add(requireNonNull(supplier, "supplier"));
         return this;
     }
 
@@ -353,6 +369,6 @@ public final class DocServiceBuilder {
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
-        return new DocService(exampleHttpHeaders, exampleRequests,  String.join("\n", injectedScripts));
+        return new DocService(exampleHttpHeaders, exampleRequests,  injectedScriptSuppliers);
     }
 }

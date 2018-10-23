@@ -73,6 +73,9 @@ public class GrpcDocServiceTest {
     private static final String INJECTED_HEADER_PROVIDER2 =
             "armeria.registerHeaderProvider(function() { return Promise.resolve({ 'cat': 'dog' }); });";
 
+    private static final String INJECTED_HEADER_PROVIDER3 =
+            "armeria.registerHeaderProvider(function() { return Promise.resolve({ 'moo': 'cow' }); });";
+
     private static class TestService extends TestServiceImplBase {
 
         @Override
@@ -108,6 +111,7 @@ public class GrpcDocServiceTest {
                                                                 .setBody(ByteString.copyFromUtf8("world")))
                                                  .build())
                             .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
+                            .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
                             .build()
                             .decorate(LoggingService.newDecorator()));
             sb.serviceUnder("/", new GrpcServiceBuilder()
@@ -175,7 +179,9 @@ public class GrpcDocServiceTest {
             try (CloseableHttpResponse res = hc.execute(injectedJsReq)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity()))
-                        .isEqualTo(INJECTED_HEADER_PROVIDER1 + '\n' + INJECTED_HEADER_PROVIDER2);
+                        .isEqualTo(INJECTED_HEADER_PROVIDER1 + '\n' +
+                                   INJECTED_HEADER_PROVIDER2 + '\n' +
+                                   INJECTED_HEADER_PROVIDER3);
             }
         }
     }
