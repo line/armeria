@@ -29,20 +29,25 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     private final HttpClientFactory clientFactory;
     private final Http2ResponseDecoder responseDecoder;
 
-    Http2ClientConnectionHandler(
-            HttpClientFactory clientFactory, Channel channel,
-            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-            Http2Settings initialSettings) {
+    Http2ClientConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                 Http2Settings initialSettings, Channel channel,
+                                 HttpClientFactory clientFactory) {
 
         super(decoder, encoder, initialSettings);
 
         this.clientFactory = clientFactory;
-        responseDecoder = new Http2ResponseDecoder(connection(), channel, encoder());
+        responseDecoder = new Http2ResponseDecoder(channel, encoder());
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);
 
         // Setup post build options
-        gracefulShutdownTimeoutMillis(clientFactory.idleTimeoutMillis());
+        final long timeout = clientFactory.idleTimeoutMillis();
+        if (timeout > 0) {
+            gracefulShutdownTimeoutMillis(timeout);
+        } else {
+            // Timeout disabled
+            gracefulShutdownTimeoutMillis(-1);
+        }
     }
 
     Http2ResponseDecoder responseDecoder() {
@@ -64,6 +69,6 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return clientFactory.isClosing() || responseDecoder.receivedErrorGoAway();
+        return clientFactory.isClosing() || responseDecoder.goAwayHandler().receivedErrorGoAway();
     }
 }

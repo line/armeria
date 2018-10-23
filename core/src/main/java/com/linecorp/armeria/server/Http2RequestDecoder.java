@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -54,20 +55,23 @@ import io.netty.util.collection.IntObjectMap;
 final class Http2RequestDecoder extends Http2EventAdapter {
 
     private final ServerConfig cfg;
+    private final Channel channel;
     private final Http2ConnectionEncoder writer;
     private final InboundTrafficController inboundTrafficController;
+    private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
-    private boolean receivedErrorGoAway;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer) {
         this.cfg = cfg;
+        this.channel = channel;
         this.writer = writer;
         inboundTrafficController = new InboundTrafficController(channel);
+        goAwayHandler = new Http2GoAwayHandler();
     }
 
-    boolean receivedErrorGoAway() {
-        return receivedErrorGoAway;
+    Http2GoAwayHandler goAwayHandler() {
+        return goAwayHandler;
     }
 
     @Override
@@ -169,6 +173,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onStreamClosed(Http2Stream stream) {
+        goAwayHandler.onStreamClosed(channel, stream);
+
         final DecodedHttpRequest req = requests.remove(stream.id());
         if (req != null) {
             // Ignored if the stream has already been closed.
@@ -272,9 +278,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     }
 
     @Override
+    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
+        goAwayHandler.onGoAwaySent(channel, lastStreamId, errorCode, debugData);
+    }
+
+    @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
-        if (errorCode != Http2Error.NO_ERROR.code()) {
-            receivedErrorGoAway = true;
-        }
+        goAwayHandler.onGoAwayReceived(channel, lastStreamId, errorCode, debugData);
     }
 }

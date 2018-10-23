@@ -38,7 +38,6 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
 
@@ -176,8 +175,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline) {
 
         final Http2Connection conn = new DefaultHttp2Connection(true);
-        conn.addListener(new Http2GoAwayListener(pipeline.channel()));
-
         final Http2FrameReader reader = new DefaultHttp2FrameReader(true);
         final Http2FrameWriter writer = new DefaultHttp2FrameWriter();
 
@@ -185,7 +182,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
         return new Http2ServerConnectionHandler(
-                config, pipeline.channel(), gracefulShutdownSupport, decoder, encoder, http2Settings());
+                decoder, encoder, http2Settings(), pipeline.channel(), config, gracefulShutdownSupport);
     }
 
     private Http2Settings http2Settings() {
