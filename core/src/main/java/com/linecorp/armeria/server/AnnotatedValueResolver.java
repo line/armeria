@@ -209,8 +209,8 @@ final class AnnotatedValueResolver {
             throw new NoAnnotatedParameterException(constructorOrMethod.toGenericString());
         }
         if (list.size() != parameters.length) {
-            throw new IllegalArgumentException("Unsupported parameter exists: " +
-                                               constructorOrMethod.toGenericString());
+            throw new NoAnnotatedParameterException("Unsupported parameter exists: " +
+                                                    constructorOrMethod.toGenericString());
         }
         return list;
     }
