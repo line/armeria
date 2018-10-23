@@ -48,7 +48,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.Http1ClientCodec;
-import com.linecorp.armeria.internal.Http2GoAwayListener;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
 
@@ -632,15 +631,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private Http2ClientConnectionHandler newHttp2ConnectionHandler(Channel ch) {
         final boolean validateHeaders = false;
         final Http2Connection conn = new DefaultHttp2Connection(false);
-        conn.addListener(new Http2GoAwayListener(ch));
-
         final Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
         final Http2FrameWriter writer = new DefaultHttp2FrameWriter();
 
         final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
         final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
-        return new Http2ClientConnectionHandler(clientFactory, ch, decoder, encoder, http2Settings());
+        return new Http2ClientConnectionHandler(decoder, encoder, http2Settings(), ch, clientFactory);
     }
 
     private Http2Settings http2Settings() {

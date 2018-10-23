@@ -20,20 +20,19 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.Http2StreamVisitor;
@@ -80,26 +79,24 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         }
 
         handlingConnectionError = true;
+        super.onConnectionError(ctx, outbound, cause, filterHttp2Exception(cause, http2Ex));
+    }
 
-        if (Flags.verboseResponses()) {
-            // TODO(trustin): Remove this once Http2ConnectionHandler.goAway() sends better debugData.
-            //                See https://github.com/netty/netty/issues/5160
-            if (http2Ex == null) {
-                http2Ex = new Http2Exception(INTERNAL_ERROR, goAwayDebugData(null, cause), cause);
-            } else if (http2Ex instanceof ClosedStreamCreationException) {
-                final ClosedStreamCreationException e = (ClosedStreamCreationException) http2Ex;
-                http2Ex = new ClosedStreamCreationException(e.error(), goAwayDebugData(e, cause), cause);
-            } else {
-                http2Ex = new Http2Exception(
-                        http2Ex.error(), goAwayDebugData(http2Ex, cause), cause, http2Ex.shutdownHint());
-            }
+    private static Http2Exception filterHttp2Exception(Throwable cause, @Nullable Http2Exception http2Ex) {
+        if (http2Ex != null) {
+            return http2Ex;
         }
 
-        super.onConnectionError(ctx, outbound, cause, http2Ex);
+        if (Flags.verboseResponses()) {
+            return new Http2Exception(INTERNAL_ERROR, goAwayDebugData(null, cause), cause);
+        } else {
+            // Do not let Netty use the exception message as debug data, just in case the exception message
+            // exposes sensitive information.
+            return new Http2Exception(INTERNAL_ERROR, null, cause);
+        }
     }
 
     private static String goAwayDebugData(@Nullable Http2Exception http2Ex, @Nullable Throwable cause) {
-        final StringBuilder buf = new StringBuilder(256);
         final String type;
         final String message;
 
@@ -109,16 +106,39 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         } else {
             type = null;
             message = null;
+            if (cause == null) {
+                return "";
+            }
         }
 
-        buf.append("type: ");
-        buf.append(MoreObjects.firstNonNull(type, "n/a"));
-        buf.append(", message: ");
-        buf.append(MoreObjects.firstNonNull(message, "n/a"));
-        buf.append(", cause: ");
-        buf.append(cause != null ? Exceptions.traceText(cause) : "n/a");
+        final StringBuilder buf = new StringBuilder(256);
+        if (type != null) {
+            buf.append(", type: ");
+            buf.append(type);
+        }
+        if (message != null) {
+            buf.append(", message: ");
+            buf.append(message);
+        }
+        if (cause != null) {
+            buf.append(", cause: ");
+            buf.append(Exceptions.traceText(cause));
+        }
 
-        return buf.toString();
+        return buf.substring(2); // Strip the leading comma.
+    }
+
+    @Override
+    public ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
+                                ChannelPromise promise) {
+        if (!ctx.channel().isActive()) {
+            // There's no point of sending a GOAWAY frame because the connection is over already.
+            promise.unvoid().trySuccess();
+            debugData.release();
+            return promise;
+        }
+
+        return super.goAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
     @Override

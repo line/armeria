@@ -29,9 +29,9 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     private final GracefulShutdownSupport gracefulShutdownSupport;
     private final Http2RequestDecoder requestDecoder;
 
-    Http2ServerConnectionHandler(
-            ServerConfig config, Channel channel, GracefulShutdownSupport gracefulShutdownSupport,
-            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
+    Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                 Http2Settings initialSettings, Channel channel, ServerConfig config,
+                                 GracefulShutdownSupport gracefulShutdownSupport) {
 
         super(decoder, encoder, initialSettings);
 
@@ -41,7 +41,13 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         decoder().frameListener(requestDecoder);
 
         // Setup post build options
-        gracefulShutdownTimeoutMillis(config.idleTimeoutMillis());
+        final long timeout = config.idleTimeoutMillis();
+        if (timeout > 0) {
+            gracefulShutdownTimeoutMillis(timeout);
+        } else {
+            // Timeout disabled
+            gracefulShutdownTimeoutMillis(-1);
+        }
     }
 
     @Override
@@ -49,6 +55,6 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return gracefulShutdownSupport.isShuttingDown() || requestDecoder.receivedErrorGoAway();
+        return gracefulShutdownSupport.isShuttingDown() || requestDecoder.goAwayHandler().receivedErrorGoAway();
     }
 }

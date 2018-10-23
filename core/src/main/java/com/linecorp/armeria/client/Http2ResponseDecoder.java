@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.Http2GoAwayHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -53,12 +54,13 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
-    private long goAwayErrorCode = -1; // -1 if not received GOAWAY yet
+    private final Http2GoAwayHandler goAwayHandler;
 
-    Http2ResponseDecoder(Http2Connection conn, Channel channel, Http2ConnectionEncoder encoder) {
+    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder) {
         super(channel);
-        this.conn = conn;
+        conn = encoder.connection();
         this.encoder = encoder;
+        goAwayHandler = new Http2GoAwayHandler();
     }
 
     @Override
@@ -96,8 +98,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         return resWrapper;
     }
 
-    boolean receivedErrorGoAway() {
-        return goAwayErrorCode > Http2Error.NO_ERROR.code();
+    Http2GoAwayHandler goAwayHandler() {
+        return goAwayHandler;
     }
 
     @Override
@@ -111,12 +113,14 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onStreamClosed(Http2Stream stream) {
+        goAwayHandler.onStreamClosed(channel(), stream);
+
         final HttpResponseWrapper res = getResponse(streamIdToId(stream.id()), true);
         if (res == null) {
             return;
         }
 
-        if (goAwayErrorCode < 0) {
+        if (!goAwayHandler.receivedGoAway()) {
             res.close(ClosedSessionException.get());
             return;
         }
@@ -133,11 +137,13 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamRemoved(Http2Stream stream) {}
 
     @Override
-    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {}
+    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
+        goAwayHandler.onGoAwaySent(channel(), lastStreamId, errorCode, debugData);
+    }
 
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
-        goAwayErrorCode = errorCode;
+        goAwayHandler.onGoAwayReceived(channel(), lastStreamId, errorCode, debugData);
     }
 
     @Override
