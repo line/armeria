@@ -23,33 +23,42 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http2.Http2ConnectionAdapter;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
 
 /**
- * A {@link Http2ConnectionAdapter} that logs the received GOAWAY frames and makes sure disconnection.
+ * Handles GOAWAY frames.
  */
-public class Http2GoAwayListener extends Http2ConnectionAdapter {
+public final class Http2GoAwayHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(Http2GoAwayListener.class);
+    private static final Logger logger = LoggerFactory.getLogger(Http2GoAwayHandler.class);
 
-    private final Channel ch;
     private boolean goAwaySent;
+    private long goAwayReceived; // -1 if not received, errorCode if received.
 
-    public Http2GoAwayListener(Channel ch) {
-        this.ch = ch;
+    /**
+     * Returns {@code true} if the connection has received a GOAWAY frame.
+     */
+    public boolean receivedGoAway() {
+        return goAwayReceived >= 0;
     }
 
-    @Override
-    public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
+    /**
+     * Returns {@code true} if the connection has received a GOAWAY frame with non-zero error code.
+     */
+    public boolean receivedErrorGoAway() {
+        return goAwayReceived > Http2Error.NO_ERROR.code();
+    }
+
+    public void onGoAwaySent(Channel channel, int lastStreamId, long errorCode, ByteBuf debugData) {
         goAwaySent = true;
-        onGoAway("Sent", lastStreamId, errorCode, debugData);
+        onGoAway(channel, "Sent", lastStreamId, errorCode, debugData);
     }
 
-    @Override
-    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
-        onGoAway("Received", lastStreamId, errorCode, debugData);
+    public void onGoAwayReceived(Channel channel, int lastStreamId, long errorCode, ByteBuf debugData) {
+        goAwayReceived = errorCode;
+
+        onGoAway(channel, "Received", lastStreamId, errorCode, debugData);
 
         // Send a GOAWAY back to the peer and close the connection gracefully if we did not send GOAWAY yet.
         // This makes sure that the connection is closed eventually once we receive GOAWAY.
@@ -57,21 +66,22 @@ public class Http2GoAwayListener extends Http2ConnectionAdapter {
             // This does not close the connection immediately but sends a GOAWAY frame.
             // The connection will be closed when all streams are closed.
             // See AbstractHttp2ConnectionHandler.close().
-            ch.close();
+            channel.close();
         }
     }
 
-    private void onGoAway(String sentOrReceived, int lastStreamId, long errorCode, ByteBuf debugData) {
+    private static void onGoAway(Channel channel, String sentOrReceived,
+                                 int lastStreamId, long errorCode, ByteBuf debugData) {
         if (errorCode != Http2Error.NO_ERROR.code()) {
             if (logger.isWarnEnabled()) {
                 logger.warn("{} {} a GOAWAY frame: lastStreamId={}, errorCode={}, debugData=\"{}\"",
-                            ch, sentOrReceived, lastStreamId, errorStr(errorCode),
+                            channel, sentOrReceived, lastStreamId, errorStr(errorCode),
                             debugData.toString(StandardCharsets.UTF_8));
             }
         } else {
             if (logger.isDebugEnabled()) {
-                logger.debug("{} {} a GOAWAY frame: lastStreamId={}, errorCode=NO_ERROR",
-                             ch, sentOrReceived, lastStreamId);
+                logger.debug("{} {} a GOAWAY frame: lastStreamId={}, errorCode=NO_ERROR(0)",
+                             channel, sentOrReceived, lastStreamId);
             }
         }
     }
@@ -82,10 +92,9 @@ public class Http2GoAwayListener extends Http2ConnectionAdapter {
                              : "UNKNOWN(" + errorCode + ')';
     }
 
-    @Override
-    public void onStreamRemoved(Http2Stream stream) {
+    public void onStreamClosed(Channel channel, Http2Stream stream) {
         if (stream.id() == 1) {
-            logger.debug("{} HTTP/2 upgrade stream removed: {}", ch, stream.state());
+            logger.debug("{} HTTP/2 upgrade stream closed: {}", channel, stream.state());
         }
     }
 }
