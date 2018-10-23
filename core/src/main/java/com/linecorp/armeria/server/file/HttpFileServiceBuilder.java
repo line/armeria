@@ -68,6 +68,7 @@ public final class HttpFileServiceBuilder {
     private Clock clock = Clock.systemUTC();
     private int maxCacheEntries = 1024;
     private int maxCacheEntrySizeBytes = 65536;
+    private int cacheExpireTime = 0;
     private boolean serveCompressedFiles;
 
     private HttpFileServiceBuilder(HttpVfs vfs) {
@@ -87,6 +88,14 @@ public final class HttpFileServiceBuilder {
      */
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
         this.maxCacheEntries = HttpFileServiceConfig.validateMaxCacheEntries(maxCacheEntries);
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed number of cached file entries.
+     */
+    public HttpFileServiceBuilder cacheExpireTime(int cacheExpireTime) {
+        this.cacheExpireTime = HttpFileServiceConfig.validateCacheExpireTime(cacheExpireTime);
         return this;
     }
 
@@ -120,7 +129,7 @@ public final class HttpFileServiceBuilder {
      */
     public HttpFileService build() {
         return new HttpFileService(new HttpFileServiceConfig(
-                vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes, serveCompressedFiles));
+                vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes, cacheExpireTime, serveCompressedFiles));
     }
 
     @Override

@@ -29,14 +29,17 @@ public final class HttpFileServiceConfig {
     private final Clock clock;
     private final int maxCacheEntries;
     private final int maxCacheEntrySizeBytes;
+    private final int cacheExpireTime;
     private final boolean serveCompressedFiles;
 
     HttpFileServiceConfig(HttpVfs vfs, Clock clock, int maxCacheEntries, int maxCacheEntrySizeBytes,
+                          int cacheExpireTime,
                           boolean serveCompressedFiles) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.maxCacheEntries = validateMaxCacheEntries(maxCacheEntries);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
+        this.cacheExpireTime = cacheExpireTime;
         this.serveCompressedFiles = serveCompressedFiles;
     }
 
@@ -46,6 +49,10 @@ public final class HttpFileServiceConfig {
 
     static int validateMaxCacheEntrySizeBytes(int maxCacheEntrySizeBytes) {
         return validateNonNegativeParameter(maxCacheEntrySizeBytes, "maxCacheEntrySizeBytes");
+    }
+
+    static int validateCacheExpireTime(int cacheExpireTime) {
+        return validateNonNegativeParameter(cacheExpireTime, "cacheExpireTime");
     }
 
     private static int validateNonNegativeParameter(int value, String name) {
@@ -82,6 +89,13 @@ public final class HttpFileServiceConfig {
      */
     public int maxCacheEntrySizeBytes() {
         return maxCacheEntrySizeBytes;
+    }
+
+    /**
+     * Returns the cached file expire time.
+     */
+    public int cacheExpireTime() {
+        return cacheExpireTime;
     }
 
     /**

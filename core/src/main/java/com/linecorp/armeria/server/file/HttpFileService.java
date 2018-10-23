@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -111,6 +112,7 @@ public final class HttpFileService extends AbstractHttpService {
         if (config.maxCacheEntries() != 0) {
             cache = Caffeine.newBuilder()
                             .maximumSize(config.maxCacheEntries())
+                            .expireAfterWrite(config.cacheExpireTime(), TimeUnit.MINUTES)
                             .recordStats()
                             .build(this::getEntryWithoutCache);
         } else {
