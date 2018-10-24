@@ -439,7 +439,7 @@ converter is not able to convert the request.
     }
 
 Then, you can write your service method as follows. Note that a request converter will work on the parameters
-which are neither annotated nor automatically injectable types.
+which are neither annotated nor automatically injected types.
 
 .. code-block:: java
 

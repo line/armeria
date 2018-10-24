@@ -278,7 +278,7 @@ final class AnnotatedValueResolver {
         }
 
         if (type == Optional.class) {
-            // Do not allow Optional<?> for the following auto-injectable types:
+            // Warn if Optional<?> is used for the following auto-injectable types:
             //  - RequestContext and ServiceRequestContext
             //  - Request and HttpRequest
             //  - AggregatedHttpMessage
@@ -287,9 +287,11 @@ final class AnnotatedValueResolver {
             final Type parameterizedType = parameterizedTypeOf(annotatedElement);
             assert parameterizedType instanceof ParameterizedType : String.valueOf(parameterizedType);
             final Type actual = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
-            if (autoInjectableTypes.containsKey(actual)) {
-                throw new IllegalArgumentException("Optional is not allowed for: " +
-                                                   actual.getClass().getSimpleName());
+            final BiFunction<AnnotatedElement, Class<?>,
+                    AnnotatedValueResolver> factory = autoInjectableTypes.get(actual);
+            if (factory != null) {
+                logger.warn("Unnecessary Optional is used at '{}'", typeElement);
+                return Optional.of(factory.apply(typeElement, type));
             }
         } else {
             // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
@@ -335,7 +337,7 @@ final class AnnotatedValueResolver {
 
         final RequestConverter requestConverter = annotatedElement.getAnnotation(RequestConverter.class);
         if (requestConverter != null) {
-            // If we are analyzing a service method, we need to deal an element, which does not have any
+            // If we are analyzing a service method, we need to deal with an element, which does not have any
             // annotation, as a target to be converted by one of request converters.
             //
             // A user can optionally specify @RequestConverter in order to specify a converter which
@@ -465,33 +467,38 @@ final class AnnotatedValueResolver {
 
     private static AnnotatedValueResolver ofRequestContext(AnnotatedElement annotatedElement, Class<?> type) {
         return builder(annotatedElement, type)
+                .supportOptional(true)
                 .resolver((unused, ctx) -> ctx.context())
                 .build();
     }
 
     private static AnnotatedValueResolver ofRequest(AnnotatedElement annotatedElement, Class<?> type) {
         return builder(annotatedElement, type)
+                .supportOptional(true)
                 .resolver((unused, ctx) -> ctx.request())
                 .build();
     }
 
     private static AnnotatedValueResolver ofAggregatedHttpMessage(AnnotatedElement annotatedElement,
                                                                   Class<?> type) {
-        return builder(annotatedElement, AggregatedHttpMessage.class)
+        return builder(annotatedElement, type)
+                .supportOptional(true)
                 .resolver((unused, ctx) -> ctx.message())
                 .aggregation(AggregationStrategy.ALWAYS)
                 .build();
     }
 
     private static AnnotatedValueResolver ofHttpParameters(AnnotatedElement annotatedElement, Class<?> type) {
-        return builder(annotatedElement, HttpParameters.class)
+        return builder(annotatedElement, type)
+                .supportOptional(true)
                 .resolver((unused, ctx) -> ctx.httpParameters())
                 .aggregation(AggregationStrategy.FOR_FORM_DATA)
                 .build();
     }
 
     private static AnnotatedValueResolver ofCookies(AnnotatedElement annotatedElement, Class<?> type) {
-        return builder(annotatedElement, Cookies.class)
+        return builder(annotatedElement, type)
+                .supportOptional(true)
                 .resolver((unused, ctx) -> {
                     final List<String> values = ctx.request().headers().getAll(HttpHeaderNames.COOKIE);
                     if (values.isEmpty()) {
@@ -558,11 +565,7 @@ final class AnnotatedValueResolver {
     }
 
     static boolean isRequestConverterType(@Nullable Class<? extends Annotation> type) {
-        if (type == null) {
-            return false;
-        }
-        return type == RequestConverter.class ||
-               type == RequestBean.class;
+        return type == RequestConverter.class || type == RequestBean.class;
     }
 
     private static Type parameterizedTypeOf(AnnotatedElement element) {
@@ -775,6 +778,10 @@ final class AnnotatedValueResolver {
          * </ul>
          */
         private Builder annotationType(Class<? extends Annotation> annotationType) {
+            assert annotationType == Param.class ||
+                   annotationType == Header.class ||
+                   annotationType == RequestBean.class ||
+                   annotationType == RequestConverter.class : annotationType.getSimpleName();
             this.annotationType = annotationType;
             return this;
         }
@@ -948,6 +955,18 @@ final class AnnotatedValueResolver {
                 if (!supportContainer && types.getKey() != null) {
                     throw new IllegalArgumentException("Unsupported collection type: " + parameterizedType);
                 }
+            } else if (shouldWrapValueAsOptional) {
+                //
+                // Here, 'type' can be one of the following types:
+                // - Optional<RequestContext> (or Optional<ServiceRequestContext>)
+                // - Optional<Request> (or Optional<HttpRequest>)
+                // - Optional<AggregatedHttpMessage>
+                // - Optional<HttpParameters>
+                // - Optional<Cookies>
+                //
+                final Type actual =
+                        ((ParameterizedType) parameterizedTypeOf(typeElement)).getActualTypeArguments()[0];
+                types = new SimpleImmutableEntry<>(null, (Class<?>) actual);
             } else {
                 assert type.getClass() == Class.class : String.valueOf(type);
                 //
@@ -956,6 +975,7 @@ final class AnnotatedValueResolver {
                 // - Request (or HttpRequest)
                 // - AggregatedHttpMessage
                 // - HttpParameters
+                // - Cookies
                 // - User classes which can be converted by request converter
                 //
                 // So the container type should be 'null'.

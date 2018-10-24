@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -207,6 +206,12 @@ public class AnnotatedHttpServiceBuilderTest {
             @Get("/test")
             public void root(@Default("a") ServiceRequestContext ctx) {}
         });
+
+        // Optional is unnecessary, but we just warn.
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public void root(Optional<ServiceRequestContext> ctx) {}
+        });
     }
 
     @Test
@@ -281,11 +286,6 @@ public class AnnotatedHttpServiceBuilderTest {
         assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
             @Get("/test")
             public void root(@Header("name") NoDefaultConstructorList<String> name) {}
-        })).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
-            @Get("/test")
-            public void root(Optional<ServiceRequestContext> ctx) {}
         })).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
