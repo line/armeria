@@ -125,8 +125,8 @@ final class AnnotatedValueResolver {
 
     /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
-     * {@link Executable}, {@code pathParams} and {@code objectResolvers}. The {@link Executable} can be
-     * one of {@link Constructor} or {@link Method}.
+     * {@link Executable}, {@code pathParams}, {@code converters} and {@code applyConverterForNoAnnotation}.
+     * The {@link Executable} can be one of {@link Constructor} or {@link Method}.
      */
     static List<AnnotatedValueResolver> of(Executable constructorOrMethod, Set<String> pathParams,
                                            List<RequestConverterFunction> converters,
@@ -215,7 +215,7 @@ final class AnnotatedValueResolver {
 
     /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
-     * {@link Parameter}, {@code pathParams} and {@code converters}.
+     * {@link Parameter}, {@code pathParams}, {@code converters} and {@code applyConverterForNoAnnotation}.
      */
     static Optional<AnnotatedValueResolver> of(Parameter parameter, Set<String> pathParams,
                                                List<RequestConverterFunction> converters,
@@ -226,7 +226,7 @@ final class AnnotatedValueResolver {
 
     /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
-     * {@link Field}, {@code pathParams} and {@code objectResolvers}.
+     * {@link Field}, {@code pathParams}.
      */
     static Optional<AnnotatedValueResolver> of(Field field, Set<String> pathParams) {
         // 'Field' is only used for converting a bean. So we need to pass 'applyConverterForNoAnnotation'
@@ -260,7 +260,7 @@ final class AnnotatedValueResolver {
         requireNonNull(typeElement, "typeElement");
         requireNonNull(type, "type");
         requireNonNull(pathParams, "pathParams");
-        requireNonNull(converters, "objectResolvers");
+        requireNonNull(converters, "converters");
 
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
@@ -288,7 +288,8 @@ final class AnnotatedValueResolver {
             assert parameterizedType instanceof ParameterizedType : String.valueOf(parameterizedType);
             final Type actual = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
             if (autoInjectableTypes.containsKey(actual)) {
-                return Optional.empty();
+                throw new IllegalArgumentException("Optional is not allowed for: " +
+                                                   actual.getClass().getSimpleName());
             }
         } else {
             // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
@@ -296,7 +297,7 @@ final class AnnotatedValueResolver {
             // So, 'typeElement' should be used when finding an injectable type because we need to check
             // syntactic errors like below:
             //
-            // void method1(@Default("a") ServiceRequestContext) { ... }
+            // void method1(@Default("a") ServiceRequestContext ctx) { ... }
             //
             final BiFunction<AnnotatedElement, Class<?>,
                     AnnotatedValueResolver> factory = autoInjectableTypes.get(type);
@@ -327,7 +328,7 @@ final class AnnotatedValueResolver {
             final BeanFactoryId beanFactoryId = AnnotatedBeanFactory.register(type, pathParams);
             AnnotatedBeanFactory.find(beanFactoryId)
                                 .orElseThrow(() -> new IllegalArgumentException(
-                                        "Cannot be registered to " +
+                                        "Failed to register to " +
                                         AnnotatedBeanFactory.class.getSimpleName() + ": " + annotatedElement));
             return Optional.of(ofRequestBean(annotatedElement, type, pathParams, beanFactoryId));
         }

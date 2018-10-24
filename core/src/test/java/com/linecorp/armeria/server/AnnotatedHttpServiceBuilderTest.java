@@ -286,7 +286,7 @@ public class AnnotatedHttpServiceBuilderTest {
         assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
             @Get("/test")
             public void root(Optional<ServiceRequestContext> ctx) {}
-        })).isInstanceOf(NoAnnotatedParameterException.class);
+        })).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
             @Get("/test")

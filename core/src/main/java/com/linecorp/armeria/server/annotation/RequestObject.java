@@ -26,9 +26,9 @@ import java.lang.annotation.Target;
  *
  * @see RequestConverterFunction
  * @see RequestConverter
- * @deprecated No more put {@link RequestObject} on the parameter which needs to be converted by one
- *             of the {@link RequestConverterFunction}s. However, use {@link RequestBean}
- *             if a request needs to be converted into a bean.
+ * @deprecated No more putting {@link RequestObject} on the parameter which needs to be converted by one
+ *             of the {@link RequestConverterFunction}s. Use {@link RequestBean} if a request needs to
+ *             be converted into a bean.
  */
 @Deprecated
 @Retention(RetentionPolicy.RUNTIME)
