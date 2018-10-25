@@ -327,13 +327,13 @@ public class HttpFileServiceTest {
 
     @Test
     public void testFileSystemGet_modifiedFile() throws Exception {
-        final File barFile = new File(tmpDir, "bar.html");
+        final File barFile = new File(tmpDir, "modifiedFile.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
         Files.write(barFile.toPath(), expectedContentA.getBytes(StandardCharsets.UTF_8));
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpUriRequest req = new HttpGet(newUri("/fs/bar.html"));
+            final HttpUriRequest req = new HttpGet(newUri("/fs/modifiedFile.html"));
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
             }
@@ -347,11 +347,11 @@ public class HttpFileServiceTest {
 
     @Test
     public void testFileSystemGet_newFile() throws Exception {
-        final File barFile = new File(tmpDir, "bar.html");
+        final File barFile = new File(tmpDir, "newFile.html");
         final String expectedContentA = "<html/>";
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpUriRequest req = new HttpGet(newUri("/fs/bar.html"));
+            final HttpUriRequest req = new HttpGet(newUri("/fs/newFile.html"));
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert404NotFound(res);
             }
