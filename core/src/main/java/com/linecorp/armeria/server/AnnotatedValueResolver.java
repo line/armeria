@@ -337,9 +337,6 @@ final class AnnotatedValueResolver {
 
         final RequestConverter requestConverter = annotatedElement.getAnnotation(RequestConverter.class);
         if (requestConverter != null) {
-            // If we are analyzing a service method, we need to deal with an element, which does not have any
-            // annotation, as a target to be converted by one of request converters.
-            //
             // A user can optionally specify @RequestConverter in order to specify a converter which
             // would be applied first, as follows:
             //
@@ -353,6 +350,8 @@ final class AnnotatedValueResolver {
 
         // No annotation but it may be converted into an object by the request converters.
         if (applyConverterForNoAnnotation) {
+            // If we are analyzing a service method, we need to deal with an element, which does not have any
+            // annotation, as a target to be converted by one of request converters.
             return Optional.of(ofRequestConverter(annotatedElement, type, converters));
         } else {
             // If we are analyzing a class to prepare a bean conversion, we don't need to analyze an element
