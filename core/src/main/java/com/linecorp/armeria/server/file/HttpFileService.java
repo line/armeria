@@ -253,13 +253,13 @@ public final class HttpFileService extends AbstractHttpService {
         final CachedEntry entry = cache.getIfPresent(pathAndEncoding);
         if (entry == null) {
             return cache.get(pathAndEncoding);
-        } else {
-            if (config.vfs().get(path, contentEncoding).lastModifiedMillis() != entry.lastModifiedMillis()) {
-                cache.invalidate(pathAndEncoding);
-                return cache.get(pathAndEncoding);
-            }
         }
-        assert entry != null; // Non-existent entry will have lastModifiedMillis of 0.
+
+        if (config.vfs().get(path, contentEncoding).lastModifiedMillis() != entry.lastModifiedMillis()) {
+            cache.invalidate(pathAndEncoding);
+            return cache.get(pathAndEncoding);
+        }
+
         return entry;
     }
 
