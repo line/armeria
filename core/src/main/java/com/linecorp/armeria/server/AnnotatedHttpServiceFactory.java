@@ -230,7 +230,7 @@ final class AnnotatedHttpServiceFactory {
         List<AnnotatedValueResolver> resolvers;
         try {
             resolvers = AnnotatedValueResolver.of(method, pathMapping.paramNames(),
-                                                  toRequestObjectResolvers(req));
+                                                  toRequestObjectResolvers(req), true);
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //
@@ -253,7 +253,7 @@ final class AnnotatedHttpServiceFactory {
         }
 
         // Warn unused path variables only if there's no '@RequestObject' annotation.
-        if (resolvers.stream().noneMatch(r -> r.isAnnotationType(RequestObject.class)) &&
+        if (resolvers.stream().noneMatch(r -> r.annotationType() == RequestObject.class) &&
             !requiredParamNames.containsAll(expectedParamNames)) {
             final Set<String> missing = Sets.difference(expectedParamNames, requiredParamNames);
             logger.warn("Some path variables of the method '" + method.getName() +

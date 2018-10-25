@@ -134,7 +134,7 @@ public class AnnotatedValueResolverTest {
         getAllMethods(Service.class).forEach(method -> {
             try {
                 final List<AnnotatedValueResolver> elements =
-                        AnnotatedValueResolver.of(method, pathParams, objectResolvers);
+                        AnnotatedValueResolver.of(method, pathParams, objectResolvers, false);
                 elements.forEach(AnnotatedValueResolverTest::testResolver);
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.
@@ -172,7 +172,7 @@ public class AnnotatedValueResolverTest {
         assertThat(constructors.size()).isOne();
         constructors.forEach(constructor -> {
             final List<AnnotatedValueResolver> elements =
-                    AnnotatedValueResolver.of(constructor, pathParams, objectResolvers);
+                    AnnotatedValueResolver.of(constructor, pathParams, objectResolvers, false);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             final ConstructorBean bean;
@@ -204,7 +204,7 @@ public class AnnotatedValueResolverTest {
         final Constructor constructor = Iterables.getFirst(constructors, null);
 
         final List<AnnotatedValueResolver> initArgs =
-                AnnotatedValueResolver.of(constructor, pathParams, objectResolvers);
+                AnnotatedValueResolver.of(constructor, pathParams, objectResolvers, false);
         initArgs.forEach(AnnotatedValueResolverTest::testResolver);
         final MixedBean bean = (MixedBean) constructor.newInstance(toArguments(initArgs, resolverContext));
         getAllMethods(MixedBean.class).forEach(method -> testMethod(method, bean));
@@ -214,7 +214,7 @@ public class AnnotatedValueResolverTest {
     private static <T> void testMethod(Method method, T bean) {
         try {
             final List<AnnotatedValueResolver> elements =
-                    AnnotatedValueResolver.of(method, pathParams, objectResolvers);
+                    AnnotatedValueResolver.of(method, pathParams, objectResolvers, false);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             method.setAccessible(true);
@@ -230,7 +230,7 @@ public class AnnotatedValueResolverTest {
     private static void testResolver(AnnotatedValueResolver resolver) {
         final Object value = resolver.resolve(resolverContext);
         logger.debug("Element {}: value {}", resolver, value);
-        if (resolver.annotation() == null) {
+        if (resolver.annotationType() == null) {
             assertThat(value).isInstanceOf(resolver.elementType());
 
             // Check whether 'Cookie' header is decoded correctly.
@@ -251,7 +251,7 @@ public class AnnotatedValueResolverTest {
             return;
         }
 
-        if (resolver.annotation().annotationType() == Header.class) {
+        if (resolver.annotationType() == Header.class) {
             if (!resolver.hasContainer()) {
                 if (shouldHttpHeaderExist(resolver)) {
                     // The first element.
@@ -285,7 +285,7 @@ public class AnnotatedValueResolverTest {
             return;
         }
 
-        if (resolver.annotation().annotationType() == Param.class) {
+        if (resolver.annotationType() == Param.class) {
             if (shouldHttpParameterExist(resolver) ||
                 shouldPathVariableExist(resolver)) {
                 assertThat(resolver.httpElementName()).isNotNull();
@@ -313,7 +313,7 @@ public class AnnotatedValueResolverTest {
             return;
         }
 
-        assertThat(resolver.annotation().annotationType()).isEqualTo(RequestObject.class);
+        assertThat(resolver.annotationType()).isEqualTo(RequestObject.class);
     }
 
     private static void testEnum(Object value, String name) {

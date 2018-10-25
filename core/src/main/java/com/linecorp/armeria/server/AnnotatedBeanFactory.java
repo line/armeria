@@ -163,7 +163,8 @@ final class AnnotatedBeanFactory {
 
             try {
                 final List<AnnotatedValueResolver> resolvers =
-                        AnnotatedValueResolver.of(constructor, beanFactoryId.pathParams, objectResolvers);
+                        AnnotatedValueResolver.of(constructor, beanFactoryId.pathParams,
+                                                  objectResolvers, false);
                 if (!resolvers.isEmpty()) {
                     // Can overwrite only if the current candidate is a default constructor.
                     if (candidate == null || candidate.getValue().isEmpty()) {
@@ -199,7 +200,8 @@ final class AnnotatedBeanFactory {
         for (final Method method : methods) {
             try {
                 final List<AnnotatedValueResolver> resolvers =
-                        AnnotatedValueResolver.of(method, beanFactoryId.pathParams, objectResolvers);
+                        AnnotatedValueResolver.of(method, beanFactoryId.pathParams,
+                                                  objectResolvers, false);
                 if (!resolvers.isEmpty()) {
                     ret.add(new SimpleImmutableEntry<>(method, resolvers));
                 }

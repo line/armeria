@@ -108,7 +108,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Post("/default/bean1/{userName}/{seqNum}")
-        public String defaultBean1ForPost(@RequestObject RequestBean1 bean1)
+        public String defaultBean1ForPost(RequestBean1 bean1)
                 throws JsonProcessingException {
             assertThat(bean1).isNotNull();
             bean1.validate();
@@ -116,7 +116,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean1/{userName}/{seqNum}")
-        public String defaultBean1ForGet(@RequestObject RequestBean1 bean1)
+        public String defaultBean1ForGet(RequestBean1 bean1)
                 throws JsonProcessingException {
             assertThat(bean1).isNotNull();
             bean1.validate();
@@ -124,7 +124,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/bean2/{userName}/{serialNo}")
-        public String defaultBean2ForPost(@RequestObject RequestBean2 bean2)
+        public String defaultBean2ForPost(RequestBean2 bean2)
                 throws JsonProcessingException {
             assertThat(bean2).isNotNull();
             bean2.validate();
@@ -132,7 +132,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean2/{userName}")
-        public String defaultBean2ForGet(@RequestObject RequestBean2 bean2)
+        public String defaultBean2ForGet(RequestBean2 bean2)
                 throws JsonProcessingException {
             assertThat(bean2).isNotNull();
             bean2.validate();
@@ -140,7 +140,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/bean3/{userName}/{departmentNo}")
-        public String defaultBean3ForPost(@RequestObject RequestBean3 bean3)
+        public String defaultBean3ForPost(RequestBean3 bean3)
                 throws JsonProcessingException {
             assertThat(bean3).isNotNull();
             bean3.validate();
@@ -148,7 +148,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean3/{userName}")
-        public String defaultBean3ForGet(@RequestObject RequestBean3 bean3)
+        public String defaultBean3ForGet(RequestBean3 bean3)
                 throws JsonProcessingException {
             assertThat(bean3).isNotNull();
             bean3.validate();
@@ -156,22 +156,22 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/json")
-        public String defaultJson(@RequestObject RequestJsonObj1 obj1,
-                                  @RequestObject RequestJsonObj2 obj2) {
+        public String defaultJson(RequestJsonObj1 obj1,
+                                  RequestJsonObj2 obj2) {
             assertThat(obj1).isNotNull();
             assertThat(obj2).isNotNull();
             return obj2.strVal();
         }
 
         @Post("/default/invalidJson")
-        public String invalidJson(@RequestObject JsonNode node) {
+        public String invalidJson(JsonNode node) {
             // Should never reach here because we are sending invalid JSON.
             throw new Error();
         }
 
         @Post("/default/binary")
-        public byte[] defaultBinary(@RequestObject HttpData obj1,
-                                    @RequestObject byte[] obj2) {
+        public byte[] defaultBinary(HttpData obj1,
+                                    byte[] obj2) {
             assertThat(obj1).isNotNull();
             assertThat(obj2).isNotNull();
             // Actually they have the same byte array.
@@ -180,7 +180,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/text")
-        public String defaultText(@RequestObject String obj1) {
+        public String defaultText(String obj1) {
             assertThat(obj1).isNotNull();
             return obj1;
         }
