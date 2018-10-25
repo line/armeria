@@ -144,7 +144,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private void writeFirstHeader() {
         final HttpSession session = HttpSession.get(ch);
         if (!session.isActive()) {
-            failAndRespond(ClosedSessionException.get());
+            failAndRespond(UnprocessedRequestException.get());
             return;
         }
 
