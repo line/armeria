@@ -53,8 +53,8 @@ public class AnnotatedHttpDocServiceUtilTest {
     @Test
     public void parameter() throws Exception {
         Method method = Service.class.getDeclaredMethod("param", String.class);
-        AnnotatedValueResolver resolver = AnnotatedValueResolver.of(method, ImmutableSet.of(),
-                                                                    ImmutableList.of()).get(0);
+        AnnotatedValueResolver resolver = AnnotatedValueResolver.ofServiceMethod(method, ImmutableSet.of(),
+                                                                                 ImmutableList.of()).get(0);
         Parameter parameter = extractParameter(resolver);
         assertThat(parameter).isNotNull();
         assertThat(parameter.getName()).isEqualTo("a1");
@@ -62,7 +62,7 @@ public class AnnotatedHttpDocServiceUtilTest {
         assertThat(parameter.getRequired()).isTrue();
 
         method = Service.class.getDeclaredMethod("param", Optional.class);
-        resolver = AnnotatedValueResolver.of(method, ImmutableSet.of(), ImmutableList.of()).get(0);
+        resolver = AnnotatedValueResolver.ofServiceMethod(method, ImmutableSet.of(), ImmutableList.of()).get(0);
         parameter = extractParameter(resolver);
         assertThat(parameter).isNotNull();
         assertThat(parameter.getName()).isEqualTo("a2");
@@ -70,7 +70,7 @@ public class AnnotatedHttpDocServiceUtilTest {
         assertThat(parameter.getRequired()).isFalse();
 
         method = Service.class.getDeclaredMethod("header", String.class);
-        resolver = AnnotatedValueResolver.of(method, ImmutableSet.of(), ImmutableList.of()).get(0);
+        resolver = AnnotatedValueResolver.ofServiceMethod(method, ImmutableSet.of(), ImmutableList.of()).get(0);
         parameter = extractParameter(resolver);
         assertThat(parameter).isNotNull();
         assertThat(parameter.getName()).isEqualTo("a3");
@@ -78,7 +78,8 @@ public class AnnotatedHttpDocServiceUtilTest {
         assertThat(parameter.getRequired()).isTrue();
 
         method = Service.class.getDeclaredMethod("pathParam", String.class);
-        resolver = AnnotatedValueResolver.of(method, ImmutableSet.of("a4"), ImmutableList.of()).get(0);
+        resolver = AnnotatedValueResolver.ofServiceMethod(method, ImmutableSet.of("a4"), ImmutableList.of())
+                                         .get(0);
         parameter = extractParameter(resolver);
         assertThat(parameter).isNotNull();
         assertThat(parameter.getName()).isEqualTo("a4");

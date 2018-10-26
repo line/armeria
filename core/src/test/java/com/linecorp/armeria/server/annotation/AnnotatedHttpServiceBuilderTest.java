@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 public class AnnotatedHttpServiceBuilderTest {

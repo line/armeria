@@ -49,9 +49,9 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.internal.PublisherToHttpResponseConverter;
-import com.linecorp.armeria.server.HttpHeaderPathMapping;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AnnotatedValueResolver.AggregationStrategy;
@@ -77,7 +77,7 @@ public class AnnotatedHttpService implements HttpService {
 
     @Nullable
     private final ResponseConverterFunction providedResponseConverter;
-    private final HttpHeaderPathMapping pathMapping;
+    private final PathMapping pathMapping;
 
     private final ResponseType responseType;
 
@@ -85,7 +85,7 @@ public class AnnotatedHttpService implements HttpService {
                          List<AnnotatedValueResolver> resolvers,
                          List<ExceptionHandlerFunction> exceptionHandlers,
                          List<ResponseConverterFunction> responseConverters,
-                         HttpHeaderPathMapping pathMapping) {
+                         PathMapping pathMapping) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -161,7 +161,7 @@ public class AnnotatedHttpService implements HttpService {
         return resolvers;
     }
 
-    HttpHeaderPathMapping pathMapping() {
+    PathMapping pathMapping() {
         return pathMapping;
     }
 

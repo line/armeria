@@ -49,7 +49,6 @@ import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.HttpHeaderPathMapping;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
@@ -90,18 +89,18 @@ public class AnnotatedOpenApiReaderTest {
                 ),
                 tags = {
                         @Tag(name = "my tag", description = "my description ",
-                                externalDocs = @ExternalDocumentation(description = "ext desc", url = "a.com")),
+                             externalDocs = @ExternalDocumentation(description = "ext desc", url = "a.com")),
                 },
                 externalDocs = @ExternalDocumentation(description = "definition docs desc",
-                        url = "https://my-example.com"),
+                                                      url = "https://my-example.com"),
                 servers = {
                         @io.swagger.v3.oas.annotations.servers.Server(
                                 description = "server desc",
                                 url = "https://{environment}.example.com/v2",
                                 variables = {
                                         @ServerVariable(name = "environment", description = "environment var",
-                                                defaultValue = "api",
-                                                allowableValues = { "api", "api.beta", "api.staging" })
+                                                        defaultValue = "api",
+                                                        allowableValues = { "api", "api.beta", "api.staging" })
                                 })
                 }
         )
@@ -161,8 +160,8 @@ public class AnnotatedOpenApiReaderTest {
                                 url = "https://{environment}.example.com/v2",
                                 variables = {
                                         @ServerVariable(name = "envir", description = "environment var",
-                                                defaultValue = "api",
-                                                allowableValues = { "api", "api.beta", "api.staging" })
+                                                        defaultValue = "api",
+                                                        allowableValues = { "api", "api.beta", "api.staging" })
                                 })
                 }
         )
@@ -189,7 +188,7 @@ public class AnnotatedOpenApiReaderTest {
 
     @Test
     public void testEndpointPath() {
-        HttpHeaderPathMapping mapping = newHttpHeaderPathMapping(PathMapping.of("/path"));
+        PathMapping mapping = newHttpHeaderPathMapping(PathMapping.of("/path"));
         String endpointPath = endpointPath(mapping);
         assertThat(endpointPath).isEqualTo("/path");
 
@@ -218,10 +217,10 @@ public class AnnotatedOpenApiReaderTest {
         assertThat(endpointPath).isNull();
     }
 
-    private static HttpHeaderPathMapping newHttpHeaderPathMapping(PathMapping pathMapping) {
-        return new HttpHeaderPathMapping(pathMapping, ImmutableSet.of(HttpMethod.GET),
-                                         ImmutableList.of(PLAIN_TEXT_UTF_8),
-                                         ImmutableList.of(JSON_UTF_8));
+    private static PathMapping newHttpHeaderPathMapping(PathMapping pathMapping) {
+        return PathMapping.withHttpHeaderInfo(pathMapping, ImmutableSet.of(HttpMethod.GET),
+                                              ImmutableList.of(PLAIN_TEXT_UTF_8),
+                                              ImmutableList.of(JSON_UTF_8));
     }
 
     @Test
@@ -257,7 +256,8 @@ public class AnnotatedOpenApiReaderTest {
     private static AnnotatedHttpService annotatedHttpService(Class<?> clazz, Set<String> pathParams) {
         final Method method = clazz.getDeclaredMethods()[0];
         final List<AnnotatedValueResolver> resolvers =
-                AnnotatedValueResolver.of(method, pathParams, toRequestObjectResolvers(ImmutableList.of()));
+                AnnotatedValueResolver.ofServiceMethod(method, pathParams,
+                                                       toRequestObjectResolvers(ImmutableList.of()));
         final AnnotatedHttpService service = mock(AnnotatedHttpService.class);
         when(service.method()).thenReturn(method);
         when(service.annotatedValueResolvers()).thenReturn(resolvers);
@@ -269,8 +269,9 @@ public class AnnotatedOpenApiReaderTest {
         class OperationTest {
             @Patch("/patch")
             @io.swagger.v3.oas.annotations.Operation(tags = { "tag1", "tag2" }, summary = "foo summary",
-                    description = "foo description", operationId = "fooId",
-                    externalDocs = @ExternalDocumentation(description = "ext doc", url = "a.com"))
+                                                     description = "foo description", operationId = "fooId",
+                                                     externalDocs = @ExternalDocumentation(
+                                                             description = "ext doc", url = "a.com"))
             public String foo(@Param("arg1") int arg1) {
                 return "";
             }
@@ -490,8 +491,8 @@ public class AnnotatedOpenApiReaderTest {
                 ),
                 tags = {
                         @Tag(name = "my tag", description = "my description ",
-                                externalDocs = @ExternalDocumentation(description = "ext desc",
-                                        url = "a.com")),
+                             externalDocs = @ExternalDocumentation(description = "ext desc",
+                                                                   url = "a.com")),
                 }
         )
         class FillFromService {
@@ -514,9 +515,9 @@ public class AnnotatedOpenApiReaderTest {
 
         final Method method = FillFromService.class.getDeclaredMethods()[0];
         final List<AnnotatedValueResolver> resolvers =
-                AnnotatedValueResolver.of(method, ImmutableSet.of(),
-                                          toRequestObjectResolvers(ImmutableList.of()));
-        final HttpHeaderPathMapping pathMapping = new HttpHeaderPathMapping(
+                AnnotatedValueResolver.ofServiceMethod(method, ImmutableSet.of(),
+                                                       toRequestObjectResolvers(ImmutableList.of()));
+        final PathMapping pathMapping = PathMapping.withHttpHeaderInfo(
                 PathMapping.of("/foo"), ImmutableSet.of(HttpMethod.GET, HttpMethod.POST),
                 ImmutableList.of(PLAIN_TEXT_UTF_8), ImmutableList.of(JSON_UTF_8));
 

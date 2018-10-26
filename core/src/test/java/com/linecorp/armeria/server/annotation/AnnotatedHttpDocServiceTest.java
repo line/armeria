@@ -71,15 +71,16 @@ public class AnnotatedHttpDocServiceTest {
             sb.serviceUnder("/docs", new DocServiceBuilder()
                     .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
                     .exampleHttpHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
-                    .exampleHttpHeaders(MyService.class, "foo", EXAMPLE_HEADERS_METHOD)
-                    .exampleRequestForMethod(MyService.class, "foo",
-                                             ImmutableList.of(mapper.readTree("{\"name\":\"armeria\"}")))
+                    .exampleHttpHeaders(MyService.class, "pathParam", EXAMPLE_HEADERS_METHOD)
+                    .exampleRequestForMethod(MyService.class, "pathParam",
+                                             ImmutableList.of(mapper.readTree(
+                                                     "{\"hello2\":\"arm\", \"hello4\":\"eria\"}")))
                     .build());
         }
     };
 
     @Test
-    public void specificationJson() {
+    public void jsonSpecification() {
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         addFooMethodInfo(methodInfos);
         addFooAllMethodInfos(methodInfos);
@@ -101,8 +102,8 @@ public class AnnotatedHttpDocServiceTest {
         final EndpointInfo endpoint = new EndpointInfoBuilder("*", "/service/foo")
                 .defaultMimeType(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfo("header1", REQUIRED, toTypeSignature(int.class)),
-                new FieldInfo("query1", REQUIRED, toTypeSignature(long.class)));
+                new FieldInfo("header", REQUIRED, toTypeSignature(int.class)),
+                new FieldInfo("query", REQUIRED, toTypeSignature(long.class)));
         final MethodInfo methodInfo = new MethodInfo(
                 "foo", toTypeSignature(String.class), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
@@ -135,7 +136,7 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private void addRegexMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "regex:/(foo|bar)")
+        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "regex:/(bar|baz)")
                 .regexPathPrefix("/service/").defaultMimeType(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 new FieldInfo("myEnum", REQUIRED, toTypeSignature(MyEnum.class)));
@@ -181,11 +182,12 @@ public class AnnotatedHttpDocServiceTest {
                 final String methodName = method.get("name").textValue();
                 final ArrayNode exampleHttpHeaders = (ArrayNode) method.get("exampleHttpHeaders");
                 if (MyService.class.getName().equals(serviceName) &&
-                    "foo".equals(methodName)) {
+                    "pathParam".equals(methodName)) {
                     exampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_METHOD));
                     final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                     exampleRequests.add('{' + System.lineSeparator() +
-                                        "  \"name\" : \"armeria\"" + System.lineSeparator() +
+                                        "  \"hello2\" : \"arm\"," + System.lineSeparator() +
+                                        "  \"hello4\" : \"eria\"" + System.lineSeparator() +
                                         '}');
                 }
             });
@@ -196,7 +198,7 @@ public class AnnotatedHttpDocServiceTest {
     private static class MyService {
 
         @Get("/foo")
-        public String foo(@Header("header1") int header1, @Param("query1") long query1) {
+        public String foo(@Header("header") int header, @Param("query") long query) {
             return "foo";
         }
 
@@ -218,7 +220,7 @@ public class AnnotatedHttpDocServiceTest {
             return "pathParam";
         }
 
-        @Get("regex:/(foo|bar)")
+        @Get("regex:/(bar|baz)")
         public String regex(@Param("myEnum") MyEnum myEnum) {
             return myEnum.toString();
         }

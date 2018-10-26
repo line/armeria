@@ -43,7 +43,6 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.HttpHeaderPathMapping;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHost;
@@ -115,7 +114,7 @@ public class AnnotatedHttpDocServicePluginTest {
     public void testNewEndpointInfo() {
         final String hostnamePattern = "*";
 
-        HttpHeaderPathMapping mapping = newHttpHeaderPathMapping(PathMapping.of("/path"));
+        PathMapping mapping = newHttpHeaderPathMapping(PathMapping.of("/path"));
         EndpointInfo endpointInfo = endpointInfo(mapping, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "/path")
                                                    .defaultMimeType(MediaType.JSON_UTF_8)
@@ -189,10 +188,10 @@ public class AnnotatedHttpDocServicePluginTest {
                         .build());
     }
 
-    private static HttpHeaderPathMapping newHttpHeaderPathMapping(PathMapping pathMapping) {
-        return new HttpHeaderPathMapping(pathMapping, ImmutableSet.of(HttpMethod.GET),
-                                         ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
-                                         ImmutableList.of(MediaType.JSON_UTF_8));
+    private static PathMapping newHttpHeaderPathMapping(PathMapping pathMapping) {
+        return PathMapping.withHttpHeaderInfo(pathMapping, ImmutableSet.of(HttpMethod.GET),
+                                              ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
+                                              ImmutableList.of(MediaType.JSON_UTF_8));
     }
 
     @Test

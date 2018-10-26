@@ -21,10 +21,16 @@ import static com.linecorp.armeria.server.PathMappingPrefixes.PREFIX;
 import static com.linecorp.armeria.server.PathMappingPrefixes.REGEX;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.docs.DocService;
 
 import io.micrometer.core.instrument.Meter;
@@ -161,6 +167,22 @@ public interface PathMapping {
     }
 
     /**
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} using
+     * the specified {@link PathMapping} and checks whether the request is valid using the specified
+     * {@code supportedMethods}, {@code consumeTypes} and {@code produceTypes}.
+     *
+     * @param pathMapping the {@link PathMapping} that matches a
+     *                          {@linkplain ServiceRequestContext#path() path}
+     * @param supportedMethods the set of {@link HttpMethod}s that this {@link PathMapping} supports
+     * @param consumeTypes the list of {@link MediaType}s that this {@link PathMapping} consumes
+     * @param produceTypes the list of {@link MediaType}s that this {@link PathMapping} produces
+     */
+    static PathMapping withHttpHeaderInfo(PathMapping pathMapping, Set<HttpMethod> supportedMethods,
+                                          List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+        return new HttpHeaderPathMapping(pathMapping, supportedMethods, consumeTypes, produceTypes);
+    }
+
+    /**
      * Matches the specified {@code path} and extracts the path parameters from it.
      *
      * @param mappingCtx a context to find the {@link Service}.
@@ -224,5 +246,26 @@ public interface PathMapping {
      */
     default int complexity() {
         return 0;
+    }
+
+    /**
+     * Returns the {@link Set} of {@link HttpMethod}s that this {@link PathMapping} supports.
+     */
+    default Set<HttpMethod> supportedMethods() {
+        return ImmutableSet.of();
+    }
+
+    /**
+     * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} consumes.
+     */
+    default List<MediaType> consumeTypes() {
+        return ImmutableList.of();
+    }
+
+    /**
+     * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} produces.
+     */
+    default List<MediaType> produceTypes() {
+        return ImmutableList.of();
     }
 }

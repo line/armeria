@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -29,15 +29,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
-import com.linecorp.armeria.server.DefaultPathMappingContext;
-import com.linecorp.armeria.server.HttpHeaderPathMapping;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.PathMappingContext;
-import com.linecorp.armeria.server.PathMappingResult;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHost;
 
 public class HttpHeaderPathMappingTest {
 

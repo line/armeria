@@ -18,7 +18,7 @@ import { Method } from '../specification';
 
 import Transport from './transport';
 
-const JSON_MIME_TYPE = 'application/json; charset=utf-8';
+export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
 
 export default class AnnotatedHttpTransport extends Transport {
   private static newPath(
@@ -43,14 +43,14 @@ export default class AnnotatedHttpTransport extends Transport {
       if (queries.charAt(0) === '?') {
         newPath += queries;
       } else {
-        newPath += '?' + queries;
+        newPath += `?${queries}`;
       }
     }
     return newPath;
   }
 
   public supportsMimeType(mimeType: string): boolean {
-    return mimeType === JSON_MIME_TYPE;
+    return mimeType === ANNOTATED_HTTP_MIME_TYPE;
   }
 
   protected async doSend(
@@ -61,7 +61,7 @@ export default class AnnotatedHttpTransport extends Transport {
     queries?: string,
   ): Promise<string> {
     const endpoint = method.endpoints.find((ep) =>
-      ep.availableMimeTypes.includes(JSON_MIME_TYPE),
+      ep.availableMimeTypes.includes(ANNOTATED_HTTP_MIME_TYPE),
     );
     if (!endpoint) {
       throw new Error(
@@ -70,7 +70,7 @@ export default class AnnotatedHttpTransport extends Transport {
     }
 
     const hdrs = new Headers();
-    hdrs.set('content-type', JSON_MIME_TYPE);
+    hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
     }

@@ -491,13 +491,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     protected VirtualHost build() {
         final List<MediaType> producibleTypes = new ArrayList<>();
 
-        services.forEach(e -> {
-            final PathMapping mapping = e.pathMapping();
-            if (mapping instanceof HttpHeaderPathMapping) {
-                // Collect producible media types over this virtual host.
-                producibleTypes.addAll(((HttpHeaderPathMapping) mapping).produceTypes());
-            }
-        });
+        // Collect producible media types over this virtual host.
+        services.forEach(e -> producibleTypes.addAll((e.pathMapping()).produceTypes()));
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,

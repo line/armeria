@@ -50,7 +50,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
@@ -125,7 +125,7 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         if (isHidden(service)) {
             return;
         }
-        final HttpHeaderPathMapping pathMapping = service.pathMapping();
+        final PathMapping pathMapping = service.pathMapping();
         final EndpointInfo endpoint = endpointInfo(pathMapping, hostnamePattern);
         if (endpoint == null) {
             return;
@@ -149,7 +149,7 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     @Nullable
     @VisibleForTesting
-    static EndpointInfo endpointInfo(HttpHeaderPathMapping pathMapping, String hostnamePattern) {
+    static EndpointInfo endpointInfo(PathMapping pathMapping, String hostnamePattern) {
         final String endpointPath;
         String regexPathPrefix = null;
         if (pathMapping.prefix().isPresent()) {
@@ -182,7 +182,7 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     }
 
     @Nullable
-    private static String getNormalizedTriePathOrRegex(HttpHeaderPathMapping pathMapping) {
+    private static String getNormalizedTriePathOrRegex(PathMapping pathMapping) {
         final String normalizedTriePath = getNormalizedTriePath(pathMapping);
         if (normalizedTriePath != null) {
             return normalizedTriePath;

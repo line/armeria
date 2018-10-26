@@ -100,7 +100,6 @@ public class ThriftDocServiceTest {
             sb.service("/cassandra/debug", cassandraServiceDebug);
             sb.service("/hbase", hbaseService);
             sb.service("/oneway", onewayHelloService);
-
             sb.serviceUnder(
                     "/docs/",
                     new DocServiceBuilder()

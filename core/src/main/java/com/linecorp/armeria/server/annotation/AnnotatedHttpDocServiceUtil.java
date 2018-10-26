@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.docs.DocService;
 
 import io.swagger.v3.core.util.ReflectionUtils;
@@ -75,7 +75,7 @@ final class AnnotatedHttpDocServiceUtil {
     }
 
     @Nullable
-    static String getNormalizedTriePath(HttpHeaderPathMapping pathMapping) {
+    static String getNormalizedTriePath(PathMapping pathMapping) {
         requireNonNull(pathMapping, "pathMapping");
         final Optional<String> triePath = pathMapping.triePath();
 

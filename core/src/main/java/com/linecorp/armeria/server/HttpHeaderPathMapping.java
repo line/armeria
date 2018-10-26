@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.MediaType;
 /**
  * A {@link PathMapping} based on {@link HttpMethod} and {@link MediaType}.
  */
-public final class HttpHeaderPathMapping implements PathMapping {
+final class HttpHeaderPathMapping implements PathMapping {
 
     private static final List<MediaType> ANY_TYPE = ImmutableList.of(MediaType.ANY_TYPE);
     private static final Joiner loggerNameJoiner = Joiner.on('_');
@@ -53,8 +53,8 @@ public final class HttpHeaderPathMapping implements PathMapping {
     /**
      * Creates a new instance.
      */
-    public HttpHeaderPathMapping(PathMapping pathStringMapping, Set<HttpMethod> supportedMethods,
-                                 List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+    HttpHeaderPathMapping(PathMapping pathStringMapping, Set<HttpMethod> supportedMethods,
+                          List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         this.pathStringMapping = requireNonNull(pathStringMapping, "pathStringMapping");
         this.supportedMethods = requireNonNull(supportedMethods, "supportedMethods");
         this.consumeTypes = requireNonNull(consumeTypes, "consumeTypes");
@@ -187,6 +187,7 @@ public final class HttpHeaderPathMapping implements PathMapping {
     /**
      * Returns the {@link Set} of {@link HttpMethod}s that this {@link PathMapping} supports.
      */
+    @Override
     public Set<HttpMethod> supportedMethods() {
         return supportedMethods;
     }
@@ -194,6 +195,7 @@ public final class HttpHeaderPathMapping implements PathMapping {
     /**
      * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} consumes.
      */
+    @Override
     public List<MediaType> consumeTypes() {
         return consumeTypes;
     }
@@ -201,6 +203,7 @@ public final class HttpHeaderPathMapping implements PathMapping {
     /**
      * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} produces.
      */
+    @Override
     public List<MediaType> produceTypes() {
         return produceTypes;
     }

@@ -29,7 +29,11 @@ export default abstract class Transport {
     const providedHeaders = await Promise.all(
       providers.map((provider) => provider()),
     );
-    let filledHeaders = { [docServiceDebug]: 'true' };
+    let filledHeaders = {};
+    if (process.env.WEBPACK_SERVE === 'true') {
+      filledHeaders = { [docServiceDebug]: 'true' };
+    }
+
     for (const hdrs of providedHeaders) {
       filledHeaders = {
         ...filledHeaders,

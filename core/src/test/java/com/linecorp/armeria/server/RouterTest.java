@@ -113,61 +113,61 @@ public class RouterTest {
     public void duplicateMappingsWithHeaders() {
         // Not a duplicate if complexity is different.
         testNonDuplicateMappings(PathMapping.of("/foo"),
-                                 new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.GET),
-                                                           ImmutableList.of(), ImmutableList.of()));
+                                 PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                                ImmutableSet.of(HttpMethod.GET),
+                                                                ImmutableList.of(), ImmutableList.of()));
 
         // Duplicate if supported methods overlap.
-        testNonDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.GET),
-                                                           ImmutableList.of(), ImmutableList.of()),
-                                 new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(), ImmutableList.of()));
-        testDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.GET),
-                                                        ImmutableList.of(), ImmutableList.of()),
-                              new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.GET, HttpMethod.POST),
-                                                        ImmutableList.of(), ImmutableList.of()));
+        testNonDuplicateMappings(PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                                ImmutableSet.of(HttpMethod.GET),
+                                                                ImmutableList.of(), ImmutableList.of()),
+                                 PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                                ImmutableSet.of(HttpMethod.POST),
+                                                                ImmutableList.of(), ImmutableList.of()));
+        testDuplicateMappings(PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                             ImmutableSet.of(HttpMethod.GET),
+                                                             ImmutableList.of(), ImmutableList.of()),
+                              PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                             ImmutableSet.of(HttpMethod.GET, HttpMethod.POST),
+                                                             ImmutableList.of(), ImmutableList.of()));
 
         // Duplicate if consume types overlap.
-        testNonDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
-                                                           ImmutableList.of()),
-                                 new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(MediaType.JSON_UTF_8),
-                                                           ImmutableList.of()));
-        testDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.POST),
-                                                        ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8,
+        testNonDuplicateMappings(PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                                ImmutableSet.of(HttpMethod.POST),
+                                                                ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
+                                                                ImmutableList.of()),
+                                 PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                                ImmutableSet.of(HttpMethod.POST),
+                                                                ImmutableList.of(MediaType.JSON_UTF_8),
+                                                                ImmutableList.of()));
+        testDuplicateMappings(PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                             ImmutableSet.of(HttpMethod.POST),
+                                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8,
                                                                          MediaType.JSON_UTF_8),
-                                                        ImmutableList.of()),
-                              new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.POST),
-                                                        ImmutableList.of(MediaType.JSON_UTF_8),
-                                                        ImmutableList.of()));
+                                                             ImmutableList.of()),
+                              PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                             ImmutableSet.of(HttpMethod.POST),
+                                                             ImmutableList.of(MediaType.JSON_UTF_8),
+                                                             ImmutableList.of()));
 
         // Duplicate if produce types overlap.
-        testNonDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(),
-                                                           ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8)),
-                                 new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(),
-                                                           ImmutableList.of(MediaType.JSON_UTF_8)));
-        testDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.POST),
-                                                        ImmutableList.of(),
-                                                        ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8,
+        testNonDuplicateMappings(PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                                ImmutableSet.of(HttpMethod.POST),
+                                                                ImmutableList.of(),
+                                                                ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8)),
+                                 PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                                ImmutableSet.of(HttpMethod.POST),
+                                                                ImmutableList.of(),
+                                                                ImmutableList.of(MediaType.JSON_UTF_8)));
+        testDuplicateMappings(PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                             ImmutableSet.of(HttpMethod.POST),
+                                                             ImmutableList.of(),
+                                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8,
                                                                          MediaType.JSON_UTF_8)),
-                              new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.POST),
-                                                        ImmutableList.of(),
-                                                        ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8)));
+                              PathMapping.withHttpHeaderInfo(PathMapping.of("/foo"),
+                                                             ImmutableSet.of(HttpMethod.POST),
+                                                             ImmutableList.of(),
+                                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8)));
     }
 
     private static void testDuplicateMappings(PathMapping... mappings) {

@@ -43,7 +43,7 @@ import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.server.HttpHeaderPathMapping;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 
 import io.swagger.v3.core.converter.AnnotatedType;
@@ -103,7 +103,7 @@ public final class AnnotatedOpenApiReader {
             return;
         }
 
-        final HttpHeaderPathMapping pathMapping = service.pathMapping();
+        final PathMapping pathMapping = service.pathMapping();
         final String operationPath = endpointPath(pathMapping);
         if (isNullOrEmpty(operationPath)) {
             return;
@@ -123,7 +123,7 @@ public final class AnnotatedOpenApiReader {
 
     @Nullable
     @VisibleForTesting
-    static String endpointPath(HttpHeaderPathMapping pathMapping) {
+    static String endpointPath(PathMapping pathMapping) {
         if (pathMapping.prefix().isPresent()) {
             if (pathMapping.regex().isPresent()) { // Does not support regex.
                 return null;
@@ -319,13 +319,13 @@ public final class AnnotatedOpenApiReader {
         }
     }
 
-    private static String[] consumeTypes(HttpHeaderPathMapping pathMapping) {
+    private static String[] consumeTypes(PathMapping pathMapping) {
         return pathMapping.consumeTypes().stream()
                           .map(com.linecorp.armeria.common.MediaType::toString)
                           .toArray(String[]::new);
     }
 
-    private static String[] produceTypes(HttpHeaderPathMapping pathMapping) {
+    private static String[] produceTypes(PathMapping pathMapping) {
         return pathMapping.produceTypes().stream()
                           .map(com.linecorp.armeria.common.MediaType::toString)
                           .toArray(String[]::new);

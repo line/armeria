@@ -150,6 +150,15 @@ const styles = (theme: Theme) =>
       width: 80,
       textAlign: 'center',
     },
+    trace: {
+      background: '#5d12ec',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
   });
 
 interface State {
@@ -214,12 +223,11 @@ function AppDrawer({
                     button
                     onClick={() =>
                       navigateTo(
-                        '/methods/' +
-                          methodKey(
+                        `/methods/$methodKey(
                             service.name,
                             method.name,
                             method.httpMethod,
-                          ),
+                          )`,
                       )
                     }
                   >
@@ -495,6 +503,10 @@ class App extends React.PureComponent<Props, State> {
     }
     if (httpMethod === 'DELETE') {
       return classes.delete;
+    }
+
+    if (httpMethod === 'TRACE') {
+      return classes.trace;
     }
 
     throw new Error(`unsupported http method: ${httpMethod}`);

@@ -290,7 +290,7 @@ final class AnnotatedValueResolver {
      * {@link Parameter}, {@code pathParams}, {@code objectResolvers} and
      * {@code implicitRequestObjectAnnotation}.
      */
-    static Optional<AnnotatedValueResolver> of(Parameter parameter, Set<String> pathParams,
+    public static Optional<AnnotatedValueResolver> of(Parameter parameter, Set<String> pathParams,
                                                List<RequestObjectResolver> objectResolvers,
                                                boolean implicitRequestObjectAnnotation) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,

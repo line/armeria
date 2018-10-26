@@ -46,7 +46,7 @@ import {
   Specification,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
-import AnnotatedHttpTransport from '../../lib/transports/annotated-http';
+import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
 
 import Section from '../../components/Section';
 import VariableList from '../../components/VariableList';
@@ -103,7 +103,6 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
   public render() {
     const { specification } = this.props;
-
     const service = this.getService();
     if (!service) {
       return <>Not found.</>;
@@ -223,8 +222,9 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                     className: 'code',
                   }}
                 />
-                {TRANSPORTS.getDebugTransport(method) instanceof
-                  AnnotatedHttpTransport &&
+                {TRANSPORTS.getDebugTransport(method)!.supportsMimeType(
+                  ANNOTATED_HTTP_MIME_TYPE,
+                ) &&
                   ((!isPrefixOrRegexMapping(method) && (
                     <>
                       <Typography variant="body1" paragraph />

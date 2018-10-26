@@ -64,7 +64,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.server.AbstractPathMapping;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
-import com.linecorp.armeria.server.HttpHeaderPathMapping;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.PathMappingResult;
@@ -194,7 +193,7 @@ public final class AnnotatedHttpServiceFactory {
         }
 
         final Class<?> clazz = object.getClass();
-        final HttpHeaderPathMapping pathMapping = new HttpHeaderPathMapping(
+        final PathMapping pathMapping = PathMapping.withHttpHeaderInfo(
                 pathStringMapping(pathPrefix, method, methodAnnotations),
                 methods, consumableMediaTypes(method, clazz), producibleMediaTypes(method, clazz));
 

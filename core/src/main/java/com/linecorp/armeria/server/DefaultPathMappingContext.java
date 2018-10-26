@@ -40,20 +40,7 @@ import com.linecorp.armeria.common.MediaTypeSet;
 /**
  * Holds the parameters which are required to find a service available to handle the request.
  */
-public final class DefaultPathMappingContext implements PathMappingContext {
-
-    /**
-     * Returns a new {@link PathMappingContext} instance.
-     */
-    public static PathMappingContext of(VirtualHost virtualHost, String hostname,
-                                        String path, @Nullable String query,
-                                        HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes) {
-        final MediaType consumeType = resolveConsumeType(requireNonNull(headers, "headers"));
-        final List<MediaType> produceTypes = resolveProduceTypes(headers, producibleMediaTypes);
-        return new DefaultPathMappingContext(virtualHost, hostname, headers.method(), path, query,
-                                             consumeType, produceTypes);
-    }
-
+final class DefaultPathMappingContext implements PathMappingContext {
     private static final Logger logger = LoggerFactory.getLogger(DefaultPathMappingContext.class);
 
     static final List<MediaType> ANY_TYPE = ImmutableList.of(MediaType.ANY_TYPE);
@@ -155,6 +142,18 @@ public final class DefaultPathMappingContext implements PathMappingContext {
     @Override
     public String toString() {
         return summary().toString();
+    }
+
+    /**
+     * Returns a new {@link PathMappingContext} instance.
+     */
+    static PathMappingContext of(VirtualHost virtualHost, String hostname,
+                                 String path, @Nullable String query,
+                                 HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes) {
+        final MediaType consumeType = resolveConsumeType(headers);
+        final List<MediaType> produceTypes = resolveProduceTypes(headers, producibleMediaTypes);
+        return new DefaultPathMappingContext(virtualHost, hostname, headers.method(), path, query,
+                                             consumeType, produceTypes);
     }
 
     @Nullable
