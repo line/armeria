@@ -439,7 +439,8 @@ converter is not able to convert the request.
     }
 
 Then, you can write your service method as follows. Note that a request converter will work on the parameters
-which are annotated with :api:`@RequestObject`.
+which are annotated with :api:`@RequestObject`. You can omit the annotation in the parameter list
+of your service method.
 
 .. code-block:: java
 
@@ -454,7 +455,7 @@ which are annotated with :api:`@RequestObject`.
 
         @Post("/hola")
         @RequestConverter(MySpanishRequestConverter.class)
-        public HttpResponse hola(@RequestObject MySpanishObject myObject) {
+        public HttpResponse hola(MySpanishObject myObject) {
             // MySpanishRequestConverter will be tried to convert a request first.
             // MyRequestConverter will be used if MySpanishRequestConverter fell through.
             // ...
@@ -464,8 +465,36 @@ which are annotated with :api:`@RequestObject`.
 Armeria also provides built-in request converters such as, a request converter for a Java Bean,
 :api:`JacksonRequestConverterFunction` for a JSON document, :api:`StringRequestConverterFunction`
 for a string and :api:`ByteArrayRequestConverterFunction` for binary data. They will be applied
-after your request converters by default, so you can use these built-in converters by just putting
-:api:`@RequestObject` annotation on the parameters which you want to convert.
+after your request converters by default, so you can use these built-in converters by just specifying
+a parameter with desired type to be converted in the parameter list of your service method.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        // JacksonRequestConverterFunction will work for the content type of 'application/json' or
+        // one of '+json' types.
+        @Post("/hello1")
+        public HttpResponse hello1(JsonNode body) { ... }
+
+        @Post("/hello2")
+        public HttpResponse hello2(MyJsonRequest body) { ...}
+
+        // StringRequestConverterFunction will work for the content type of any of 'text'.
+        @Post("/hello3")
+        public HttpResponse hello3(String body) { ... }
+
+        @Post("/hello4")
+        public HttpResponse hello4(CharSequence body) { ... }
+
+        // ByteArrayRequestConverterFunction will work for the content type of 'application/octet-stream',
+        // 'application/binary' or none.
+        @Post("/hello5")
+        public HttpResponse hello5(byte[] body) { ... }
+
+        @Post("/hello6")
+        public HttpResponse hello6(HttpData body) { ... }
+    }
 
 In some cases, :api:`@RequestObject` annotation may have a request converter as its value.
 Assume that you have a Java class named ``MyRequest`` that it is usually able to be converted by
@@ -489,12 +518,19 @@ Injecting value of parameters and HTTP headers into a Java object
 
 Armeria provides a generic built-in request converter for Java objects which is activated by
 putting :api:`@RequestObject` annotation on the parameters which you want to convert.
+The same as when using a request converter, you can also omit the annotation in the parameter list of
+your service method.
 
 .. code-block:: java
 
     public class MyAnnotatedService {
-        @Post("/hello")
-        public HttpResponse hello(@RequestObject MyRequestObject myRequestObject) { ... }
+        @Post("/hello1")
+        public HttpResponse hello1(@RequestObject MyRequestObject myRequestObject) { ... }
+
+        @Post("/hello2")
+        public HttpResponse hello2(MyRequestObject myRequestObject) {
+            // Will work the same as 'hello1'.
+        }
     }
 
 Besides the annotated service class, you also need to create ``MyRequestObject`` and put :api:`@Param` or
@@ -517,7 +553,7 @@ or HTTP headers:
         @Header("age") // This field will be injected by the value of HTTP header "age".
         private int age;
 
-        @RequestObject // This field will be injected by another request converter.
+        @RequestObject // This field will be injected by another request converter. You cannot omit this annotation.
         private MyAnotherRequestObject obj;
 
         // You can omit the value of @Param or @Header if you compiled your code with ``-parameters`` javac option.
@@ -1117,5 +1153,5 @@ Then, you can annotate your service method with your annotation as follows.
         @Post("/hello")
         @MyConsumableType  // the same as @Consumes("application/xml")
         @MyProducibleType  // the same as @Produces("application/xml")
-        public MyResponse hello(@RequestObject MyRequest myRequest) { ... }
+        public MyResponse hello(MyRequest myRequest) { ... }
     }
