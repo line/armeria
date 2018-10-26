@@ -23,29 +23,16 @@ dependencies {
 
     compile 'com.squareup.retrofit2:adapter-java8'
     compile 'com.squareup.retrofit2:converter-jackson'
+
+    jmh 'pl.project13.scala:sbt-jmh-extras'
 }
 
 jmh {
-    if (jmhInclude) {
-        include = jmhInclude
-    }
-
-    if (rootProject.hasProperty('jmh.forceGC')) {
-        forceGC = 'true'.equals(rootProject.findProperty('jmh.forceGC'))
-    } else {
-        forceGC = true
-    }
-
-
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
     jmhVersion = managedVersions['org.openjdk.jmh:jmh-core']
 
-    if (rootProject.hasProperty('jmh.params')) {
-        benchmarkParameters = [:]
-        rootProject.findProperty('jmh.params').split(';').each {
-            def parts = it.split('=')
-            benchmarkParameters[parts[0]] = parts[1].tokenize(',')
-        }
+    if (jmhInclude) {
+        include = jmhInclude
     }
 
     if (rootProject.hasProperty('jmh.fork')) {
@@ -54,25 +41,43 @@ jmh {
         fork = 1
     }
 
-    if (rootProject.hasProperty('jmh.jvmargs')) {
-        jvmArgsAppend = String.valueOf(rootProject.findProperty('jmh.jvmargs')).split(' ').toList()
-    }
-
     if (rootProject.hasProperty('jmh.iterations')) {
         iterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.iterations')))
     }
+
     if (rootProject.hasProperty('jmh.warmupIterations')) {
         warmupIterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.warmupIterations')))
     } else {
         warmupIterations = iterations
     }
+
     if (rootProject.hasProperty('jmh.profilers')) {
         profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',')
     }
+
     if (rootProject.hasProperty('jmh.threads')) {
         threads = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.threads')))
     }
+
     if (rootProject.hasProperty('jmh.verbose')) {
         verbosity = 'EXTRA'
+    }
+
+    if (rootProject.hasProperty('jmh.jvmargs')) {
+        jvmArgsAppend = String.valueOf(rootProject.findProperty('jmh.jvmargs')).split(' ').toList()
+    }
+
+    if (rootProject.hasProperty('jmh.forceGC')) {
+        forceGC = 'true'.equals(rootProject.findProperty('jmh.forceGC'))
+    } else {
+        forceGC = true
+    }
+
+    if (rootProject.hasProperty('jmh.params')) {
+        benchmarkParameters = [:]
+        rootProject.findProperty('jmh.params').split(';').each {
+            def parts = it.split('=')
+            benchmarkParameters[parts[0]] = parts[1].tokenize(',')
+        }
     }
 }

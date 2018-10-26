@@ -386,3 +386,6 @@ org.springframework.boot:
   spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
   spring-boot-configuration-processor: { version: *SPRING_BOOT_VERSION }
   spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }
+
+pl.project13.scala:
+  sbt-jmh-extras: { version: 0.3.4 }
