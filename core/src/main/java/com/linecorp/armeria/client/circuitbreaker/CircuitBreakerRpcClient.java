@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -39,16 +40,19 @@ public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcReque
      * @param circuitBreaker The {@link CircuitBreaker} instance to be used
      */
     public static Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient>
-    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerStrategy<RpcResponse> strategy) {
+    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
         return newDecorator((ctx, req) -> circuitBreaker, strategy);
     }
 
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerMapping} and
      * {@link CircuitBreakerStrategy}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
      */
     public static Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient>
-    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerStrategy<RpcResponse> strategy) {
+    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
         return delegate -> new CircuitBreakerRpcClient(delegate, mapping, strategy);
     }
 
@@ -56,44 +60,53 @@ public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcReque
      * Creates a new decorator that binds one {@link CircuitBreaker} per RPC method name with the specified
      * {@link CircuitBreakerStrategy}.
      *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
      * @param factory A function that takes an RPC method name and creates a new {@link CircuitBreaker}.
      */
     public static Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,
-                          CircuitBreakerStrategy<RpcResponse> strategy) {
-        return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.METHOD, factory), strategy);
+                          CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
+        return newDecorator(CircuitBreakerMapping.perMethod(factory), strategy);
     }
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host with the specified
      * {@link CircuitBreakerStrategy}.
      *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
      */
     public static Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory,
-                        CircuitBreakerStrategy<RpcResponse> strategy) {
-        return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST, factory), strategy);
+                        CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
+        return newDecorator(CircuitBreakerMapping.perHost(factory), strategy);
     }
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host and RPC method name with
      * the specified {@link CircuitBreakerStrategy}.
      *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
      */
     public static Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
-                                 CircuitBreakerStrategy<RpcResponse> strategy) {
-        return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST_AND_METHOD, factory), strategy);
+                                 CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
+        return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), strategy);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     CircuitBreakerRpcClient(Client<RpcRequest, RpcResponse> delegate, CircuitBreakerMapping mapping,
-                            CircuitBreakerStrategy<RpcResponse> strategy) {
-        super(delegate, mapping, strategy);
+                            CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
+        super(delegate, mapping, requireNonNull(strategy, "strategy"));
     }
 
     @Override
@@ -103,14 +116,13 @@ public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcReque
         try {
             response = delegate().execute(ctx, req);
         } catch (Throwable cause) {
-            reportSuccessOrFailure(
-                    circuitBreaker, strategy().shouldReportAsSuccess(RpcResponse.ofFailure(cause)));
+            reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
+                    ctx, RpcResponse.ofFailure(cause)));
             throw cause;
         }
 
-        response.whenComplete((unused1, unused2) -> {
-            reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(response));
-        });
+        response.whenComplete((unused1, unused2) -> reportSuccessOrFailure(
+                circuitBreaker, strategyWithContent().shouldReportAsSuccess(ctx, response)));
         return response;
     }
 }

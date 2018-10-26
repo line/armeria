@@ -22,13 +22,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
-import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.internal.HttpHeaderSubscriber;
+import javax.annotation.Nullable;
 
-final class HttpStatusBasedCircuitBreakerStrategy implements CircuitBreakerStrategy<HttpResponse> {
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+
+final class HttpStatusBasedCircuitBreakerStrategy implements CircuitBreakerStrategy {
 
     private final BiFunction<HttpStatus, Throwable, Boolean> function;
 
@@ -37,18 +38,16 @@ final class HttpStatusBasedCircuitBreakerStrategy implements CircuitBreakerStrat
     }
 
     @Override
-    public CompletionStage<Boolean> shouldReportAsSuccess(HttpResponse response) {
-        final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
-        final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
-        response.completionFuture().whenComplete(subscriber);
-        response.subscribe(subscriber);
-
-        return future.handle((headers, thrown) -> {
-            if (thrown instanceof UnprocessedRequestException) {
-                return null; // Neither success nor failure.
-            }
-
-            return function.apply(headers != null ? headers.status() : null, thrown);
-        });
+    public CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx, @Nullable Throwable cause) {
+        if (cause instanceof UnprocessedRequestException) {
+            return CompletableFuture.completedFuture(null); // Neither success nor failure.
+        }
+        final HttpStatus status;
+        if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+            status = ctx.log().responseHeaders().status();
+        } else {
+            status = null;
+        }
+        return CompletableFuture.completedFuture(function.apply(status, cause));
     }
 }
