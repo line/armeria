@@ -21,8 +21,10 @@ A collection of JMH benchmarks which may be useful for measuring Armeria perform
 - `-Pjmh.profilers=<spec>`
   - The profiler settings. Profiler disabled if unspecified.
     - `jmh.extras.Async:asyncProfilerDir=...;flameGraphDir=...`
-- `-Pjmh.threads=<integer>` - The number of threads. JMH default if unspecified.
-- `-Pjmh.verbose` - Increases the verbosity of JMH to `EXTRA`.
+- `-Pjmh.threads=<integer>`
+  - The number of threads. JMH default if unspecified.
+- `-Pjmh.verbose`
+  - Increases the verbosity of JMH to `EXTRA`.
 - `-Pjmh.jvmargs=<jvm options>`
   - Additional JVM options.
 - `-Pjmh.forcegc=<true|false>`
@@ -57,6 +59,6 @@ $ ./gradlew :benchmarks:jmh \
 
 ## Notes
 
-- Do not forgot to wrap `-Pjmh.params` and `-Pjmh.profilers` option with double quotes, because otherwise your
+- Do not forget to wrap `-Pjmh.params` and `-Pjmh.profilers` option with double quotes, because otherwise your
   shell will interpret `;` as the end of the command.
 - See [sbt-jmh documentation](https://github.com/ktoso/sbt-jmh#using-async-profiler) for more profiler options.
