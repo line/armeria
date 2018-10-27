@@ -190,7 +190,6 @@ abstract class HttpResponseDecoder {
         public boolean tryWrite(HttpObject o) {
             if (o instanceof HttpHeaders) {
                 // NB: It's safe to call logBuilder.start() multiple times.
-                //     See AbstractMessageLog.start() for more information.
                 logBuilder.startResponse();
                 final HttpHeaders headers = (HttpHeaders) o;
                 final HttpStatus status = headers.status();
