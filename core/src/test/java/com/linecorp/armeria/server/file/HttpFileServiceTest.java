@@ -30,7 +30,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 
 import javax.annotation.Nullable;
@@ -301,8 +300,7 @@ public class HttpFileServiceTest {
 
             // HTTP-date has no sub-second precision; just add a few seconds to the time.
             Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
-            assertThat(
-                    barFile.setLastModified(now.toEpochMilli() + TimeUnit.SECONDS.toMillis(5))).isTrue();
+            assertThat(barFile.setLastModified(now.toEpochMilli() + 5000)).isTrue();
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 final String newLastModified = assert200Ok(res, "text/html", expectedContentB);
@@ -331,14 +329,20 @@ public class HttpFileServiceTest {
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
         Files.write(barFile.toPath(), expectedContentA.getBytes(StandardCharsets.UTF_8));
+        final long barFileLastModified = barFile.lastModified();
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpUriRequest req = new HttpGet(newUri("/fs/modifiedFile.html"));
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
             }
+
+            // Modify the file cached by the service. Update last modification time explicitly
+            // so that it differs from the old value.
             Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8),
                         StandardOpenOption.TRUNCATE_EXISTING);
+            assertThat(barFile.setLastModified(barFileLastModified + 5000)).isTrue();
+
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentB);
             }
