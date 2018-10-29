@@ -68,6 +68,12 @@ public final class PathAndQuery {
 
     /**
      * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
+     * {@code "%2F"}.
+     */
+    private static final int ENCODED_SLASH = 0xFC;
+
+    /**
+     * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
      * {@code "%26"}.
      */
     private static final int ENCODED_AMPERSAND = 0xFD;

@@ -300,6 +300,15 @@ public class HttpClientIntegrationTest {
                 }, ctx.eventLoop());
                 return res;
             });
+
+            sb.service("glob:/oneparam/**", ((ctx, req) -> {
+                // The client was able to send a request with an escaped path param. Armeria servers always
+                // decode the path so ctx.path == '/oneparam/foo/bar' here.
+                if (req.headers().path().equals("/oneparam/foo%2Fbar")) {
+                    return HttpResponse.of("routed");
+                }
+                return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+            }));
         }
     };
 
@@ -616,5 +625,14 @@ public class HttpClientIntegrationTest {
         await().untilAsserted(() -> assertThat(obj).hasValue(HttpHeaders.of(HttpStatus.OK)));
         factory.close();
         await().untilAsserted(() -> assertThat(completed).hasValue(true));
+    }
+
+    @Test
+    public void testEscapedPathParam() throws Exception {
+        final HttpClient client = HttpClient.of(server.uri("/"));
+
+        final AggregatedHttpMessage response = client.get("/oneparam/foo%2Fbar").aggregate().get();
+
+        assertEquals("routed", response.content().toStringUtf8());
     }
 }
