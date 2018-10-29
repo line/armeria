@@ -664,7 +664,8 @@ final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns a cached instance of the specified {@link Class}.
+     * Returns a cached instance of the specified {@link Class} which is specified in the given
+     * {@link Annotation}.
      */
     @SuppressWarnings("unchecked")
     static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
@@ -686,6 +687,23 @@ final class AnnotatedHttpServiceFactory {
                     "A class specified in @" + annotation.getClass().getSimpleName() +
                     " annotation cannot be cast to " + expectedType, e);
         }
+    }
+
+    /**
+     * Returns a cached instance of the specified {@link Class}.
+     */
+    @SuppressWarnings("unchecked")
+    static <T> T getInstance(Class<T> clazz) {
+        return (T) instanceCache.computeIfAbsent(clazz, type -> {
+            try {
+                final Constructor<? extends T> constructor = clazz.getDeclaredConstructor();
+                constructor.setAccessible(true);
+                return constructor.newInstance();
+            } catch (Exception e) {
+                throw new IllegalStateException("A class must have an accessible default constructor: " +
+                                                clazz.getName(), e);
+            }
+        });
     }
 
     /**

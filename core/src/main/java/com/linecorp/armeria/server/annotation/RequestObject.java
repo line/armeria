@@ -22,18 +22,51 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies which parameter should be converted by {@link RequestConverterFunction}.
+ * Specifies which element should be converted by {@link RequestConverterFunction}.
  *
+ * <p>A {@link RequestObject} can be implicitly applied when:
+ * <ul>
+ *     <li>A parameter is neither annotated nor automatically injected type in an annotated method.</li>
+ *     <li>A {@link RequestConverter} annotation is specified on a parameter in an annotated method
+ *     or a setter of a bean.</li>
+ *     <li>A {@link RequestConverter} annotation is specified on a field of a bean.</li>
+ *     <li>A {@link RequestConverter} annotation is specified on a method or constructor which has
+ *     only one parameter.</li>
+ * </ul>
+ * The following example shows when to apply a {@link RequestObject} implicitly.
+ * <pre>{@code
+ * > @RequestConverter(ErinConverter.class)
+ * > @RequestConverter(FrankConverter.class)
+ * > public class CompositeBean {
+ * >     private final Alice a;
+ * >
+ * >     @RequestConverter(BobConverter.class)
+ * >     private Bob b;
+ * >
+ * >     private Charlie c;
+ * >     private David d;
+ * >     private Erin e;
+ * >
+ * >     @RequestObject
+ * >     private Frank f;
+ * >
+ * >     @RequestConverter(AliceConverter.class)
+ * >     public CompositeBean(Alice a) { ... }
+ * >
+ * >     @RequestConverter(CharlieConverter.class)
+ * >     public void setCharlie(Charlie c) { ... }
+ * >
+ * >     public void setDavidAndErin(@RequestConverter(DavidConverter.class) David d, Erin e) { ... }
+ * > }
+ * }</pre>
  * @see RequestConverterFunction
  * @see RequestConverter
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR })
-public @interface RequestObject {
-
-    /**
-     * {@link RequestConverterFunction} implementation type which is used for converting the annotated
-     * parameter. The specified class must have an accessible default constructor.
-     */
-    Class<? extends RequestConverterFunction> value() default RequestConverterFunction.class;
-}
+@Target({
+        ElementType.METHOD,
+        ElementType.PARAMETER,
+        ElementType.CONSTRUCTOR,
+        ElementType.FIELD
+})
+public @interface RequestObject {}
