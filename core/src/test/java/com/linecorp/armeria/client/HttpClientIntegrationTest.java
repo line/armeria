@@ -401,25 +401,6 @@ public class HttpClientIntegrationTest {
     }
 
     /**
-     * When the request path contains double slashes, they should be replaced with single slashes.
-     */
-    @Test
-    public void testDoubleSlashSuppression() throws Exception {
-        testDoubleSlashSuppression("/double//slashes", "/double/slashes");
-        // The double slashes in the query string should not be normalized.
-        testDoubleSlashSuppression("/double//slashes?slashed//query", "/double/slashes?slashed//query");
-    }
-
-    private static void testDoubleSlashSuppression(String path, String normalizedPath) throws IOException {
-        testSocketOutput(
-                path,
-                port -> "GET " + normalizedPath + " HTTP/1.1\r\n" +
-                        "host: 127.0.0.1:" + port + "\r\n" +
-                        "user-agent: " + HttpHeaderUtil.USER_AGENT + "\r\n\r\n"
-        );
-    }
-
-    /**
      * :authority header should be overridden by ClientOption.HTTP_HEADER
      */
     @Test
