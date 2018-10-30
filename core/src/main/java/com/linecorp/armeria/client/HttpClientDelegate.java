@@ -30,10 +30,10 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
 import com.linecorp.armeria.client.pool.PoolKey;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.netty.channel.Channel;
@@ -58,8 +58,9 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         if (!sanitizePath(req)) {
-            req.abort();
-            return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
+            final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
+            handleEarlyRequestException(ctx, req, cause);
+            return HttpResponse.ofFailure(cause);
         }
 
         final Endpoint endpoint = ctx.endpoint().resolve(ctx)
@@ -94,7 +95,9 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         if (resolveFuture.isSuccess()) {
             executeWithIpAddr(ctx, endpoint, resolveFuture.getNow().getAddress().getHostAddress(), req, res);
         } else {
-            res.close(resolveFuture.cause());
+            final Throwable cause = resolveFuture.cause();
+            handleEarlyRequestException(ctx, req, cause);
+            res.close(cause);
         }
     }
 
@@ -118,7 +121,9 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             final Channel ch = channelFuture.getNow();
             invoke0(ch, ctx, req, res, poolKey);
         } else {
-            res.close(channelFuture.cause());
+            final Throwable cause = channelFuture.cause();
+            handleEarlyRequestException(ctx, req, cause);
+            res.close(cause);
         }
     }
 
@@ -188,6 +193,14 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         return true;
     }
 
+    private static void handleEarlyRequestException(ClientRequestContext ctx,
+                                                    HttpRequest req, Throwable cause) {
+        req.abort();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.endRequest(cause);
+        logBuilder.endResponse(cause);
+    }
+
     void invoke0(Channel channel, ClientRequestContext ctx,
                  HttpRequest req, DecodedHttpResponse res, PoolKey poolKey) {
         final KeyedChannelPool<PoolKey> pool = KeyedChannelPool.findPool(channel);
@@ -199,7 +212,10 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             if (sessionProtocol == null) {
                 needsRelease = false;
                 try {
-                    res.close(ClosedSessionException.get());
+                    // TODO(minwoox): Make a test that handles this case
+                    final UnprocessedRequestException cause = UnprocessedRequestException.get();
+                    handleEarlyRequestException(ctx, req, cause);
+                    res.close(cause);
                 } finally {
                     channel.close();
                 }
