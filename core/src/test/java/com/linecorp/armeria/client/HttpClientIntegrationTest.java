@@ -300,6 +300,16 @@ public class HttpClientIntegrationTest {
                 }, ctx.eventLoop());
                 return res;
             });
+
+            sb.service("glob:/oneparam/**", ((ctx, req) -> {
+                // The client was able to send a request with an escaped path param. Armeria servers always
+                // decode the path so ctx.path == '/oneparam/foo/bar' here.
+                if (req.headers().path().equals("/oneparam/foo%2Fbar") &&
+                    ctx.path().equals("/oneparam/foo/bar")) {
+                    return HttpResponse.of("routed");
+                }
+                return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+            }));
         }
     };
 
@@ -388,25 +398,6 @@ public class HttpClientIntegrationTest {
         final AggregatedHttpMessage response = client.get("/not200").aggregate().get();
 
         assertEquals(HttpStatus.NOT_FOUND, response.headers().status());
-    }
-
-    /**
-     * When the request path contains double slashes, they should be replaced with single slashes.
-     */
-    @Test
-    public void testDoubleSlashSuppression() throws Exception {
-        testDoubleSlashSuppression("/double//slashes", "/double/slashes");
-        // The double slashes in the query string should not be normalized.
-        testDoubleSlashSuppression("/double//slashes?slashed//query", "/double/slashes?slashed//query");
-    }
-
-    private static void testDoubleSlashSuppression(String path, String normalizedPath) throws IOException {
-        testSocketOutput(
-                path,
-                port -> "GET " + normalizedPath + " HTTP/1.1\r\n" +
-                        "host: 127.0.0.1:" + port + "\r\n" +
-                        "user-agent: " + HttpHeaderUtil.USER_AGENT + "\r\n\r\n"
-        );
     }
 
     /**
@@ -616,5 +607,14 @@ public class HttpClientIntegrationTest {
         await().untilAsserted(() -> assertThat(obj).hasValue(HttpHeaders.of(HttpStatus.OK)));
         factory.close();
         await().untilAsserted(() -> assertThat(completed).hasValue(true));
+    }
+
+    @Test
+    public void testEscapedPathParam() throws Exception {
+        final HttpClient client = HttpClient.of(server.uri("/"));
+
+        final AggregatedHttpMessage response = client.get("/oneparam/foo%2Fbar").aggregate().get();
+
+        assertEquals("routed", response.content().toStringUtf8());
     }
 }
