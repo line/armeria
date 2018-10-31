@@ -23,8 +23,8 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -52,11 +52,15 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + concatPaths));
         }
 
-        return execute(eventLoop, req.method(), pathAndQuery.path(), pathAndQuery.query(), null, req, cause -> {
-            final HttpResponseWriter res = HttpResponse.streaming();
-            res.close(cause);
-            return res;
-        });
+        return execute(eventLoop, req.method(), pathAndQuery.path(), pathAndQuery.query(), null, req,
+                       (ctx, cause) -> {
+                           if (ctx != null && !ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
+                               // An exception is raised even before sending a request, so abort the request to
+                               // release the elements.
+                               req.abort();
+                           }
+                           return HttpResponse.ofFailure(cause);
+                       });
     }
 
     @Override
