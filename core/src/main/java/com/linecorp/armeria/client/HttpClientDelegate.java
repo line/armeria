@@ -57,7 +57,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        if (!sanitizePath(req)) {
+        if (!isValidPath(req)) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
@@ -174,23 +174,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         return null;
     }
 
-    private static boolean sanitizePath(HttpRequest req) {
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
-        if (pathAndQuery == null) {
-            return false;
-        }
-
-        final String path = pathAndQuery.path();
-        final String query = pathAndQuery.query();
-        final String newPathAndQuery;
-        if (query != null) {
-            newPathAndQuery = path + '?' + query;
-        } else {
-            newPathAndQuery = path;
-        }
-
-        req.path(newPathAndQuery);
-        return true;
+    private static boolean isValidPath(HttpRequest req) {
+        return PathAndQuery.parse(req.path()) != null;
     }
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
