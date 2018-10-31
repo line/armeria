@@ -10,9 +10,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.4.0'
+    version: '3.4.1'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.4.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.4.1/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -132,17 +132,17 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.7'
+    version: &MICROMETER_VERSION '1.1.0'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.7/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.0/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.7/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.0/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.7/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.0/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -378,7 +378,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.0.6.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.0.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
