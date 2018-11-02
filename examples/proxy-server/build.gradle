@@ -1,0 +1,12 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    compile project(':core')
+    runtime 'org.slf4j:slf4j-simple'
+}
+
+application {
+    mainClassName = 'example.armeria.proxy.Main'
+}

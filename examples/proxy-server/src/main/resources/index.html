@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <h1 align="center">Armeria animation!</h1>
+</head>
+<style>
+
+.ascii-art {
+  display: flex;
+  justify-content: center;
+  font-family: Courier, monospace;
+  font-size: 20px;
+}
+
+.description {
+  display: flex;
+  justify-content: center;
+  font-size: 24px;
+}
+
+</style>
+<script>
+  fetch('/animation')
+     .then(response => response.body.getReader())
+     .then(reader => {
+       const decoder = new TextDecoder('utf-8');
+       return new ReadableStream({
+         start(controller) {
+           return animation();
+           function animation() {
+             return reader.read().then(({ done, value }) => {
+               if (done) {
+                 controller.close();
+                 return;
+               }
+               document.getElementById("root").innerHTML = decoder.decode(value);
+               return animation();
+             })
+           }
+         }
+       })
+    });
+</script>
+<body>
+  <div class="description">Press F5 to access the different backend!</div>
+  <div id="root" class="ascii-art"></div>
+</body>
+</html>
