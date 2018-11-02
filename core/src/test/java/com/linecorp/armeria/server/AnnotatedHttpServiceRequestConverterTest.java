@@ -44,6 +44,11 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean1;
+import com.linecorp.armeria.server.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean2;
+import com.linecorp.armeria.server.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean3;
+import com.linecorp.armeria.server.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean4;
+import com.linecorp.armeria.server.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean5;
 import com.linecorp.armeria.server.TestConverters.ByteArrayConverterFunction;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Get;
@@ -65,10 +70,9 @@ public class AnnotatedHttpServiceRequestConverterTest {
     public static final ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/1", new MyService1(),
-                                LoggingService.newDecorator());
-            sb.annotatedService("/2", new MyService2(),
-                                LoggingService.newDecorator());
+            sb.annotatedService("/1", new MyService1(), LoggingService.newDecorator());
+            sb.annotatedService("/2", new MyService2(), LoggingService.newDecorator());
+            sb.annotatedService("/3", new MyService3(), LoggingService.newDecorator());
         }
     };
 
@@ -77,7 +81,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
     public static class MyService1 {
 
         @Post("/convert1")
-        public String convert1(@RequestObject RequestJsonObj1 obj1) {
+        public String convert1(RequestJsonObj1 obj1) {
             assertThat(obj1).isNotNull();
             return obj1.toString();
         }
@@ -86,15 +90,15 @@ public class AnnotatedHttpServiceRequestConverterTest {
         @RequestConverter(TestRequestConverter2.class)
         @RequestConverter(TestRequestConverter1A.class)
         @RequestConverter(TestRequestConverter1.class)
-        public String convert2(@RequestObject RequestJsonObj1 obj1) {
+        public String convert2(RequestJsonObj1 obj1) {
             assertThat(obj1).isNotNull();
             return obj1.toString();
         }
 
         @Post("/convert3")
-        public String convert3(@RequestObject(TestRequestConverterOptional1.class)
+        public String convert3(@RequestConverter(TestRequestConverterOptional1.class)
                                        Optional<RequestJsonObj1> obj1,
-                               @RequestObject(TestRequestConverterOptional2.class)
+                               @RequestConverter(TestRequestConverterOptional2.class)
                                        Optional<RequestJsonObj2> obj2) {
             assertThat(obj1.isPresent()).isTrue();
             assertThat(obj2.isPresent()).isTrue();
@@ -108,7 +112,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Post("/default/bean1/{userName}/{seqNum}")
-        public String defaultBean1ForPost(@RequestObject RequestBean1 bean1)
+        public String defaultBean1ForPost(RequestBean1 bean1)
                 throws JsonProcessingException {
             assertThat(bean1).isNotNull();
             bean1.validate();
@@ -116,7 +120,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean1/{userName}/{seqNum}")
-        public String defaultBean1ForGet(@RequestObject RequestBean1 bean1)
+        public String defaultBean1ForGet(RequestBean1 bean1)
                 throws JsonProcessingException {
             assertThat(bean1).isNotNull();
             bean1.validate();
@@ -124,7 +128,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/bean2/{userName}/{serialNo}")
-        public String defaultBean2ForPost(@RequestObject RequestBean2 bean2)
+        public String defaultBean2ForPost(RequestBean2 bean2)
                 throws JsonProcessingException {
             assertThat(bean2).isNotNull();
             bean2.validate();
@@ -132,7 +136,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean2/{userName}")
-        public String defaultBean2ForGet(@RequestObject RequestBean2 bean2)
+        public String defaultBean2ForGet(RequestBean2 bean2)
                 throws JsonProcessingException {
             assertThat(bean2).isNotNull();
             bean2.validate();
@@ -140,7 +144,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/bean3/{userName}/{departmentNo}")
-        public String defaultBean3ForPost(@RequestObject RequestBean3 bean3)
+        public String defaultBean3ForPost(RequestBean3 bean3)
                 throws JsonProcessingException {
             assertThat(bean3).isNotNull();
             bean3.validate();
@@ -148,7 +152,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Get("/default/bean3/{userName}")
-        public String defaultBean3ForGet(@RequestObject RequestBean3 bean3)
+        public String defaultBean3ForGet(RequestBean3 bean3)
                 throws JsonProcessingException {
             assertThat(bean3).isNotNull();
             bean3.validate();
@@ -156,22 +160,22 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/json")
-        public String defaultJson(@RequestObject RequestJsonObj1 obj1,
-                                  @RequestObject RequestJsonObj2 obj2) {
+        public String defaultJson(RequestJsonObj1 obj1,
+                                  RequestJsonObj2 obj2) {
             assertThat(obj1).isNotNull();
             assertThat(obj2).isNotNull();
             return obj2.strVal();
         }
 
         @Post("/default/invalidJson")
-        public String invalidJson(@RequestObject JsonNode node) {
+        public String invalidJson(JsonNode node) {
             // Should never reach here because we are sending invalid JSON.
             throw new Error();
         }
 
         @Post("/default/binary")
-        public byte[] defaultBinary(@RequestObject HttpData obj1,
-                                    @RequestObject byte[] obj2) {
+        public byte[] defaultBinary(HttpData obj1,
+                                    byte[] obj2) {
             assertThat(obj1).isNotNull();
             assertThat(obj2).isNotNull();
             // Actually they have the same byte array.
@@ -180,9 +184,131 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
 
         @Post("/default/text")
-        public String defaultText(@RequestObject String obj1) {
+        public String defaultText(String obj1) {
             assertThat(obj1).isNotNull();
             return obj1;
+        }
+    }
+
+    static class MyService3 {
+        @Get("/composite1/:age")
+        public String composite1(CompositeRequestBean1 bean) {
+            return bean.getClass().getSimpleName() + ':' + bean.alice.age + ':' + bean.bob.age;
+        }
+
+        static class CompositeRequestBean1 {
+            private final Alice alice;
+            private Bob bob;
+
+            @RequestConverter(AliceRequestConverter.class)
+            CompositeRequestBean1(Alice alice) {
+                this.alice = alice;
+            }
+
+            @RequestConverter(BobRequestConverter.class)
+            void setBob(Bob bob) {
+                this.bob = bob;
+            }
+        }
+
+        @Get("/composite2/:age")
+        public String composite2(CompositeRequestBean2 bean) {
+            return bean.getClass().getSimpleName() + ':' + bean.alice.age + ':' + bean.bob.age;
+        }
+
+        @RequestConverter(AliceRequestConverter.class)
+        static class CompositeRequestBean2 {
+            private Alice alice;
+            private Bob bob;
+
+            void initialize(@RequestObject Alice alice, @RequestConverter(BobRequestConverter.class) Bob bob) {
+                this.alice = alice;
+                this.bob = bob;
+            }
+        }
+
+        @Get("/composite3/:age")
+        public String composite3(CompositeRequestBean3 bean) {
+            return bean.getClass().getSimpleName() + ':' + bean.alice.age + ':' + bean.bob.age;
+        }
+
+        @SuppressWarnings("checkstyle:all")
+        @RequestConverter(AliceRequestConverter.class)
+        @RequestConverter(BobRequestConverter.class)
+        static class CompositeRequestBean3 {
+            @RequestObject
+            protected Alice alice;
+            @RequestObject
+            protected Bob bob;
+        }
+
+        @Get("/composite4/:age")
+        public String composite4(CompositeRequestBean4 bean) {
+            return bean.getClass().getSimpleName() + ':' + bean.alice.age + ':' + bean.bob.age;
+        }
+
+        static class CompositeRequestBean4 {
+            @RequestConverter(AliceRequestConverter.class)
+            private Alice alice;
+            @RequestConverter(BobRequestConverter.class)
+            private Bob bob;
+        }
+
+        @Post("/composite5/:age")
+        public String composite5(CompositeRequestBean5 bean) {
+            return bean.getClass().getSimpleName() + ':' + bean.alice.age + ':' + bean.bob.age + ':' +
+                   bean.json1.strVal + ':' + bean.json1.intVal;
+        }
+
+        @RequestConverter(AliceRequestConverter.class)
+        @RequestConverter(BobRequestConverter.class)
+        static class CompositeRequestBean5 extends CompositeRequestBean3 {
+            @RequestObject
+            private RequestJsonObj1 json1;
+        }
+
+        static class Alice {
+            private final int age;
+
+            Alice(int age) {
+                this.age = age;
+            }
+        }
+
+        static class Bob {
+            private final int age;
+
+            Bob(int age) {
+                this.age = age;
+            }
+        }
+
+        static class AliceRequestConverter implements RequestConverterFunction {
+            @Nullable
+            @Override
+            public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+                                         Class<?> expectedResultType) throws Exception {
+                if (expectedResultType == Alice.class) {
+                    final String age = ctx.pathParam("age");
+                    assert age != null;
+                    return new Alice(Integer.parseInt(age));
+                }
+                return RequestConverterFunction.fallthrough();
+            }
+        }
+
+        static class BobRequestConverter implements RequestConverterFunction {
+            @Nullable
+            @Override
+            public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+                                         Class<?> expectedResultType) throws Exception {
+                if (expectedResultType == Bob.class) {
+                    final String age = ctx.pathParam("age");
+                    assert age != null;
+                    return new Bob(Integer.parseInt(age) * 2);
+                }
+                return RequestConverterFunction.fallthrough();
+            }
         }
     }
 
@@ -465,7 +591,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().toStringUtf8()).isEqualTo(obj1a.toString());
 
-        // Multiple @RequestObject annotated parameters
+        // Multiple @RequestConverter annotated parameters
         response = client.post("/1/convert3", content1).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().toStringUtf8()).isEqualTo(HttpMethod.POST.name());
@@ -617,6 +743,39 @@ public class AnnotatedHttpServiceRequestConverterTest {
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+    }
+
+    @Test
+    public void testDefaultRequestConverter_bean4() throws Exception {
+        final HttpClient client = HttpClient.of(rule.uri("/3"));
+        final ObjectMapper mapper = new ObjectMapper();
+
+        AggregatedHttpMessage response;
+
+        response = client.get("/composite1/10").aggregate().join();
+        assertThat(response.content().toStringUtf8())
+                .isEqualTo(CompositeRequestBean1.class.getSimpleName() + ":10:20");
+
+        response = client.get("/composite2/10").aggregate().join();
+        assertThat(response.content().toStringUtf8())
+                .isEqualTo(CompositeRequestBean2.class.getSimpleName() + ":10:20");
+
+        response = client.get("/composite3/10").aggregate().join();
+        assertThat(response.content().toStringUtf8())
+                .isEqualTo(CompositeRequestBean3.class.getSimpleName() + ":10:20");
+
+        response = client.get("/composite4/10").aggregate().join();
+        assertThat(response.content().toStringUtf8())
+                .isEqualTo(CompositeRequestBean4.class.getSimpleName() + ":10:20");
+
+        final RequestJsonObj1 obj1 = new RequestJsonObj1(1, "abc");
+        final String content1 = mapper.writeValueAsString(obj1);
+
+        response = client.execute(AggregatedHttpMessage.of(
+                HttpMethod.POST, "/composite5/10", MediaType.JSON_UTF_8, content1)).aggregate().join();
+        assertThat(response.content().toStringUtf8())
+                .isEqualTo(CompositeRequestBean5.class.getSimpleName() + ":10:20:" +
+                           obj1.strVal() + ':' + obj1.intVal());
     }
 
     @Test
