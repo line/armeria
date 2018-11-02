@@ -28,12 +28,38 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
  * Specifies a {@link RequestConverterFunction} class which converts an {@link AggregatedHttpMessage} to
  * an object.
  *
+ * <p>It can be specified on a class, a method and a parameter in an annotated service.
+ * Its scope is determined by where it is specified, e.g.
+ * <pre>{@code
+ * > @RequestConverter(AliceConverter.class)
+ * > @RequestConverter(BobConverter.class)
+ * > public class MyService {
+ * >
+ * >     @Get("/general")
+ * >     @RequestConverter(CarolConverter.class)
+ * >     public HttpResponse general(Alice a, Bob b, Carol c) {
+ * >         // Try CarolConverter, AliceConverter and BobConverter in order, for converting each parameter.
+ * >     }
+ * >
+ * >     @Get("/special")
+ * >     public HttpResponse special(@RequestConverter(SuperAliceConverter.class) Alice a, Bob b) {
+ * >         // Try SuperAliceConverter, AliceConverter and BobConverter in order, for converting parameter 'a'.
+ * >         // Try AliceConverter and BobConverter in order, for converting parameter 'b'.
+ * >     }
+ * > }
+ * }</pre>
  * @see RequestConverterFunction
  * @see RequestObject
  */
 @Repeatable(RequestConverters.class)
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({
+        ElementType.TYPE,
+        ElementType.METHOD,
+        ElementType.PARAMETER,
+        ElementType.CONSTRUCTOR,
+        ElementType.FIELD
+})
 public @interface RequestConverter {
 
     /**
