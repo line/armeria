@@ -526,7 +526,7 @@ Just define a plain old Java class and specify it as a parameter of your service
 
 
 We also need to define the ``MyRequestObject`` class which was used in the method ``hello()`` above.
-To tell Armeria which constructor parameters, setter methods or fields has to be injected with what value,
+To tell Armeria which constructor parameter, setter method or field has to be injected with what value,
 we should put :api:`@Param`, :api:`@Header`, :api:`@RequestObject` annotations on any of the following elements:
 
 - Fields

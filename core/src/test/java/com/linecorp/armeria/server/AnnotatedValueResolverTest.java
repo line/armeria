@@ -134,7 +134,7 @@ public class AnnotatedValueResolverTest {
         getAllMethods(Service.class).forEach(method -> {
             try {
                 final List<AnnotatedValueResolver> elements =
-                        AnnotatedValueResolver.of(method, pathParams, objectResolvers, false);
+                        AnnotatedValueResolver.ofServiceMethod(method, pathParams, objectResolvers);
                 elements.forEach(AnnotatedValueResolverTest::testResolver);
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.
@@ -149,7 +149,7 @@ public class AnnotatedValueResolverTest {
 
         getAllFields(FieldBean.class).forEach(field -> {
             final Optional<AnnotatedValueResolver> resolver =
-                    AnnotatedValueResolver.of(field, pathParams, objectResolvers);
+                    AnnotatedValueResolver.ofBeanField(field, pathParams, objectResolvers);
 
             if (resolver.isPresent()) {
                 testResolver(resolver.get());
@@ -172,7 +172,7 @@ public class AnnotatedValueResolverTest {
         assertThat(constructors.size()).isOne();
         constructors.forEach(constructor -> {
             final List<AnnotatedValueResolver> elements =
-                    AnnotatedValueResolver.of(constructor, pathParams, objectResolvers, false);
+                    AnnotatedValueResolver.ofBeanConstructorOrMethod(constructor, pathParams, objectResolvers);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             final ConstructorBean bean;
@@ -204,7 +204,7 @@ public class AnnotatedValueResolverTest {
         final Constructor constructor = Iterables.getFirst(constructors, null);
 
         final List<AnnotatedValueResolver> initArgs =
-                AnnotatedValueResolver.of(constructor, pathParams, objectResolvers, false);
+                AnnotatedValueResolver.ofBeanConstructorOrMethod(constructor, pathParams, objectResolvers);
         initArgs.forEach(AnnotatedValueResolverTest::testResolver);
         final MixedBean bean = (MixedBean) constructor.newInstance(toArguments(initArgs, resolverContext));
         getAllMethods(MixedBean.class).forEach(method -> testMethod(method, bean));
@@ -214,7 +214,7 @@ public class AnnotatedValueResolverTest {
     private static <T> void testMethod(Method method, T bean) {
         try {
             final List<AnnotatedValueResolver> elements =
-                    AnnotatedValueResolver.of(method, pathParams, objectResolvers, false);
+                    AnnotatedValueResolver.ofBeanConstructorOrMethod(method, pathParams, objectResolvers);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             method.setAccessible(true);
@@ -391,8 +391,6 @@ public class AnnotatedValueResolverTest {
                             Cookies cookies) {}
 
         public void dummy1() {}
-
-        public void dummy2(String a) {}
 
         public void redundant1(@Param @Default("defaultValue") Optional<String> value) {}
 

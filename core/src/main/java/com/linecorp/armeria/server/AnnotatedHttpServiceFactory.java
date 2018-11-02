@@ -229,8 +229,8 @@ final class AnnotatedHttpServiceFactory {
 
         List<AnnotatedValueResolver> resolvers;
         try {
-            resolvers = AnnotatedValueResolver.of(method, pathMapping.paramNames(),
-                                                  toRequestObjectResolvers(req), true);
+            resolvers = AnnotatedValueResolver.ofServiceMethod(method, pathMapping.paramNames(),
+                                                               toRequestObjectResolvers(req));
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //

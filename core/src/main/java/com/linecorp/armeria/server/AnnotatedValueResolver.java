@@ -130,13 +130,46 @@ final class AnnotatedValueResolver {
 
     /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
+     * {@link Method}, {@code pathParams} and {@code objectResolvers}.
+     */
+    static List<AnnotatedValueResolver> ofServiceMethod(Method method, Set<String> pathParams,
+                                                        List<RequestObjectResolver> objectResolvers) {
+        return of(method, pathParams, objectResolvers, true, true);
+    }
+
+    /**
+     * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
+     * {@code constructorOrMethod}, {@code pathParams} and {@code objectResolvers}.
+     */
+    static List<AnnotatedValueResolver> ofBeanConstructorOrMethod(Executable constructorOrMethod,
+                                                                  Set<String> pathParams,
+                                                                  List<RequestObjectResolver> objectResolvers) {
+        return of(constructorOrMethod, pathParams, objectResolvers, false, false);
+    }
+
+    /**
+     * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
+     * {@link Field}, {@code pathParams} and {@code objectResolvers}.
+     */
+    static Optional<AnnotatedValueResolver> ofBeanField(Field field, Set<String> pathParams,
+                                                        List<RequestObjectResolver> objectResolvers) {
+        // 'Field' is only used for converting a bean.
+        // So we always need to pass 'implicitRequestObjectAnnotation' as false.
+        return of(field, field, field.getType(), pathParams, objectResolvers, false);
+    }
+
+    /**
+     * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
      * {@link Executable}, {@code pathParams}, {@code objectResolvers} and
      * {@code implicitRequestObjectAnnotation}.
      * The {@link Executable} can be either {@link Constructor} or {@link Method}.
+     *
+     * @param isServiceMethod {@code true} if the {@code constructorOrMethod} is a service method.
      */
-    static List<AnnotatedValueResolver> of(Executable constructorOrMethod, Set<String> pathParams,
-                                           List<RequestObjectResolver> objectResolvers,
-                                           boolean implicitRequestObjectAnnotation) {
+    private static List<AnnotatedValueResolver> of(Executable constructorOrMethod, Set<String> pathParams,
+                                                   List<RequestObjectResolver> objectResolvers,
+                                                   boolean implicitRequestObjectAnnotation,
+                                                   boolean isServiceMethod) {
         final Parameter[] parameters = constructorOrMethod.getParameters();
         if (parameters.length == 0) {
             throw new NoParameterException(constructorOrMethod.toGenericString());
@@ -179,7 +212,8 @@ final class AnnotatedValueResolver {
             resolver = of(constructorOrMethod,
                           parameters[0], parameters[0].getType(), pathParams, objectResolvers,
                           implicitRequestObjectAnnotation);
-        } else if (constructorOrMethod.getAnnotationsByType(RequestConverter.class).length > 0 &&
+        } else if (!isServiceMethod &&
+                   constructorOrMethod.getAnnotationsByType(RequestConverter.class).length > 0 &&
                    parameters.length == 1) {
             //
             // Filter out the cases like the following:
@@ -270,17 +304,6 @@ final class AnnotatedValueResolver {
                                                boolean implicitRequestObjectAnnotation) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,
                   implicitRequestObjectAnnotation);
-    }
-
-    /**
-     * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
-     * {@link Field}, {@code pathParams} and {@code objectResolvers}.
-     */
-    static Optional<AnnotatedValueResolver> of(Field field, Set<String> pathParams,
-                                               List<RequestObjectResolver> objectResolvers) {
-        // 'Field' is only used for converting a bean.
-        // So we always need to pass 'implicitRequestObjectAnnotation' as false.
-        return of(field, field, field.getType(), pathParams, objectResolvers, false);
     }
 
     /**

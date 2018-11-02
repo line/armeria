@@ -178,8 +178,9 @@ final class AnnotatedBeanFactory {
             try {
                 final RequestConverter[] converters = constructor.getAnnotationsByType(RequestConverter.class);
                 final List<AnnotatedValueResolver> resolvers =
-                        AnnotatedValueResolver.of(constructor, beanFactoryId.pathParams,
-                                                  addToFirstIfExists(objectResolvers, converters), false);
+                        AnnotatedValueResolver.ofBeanConstructorOrMethod(
+                                constructor, beanFactoryId.pathParams,
+                                addToFirstIfExists(objectResolvers, converters));
                 if (!resolvers.isEmpty()) {
                     // Can overwrite only if the current candidate is a default constructor.
                     if (candidate == null || candidate.getValue().isEmpty()) {
@@ -203,8 +204,8 @@ final class AnnotatedBeanFactory {
         final Set<Field> fields = getAllFields(beanFactoryId.type);
         for (final Field field : fields) {
             final RequestConverter[] converters = field.getAnnotationsByType(RequestConverter.class);
-            AnnotatedValueResolver.of(field, beanFactoryId.pathParams,
-                                      addToFirstIfExists(objectResolvers, converters))
+            AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
+                                               addToFirstIfExists(objectResolvers, converters))
                                   .ifPresent(resolver -> ret.add(new SimpleImmutableEntry<>(field, resolver)));
         }
         return ret;
@@ -218,8 +219,9 @@ final class AnnotatedBeanFactory {
             final RequestConverter[] converters = method.getAnnotationsByType(RequestConverter.class);
             try {
                 final List<AnnotatedValueResolver> resolvers =
-                        AnnotatedValueResolver.of(method, beanFactoryId.pathParams,
-                                                  addToFirstIfExists(objectResolvers, converters), false);
+                        AnnotatedValueResolver.ofBeanConstructorOrMethod(
+                                method, beanFactoryId.pathParams,
+                                addToFirstIfExists(objectResolvers, converters));
                 if (!resolvers.isEmpty()) {
                     ret.add(new SimpleImmutableEntry<>(method, resolvers));
                 }
