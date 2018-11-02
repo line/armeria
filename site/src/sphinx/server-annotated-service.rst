@@ -492,7 +492,7 @@ after your request converters, so you don't have to specify any :api:`@RequestCo
         public HttpResponse hello1(JsonNode body) { ... }
 
         @Post("/hello2")
-        public HttpResponse hello2(MyJsonRequest body) { ...}
+        public HttpResponse hello2(MyJsonRequest body) { ... }
 
         // StringRequestConverterFunction will work for the content type of any of 'text'.
         @Post("/hello3")
@@ -523,10 +523,11 @@ Just define a plain old Java class and specify it as a parameter of your service
         public HttpResponse hello(MyRequestObject myRequestObject) { ... }
     }
 
-We also need to define a class called ``MyRequestObject`` which was referred in our service method
-``hello()``. To tell Armeria which constructor parameters, setter methods or fields has to be
-injected with what value, we should put :api:`@Param`, :api:`@Header`, :api:`@RequestObject`
-annotations on any of the following elements:
+
+
+We also need to define the ``MyRequestObject`` class which was used in the method ``hello()`` above.
+To tell Armeria which constructor parameters, setter methods or fields has to be injected with what value,
+we should put :api:`@Param`, :api:`@Header`, :api:`@RequestObject` annotations on any of the following elements:
 
 - Fields
 - Constructors with only one parameter

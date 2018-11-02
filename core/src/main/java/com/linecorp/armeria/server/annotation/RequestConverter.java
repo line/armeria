@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
  * an object.
  *
  * <p>It can be specified on a class, a method and a parameter in an annotated service.
- * Depending on where it is specified, its scope can be determined. e.g.
+ * Its scope is determined by where it is specified, e.g.
  * <pre>{@code
  * > @RequestConverter(AliceConverter.class)
  * > @RequestConverter(BobConverter.class)

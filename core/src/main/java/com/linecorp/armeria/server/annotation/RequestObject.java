@@ -40,7 +40,7 @@ import java.lang.annotation.Target;
  * > public class CompositeBean {
  * >     private final Alice a;
  * >
- * >     @RequestConverter(BobConverter.class)
+ * >     @RequestConverter(BobConverter.class)      // @RequestObject would be applied implicitly.
  * >     private Bob b;
  * >
  * >     private Charlie c;
@@ -48,14 +48,17 @@ import java.lang.annotation.Target;
  * >     private Erin e;
  * >
  * >     @RequestObject
- * >     private Frank f;
+ * >     private Frank f;                           // Would be converted by the class-level converter.
  * >
- * >     @RequestConverter(AliceConverter.class)
+ * >     private String g;                          // No conversion would be performed. 'null' would be set.
+ * >
+ * >     @RequestConverter(AliceConverter.class)    // @RequestObject would be applied implicitly.
  * >     public CompositeBean(Alice a) { ... }
  * >
- * >     @RequestConverter(CharlieConverter.class)
+ * >     @RequestConverter(CharlieConverter.class)  // @RequestObject would be applied implicitly.
  * >     public void setCharlie(Charlie c) { ... }
  * >
+ * >     // @RequestObject would be applied implicitly.
  * >     public void setDavidAndErin(@RequestConverter(DavidConverter.class) David d, Erin e) { ... }
  * > }
  * }</pre>

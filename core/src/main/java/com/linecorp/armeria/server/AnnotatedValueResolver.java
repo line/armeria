@@ -132,7 +132,7 @@ final class AnnotatedValueResolver {
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
      * {@link Executable}, {@code pathParams}, {@code objectResolvers} and
      * {@code implicitRequestObjectAnnotation}.
-     * The {@link Executable} can be one of {@link Constructor} or {@link Method}.
+     * The {@link Executable} can be either {@link Constructor} or {@link Method}.
      */
     static List<AnnotatedValueResolver> of(Executable constructorOrMethod, Set<String> pathParams,
                                            List<RequestObjectResolver> objectResolvers,
@@ -166,7 +166,7 @@ final class AnnotatedValueResolver {
                                                    constructorOrMethod.toGenericString());
             }
             //
-            // Filter out like the following case:
+            // Filter out the cases like the following:
             //
             // @Param
             // void setter(@Header String name) { ... }
@@ -182,7 +182,7 @@ final class AnnotatedValueResolver {
         } else if (constructorOrMethod.getAnnotationsByType(RequestConverter.class).length > 0 &&
                    parameters.length == 1) {
             //
-            // Filter out like the following case:
+            // Filter out the cases like the following:
             //
             // @RequestConverter(BeanConverter.class)
             // void setter(@Header String name) { ... }
@@ -234,7 +234,7 @@ final class AnnotatedValueResolver {
         }
         if (list.size() != parameters.length) {
             // There are parameters which cannot be resolved, so we cannot accept this constructor or method
-            // as an annotated bean or method. But we can handle this kind of situation as two ways as follows.
+            // as an annotated bean or method. We handle this case in two ways as follows.
             if (list.stream().anyMatch(r -> r.annotationType() != null)) {
                 // If a user specify one of @Param, @Header or @RequestObject on the parameter list,
                 // it clearly means that the user wants to convert the parameter into a bean. e.g.
