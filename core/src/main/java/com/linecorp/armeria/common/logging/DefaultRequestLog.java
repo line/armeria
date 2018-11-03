@@ -157,6 +157,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                           log.sessionProtocol(), true);
         }, REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
+        child.addListener(log -> requestHeadersFirstBytesTransferred(
+                log.requestHeadersFirstBytesTransferredTimeNanos()), REQUEST_HEADERS_FIRST_BYTES_TRANSFERRED);
         child.addListener(log -> requestHeaders(log.requestHeaders()), REQUEST_HEADERS);
         child.addListener(log -> requestContent(log.requestContent(), log.rawRequestContent()),
                           REQUEST_CONTENT);
@@ -184,6 +186,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             startResponse0(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMillis(), true);
         }
 
+        if (lastChild.isAvailable(RESPONSE_HEADERS_FIRST_BYTES_TRANSFERRED)) {
+            responseHeadersFirstBytesTransferred(lastChild.responseHeadersFirstBytesTransferredTimeNanos());
+        }
+
         if (lastChild.isAvailable(RESPONSE_HEADERS)) {
             responseHeaders(lastChild.responseHeaders());
         }
@@ -198,6 +204,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         lastChild.addListener(log -> startResponse0(
                 log.responseStartTimeNanos(), log.responseStartTimeMillis(), true), RESPONSE_START);
+        lastChild.addListener(log -> responseHeadersFirstBytesTransferred(
+                log.responseHeadersFirstBytesTransferredTimeNanos()), RESPONSE_HEADERS_FIRST_BYTES_TRANSFERRED);
         lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
@@ -436,12 +444,17 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestLength = requestLength;
     }
 
-    @Override
-    public void requestHeadersFirstBytesTransferred() {
+    private void requestHeadersFirstBytesTransferred(long timestamp) {
         if (isAvailabilityAlreadyUpdated(REQUEST_HEADERS_FIRST_BYTES_TRANSFERRED)) {
             return;
         }
-        requestHeadersFirstBytesTransferredTimeNanos = System.nanoTime();
+        requestHeadersFirstBytesTransferredTimeNanos = timestamp;
+        updateAvailability(REQUEST_HEADERS_FIRST_BYTES_TRANSFERRED);
+    }
+
+    @Override
+    public void requestHeadersFirstBytesTransferred() {
+        requestHeadersFirstBytesTransferred(System.nanoTime());
     }
 
     @Override
@@ -617,12 +630,17 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.responseLength = responseLength;
     }
 
-    @Override
-    public void responseHeadersFirstBytesTransferred() {
+    private void responseHeadersFirstBytesTransferred(long timestamp) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_HEADERS_FIRST_BYTES_TRANSFERRED)) {
             return;
         }
-        responseHeadersFirstBytesTransferredTimeNanos = System.nanoTime();
+        responseHeadersFirstBytesTransferredTimeNanos = timestamp;
+        updateAvailability(RESPONSE_HEADERS_FIRST_BYTES_TRANSFERRED);
+    }
+
+    @Override
+    public void responseHeadersFirstBytesTransferred() {
+        responseHeadersFirstBytesTransferred(System.nanoTime());
     }
 
     @Override
