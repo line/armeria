@@ -99,12 +99,13 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
 
         final String method = ctx.method().name();
         span.kind(Kind.CLIENT).name(method);
-        ctx.log().addListener(l -> SpanContextUtil.startSpan(span, l), RequestLogAvailability.REQUEST_START);
+        ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
+                              RequestLogAvailability.REQUEST_START);
 
         // Ensure the trace context propagates to children
         ctx.onChild(RequestContextCurrentTraceContext::copy);
 
-        ctx.log().addListener(l -> finishSpan(span, l), RequestLogAvailability.COMPLETE);
+        ctx.log().addListener(log -> finishSpan(span, log), RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().execute(ctx, req);
