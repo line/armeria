@@ -5,7 +5,7 @@ A collection of JMH benchmarks which may be useful for measuring Armeria perform
 ## Options
 
 - `-Pjmh.include=<pattern>`
-  - The benchmarks to run, in a regular expression. All benchmarks if unspecified.
+  - The benchmarks to run, in a comma-separated regular expression. All benchmarks if unspecified.
     - `grpc.downstream.DownstreamSimpleBenchmark`
     - `grpc.downstream.DownstreamSimpleBenchmark.empty$`
 - `-Pjmh.params=<spec>`
