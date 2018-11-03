@@ -191,10 +191,20 @@ public interface RequestLog {
     }
 
     /**
-     * Returns the time when the processing of the request started, in millis since the epoch.
+     * Returns the time when the processing of the request started, in micros since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    long requestStartTimeMicros();
+
+    /**
+     * Returns the time when the processing of the request started, in millis since the epoch.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     *
+     * @deprecated Use {@link #requestStartTimeMicros()}.
+     */
+    @Deprecated
     long requestStartTimeMillis();
 
     /**
@@ -237,10 +247,20 @@ public interface RequestLog {
     Throwable requestCause();
 
     /**
-     * Returns the time when the processing of the response started, in millis since the epoch.
+     * Returns the time when the processing of the response started, in micros since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    long responseStartTimeMicros();
+
+    /**
+     * Returns the time when the processing of the response started, in millis since the epoch.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     *
+     * @deprecated Use {@link #requestStartTimeMicros()}.
+     */
+    @Deprecated
     long responseStartTimeMillis();
 
     /**
