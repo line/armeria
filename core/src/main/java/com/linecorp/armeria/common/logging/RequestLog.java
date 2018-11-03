@@ -258,7 +258,7 @@ public interface RequestLog {
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      *
-     * @deprecated Use {@link #requestStartTimeMicros()}.
+     * @deprecated Use {@link #responseStartTimeMicros()}.
      */
     @Deprecated
     long responseStartTimeMillis();
