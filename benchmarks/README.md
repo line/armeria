@@ -5,9 +5,9 @@ A collection of JMH benchmarks which may be useful for measuring Armeria perform
 ## Options
 
 - `-Pjmh.include=<pattern>`
-  - The benchmarks to run. All benchmarks if unspecified.
-    - `DownstreamSimpleBenchmark`
-    - `DownstreamSimpleBenchmark.emptyNonBlocking`
+  - The benchmarks to run, in a regular expression. All benchmarks if unspecified.
+    - `grpc.downstream.DownstreamSimpleBenchmark`
+    - `grpc.downstream.DownstreamSimpleBenchmark.empty$`
 - `-Pjmh.params=<spec>`
   - The benchmark parameters. Uses the parameters specified in the benchmark code if unspecified.
     - `clientType=NORMAL`
@@ -27,6 +27,7 @@ A collection of JMH benchmarks which may be useful for measuring Armeria perform
   - Increases the verbosity of JMH to `EXTRA`.
 - `-Pjmh.jvmargs=<jvm options>`
   - Additional JVM options.
+    - `-Xmx8192m -Xms8192m`
 - `-Pjmh.forcegc=<true|false>`
   - Whether to force JVM garbage collection. `false` if unspecified.
 
