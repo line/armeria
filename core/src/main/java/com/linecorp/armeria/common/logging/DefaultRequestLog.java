@@ -824,7 +824,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append('{');
         if (isAvailable(flags, REQUEST_START)) {
             buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, requestStartTimeMicros);
+            TextFormatter.appendEpoch(buf, TimeUnit.MICROSECONDS.toMillis(requestStartTimeMicros));
 
             if (isAvailable(flags, REQUEST_END)) {
                 buf.append(", length=");
@@ -881,7 +881,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append('{');
         if (isAvailable(flags, RESPONSE_START)) {
             buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, responseStartTimeMicros);
+            TextFormatter.appendEpoch(buf, TimeUnit.MICROSECONDS.toMillis(responseStartTimeMicros));
 
             if (isAvailable(flags, RESPONSE_END)) {
                 buf.append(", length=");
