@@ -361,10 +361,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * frame length.
      */
     private void readHeader() {
-        assert unprocessed != null;
-
-        final long header = readHeaderAsLong();
-        final int type = (int) (header >>> 32);
+        final int type = readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
             throw Status.INTERNAL.withDescription(
                     DEBUG_STRING + ": Frame header malformed: reserved bits not zero")
@@ -373,7 +370,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         compressedFlag = (type & COMPRESSED_FLAG_MASK) != 0;
 
         // Update the required length to include the length of the frame.
-        requiredLength = (int) header;
+        requiredLength = readInt();
         if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
             throw Status.RESOURCE_EXHAUSTED.withDescription(
                     String.format("%s: Frame size %d exceeds maximum: %d. ",
@@ -385,40 +382,50 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         state = State.BODY;
     }
 
-    private long readHeaderAsLong() {
-        unprocessedBytes -= HEADER_LENGTH;
+    private int readUnsignedByte() {
+        unprocessedBytes--;
+        assert unprocessed != null;
+        final ByteBuf firstBuf = unprocessed.peek();
+        assert firstBuf != null;
+        final int type = firstBuf.readUnsignedByte();
+        if (!firstBuf.isReadable()) {
+            unprocessed.remove().release();
+        }
+        return type;
+    }
+
+    private int readInt() {
+        unprocessedBytes -= 4;
         assert unprocessed != null;
         final ByteBuf firstBuf = unprocessed.peek();
         assert firstBuf != null;
         final int firstBufLen = firstBuf.readableBytes();
 
-        if (firstBufLen >= HEADER_LENGTH) {
-            final long header = (firstBuf.readUnsignedInt() << 8) | firstBuf.readUnsignedByte();
+        if (firstBufLen >= 4) {
+            final int value = firstBuf.readInt();
             if (!firstBuf.isReadable()) {
                 unprocessed.remove().release();
             }
-            return header;
+            return value;
         }
 
-        return readHeaderAsLongSlowPath();
+        return readIntSlowPath();
     }
 
-    private long readHeaderAsLongSlowPath() {
+    private int readIntSlowPath() {
         assert unprocessed != null;
 
-        long header = 0;
-        int readBytes = 0;
-        do {
+        int value = 0;
+        for (int i = 4; i > 0; i--) {
             final ByteBuf buf = unprocessed.peek();
             assert buf != null;
-            header <<= 8;
-            header |= buf.readUnsignedByte();
+            value <<= 8;
+            value |= buf.readUnsignedByte();
             if (!buf.isReadable()) {
                 unprocessed.remove().release();
             }
-            readBytes++;
-        } while (readBytes < HEADER_LENGTH);
-        return header;
+        }
+        return value;
     }
 
     /**
