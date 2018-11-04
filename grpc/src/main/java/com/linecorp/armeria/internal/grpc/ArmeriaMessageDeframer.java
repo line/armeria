@@ -412,7 +412,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             final ByteBuf buf = unprocessed.peek();
             assert buf != null;
             header <<= 8;
-            header |=  buf.readUnsignedByte();
+            header |= buf.readUnsignedByte();
             if (!buf.isReadable()) {
                 unprocessed.remove().release();
             }
@@ -470,7 +470,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             final int remaining = merged.writableBytes();
 
             if (bufLen <= remaining) {
-                merged.writeBytes(buf, bufLen);
+                merged.writeBytes(buf);
                 unprocessed.remove().release();
 
                 if (bufLen == remaining) {
