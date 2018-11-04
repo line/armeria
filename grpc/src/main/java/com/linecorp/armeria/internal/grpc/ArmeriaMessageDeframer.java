@@ -394,7 +394,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         if (firstBufLen >= HEADER_LENGTH) {
             final long header = (firstBuf.readUnsignedInt() << 8) | firstBuf.readUnsignedByte();
-            if (firstBufLen == HEADER_LENGTH) {
+            if (!firstBuf.isReadable()) {
                 unprocessed.remove().release();
             }
             return header;
