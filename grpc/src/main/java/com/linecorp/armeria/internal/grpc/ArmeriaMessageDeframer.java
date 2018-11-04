@@ -387,11 +387,11 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         assert unprocessed != null;
         final ByteBuf firstBuf = unprocessed.peek();
         assert firstBuf != null;
-        final int type = firstBuf.readUnsignedByte();
+        final int value = firstBuf.readUnsignedByte();
         if (!firstBuf.isReadable()) {
             unprocessed.remove().release();
         }
-        return type;
+        return value;
     }
 
     private int readInt() {
