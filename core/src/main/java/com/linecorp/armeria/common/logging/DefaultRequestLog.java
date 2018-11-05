@@ -539,14 +539,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         startResponse0(System.nanoTime(), System.currentTimeMillis(), updateAvailability);
     }
 
-    private void startResponse0(long responseStartTimeNanos, long responseStartTimeMillis,
+    private void startResponse0(long responseStartTimeNanos, long responseStartTimeMicros,
                                 boolean updateAvailability) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_START)) {
             return;
         }
 
         this.responseStartTimeNanos = responseStartTimeNanos;
-        this.responseStartTimeMicros = responseStartTimeMillis;
+        this.responseStartTimeMicros = responseStartTimeMicros;
         if (updateAvailability) {
             updateAvailability(RESPONSE_START);
         }
