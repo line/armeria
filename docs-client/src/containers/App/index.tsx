@@ -152,7 +152,7 @@ function AppDrawer({
                         variant: 'body1',
                       }}
                     >
-                      <code>{method.name}()</code>
+                      <code>{`${method.name}()`}</code>
                     </ListItemText>
                   </ListItem>
                 ))}
