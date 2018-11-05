@@ -201,10 +201,7 @@ public interface RequestLog {
      * Returns the time when the processing of the request started, in millis since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
-     *
-     * @deprecated Use {@link #requestStartTimeMicros()}.
      */
-    @Deprecated
     long requestStartTimeMillis();
 
     /**
@@ -257,10 +254,7 @@ public interface RequestLog {
      * Returns the time when the processing of the response started, in millis since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
-     *
-     * @deprecated Use {@link #responseStartTimeMicros()}.
      */
-    @Deprecated
     long responseStartTimeMillis();
 
     /**

@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
+import io.netty.util.internal.PlatformDependent;
 
 /**
  * Default {@link RequestLog} implementation.
@@ -824,7 +825,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append('{');
         if (isAvailable(flags, REQUEST_START)) {
             buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, TimeUnit.MICROSECONDS.toMillis(requestStartTimeMicros));
+            TextFormatter.appendEpoch(buf, requestStartTimeMillis());
 
             if (isAvailable(flags, REQUEST_END)) {
                 buf.append(", length=");
@@ -881,7 +882,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append('{');
         if (isAvailable(flags, RESPONSE_START)) {
             buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, TimeUnit.MICROSECONDS.toMillis(responseStartTimeMicros));
+            TextFormatter.appendEpoch(buf, responseStartTimeMillis());
 
             if (isAvailable(flags, RESPONSE_END)) {
                 buf.append(", length=");
@@ -923,9 +924,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
-    // This is millisecond precision on Java 8, but it's the best we can do.
     private static long currentTimeMicros() {
-        Instant now = Clock.systemUTC().instant();
-        return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(now.getNano());
+        if (PlatformDependent.javaVersion() == 8) {
+            return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
+        } else {
+            // Java 9+ support higher precision wall time.
+            Instant now = Clock.systemUTC().instant();
+            return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
+                    now.getNano());
+        }
     }
 }
