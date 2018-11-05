@@ -206,13 +206,13 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         final long maxContentLength = req.maxRequestLength();
         if (maxContentLength > 0 && req.transferredBytes() > maxContentLength) {
-            if (req.isOpen()) {
-                req.close(ContentTooLargeException.get());
-            }
-
             final Http2Stream stream = writer.connection().stream(streamId);
             if (isWritable(stream)) {
                 writeErrorResponse(ctx, streamId, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+                writer.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.voidPromise());
+                if (req.isOpen()) {
+                    req.close(ContentTooLargeException.get());
+                }
             } else {
                 // The response has been started already. Abort the request and let the response continue.
                 req.abort();
@@ -244,7 +244,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
     }
 
-    private void writeErrorResponse(ChannelHandlerContext ctx, int streamId, HttpResponseStatus status) {
+    private void writeErrorResponse(ChannelHandlerContext ctx, int streamId,
+                                    HttpResponseStatus status) throws Http2Exception {
         final byte[] content = status.toString().getBytes(StandardCharsets.UTF_8);
 
         writer.writeHeaders(
@@ -255,8 +256,14 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                         .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length),
                 0, false, ctx.voidPromise());
 
-        writer.writeData(
-                ctx, streamId, Unpooled.wrappedBuffer(content), 0, true, ctx.voidPromise());
+        writer.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, true, ctx.voidPromise());
+
+        final Http2Stream stream = writer.connection().stream(streamId);
+        if (stream != null && writer.flowController().hasFlowControlled(stream)) {
+            // Ensure to flush the error response if it's flow-controlled so that it is sent
+            // before an RST_STREAM frame.
+            writer.flowController().writePendingBytes();
+        }
     }
 
     @Override

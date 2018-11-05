@@ -283,10 +283,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             setDone();
         }
 
-        ctx.channel().eventLoop().execute(() -> write0(o, endOfStream));
-    }
-
-    private void write0(HttpObject o, boolean endOfStream) {
         final ChannelFuture future;
         final boolean wroteEmptyData;
         if (o instanceof HttpData) {
