@@ -110,9 +110,29 @@ public class ArmeriaMessageDeframerTest {
     }
 
     @Test
-    public void deframe_multipleFrames() throws Exception {
+    public void deframe_frameWithManyFragments() throws Exception {
         final byte[] frameBytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
         deframer.request(1);
+
+        // Only the last fragment should notify the listener.
+        for (int i = 0; i < frameBytes.length - 1; i++) {
+            deframer.deframe(HttpData.of(new byte[] { frameBytes[i] }), false);
+            verifyZeroInteractions(listener);
+            assertThat(deframer.isStalled()).isTrue();
+        }
+
+        deframer.deframe(HttpData.of(new byte[] { frameBytes[frameBytes.length - 1] }), false);
+        verifyAndReleaseMessage(new ByteBufOrStream(GrpcTestUtil.requestByteBuf()));
+        verifyNoMoreInteractions(listener);
+        assertThat(deframer.isStalled()).isTrue();
+    }
+
+    @Test
+    public void deframe_frameWithHeaderAndBodyFragment() throws Exception {
+        final byte[] frameBytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+        deframer.request(1);
+
+        // Frame is split into two fragments - header and body.
         deframer.deframe(HttpData.of(Arrays.copyOfRange(frameBytes, 0, 5)), false);
         verifyZeroInteractions(listener);
         assertThat(deframer.isStalled()).isTrue();
