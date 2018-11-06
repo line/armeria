@@ -81,7 +81,7 @@ com.moowork.gradle:
   gradle-node-plugin: { version: '1.2.0' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.11' }
+  checkstyle: { version: '8.14' }
 
 com.spotify:
   completable-futures:
