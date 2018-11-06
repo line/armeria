@@ -75,6 +75,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
 
     private final SessionProtocol protocol;
     private final String healthCheckPath;
+    private final int healthCheckPort;
     private final Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator;
 
     /**
@@ -84,11 +85,13 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
                                    EndpointGroup delegate,
                                    SessionProtocol protocol,
                                    String healthCheckPath,
+                                   int healthCheckPort,
                                    Duration healthCheckRetryInterval,
                                    Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
         super(clientFactory, delegate, healthCheckRetryInterval);
         this.protocol = requireNonNull(protocol, "protocol");
         this.healthCheckPath = requireNonNull(healthCheckPath, "healthCheckPath");
+        this.healthCheckPort = healthCheckPort;
         this.configurator = requireNonNull(configurator, "configurator");
         init();
     }
@@ -96,7 +99,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
     @Override
     protected EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint) {
         return new HttpEndpointHealthChecker(clientFactory(), endpoint, protocol, healthCheckPath,
-                                             configurator);
+                                             healthCheckPort, configurator);
     }
 
     private static final class HttpEndpointHealthChecker implements EndpointHealthChecker {
@@ -105,7 +108,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
 
         private HttpEndpointHealthChecker(
                 ClientFactory clientFactory, Endpoint endpoint,
-                SessionProtocol protocol, String healthCheckPath,
+                SessionProtocol protocol, String healthCheckPath, int healthCheckPort,
                 Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
 
             final String scheme = protocol.uriText();
@@ -114,7 +117,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
             if (ipAddr == null) {
                 builder = new HttpClientBuilder(scheme + "://" + endpoint.authority());
             } else {
-                final int port = endpoint.port(protocol.defaultPort());
+                final int port = healthCheckPort > 0 ? healthCheckPort : endpoint.port(protocol.defaultPort());
                 if (endpoint.ipFamily() == StandardProtocolFamily.INET) {
                     builder = new HttpClientBuilder(scheme + "://" + ipAddr + ':' + port);
                 } else {
