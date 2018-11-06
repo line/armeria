@@ -29,10 +29,13 @@ import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONS
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.SCHEME;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Function;
 
@@ -51,6 +54,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
+import io.netty.util.internal.PlatformDependent;
 
 /**
  * Default {@link RequestLog} implementation.
@@ -88,14 +92,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private volatile boolean requestContentDeferred;
     private volatile boolean responseContentDeferred;
 
-    private long requestStartTimeMillis;
+    private long requestStartTimeMicros;
     private long requestStartTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
     @Nullable
     private Throwable requestCause;
 
-    private long responseStartTimeMillis;
+    private long responseStartTimeMicros;
     private long responseStartTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
@@ -149,7 +153,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void propagateRequestSideLog(RequestLog child) {
         child.addListener(log -> {
-            startRequest0(log.requestStartTimeNanos(), log.requestStartTimeMillis(), log.channel(),
+            startRequest0(log.requestStartTimeNanos(), log.requestStartTimeMicros(), log.channel(),
                           log.sessionProtocol(), true);
         }, REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
@@ -177,7 +181,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void propagateResponseSideLog(RequestLog lastChild) {
         // update the available logs if the lastChild already has them
         if (lastChild.isAvailable(RESPONSE_START)) {
-            startResponse0(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMillis(), true);
+            startResponse0(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMicros(), true);
         }
 
         if (lastChild.isAvailable(RESPONSE_HEADERS)) {
@@ -193,7 +197,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         lastChild.addListener(log -> startResponse0(
-                log.responseStartTimeNanos(), log.responseStartTimeMillis(), true), RESPONSE_START);
+                log.responseStartTimeNanos(), log.responseStartTimeMicros(), true), RESPONSE_START);
         lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
@@ -316,11 +320,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void startRequest0(Channel channel, SessionProtocol sessionProtocol, boolean updateAvailability) {
-        startRequest0(System.nanoTime(), System.currentTimeMillis(), channel, sessionProtocol,
-                      updateAvailability);
+        startRequest0(System.nanoTime(), currentTimeMicros(), channel, sessionProtocol, updateAvailability);
     }
 
-    private void startRequest0(long requestStartTimeNanos, long requestStartTimeMillis,
+    private void startRequest0(long requestStartTimeNanos, long requestStartTimeMicros,
                                @Nullable Channel channel, SessionProtocol sessionProtocol,
                                boolean updateAvailability) {
         if (isAvailabilityAlreadyUpdated(REQUEST_START)) {
@@ -328,7 +331,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.requestStartTimeNanos = requestStartTimeNanos;
-        this.requestStartTimeMillis = requestStartTimeMillis;
+        this.requestStartTimeMicros = requestStartTimeMicros;
         this.channel = channel;
         this.sessionProtocol = sessionProtocol;
         if (sessionProtocol.isTls()) {
@@ -344,9 +347,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public long requestStartTimeMillis() {
+    public long requestStartTimeMicros() {
         ensureAvailability(REQUEST_START);
-        return requestStartTimeMillis;
+        return requestStartTimeMicros;
+    }
+
+    @Override
+    public long requestStartTimeMillis() {
+        return TimeUnit.MICROSECONDS.toMillis(requestStartTimeMicros());
     }
 
     @Override
@@ -514,7 +522,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
-        startRequest0(requestEndTimeNanos, System.currentTimeMillis(), null,
+        startRequest0(requestEndTimeNanos, currentTimeMicros(), null,
                       context().sessionProtocol(), false);
 
         this.requestEndTimeNanos = requestEndTimeNanos;
@@ -531,23 +539,28 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         startResponse0(System.nanoTime(), System.currentTimeMillis(), updateAvailability);
     }
 
-    private void startResponse0(long responseStartTimeNanos, long responseStartTimeMillis,
+    private void startResponse0(long responseStartTimeNanos, long responseStartTimeMicros,
                                 boolean updateAvailability) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_START)) {
             return;
         }
 
         this.responseStartTimeNanos = responseStartTimeNanos;
-        this.responseStartTimeMillis = responseStartTimeMillis;
+        this.responseStartTimeMicros = responseStartTimeMicros;
         if (updateAvailability) {
             updateAvailability(RESPONSE_START);
         }
     }
 
     @Override
-    public long responseStartTimeMillis() {
+    public long responseStartTimeMicros() {
         ensureAvailability(RESPONSE_START);
-        return responseStartTimeMillis;
+        return responseStartTimeMicros;
+    }
+
+    @Override
+    public long responseStartTimeMillis() {
+        return TimeUnit.MICROSECONDS.toMillis(responseStartTimeMicros());
     }
 
     @Override
@@ -691,7 +704,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
         // totalResponseDuration will be 0
-        startResponse0(responseEndTimeNanos, System.currentTimeMillis(), false);
+        startResponse0(responseEndTimeNanos, currentTimeMicros(), false);
 
         this.responseEndTimeNanos = responseEndTimeNanos;
         if (this.responseCause == null) {
@@ -812,7 +825,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append('{');
         if (isAvailable(flags, REQUEST_START)) {
             buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, requestStartTimeMillis);
+            TextFormatter.appendEpoch(buf, requestStartTimeMillis());
 
             if (isAvailable(flags, REQUEST_END)) {
                 buf.append(", length=");
@@ -869,7 +882,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append('{');
         if (isAvailable(flags, RESPONSE_START)) {
             buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, responseStartTimeMillis);
+            TextFormatter.appendEpoch(buf, responseStartTimeMillis());
 
             if (isAvailable(flags, RESPONSE_END)) {
                 buf.append(", length=");
@@ -908,6 +921,17 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         ListenerEntry(RequestLogListener listener, int interestedFlags) {
             this.listener = listener;
             this.interestedFlags = interestedFlags;
+        }
+    }
+
+    private static long currentTimeMicros() {
+        if (PlatformDependent.javaVersion() == 8) {
+            return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
+        } else {
+            // Java 9+ support higher precision wall time.
+            Instant now = Clock.systemUTC().instant();
+            return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
+                    now.getNano());
         }
     }
 }
