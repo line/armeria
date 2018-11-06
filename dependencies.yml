@@ -77,6 +77,9 @@ com.google.protobuf:
   protoc: { version: '3.5.1-1' }
   protobuf-gradle-plugin: { version: '0.8.6' }
 
+com.moowork.gradle:
+  gradle-node-plugin: { version: '1.2.0' }
+
 com.puppycrawl.tools:
   checkstyle: { version: '8.11' }
 
