@@ -48,7 +48,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
      *
-     * @deprecated use {@link HttpHealthCheckedEndpointGroupBuilder}
+     * @deprecated Use {@link HttpHealthCheckedEndpointGroupBuilder}.
      */
     @Deprecated
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
@@ -60,7 +60,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
      *
-     * @deprecated use {@link HttpHealthCheckedEndpointGroupBuilder}
+     * @deprecated Use {@link HttpHealthCheckedEndpointGroupBuilder}.
      */
     @Deprecated
     public static HttpHealthCheckedEndpointGroup of(ClientFactory clientFactory,

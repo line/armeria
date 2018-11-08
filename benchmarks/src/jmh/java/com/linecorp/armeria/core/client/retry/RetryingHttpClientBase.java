@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.retrofit2.shared;
+package com.linecorp.armeria.core.client.retry;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
@@ -22,23 +22,23 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 
 @State(Scope.Benchmark)
-public abstract class SimpleBenchmarkBase {
+public abstract class RetryingHttpClientBase {
 
     private Server server;
-    private SimpleBenchmarkClient client;
+    private HttpClient client;
 
     @Setup
-    public void start() throws Exception {
+    public void start() {
         server = new ServerBuilder()
-                .https(0)
+                .http(0)
                 .service("/empty", (ctx, req) -> HttpResponse.of("\"\""))
-                .tlsSelfSigned()
                 .build();
         server.start().join();
         client = newClient();
@@ -49,17 +49,17 @@ public abstract class SimpleBenchmarkBase {
         server.stop().join();
     }
 
-    protected abstract SimpleBenchmarkClient newClient() throws Exception;
+    protected abstract HttpClient newClient();
 
     protected String baseUrl() {
         final ServerPort httpPort = server.activePorts().values().stream()
-                                          .filter(ServerPort::hasHttps).findAny()
+                                          .filter(ServerPort::hasHttp).findAny()
                                           .get();
-        return "https://127.0.0.1:" + httpPort.localAddress().getPort();
+        return "h2c://127.0.0.1:" + httpPort.localAddress().getPort();
     }
 
     @Benchmark
     public void empty() {
-        client.empty().join();
+        client.get("/empty").aggregate().join();
     }
 }
