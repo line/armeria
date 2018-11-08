@@ -42,7 +42,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClosedClientFactoryException;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.client.retry.RetryStrategy;
+import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClientBuilder;
 import com.linecorp.armeria.common.RpcRequest;
@@ -55,25 +55,17 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class RetryingRpcClientTest {
-    private static final RetryStrategy<RpcRequest, RpcResponse> retryAlways =
-            (request, response) -> {
-                final CompletableFuture<Backoff> future = new CompletableFuture<>();
-                response.whenComplete((unused1, unused2) -> future.complete(Backoff.fixed(500)));
-                return future;
-            };
 
-    private static final RetryStrategy<RpcRequest, RpcResponse> retryOnException =
-            (request, response) -> {
-                final CompletableFuture<Backoff> future = new CompletableFuture<>();
-                response.whenComplete((unused1, cause) -> {
-                    if (cause != null) {
-                        future.complete(Backoff.withoutDelay());
-                    } else {
-                        future.complete(null);
-                    }
-                });
-                return future;
-            };
+    private static final RetryStrategyWithContent<RpcResponse> retryAlways =
+            (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(500));
+
+    private static final RetryStrategyWithContent<RpcResponse> retryOnException =
+            (ctx, response) -> response.completionFuture().handle((unused, cause) -> {
+                if (cause != null) {
+                    return Backoff.withoutDelay();
+                }
+                return null;
+            });
 
     private final HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
     private final DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);
@@ -121,13 +113,8 @@ public class RetryingRpcClientTest {
 
     @Test
     public void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
-        final RetryStrategy<RpcRequest, RpcResponse> strategy =
-                (request, response) -> {
-                    final CompletableFuture<Backoff> future = new CompletableFuture<>();
-                    response.whenComplete((unused1, unused2) -> future.complete(Backoff.fixed(10000000)));
-                    return future;
-                };
-
+        final RetryStrategyWithContent<RpcResponse> strategy =
+                (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(10000000));
         final HelloService.Iface client = helloClient(strategy, 100);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
@@ -137,7 +124,7 @@ public class RetryingRpcClientTest {
         verify(serviceHandler, only()).hello("hello");
     }
 
-    private HelloService.Iface helloClient(RetryStrategy<RpcRequest, RpcResponse> strategy,
+    private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts) {
         return new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .decorator(RpcRequest.class, RpcResponse.class,
@@ -170,12 +157,10 @@ public class RetryingRpcClientTest {
         // The next retry will be after 8 seconds so closing the factory after 1 second should be work.
         Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 1, TimeUnit.SECONDS);
 
-        final RetryStrategy<RpcRequest, RpcResponse> strategy =
-                (request, response) -> {
-                    final CompletableFuture<Backoff> future = new CompletableFuture<>();
+        final RetryStrategyWithContent<RpcResponse> strategy =
+                (ctx, response) -> {
                     // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
-                    response.whenComplete((unused1, unused2) -> future.complete(Backoff.fixed(8000)));
-                    return future;
+                    return CompletableFuture.completedFuture(Backoff.fixed(8000));
                 };
 
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))

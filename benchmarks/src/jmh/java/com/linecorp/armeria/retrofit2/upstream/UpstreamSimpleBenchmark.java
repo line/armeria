@@ -35,7 +35,7 @@ import retrofit2.converter.jackson.JacksonConverterFactory;
 public class UpstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     @Override
-    protected SimpleBenchmarkClient client() throws Exception {
+    protected SimpleBenchmarkClient newClient() throws Exception {
         SSLContext context = SSLContext.getInstance("TLS");
         context.init(null, InsecureTrustManagerFactory.INSTANCE.getTrustManagers(), null);
         OkHttpClient client = new OkHttpClient.Builder()

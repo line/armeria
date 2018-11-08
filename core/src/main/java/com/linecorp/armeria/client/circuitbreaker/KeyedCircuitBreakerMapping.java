@@ -36,6 +36,9 @@ import com.linecorp.armeria.common.RpcRequest;
  */
 public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
 
+    static final CircuitBreakerMapping defaultMapping =
+            new KeyedCircuitBreakerMapping<>(KeySelector.HOST, CircuitBreaker::of);
+
     private final ConcurrentMap<K, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
     private final KeySelector<K> keySelector;
