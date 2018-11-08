@@ -135,6 +135,24 @@ public class HttpHealthCheckedEndpointGroupTest {
     }
 
     @Test
+    public void endpoints_customPort() throws Exception {
+        serverOne.start();
+        serverTwo.start();
+        final int portOne = serverOne.port(protocol);
+        final int portTwo = serverTwo.port(protocol);
+
+        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
+                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne)),
+                HEALTH_CHECK_PATH)
+                .healthCheckPort(portOne)
+                .protocol(protocol)
+                .clientFactory(clientFactory)
+                .build();
+        await().untilAsserted(
+                () -> assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", portOne)));
+    }
+
+    @Test
     public void endpoints_containsUnhealthyServer() throws Exception {
         serverOne.start();
 
