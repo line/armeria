@@ -124,8 +124,8 @@ public class ArmeriaReactiveWebServerFactoryTest {
             final AggregatedHttpMessage res1 = client.post("/hello", "hello").aggregate().join();
             assertThat(res1.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.BAD_REQUEST);
 
-            final AggregatedHttpMessage res = client.get("/hello").aggregate().join();
-            assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.BAD_REQUEST);
+            final AggregatedHttpMessage res2 = client.get("/hello").aggregate().join();
+            assertThat(res2.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.BAD_REQUEST);
         });
     }
 

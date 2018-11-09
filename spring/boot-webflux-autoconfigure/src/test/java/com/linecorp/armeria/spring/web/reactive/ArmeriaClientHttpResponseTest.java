@@ -70,7 +70,7 @@ public class ArmeriaClientHttpResponseTest {
     @Test
     public void getCookies() {
         final HttpHeaders httpHeaders = HttpHeaders.of(HttpStatus.OK)
-                                                   .add(AsciiString.of("blabla"), "armeria")
+                                                   .add(AsciiString.of("blahblah"), "armeria")
                                                    .add(HttpHeaderNames.SET_COOKIE, "a=1; b=2");
         final HttpResponse httpResponse = HttpResponse.of(httpHeaders);
         final ArmeriaClientHttpResponse response =
@@ -80,7 +80,7 @@ public class ArmeriaClientHttpResponseTest {
         assertThat(httpResponse.completionFuture().isDone()).isTrue();
 
         assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
-        assertThat(response.getHeaders().getFirst("blabla")).isEqualTo("armeria");
+        assertThat(response.getHeaders().getFirst("blahblah")).isEqualTo("armeria");
 
         final ResponseCookie cookie = response.getCookies().getFirst("a");
         assertThat(cookie).isNotNull();

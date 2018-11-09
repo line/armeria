@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.spring;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -159,7 +160,7 @@ public final class ArmeriaConfigurationUtil {
             final String ip = p.getIp();
             final String iface = p.getIface();
             final int port = p.getPort();
-            final SessionProtocol proto = p.getProtocol();
+            final SessionProtocol proto = firstNonNull(p.getProtocol(), SessionProtocol.HTTP);
 
             if (ip == null) {
                 if (iface == null) {

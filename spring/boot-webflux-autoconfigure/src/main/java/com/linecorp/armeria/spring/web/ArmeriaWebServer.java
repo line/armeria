@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring.web;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -59,6 +60,7 @@ public final class ArmeriaWebServer implements WebServer {
         this.server = requireNonNull(server, "server");
         this.protocol = requireNonNull(protocol, "protocol");
         this.address = address;
+        checkArgument(port >= 0 && port <= 65535, "port: %s (expected: 0...65535)", port);
         this.port = port;
     }
 
@@ -77,7 +79,7 @@ public final class ArmeriaWebServer implements WebServer {
                                                Arrays.equals(address.getAddress(),
                                                              p.localAddress().getAddress().getAddress()))
                                   .findFirst();
-                    assert port.isPresent() : "the primary port doest not exist";
+                    assert port.isPresent() : "the primary port doest not exist.";
                     this.port = port.get().localAddress().getPort();
                 }
                 isRunning = true;

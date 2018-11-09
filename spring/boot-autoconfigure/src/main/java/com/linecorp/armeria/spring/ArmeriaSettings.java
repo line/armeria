@@ -118,6 +118,7 @@ public class ArmeriaSettings {
         /**
          * Returns the {@link SessionProtocol} that {@link Server} use.
          */
+        @Nullable
         public SessionProtocol getProtocol() {
             return protocol;
         }

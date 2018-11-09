@@ -36,8 +36,8 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  * HTTP encoding will be applied if:
  * <ul>
  *     <li>the client specifies it</li>
- *     <li>the response content type is a reasonable type to encode</li>
- *     <li>the request headers are also acceptable</li>
+ *     <li>the response content type is encodable</li>
+ *     <li>the request headers are acceptable</li>
  *     <li>the response either has no fixed content length or the length is larger than 1KB</li>
  * </ul>
  */

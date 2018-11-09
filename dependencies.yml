@@ -170,7 +170,11 @@ io.netty:
   netty-tcnative-boringssl-static: { version: '2.0.19.Final' }
 
 io.projectreactor:
-  reactor-test: { version: '3.2.2.RELEASE' }
+  reactor-core:
+    version: &REACTOR_VERSION '3.2.2.RELEASE'
+    javadocs:
+    - https://projectreactor.io/docs/core/release/api/
+  reactor-test: { version: *REACTOR_VERSION }
 
 io.prometheus:
   simpleclient_common:

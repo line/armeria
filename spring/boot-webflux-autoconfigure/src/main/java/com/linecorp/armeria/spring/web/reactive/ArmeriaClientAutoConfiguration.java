@@ -17,11 +17,14 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import java.util.Optional;
 
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
 import org.springframework.boot.web.reactive.function.client.WebClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
@@ -34,6 +37,7 @@ import com.linecorp.armeria.spring.web.reactive.ArmeriaBufferFactoryConfiguratio
 @Configuration
 @ConditionalOnClass(WebClient.Builder.class)
 @ConditionalOnMissingBean(ClientHttpConnector.class)
+@Import(WebClientAutoConfiguration.class)
 public class ArmeriaClientAutoConfiguration {
 
     /**

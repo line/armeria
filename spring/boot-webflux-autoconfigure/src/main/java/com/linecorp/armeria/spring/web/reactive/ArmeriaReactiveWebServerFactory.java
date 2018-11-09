@@ -87,7 +87,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.Disposable;
 
 /**
- * {@link ReactiveWebServerFactory} which is used to create a new {@link ArmeriaWebServer}.
+ * A {@link ReactiveWebServerFactory} which is used to create a new {@link ArmeriaWebServer}.
  */
 public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaReactiveWebServerFactory.class);
@@ -154,9 +154,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         return new ArmeriaWebServer(server, protocol, address, port);
     }
 
-    static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,
-                                          ArmeriaBufferFactory bufferFactory,
-                                          @Nullable String serverHeader) {
+    private static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,
+                                                  ArmeriaBufferFactory bufferFactory,
+                                                  @Nullable String serverHeader) {
         final ArmeriaHttpHandlerAdapter handler =
                 new ArmeriaHttpHandlerAdapter(httpHandler, bufferFactory);
         return sb.service(PathMapping.ofCatchAll(), (ctx, req) -> {

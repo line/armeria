@@ -16,6 +16,7 @@ For Maven:
     <dependency>
         <groupId>com.linecorp.armeria</groupId>
         <artifactId>spring-boot-webflux-starter</artifactId>
+        <version>x.y.z</version>
     </dependency>
 
 For Gradle:
@@ -23,7 +24,7 @@ For Gradle:
 .. code-block:: groovy
 
     dependencies {
-        compile 'com.linecorp.armeria:spring-boot-webflux-starter'
+        compile 'com.linecorp.armeria:spring-boot-webflux-starter:x.y.z'
     }
 
 It automatically configures the Armeria web server by referring to `application.yml` when the application starts up.

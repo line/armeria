@@ -30,7 +30,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 
 /**
- * {@link EnableAutoConfiguration Auto-configuration} for reactive web servers.
+ * An {@linkplain EnableAutoConfiguration auto-configuration} for a reactive web server.
  */
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
