@@ -3,11 +3,11 @@
 
 .. _advanced-spring-webflux-integration:
 
-Using Armeria as a web server of a reactive Spring application
-==============================================================
+Using Armeria with Spring WebFlux
+=================================
 
-A user can use Armeria as a web server of his or her reactive Spring application by adding
-`spring-boot-webflux-starter` to the dependencies.
+Armeria can be plugged in as the underlying HTTP server for a Spring WebFlux application by adding
+the following dependency:
 
 For Maven:
 
@@ -27,10 +27,10 @@ For Gradle:
         compile 'com.linecorp.armeria:spring-boot-webflux-starter:x.y.z'
     }
 
-It automatically configures the Armeria web server by referring to `application.yml` when the application starts up.
-A user can configure the server with the properties provided by Spring framework, because it replaces
-the existing web server, such as Tomcat or Netty, with Armeria web server. The following is
-a simple example for configuring the server:
+The above starter configures Armeria as the HTTP server for WebFlux to run on by referring to `application.yml`
+when the application starts up. A user can customize the server configuration with the same properties
+provided by Spring Boot as for other servers supported with WebFlux such as Tomcat or Reactor Netty.
+The following is a simple example for configuring the server:
 
 .. code-block:: yml
 
@@ -56,9 +56,9 @@ The user can customize the server by defining a bean of the type in the configur
         }
     }
 
-Armeria-based `WebClient` is also provided to support the client-side, and :api:`ArmeriaClientConfigurator`
-is provided as well in order to customize the Armeria HTTP client. A user can define a bean of the type
-in the configuration as follows:
+Armeria can also be plugged as the underlying HTTP client for the Spring `WebClient`. To customize
+client settings for the Armeria HTTP client, simply define an :api:`ArmeriaClientConfigurator` bean
+in your configuration as follows:
 
 .. code-block:: java
 
@@ -78,4 +78,5 @@ in the configuration as follows:
 .. note::
 
     You can find a simple reactive Spring Boot application from `armeria-examples`_.
-    Also, please refer to `Spring Boot Reference Guide`_ for more information about Spring Boot.
+    Also, please refer to `Spring Boot Reference Guide`_ for more information about Spring Boot and the
+    `Spring Framework Reference Guide` for more information about Spring WebFlux.
