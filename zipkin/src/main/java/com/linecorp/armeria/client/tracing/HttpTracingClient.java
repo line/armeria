@@ -25,6 +25,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
@@ -145,7 +147,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
             }
         }
 
-        if (remoteServiceName != null) {
+        if (!Strings.isNullOrEmpty(remoteServiceName)) {
             span.remoteServiceName(remoteServiceName);
         }
         if (address != null) {
