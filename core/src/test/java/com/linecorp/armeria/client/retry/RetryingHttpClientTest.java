@@ -398,10 +398,6 @@ public class RetryingHttpClientTest {
         final ClientFactory factory = new ClientFactoryBuilder()
                 .workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
-        // There's no way to notice that the RetryingClient has scheduled the next retry.
-        // The next retry will be after 8 seconds so closing the factory after 1 second should be work.
-        Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 1, TimeUnit.SECONDS);
-
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(factory)
                 .defaultResponseTimeoutMillis(10000)
@@ -409,6 +405,10 @@ public class RetryingHttpClientTest {
                         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
                         RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
                 .build();
+
+        // There's no way to notice that the RetryingClient has scheduled the next retry.
+        // The next retry will be after 8 seconds so closing the factory after 3 seconds should work.
+        Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 3, TimeUnit.SECONDS);
         assertThatThrownBy(() -> client.get("/service-unavailable").aggregate().join())
                 .hasCauseInstanceOf(ClosedClientFactoryException.class);
     }
