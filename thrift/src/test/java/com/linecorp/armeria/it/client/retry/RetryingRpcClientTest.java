@@ -153,10 +153,6 @@ public class RetryingRpcClientTest {
         final ClientFactory factory = new ClientFactoryBuilder()
                 .workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
-        // There's no way to notice that the RetryingClient has scheduled the next retry.
-        // The next retry will be after 8 seconds so closing the factory after 1 second should be work.
-        Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 1, TimeUnit.SECONDS);
-
         final RetryStrategyWithContent<RpcResponse> strategy =
                 (ctx, response) -> {
                     // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
@@ -170,6 +166,10 @@ public class RetryingRpcClientTest {
                            new RetryingRpcClientBuilder(strategy).newDecorator())
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
+
+        // There's no way to notice that the RetryingClient has scheduled the next retry.
+        // The next retry will be after 8 seconds so closing the factory after 3 seconds should work.
+        Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 3, TimeUnit.SECONDS);
         assertThatThrownBy(() -> client.hello("hello"))
                 .isInstanceOf(ClosedClientFactoryException.class);
     }

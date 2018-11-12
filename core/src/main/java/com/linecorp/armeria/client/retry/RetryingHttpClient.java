@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.common.HttpHeaders.EMPTY_HEADERS;
 import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
 
@@ -131,16 +132,17 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        final boolean hasInitialAuthority = !isNullOrEmpty(req.headers().authority());
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture);
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req, 0, ctx.eventLoop());
-        doExecute0(ctx, reqDuplicator, req, res, responseFuture);
+        doExecute0(ctx, reqDuplicator, req, res, responseFuture, hasInitialAuthority);
         return res;
     }
 
     private void doExecute0(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
                             HttpRequest originalReq, HttpResponse returnedRes,
-                            CompletableFuture<HttpResponse> future) {
+                            CompletableFuture<HttpResponse> future, boolean hasInitialAuthority) {
         if (originalReq.completionFuture().isCompletedExceptionally() || returnedRes.isComplete()) {
             // The request or response has been aborted by the client before it receives a response,
             // so stop retrying.
@@ -165,6 +167,10 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             }
             return HttpResponse.ofFailure(cause);
         };
+
+        if (!hasInitialAuthority) {
+            duplicateReq.headers().remove(HttpHeaderNames.AUTHORITY);
+        }
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx, duplicateReq, fallback);
 
         derivedCtx.log().addListener(log -> {
@@ -175,13 +181,15 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                           .whenComplete(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
                                                                       originalReq, returnedRes, future,
                                                                       resDuplicator.duplicateStream(true),
-                                                                      resDuplicator::close));
+                                                                      resDuplicator::close,
+                                                                      hasInitialAuthority));
             } else {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
                 retryStrategy().shouldRetry(derivedCtx, responseCause)
                                .whenComplete(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
-                                                           returnedRes, future, response, response::abort));
+                                                           returnedRes, future, response, response::abort,
+                                                           hasInitialAuthority));
             }
         }, RequestLogAvailability.RESPONSE_HEADERS);
     }
@@ -211,7 +219,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                                          HttpResponse returnedRes,
                                                          CompletableFuture<HttpResponse> future,
                                                          HttpResponse originalRes,
-                                                         Runnable closingOriginalResTask) {
+                                                         Runnable closingOriginalResTask,
+                                                         boolean hasInitialAuthority) {
         return (backoff, unused) -> {
             if (backoff != null) {
                 final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
@@ -220,7 +229,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                     closingOriginalResTask.run();
                     scheduleNextRetry(
                             ctx, cause -> handleException(ctx, rootReqDuplicator, future, cause),
-                            () -> doExecute0(ctx, rootReqDuplicator, originalReq, returnedRes, future),
+                            () -> doExecute0(ctx, rootReqDuplicator, originalReq,
+                                             returnedRes, future, hasInitialAuthority),
                             nextDelay);
                     return;
                 }
