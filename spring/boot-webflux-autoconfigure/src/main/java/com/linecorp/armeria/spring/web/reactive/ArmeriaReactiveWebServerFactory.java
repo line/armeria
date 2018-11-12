@@ -38,6 +38,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
@@ -57,7 +58,6 @@ import org.springframework.boot.web.server.WebServer;
 import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.util.ResourceUtils;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -79,7 +79,6 @@ import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 import com.linecorp.armeria.spring.web.ArmeriaWebServer;
-import com.linecorp.armeria.spring.web.reactive.ArmeriaBufferFactoryConfiguration.ArmeriaBufferFactoryHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -141,24 +140,17 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         findBean(ArmeriaSettings.class).ifPresent(settings -> configureArmeriaService(sb, settings));
         findBeans(ArmeriaServerConfigurator.class).forEach(configurator -> configurator.configure(sb));
 
-        final ArmeriaBufferFactory bufferFactory;
-        final ArmeriaBufferFactoryHolder factoryHolder =
-                findBean(ArmeriaBufferFactoryHolder.class).orElse(null);
-        if (factoryHolder != null) {
-            bufferFactory = factoryHolder.get();
-        } else {
-            bufferFactory = ArmeriaBufferFactory.DEFAULT;
-        }
-
-        final Server server = configureService(sb, httpHandler, bufferFactory, getServerHeader()).build();
+        final DataBufferFactoryWrapper<?> factoryWrapper =
+                findBean(DataBufferFactoryWrapper.class).orElse(DataBufferFactoryWrapper.DEFAULT);
+        final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
         return new ArmeriaWebServer(server, protocol, address, port);
     }
 
     private static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,
-                                                  ArmeriaBufferFactory bufferFactory,
+                                                  DataBufferFactoryWrapper<?> factoryWrapper,
                                                   @Nullable String serverHeader) {
         final ArmeriaHttpHandlerAdapter handler =
-                new ArmeriaHttpHandlerAdapter(httpHandler, bufferFactory);
+                new ArmeriaHttpHandlerAdapter(httpHandler, factoryWrapper);
         return sb.service(PathMapping.ofCatchAll(), (ctx, req) -> {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final HttpResponse response = HttpResponse.from(future);
@@ -180,11 +172,10 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         if (mimeTypes == null || mimeTypes.length == 0) {
             encodableContentTypePredicate = contentType -> true;
         } else {
-            final List<MediaType> encodableContentTypes = Arrays.stream(mimeTypes)
-                                                                .map(MediaType::parse)
-                                                                .collect(toImmutableList());
-            encodableContentTypePredicate = contentType -> encodableContentTypes.stream()
-                                                                                .anyMatch(contentType::is);
+            final List<MediaType> encodableContentTypes =
+                    Arrays.stream(mimeTypes).map(MediaType::parse).collect(toImmutableList());
+            encodableContentTypePredicate = contentType ->
+                    encodableContentTypes.stream().anyMatch(contentType::is);
         }
 
         final Predicate<HttpHeaders> encodableRequestHeadersPredicate;
@@ -192,10 +183,12 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         if (excludedUserAgents == null || excludedUserAgents.length == 0) {
             encodableRequestHeadersPredicate = headers -> true;
         } else {
+            final List<Pattern> patterns =
+                    Arrays.stream(excludedUserAgents).map(Pattern::compile).collect(toImmutableList());
             encodableRequestHeadersPredicate = headers -> {
-                final String userAgent = headers.get(HttpHeaderNames.USER_AGENT);
-                return !Strings.isNullOrEmpty(userAgent) &&
-                       Arrays.stream(excludedUserAgents).noneMatch(userAgent::equalsIgnoreCase);
+                // No User-Agent header will be converted to an empty string.
+                final String userAgent = headers.get(HttpHeaderNames.USER_AGENT, "");
+                return patterns.stream().noneMatch(pattern -> pattern.matcher(userAgent).matches());
             };
         }
 
@@ -272,7 +265,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
             final String[] enabledProtocols = ssl.getEnabledProtocols();
             if (enabledProtocols != null) {
-                sslBuilder.protocols(Arrays.copyOf(enabledProtocols, enabledProtocols.length));
+                sslBuilder.protocols(enabledProtocols.clone());
             }
 
             final String[] ciphers = ssl.getCiphers();

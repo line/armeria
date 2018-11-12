@@ -55,7 +55,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     private final HttpClient client;
 
     private final HttpHeaders headers;
-    private final ArmeriaBufferFactory factory;
+    private final DataBufferFactoryWrapper<?> factoryWrapper;
 
     private final HttpMethod httpMethod;
 
@@ -67,11 +67,11 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     private HttpRequest request;
 
     ArmeriaClientHttpRequest(HttpClient client, HttpMethod httpMethod, String pathAndQuery,
-                             URI uri, ArmeriaBufferFactory factory) {
+                             URI uri, DataBufferFactoryWrapper<?> factoryWrapper) {
         this.client = requireNonNull(client, "client");
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.uri = requireNonNull(uri, "uri");
-        this.factory = requireNonNull(factory, "factory");
+        this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
         headers = HttpHeaders.of(com.linecorp.armeria.common.HttpMethod.valueOf(httpMethod.name()),
                                  requireNonNull(pathAndQuery, "pathAndQuery"));
     }
@@ -106,7 +106,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
     @Override
     public DataBufferFactory bufferFactory() {
-        return factory;
+        return factoryWrapper.dataBufferFactory();
     }
 
     public CompletableFuture<HttpResponse> future() {
@@ -125,7 +125,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     }
 
     private Mono<Void> write(Flux<? extends DataBuffer> body) {
-        return doCommit(execute(() -> HttpRequest.of(headers, body.map(factory::unwrap))));
+        return doCommit(execute(() -> HttpRequest.of(headers, body.map(factoryWrapper::toHttpData))));
     }
 
     @Override
@@ -155,7 +155,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
                           .omitNullValues()
                           .add("client", client)
                           .add("headers", headers)
-                          .add("factory", factory)
+                          .add("factoryWrapper", factoryWrapper)
                           .add("httpMethod", httpMethod)
                           .add("uri", uri)
                           .add("request", request)

@@ -68,7 +68,7 @@ public class ArmeriaWebClientTest {
             @GetMapping("/hello")
             Flux<String> hello() {
                 ensureInRequestContextAwareEventLoop();
-                return Flux.fromArray(new String[] { "hello", "\n", "armeria", "\n", "world" });
+                return Flux.just("hello", "\n", "armeria", "\n", "world");
             }
 
             @GetMapping("/conflict")

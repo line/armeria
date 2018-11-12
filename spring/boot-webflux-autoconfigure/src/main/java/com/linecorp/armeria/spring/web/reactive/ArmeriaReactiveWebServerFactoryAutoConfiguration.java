@@ -36,7 +36,7 @@ import com.linecorp.armeria.spring.ArmeriaSettings;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
 @ConditionalOnClass(Server.class)
 @EnableConfigurationProperties({ ServerProperties.class, ArmeriaSettings.class })
-@Import(ReactiveWebServerFactoryAutoConfiguration.class)
+@Import({ ReactiveWebServerFactoryAutoConfiguration.class, DataBufferFactoryWrapperConfiguration.class })
 public class ArmeriaReactiveWebServerFactoryAutoConfiguration {
 
     /**

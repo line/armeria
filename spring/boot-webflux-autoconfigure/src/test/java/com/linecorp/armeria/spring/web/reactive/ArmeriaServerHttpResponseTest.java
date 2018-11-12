@@ -54,7 +54,7 @@ public class ArmeriaServerHttpResponseTest {
 
     private static ArmeriaServerHttpResponse response(
             ServiceRequestContext ctx, CompletableFuture<HttpResponse> future) {
-        return new ArmeriaServerHttpResponse(ctx, future, ArmeriaBufferFactory.DEFAULT, null);
+        return new ArmeriaServerHttpResponse(ctx, future, DataBufferFactoryWrapper.DEFAULT, null);
     }
 
     @Test
@@ -106,8 +106,9 @@ public class ArmeriaServerHttpResponseTest {
                                          .build());
         assertThat(future.isDone()).isFalse();
 
-        final Flux<DataBuffer> body = Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })
-                                          .map(s -> ArmeriaBufferFactory.DEFAULT.wrap(s.getBytes()));
+        final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e")
+                                          .map(String::getBytes)
+                                          .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap);
 
         // Create HttpResponse.
         response.writeWith(body).then(Mono.defer(response::setComplete)).subscribe();
@@ -157,8 +158,9 @@ public class ArmeriaServerHttpResponseTest {
         response.setStatusCode(HttpStatus.OK);
         assertThat(future.isDone()).isFalse();
 
-        final Flux<DataBuffer> body = Flux.fromArray(new String[] { "a", "b", "c", "d", "e", "f", "g" })
-                                          .map(String::getBytes).map(ArmeriaBufferFactory.DEFAULT::wrap);
+        final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e", "f", "g")
+                                          .map(String::getBytes)
+                                          .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap);
 
         // Create HttpResponse.
         response.writeWith(body).then(Mono.defer(response::setComplete)).subscribe();
@@ -195,7 +197,6 @@ public class ArmeriaServerHttpResponseTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void returnHeadersAndBodyWithMultiplePublisher() throws Exception {
         final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         final ArmeriaServerHttpResponse response = response(ctx, future);
@@ -203,13 +204,11 @@ public class ArmeriaServerHttpResponseTest {
         response.setStatusCode(HttpStatus.OK);
         assertThat(future.isDone()).isFalse();
 
-        final Flux<Flux<DataBuffer>> body = Flux.fromArray(
-                new Flux[] {
-                        Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })
-                            .map(String::getBytes).map(ArmeriaBufferFactory.DEFAULT::wrap),
-                        Flux.fromArray(new String[] { "1", "2", "3", "4", "5" })
-                            .map(String::getBytes).map(ArmeriaBufferFactory.DEFAULT::wrap)
-                }
+        final Flux<Flux<DataBuffer>> body = Flux.just(
+                Flux.just("a", "b", "c", "d", "e").map(String::getBytes)
+                    .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap),
+                Flux.just("1", "2", "3", "4", "5").map(String::getBytes)
+                    .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap)
         );
 
         // Create HttpResponse.

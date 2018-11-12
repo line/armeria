@@ -13,7 +13,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaClientHttpConnector;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
 public class HelloApplicationIntegrationTest {
 
     @LocalServerPort

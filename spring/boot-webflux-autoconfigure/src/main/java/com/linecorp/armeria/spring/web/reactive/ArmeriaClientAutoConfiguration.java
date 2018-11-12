@@ -17,7 +17,6 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import java.util.Optional;
 
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
@@ -29,15 +28,13 @@ import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 
-import com.linecorp.armeria.spring.web.reactive.ArmeriaBufferFactoryConfiguration.ArmeriaBufferFactoryHolder;
-
 /**
  * An auto-configuration for Armeria-based {@link WebClient}.
  */
 @Configuration
 @ConditionalOnClass(WebClient.Builder.class)
 @ConditionalOnMissingBean(ClientHttpConnector.class)
-@Import(WebClientAutoConfiguration.class)
+@Import({ WebClientAutoConfiguration.class, DataBufferFactoryWrapperConfiguration.class })
 public class ArmeriaClientAutoConfiguration {
 
     /**
@@ -47,15 +44,9 @@ public class ArmeriaClientAutoConfiguration {
     @Bean
     public ClientHttpConnector clientHttpConnector(
             Optional<ArmeriaClientConfigurator> customizer,
-            Optional<ArmeriaBufferFactoryHolder> armeriaBufferFactoryHolder) {
-        final ArmeriaBufferFactory factory;
-        if (armeriaBufferFactoryHolder.isPresent()) {
-            factory = armeriaBufferFactoryHolder.get().get();
-        } else {
-            factory = ArmeriaBufferFactory.DEFAULT;
-        }
-        return customizer.map(c -> new ArmeriaClientHttpConnector(c, factory))
-                         .orElseGet(() -> new ArmeriaClientHttpConnector(factory));
+            DataBufferFactoryWrapper<?> factoryWrapper) {
+        return customizer.map(c -> new ArmeriaClientHttpConnector(c, factoryWrapper))
+                         .orElseGet(() -> new ArmeriaClientHttpConnector(factoryWrapper));
     }
 
     /**

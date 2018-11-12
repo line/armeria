@@ -87,7 +87,7 @@ public class ArmeriaAutoConfiguration {
 
         final List<Port> ports = armeriaSettings.getPorts();
         if (ports.isEmpty()) {
-            server.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocol()));
+            server.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
         } else {
             configurePorts(server, ports);
         }

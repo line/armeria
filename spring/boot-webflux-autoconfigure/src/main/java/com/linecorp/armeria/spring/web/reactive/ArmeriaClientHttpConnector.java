@@ -22,7 +22,6 @@ import java.net.URI;
 import java.util.function.Function;
 
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ClientHttpRequest;
@@ -47,34 +46,34 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
     private static final ArmeriaClientConfigurator IDENTITY = b -> { /* noop */ };
 
     private final ArmeriaClientConfigurator customizer;
-    private final ArmeriaBufferFactory bufferFactory;
+    private final DataBufferFactoryWrapper<?> factoryWrapper;
 
     /**
      * Creates an {@link ArmeriaClientHttpConnector} with the default
-     * {@link ArmeriaClientConfigurator} and {@link DataBufferFactory}.
+     * {@link ArmeriaClientConfigurator} and {@link DataBufferFactoryWrapper}.
      */
     public ArmeriaClientHttpConnector() {
-        this(IDENTITY, ArmeriaBufferFactory.DEFAULT);
+        this(IDENTITY, DataBufferFactoryWrapper.DEFAULT);
     }
 
     /**
      * Creates an {@link ArmeriaClientHttpConnector} with the specified
-     * {@link ArmeriaClientConfigurator} and the default {@link DataBufferFactory}.
+     * {@link ArmeriaClientConfigurator} and the default {@link DataBufferFactoryWrapper}.
      *
      * @param customizer the customizer to be used to build an {@link HttpClient}
      */
     public ArmeriaClientHttpConnector(ArmeriaClientConfigurator customizer) {
-        this(customizer, ArmeriaBufferFactory.DEFAULT);
+        this(customizer, DataBufferFactoryWrapper.DEFAULT);
     }
 
     /**
-     * Creates an {@link ArmeriaClientHttpConnector} with the specified {@link DataBufferFactory}
+     * Creates an {@link ArmeriaClientHttpConnector} with the specified {@link DataBufferFactoryWrapper}
      * and the default {@link ArmeriaClientConfigurator}.
      *
-     * @param bufferFactory the factory to be used to create a {@link DataBuffer}
+     * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
      */
-    public ArmeriaClientHttpConnector(ArmeriaBufferFactory bufferFactory) {
-        this(IDENTITY, bufferFactory);
+    public ArmeriaClientHttpConnector(DataBufferFactoryWrapper<?> factoryWrapper) {
+        this(IDENTITY, factoryWrapper);
     }
 
     /**
@@ -82,12 +81,12 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
      *
      * @param customizer the {@link ArmeriaClientConfigurator} to be used to build an
      *                   {@link HttpClient}
-     * @param bufferFactory the factory to be used to create a {@link DataBuffer}
+     * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
      */
     public ArmeriaClientHttpConnector(ArmeriaClientConfigurator customizer,
-                                      ArmeriaBufferFactory bufferFactory) {
+                                      DataBufferFactoryWrapper<?> factoryWrapper) {
         this.customizer = requireNonNull(customizer, "customizer");
-        this.bufferFactory = requireNonNull(bufferFactory, "bufferFactory");
+        this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
     }
 
     @Override
@@ -124,11 +123,11 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
 
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;
 
-        return new ArmeriaClientHttpRequest(builder.build(), method, pathAndQuery, uri, bufferFactory);
+        return new ArmeriaClientHttpRequest(builder.build(), method, pathAndQuery, uri, factoryWrapper);
     }
 
     private ArmeriaClientHttpResponse createResponse(HttpHeaders headers,
                                                      ArmeriaHttpClientResponseSubscriber s) {
-        return new ArmeriaClientHttpResponse(headers, s.toResponseBodyPublisher(), bufferFactory);
+        return new ArmeriaClientHttpResponse(headers, s.toResponseBodyPublisher(), factoryWrapper);
     }
 }

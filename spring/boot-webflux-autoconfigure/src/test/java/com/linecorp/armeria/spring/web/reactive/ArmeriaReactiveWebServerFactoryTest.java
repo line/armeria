@@ -136,7 +136,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
         compression.setEnabled(true);
         compression.setMinResponseSize(DataSize.ofBytes(1));
         compression.setMimeTypes(new String[] { "text/plain" });
-        compression.setExcludedUserAgents(new String[] { "unknown-agent" });
+        compression.setExcludedUserAgents(new String[] { "unknown-agent/[0-9]+\\.[0-9]+\\.[0-9]+$" });
         factory.setCompression(compression);
         runEchoServer(factory, server -> {
             final AggregatedHttpMessage res = sendPostRequest(httpClient(server));
@@ -167,7 +167,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
         final Compression compression = new Compression();
         compression.setEnabled(true);
         compression.setMinResponseSize(DataSize.ofBytes(1));
-        compression.setExcludedUserAgents(new String[] { "test-agent" });
+        compression.setExcludedUserAgents(new String[] { "test-agent/[0-9]+\\.[0-9]+\\.[0-9]+$" });
         factory.setCompression(compression);
         runEchoServer(factory, server -> {
             final AggregatedHttpMessage res = sendPostRequest(httpClient(server));
@@ -179,7 +179,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
     private AggregatedHttpMessage sendPostRequest(HttpClient client) {
         final HttpHeaders requestHeaders =
                 HttpHeaders.of(HttpMethod.POST, "/hello")
-                           .add(HttpHeaderNames.USER_AGENT, "test-agent")
+                           .add(HttpHeaderNames.USER_AGENT, "test-agent/1.0.0")
                            .add(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         return client.execute(requestHeaders, HttpData.of(POST_BODY.getBytes())).aggregate().join();
     }

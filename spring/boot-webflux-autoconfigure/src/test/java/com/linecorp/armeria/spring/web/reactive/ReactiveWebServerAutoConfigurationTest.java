@@ -19,6 +19,7 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -80,7 +81,7 @@ public class ReactiveWebServerAutoConfigurationTest {
             Flux<String> hello() {
                 // This method would be called in one of Armeria worker threads.
                 assertThat((ServiceRequestContext) RequestContext.current()).isNotNull();
-                return Flux.fromArray(new String[] { "h", "e", "l", "l", "o" });
+                return Flux.just("h", "e", "l", "l", "o");
             }
         }
 
@@ -106,8 +107,10 @@ public class ReactiveWebServerAutoConfigurationTest {
 
             public Mono<ServerResponse> route2(ServerRequest request) {
                 assertThat((ServiceRequestContext) RequestContext.current()).isNotNull();
-                return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-                                     .body(BodyInserters.fromObject("[\"route\"]"));
+                return Mono.from(request.bodyToMono(Map.class))
+                           .map(map -> assertThat(map.get("a")).isEqualTo(1))
+                           .then(ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+                                               .body(BodyInserters.fromObject("[\"route\"]")));
             }
         }
     }
@@ -150,7 +153,7 @@ public class ReactiveWebServerAutoConfigurationTest {
             final AggregatedHttpMessage res2 =
                     client.execute(HttpHeaders.of(HttpMethod.POST, "/route2")
                                               .contentType(com.linecorp.armeria.common.MediaType.JSON_UTF_8),
-                                   HttpData.of("{}".getBytes())).aggregate().join();
+                                   HttpData.of("{\"a\":1}".getBytes())).aggregate().join();
             assertThatJson(res2.content().toStringUtf8()).isArray()
                                                          .ofLength(1)
                                                          .thatContains("route");

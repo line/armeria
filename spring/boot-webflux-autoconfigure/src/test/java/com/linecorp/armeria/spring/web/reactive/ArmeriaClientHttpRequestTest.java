@@ -55,7 +55,7 @@ public class ArmeriaClientHttpRequestTest {
 
     private static ArmeriaClientHttpRequest request() {
         return new ArmeriaClientHttpRequest(httpClient, HttpMethod.GET, TEST_PATH_AND_QUERY,
-                                            URI.create("http://localhost"), ArmeriaBufferFactory.DEFAULT);
+                                            URI.create("http://localhost"), DataBufferFactoryWrapper.DEFAULT);
     }
 
     @Test
@@ -80,8 +80,9 @@ public class ArmeriaClientHttpRequestTest {
     @Test
     public void writeWithPublisher() {
         final ArmeriaClientHttpRequest request = request();
-        final Flux<DataBuffer> body = Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })
-                                          .map(String::getBytes).map(ArmeriaBufferFactory.DEFAULT::wrap);
+        final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e")
+                                          .map(String::getBytes)
+                                          .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap);
 
         assertThat(request.getMethod()).isEqualTo(HttpMethod.GET);
         request.getHeaders().add(HttpHeaderNames.USER_AGENT.toString(), "spring/armeria");
@@ -126,14 +127,11 @@ public class ArmeriaClientHttpRequestTest {
     @Test
     public void writeAndFlushWithMultiplePublisher() {
         final ArmeriaClientHttpRequest request = request();
-        @SuppressWarnings("unchecked")
-        final Flux<Flux<DataBuffer>> body = Flux.fromArray(
-                new Flux[] {
-                        Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })
-                            .map(String::getBytes).map(ArmeriaBufferFactory.DEFAULT::wrap),
-                        Flux.fromArray(new String[] { "1", "2", "3", "4", "5" })
-                            .map(String::getBytes).map(ArmeriaBufferFactory.DEFAULT::wrap)
-                }
+        final Flux<Flux<DataBuffer>> body = Flux.just(
+                Flux.just("a", "b", "c", "d", "e").map(String::getBytes)
+                    .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap),
+                Flux.just("1", "2", "3", "4", "5").map(String::getBytes)
+                    .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap)
         );
 
         request.writeAndFlushWith(body)

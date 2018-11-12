@@ -39,18 +39,18 @@ final class ArmeriaHttpHandlerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaHttpHandlerAdapter.class);
 
     private final HttpHandler httpHandler;
-    private final ArmeriaBufferFactory factory;
+    private final DataBufferFactoryWrapper<?> factoryWrapper;
 
-    ArmeriaHttpHandlerAdapter(HttpHandler httpHandler, ArmeriaBufferFactory factory) {
+    ArmeriaHttpHandlerAdapter(HttpHandler httpHandler, DataBufferFactoryWrapper<?> factoryWrapper) {
         this.httpHandler = requireNonNull(httpHandler, "httpHandler");
-        this.factory = requireNonNull(factory, "factory");
+        this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
     }
 
     Mono<Void> handle(ServiceRequestContext ctx, HttpRequest req, CompletableFuture<HttpResponse> future,
                       @Nullable String serverHeader) {
         final ArmeriaServerHttpRequest convertedRequest;
         try {
-            convertedRequest = new ArmeriaServerHttpRequest(ctx, req, factory);
+            convertedRequest = new ArmeriaServerHttpRequest(ctx, req, factoryWrapper);
         } catch (Exception e) {
             logger.warn("{} Invalid request path: {}", ctx, req.path(), e);
             future.complete(HttpResponse.of(HttpStatus.BAD_REQUEST));
@@ -58,7 +58,7 @@ final class ArmeriaHttpHandlerAdapter {
         }
 
         final ArmeriaServerHttpResponse convertedResponse =
-                new ArmeriaServerHttpResponse(ctx, future, factory, serverHeader);
+                new ArmeriaServerHttpResponse(ctx, future, factoryWrapper, serverHeader);
         return httpHandler.handle(convertedRequest, convertedResponse)
                           .doOnSuccessOrError((unused, cause) -> {
                               if (cause != null) {

@@ -54,13 +54,13 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
 
     ArmeriaClientHttpResponse(com.linecorp.armeria.common.HttpHeaders headers,
                               ResponseBodyPublisher publisher,
-                              ArmeriaBufferFactory factory) {
+                              DataBufferFactoryWrapper<?> factoryWrapper) {
         this.headers = requireNonNull(headers, "headers");
         final com.linecorp.armeria.common.HttpStatus status = headers.status();
         checkArgument(status != null, "no status in HTTP headers");
         this.status = status;
 
-        body = Flux.from(publisher).cast(HttpData.class).map(factory::wrap);
+        body = Flux.from(publisher).cast(HttpData.class).map(factoryWrapper::toDataBuffer);
     }
 
     @Override
@@ -102,9 +102,11 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("status", status)
                           .add("headers", headers)
+                          .add("cookies", cookies)
+                          .add("httpHeaders", httpHeaders)
                           .toString();
     }
 

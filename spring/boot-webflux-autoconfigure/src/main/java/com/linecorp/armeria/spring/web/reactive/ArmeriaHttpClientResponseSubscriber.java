@@ -24,6 +24,7 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
@@ -32,7 +33,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
-import reactor.core.scheduler.Schedulers;
+import io.netty.channel.EventLoop;
 
 /**
  * A {@link Subscriber} which reads the {@link HttpHeaders} first from an {@link HttpResponse}.
@@ -44,6 +45,7 @@ final class ArmeriaHttpClientResponseSubscriber
         implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
 
     private final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
+    private final EventLoop eventLoop = CommonPools.workerGroup().next();
 
     @Nullable
     private ResponseBodyPublisher publisher;
@@ -57,7 +59,7 @@ final class ArmeriaHttpClientResponseSubscriber
 
     ArmeriaHttpClientResponseSubscriber(HttpResponse httpResponse) {
         httpResponse.completionFuture().whenComplete(this);
-        httpResponse.subscribe(this);
+        httpResponse.subscribe(this, eventLoop);
     }
 
     CompletableFuture<HttpHeaders> httpHeadersFuture() {
@@ -170,7 +172,7 @@ final class ArmeriaHttpClientResponseSubscriber
             }
 
             // If this stream is already completed, invoke 'onComplete' or 'onError' in asynchronous manner.
-            Schedulers.single().schedule(() -> {
+            eventLoop.execute(() -> {
                 if (completedCause != null) {
                     relayOnError(completedCause);
                 } else {

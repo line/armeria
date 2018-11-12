@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.spring;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -150,26 +149,26 @@ public final class ArmeriaConfigurationUtil {
     }
 
     /**
-     * Configures the specified {@link ServerBuilder} to bind on the specified ports.
+     * Adds {@link Port}s to the specified {@link ServerBuilder}.
      */
     public static void configurePorts(ServerBuilder server, List<Port> ports) {
         requireNonNull(server, "server");
         requireNonNull(ports, "ports");
-
         ports.forEach(p -> {
             final String ip = p.getIp();
             final String iface = p.getIface();
             final int port = p.getPort();
-            final SessionProtocol proto = firstNonNull(p.getProtocol(), SessionProtocol.HTTP);
+            final List<SessionProtocol> protocols = p.getProtocols();
 
             if (ip == null) {
                 if (iface == null) {
-                    server.port(new ServerPort(port, proto));
+                    server.port(new ServerPort(port, protocols));
                 } else {
                     try {
                         final Enumeration<InetAddress> e = NetworkInterface.getByName(iface).getInetAddresses();
                         while (e.hasMoreElements()) {
-                            server.port(new ServerPort(new InetSocketAddress(e.nextElement(), port), proto));
+                            server.port(new ServerPort(new InetSocketAddress(e.nextElement(), port),
+                                                       protocols));
                         }
                     } catch (SocketException e) {
                         throw new IllegalStateException("Failed to find an iface: " + iface, e);
@@ -180,7 +179,7 @@ public final class ArmeriaConfigurationUtil {
                     final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(ip);
                     try {
                         server.port(new ServerPort(new InetSocketAddress(
-                                InetAddress.getByAddress(bytes), port), proto));
+                                InetAddress.getByAddress(bytes), port), protocols));
                     } catch (UnknownHostException e) {
                         // Should never happen.
                         throw new Error(e);

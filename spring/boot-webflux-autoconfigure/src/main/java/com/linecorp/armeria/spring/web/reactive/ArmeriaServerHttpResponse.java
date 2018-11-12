@@ -59,18 +59,18 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
     private final ServiceRequestContext ctx;
     private final CompletableFuture<HttpResponse> future;
-    private final ArmeriaBufferFactory factory;
+    private final DataBufferFactoryWrapper<?> factoryWrapper;
 
     private final HttpHeaders headers;
 
     ArmeriaServerHttpResponse(ServiceRequestContext ctx,
                               CompletableFuture<HttpResponse> future,
-                              ArmeriaBufferFactory factory,
+                              DataBufferFactoryWrapper<?> factoryWrapper,
                               @Nullable String serverHeader) {
-        super(requireNonNull(factory, "factory"));
+        super(requireNonNull(factoryWrapper, "factoryWrapper").dataBufferFactory());
         this.ctx = requireNonNull(ctx, "ctx");
         this.future = requireNonNull(future, "future");
-        this.factory = factory;
+        this.factoryWrapper = factoryWrapper;
 
         headers = new DefaultHttpHeaders();
         if (!Strings.isNullOrEmpty(serverHeader)) {
@@ -99,7 +99,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
         return Mono.defer(() -> {
             final HttpResponse response = HttpResponse.of(
-                    Flux.concat(Mono.just(headers), publisher.map(factory::unwrap))
+                    Flux.concat(Mono.just(headers), publisher.map(factoryWrapper::toHttpData))
                         // Publish the response stream on the event loop in order to avoid the possibility of
                         // calling subscription.request() from multiple threads while publishing messages
                         // with onNext signals or starting the subscription with onSubscribe signal.
@@ -176,6 +176,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
         return MoreObjects.toStringHelper(this)
                           .add("ctx", ctx)
                           .add("future", future)
+                          .add("factoryWrapper", factoryWrapper)
                           .add("headers", headers)
                           .toString();
     }

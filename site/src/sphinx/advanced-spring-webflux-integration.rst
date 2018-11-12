@@ -11,10 +11,11 @@ Spring framework provides powerful features which are necessary for building a w
 dependency injection, data binding, AOP, transaction, etc. In addition, if your Spring application integrates
 with Armeria, you can leverage the following:
 
-- rich support for Apache `Thrift <https://thrift.apache.org/>`_ and `gRPC <https://grpc.io/>`_,
+- Rich support for Apache `Thrift <https://thrift.apache.org/>`_ and `gRPC <https://grpc.io/>`_,
   including the documentation service
-- a way to run HTTP REST service and RPC service in the same port
-- full HTTP/2 support for both server-side and client-side, including HTTP/2 on cleartext connections
+- Ability to run HTTP REST service and RPC service in the same port
+- Full HTTP/2 support for both server-side and client-side, including :ref:`the fancy web console <server-docservice>`
+  that enables you to send Thrift and gRPC requests from web browser.
 - `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>`_ support which is
   interoperable with load balancers such as `HAProxy <https://www.haproxy.org/>`_ and
   `AWS ELB <https://aws.amazon.com/elasticloadbalancing/>`_.
@@ -24,20 +25,22 @@ the following dependency:
 
 For Maven:
 
-.. code-block:: xml
+.. parsed-literal::
+    :class: highlight-xml
 
     <dependency>
         <groupId>com.linecorp.armeria</groupId>
         <artifactId>spring-boot-webflux-starter</artifactId>
-        <version>x.y.z</version>
+        <version>\ |release|\ </version>
     </dependency>
 
 For Gradle:
 
-.. code-block:: groovy
+.. parsed-literal::
+    :class: highlight-groovy
 
     dependencies {
-        compile 'com.linecorp.armeria:spring-boot-webflux-starter:x.y.z'
+        compile 'com.linecorp.armeria:spring-boot-webflux-starter:\ |release|\ '
     }
 
 The above starter configures Armeria as the HTTP server for WebFlux to run on by referring to ``application.yml``
@@ -63,8 +66,20 @@ The user can customize the server by defining a bean of the type in the configur
          */
         @Bean
         public ArmeriaServerConfigurator armeriaServerConfigurator() {
+            // Customize the server using the given ServerBuilder. For example:
             return builder -> {
-                // Customize the server using the given ServerBuilder.
+                // Add DocService that enables you to send Thrift and gRPC requests from web browser.
+                builder.serviceUnder("/docs", new DocService());
+
+                // Logging every request and response which is received by the server.
+                builder.decorator(LoggingService.newDecorator());
+
+                // Write access log after completing a request.
+                builder.accessLogWriter(AccessLogWriter.combined(), false);
+
+                // You can also bind asynchronous RPC services such as Thrift and gRPC:
+                // builder.service(THttpService.of(...));
+                // builder.service(new GrpcServiceBuilder()...build());
             };
         }
     }
@@ -82,9 +97,21 @@ in your configuration as follows:
          */
         @Bean
         public ArmeriaClientConfigurator armeriaClientConfigurator() {
+            // Customize the client using the given HttpClientBuilder. For example:
             return builder -> {
-                // Customize the client using the given HttpClientBuilder.
-            }
+                // Use circuit breaker for every endpoint.
+                final Function<String, CircuitBreaker> factory = key -> CircuitBreaker.of("my-cb-" + key);
+                final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
+                builder.decorator(CircuitBreakerHttpClient.newPerHostDecorator(factory, strategy));
+
+                // Automatically retry a request when the server returns a 5xx response.
+                builder.decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()));
+
+                // Use a custom client factory in order not to validate a certificate received from the server.
+                final ClientFactory clientFactory = new ClientFactoryBuilder().sslContextCustomizer(
+                        b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
+                builder.factory(clientFactory);
+            };
         }
     }
 
@@ -92,4 +119,4 @@ in your configuration as follows:
 
     If you are not familiar with Spring Boot and Spring WebFlux, please refer to
     `Spring Boot Reference Guide <https://docs.spring.io/spring-boot/docs/current/reference/html/>`_ and
-    `Spring Framework Documentation <https://docs.spring.io/spring/docs/current/spring-framework-reference/>`_.
+    `Web on Reactive Stack <https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html/>`_.

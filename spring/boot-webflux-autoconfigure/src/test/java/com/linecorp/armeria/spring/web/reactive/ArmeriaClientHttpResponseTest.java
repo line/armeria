@@ -45,7 +45,7 @@ public class ArmeriaClientHttpResponseTest {
         final HttpHeaders httpHeaders = HttpHeaders.of(HttpStatus.OK);
         final HttpResponse httpResponse = HttpResponse.of(
                 Flux.concat(Mono.just(httpHeaders),
-                            Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })
+                            Flux.just("a", "b", "c", "d", "e")
                                 .map(HttpData::ofUtf8)));
         final ArmeriaClientHttpResponse response =
                 response(new ArmeriaHttpClientResponseSubscriber(httpResponse), httpHeaders);
@@ -90,7 +90,7 @@ public class ArmeriaClientHttpResponseTest {
     @Test
     public void cancel() {
         final AtomicBoolean completedWithError = new AtomicBoolean();
-        final Flux<HttpData> bodyPub = Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })
+        final Flux<HttpData> bodyPub = Flux.just("a", "b", "c", "d", "e")
                                            .map(HttpData::ofUtf8)
                                            .doOnCancel(() -> completedWithError.set(true));
 
@@ -128,6 +128,6 @@ public class ArmeriaClientHttpResponseTest {
         assertThat(h).isEqualTo(expectedHttpHeaders);
 
         return new ArmeriaClientHttpResponse(h, subscriber.toResponseBodyPublisher(),
-                                             ArmeriaBufferFactory.DEFAULT);
+                                             DataBufferFactoryWrapper.DEFAULT);
     }
 }

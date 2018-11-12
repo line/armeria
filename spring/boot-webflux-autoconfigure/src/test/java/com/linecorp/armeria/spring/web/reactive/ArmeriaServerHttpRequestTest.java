@@ -53,14 +53,14 @@ public class ArmeriaServerHttpRequestTest {
     }
 
     private static ArmeriaServerHttpRequest request(HttpRequest httpRequest) {
-        return new ArmeriaServerHttpRequest(ctx, httpRequest, ArmeriaBufferFactory.DEFAULT);
+        return new ArmeriaServerHttpRequest(ctx, httpRequest, DataBufferFactoryWrapper.DEFAULT);
     }
 
     @Test
     public void readBodyStream() throws Exception {
         final HttpRequest httpRequest =
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/"),
-                               Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })
+                               Flux.just("a", "b", "c", "d", "e")
                                    .map(HttpData::ofUtf8));
 
         final ArmeriaServerHttpRequest req = request(httpRequest);
@@ -101,7 +101,7 @@ public class ArmeriaServerHttpRequestTest {
     public void cancel() {
         final HttpRequest httpRequest =
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/"),
-                               Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })
+                               Flux.just("a", "b", "c", "d", "e")
                                    .map(HttpData::ofUtf8));
 
         final ArmeriaServerHttpRequest req = request(httpRequest);

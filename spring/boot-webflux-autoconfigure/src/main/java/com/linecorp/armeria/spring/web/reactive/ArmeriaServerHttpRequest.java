@@ -55,14 +55,14 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
 
     ArmeriaServerHttpRequest(ServiceRequestContext ctx,
                              HttpRequest req,
-                             ArmeriaBufferFactory factory) {
+                             DataBufferFactoryWrapper<?> factoryWrapper) {
         super(URI.create(requireNonNull(req, "req").path()),
               null,
               fromArmeriaHttpHeaders(req.headers()));
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = req;
 
-        body = Flux.from(req).cast(HttpData.class).map(factory::wrap)
+        body = Flux.from(req).cast(HttpData.class).map(factoryWrapper::toDataBuffer)
                    // Guarantee that the context is accessible from a controller method
                    // when a user specify @RequestBody in order to convert a request body into an object.
                    .publishOn(Schedulers.fromExecutor(ctx.contextAwareExecutor()));
