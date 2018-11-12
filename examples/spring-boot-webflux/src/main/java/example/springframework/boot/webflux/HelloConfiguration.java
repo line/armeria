@@ -1,4 +1,4 @@
-package example.springframework.boot.armeria;
+package example.springframework.boot.webflux;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

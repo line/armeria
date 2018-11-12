@@ -67,12 +67,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringBootTest(
-        webEnvironment = WebEnvironment.RANDOM_PORT,
-        // https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-testing.html
-        // #boot-features-testing-spring-boot-applications-detecting-web-app-type
-        properties = "spring.main.web-application-type=reactive"
-)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test_reactive")
 public class ReactiveWebServerAutoConfigurationTest {
 

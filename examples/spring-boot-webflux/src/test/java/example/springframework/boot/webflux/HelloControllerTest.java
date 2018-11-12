@@ -1,4 +1,4 @@
-package example.springframework.boot.armeria;
+package example.springframework.boot.webflux;
 
 import javax.inject.Inject;
 

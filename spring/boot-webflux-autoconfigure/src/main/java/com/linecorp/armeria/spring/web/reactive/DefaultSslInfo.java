@@ -107,7 +107,7 @@ final class DefaultSslInfo implements SslInfo {
         Certificate[] certificates;
         try {
             certificates = session.getPeerCertificates();
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             return null;
         }
 

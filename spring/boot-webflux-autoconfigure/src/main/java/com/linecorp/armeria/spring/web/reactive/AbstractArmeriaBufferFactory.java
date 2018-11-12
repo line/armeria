@@ -83,7 +83,7 @@ abstract class AbstractArmeriaBufferFactory<T extends DataBufferFactory>
 
     protected abstract DataBuffer wrap0(DefaultHttpData httpData);
 
-    protected final T delegate() {
+    final T delegate() {
         return delegate;
     }
 }

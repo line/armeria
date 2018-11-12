@@ -124,9 +124,9 @@ public class ArmeriaClientHttpRequestTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void writeAndFlushWithMultiplePublisher() {
         final ArmeriaClientHttpRequest request = request();
+        @SuppressWarnings("unchecked")
         final Flux<Flux<DataBuffer>> body = Flux.fromArray(
                 new Flux[] {
                         Flux.fromArray(new String[] { "a", "b", "c", "d", "e" })

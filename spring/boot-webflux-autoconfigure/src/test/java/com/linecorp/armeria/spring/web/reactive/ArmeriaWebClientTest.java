@@ -54,10 +54,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringBootTest(
-        webEnvironment = WebEnvironment.RANDOM_PORT,
-        properties = "spring.main.web-application-type=reactive"
-)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test_reactive")
 public class ArmeriaWebClientTest {
 

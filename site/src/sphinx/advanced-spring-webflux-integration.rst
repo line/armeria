@@ -1,10 +1,23 @@
-.. _`Spring Boot Reference Guide`: https://docs.spring.io/spring-boot/docs/current/reference/html/
-.. _`armeria-examples`: https://github.com/line/armeria-examples
-
 .. _advanced-spring-webflux-integration:
 
 Using Armeria with Spring WebFlux
 =================================
+
+.. note::
+
+    Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find the fully working example code.
+
+Spring framework provides powerful features which are necessary for building a web application, such as
+dependency injection, data binding, AOP, transaction, etc. In addition, if your Spring application integrates
+with Armeria, you can leverage the following:
+
+- rich support for Apache `Thrift <https://thrift.apache.org/>`_ and `gRPC <https://grpc.io/>`_,
+  including the documentation service
+- a way to run HTTP REST service and RPC service in the same port
+- full HTTP/2 support for both server-side and client-side, including HTTP/2 on cleartext connections
+- `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>`_ support which is
+  interoperable with load balancers such as `HAProxy <https://www.haproxy.org/>`_ and
+  `AWS ELB <https://aws.amazon.com/elasticloadbalancing/>`_.
 
 Armeria can be plugged in as the underlying HTTP server for a Spring WebFlux application by adding
 the following dependency:
@@ -27,7 +40,7 @@ For Gradle:
         compile 'com.linecorp.armeria:spring-boot-webflux-starter:x.y.z'
     }
 
-The above starter configures Armeria as the HTTP server for WebFlux to run on by referring to `application.yml`
+The above starter configures Armeria as the HTTP server for WebFlux to run on by referring to ``application.yml``
 when the application starts up. A user can customize the server configuration with the same properties
 provided by Spring Boot as for other servers supported with WebFlux such as Tomcat or Reactor Netty.
 The following is a simple example for configuring the server:
@@ -56,7 +69,7 @@ The user can customize the server by defining a bean of the type in the configur
         }
     }
 
-Armeria can also be plugged as the underlying HTTP client for the Spring `WebClient`. To customize
+Armeria can also be plugged as the underlying HTTP client for the Spring ``WebClient``. To customize
 client settings for the Armeria HTTP client, simply define an :api:`ArmeriaClientConfigurator` bean
 in your configuration as follows:
 
@@ -77,6 +90,6 @@ in your configuration as follows:
 
 .. note::
 
-    You can find a simple reactive Spring Boot application from `armeria-examples`_.
-    Also, please refer to `Spring Boot Reference Guide`_ for more information about Spring Boot and the
-    `Spring Framework Reference Guide` for more information about Spring WebFlux.
+    If you are not familiar with Spring Boot and Spring WebFlux, please refer to
+    `Spring Boot Reference Guide <https://docs.spring.io/spring-boot/docs/current/reference/html/>`_ and
+    `Spring Framework Documentation <https://docs.spring.io/spring/docs/current/spring-framework-reference/>`_.

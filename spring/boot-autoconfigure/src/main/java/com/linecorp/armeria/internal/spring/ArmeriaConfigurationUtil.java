@@ -150,7 +150,7 @@ public final class ArmeriaConfigurationUtil {
     }
 
     /**
-     * Configures the server ports that the specified {@link ServerBuilder} will be bound on.
+     * Configures the specified {@link ServerBuilder} to bind on the specified ports.
      */
     public static void configurePorts(ServerBuilder server, List<Port> ports) {
         requireNonNull(server, "server");
