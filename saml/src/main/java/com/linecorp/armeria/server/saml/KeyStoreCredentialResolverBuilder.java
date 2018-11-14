@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
@@ -136,6 +137,10 @@ public final class KeyStoreCredentialResolverBuilder {
 
         assert classLoader != null : "classLoader";
         assert resourcePath != null : "resourcePath";
-        return classLoader.getResourceAsStream(resourcePath);
+        final InputStream is = classLoader.getResourceAsStream(resourcePath);
+        if (is == null) {
+            throw new FileNotFoundException("Resource not found: " + resourcePath);
+        }
+        return is;
     }
 }
