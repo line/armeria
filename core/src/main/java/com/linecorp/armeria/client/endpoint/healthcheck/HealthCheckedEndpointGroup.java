@@ -17,7 +17,6 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -92,7 +91,7 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                               .map(connection -> connection.healthChecker.isHealthy(connection.endpoint()))
                               .collect(toImmutableList()),
                 t -> false);
-        return healthCheckResults.handle(voidFunction((result, thrown) -> {
+        return healthCheckResults.handle((result, thrown) -> {
             final ImmutableList.Builder<Endpoint> newHealthyEndpoints = ImmutableList.builder();
             for (int i = 0; i < result.size(); i++) {
                 if (result.get(i)) {
@@ -100,7 +99,8 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
             setEndpoints(newHealthyEndpoints.build());
-        }));
+            return null;
+        });
     }
 
     /**

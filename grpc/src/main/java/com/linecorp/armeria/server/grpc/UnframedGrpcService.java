@@ -200,13 +200,14 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             return;
         }
 
-        grpcResponse.aggregate().whenCompleteAsync(
+        grpcResponse.aggregate().handleAsync(
                 (framedResponse, t) -> {
                     if (t != null) {
                         res.completeExceptionally(t);
                     } else {
                         deframeAndRespond(ctx, framedResponse, res);
                     }
+                    return null;
                 },
                 ctx.eventLoop());
     }

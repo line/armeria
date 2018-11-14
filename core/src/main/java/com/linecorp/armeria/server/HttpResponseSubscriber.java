@@ -234,7 +234,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             // If timeout occurs, respond with 503 Service Unavailable.
             ((HttpResponseException) cause).httpResponse()
                                            .aggregate(ctx.executor())
-                                           .whenCompleteAsync((message, throwable) -> {
+                                           .handleAsync((message, throwable) -> {
                                                if (throwable != null) {
                                                    failAndRespond(throwable,
                                                                   INTERNAL_SERVER_ERROR_MESSAGE,
@@ -242,6 +242,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                                                } else {
                                                    failAndRespond(cause, message, Http2Error.CANCEL);
                                                }
+                                               return null;
                                            }, ctx.executor());
         } else if (cause instanceof HttpStatusException) {
             failAndRespond(cause,

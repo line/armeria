@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.tomcat;
 
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -59,7 +58,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.internal.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -257,18 +255,18 @@ public abstract class TomcatService implements HttpService {
         }
 
         final HttpResponseWriter res = HttpResponse.streaming();
-        req.aggregate().handle(voidFunction((aReq, cause) -> {
-            if (cause != null) {
-                logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
-                return;
-            }
-
+        req.aggregate().handle((aReq, cause) -> {
             try {
+                if (cause != null) {
+                    logger.warn("{} Failed to aggregate a request:", ctx, cause);
+                    res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                    return null;
+                }
+
                 final Request coyoteReq = convertRequest(ctx, aReq);
                 if (coyoteReq == null) {
                     res.close(HttpHeaders.of(HttpStatus.BAD_REQUEST));
-                    return;
+                    return null;
                 }
                 final Response coyoteRes = new Response();
                 coyoteReq.setResponse(coyoteRes);
@@ -303,7 +301,9 @@ public abstract class TomcatService implements HttpService {
                 logger.warn("{} Failed to invoke Tomcat:", ctx, t);
                 res.close();
             }
-        })).exceptionally(CompletionActions::log);
+
+            return null;
+        });
 
         return res;
     }
