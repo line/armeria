@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.jetty;
 
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -237,11 +236,11 @@ public final class JettyService implements HttpService {
 
         final HttpResponseWriter res = HttpResponse.streaming();
 
-        req.aggregate().handle(voidFunction((aReq, cause) -> {
+        req.aggregate().handle((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
                 res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
-                return;
+                return null;
             }
 
             boolean success = false;
@@ -258,12 +257,13 @@ public final class JettyService implements HttpService {
 
                 ctx.blockingTaskExecutor().execute(() -> invoke(ctx, res, transport, httpChannel));
                 success = true;
+                return null;
             } finally {
                 if (!success) {
                     res.close();
                 }
             }
-        })).exceptionally(CompletionActions::log);
+        }).exceptionally(CompletionActions::log);
 
         return res;
     }

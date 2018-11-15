@@ -358,7 +358,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        completionFuture().whenComplete(aggregator);
+        completionFuture().handle(aggregator);
         subscribe(aggregator);
         return future;
     }
@@ -370,7 +370,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        completionFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
     }
@@ -385,7 +385,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        completionFuture().whenComplete(aggregator);
+        completionFuture().handle(aggregator);
         subscribe(aggregator, true);
         return future;
     }
@@ -402,7 +402,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        completionFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor, true);
         return future;
     }

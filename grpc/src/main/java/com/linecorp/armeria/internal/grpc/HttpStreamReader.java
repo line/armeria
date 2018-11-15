@@ -18,7 +18,7 @@ package com.linecorp.armeria.internal.grpc;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
@@ -40,7 +40,7 @@ import io.grpc.Status;
 /**
  * A {@link Subscriber} to read HTTP messages and pass to gRPC business logic.
  */
-public class HttpStreamReader implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
+public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
@@ -175,9 +175,9 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiConsumer<Void
     }
 
     @Override
-    public void accept(Void unused, Throwable cause) {
+    public Void apply(@Nullable Void unused, @Nullable Throwable cause) {
         if (cancelled) {
-            return;
+            return null;
         }
 
         if (cause == null) {
@@ -185,6 +185,8 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiConsumer<Void
         } else {
             transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
         }
+
+        return null;
     }
 
     public void cancel() {

@@ -171,7 +171,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             return;
         }
         res.subscribe(responseReader, ctx.eventLoop(), true);
-        res.completionFuture().whenCompleteAsync(responseReader, ctx.eventLoop());
+        res.completionFuture().handleAsync(responseReader, ctx.eventLoop());
     }
 
     @Override

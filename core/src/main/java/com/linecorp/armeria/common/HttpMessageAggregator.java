@@ -19,7 +19,7 @@ package com.linecorp.armeria.common;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
@@ -33,7 +33,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.ReferenceCountUtil;
 
-abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
+abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
 
     private final CompletableFuture<AggregatedHttpMessage> future;
     private final List<HttpData> contentList = new ArrayList<>();
@@ -109,10 +109,10 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
     }
 
     @Override
-    public void accept(Void unused, Throwable cause) {
+    public Void apply(Void unused, Throwable cause) {
         if (cause != null) {
             fail(cause);
-            return;
+            return null;
         }
 
         final HttpData content;
@@ -152,6 +152,8 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
         } catch (Throwable e) {
             future.completeExceptionally(e);
         }
+
+        return null;
     }
 
     private void fail(Throwable cause) {
