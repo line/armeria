@@ -346,7 +346,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
-        completionFuture().whenComplete(aggregator);
+        completionFuture().handle(aggregator);
         subscribe(aggregator);
         return future;
     }
@@ -359,7 +359,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(executor, "executor");
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
-        completionFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
     }
@@ -374,7 +374,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
-        completionFuture().whenComplete(aggregator);
+        completionFuture().handle(aggregator);
         subscribe(aggregator, true);
         return future;
     }
@@ -391,7 +391,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
-        completionFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor, true);
         return future;
     }

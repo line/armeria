@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.thrift;
 
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -419,7 +418,7 @@ public final class THttpService extends AbstractHttpService {
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(voidFunction((aReq, cause) -> {
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
             if (cause != null) {
                 final HttpResponse errorRes;
                 if (Flags.verboseResponses()) {
@@ -430,11 +429,12 @@ public final class THttpService extends AbstractHttpService {
                     errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                 }
                 responseFuture.complete(errorRes);
-                return;
+                return null;
             }
 
             decodeAndInvoke(ctx, aReq, serializationFormat, responseFuture);
-        })).exceptionally(CompletionActions::log);
+            return null;
+        }).exceptionally(CompletionActions::log);
         return res;
     }
 
@@ -609,15 +609,15 @@ public final class THttpService extends AbstractHttpService {
             return;
         }
 
-        reply.handle(voidFunction((result, cause) -> {
+        reply.handle((result, cause) -> {
             if (func.isOneWay()) {
                 handleOneWaySuccess(ctx, reply, res, serializationFormat);
-                return;
+                return null;
             }
 
             if (cause != null) {
                 handleException(ctx, reply, res, serializationFormat, seqId, func, cause);
-                return;
+                return null;
             }
 
             try {
@@ -625,7 +625,9 @@ public final class THttpService extends AbstractHttpService {
             } catch (Throwable t) {
                 handleException(ctx, new DefaultRpcResponse(t), res, serializationFormat, seqId, func, t);
             }
-        })).exceptionally(CompletionActions::log);
+
+            return null;
+        }).exceptionally(CompletionActions::log);
     }
 
     private static RpcRequest toRpcRequest(Class<?> serviceType, String method, TBase<?, ?> thriftArgs) {

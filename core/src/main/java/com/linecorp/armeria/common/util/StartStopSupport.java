@@ -233,7 +233,7 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
         }
 
         final CompletableFuture<Void> future = stopFuture.whenCompleteAsync(
-                (unused1, unused2) -> enter(State.STOPPED, null), executor);
+                (unused1, cause) -> enter(State.STOPPED, null), executor);
         this.future = future;
         return future;
     }

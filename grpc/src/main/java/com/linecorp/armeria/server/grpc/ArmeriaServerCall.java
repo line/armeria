@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static io.netty.util.AsciiString.c2b;
 import static java.util.Objects.requireNonNull;
 
@@ -173,13 +172,16 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
 
-        res.completionFuture().handleAsync(voidFunction((unused, t) -> {
+        res.completionFuture().handleAsync((unused, t) -> {
             if (!closeCalled) {
                 // Closed by client, not by server.
                 cancelled = true;
-                close(Status.CANCELLED, EMPTY_METADATA);
+                try (SafeCloseable ignore = ctx.pushIfAbsent()) {
+                    close(Status.CANCELLED, EMPTY_METADATA);
+                }
             }
-        }), ctx.contextAwareEventLoop());
+            return null;
+        }, ctx.eventLoop());
     }
 
     @Override

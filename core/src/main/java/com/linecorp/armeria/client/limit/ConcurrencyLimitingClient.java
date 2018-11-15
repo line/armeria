@@ -239,9 +239,10 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
             try (SafeCloseable ignored = ctx.push()) {
                 try {
                     final O actualRes = delegate().execute(ctx, req);
-                    actualRes.completionFuture().whenCompleteAsync((unused, cause) -> {
+                    actualRes.completionFuture().handleAsync((unused, cause) -> {
                         numActiveRequests.decrementAndGet();
                         drain();
+                        return null;
                     }, ctx.eventLoop());
                     deferred.delegate(actualRes);
                 } catch (Throwable t) {

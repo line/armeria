@@ -22,7 +22,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -423,16 +422,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }, RequestLogAvailability.COMPLETE);
             }
 
-            req.completionFuture().handle(voidFunction((ret, cause) -> {
+            req.completionFuture().handle((ret, cause) -> {
                 if (cause == null) {
                     logBuilder.endRequest();
                 } else {
                     logBuilder.endRequest(cause);
                     // NB: logBuilder.endResponse(cause) will be called by HttpResponseSubscriber below
                 }
-            })).exceptionally(CompletionActions::log);
+                return null;
+            }).exceptionally(CompletionActions::log);
 
-            res.completionFuture().handleAsync(voidFunction((ret, cause) -> {
+            res.completionFuture().handleAsync((ret, cause) -> {
                 req.abort();
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
                 if (!isTransient) {
@@ -442,7 +442,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 if (unfinishedRequests.isEmpty() && handledLastRequest) {
                     ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                 }
-            }), eventLoop).exceptionally(CompletionActions::log);
+                return null;
+            }, eventLoop).exceptionally(CompletionActions::log);
 
             // Set the response to the request in order to be able to immediately abort the response
             // when the peer cancels the stream.

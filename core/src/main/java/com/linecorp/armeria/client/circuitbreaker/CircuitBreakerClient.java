@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
@@ -131,15 +130,17 @@ public abstract class CircuitBreakerClient<I extends Request, O extends Response
      */
     protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
                                                  CompletionStage<Boolean> future) {
-        future.handle(voidFunction((success, unused) -> {
+        future.handle((success, unused) -> {
             if (success != null) {
                 if (success) {
                     circuitBreaker.onSuccess();
                 } else {
                     circuitBreaker.onFailure();
                 }
+            } else {
+                // Ignore, because 'null' means the user does not want to count as a success nor failure.
             }
-            // If the success is null, the user does not want to count as a success nor failure. So ignore it.
-        })).exceptionally(CompletionActions::log);
+            return null;
+        }).exceptionally(CompletionActions::log);
     }
 }
