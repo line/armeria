@@ -1,15 +1,12 @@
 package example.springframework.boot.webflux;
 
-import java.util.function.Function;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
@@ -38,7 +35,7 @@ public class HelloConfiguration {
             // Add DocService that enables you to send Thrift and gRPC requests from web browser.
             builder.serviceUnder("/docs", new DocService());
 
-            // Logging every request and response which is received by the server.
+            // Log every message which the server receives and responds.
             builder.decorator(LoggingService.newDecorator());
 
             // Write access log after completing a request.
@@ -57,15 +54,15 @@ public class HelloConfiguration {
     public ArmeriaClientConfigurator armeriaClientConfigurator() {
         // Customize the client using the given HttpClientBuilder. For example:
         return builder -> {
-            // Use circuit breaker for every endpoint.
-            final Function<String, CircuitBreaker> factory = key -> CircuitBreaker.of("my-cb-" + key);
+            // Use a circuit breaker for each remote host.
             final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(CircuitBreakerHttpClient.newPerHostDecorator(factory, strategy));
+            builder.decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator());
 
             // Automatically retry a request when the server returns a 5xx response.
             builder.decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()));
 
-            // Use a custom client factory in order not to validate a certificate received from the server.
+            // Use a custom client factory in order to disable the certificate validation,
+            // which means any certificate received from the server will be accepted.
             final ClientFactory clientFactory = new ClientFactoryBuilder().sslContextCustomizer(
                     b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
             builder.factory(clientFactory);

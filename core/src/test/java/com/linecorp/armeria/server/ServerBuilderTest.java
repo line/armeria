@@ -21,8 +21,6 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.google.common.collect.Iterables;
-
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -40,7 +38,7 @@ public class ServerBuilderTest {
 
         final List<ServerPort> ports = server.config().ports();
         assertThat(ports.size()).isOne(); // merged
-        assertThat(Iterables.getFirst(ports, null).protocols())
+        assertThat(ports.get(0).protocols())
                 .contains(SessionProtocol.HTTP, SessionProtocol.HTTPS);
     }
 

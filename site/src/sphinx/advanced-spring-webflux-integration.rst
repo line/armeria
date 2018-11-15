@@ -15,7 +15,7 @@ with Armeria, you can leverage the following:
   including the documentation service
 - Ability to run HTTP REST service and RPC service in the same port
 - Full HTTP/2 support for both server-side and client-side, including :ref:`the fancy web console <server-docservice>`
-  that enables you to send Thrift and gRPC requests from web browser.
+  that enables you to send Thrift and gRPC requests from a web browser.
 - `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>`_ support which is
   interoperable with load balancers such as `HAProxy <https://www.haproxy.org/>`_ and
   `AWS ELB <https://aws.amazon.com/elasticloadbalancing/>`_.
@@ -71,7 +71,7 @@ The user can customize the server by defining a bean of the type in the configur
                 // Add DocService that enables you to send Thrift and gRPC requests from web browser.
                 builder.serviceUnder("/docs", new DocService());
 
-                // Logging every request and response which is received by the server.
+                // Log every message which the server receives and responds.
                 builder.decorator(LoggingService.newDecorator());
 
                 // Write access log after completing a request.
@@ -99,15 +99,15 @@ in your configuration as follows:
         public ArmeriaClientConfigurator armeriaClientConfigurator() {
             // Customize the client using the given HttpClientBuilder. For example:
             return builder -> {
-                // Use circuit breaker for every endpoint.
-                final Function<String, CircuitBreaker> factory = key -> CircuitBreaker.of("my-cb-" + key);
+                // Use a circuit breaker for each remote host.
                 final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-                builder.decorator(CircuitBreakerHttpClient.newPerHostDecorator(factory, strategy));
+                builder.decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator());
 
                 // Automatically retry a request when the server returns a 5xx response.
                 builder.decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()));
 
-                // Use a custom client factory in order not to validate a certificate received from the server.
+                // Use a custom client factory in order to disable the certificate validation,
+                // which means any certificate received from the server will be accepted.
                 final ClientFactory clientFactory = new ClientFactoryBuilder().sslContextCustomizer(
                         b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
                 builder.factory(clientFactory);

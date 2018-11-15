@@ -1170,7 +1170,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Returns a list of {@link ServerPort} which consists of distinct port numbers except for the port
+     * Returns a list of {@link ServerPort}s which consists of distinct port numbers except for the port
      * {@code 0}. If there are the same port numbers with different {@link SessionProtocol}s,
      * their {@link SessionProtocol}s will be merged into a single {@link ServerPort} instance.
      * The returned list is sorted as the same order of the specified {@code ports}.
