@@ -167,19 +167,21 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         req.abort();
         ctx.logBuilder().startRequest(channel, protocol);
         ctx.logBuilder().requestHeaders(req.headers());
-        req.completionFuture().whenComplete((unused, cause) -> {
+        req.completionFuture().handle((unused, cause) -> {
             if (cause == null) {
                 ctx.logBuilder().endRequest();
             } else {
                 ctx.logBuilder().endRequest(cause);
             }
+            return null;
         });
-        res.completionFuture().whenComplete((unused, cause) -> {
+        res.completionFuture().handle((unused, cause) -> {
             if (cause == null) {
                 ctx.logBuilder().endResponse();
             } else {
                 ctx.logBuilder().endResponse(cause);
             }
+            return null;
         });
 
         return true;

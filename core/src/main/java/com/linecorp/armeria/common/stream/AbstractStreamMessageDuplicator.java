@@ -411,7 +411,10 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             downstreamSubscriptions.clear();
             final CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(
                     completionFutures.toArray(EMPTY_FUTURES));
-            allDoneFuture.whenComplete((unused1, unused2) -> signals.clear());
+            allDoneFuture.handle((unused1, unused2) -> {
+                signals.clear();
+                return null;
+            });
         }
     }
 

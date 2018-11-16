@@ -137,7 +137,10 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
         boolean success = false;
         try {
             final O res = delegate().execute(ctx, req);
-            res.completionFuture().whenComplete((unused, cause) -> numActiveRequests.decrementAndGet());
+            res.completionFuture().handle((unused, cause) -> {
+                numActiveRequests.decrementAndGet();
+                return null;
+            });
             success = true;
             return res;
         } finally {
