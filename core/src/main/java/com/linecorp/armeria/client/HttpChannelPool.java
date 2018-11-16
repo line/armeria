@@ -173,57 +173,8 @@ final class HttpChannelPool implements AutoCloseable {
         if (usePendingAcquisition(desiredProtocol, key, promise)) {
             return;
         }
-        setPendingAcquisition(desiredProtocol, key, promise);
 
-        // Create a new connection.
-        final Future<Channel> f = connect(desiredProtocol, key);
-        if (f.isDone()) {
-            notifyConnect(desiredProtocol, key, f, promise);
-        } else {
-            f.addListener((Future<Channel> future) -> notifyConnect(desiredProtocol, key, future, promise));
-        }
-    }
-
-    /**
-     * Tries to use the pending HTTP/2 connection to avoid creating an extra connection.
-     *
-     * @return {@code true} if succeeded to reuse the pending connection.
-     */
-    private boolean usePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
-                                          CompletableFuture<PooledChannel> promise) {
-
-        if (desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C) {
-            // Can't use HTTP/1 connections because they will not be available in the pool until
-            // the request is done.
-            return false;
-        }
-
-        final CompletableFuture<PooledChannel> pendingAcquisition =
-                getPendingAcquisition(desiredProtocol, key);
-
-        if (pendingAcquisition == null) {
-            return false;
-        }
-
-        pendingAcquisition.handle((pch, cause) -> {
-            if (cause == null) {
-                if (pch.protocol().isMultiplex()) {
-                    promise.complete(pch);
-                } else {
-                    // Try to acquire again because the connection was not HTTP/2.
-                    // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
-                    // we do not waste our time looking for pending acquisitions for the host
-                    // that does not support HTTP/2.
-                    acquire(pch.protocol(), key, promise);
-                }
-            } else {
-                // Try to acquire again because the pending connection attempt has failed.
-                acquire(desiredProtocol, key, promise);
-            }
-            return null;
-        });
-
-        return true;
+        connect(desiredProtocol, key, promise);
     }
 
     /**
@@ -302,30 +253,82 @@ final class HttpChannelPool implements AutoCloseable {
         }
     }
 
-    private Future<Channel> connect(SessionProtocol desiredProtocol, PoolKey key) {
-        final InetSocketAddress remoteAddress;
+    /**
+     * Tries to use the pending HTTP/2 connection to avoid creating an extra connection.
+     *
+     * @return {@code true} if succeeded to reuse the pending connection.
+     */
+    private boolean usePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
+                                          CompletableFuture<PooledChannel> promise) {
+
+        if (desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C) {
+            // Can't use HTTP/1 connections because they will not be available in the pool until
+            // the request is done.
+            return false;
+        }
+
+        final CompletableFuture<PooledChannel> pendingAcquisition =
+                getPendingAcquisition(desiredProtocol, key);
+
+        if (pendingAcquisition == null) {
+            return false;
+        }
+
+        pendingAcquisition.handle((pch, cause) -> {
+            if (cause == null) {
+                if (pch.protocol().isMultiplex()) {
+                    promise.complete(pch);
+                } else {
+                    // Try to acquire again because the connection was not HTTP/2.
+                    // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
+                    // we do not waste our time looking for pending acquisitions for the host
+                    // that does not support HTTP/2.
+                    acquire(pch.protocol(), key, promise);
+                }
+            } else {
+                // The pending connection attempt has failed.
+                connect(desiredProtocol, key, promise);
+            }
+            return null;
+        });
+
+        return true;
+    }
+
+    private void connect(SessionProtocol desiredProtocol, PoolKey key,
+                         CompletableFuture<PooledChannel> promise) {
+
+        setPendingAcquisition(desiredProtocol, key, promise);
+
+        // Create a new connection.
+        Future<Channel> f;
         try {
-            remoteAddress = toRemoteAddress(key);
+            final InetSocketAddress remoteAddress = toRemoteAddress(key);
+            if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, desiredProtocol)) {
+                // Fail immediately if it is sure that the remote address doesn't support the desired protocol.
+                f = eventLoop.newFailedFuture(
+                        new SessionProtocolNegotiationException(desiredProtocol,
+                                                                "previously failed negotiation"));
+            } else {
+                final Promise<Channel> channelPromise = eventLoop.newPromise();
+                f = channelPromise;
+                connect(remoteAddress, desiredProtocol, channelPromise);
+            }
         } catch (UnknownHostException e) {
-            return eventLoop.newFailedFuture(e);
+            f = eventLoop.newFailedFuture(e);
         }
 
-        if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, desiredProtocol)) {
-            // Fail immediately if it is sure that the remote address does not support the requested protocol.
-            return eventLoop.newFailedFuture(
-                    new SessionProtocolNegotiationException(desiredProtocol, "previously failed negotiation"));
+        if (f.isDone()) {
+            notifyConnect(desiredProtocol, key, f, promise);
+        } else {
+            f.addListener((Future<Channel> future) -> notifyConnect(desiredProtocol, key, future, promise));
         }
-
-        final Promise<Channel> sessionPromise = eventLoop.newPromise();
-        connect(remoteAddress, desiredProtocol, sessionPromise);
-
-        return sessionPromise;
     }
 
     /**
      * A low-level operation that triggers a new connection attempt. Used only by:
      * <ul>
-     *   <li>{@link #connect(SessionProtocol, PoolKey)} - The pool has been exhausted.</li>
+     *   <li>{@link #connect(SessionProtocol, PoolKey, CompletableFuture)} - The pool has been exhausted.</li>
      *   <li>{@link HttpSessionHandler} - HTTP/2 upgrade has failed.</li>
      * </ul>
      */
