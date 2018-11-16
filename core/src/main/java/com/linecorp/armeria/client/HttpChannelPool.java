@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import java.lang.reflect.Array;
@@ -24,6 +23,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -36,9 +36,11 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.bootstrap.Bootstrap;
@@ -54,35 +56,36 @@ import io.netty.util.concurrent.Promise;
 
 final class HttpChannelPool implements AutoCloseable {
 
+    private static final Logger logger = LoggerFactory.getLogger(HttpChannelPool.class);
+
     private final EventLoop eventLoop;
     private boolean closed;
 
     // Fields for pooling connections:
     private final Map<PoolKey, Deque<PooledChannel>>[] pool;
-    private final Map<PoolKey, Future<Channel>>[] pendingConnections;
+    private final Map<PoolKey, CompletableFuture<PooledChannel>>[] pendingAcquisitions;
     private final Map<Channel, Boolean> allChannels;
-    private final SafeConnectionPoolListener channelPoolHandler;
+    private final ConnectionPoolListener listener;
 
     // Fields for creating a new connection:
     private final Bootstrap[] bootstraps;
     private final int connectTimeoutMillis;
 
-    HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
-                    ConnectionPoolListener channelPoolHandler) {
+    HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop, ConnectionPoolListener listener) {
         this.eventLoop = eventLoop;
         pool = newEnumMap(
                 Map.class,
                 unused -> new HashMap<>(),
                 SessionProtocol.H1, SessionProtocol.H1C,
                 SessionProtocol.H2, SessionProtocol.H2C);
-        pendingConnections = newEnumMap(
+        pendingAcquisitions = newEnumMap(
                 Map.class,
                 unused -> new HashMap<>(),
                 SessionProtocol.HTTP, SessionProtocol.HTTPS,
                 SessionProtocol.H1, SessionProtocol.H1C,
                 SessionProtocol.H2, SessionProtocol.H2C);
         allChannels = new IdentityHashMap<>();
-        this.channelPoolHandler = new SafeConnectionPoolListener(channelPoolHandler);
+        this.listener = listener;
 
         final Bootstrap baseBootstrap = clientFactory.newBootstrap();
         baseBootstrap.group(eventLoop);
@@ -107,7 +110,7 @@ final class HttpChannelPool implements AutoCloseable {
     }
 
     /**
-     * Returns an array whose index signifies {@link SessionProtocol#ordinal()}.
+     * Returns an array whose index signifies {@link SessionProtocol#ordinal()}. Similar to {@link EnumMap}.
      */
     private static <T> T[] newEnumMap(Class<?> elementType,
                                       Function<SessionProtocol, T> factory,
@@ -136,16 +139,18 @@ final class HttpChannelPool implements AutoCloseable {
     }
 
     @Nullable
-    private Future<Channel> getPendingConnection(SessionProtocol desiredProtocol, PoolKey key) {
-        return pendingConnections[desiredProtocol.ordinal()].get(key);
+    private CompletableFuture<PooledChannel> getPendingAcquisition(SessionProtocol desiredProtocol,
+                                                                   PoolKey key) {
+        return pendingAcquisitions[desiredProtocol.ordinal()].get(key);
     }
 
-    private void setPendingConnection(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future) {
-        pendingConnections[desiredProtocol.ordinal()].put(key, future);
+    private void setPendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
+                                       CompletableFuture<PooledChannel> future) {
+        pendingAcquisitions[desiredProtocol.ordinal()].put(key, future);
     }
 
-    private void removePendingConnection(SessionProtocol desiredProtocol, PoolKey key) {
-        pendingConnections[desiredProtocol.ordinal()].remove(key);
+    private void removePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key) {
+        pendingAcquisitions[desiredProtocol.ordinal()].remove(key);
     }
 
     /**
@@ -165,22 +170,60 @@ final class HttpChannelPool implements AutoCloseable {
             return;
         }
 
-        // Try to use the pending connection to avoid creating an extra connection.
-        final Future<Channel> pendingChannel = getPendingConnection(desiredProtocol, key);
-        if (pendingChannel != null) {
-            // Acquire again after the pending connection is completed.
-            pendingChannel.addListener(unused -> acquire(desiredProtocol, key, promise));
+        if (usePendingAcquisition(desiredProtocol, key, promise)) {
             return;
         }
+        setPendingAcquisition(desiredProtocol, key, promise);
 
         // Create a new connection.
         final Future<Channel> f = connect(desiredProtocol, key);
-        setPendingConnection(desiredProtocol, key, f);
         if (f.isDone()) {
             notifyConnect(desiredProtocol, key, f, promise);
         } else {
             f.addListener((Future<Channel> future) -> notifyConnect(desiredProtocol, key, future, promise));
         }
+    }
+
+    /**
+     * Tries to use the pending HTTP/2 connection to avoid creating an extra connection.
+     *
+     * @return {@code true} if succeeded to reuse the pending connection.
+     */
+    private boolean usePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
+                                          CompletableFuture<PooledChannel> promise) {
+
+        if (desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C) {
+            // Can't use HTTP/1 connections because they will not be available in the pool until
+            // the request is done.
+            return false;
+        }
+
+        final CompletableFuture<PooledChannel> pendingAcquisition =
+                getPendingAcquisition(desiredProtocol, key);
+
+        if (pendingAcquisition == null) {
+            return false;
+        }
+
+        pendingAcquisition.handle((pch, cause) -> {
+            if (cause == null) {
+                if (pch.protocol().isMultiplex()) {
+                    promise.complete(pch);
+                } else {
+                    // Try to acquire again because the connection was not HTTP/2.
+                    // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
+                    // we do not waste our time looking for pending acquisitions for the host
+                    // that does not support HTTP/2.
+                    acquire(pch.protocol(), key, promise);
+                }
+            } else {
+                // Try to acquire again because the pending connection attempt has failed.
+                acquire(desiredProtocol, key, promise);
+            }
+            return null;
+        });
+
+        return true;
     }
 
     /**
@@ -248,6 +291,8 @@ final class HttpChannelPool implements AutoCloseable {
             return null;
         }
 
+        // Note that we do not need to check 'HttpSession.isActive()'
+        // because an inactive session always returns null.
         return HttpSession.get(ch).protocol();
     }
 
@@ -325,7 +370,7 @@ final class HttpChannelPool implements AutoCloseable {
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key,
                                Future<Channel> future, CompletableFuture<PooledChannel> promise) {
         assert future.isDone();
-        removePendingConnection(desiredProtocol, key);
+        removePendingAcquisition(desiredProtocol, key);
 
         try {
             if (future.isSuccess()) {
@@ -333,15 +378,23 @@ final class HttpChannelPool implements AutoCloseable {
                 final SessionProtocol protocol = getProtocolIfHealthy(channel);
                 if (closed || protocol == null) {
                     channel.close();
-                    promise.completeExceptionally(ClosedSessionException.get());
+                    promise.completeExceptionally(UnprocessedRequestException.get());
                     return;
                 }
 
-                channelPoolHandler.connectionOpen(protocol,
-                                                  (InetSocketAddress) channel.remoteAddress(),
-                                                  (InetSocketAddress) channel.localAddress(),
-                                                  channel);
                 allChannels.put(channel, Boolean.TRUE);
+
+                try {
+                    listener.connectionOpen(protocol,
+                                            (InetSocketAddress) channel.remoteAddress(),
+                                            (InetSocketAddress) channel.localAddress(),
+                                            channel);
+                } catch (Exception e) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("{} Exception handling {}.connectionOpen()",
+                                    channel, listener.getClass().getName(), e);
+                    }
+                }
 
                 if (protocol.isMultiplex()) {
                     final Http2PooledChannel pooledChannel = new Http2PooledChannel(channel, protocol);
@@ -352,10 +405,6 @@ final class HttpChannelPool implements AutoCloseable {
                 }
 
                 channel.closeFuture().addListener(f -> {
-                    channelPoolHandler.connectionClosed(protocol,
-                                                        (InetSocketAddress) channel.remoteAddress(),
-                                                        (InetSocketAddress) channel.localAddress(),
-                                                        channel);
                     allChannels.remove(channel);
 
                     // Clean up old unhealthy channels by iterating from the beginning of the queue.
@@ -367,6 +416,18 @@ final class HttpChannelPool implements AutoCloseable {
                                 break;
                             }
                             queue.removeFirst();
+                        }
+                    }
+
+                    try {
+                        listener.connectionClosed(protocol,
+                                                  (InetSocketAddress) channel.remoteAddress(),
+                                                  (InetSocketAddress) channel.localAddress(),
+                                                  channel);
+                    } catch (Exception e) {
+                        if (logger.isWarnEnabled()) {
+                            logger.warn("{} Exception handling {}.connectionClosed()",
+                                        channel, listener.getClass().getName(), e);
                         }
                     }
                 });
@@ -465,7 +526,7 @@ final class HttpChannelPool implements AutoCloseable {
             this.host = host;
             this.ipAddr = ipAddr;
             this.port = port;
-            hashCode = ipAddr.hashCode() * 31 + port;
+            hashCode = (host.hashCode() * 31 + ipAddr.hashCode()) * 31 + port;
         }
 
         @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -65,8 +65,8 @@ public class ConnectionPoolLoggingListener implements ConnectionPoolListener {
                                InetSocketAddress localAddr,
                                AttributeMap attrs) throws Exception {
         final int activeChannels = this.activeChannels.incrementAndGet();
-        attrs.attr(OPEN_NANOS).set(ticker.read());
         if (logger.isInfoEnabled()) {
+            attrs.attr(OPEN_NANOS).set(ticker.read());
             logger.info("[L:{} - R:{}][{}] OPEN (active channels: {})",
                         localAddr, remoteAddr, protocol.uriText(), activeChannels);
         }
@@ -78,7 +78,7 @@ public class ConnectionPoolLoggingListener implements ConnectionPoolListener {
                                  InetSocketAddress localAddr,
                                  AttributeMap attrs) throws Exception {
         final int activeChannels = this.activeChannels.decrementAndGet();
-        if (logger.isInfoEnabled()) {
+        if (logger.isInfoEnabled() && attrs.hasAttr(OPEN_NANOS)) {
             final long closeNanos = ticker.read();
             final long elapsedNanos = closeNanos - attrs.attr(OPEN_NANOS).get();
             logger.info("[L:{} ! R:{}][{}] CLOSED (lasted for: {}, active channels: {})",

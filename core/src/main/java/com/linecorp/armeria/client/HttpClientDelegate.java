@@ -64,7 +64,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
         if (endpoint.hasIpAddr()) {
             // IP address has been resolved already.
-            executeWithIpAddr(ctx, endpoint, endpoint.ipAddr(), req, res);
+            acquireConnectionAndExecute(ctx, endpoint, endpoint.ipAddr(), req, res);
         } else {
             // IP address has not been resolved yet.
             final Future<InetSocketAddress> resolveFuture =
@@ -87,7 +87,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                                Future<InetSocketAddress> resolveFuture, HttpRequest req,
                                DecodedHttpResponse res) {
         if (resolveFuture.isSuccess()) {
-            executeWithIpAddr(ctx, endpoint, resolveFuture.getNow().getAddress().getHostAddress(), req, res);
+            final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
+            acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res);
         } else {
             final Throwable cause = resolveFuture.cause();
             handleEarlyRequestException(ctx, req, cause);
@@ -95,19 +96,13 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
     }
 
-    private void executeWithIpAddr(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
-                                   HttpRequest req, DecodedHttpResponse res) {
+    private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
+                                             HttpRequest req, DecodedHttpResponse res) {
         final EventLoop eventLoop = ctx.eventLoop();
-        if (eventLoop.inEventLoop()) {
-            executeWithIpAddr0(ctx, endpoint, ipAddr, req, res);
-        } else {
-            eventLoop.execute(() -> executeWithIpAddr0(ctx, endpoint, ipAddr, req, res));
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res));
+            return;
         }
-    }
-
-    private void executeWithIpAddr0(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
-                                    HttpRequest req, DecodedHttpResponse res) {
-        assert ctx.eventLoop().inEventLoop();
 
         final String host = extractHost(ctx, req, endpoint);
         final int port = endpoint.port();
@@ -117,16 +112,16 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         final PoolKey key = new PoolKey(host, ipAddr, port);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
-            invoke0(pooledChannel,ctx, req, res);
+            doExecute(pooledChannel, ctx, req, res);
         } else {
-            pool.acquire(protocol, key).whenComplete((newPooledChannel, cause) -> {
-                if (cause != null) {
+            pool.acquire(protocol, key).handle((newPooledChannel, cause) -> {
+                if (cause == null) {
+                    doExecute(newPooledChannel, ctx, req, res);
+                } else {
                     handleEarlyRequestException(ctx, req, cause);
                     res.close(cause);
-                    return;
                 }
-
-                invoke0(newPooledChannel, ctx, req, res);
+                return null;
             });
         }
     }
@@ -190,8 +185,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         logBuilder.endResponse(cause);
     }
 
-    private void invoke0(PooledChannel pooledChannel, ClientRequestContext ctx,
-                         HttpRequest req, DecodedHttpResponse res) {
+    private void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,
+                           HttpRequest req, DecodedHttpResponse res) {
         final Channel channel = pooledChannel.get();
         boolean needsRelease = true;
         try {
