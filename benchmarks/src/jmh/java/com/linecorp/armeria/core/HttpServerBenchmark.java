@@ -89,13 +89,14 @@ public class HttpServerBenchmark {
         bh.consume(
                 httpClient.get("/empty")
                           .aggregate()
-                          .whenComplete((msg, t) -> {
+                          .handle((msg, t) -> {
                               counters.decrementCurrentRequests();
                               if (t != null) {
                                   counters.incrementNumFailures();
                               } else {
                                   counters.incrementNumSuccesses();
                               }
+                              return null;
                           }));
     }
 }

@@ -129,7 +129,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
         final CompletableFuture<T> future = new RequestContextAwareCompletableFuture<>(this);
-        stage.whenComplete((result, cause) -> {
+        stage.handle((result, cause) -> {
             try (SafeCloseable ignored = pushIfAbsent()) {
                 if (cause != null) {
                     future.completeExceptionally(cause);
@@ -137,6 +137,7 @@ public abstract class AbstractRequestContext implements RequestContext {
                     future.complete(result);
                 }
             }
+            return null;
         });
         return future;
     }

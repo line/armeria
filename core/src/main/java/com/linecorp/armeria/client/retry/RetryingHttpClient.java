@@ -24,7 +24,6 @@ import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -178,18 +177,18 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                 final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(
                         response, maxSignalLength(derivedCtx.maxResponseLength()), derivedCtx.eventLoop());
                 retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse(resDuplicator))
-                                          .whenComplete(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                                      originalReq, returnedRes, future,
-                                                                      resDuplicator.duplicateStream(true),
-                                                                      resDuplicator::close,
-                                                                      hasInitialAuthority));
+                                          .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                                originalReq, returnedRes, future,
+                                                                resDuplicator.duplicateStream(true),
+                                                                resDuplicator::close,
+                                                                hasInitialAuthority));
             } else {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
                 retryStrategy().shouldRetry(derivedCtx, responseCause)
-                               .whenComplete(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
-                                                           returnedRes, future, response, response::abort,
-                                                           hasInitialAuthority));
+                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
+                                                     returnedRes, future, response, response::abort,
+                                                     hasInitialAuthority));
             }
         }, RequestLogAvailability.RESPONSE_HEADERS);
     }
@@ -212,15 +211,15 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         return new ContentPreviewResponse(resDuplicator.duplicateStream(), contentPreviewLength);
     }
 
-    private BiConsumer<Backoff, Throwable> handleBackoff(ClientRequestContext ctx,
-                                                         ClientRequestContext derivedCtx,
-                                                         HttpRequestDuplicator rootReqDuplicator,
-                                                         HttpRequest originalReq,
-                                                         HttpResponse returnedRes,
-                                                         CompletableFuture<HttpResponse> future,
-                                                         HttpResponse originalRes,
-                                                         Runnable closingOriginalResTask,
-                                                         boolean hasInitialAuthority) {
+    private BiFunction<Backoff, Throwable, Void> handleBackoff(ClientRequestContext ctx,
+                                                               ClientRequestContext derivedCtx,
+                                                               HttpRequestDuplicator rootReqDuplicator,
+                                                               HttpRequest originalReq,
+                                                               HttpResponse returnedRes,
+                                                               CompletableFuture<HttpResponse> future,
+                                                               HttpResponse originalRes,
+                                                               Runnable closingOriginalResTask,
+                                                               boolean hasInitialAuthority) {
         return (backoff, unused) -> {
             if (backoff != null) {
                 final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
@@ -232,12 +231,13 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                             () -> doExecute0(ctx, rootReqDuplicator, originalReq,
                                              returnedRes, future, hasInitialAuthority),
                             nextDelay);
-                    return;
+                    return null;
                 }
             }
             onRetryingComplete(ctx);
             future.complete(originalRes);
             rootReqDuplicator.close();
+            return null;
         };
     }
 
