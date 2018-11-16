@@ -102,7 +102,7 @@ public final class EventLoopGroups {
      * configuring a custom {@link Bootstrap}.
      */
     public static Class<? extends ServerChannel> serverChannelClass(EventLoopGroup eventLoopGroup) {
-        return TransportType.serverChannelClass(eventLoopGroup);
+        return TransportType.serverChannelClass(requireNonNull(eventLoopGroup, "eventLoopGroup"));
     }
 
     /**
