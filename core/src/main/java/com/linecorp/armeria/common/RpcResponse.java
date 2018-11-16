@@ -53,22 +53,22 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
     static RpcResponse from(CompletionStage<?> stage) {
         requireNonNull(stage, "stage");
         final DefaultRpcResponse res = new DefaultRpcResponse();
-        stage.whenComplete((value, cause) -> {
+        stage.handle((value, cause) -> {
             if (cause != null) {
                 res.completeExceptionally(cause);
-                return;
-            }
-            if (value instanceof RpcResponse) {
-                ((RpcResponse) value).whenComplete((rpcResponseResult, rpcResponseCause) -> {
+            } else if (value instanceof RpcResponse) {
+                ((RpcResponse) value).handle((rpcResponseResult, rpcResponseCause) -> {
                     if (rpcResponseCause != null) {
                         res.completeExceptionally(Exceptions.peel(rpcResponseCause));
-                        return;
+                    } else {
+                        res.complete(rpcResponseResult);
                     }
-                    res.complete(rpcResponseResult);
+                    return null;
                 });
             } else {
                 res.complete(value);
             }
+            return null;
         });
         return res;
     }

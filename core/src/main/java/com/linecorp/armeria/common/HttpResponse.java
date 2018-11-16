@@ -63,7 +63,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        stage.whenComplete((delegate, thrown) -> {
+        stage.handle((delegate, thrown) -> {
             if (thrown != null) {
                 res.close(Exceptions.peel(thrown));
             } else if (delegate == null) {
@@ -71,6 +71,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             } else {
                 res.delegate(delegate);
             }
+            return null;
         });
         return res;
     }

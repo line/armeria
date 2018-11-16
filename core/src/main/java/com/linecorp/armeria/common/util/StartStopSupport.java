@@ -133,12 +133,13 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
                         throw new IllegalStateException("doStart() returned null.");
                     }
 
-                    f.whenComplete((result, cause) -> {
+                    f.handle((result, cause) -> {
                         if (cause != null) {
                             startFuture.completeExceptionally(cause);
                         } else {
                             startFuture.complete(result);
                         }
+                        return null;
                     });
                 } catch (Exception e) {
                     startFuture.completeExceptionally(e);
@@ -212,12 +213,13 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
                         throw new IllegalStateException("doStop() returned null.");
                     }
 
-                    f.whenComplete((unused, cause) -> {
+                    f.handle((unused, cause) -> {
                         if (cause != null) {
                             stopFuture.completeExceptionally(cause);
                         } else {
                             stopFuture.complete(null);
                         }
+                        return null;
                     });
                 } catch (Exception e) {
                     stopFuture.completeExceptionally(e);

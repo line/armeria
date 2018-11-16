@@ -108,14 +108,14 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 (context, cause) -> new DefaultRpcResponse(cause);
         final RpcResponse res = executeWithFallback(delegate(), derivedCtx, req, fallback);
 
-        res.whenComplete((unused1, unused2) -> {
-            retryStrategyWithContent().shouldRetry(derivedCtx, res).whenComplete((backoff, unused3) -> {
+        res.handle((unused1, unused2) -> {
+            retryStrategyWithContent().shouldRetry(derivedCtx, res).handle((backoff, unused3) -> {
                 if (backoff != null) {
                     final long nextDelay = getNextDelay(derivedCtx, backoff);
                     if (nextDelay < 0) {
                         onRetryingComplete(ctx);
                         future.complete(res);
-                        return;
+                        return null;
                     }
 
                     scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause),
@@ -124,7 +124,9 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                     onRetryingComplete(ctx);
                     future.complete(res);
                 }
+                return null;
             });
+            return null;
         });
     }
 
