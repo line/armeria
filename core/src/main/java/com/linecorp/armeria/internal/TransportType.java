@@ -73,6 +73,13 @@ public enum TransportType {
     }
 
     /**
+     * Returns the {@link ServerChannel} class for {@code eventLoopGroup}.
+     */
+    public static Class<? extends ServerChannel> serverChannelClass(EventLoopGroup eventLoopGroup) {
+        return find(eventLoopGroup).serverChannelClass;
+    }
+
+    /**
      * Returns the {@link ServerChannel} class that is available for this transport type.
      */
     public Class<? extends ServerChannel> serverChannelClass() {
@@ -97,13 +104,6 @@ public enum TransportType {
         } else {
             return NIO;
         }
-    }
-
-    /**
-     * Returns the {@link ServerChannel} class for {@code eventLoopGroup}.
-     */
-    public static Class<? extends ServerChannel> serverChannelClass(EventLoopGroup eventLoopGroup) {
-        return find(eventLoopGroup).serverChannelClass;
     }
 
     /**
