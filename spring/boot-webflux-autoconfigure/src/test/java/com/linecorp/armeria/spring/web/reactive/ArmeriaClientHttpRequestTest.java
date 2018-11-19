@@ -82,7 +82,7 @@ public class ArmeriaClientHttpRequestTest {
         final ArmeriaClientHttpRequest request = request();
         final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e")
                                           .map(String::getBytes)
-                                          .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap);
+                                          .map(DataBufferFactoryWrapper.DEFAULT.delegate()::wrap);
 
         assertThat(request.getMethod()).isEqualTo(HttpMethod.GET);
         request.getHeaders().add(HttpHeaderNames.USER_AGENT.toString(), "spring/armeria");
@@ -129,9 +129,9 @@ public class ArmeriaClientHttpRequestTest {
         final ArmeriaClientHttpRequest request = request();
         final Flux<Flux<DataBuffer>> body = Flux.just(
                 Flux.just("a", "b", "c", "d", "e").map(String::getBytes)
-                    .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap),
+                    .map(DataBufferFactoryWrapper.DEFAULT.delegate()::wrap),
                 Flux.just("1", "2", "3", "4", "5").map(String::getBytes)
-                    .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap)
+                    .map(DataBufferFactoryWrapper.DEFAULT.delegate()::wrap)
         );
 
         request.writeAndFlushWith(body)

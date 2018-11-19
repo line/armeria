@@ -106,7 +106,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
     @Override
     public DataBufferFactory bufferFactory() {
-        return factoryWrapper.dataBufferFactory();
+        return factoryWrapper.delegate();
     }
 
     public CompletableFuture<HttpResponse> future() {

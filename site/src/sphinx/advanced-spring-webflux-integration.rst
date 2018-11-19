@@ -12,13 +12,13 @@ dependency injection, data binding, AOP, transaction, etc. In addition, if your 
 with Armeria, you can leverage the following:
 
 - Rich support for Apache `Thrift <https://thrift.apache.org/>`_ and `gRPC <https://grpc.io/>`_,
-  including the documentation service
+  including :ref:`the fancy web console <server-docservice>` that enables you to send Thrift and gRPC requests
+  from a web browser
 - Ability to run HTTP REST service and RPC service in the same port
-- Full HTTP/2 support for both server-side and client-side, including :ref:`the fancy web console <server-docservice>`
-  that enables you to send Thrift and gRPC requests from a web browser.
-- `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>`_ support which is
-  interoperable with load balancers such as `HAProxy <https://www.haproxy.org/>`_ and
-  `AWS ELB <https://aws.amazon.com/elasticloadbalancing/>`_.
+- Full HTTP/2 support for both server-side and client-side, including ``h2c`` (plaintext HTTP/2)
+- `PROXY protocol <https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>`_ support which provides
+  interoperability with load balancers such as `HAProxy <https://www.haproxy.org/>`_ and
+  `AWS ELB <https://aws.amazon.com/elasticloadbalancing/>`_
 
 Armeria can be plugged in as the underlying HTTP server for a Spring WebFlux application by adding
 the following dependency:

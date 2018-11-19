@@ -79,7 +79,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Register an IP address that the {@link Server} uses.
+         * Registers an IP address that the {@link Server} uses.
          */
         public Port setIp(String ip) {
             this.ip = ip;
@@ -95,7 +95,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Register a network interface that the {@link Server} use.
+         * Registers a network interface that the {@link Server} use.
          */
         public Port setIface(String iface) {
             this.iface = iface;
@@ -110,7 +110,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Register a port that the {@link Server} use.
+         * Registers a port that the {@link Server} use.
          */
         public Port setPort(int port) {
             this.port = port;
@@ -126,7 +126,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Register a list of {@link SessionProtocol}s that the {@link Server} uses.
+         * Registers a list of {@link SessionProtocol}s that the {@link Server} uses.
          */
         public Port setProtocols(List<SessionProtocol> protocols) {
             this.protocols = protocols;
@@ -134,7 +134,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Register a {@link SessionProtocol} that the {@link Server} uses.
+         * Registers a {@link SessionProtocol} that the {@link Server} uses.
          */
         public Port setProtocol(SessionProtocol protocol) {
             protocols = ImmutableList.of(protocol);

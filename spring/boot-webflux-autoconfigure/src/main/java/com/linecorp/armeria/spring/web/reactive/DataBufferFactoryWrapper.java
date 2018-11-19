@@ -55,7 +55,7 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
     /**
      * Returns the underlying {@link DataBufferFactory}.
      */
-    public T dataBufferFactory() {
+    public T delegate() {
         return delegate;
     }
 

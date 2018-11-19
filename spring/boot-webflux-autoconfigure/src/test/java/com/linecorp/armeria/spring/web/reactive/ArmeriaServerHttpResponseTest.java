@@ -108,7 +108,7 @@ public class ArmeriaServerHttpResponseTest {
 
         final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e")
                                           .map(String::getBytes)
-                                          .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap);
+                                          .map(DataBufferFactoryWrapper.DEFAULT.delegate()::wrap);
 
         // Create HttpResponse.
         response.writeWith(body).then(Mono.defer(response::setComplete)).subscribe();
@@ -160,7 +160,7 @@ public class ArmeriaServerHttpResponseTest {
 
         final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e", "f", "g")
                                           .map(String::getBytes)
-                                          .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap);
+                                          .map(DataBufferFactoryWrapper.DEFAULT.delegate()::wrap);
 
         // Create HttpResponse.
         response.writeWith(body).then(Mono.defer(response::setComplete)).subscribe();
@@ -206,9 +206,9 @@ public class ArmeriaServerHttpResponseTest {
 
         final Flux<Flux<DataBuffer>> body = Flux.just(
                 Flux.just("a", "b", "c", "d", "e").map(String::getBytes)
-                    .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap),
+                    .map(DataBufferFactoryWrapper.DEFAULT.delegate()::wrap),
                 Flux.just("1", "2", "3", "4", "5").map(String::getBytes)
-                    .map(DataBufferFactoryWrapper.DEFAULT.dataBufferFactory()::wrap)
+                    .map(DataBufferFactoryWrapper.DEFAULT.delegate()::wrap)
         );
 
         // Create HttpResponse.

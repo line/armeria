@@ -67,7 +67,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
                               CompletableFuture<HttpResponse> future,
                               DataBufferFactoryWrapper<?> factoryWrapper,
                               @Nullable String serverHeader) {
-        super(requireNonNull(factoryWrapper, "factoryWrapper").dataBufferFactory());
+        super(requireNonNull(factoryWrapper, "factoryWrapper").delegate());
         this.ctx = requireNonNull(ctx, "ctx");
         this.future = requireNonNull(future, "future");
         this.factoryWrapper = factoryWrapper;
