@@ -300,28 +300,34 @@ final class HttpChannelPool implements AutoCloseable {
 
         setPendingAcquisition(desiredProtocol, key, promise);
 
-        // Create a new connection.
-        Future<Channel> f;
+        final InetSocketAddress remoteAddress;
         try {
-            final InetSocketAddress remoteAddress = toRemoteAddress(key);
-            if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, desiredProtocol)) {
-                // Fail immediately if it is sure that the remote address doesn't support the desired protocol.
-                f = eventLoop.newFailedFuture(
-                        new SessionProtocolNegotiationException(desiredProtocol,
-                                                                "previously failed negotiation"));
-            } else {
-                final Promise<Channel> channelPromise = eventLoop.newPromise();
-                f = channelPromise;
-                connect(remoteAddress, desiredProtocol, channelPromise);
-            }
+            remoteAddress = toRemoteAddress(key);
         } catch (UnknownHostException e) {
-            f = eventLoop.newFailedFuture(e);
+            notifyConnect(desiredProtocol, key, eventLoop.newFailedFuture(e), promise);
+            return;
         }
 
-        if (f.isDone()) {
-            notifyConnect(desiredProtocol, key, f, promise);
+        // Fail immediately if it is sure that the remote address doesn't support the desired protocol.
+        if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, desiredProtocol)) {
+            notifyConnect(desiredProtocol, key,
+                          eventLoop.newFailedFuture(
+                                  new SessionProtocolNegotiationException(
+                                          desiredProtocol, "previously failed negotiation")),
+                          promise);
+            return;
+        }
+
+        // Create a new connection.
+        final Promise<Channel> channelPromise = eventLoop.newPromise();
+        connect(remoteAddress, desiredProtocol, channelPromise);
+
+        if (channelPromise.isDone()) {
+            notifyConnect(desiredProtocol, key, channelPromise, promise);
         } else {
-            f.addListener((Future<Channel> future) -> notifyConnect(desiredProtocol, key, future, promise));
+            channelPromise.addListener((Future<Channel> future) -> {
+                notifyConnect(desiredProtocol, key, future, promise);
+            });
         }
     }
 
