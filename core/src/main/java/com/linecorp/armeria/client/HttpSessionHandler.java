@@ -60,7 +60,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      */
     private static final int MAX_NUM_REQUESTS_SENT = 536870912;
 
-    private final HttpSessionChannelFactory channelFactory;
+    private final HttpChannelPool channelPool;
     private final Channel channel;
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
@@ -92,10 +92,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      */
     private boolean needsRetryWithH1C;
 
-    HttpSessionHandler(HttpSessionChannelFactory channelFactory, Channel channel,
+    HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture) {
 
-        this.channelFactory = requireNonNull(channelFactory, "channelFactory");
+        this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
@@ -280,7 +280,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            channelFactory.connect(channel.remoteAddress(), H1C, sessionPromise);
+            channelPool.connect(channel.remoteAddress(), H1C, sessionPromise);
         } else {
             // Fail all pending responses.
             failUnfinishedResponses(ClosedSessionException.get());

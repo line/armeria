@@ -34,8 +34,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
-import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -70,8 +68,8 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  */
 public final class ClientFactoryBuilder {
 
-    private static final KeyedChannelPoolHandler<PoolKey> DEFAULT_CONNECTION_POOL_LISTENER =
-            KeyedChannelPoolHandler.noop();
+    private static final ConnectionPoolListener DEFAULT_CONNECTION_POOL_LISTENER =
+            ConnectionPoolListener.noop();
 
     private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
 
@@ -108,7 +106,7 @@ public final class ClientFactoryBuilder {
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
-    private KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener = DEFAULT_CONNECTION_POOL_LISTENER;
+    private ConnectionPoolListener connectionPoolListener = DEFAULT_CONNECTION_POOL_LISTENER;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
 
     /**
@@ -333,7 +331,7 @@ public final class ClientFactoryBuilder {
      * Sets the listener which is notified on a connection pool event.
      */
     public ClientFactoryBuilder connectionPoolListener(
-            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+            ConnectionPoolListener connectionPoolListener) {
         this.connectionPoolListener = requireNonNull(connectionPoolListener, "connectionPoolListener");
         return this;
     }
@@ -377,7 +375,7 @@ public final class ClientFactoryBuilder {
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
-            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener,
+            ConnectionPoolListener connectionPoolListener,
             MeterRegistry meterRegistry) {
 
         final ToStringHelper helper = MoreObjects.toStringHelper(self).omitNullValues();

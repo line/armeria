@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
@@ -47,10 +46,9 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
+import com.linecorp.armeria.client.ConnectionPoolListener;
+import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
-import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -88,6 +86,7 @@ import io.netty.util.AsciiString;
 public class ThriftOverHttpClientTest {
 
     private static final boolean ENABLE_LOGGING_DECORATORS = false;
+    private static final boolean ENABLE_CONNECTION_POOL_LOGGING = true;
 
     private static final Server server;
 
@@ -214,8 +213,7 @@ public class ThriftOverHttpClientTest {
             parameters.add(new Object[] { serializationFormat, "http", false, false });
             parameters.add(new Object[] { serializationFormat, "https", true, false });
             parameters.add(new Object[] { serializationFormat, "h1", true, false }); // HTTP/1 over TLS
-            parameters.add(new Object[] { serializationFormat, "h1c", false, true }); // HTTP/1 cleartext
-            parameters.add(new Object[] { serializationFormat, "h1c", false, false });
+            parameters.add(new Object[] { serializationFormat, "h1c", false, false }); // HTTP/1 cleartext
             parameters.add(new Object[] { serializationFormat, "h2", true, false }); // HTTP/2 over TLS
             parameters.add(new Object[] { serializationFormat, "h2c", false, true }); // HTTP/2 cleartext
             parameters.add(new Object[] { serializationFormat, "h2c", false, false });
@@ -253,9 +251,9 @@ public class ThriftOverHttpClientTest {
         final Consumer<SslContextBuilder> sslContextCustomizer =
                 b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE);
 
-        final KeyedChannelPoolHandler<PoolKey> connectionPoolListener =
-                ENABLE_LOGGING_DECORATORS ? new KeyedChannelPoolLoggingHandler()
-                                          : KeyedChannelPoolHandler.noop();
+        final ConnectionPoolListener connectionPoolListener =
+                ENABLE_CONNECTION_POOL_LOGGING ? new ConnectionPoolLoggingListener()
+                                               : ConnectionPoolListener.noop();
 
         clientFactoryWithUseHttp2Preface = new ClientFactoryBuilder()
                 .sslContextCustomizer(sslContextCustomizer)
@@ -286,11 +284,9 @@ public class ThriftOverHttpClientTest {
 
     @AfterClass
     public static void destroy() throws Exception {
-        CompletableFuture.runAsync(() -> {
-            clientFactoryWithUseHttp2Preface.close();
-            clientFactoryWithoutUseHttp2Preface.close();
-            server.stop();
-        });
+        clientFactoryWithUseHttp2Preface.close();
+        clientFactoryWithoutUseHttp2Preface.close();
+        server.stop();
     }
 
     @Before

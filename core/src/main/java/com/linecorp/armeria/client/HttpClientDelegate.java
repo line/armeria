@@ -22,14 +22,10 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.client.pool.KeyedChannelPool;
-import com.linecorp.armeria.client.pool.PoolKey;
+import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -43,8 +39,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
-
-    private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
 
     private final HttpClientFactory factory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
@@ -70,7 +64,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
         if (endpoint.hasIpAddr()) {
             // IP address has been resolved already.
-            executeWithIpAddr(ctx, endpoint, endpoint.ipAddr(), req, res);
+            acquireConnectionAndExecute(ctx, endpoint, endpoint.ipAddr(), req, res);
         } else {
             // IP address has not been resolved yet.
             final Future<InetSocketAddress> resolveFuture =
@@ -93,7 +87,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                                Future<InetSocketAddress> resolveFuture, HttpRequest req,
                                DecodedHttpResponse res) {
         if (resolveFuture.isSuccess()) {
-            executeWithIpAddr(ctx, endpoint, resolveFuture.getNow().getAddress().getHostAddress(), req, res);
+            final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
+            acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res);
         } else {
             final Throwable cause = resolveFuture.cause();
             handleEarlyRequestException(ctx, req, cause);
@@ -101,29 +96,33 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
     }
 
-    private void executeWithIpAddr(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
-                                   HttpRequest req, DecodedHttpResponse res) {
-        final String host = extractHost(ctx, req, endpoint);
-        final PoolKey poolKey = new PoolKey(host, ipAddr, endpoint.port(), ctx.sessionProtocol());
-        final Future<Channel> channelFuture = factory.pool(ctx.eventLoop()).acquire(poolKey);
-
-        if (channelFuture.isDone()) {
-            finishExecute(ctx, poolKey, channelFuture, req, res);
-        } else {
-            channelFuture.addListener(
-                    (Future<Channel> future) -> finishExecute(ctx, poolKey, future, req, res));
+    private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
+                                             HttpRequest req, DecodedHttpResponse res) {
+        final EventLoop eventLoop = ctx.eventLoop();
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res));
+            return;
         }
-    }
 
-    private void finishExecute(ClientRequestContext ctx, PoolKey poolKey, Future<Channel> channelFuture,
-                               HttpRequest req, DecodedHttpResponse res) {
-        if (channelFuture.isSuccess()) {
-            final Channel ch = channelFuture.getNow();
-            invoke0(ch, ctx, req, res, poolKey);
+        final String host = extractHost(ctx, req, endpoint);
+        final int port = endpoint.port();
+        final SessionProtocol protocol = ctx.sessionProtocol();
+        final HttpChannelPool pool = factory.pool(ctx.eventLoop());
+
+        final PoolKey key = new PoolKey(host, ipAddr, port);
+        final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
+        if (pooledChannel != null) {
+            doExecute(pooledChannel, ctx, req, res);
         } else {
-            final Throwable cause = channelFuture.cause();
-            handleEarlyRequestException(ctx, req, cause);
-            res.close(cause);
+            pool.acquire(protocol, key).handle((newPooledChannel, cause) -> {
+                if (cause == null) {
+                    doExecute(newPooledChannel, ctx, req, res);
+                } else {
+                    handleEarlyRequestException(ctx, req, cause);
+                    res.close(cause);
+                }
+                return null;
+            });
         }
     }
 
@@ -186,9 +185,9 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         logBuilder.endResponse(cause);
     }
 
-    void invoke0(Channel channel, ClientRequestContext ctx,
-                 HttpRequest req, DecodedHttpResponse res, PoolKey poolKey) {
-        final KeyedChannelPool<PoolKey> pool = KeyedChannelPool.findPool(channel);
+    private void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,
+                           HttpRequest req, DecodedHttpResponse res) {
+        final Channel channel = pooledChannel.get();
         boolean needsRelease = true;
         try {
             final HttpSession session = HttpSession.get(channel);
@@ -211,31 +210,23 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                 needsRelease = false;
 
                 // Return the channel to the pool.
-                if (sessionProtocol.isMultiplex()) {
-                    release(pool, poolKey, channel);
-                } else {
+                if (!sessionProtocol.isMultiplex()) {
                     // If pipelining is enabled, return as soon as the request is fully sent.
                     // If pipelining is disabled, return after the response is fully received.
                     final CompletableFuture<Void> completionFuture =
                             factory.useHttp1Pipelining() ? req.completionFuture() : res.completionFuture();
                     completionFuture.handle((ret, cause) -> {
-                        release(pool, poolKey, channel);
+                        pooledChannel.release();
                         return null;
                     });
+                } else {
+                    // HTTP/2 connections do not need to get returned.
                 }
             }
         } finally {
             if (needsRelease) {
-                release(pool, poolKey, channel);
+                pooledChannel.release();
             }
-        }
-    }
-
-    private static void release(KeyedChannelPool<PoolKey> pool, PoolKey poolKey, Channel channel) {
-        try {
-            pool.release(poolKey, channel);
-        } catch (Throwable t) {
-            logger.warn("Failed to return a Channel to the pool: {}", channel, t);
         }
     }
 }
