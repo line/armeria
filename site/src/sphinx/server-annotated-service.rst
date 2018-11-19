@@ -769,7 +769,7 @@ more response types which can be used in the annotated service.
     passed into the response converters as it is. But if multiple objects are produced, they will be passed
     into the response converters as a list. If the producer produces an error, exception handlers will handle it.
     Note that RxJava `ObservableSource <http://reactivex.io/RxJava/javadoc/io/reactivex/ObservableSource.html>`_
-    will be treated in the same way as Publisher_ if you use ``armeria-rxjava``.
+    will be treated in the same way as Publisher_ if you add ``armeria-rxjava`` to the dependencies.
 
 - ``CompletionStage`` and ``CompletableFuture``
 
