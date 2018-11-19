@@ -171,6 +171,45 @@ using :api:`RetryingHttpClientBuilder`:
 
     final AggregatedHttpMessage res = client.execute(...).aggregate().join();
 
+When we should retry?
+---------------------
+
+In the strategy examples above, we simply retry when a :api:`ResponseTimeoutException` or
+:api:`UnprocessedRequestException` is raised. In the real world, however, you should consider the characteristic
+of the exception and the request whether you retry or not.
+If an :api:`UnprocessedRequestException` is raised, you can safely retry as many times as you wish because
+the request hasn't been processed by the server. By the way, if a :api:`ResponseTimeoutException` is raised,
+you are not sure that the request is processed by the server because the timeout can happen after the request
+is accepted or before it. In this case, you need to take into account the idempotence of the request.
+If the request is an idempotent HTTP method such as a GET or PUT, it can be safely retried because it doesn't
+change the result by applying it many times. But if it's a non-idempotent method such as POST, it might change
+the consequences. If you would like to retry even on this situation, the server side should guarantee that
+a request is not processed multiple times by keeping the request IDs or etc.
+
+There's another exception you have to consider when you implement your own strategy.
+You might use :ref:`client-circuit-breaker` with :api:`RetryingHttpClient`:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
+    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
+
+    CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
+    RetryStrategy retryStrategy = RetryStrategy.onServerErrorStatus();
+
+    HttpClient client = new HttpClientBuilder(...)
+            .decorator(new CircuitBreakerHttpClientBuilder(cbStrategy).newDecorator())
+            .decorator(new RetryingHttpClientBuilder(retryStrategy).newDecorator())
+            .build();
+
+    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+
+This example demonstrates that the :api:`CircuitBreaker` judges every request and retried request as successful
+or failed and raises the :api:`FailFastException` if the failure rate exceeds a certain threshold.
+If you are sending the requests to only one host, you will not want to retry when a :api:`FailFastException`
+is raised. However if you are using :ref:`client-service-discovery`, you might want to retry because there's a
+chance that only small amount of the backends are unreachable so that you can send the requests to other hosts.
+
 ``Backoff``
 -----------
 
