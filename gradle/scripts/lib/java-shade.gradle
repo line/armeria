@@ -177,7 +177,7 @@ configure(relocatedProjects) {
 
         if (project.hasFlags('coverage')) {
             jacoco {
-                enabled = false
+                enabled = true
             }
         }
     }
@@ -197,7 +197,14 @@ configure(relocatedProjects) {
     gradle.taskGraph.whenReady {
         // Skip unshaded tests if shaded tests will run.
         if (gradle.taskGraph.hasTask(tasks.shadedTest)) {
-            tasks.test.onlyIf { false }
+            tasks.test.configure {
+                onlyIf { false }
+                if (project.hasFlags('coverage')) {
+                    jacoco {
+                        enabled = false
+                    }
+                }
+            }
         }
     }
 }
