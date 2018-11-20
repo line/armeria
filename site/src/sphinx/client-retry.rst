@@ -1,3 +1,4 @@
+.. _What are idempotent and/or safe methods?: http://restcookbook.com/HTTP%20Methods/idempotency/
 .. _decorator: client-decorator.html
 
 .. _client-retry:
@@ -92,7 +93,8 @@ You can customize the ``strategy`` by implementing :api:`RetryStrategy`.
         }
     };
 
-This will retry when the response's status is ``409 Conflict`` or :api:`ResponseTimeoutException` is raised.
+This will retry when one of :api:`ResponseTimeoutException` and :api:`UnprocessedRequestException` is raised or
+the response's status is ``409 Conflict``.
 
 .. note::
 
@@ -104,6 +106,12 @@ This will retry when the response's status is ``409 Conflict`` or :api:`Response
     you decided to change your :api:`Backoff` strategy. If you do not return the same one, when the
     :api:`Backoff` yields a different delay based on the number of retries, such as an exponential backoff,
     it will not work as expected. We will take a close look into a :api:`Backoff` at the next section.
+
+.. note::
+
+    :api:`UnprocessedRequestException` literally means that the request has not been processed by the server.
+    Therefore, you can safely retry as many times as you wish regardless of the idempotency of the request.
+    For more information about idempotency, please refer to `What are idempotent and/or safe methods?`_.
 
 You can return a different :api:`Backoff` according to the response status.
 
@@ -170,45 +178,6 @@ using :api:`RetryingHttpClientBuilder`:
             .build();
 
     final AggregatedHttpMessage res = client.execute(...).aggregate().join();
-
-When we should retry?
----------------------
-
-In the strategy examples above, we simply retry when a :api:`ResponseTimeoutException` or
-:api:`UnprocessedRequestException` is raised. In the real world, however, you should consider the characteristic
-of the exception and the request whether you retry or not.
-If an :api:`UnprocessedRequestException` is raised, you can safely retry as many times as you wish because
-the request hasn't been processed by the server. By the way, if a :api:`ResponseTimeoutException` is raised,
-you are not sure that the request is processed by the server because the timeout can happen after the request
-is accepted or before it. In this case, you need to take into account the idempotence of the request.
-If the request is an idempotent HTTP method such as a GET or PUT, it can be safely retried because it doesn't
-change the result by applying it many times. But if it's a non-idempotent method such as POST, it might change
-the consequences. If you would like to retry even on this situation, the server side should guarantee that
-a request is not processed multiple times by keeping the request IDs or etc.
-
-There's another exception you have to consider when you implement your own strategy.
-You might use :ref:`client-circuit-breaker` with :api:`RetryingHttpClient`:
-
-.. code-block:: java
-
-    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
-    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
-
-    CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
-    RetryStrategy retryStrategy = RetryStrategy.onServerErrorStatus();
-
-    HttpClient client = new HttpClientBuilder(...)
-            .decorator(new CircuitBreakerHttpClientBuilder(cbStrategy).newDecorator())
-            .decorator(new RetryingHttpClientBuilder(retryStrategy).newDecorator())
-            .build();
-
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
-
-This example demonstrates that the :api:`CircuitBreaker` judges every request and retried request as successful
-or failed and raises the :api:`FailFastException` if the failure rate exceeds a certain threshold.
-If you are sending the requests to only one host, you will not want to retry when a :api:`FailFastException`
-is raised. However if you are using :ref:`client-service-discovery`, you might want to retry because there's a
-chance that only small amount of the backends are unreachable so that you can send the requests to other hosts.
 
 ``Backoff``
 -----------
@@ -324,8 +293,8 @@ The :api:`RetryingClient`, at this point, stops retrying and finished the retry 
 
 .. _retry-with-logging:
 
-RetryingClient with logging
----------------------------
+``RetryingClient`` with logging
+-------------------------------
 
 You can use :api:`RetryingClient` with :api:`LoggingClient` to log. If you want to log all of the
 requests and responses, decorate :api:`LoggingClient` with :api:`RetryingClient`. That is:
@@ -373,6 +342,37 @@ This will produce only single request and response log pair regardless how many 
 .. note::
 
     Please refer to :ref:`nested-log`, if you are curious about how this works internally.
+
+``RetryingClient`` with circuit breaker
+---------------------------------------
+
+You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClient` using decorator_:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
+    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
+
+    CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
+    RetryStrategy myRetryStrategy = new RetryStrategy(){ ... };
+
+    HttpClient client = new HttpClientBuilder(...)
+            .decorator(new CircuitBreakerHttpClientBuilder(cbStrategy).newDecorator())
+            .decorator(new RetryingHttpClientBuilder(myRetryStrategy).newDecorator())
+            .build();
+
+    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+
+This decorates :api:`CircuitBreakerHttpClient` with :api:`RetryingHttpClient` so that the :api:`CircuitBreaker`
+judges every request and retried request as successful or failed. If the failure rate exceeds a certain
+threshold, it raises a :api:`FailFastException`.
+
+You have to be very cautious implementing your own :api:`RetryStrategy` in this situation.
+When a :api:`FailFastException` is raised, you can retry or you shouldn't retry depending on
+you are using :ref:`client-service-discovery` or not. If you are doing client-side load balancing,
+you might want to retry because there's a chance that only small amount of the backends are unreachable
+so that you can send the requests to other hosts. On the contrary, if you are sending the requests to only
+one host, you will not want to retry because the circuit is already closed.
 
 See also
 --------
