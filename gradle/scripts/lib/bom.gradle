@@ -53,83 +53,32 @@ configure(projectsWithFlags('bom')) {
                     if (dependencyMgmt == null) {
                         findChildNode(asNode(), 'scm') + {
                             resolveStrategy = DELEGATE_FIRST
-                            dependencyManagement {
-                                dependencies {
-                                    deleteMe {} // Placeholder to use the Node.plus(Closure)
-                                }
-                            }
+                            dependencyManagement {}
                         }
                         dependencyMgmt = findChildNode(asNode(), 'dependencyManagement')
                     }
 
-                    // Add our own projects to the 'dependencies' sections.
-                    List<Node> dependencies = findChildNode(dependencyMgmt, 'dependencies').children()
-                    dependencies.last() + {
+                    // Replace the `dependencyManagement` section populated by dependency-management-plugin
+                    // or created by ourselves above.
+                    dependencyMgmt.replaceNode {
                         resolveStrategy = DELEGATE_FIRST
-                        projectsWithFlags('java', 'publish').each { Project p ->
-                            dependency {
-                                groupId "${p.group}"
-                                artifactId "${p.ext.artifactId}"
-                                version "${p.version}"
-                            }
-                            if (p.hasFlags('relocate')) {
-                                dependency {
-                                    groupId "${p.group}"
-                                    artifactId "${p.ext.artifactId}-shaded"
-                                    version "${p.version}"
+                        dependencyManagement {
+                            dependencies {
+                                projectsWithFlags('java', 'publish').toList().sort { a, b ->
+                                    def groupComparison = "${a.group}".compareTo("${b.group}")
+                                    if (groupComparison != 0) {
+                                        return groupComparison
+                                    }
+                                    return "${a.ext.artifactId}".compareTo("${b.ext.artifactId}")
+                                }.each { p ->
+                                    dependency {
+                                        groupId "${p.group}"
+                                        artifactId "${p.ext.artifactId}"
+                                        version "${p.version}"
+                                    }
                                 }
                             }
                         }
-                    }
-
-                    // Remove the 'deleteMe' placeholder we added above.
-                    dependencies.removeIf {
-                        def name = it.name()
-                        if (name instanceof QName) {
-                            name = name.localPart
-                        } else {
-                            name = name.toString()
-                        }
-
-                        return name == 'deleteMe'
-                    }
-
-                    // Sort the dependencies for aesthetics.
-                    dependencies.sort { a, b ->
-                        // BOM import comes first.
-                        def scopeNodeA = findChildNode(a, 'scope')
-                        def scopeNodeB = findChildNode(b, 'scope')
-                        def scopeA = scopeNodeA != null ? scopeNodeA.text() : ''
-                        def scopeB = scopeNodeB != null ? scopeNodeB.text() : ''
-                        if (scopeA == 'import') {
-                            if (scopeB != 'import') {
-                                return -1
-                            }
-                        } else if (scopeB == 'import') {
-                            return 1
-                        }
-
-                        // Our own group comes first.
-                        def groupA = findChildNode(a, 'groupId').text()
-                        def groupB = findChildNode(b, 'groupId').text()
-                        if (groupA == rootProject.group) {
-                            if (groupB != rootProject.group) {
-                                return -1
-                            }
-                        } else if (groupB == rootProject.group) {
-                            return 1
-                        }
-
-                        // Sort by groupId alphabetically otherwise.
-                        def groupComparison = groupA.compareTo(groupB)
-                        if (groupComparison != 0) {
-                            return groupComparison
-                        }
-
-                        // Sort by artifactId.
-                        def artifactA = findChildNode(a, 'artifactId').text()
-                        def artifactB = findChildNode(b, 'artifactId').text()
-                        return artifactA.compareTo(artifactB);
                     }
                 }
             }
