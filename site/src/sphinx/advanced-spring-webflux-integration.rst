@@ -93,7 +93,7 @@ in your configuration as follows:
     @Configuration
     public class ArmeriaConfiguration {
         /**
-         * A user can configure the client by providing an ArmeriaClientConfigurator bean.
+         * A user can configure a {@link Client} by providing an {@link ArmeriaClientConfigurator} bean.
          */
         @Bean
         public ArmeriaClientConfigurator armeriaClientConfigurator() {
@@ -103,15 +103,19 @@ in your configuration as follows:
                 final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
                 builder.decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator());
 
-                // Automatically retry a request when the server returns a 5xx response.
-                builder.decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()));
-
-                // Use a custom client factory in order to disable the certificate validation,
-                // which means any certificate received from the server will be accepted.
-                final ClientFactory clientFactory = new ClientFactoryBuilder().sslContextCustomizer(
-                        b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
-                builder.factory(clientFactory);
+                // Set a custom client factory.
+                builder.factory(clientFactory());
             };
+        }
+
+        /**
+         * Returns a custom client factory which is configured as disabling the certificate validation,
+         * which means any certificate received from the server will be accepted.
+         */
+        @Bean
+        public ClientFactory clientFactory() {
+            return new ClientFactoryBuilder().sslContextCustomizer(
+                    b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
         }
     }
 

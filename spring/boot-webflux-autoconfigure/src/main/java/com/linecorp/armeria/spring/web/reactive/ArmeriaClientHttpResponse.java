@@ -106,7 +106,6 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
                           .add("status", status)
                           .add("headers", headers)
                           .add("cookies", cookies)
-                          .add("httpHeaders", httpHeaders)
                           .toString();
     }
 

@@ -8,8 +8,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
-import com.linecorp.armeria.client.retry.RetryStrategy;
-import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -58,14 +56,18 @@ public class HelloConfiguration {
             final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
             builder.decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator());
 
-            // Automatically retry a request when the server returns a 5xx response.
-            builder.decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()));
-
-            // Use a custom client factory in order to disable the certificate validation,
-            // which means any certificate received from the server will be accepted.
-            final ClientFactory clientFactory = new ClientFactoryBuilder().sslContextCustomizer(
-                    b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
-            builder.factory(clientFactory);
+            // Set a custom client factory.
+            builder.factory(clientFactory());
         };
+    }
+
+    /**
+     * Returns a custom client factory which is configured as disabling the certificate validation,
+     * which means any certificate received from the server will be accepted.
+     */
+    @Bean
+    public ClientFactory clientFactory() {
+        return new ClientFactoryBuilder().sslContextCustomizer(
+                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
     }
 }
