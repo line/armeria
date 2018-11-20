@@ -87,7 +87,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Returns the network interface that the {@link Server} use.
+         * Returns the network interface that the {@link Server} uses.
          */
         @Nullable
         public String getIface() {
@@ -95,7 +95,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Registers a network interface that the {@link Server} use.
+         * Registers a network interface that the {@link Server} uses.
          */
         public Port setIface(String iface) {
             this.iface = iface;
@@ -103,14 +103,14 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Returns the port that the {@link Server} use.
+         * Returns the port that the {@link Server} uses.
          */
         public int getPort() {
             return port;
         }
 
         /**
-         * Registers a port that the {@link Server} use.
+         * Registers a port that the {@link Server} uses.
          */
         public Port setPort(int port) {
             this.port = port;
@@ -129,7 +129,7 @@ public class ArmeriaSettings {
          * Registers a list of {@link SessionProtocol}s that the {@link Server} uses.
          */
         public Port setProtocols(List<SessionProtocol> protocols) {
-            this.protocols = protocols;
+            this.protocols = ImmutableList.copyOf(protocols);
             return this;
         }
 

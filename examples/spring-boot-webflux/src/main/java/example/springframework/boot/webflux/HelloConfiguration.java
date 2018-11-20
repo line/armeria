@@ -46,10 +46,23 @@ public class HelloConfiguration {
     }
 
     /**
+     * Returns a custom client factory which is configured as disabling the certificate validation,
+     * which means any certificate received from the server will be accepted.
+     * It is used for an example which makes the client send HTTPS request to the server running
+     * on localhost with a self-signed certificate. So you MUST NOT use the
+     * {@link InsecureTrustManagerFactory} in production.
+     */
+    @Bean
+    public ClientFactory clientFactory() {
+        return new ClientFactoryBuilder().sslContextCustomizer(
+                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
+    }
+
+    /**
      * A user can configure a {@link Client} by providing an {@link ArmeriaClientConfigurator} bean.
      */
     @Bean
-    public ArmeriaClientConfigurator armeriaClientConfigurator() {
+    public ArmeriaClientConfigurator armeriaClientConfigurator(ClientFactory clientFactory) {
         // Customize the client using the given HttpClientBuilder. For example:
         return builder -> {
             // Use a circuit breaker for each remote host.
@@ -57,17 +70,7 @@ public class HelloConfiguration {
             builder.decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator());
 
             // Set a custom client factory.
-            builder.factory(clientFactory());
+            builder.factory(clientFactory);
         };
-    }
-
-    /**
-     * Returns a custom client factory which is configured as disabling the certificate validation,
-     * which means any certificate received from the server will be accepted.
-     */
-    @Bean
-    public ClientFactory clientFactory() {
-        return new ClientFactoryBuilder().sslContextCustomizer(
-                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
     }
 }
