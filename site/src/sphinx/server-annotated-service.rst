@@ -7,7 +7,7 @@ Annotated HTTP Service
 Armeria provides a way to write an HTTP service using annotations. It helps a user make his or her code
 simple and easy to understand. A user is able to run an HTTP service by fewer lines of code using
 annotations as follows. ``hello()`` method in the example would be mapped to the path of ``/hello/{name}``
-with an HTTP GET method.
+with an HTTP ``GET`` method.
 
 .. code-block:: java
 
@@ -221,7 +221,7 @@ Getting an HTTP parameter
 
 When the value of :api:`@Param` annotation is not shown in the path pattern, it will be handled as a
 parameter name of the query string of the request. If you have a service class like the example below and
-a user sends an HTTP GET request with URI of ``/hello1?name=armeria``, the service method will get ``armeria``
+a user sends an HTTP ``GET`` request with URI of ``/hello1?name=armeria``, the service method will get ``armeria``
 as the value of parameter ``name``. If there is no parameter named ``name`` in the query string, the parameter
 ``name`` of the method would be ``null``. If you want to avoid ``null`` in this case, you can use
 :api:`@Default` annotation or ``Optional<?>`` class, e.g. ``hello2`` and ``hello3`` methods below, respectively.
@@ -262,7 +262,7 @@ or ``Optional<?>`` class here, too.
         public HttpResponse hello3(@Param("number") Optional<List<Integer>> numbers) { ... }
     }
 
-If an HTTP POST request with a ``Content-Type: x-www-form-urlencoded`` is received and no :api:`@Param`
+If an HTTP ``POST`` request with a ``Content-Type: x-www-form-urlencoded`` is received and no :api:`@Param`
 value appears in the path pattern, Armeria will aggregate the received request and decode its body as
 a URL-encoded form. After that, Armeria will inject the decoded value into the parameter.
 

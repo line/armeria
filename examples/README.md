@@ -2,7 +2,10 @@
 
 - `annotated-http-service`
   - Learn how to use the features provided by Armeria annotated HTTP service. 
-  
+
+- `saml-service-provider`
+  - Learn how to use Armeria SAML module.
+    
 - `spring-boot-tomcat`
   - Learn how to make Armeria serve your Spring Boot web application.
 

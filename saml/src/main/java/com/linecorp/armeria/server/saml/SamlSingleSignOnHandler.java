@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.saml;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
@@ -44,9 +45,11 @@ public interface SamlSingleSignOnHandler {
      *                provider
      * @param idpConfig the configuration of the identity provider that the request is sending to
      */
-    CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
-                                              MessageContext<AuthnRequest> message,
-                                              SamlIdentityProviderConfig idpConfig);
+    default CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
+                                                      MessageContext<AuthnRequest> message,
+                                                      SamlIdentityProviderConfig idpConfig) {
+        return CompletableFuture.completedFuture(null);
+    }
 
     /**
      * Invoked when the single sign-on is succeeded. It should return an {@link HttpResponse} which sends
