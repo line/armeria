@@ -67,6 +67,27 @@ allprojects {
     }
 }
 
+// Create a new configuration called 'allDependencies'.
+rootProject.configurations {
+    allDependencies
+}
+
+// Add all dependencies declared in 'dependencies.yml' to 'allDependencies' because otherwise
+// 'dependencyUpdates' task will not check all dependencies.
+rootProject.dependencies {
+    rootProject.ext.dependenciesYaml.forEach { String key, value ->
+        if (key != 'boms') {
+            def groupId = key
+            def artifact = value as Map
+            artifact.forEach { String artifactId, Map props ->
+                if (props.containsKey('version')) {
+                    allDependencies("${groupId}:${artifactId}")
+                }
+            }
+        }
+    }
+}
+
 rootProject.ext {
     // Build the relocation table from dependencies.yml.
     relocations = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
@@ -86,6 +107,7 @@ rootProject.ext {
         return list
     }
 
+    // Build the Javadoc link table from dependencies.yml.
     javadocLinks = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
         if (entry.key != 'boms') {
             def groupId = entry.key
@@ -125,6 +147,20 @@ configure(rootProject) {
             f.parentFile.mkdir()
             f.withWriter('UTF-8') {
                 new Yaml().dump(dependencyManagement.managedVersions, it)
+            }
+        }
+    }
+}
+
+// Ignore release candidates when checking dependency updates.
+rootProject.tasks.dependencyUpdates.resolutionStrategy {
+    componentSelection { rules ->
+        rules.all { ComponentSelection selection ->
+            boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview'].any { qualifier ->
+                selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+            }
+            if (rejected) {
+                selection.reject('Release candidate')
             }
         }
     }

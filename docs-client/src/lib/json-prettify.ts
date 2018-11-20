@@ -24,15 +24,15 @@ function doPrettify(ch: string, indentation: number): [string, number] {
     case '{':
     case '[':
       newIndentation += 1;
-      prettified = ch + '\n' + '  '.repeat(newIndentation);
+      prettified = `${ch}\n${'  '.repeat(newIndentation)}`;
       break;
     case '}':
     case ']':
       newIndentation -= 1;
-      prettified = '\n' + '  '.repeat(newIndentation) + ch;
+      prettified = `\n${'  '.repeat(newIndentation)}${ch}`;
       break;
     case ',':
-      prettified = ',\n' + '  '.repeat(newIndentation);
+      prettified = `,\n${'  '.repeat(newIndentation)}`;
       break;
     default:
       prettified = ch;

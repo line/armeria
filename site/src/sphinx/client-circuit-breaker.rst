@@ -78,19 +78,19 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
-    import com.linecorp.armeria.client.ClientBuilder;
+    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
+    import com.linecorp.armeria.client.HttpClientBuilder;
     import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.common.AggregatedHttpMessage;
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
 
-    final CircuitBreakerStrategy<HttpResponse> strategy = CircuitBreakerStrategy.onServerErrorStatus();
-    final CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaultName();
-    final HttpClient client = new ClientBuilder(...)
-            .decorator(HttpRequest.class, HttpResponse.class,
-                       CircuitBreakerHttpClient.newDecorator(circuitBreaker, strategy))
-            .build(HttpClient.class);
+    final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
+    final HttpClient client = new HttpClientBuilder(...)
+            .decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator())
+            .build();
 
-    client.execute(...).aggregate().join(); // Send requests on and on.
+    final AggregatedHttpMessage res = client.execute(...).aggregate().join(); // Send requests on and on.
 
 Now, the :api:`Client` can track the number of success or failure events depending on the :apiplural:`Response`.
 The :api:`CircuitBreaker` will enter ``OPEN``, when the number of failures divided by the total number of
@@ -111,39 +111,90 @@ is raised or the status is ``5xx``, succeeds when the status is ``2xx`` and igno
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.ClientRequestContext;
+    import com.linecorp.armeria.client.UnprocessedRequestException;
+    import com.linecorp.armeria.common.HttpStatus;
     import com.linecorp.armeria.common.HttpStatusClass;
 
-    final CircuitBreakerStrategy<HttpResponse> myStrategy = new CircuitBreakerStrategy<HttpResponse>() {
+    final CircuitBreakerStrategy myStrategy = new CircuitBreakerStrategy() {
 
         @Override
-        public CompletionStage<Boolean> shouldReportAsSuccess(HttpResponse response) {
-            return response.aggregate().handle((res, cause) -> {
-                if (cause != null) { // A failure if an Exception is raised.
-                    return false;
+        public CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx,
+                                                              @Nullable Throwable cause) {
+            if (cause != null) {
+                if (cause instanceof UnprocessedRequestException) {
+                    // Neither a success nor a failure because the request has not been handled by the server.
+                    return CompletableFuture.completedFuture(null);
+                }
+                // A failure if an Exception is raised.
+                return CompletableFuture.completedFuture(false);
+            }
+
+            final HttpStatus status = ctx.log().responseHeaders().status();
+            if (status != null) {
+                // A failure if the response is 5xx.
+                if (status.codeClass() == HttpStatusClass.SERVER_ERROR) {
+                    return CompletableFuture.completedFuture(false);
                 }
 
-                final HttpStatus status = res.status();
-                if (status != null) {
-                    // A failure if the response is 5xx.
-                    if (status.codeClass() == HttpStatusClass.SERVER_ERROR) {
-                        return false;
-                    }
-
-                    // A success if the response is 2xx.
-                    if (status.codeClass() == HttpStatusClass.SUCCESS) {
-                        return true;
-                    }
+                // A success if the response is 2xx.
+                if (status.codeClass() == HttpStatusClass.SUCCESS) {
+                    return CompletableFuture.completedFuture(true);
                 }
+            }
 
-                // Neither a success nor a failure. Do not take this response into account.
-                return null;
-            });
+            // Neither a success nor a failure. Do not take this response into account.
+            return CompletableFuture.completedFuture(null);
         }
     };
 
 If you want to treat a :api:`Response` as a success, return ``true``. Return ``false`` to treat as a failure.
 Note that :api:`CircuitBreakerStrategy` can return ``null`` as well. It won't be counted as a success nor
 a failure.
+
+If you need to determine whether the request was successful by looking into the response content,
+you should implement :api:`CircuitBreakerStrategyWithContent` and specify it when you create an
+:api:`HttpClient` using :api:`CircuitBreakerHttpClientBuilder`:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategyWithContent;
+
+    final CircuitBreakerStrategyWithContent<HttpResponse> myStrategy =
+            new CircuitBreakerStrategyWithContent<HttpResponse>() {
+
+                @Override
+                public CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx,
+                                                                      HttpResponse response) {
+                    return response.aggregate().handle((res, cause) -> {
+                        if (cause != null) {
+                            if (cause instanceof UnprocessedRequestException) {
+                                // Neither a success nor a failure because the request has not been handled
+                                // by the server.
+                                return null;
+                            }
+                            // A failure if an Exception is raised.
+                            return false;
+                        }
+
+                        final String content = res.content().toStringUtf8();
+                        if ("Success".equals(content)) {
+                            return true;
+                        } else if ("Failure".equals(content)) {
+                            return false;
+                        }
+
+                        // Neither a success nor a failure. Do not take this response into account.
+                        return null;
+                    });
+                }
+            };
+
+    final HttpClient client = new HttpClientBuilder(...)
+            .decorator(new CircuitBreakerHttpClientBuilder(myStrategy).newDecorator()) // Specify the strategy
+            .build();
+
+    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
 
 Grouping ``CircuitBreaker``\s
 -----------------------------

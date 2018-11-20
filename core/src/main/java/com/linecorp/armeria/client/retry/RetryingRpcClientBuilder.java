@@ -29,11 +29,10 @@ public class RetryingRpcClientBuilder
         extends RetryingClientBuilder<RetryingRpcClientBuilder, RetryingRpcClient, RpcRequest, RpcResponse> {
 
     /**
-     * Creates a new builder with the specified retry strategy.
+     * Creates a new builder with the specified {@link RetryStrategyWithContent}.
      */
-    public RetryingRpcClientBuilder(
-            RetryStrategy<RpcRequest, RpcResponse> retryStrategy) {
-        super(retryStrategy);
+    public RetryingRpcClientBuilder(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
+        super(retryStrategyWithContent);
     }
 
     /**
@@ -42,7 +41,8 @@ public class RetryingRpcClientBuilder
     @Override
     public RetryingRpcClient build(Client<RpcRequest, RpcResponse> delegate) {
         return new RetryingRpcClient(
-                delegate, retryStrategy, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+                delegate, retryStrategyWithContent(), maxTotalAttempts(),
+                responseTimeoutMillisForEachAttempt());
     }
 
     /**
@@ -51,8 +51,6 @@ public class RetryingRpcClientBuilder
      */
     @Override
     public Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient> newDecorator() {
-        return delegate ->
-                new RetryingRpcClient(
-                        delegate, retryStrategy, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+        return this::build;
     }
 }

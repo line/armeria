@@ -32,7 +32,7 @@ public interface Response {
      * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or
      * 2) the result value is set (the {@link CompletionStage} has completed.)
      *
-     * @deprecated Use {@link #completionFuture()} instead.
+     * @deprecated Use {@link #completionFuture()}.
      */
     @Deprecated
     default CompletableFuture<?> closeFuture() {

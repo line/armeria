@@ -72,7 +72,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         final HttpResponseWrapper resWrapper =
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
-        resWrapper.completionFuture().whenComplete((unused, cause) -> {
+        resWrapper.completionFuture().handle((unused, cause) -> {
             // Cancel timeout future and abort the request if it exists.
             resWrapper.onSubscriptionCancelled();
 
@@ -81,6 +81,8 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                 // to recover from it in HTTP/1.
                 channel().close();
             }
+
+            return null;
         });
 
         return resWrapper;

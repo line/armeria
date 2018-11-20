@@ -17,8 +17,11 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.function.Function;
+
+import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.HttpRequest;
@@ -30,17 +33,28 @@ import com.linecorp.armeria.common.HttpResponse;
 public class RetryingHttpClientBuilder extends RetryingClientBuilder<
         RetryingHttpClientBuilder, RetryingHttpClient, HttpRequest, HttpResponse> {
 
-    private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = 0; // no preview (0 byte)
+    private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = Integer.MAX_VALUE;
 
     private boolean useRetryAfter;
 
     private int contentPreviewLength = DEFAULT_CONTENT_PREVIEW_LENGTH;
 
+    private final boolean needsContentInStrategy;
+
     /**
-     * Creates a new builder with the specified retry strategy.
+     * Creates a new builder with the specified {@link RetryStrategy}.
      */
-    public RetryingHttpClientBuilder(RetryStrategy<HttpRequest, HttpResponse> retryStrategy) {
+    public RetryingHttpClientBuilder(RetryStrategy retryStrategy) {
         super(retryStrategy);
+        needsContentInStrategy = false;
+    }
+
+    /**
+     * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     */
+    public RetryingHttpClientBuilder(RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
+        super(retryStrategyWithContent);
+        needsContentInStrategy = true;
     }
 
     /**
@@ -59,16 +73,26 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
     }
 
     /**
-     * Sets the length of content to look up whether retry or not. If the total length of content exceeds
-     * this and there's no retry condition matched, it will hand over the stream to the client.
-     * @param contentPreviewLength the content length to preview. Unlike other length related arguments,
-     *                             {@code 0} does not disable the length limit. It means that it will not
-     *                             look up the content
+     * Sets the length of content required to determine whether to retry or not. If the total length of content
+     * exceeds this length and there's no retry condition matched, it will hand over the stream to the client.
+     * Note that this property is useful only if you specified {@link RetryStrategyWithContent} when calling
+     * this builder's constructor. The default value of this property is
+     * {@value #DEFAULT_CONTENT_PREVIEW_LENGTH}.
+     *
+     * @param contentPreviewLength the content length to preview. {@code 0} does not disable the length limit.
+     *
      * @return {@link RetryingHttpClientBuilder} to support method chaining
+     *
+     * @throws IllegalStateException if this builder is created with a {@link RetryStrategy} rather than
+     *                               {@link RetryStrategyWithContent}
+     * @throws IllegalArgumentException if the specified {@code contentPreviewLength} is equal to or
+     *                                  less than {@code 0}
      */
     public RetryingHttpClientBuilder contentPreviewLength(int contentPreviewLength) {
-        checkArgument(contentPreviewLength >= 0,
-                      "contentPreviewLength: %s (expected: >= 0)", contentPreviewLength);
+        checkState(needsContentInStrategy, "cannot set contentPreviewLength when RetryStrategy is used; " +
+                                           "Use RetryStrategyWithContent to enable this feature.");
+        checkArgument(contentPreviewLength > 0,
+                      "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
         this.contentPreviewLength = contentPreviewLength;
         return self();
     }
@@ -78,8 +102,14 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
      */
     @Override
     public RetryingHttpClient build(Client<HttpRequest, HttpResponse> delegate) {
-        return new RetryingHttpClient(delegate, retryStrategy, maxTotalAttempts,
-                                      responseTimeoutMillisForEachAttempt, useRetryAfter, contentPreviewLength);
+        if (needsContentInStrategy) {
+            return new RetryingHttpClient(delegate, retryStrategyWithContent(), maxTotalAttempts(),
+                                          responseTimeoutMillisForEachAttempt(), useRetryAfter,
+                                          contentPreviewLength);
+        }
+
+        return new RetryingHttpClient(delegate, retryStrategy(), maxTotalAttempts(),
+                                      responseTimeoutMillisForEachAttempt(), useRetryAfter);
     }
 
     /**
@@ -88,13 +118,15 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
      */
     @Override
     public Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient> newDecorator() {
-        return delegate -> new RetryingHttpClient(
-                delegate, retryStrategy, maxTotalAttempts, responseTimeoutMillisForEachAttempt,
-                useRetryAfter, contentPreviewLength);
+        return this::build;
     }
 
     @Override
     public String toString() {
-        return toStringHelper().add("useRetryAfter", useRetryAfter).toString();
+        final ToStringHelper stringHelper = toStringHelper().add("useRetryAfter", this.useRetryAfter);
+        if (needsContentInStrategy) {
+            stringHelper.add("contentPreviewLength", contentPreviewLength);
+        }
+        return stringHelper.toString();
     }
 }

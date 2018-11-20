@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.client.retry.DefaultBackoffHolder.defaultBackoff;
 import static com.linecorp.armeria.client.retry.FixedBackoff.NO_DELAY;
 import static java.util.Objects.requireNonNull;
 
@@ -29,6 +30,14 @@ import java.util.function.Supplier;
  */
 @FunctionalInterface
 public interface Backoff {
+
+    /**
+     * Returns the default {@link Backoff}.
+     */
+    static Backoff ofDefault() {
+        return defaultBackoff;
+    }
+
     /**
      * Returns a {@link Backoff} that will never wait between attempts. In most cases, using back off
      * without delay is very dangerous. Please consider using {@link #exponential(long, long)} with

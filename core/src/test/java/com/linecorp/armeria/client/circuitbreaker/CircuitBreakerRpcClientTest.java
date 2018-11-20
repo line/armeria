@@ -297,7 +297,7 @@ public class CircuitBreakerRpcClientTest {
      * Returns a {@link CircuitBreakerStrategy} which returns {@code true} when there's
      * no {@link Exception} raised.
      */
-    private static CircuitBreakerStrategy<RpcResponse> strategy() {
-        return response -> response.completionFuture().handle((res, cause) -> cause == null);
+    private static CircuitBreakerStrategyWithContent<RpcResponse> strategy() {
+        return (ctx, response) -> response.handle((unused, cause) -> cause == null);
     }
 }

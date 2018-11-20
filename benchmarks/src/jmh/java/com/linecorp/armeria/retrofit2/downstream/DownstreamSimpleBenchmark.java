@@ -33,7 +33,7 @@ import retrofit2.converter.jackson.JacksonConverterFactory;
 public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     @Override
-    protected SimpleBenchmarkClient client() {
+    protected SimpleBenchmarkClient newClient() {
         ClientFactory factory =
                 new ClientFactoryBuilder()
                         .sslContextCustomizer(ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))

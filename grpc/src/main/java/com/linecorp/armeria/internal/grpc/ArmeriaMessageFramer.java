@@ -147,23 +147,37 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     }
 
     private ByteBuf write(ByteBuf message, boolean compressed) {
-        try {
-            final int messageLength = message.readableBytes();
-            if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
-                throw Status.RESOURCE_EXHAUSTED
-                        .withDescription(
-                                String.format("message too large %d > %d", messageLength,
-                                              maxOutboundMessageSize))
-                        .asRuntimeException();
-            }
-            final ByteBuf buf = alloc.buffer(HEADER_LENGTH + messageLength);
-            buf.writeByte(compressed ? COMPRESSED : UNCOMPRESSED);
-            buf.writeInt(messageLength);
-            buf.writeBytes(message);
-            return buf;
-        } finally {
+        final int messageLength = message.readableBytes();
+        if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
             message.release();
+            throw Status.RESOURCE_EXHAUSTED
+                    .withDescription(
+                            String.format("message too large %d > %d", messageLength,
+                                          maxOutboundMessageSize))
+                    .asRuntimeException();
         }
+
+        // Here comes some heuristics.
+        // TODO(trustin): Consider making this configurable.
+        if (messageLength <= 128) {
+            // Frame is so small that the cost of composition outweighs.
+            try {
+                final ByteBuf buf = alloc.buffer(HEADER_LENGTH + messageLength);
+                buf.writeByte(compressed ? COMPRESSED : UNCOMPRESSED);
+                buf.writeInt(messageLength);
+                buf.writeBytes(message);
+                return buf;
+            } finally {
+                message.release();
+            }
+        }
+
+        // Frame is fairly large that composition might reduce memory footprint.
+        return new CompositeByteBuf(alloc, true, 2,
+                                    alloc.buffer(HEADER_LENGTH)
+                                         .writeByte(compressed ? COMPRESSED : UNCOMPRESSED)
+                                         .writeInt(messageLength),
+                                    message);
     }
 
     private void verifyNotClosed() {

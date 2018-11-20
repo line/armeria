@@ -53,7 +53,9 @@ import static java.util.Objects.requireNonNull;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayDeque;
 import java.util.Objects;
+import java.util.Queue;
 
 import javax.annotation.Nullable;
 
@@ -69,7 +71,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * A deframer of messages transported in the gRPC wire format. See
@@ -177,7 +179,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private boolean endOfStream;
 
     @Nullable
-    private CompositeByteBuf unprocessed;
+    private Queue<ByteBuf> unprocessed;
+    private int unprocessedBytes;
 
     private long pendingDeliveries;
     private boolean deliveryStalled = true;
@@ -191,7 +194,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         this.maxMessageSizeBytes = maxMessageSizeBytes;
         this.alloc = requireNonNull(alloc, "alloc");
 
-        unprocessed = alloc.compositeBuffer();
+        unprocessed = new ArrayDeque<>();
     }
 
     /**
@@ -236,16 +239,17 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         startedDeframing = true;
 
-        if (!data.isEmpty()) {
+        final int dataLength = data.length();
+        if (dataLength != 0) {
             final ByteBuf buf;
             if (data instanceof ByteBufHolder) {
                 buf = ((ByteBufHolder) data).content();
             } else {
-                buf = alloc.buffer(data.length());
-                buf.writeBytes(data.array(), data.offset(), data.length());
+                buf = Unpooled.wrappedBuffer(data.array(), data.offset(), dataLength);
             }
             assert unprocessed != null;
-            unprocessed.addComponent(true, buf);
+            unprocessed.add(buf);
+            unprocessedBytes += dataLength;
         }
 
         // Indicate that all of the data for this stream has been received.
@@ -261,7 +265,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     public void close() {
         try {
             if (unprocessed != null) {
-                unprocessed.release();
+                unprocessed.forEach(ByteBuf::release);
             }
         } finally {
             unprocessed = null;
@@ -330,7 +334,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
             if (endOfStream && stalled) {
                 assert unprocessed != null;
-                final boolean havePartialMessage = unprocessed.isReadable();
+                final boolean havePartialMessage = !unprocessed.isEmpty();
                 if (!havePartialMessage) {
                     listener.endOfStream();
                     deliveryStalled = false;
@@ -349,7 +353,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     private boolean hasRequiredBytes() {
-        return unprocessed.readableBytes() >= requiredLength;
+        return unprocessedBytes >= requiredLength;
     }
 
     /**
@@ -357,8 +361,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * frame length.
      */
     private void readHeader() {
-        assert unprocessed != null;
-        final int type = unprocessed.readUnsignedByte();
+        final int type = readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
             throw Status.INTERNAL.withDescription(
                     DEBUG_STRING + ": Frame header malformed: reserved bits not zero")
@@ -367,7 +370,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         compressedFlag = (type & COMPRESSED_FLAG_MASK) != 0;
 
         // Update the required length to include the length of the frame.
-        requiredLength = unprocessed.readInt();
+        requiredLength = readInt();
         if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
             throw Status.RESOURCE_EXHAUSTED.withDescription(
                     String.format("%s: Frame size %d exceeds maximum: %d. ",
@@ -377,6 +380,52 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         // Continue reading the frame body.
         state = State.BODY;
+    }
+
+    private int readUnsignedByte() {
+        unprocessedBytes--;
+        assert unprocessed != null;
+        final ByteBuf firstBuf = unprocessed.peek();
+        assert firstBuf != null;
+        final int value = firstBuf.readUnsignedByte();
+        if (!firstBuf.isReadable()) {
+            unprocessed.remove().release();
+        }
+        return value;
+    }
+
+    private int readInt() {
+        unprocessedBytes -= 4;
+        assert unprocessed != null;
+        final ByteBuf firstBuf = unprocessed.peek();
+        assert firstBuf != null;
+        final int firstBufLen = firstBuf.readableBytes();
+
+        if (firstBufLen >= 4) {
+            final int value = firstBuf.readInt();
+            if (!firstBuf.isReadable()) {
+                unprocessed.remove().release();
+            }
+            return value;
+        }
+
+        return readIntSlowPath();
+    }
+
+    private int readIntSlowPath() {
+        assert unprocessed != null;
+
+        int value = 0;
+        for (int i = 4; i > 0; i--) {
+            final ByteBuf buf = unprocessed.peek();
+            assert buf != null;
+            value <<= 8;
+            value |= buf.readUnsignedByte();
+            if (!buf.isReadable()) {
+                unprocessed.remove().release();
+            }
+        }
+        return value;
     }
 
     /**
@@ -394,10 +443,51 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     private ByteBuf readBytes(int length) {
+        if (length == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        unprocessedBytes -= length;
         assert unprocessed != null;
-        final ByteBuf buf = unprocessed.readBytes(length);
-        unprocessed.discardReadComponents();
-        return buf;
+        final ByteBuf firstBuf = unprocessed.peek();
+        assert firstBuf != null;
+        final int firstBufLen = firstBuf.readableBytes();
+
+        if (firstBufLen == length) {
+            unprocessed.remove();
+            return firstBuf;
+        }
+
+        if (firstBufLen > length) {
+            return firstBuf.readRetainedSlice(length);
+        }
+
+        return readBytesMerged(length);
+    }
+
+    private ByteBuf readBytesMerged(int length) {
+        assert unprocessed != null;
+
+        final ByteBuf merged = alloc.buffer(length);
+        for (;;) {
+            final ByteBuf buf = unprocessed.peek();
+            assert buf != null;
+
+            final int bufLen = buf.readableBytes();
+            final int remaining = merged.writableBytes();
+
+            if (bufLen <= remaining) {
+                merged.writeBytes(buf);
+                unprocessed.remove().release();
+
+                if (bufLen == remaining) {
+                    return merged;
+                }
+            } else {
+                merged.writeBytes(buf, remaining);
+                return merged;
+            }
+        }
     }
 
     private static ByteBufOrStream getUncompressedBody(ByteBuf buf) {

@@ -22,17 +22,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.internal.HttpHeaderSubscriber;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 /**
  * Provides a {@link RetryStrategy} that decides to retry the request based on the {@link HttpStatus} of
  * its response or the {@link Exception} raised while processing the {@link HttpResponse}.
  */
-final class HttpStatusBasedRetryStrategy implements RetryStrategy<HttpRequest, HttpResponse> {
+final class HttpStatusBasedRetryStrategy implements RetryStrategy {
 
     private final BiFunction<HttpStatus, Throwable, Backoff> backoffFunction;
 
@@ -44,13 +45,13 @@ final class HttpStatusBasedRetryStrategy implements RetryStrategy<HttpRequest, H
     }
 
     @Override
-    public CompletionStage<Backoff> shouldRetry(HttpRequest request, HttpResponse response) {
-        final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
-        final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
-        response.completionFuture().whenComplete(subscriber);
-        response.subscribe(subscriber);
-
-        return future.handle((headers, thrown) -> backoffFunction
-                .apply(headers != null ? headers.status() : null, thrown));
+    public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+        final HttpStatus status;
+        if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+            status = ctx.log().responseHeaders().status();
+        } else {
+            status = null;
+        }
+        return CompletableFuture.completedFuture(backoffFunction.apply(status, cause));
     }
 }

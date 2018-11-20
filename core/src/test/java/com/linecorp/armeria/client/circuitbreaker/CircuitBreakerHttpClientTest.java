@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -26,8 +27,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.testing.FakeTicker;
@@ -37,11 +40,16 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.channel.DefaultEventLoop;
 
@@ -54,6 +62,14 @@ public class CircuitBreakerHttpClientTest {
             Endpoint.of("dummyhost", 8080),
             HttpMethod.GET, "/", null, null, ClientOptions.DEFAULT, mock(HttpRequest.class));
 
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/unavailable", (ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE));
+        }
+    };
+
     @Test
     public void testPerMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
@@ -65,7 +81,7 @@ public class CircuitBreakerHttpClientTest {
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerHttpClient.newPerMethodDecorator(factory, strategy()),
-                           ctx.method(), COUNT);
+                           HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("GET");
@@ -82,7 +98,7 @@ public class CircuitBreakerHttpClientTest {
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerHttpClient.newPerHostDecorator(factory, strategy()),
-                           ctx.method(), COUNT);
+                           HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("dummyhost:8080");
@@ -99,14 +115,28 @@ public class CircuitBreakerHttpClientTest {
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerHttpClient.newPerHostAndMethodDecorator(factory, strategy()),
-                           ctx.method(), COUNT);
+                           HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("dummyhost:8080#GET");
     }
 
     @Test
-    public void circuitBreakerIsOpenOnServerError() throws Exception {
+    public void strategyWithoutContent() throws Exception {
+        final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
+        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+    }
+
+    @Test
+    public void strategyWithContent() throws Exception {
+        final CircuitBreakerStrategyWithContent<HttpResponse> strategy =
+                (ctx, response) -> response.aggregate().handle(
+                        (msg, unused1) -> msg.status().codeClass() != HttpStatusClass.SERVER_ERROR);
+        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+    }
+
+    private static void circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClientBuilder builder)
+            throws Exception {
         final FakeTicker ticker = new FakeTicker();
         final int minimumRequestThreshold = 2;
         final Duration circuitOpenWindow = Duration.ofSeconds(60);
@@ -129,21 +159,23 @@ public class CircuitBreakerHttpClientTest {
                                             .thenReturn(HttpResponse.of(503));
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        final CircuitBreakerHttpClient stub = new CircuitBreakerHttpClient(
-                delegate, mapping, CircuitBreakerStrategy.onServerErrorStatus());
+        final HttpClient client = new HttpClientBuilder(server.uri("/"))
+                .decorator(builder.circuitBreakerMapping(mapping).newDecorator())
+                .build();
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             // Need to call execute() one more to change the state of the circuit breaker.
 
-            assertThat(stub.execute(ctx, mock(HttpRequest.class)).aggregate().join().headers().status())
+            assertThat(client.get("/unavailable").aggregate().join().headers().status())
                     .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 
+        await().untilAsserted(() -> assertThat(circuitBreaker.canRequest()).isFalse());
         // OPEN
-        assertThatThrownBy(() -> stub.execute(ctx, mock(HttpRequest.class)))
-                .isInstanceOf(FailFastException.class);
+        assertThatThrownBy(() -> client.get("/unavailable").aggregate().join())
+                .hasCauseExactlyInstanceOf(FailFastException.class);
     }
 
     private static void failFastInvocation(
@@ -171,7 +203,7 @@ public class CircuitBreakerHttpClientTest {
      * Returns a {@link CircuitBreakerStrategy} which returns {@code true} when there's
      * no {@link Exception} raised.
      */
-    private static CircuitBreakerStrategy<HttpResponse> strategy() {
-        return response -> response.aggregate().handle((res, cause) -> cause == null);
+    private static CircuitBreakerStrategy strategy() {
+        return (ctx, cause) -> CompletableFuture.completedFuture(cause == null);
     }
 }

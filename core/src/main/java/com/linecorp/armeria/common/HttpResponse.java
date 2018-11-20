@@ -63,7 +63,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        stage.whenComplete((delegate, thrown) -> {
+        stage.handle((delegate, thrown) -> {
             if (thrown != null) {
                 res.close(Exceptions.peel(thrown));
             } else if (delegate == null) {
@@ -71,6 +71,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             } else {
                 res.delegate(delegate);
             }
+            return null;
         });
         return res;
     }
@@ -336,7 +337,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     /**
      * Creates a new failed HTTP response.
      *
-     * @deprecated Use {@link #ofFailure(Throwable)} instead.
+     * @deprecated Use {@link #ofFailure(Throwable)}.
      */
     @Deprecated
     static HttpResponse ofFailed(Throwable cause) {
@@ -358,7 +359,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        completionFuture().whenComplete(aggregator);
+        completionFuture().handle(aggregator);
         subscribe(aggregator);
         return future;
     }
@@ -370,7 +371,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        completionFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
     }
@@ -385,7 +386,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        completionFuture().whenComplete(aggregator);
+        completionFuture().handle(aggregator);
         subscribe(aggregator, true);
         return future;
     }
@@ -402,7 +403,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        completionFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor, true);
         return future;
     }

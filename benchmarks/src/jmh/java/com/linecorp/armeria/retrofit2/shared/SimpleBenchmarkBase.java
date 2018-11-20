@@ -41,7 +41,7 @@ public abstract class SimpleBenchmarkBase {
                 .tlsSelfSigned()
                 .build();
         server.start().join();
-        client = client();
+        client = newClient();
     }
 
     @TearDown
@@ -49,13 +49,13 @@ public abstract class SimpleBenchmarkBase {
         server.stop().join();
     }
 
-    protected abstract SimpleBenchmarkClient client() throws Exception;
+    protected abstract SimpleBenchmarkClient newClient() throws Exception;
 
     protected String baseUrl() {
         final ServerPort httpPort = server.activePorts().values().stream()
                                           .filter(ServerPort::hasHttps).findAny()
                                           .get();
-        return "https://localhost:" + httpPort.localAddress().getPort();
+        return "https://127.0.0.1:" + httpPort.localAddress().getPort();
     }
 
     @Benchmark

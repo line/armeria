@@ -25,6 +25,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
@@ -98,7 +100,9 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         }
 
         final String method = ctx.method().name();
-        span.kind(Kind.CLIENT).name(method).start();
+        span.kind(Kind.CLIENT).name(method);
+        ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
+                              RequestLogAvailability.REQUEST_START);
 
         // Ensure the trace context propagates to children
         ctx.onChild(RequestContextCurrentTraceContext::copy);
@@ -143,7 +147,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
             }
         }
 
-        if (remoteServiceName != null) {
+        if (!Strings.isNullOrEmpty(remoteServiceName)) {
             span.remoteServiceName(remoteServiceName);
         }
         if (address != null) {

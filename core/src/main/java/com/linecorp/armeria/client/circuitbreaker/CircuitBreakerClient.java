@@ -16,10 +16,12 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +44,11 @@ public abstract class CircuitBreakerClient<I extends Request, O extends Response
 
     private static final Logger logger = LoggerFactory.getLogger(CircuitBreakerClient.class);
 
-    private final CircuitBreakerStrategy<O> strategy;
+    @Nullable
+    private final CircuitBreakerStrategy strategy;
+
+    @Nullable
+    private final CircuitBreakerStrategyWithContent<O> strategyWithContent;
 
     private final CircuitBreakerMapping mapping;
 
@@ -50,14 +56,48 @@ public abstract class CircuitBreakerClient<I extends Request, O extends Response
      * Creates a new instance that decorates the specified {@link Client}.
      */
     protected CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                   CircuitBreakerStrategy<O> strategy) {
-        super(delegate);
-        this.mapping = requireNonNull(mapping, "mapping");
-        this.strategy = requireNonNull(strategy, "strategy");
+                                   CircuitBreakerStrategy strategy) {
+        this(delegate, mapping, requireNonNull(strategy, "strategy"), null);
     }
 
-    protected final CircuitBreakerStrategy<O> strategy() {
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     */
+    protected CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
+                                   CircuitBreakerStrategyWithContent<O> strategyWithContent) {
+        this(delegate, mapping, null, requireNonNull(strategyWithContent, "strategyWithContent"));
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     */
+    private CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
+                                 @Nullable CircuitBreakerStrategy strategy,
+                                 @Nullable CircuitBreakerStrategyWithContent<O> strategyWithContent) {
+        super(delegate);
+        this.mapping = requireNonNull(mapping, "mapping");
+        this.strategy = strategy;
+        this.strategyWithContent = strategyWithContent;
+    }
+
+    /**
+     * Returns the {@link CircuitBreakerStrategy}.
+     *
+     * @throws IllegalStateException if the {@link CircuitBreakerStrategy} is not set
+     */
+    protected final CircuitBreakerStrategy strategy() {
+        checkState(strategy != null, "strategy is not set.");
         return strategy;
+    }
+
+    /**
+     * Returns the {@link CircuitBreakerStrategyWithContent}.
+     *
+     * @throws IllegalStateException if the {@link CircuitBreakerStrategyWithContent} is not set
+     */
+    protected final CircuitBreakerStrategyWithContent<O> strategyWithContent() {
+        checkState(strategyWithContent != null, "strategyWithContent is not set.");
+        return strategyWithContent;
     }
 
     @Override
@@ -90,15 +130,17 @@ public abstract class CircuitBreakerClient<I extends Request, O extends Response
      */
     protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
                                                  CompletionStage<Boolean> future) {
-        future.handle(voidFunction((success, unused) -> {
+        future.handle((success, unused) -> {
             if (success != null) {
                 if (success) {
                     circuitBreaker.onSuccess();
                 } else {
                     circuitBreaker.onFailure();
                 }
+            } else {
+                // Ignore, because 'null' means the user does not want to count as a success nor failure.
             }
-            // If the success is null, the user does not want to count as a success nor failure. So ignore it.
-        })).exceptionally(CompletionActions::log);
+            return null;
+        }).exceptionally(CompletionActions::log);
     }
 }

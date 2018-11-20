@@ -74,13 +74,6 @@ interface HttpSession {
         if (lastHandler instanceof HttpSession) {
             return (HttpSession) lastHandler;
         }
-
-        for (ChannelHandler h : ch.pipeline().toMap().values()) {
-            if (h instanceof HttpSession) {
-                return (HttpSession) h;
-            }
-        }
-
         return INACTIVE;
     }
 

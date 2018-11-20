@@ -387,13 +387,13 @@ public final class Server implements AutoCloseable {
 
             // Close all server sockets.
             final Set<Channel> serverChannels = ImmutableSet.copyOf(Server.this.serverChannels);
-            ChannelUtil.close(serverChannels).whenComplete((unused1, unused2) -> {
+            ChannelUtil.close(serverChannels).handle((unused1, unused2) -> {
                 // All server ports have been closed.
                 primaryActivePort = null;
                 activePorts.clear();
 
                 // Close all accepted sockets.
-                ChannelUtil.close(connectionLimitingHandler.children()).whenComplete((unused3, unused4) -> {
+                ChannelUtil.close(connectionLimitingHandler.children()).handle((unused3, unused4) -> {
                     // Shut down the worker group if necessary.
                     final Future<?> workerShutdownFuture;
                     if (config.shutdownWorkerGroupOnStop()) {
@@ -425,7 +425,11 @@ public final class Server implements AutoCloseable {
                             });
                         });
                     });
+
+                    return null;
                 });
+
+                return null;
             });
         }
 
