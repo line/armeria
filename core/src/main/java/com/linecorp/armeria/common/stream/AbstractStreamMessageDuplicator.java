@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -36,6 +37,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
@@ -689,6 +691,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
 
             final Object signal = signals.get(offset);
+            assert signal != null : "signal is null. offset: " + offset + ", upstreamOffset: " +
+                                    processor.upstreamOffset + ", signals: " + signals;
+
             if (signal instanceof CloseEvent) {
                 // The stream has reached at its end.
                 offset++;
@@ -699,7 +704,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             for (;;) {
                 final long demand = this.demand;
                 if (demand == 0) {
-                    break;
+                    return false;
                 }
 
                 if (demand != Long.MAX_VALUE && !demandUpdater.compareAndSet(this, demand, demand - 1)) {
@@ -741,7 +746,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                         for (DownstreamSubscription<?> s : processor.downstreamSubscriptions) {
                             minOffset = Math.min(minOffset, s.offset);
                         }
-                        processor.signals().requestRemovalAheadOf(minOffset);
+                        signals.requestRemovalAheadOf(minOffset);
                     }
                 }
 
@@ -753,8 +758,6 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 }
                 return true;
             }
-
-            return false;
         }
 
         @Override
@@ -841,7 +844,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             elements = new Object[16];
         }
 
-        // Steals a reference to o.
+        /**
+         * Invoked by the executor in {@link StreamMessageProcessor}.
+         */
         int addAndRemoveIfRequested(Object o) {
             requireNonNull(o);
             int removedLength = 0;
@@ -849,6 +854,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 removedLength = removeElements();
             }
             final int t = tail;
+            final Object[] elements = this.elements;
+            assert elements != null : "elements is null. SignalQueue: " + this;
+
             elements[t] = o;
             size++;
             if ((tail = t + 1 & elements.length - 1) == head) {
@@ -857,10 +865,15 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             return removedLength;
         }
 
-        // Releases references to removed elements.
+        /**
+         * Invoked by the executor in {@link StreamMessageProcessor}.
+         */
         private int removeElements() {
             final int removalRequestedOffset = lastRemovalRequestedOffset;
             final int numElementsToBeRemoved = removalRequestedOffset - headOffset;
+            final Object[] elements = this.elements;
+            assert elements != null : "elements is null. SignalQueue: " + this;
+
             final int bitMask = elements.length - 1;
             final int oldHead = head;
             int removedLength = 0;
@@ -879,10 +892,15 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             return removedLength;
         }
 
+        /**
+         * Invoked by the executor in {@link StreamMessageProcessor}.
+         */
         private void doubleCapacity() {
             assert head == tail;
             final int h = head;
             final Object[] elements = this.elements;
+            assert elements != null : "elements is null. SignalQueue: " + this;
+
             final int n = elements.length;
             final int r = n - h; // number of elements to the right of h including h
             final int newCapacity = n << 1;
@@ -905,10 +923,15 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             this.elements = a;
         }
 
-        // Steals a reference to the object.
+        /**
+         * Invoked by the executor in {@link DownstreamSubscription}.
+         */
         Object get(int offset) {
             final int head = this.head;
             final int tail = this.tail;
+            final Object[] elements = this.elements;
+            assert elements != null : "elements is null. SignalQueue: " + this;
+
             final int length = elements.length;
             final int convertedIndex = offset & length - 1;
             checkState(size > 0, "queue is empty");
@@ -923,6 +946,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             return elements[convertedIndex];
         }
 
+        /**
+         * Invoked by the executor in {@link DownstreamSubscription}.
+         */
         void requestRemovalAheadOf(int offset) {
             for (;;) {
                 final int oldLastRemovalRequestedOffset = lastRemovalRequestedOffset;
@@ -951,6 +977,22 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             for (int i = head; i < t; i++) {
                 ReferenceCountUtil.safeRelease(oldElements[i]);
             }
+        }
+
+        @Override
+        public String toString() {
+            final ToStringHelper toStringHelper = toStringHelper(this);
+            final Object[] elements = this.elements;
+            if (elements != null) {
+                toStringHelper.add("elements.length", elements.length);
+            }
+
+            return toStringHelper.add("head", head)
+                                 .add("tail", tail)
+                                 .add("size", size)
+                                 .add("headOffset", headOffset)
+                                 .add("lastRemovalRequestedOffset", lastRemovalRequestedOffset)
+                                 .toString();
         }
     }
 }
