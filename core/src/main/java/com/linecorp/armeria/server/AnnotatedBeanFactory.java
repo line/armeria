@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.server.AnnotatedValueResolver.addToFirstIfExists;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -48,6 +49,7 @@ import com.google.common.collect.MapMaker;
 import com.linecorp.armeria.server.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.server.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
+import com.linecorp.armeria.server.annotation.RequestConverter;
 
 /**
  * A singleton class which manages factories for creating a bean. {@link #register(Class, Set, List)} should
@@ -99,16 +101,28 @@ final class AnnotatedBeanFactory {
             return null;
         }
 
+        // Support request converters which are specified for a bean class. e.g.
+        //
+        // @RequestConverter(BeanConverterA.class)
+        // @RequestConverter(BeanConverterB.class)
+        // class CompositeBean {
+        //     @RequestObject
+        //     BeanA a;
+        //     ...
+        // }
+        final List<RequestObjectResolver> resolvers = addToFirstIfExists(
+                objectResolvers, beanFactoryId.type.getAnnotationsByType(RequestConverter.class));
+
         final Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor =
-                findConstructor(beanFactoryId, objectResolvers);
+                findConstructor(beanFactoryId, resolvers);
         if (constructor == null) {
             // There is no constructor, so we cannot create a new instance.
             return null;
         }
 
-        final List<Entry<Field, AnnotatedValueResolver>> fields = findFields(beanFactoryId, objectResolvers);
+        final List<Entry<Field, AnnotatedValueResolver>> fields = findFields(beanFactoryId, resolvers);
         final List<Entry<Method, List<AnnotatedValueResolver>>> methods = findMethods(beanFactoryId,
-                                                                                      objectResolvers);
+                                                                                      resolvers);
 
         if (constructor.getValue().isEmpty() && fields.isEmpty() && methods.isEmpty()) {
             // A default constructor exists but there is no annotated field or method.
@@ -162,8 +176,11 @@ final class AnnotatedBeanFactory {
             }
 
             try {
+                final RequestConverter[] converters = constructor.getAnnotationsByType(RequestConverter.class);
                 final List<AnnotatedValueResolver> resolvers =
-                        AnnotatedValueResolver.of(constructor, beanFactoryId.pathParams, objectResolvers);
+                        AnnotatedValueResolver.ofBeanConstructorOrMethod(
+                                constructor, beanFactoryId.pathParams,
+                                addToFirstIfExists(objectResolvers, converters));
                 if (!resolvers.isEmpty()) {
                     // Can overwrite only if the current candidate is a default constructor.
                     if (candidate == null || candidate.getValue().isEmpty()) {
@@ -186,7 +203,9 @@ final class AnnotatedBeanFactory {
         final List<Entry<Field, AnnotatedValueResolver>> ret = new ArrayList<>();
         final Set<Field> fields = getAllFields(beanFactoryId.type);
         for (final Field field : fields) {
-            AnnotatedValueResolver.of(field, beanFactoryId.pathParams, objectResolvers)
+            final RequestConverter[] converters = field.getAnnotationsByType(RequestConverter.class);
+            AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
+                                               addToFirstIfExists(objectResolvers, converters))
                                   .ifPresent(resolver -> ret.add(new SimpleImmutableEntry<>(field, resolver)));
         }
         return ret;
@@ -197,9 +216,12 @@ final class AnnotatedBeanFactory {
         final List<Entry<Method, List<AnnotatedValueResolver>>> ret = new ArrayList<>();
         final Set<Method> methods = getAllMethods(beanFactoryId.type);
         for (final Method method : methods) {
+            final RequestConverter[] converters = method.getAnnotationsByType(RequestConverter.class);
             try {
                 final List<AnnotatedValueResolver> resolvers =
-                        AnnotatedValueResolver.of(method, beanFactoryId.pathParams, objectResolvers);
+                        AnnotatedValueResolver.ofBeanConstructorOrMethod(
+                                method, beanFactoryId.pathParams,
+                                addToFirstIfExists(objectResolvers, converters));
                 if (!resolvers.isEmpty()) {
                     ret.add(new SimpleImmutableEntry<>(method, resolvers));
                 }

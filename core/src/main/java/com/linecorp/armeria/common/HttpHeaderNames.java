@@ -254,7 +254,7 @@ public final class HttpHeaderNames {
     /**
      * {@code "keep-alive"}.
      *
-     * @deprecated Use {@link #CONNECTION} instead.
+     * @deprecated Use {@link #CONNECTION}.
      */
     @Deprecated
     public static final AsciiString KEEP_ALIVE = AsciiString.cached("keep-alive");
@@ -297,7 +297,7 @@ public final class HttpHeaderNames {
     /**
      * {@code "proxy-connection"}.
      *
-     * @deprecated Use {@link #CONNECTION} instead.
+     * @deprecated Use {@link #CONNECTION}.
      */
     @Deprecated
     public static final AsciiString PROXY_CONNECTION = AsciiString.cached("proxy-connection");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,20 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.pool;
+package com.linecorp.armeria.client.retry;
 
-import io.netty.channel.Channel;
-import io.netty.util.AttributeKey;
+import com.linecorp.armeria.common.Flags;
 
-final class KeyedChannelPoolUtil {
+final class DefaultBackoffHolder {
 
-    @SuppressWarnings("rawtypes")
-    static final AttributeKey<KeyedChannelPool> POOL = AttributeKey.valueOf(KeyedChannelPool.class, "POOL");
+    static final Backoff defaultBackoff = Backoff.of(Flags.defaultBackoffSpec());
 
-    @SuppressWarnings("unchecked")
-    static <K> KeyedChannelPool<K> findPool(Channel ch) {
-        return (KeyedChannelPool<K>) ch.attr(POOL).get();
-    }
-
-    private KeyedChannelPoolUtil() {}
+    private DefaultBackoffHolder() {}
 }

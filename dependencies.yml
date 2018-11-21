@@ -10,9 +10,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.4.0'
+    version: '3.4.1'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.4.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.4.1/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -41,7 +41,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '2.0.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.33.1' }
+  gax-grpc: { version: '1.34.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -77,8 +77,11 @@ com.google.protobuf:
   protoc: { version: '3.5.1-1' }
   protobuf-gradle-plugin: { version: '0.8.6' }
 
+com.moowork.gradle:
+  gradle-node-plugin: { version: '1.2.0' }
+
 com.puppycrawl.tools:
-  checkstyle: { version: '8.11' }
+  checkstyle: { version: '8.14' }
 
 com.spotify:
   completable-futures:
@@ -107,7 +110,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.15.1'
+    version: &GRPC_VERSION '1.16.1'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -132,24 +135,24 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.0.7'
+    version: &MICROMETER_VERSION '1.1.0'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.0.7/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.0/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.0.7/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.0/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.0.7/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.0/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.30.Final'
+    version: &NETTY_VERSION '4.1.31.Final'
     javadocs:
     - https://netty.io/4.1/api/
   netty-buffer: { version: *NETTY_VERSION }
@@ -164,7 +167,7 @@ io.netty:
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.17.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.19.Final' }
 
 io.prometheus:
   simpleclient_common:
@@ -174,15 +177,15 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.2'
+    version: '2.2.3'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: '5.4.3'
+    version: '5.5.0'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.4.3/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.5.0/
 
 it.unimi.dsi:
   fastutil:
@@ -216,7 +219,7 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.7' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '1.31.1' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.0.2' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -378,7 +381,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.0.6.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.0.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }

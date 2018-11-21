@@ -138,7 +138,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         // NB: This must be invoked at the end of this method because otherwise the callback methods in this
         //     class can be called before the member fields (subscription and timeoutFuture) are initialized.
         //     It is because the successful write of the first headers will trigger subscription.request(1).
-        eventLoop.execute(this::writeFirstHeader);
+        writeFirstHeader();
     }
 
     private void writeFirstHeader() {
@@ -263,7 +263,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             state = State.DONE;
         }
 
-        ch.eventLoop().execute(() -> write0(o, endOfStream, flush));
+        write0(o, endOfStream, flush);
     }
 
     private void write0(HttpObject o, boolean endOfStream, boolean flush) {

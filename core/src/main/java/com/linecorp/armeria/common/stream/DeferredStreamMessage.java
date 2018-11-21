@@ -212,7 +212,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
                 if (delegate.isComplete()) {
                     subscription.clearSubscriber();
                 } else {
-                    delegate.completionFuture().whenComplete((u1, u2) -> subscription.clearSubscriber());
+                    delegate.completionFuture().handle((u1, u2) -> {
+                        subscription.clearSubscriber();
+                        return null;
+                    });
                 }
             }
         } else {

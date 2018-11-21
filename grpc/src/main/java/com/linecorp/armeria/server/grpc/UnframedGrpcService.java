@@ -152,14 +152,14 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         ctx.logBuilder().deferResponseContent();
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).whenComplete(
-                (clientRequest, t) -> {
-                    if (t != null) {
-                        responseFuture.completeExceptionally(t);
-                    } else {
-                        frameAndServe(ctx, grpcHeaders, clientRequest, responseFuture);
-                    }
-                });
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
+            if (t != null) {
+                responseFuture.completeExceptionally(t);
+            } else {
+                frameAndServe(ctx, grpcHeaders, clientRequest, responseFuture);
+            }
+            return null;
+        });
         return HttpResponse.from(responseFuture);
     }
 
@@ -200,13 +200,14 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             return;
         }
 
-        grpcResponse.aggregate().whenCompleteAsync(
+        grpcResponse.aggregate().handleAsync(
                 (framedResponse, t) -> {
                     if (t != null) {
                         res.completeExceptionally(t);
                     } else {
                         deframeAndRespond(ctx, framedResponse, res);
                     }
+                    return null;
                 },
                 ctx.eventLoop());
     }

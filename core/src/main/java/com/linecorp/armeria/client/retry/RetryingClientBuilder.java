@@ -17,10 +17,13 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -42,20 +45,48 @@ public abstract class RetryingClientBuilder<
         T extends RetryingClientBuilder<T, U, I, O>, U extends RetryingClient<I, O>,
         I extends Request, O extends Response> {
 
-    final RetryStrategy<I, O> retryStrategy;
-    int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
-    long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
+    @Nullable
+    private final RetryStrategy retryStrategy;
+
+    @Nullable
+    private final RetryStrategyWithContent<O> retryStrategyWithContent;
+
+    private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
+    private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
 
     /**
-     * Creates a new builder with the specified retry strategy.
+     * Creates a new builder with the specified {@link RetryStrategy}.
      */
-    protected RetryingClientBuilder(RetryStrategy<I, O> retryStrategy) {
-        this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
+    protected RetryingClientBuilder(RetryStrategy retryStrategy) {
+        this(requireNonNull(retryStrategy, "retryStrategy"), null);
+    }
+
+    /**
+     * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     */
+    protected RetryingClientBuilder(RetryStrategyWithContent<O> retryStrategyWithContent) {
+        this(null, requireNonNull(retryStrategyWithContent, "retryStrategyWithContent"));
+    }
+
+    private RetryingClientBuilder(@Nullable RetryStrategy retryStrategy,
+                                  @Nullable RetryStrategyWithContent<O> retryStrategyWithContent) {
+        this.retryStrategy = retryStrategy;
+        this.retryStrategyWithContent = retryStrategyWithContent;
     }
 
     @SuppressWarnings("unchecked")
     final T self() {
         return (T) this;
+    }
+
+    RetryStrategy retryStrategy() {
+        checkState(retryStrategy != null, "retryStrategy is not set.");
+        return retryStrategy;
+    }
+
+    RetryStrategyWithContent<O> retryStrategyWithContent() {
+        checkState(retryStrategyWithContent != null, "retryStrategyWithContent is not set.");
+        return retryStrategyWithContent;
     }
 
     /**
@@ -69,6 +100,10 @@ public abstract class RetryingClientBuilder<
                       "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
         this.maxTotalAttempts = maxTotalAttempts;
         return self();
+    }
+
+    int maxTotalAttempts() {
+        return maxTotalAttempts;
     }
 
     /**
@@ -88,6 +123,10 @@ public abstract class RetryingClientBuilder<
                       responseTimeoutMillisForEachAttempt);
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
         return self();
+    }
+
+    long responseTimeoutMillisForEachAttempt() {
+        return responseTimeoutMillisForEachAttempt;
     }
 
     /**
@@ -123,8 +162,9 @@ public abstract class RetryingClientBuilder<
     }
 
     ToStringHelper toStringHelper() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("retryStrategy", retryStrategy)
+                          .add("retryStrategyWithContent", retryStrategyWithContent)
                           .add("maxTotalAttempts", maxTotalAttempts)
                           .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt);
     }

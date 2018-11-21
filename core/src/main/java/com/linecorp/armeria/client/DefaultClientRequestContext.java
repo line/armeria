@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.Headers;
@@ -333,6 +333,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public ByteBufAllocator alloc() {
         final Channel channel = channel();
-        return channel != null ? channel.alloc() : UnpooledByteBufAllocator.DEFAULT;
+        return channel != null ? channel.alloc() : PooledByteBufAllocator.DEFAULT;
     }
 }

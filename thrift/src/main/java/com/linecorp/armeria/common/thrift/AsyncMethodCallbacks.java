@@ -46,7 +46,7 @@ public final class AsyncMethodCallbacks {
     public static <T> void transfer(CompletionStage<T> src, AsyncMethodCallback<? super T> dest) {
         requireNonNull(src, "src");
         requireNonNull(dest, "dest");
-        src.whenComplete((res, cause) -> {
+        src.handle((res, cause) -> {
             try {
                 if (cause != null) {
                     invokeOnError(dest, cause);
@@ -56,6 +56,7 @@ public final class AsyncMethodCallbacks {
             } catch (Exception e) {
                 CompletionActions.log(e);
             }
+            return null;
         });
     }
 

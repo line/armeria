@@ -27,12 +27,12 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http2GoAwayHandler;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -71,7 +71,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         final HttpResponseWrapper resWrapper =
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
-        resWrapper.completionFuture().whenCompleteAsync((unused, cause) -> {
+        resWrapper.completionFuture().handleAsync((unused, cause) -> {
             // Cancel timeout future and abort the request if it exists.
             resWrapper.onSubscriptionCancelled();
 
@@ -94,6 +94,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                     }
                 }
             }
+
+            return null;
         }, channel().eventLoop());
         return resWrapper;
     }
@@ -230,7 +232,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             // If this tryWrite() returns false, it means the response stream has been closed due to
             // disconnection or by the response consumer. We do not need to handle such cases here because
             // it will be notified to the response consumer anyway.
-            res.tryWrite(HttpData.of(data));
+            res.tryWrite(new ByteBufHttpData(data.retain(), endOfStream));
         } catch (Throwable t) {
             res.close(t);
             throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");

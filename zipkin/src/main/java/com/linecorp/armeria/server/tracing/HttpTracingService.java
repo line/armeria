@@ -81,7 +81,9 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
         }
 
         final String method = ctx.method().name();
-        span.kind(Kind.SERVER).name(method).start();
+        span.kind(Kind.SERVER).name(method);
+        ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
+                              RequestLogAvailability.REQUEST_START);
 
         // Ensure the trace context propagates to children
         ctx.onChild(RequestContextCurrentTraceContext::copy);

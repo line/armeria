@@ -23,7 +23,11 @@ import java.util.concurrent.ThreadFactory;
 
 import com.linecorp.armeria.internal.TransportType;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
@@ -91,6 +95,30 @@ public final class EventLoopGroups {
 
         final TransportType type = TransportType.detectTransportType();
         return type.newEventLoopGroup(numThreads, unused -> threadFactory);
+    }
+
+    /**
+     * Returns the {@link ServerChannel} class that is available for this {@code eventLoopGroup}, for use in
+     * configuring a custom {@link Bootstrap}.
+     */
+    public static Class<? extends ServerChannel> serverChannelClass(EventLoopGroup eventLoopGroup) {
+        return TransportType.serverChannelClass(requireNonNull(eventLoopGroup, "eventLoopGroup"));
+    }
+
+    /**
+     * Returns the available {@link SocketChannel} class for {@code eventLoopGroup}, for use in configuring a
+     * custom {@link Bootstrap}.
+     */
+    public static Class<? extends SocketChannel> socketChannelType(EventLoopGroup eventLoopGroup) {
+        return TransportType.socketChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
+    }
+
+    /**
+     * Returns the available {@link DatagramChannel} class for {@code eventLoopGroup}, for use in configuring a
+     * custom {@link Bootstrap}.
+     */
+    public static Class<? extends DatagramChannel> datagramChannelType(EventLoopGroup eventLoopGroup) {
+        return TransportType.datagramChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
     }
 
     private EventLoopGroups() {}

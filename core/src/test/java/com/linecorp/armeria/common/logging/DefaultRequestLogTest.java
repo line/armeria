@@ -123,7 +123,7 @@ public class DefaultRequestLogTest {
         final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
         child.startRequest(channel, SessionProtocol.H2C);
-        assertThat(log.requestStartTimeMillis()).isEqualTo(child.requestStartTimeMillis());
+        assertThat(log.requestStartTimeMicros()).isEqualTo(child.requestStartTimeMicros());
         assertThat(log.channel()).isSameAs(channel);
         assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
 
@@ -146,7 +146,7 @@ public class DefaultRequestLogTest {
 
         // response-side log are propagated when RequestLogBuilder.endResponseWithLastChild() is invoked
         child.startResponse();
-        assertThatThrownBy(() -> log.responseStartTimeMillis())
+        assertThatThrownBy(() -> log.responseStartTimeMicros())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
         final HttpHeaders bar = HttpHeaders.of(AsciiString.of("bar"), "bar");
@@ -155,7 +155,7 @@ public class DefaultRequestLogTest {
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
         log.endResponseWithLastChild();
-        assertThat(log.responseStartTimeMillis()).isEqualTo(child.responseStartTimeMillis());
+        assertThat(log.responseStartTimeMicros()).isEqualTo(child.responseStartTimeMicros());
         assertThat(log.responseHeaders()).isSameAs(bar);
 
         final String responseContent = "baz1";

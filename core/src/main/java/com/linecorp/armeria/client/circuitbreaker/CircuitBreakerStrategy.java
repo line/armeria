@@ -19,26 +19,28 @@ package com.linecorp.armeria.client.circuitbreaker;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
-import com.linecorp.armeria.common.HttpResponse;
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.Response;
 
 /**
  * Determines whether a {@link Response} should be reported as a success or a failure to a
- * {@link CircuitBreaker}.
- *
- * @param <T> the response type
+ * {@link CircuitBreaker}. If you need to determine whether the request was successful by looking into the
+ * {@link Response} content, use {@link CircuitBreakerStrategyWithContent}.
  */
 @FunctionalInterface
-public interface CircuitBreakerStrategy<T extends Response> {
+public interface CircuitBreakerStrategy {
 
     /**
      * Returns the {@link CircuitBreakerStrategy} that determines a {@link Response} as successful
      * when its {@link HttpStatus} is not {@link HttpStatusClass#SERVER_ERROR} and there was no
      * {@link Exception} raised.
      */
-    static CircuitBreakerStrategy<HttpResponse> onServerErrorStatus() {
+    static CircuitBreakerStrategy onServerErrorStatus() {
         return onStatus(
                 (status, thrown) -> status != null && status.codeClass() != HttpStatusClass.SERVER_ERROR);
     }
@@ -50,21 +52,39 @@ public interface CircuitBreakerStrategy<T extends Response> {
      * @param function the {@link BiFunction} that returns {@code true}, {@code false} or
      *                 {@code null} according to the {@link HttpStatus} and {@link Throwable}. If {@code true}
      *                 is returned, {@link CircuitBreaker#onSuccess()} is called so that the
-     *                 {@link CircuitBreaker} increases its success count and use it to make a decision to
-     *                 close or open the switch. If {@code false} is returned, it works the other way around.
+     *                 {@link CircuitBreaker} increases its success count and uses it to make a decision to
+     *                 close or open the circuit. If {@code false} is returned, it works the other way around.
      *                 If {@code null} is returned, the {@link CircuitBreaker} ignores it.
      */
-    static CircuitBreakerStrategy<HttpResponse> onStatus(
-            BiFunction<HttpStatus, Throwable, Boolean> function) {
+    static CircuitBreakerStrategy onStatus(BiFunction<HttpStatus, Throwable, Boolean> function) {
         return new HttpStatusBasedCircuitBreakerStrategy(function);
     }
 
     /**
      * Returns a {@link CompletionStage} that contains {@code true}, {@code false} or
-     * {@code null} according to the specified {@link Response}. If {@code true} is returned,
+     * {@code null} which indicates a {@link Response} is successful or not. If {@code true} is returned,
      * {@link CircuitBreaker#onSuccess()} is called so that the {@link CircuitBreaker} increases its success
-     * count and use it to make a decision to close or open the switch. If {@code false} is returned, it works
+     * count and uses it to make a decision to close or open the circuit. If {@code false} is returned, it works
      * the other way around. If {@code null} is returned, the {@link CircuitBreaker} ignores it.
+     * To retrieve the response {@link HttpHeaders}, you can use the specified {@link ClientRequestContext}:
+     *
+     * <pre>{@code
+     * CompletionStage<Backoff> shouldReportAsSuccess(ClientRequestContext ctx, @Nullable Throwable cause) {
+     *     if (cause != null) {
+     *         return CompletableFuture.completedFuture(false);
+     *     }
+     *
+     *     HttpHeaders responseHeaders = ctx.log().responseHeaders();
+     *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
+     *         return CompletableFuture.completedFuture(false);
+     *     }
+     *     ...
+     * }
+     * }</pre>
+     *
+     * @param ctx the {@link ClientRequestContext} of this request
+     * @param cause the {@link Throwable} which is raised while sending a request. {@code null} if there's no
+     *              exception.
      */
-    CompletionStage<Boolean> shouldReportAsSuccess(T response);
+    CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx, @Nullable Throwable cause);
 }

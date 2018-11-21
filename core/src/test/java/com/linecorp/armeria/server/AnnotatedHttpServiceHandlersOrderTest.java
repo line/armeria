@@ -71,7 +71,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         @Post("/requestConverterOrder")
         @RequestConverter(MethodLevelRequestConverter.class)
         public HttpResponse requestConverterOrder(
-                @RequestObject(ParameterLevelRequestConverter.class) JsonNode node) {
+                @RequestConverter(ParameterLevelRequestConverter.class) JsonNode node) {
             assertThat(node).isNotNull();
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8(node.toString()));
         }

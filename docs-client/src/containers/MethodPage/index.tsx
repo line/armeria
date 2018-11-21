@@ -30,8 +30,8 @@ import TableRow from '@material-ui/core/TableRow';
 import TextField from '@material-ui/core/TextField';
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
-import ContentCopyIcon from '@material-ui/icons/ContentCopy';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
+import FileCopyIcon from '@material-ui/icons/FileCopy';
 import jsonMinify from 'jsonminify';
 import React, { ChangeEvent } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
@@ -246,7 +246,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
               <Grid item xs={12} sm={6}>
                 <Tooltip title="Copy response">
                   <IconButton onClick={this.onCopy}>
-                    <ContentCopyIcon />
+                    <FileCopyIcon />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Clear response">

@@ -131,7 +131,7 @@ configure(relocatedProjects) {
             dontobfuscate
             dontwarn // Ignore the harmless 'missing classes' warnings related with the optional dependencies.
 
-            keepattributes 'Signature, InnerClasses, EnclosingMethod, *Annotation*'
+            keepattributes '**'
             keepparameternames
 
             printconfiguration file("${project.buildDir}/proguard.cfg")
@@ -191,6 +191,13 @@ configure(relocatedProjects) {
                 it.tasks.shadedTest.classpath +=
                         it.files(createShadedTestRuntimeConfiguration(it).resolve())
             }
+        }
+    }
+
+    gradle.taskGraph.whenReady {
+        // Skip unshaded tests if shaded tests will run.
+        if (gradle.taskGraph.hasTask(tasks.shadedTest)) {
+            tasks.test.onlyIf { false }
         }
     }
 }

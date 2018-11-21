@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -208,6 +207,18 @@ public class AnnotatedHttpServiceBuilderTest {
             @Get("/test")
             public void root(@Default("a") ServiceRequestContext ctx) {}
         });
+
+        // Optional is redundant, but we just warn.
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public void root(Optional<ServiceRequestContext> ctx) {}
+        });
+
+        // BeanB would be tried to be converted into an object with a request converter.
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public void root(BeanB b) {}
+        });
     }
 
     @Test
@@ -286,13 +297,13 @@ public class AnnotatedHttpServiceBuilderTest {
 
         assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
             @Get("/test")
-            public void root(Optional<ServiceRequestContext> ctx) {}
-        })).isInstanceOf(NoAnnotatedParameterException.class);
+            @Default("a")
+            public void root(ServiceRequestContext ctx) {}
+        })).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
             @Get("/test")
-            @Default("a")
-            public void root(ServiceRequestContext ctx) {}
+            public void root(BeanA a) {}
         })).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -308,6 +319,26 @@ public class AnnotatedHttpServiceBuilderTest {
         @Override
         public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             return null;
+        }
+    }
+
+    private static class BeanA {
+        private final int valA;
+        private final int valB;
+
+        BeanA(@Param("a") int valA, int valB) {
+            this.valA = valA;
+            this.valB = valB;
+        }
+    }
+
+    private static class BeanB {
+        private final ServiceRequestContext ctx;
+        private final int val;
+
+        BeanB(ServiceRequestContext ctx, int val) {
+            this.ctx = ctx;
+            this.val = val;
         }
     }
 }

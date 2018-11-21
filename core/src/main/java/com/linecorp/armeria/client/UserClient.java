@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
+
 import java.net.URI;
 import java.util.function.BiFunction;
 
@@ -26,9 +28,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.ReleasableHolder;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -156,17 +156,6 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
                                                   method, path, query, fragment, options(), req);
         }
 
-        try (SafeCloseable ignored = ctx.push()) {
-            return delegate().execute(ctx, req);
-        } catch (Throwable cause) {
-            final O fallbackRes = fallback.apply(ctx, cause);
-            final RequestLogBuilder logBuilder = ctx.logBuilder();
-            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
-                // An exception is raised even before sending a request, so end the request with the exception.
-                logBuilder.endRequest(cause);
-            }
-            logBuilder.endResponse(cause);
-            return fallbackRes;
-        }
+        return executeWithFallback(delegate(), ctx, req, fallback);
     }
 }

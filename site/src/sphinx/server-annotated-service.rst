@@ -1,4 +1,5 @@
 .. _server-annotated-service:
+.. _Publisher: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html
 
 Annotated HTTP Service
 ======================
@@ -424,39 +425,55 @@ converter is not able to convert the request.
 
 .. code-block:: java
 
-    public class MyRequestConverter implements RequestConverterFunction {
+    public class ToEnglishConverter implements RequestConverterFunction {
         @Override
         public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                      Class<?> expectedResultType) {
-            if (expectedResultType == MyObject.class) {
+            if (expectedResultType == Greeting.class) {
                 // Convert the request to a Java object.
-                return new MyObject(request.content());
+                return new Greeting(translateToEnglish(request.content().toStringUtf8()));
             }
 
             // To the next request converter.
             return RequestConverterFunction.fallthrough();
         }
+
+        private String translateToEnglish(String greetingInAnyLanguage) { ... }
     }
 
-Then, you can write your service method as follows. Note that a request converter will work on the parameters
-which are annotated with :api:`@RequestObject`.
+Then, you can write your service method as follows. Custom request objects will be converted automatically
+by the converters you registered with :api:`@RequestConverter` annotation. Note that :api:`@RequestConverter`
+annotation can be specified on a class, a method or a parameter in an annotated service, and its scope
+is determined depending on where it is specified.
 
 .. code-block:: java
 
-    @RequestConverter(MyRequestConverter.class)
+    @RequestConverter(ToEnglishConverter.class)
     public class MyAnnotatedService {
 
         @Post("/hello")
-        public HttpResponse hello(@RequestObject MyObject myObject) {
-            // MyRequestConverter will be used to convert a request.
+        public HttpResponse hello(Greeting greeting) {
+            // ToEnglishConverter will be used to convert a request.
             // ...
         }
 
         @Post("/hola")
-        @RequestConverter(MySpanishRequestConverter.class)
-        public HttpResponse hola(@RequestObject MySpanishObject myObject) {
-            // MySpanishRequestConverter will be tried to convert a request first.
-            // MyRequestConverter will be used if MySpanishRequestConverter fell through.
+        @RequestConverter(ToSpanishConverter.class)
+        public HttpResponse hola(Greeting greeting) {
+            // ToSpanishConverter will be tried to convert a request first.
+            // ToEnglishConverter will be used if ToSpanishConverter fell through.
+            // ...
+        }
+
+        @Post("/greet")
+        public HttpResponse greet(RequestConverter(ToGermanConverter.class) Greeting greetingInGerman,
+                                  Greeting greetingInEnglish) {
+            // For the 1st parameter 'greetingInGerman':
+            // ToGermanConverter will be tried to convert a request first.
+            // ToEnglishConverter will be used if ToGermanConverter fell through.
+            //
+            // For the 2nd parameter 'greetingInEnglish':
+            // ToEnglishConverter will be used to convert a request.
             // ...
         }
     }
@@ -464,42 +481,54 @@ which are annotated with :api:`@RequestObject`.
 Armeria also provides built-in request converters such as, a request converter for a Java Bean,
 :api:`JacksonRequestConverterFunction` for a JSON document, :api:`StringRequestConverterFunction`
 for a string and :api:`ByteArrayRequestConverterFunction` for binary data. They will be applied
-after your request converters by default, so you can use these built-in converters by just putting
-:api:`@RequestObject` annotation on the parameters which you want to convert.
-
-In some cases, :api:`@RequestObject` annotation may have a request converter as its value.
-Assume that you have a Java class named ``MyRequest`` that it is usually able to be converted by
-``MyDefaultRequestConverter``. But what if there is only one method which has a parameter of ``MyRequest``
-that you have to convert it differently? In this case, you may specify a request converter with
-:api:`@RequestObject` annotation. In the example, ``MySpecialRequestConverter`` will be used first for
-converting ``MyRequest``.
+after your request converters, so you don't have to specify any :api:`@RequestConverter` annotations:
 
 .. code-block:: java
 
-    @RequestConverter(MyDefaultRequestConverter.class)
     public class MyAnnotatedService {
-        @Post("/hello")
-        public HttpResponse hello(
-            @RequestObject(MySpecialRequestConverter.class) MyRequest myRequest) { ... }
-    }
 
+        // JacksonRequestConverterFunction will work for the content type of 'application/json' or
+        // one of '+json' types.
+        @Post("/hello1")
+        public HttpResponse hello1(JsonNode body) { ... }
+
+        @Post("/hello2")
+        public HttpResponse hello2(MyJsonRequest body) { ... }
+
+        // StringRequestConverterFunction will work for the content type of any of 'text'.
+        @Post("/hello3")
+        public HttpResponse hello3(String body) { ... }
+
+        @Post("/hello4")
+        public HttpResponse hello4(CharSequence body) { ... }
+
+        // ByteArrayRequestConverterFunction will work for the content type of 'application/octet-stream',
+        // 'application/binary' or none.
+        @Post("/hello5")
+        public HttpResponse hello5(byte[] body) { ... }
+
+        @Post("/hello6")
+        public HttpResponse hello6(HttpData body) { ... }
+    }
 
 Injecting value of parameters and HTTP headers into a Java object
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Armeria provides a generic built-in request converter for Java objects which is activated by
-putting :api:`@RequestObject` annotation on the parameters which you want to convert.
+Armeria provides a generic built-in request converter that converts a request into a Java object.
+Just define a plain old Java class and specify it as a parameter of your service method.
 
 .. code-block:: java
 
     public class MyAnnotatedService {
         @Post("/hello")
-        public HttpResponse hello(@RequestObject MyRequestObject myRequestObject) { ... }
+        public HttpResponse hello(MyRequestObject myRequestObject) { ... }
     }
 
-Besides the annotated service class, you also need to create ``MyRequestObject`` and put :api:`@Param` or
-:api:`@Header` annotations on any of the following elements, to inject the path parameters, HTTP parameters
-or HTTP headers:
+
+
+We also need to define the ``MyRequestObject`` class which was used in the method ``hello()`` above.
+To tell Armeria which constructor parameter, setter method or field has to be injected with what value,
+we should put :api:`@Param`, :api:`@Header`, :api:`@RequestObject` annotations on any of the following elements:
 
 - Fields
 - Constructors with only one parameter
@@ -544,6 +573,7 @@ using them on the parameters of a service method because even you can use :api:`
 :api:`@RequestObject` annotations defined there.
 Please refer to :ref:`parameter-injection`, and :ref:`header-injection` for more information.
 
+.. _response_converter:
 
 Converting a Java object to an HTTP response
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -719,6 +749,38 @@ order commented. It is also the same as the evaluation order of the converters.
     sb.annotatedService(new MyAnnotatedService(),
                         new MyGlobalExceptionHandler5(),        // order 5
                         new MyGlobalExceptionHandler6());       // order 6
+
+Returning a response
+--------------------
+
+In the earlier examples, the annotated service methods only return :api:`HttpResponse`, however there are
+more response types which can be used in the annotated service.
+
+- :api:`HttpResponse` and :api:`AggregatedHttpMessage`
+
+  - It will be sent to the client without any modification. If an exception is raised while the response is
+    being sent, exception handlers will handle it. If no message has been sent to the client yet,
+    the exception handler can send an :api:`HttpResponse` instead.
+
+- Reactive Streams Publisher_
+
+  - All objects which are produced by the publisher will be collected, then the collected ones will be
+    converted to an :api:`HttpResponse` by response converters. If a single object is produced, it will be
+    passed into the response converters as it is. But if multiple objects are produced, they will be passed
+    into the response converters as a list. If the producer produces an error, exception handlers will handle it.
+    Note that RxJava `ObservableSource <http://reactivex.io/RxJava/javadoc/io/reactivex/ObservableSource.html>`_
+    will be treated in the same way as Publisher_ if you add ``armeria-rxjava`` to the dependencies.
+
+- ``CompletionStage`` and ``CompletableFuture``
+
+  - An object which is generated by the ``CompletionStage`` will be converted to an :api:`HttpResponse`
+    by response converters. If the ``CompletionStage`` completes exceptionally, exception handlers will
+    handle the cause.
+
+- Other types
+
+  - As described in :ref:`response_converter`, you can use any response types with response converters
+    that convert them. If a service method raises an exception, exception handlers will handle it.
 
 Decorating an annotated service
 -------------------------------
@@ -1117,5 +1179,5 @@ Then, you can annotate your service method with your annotation as follows.
         @Post("/hello")
         @MyConsumableType  // the same as @Consumes("application/xml")
         @MyProducibleType  // the same as @Produces("application/xml")
-        public MyResponse hello(@RequestObject MyRequest myRequest) { ... }
+        public MyResponse hello(MyRequest myRequest) { ... }
     }

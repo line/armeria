@@ -1,14 +1,8 @@
 configure(projectsWithFlags('publish', 'java')) {
-    def needsToPublishShadedJar = project.hasFlags('relocate')
-
     publishing {
         publications {
-            def configureJarPublication = { boolean isShaded ->
+            jar(MavenPublication) {
                 def currentArtifactId = project.ext.artifactId
-                if (isShaded) {
-                    currentArtifactId += '-shaded'
-                }
-
                 artifactId currentArtifactId
 
                 // Generate the POM.
@@ -68,7 +62,7 @@ configure(projectsWithFlags('publish', 'java')) {
                             }).each { dep ->
                                 dependency {
                                     groupId dep.group
-                                    artifactId dep.dependencyProject.ext.artifactId + (isShaded ? '-shaded' : '')
+                                    artifactId dep.dependencyProject.ext.artifactId
                                     version dep.version ?: dep.dependencyProject.version
                                     if (dep.hasProperty('optional') && dep.optional) {
                                         optional true
@@ -88,7 +82,7 @@ configure(projectsWithFlags('publish', 'java')) {
                             }).each { dep ->
                                 dependency {
                                     groupId dep.group
-                                    artifactId dep.dependencyProject.ext.artifactId + (isShaded ? '-shaded' : '')
+                                    artifactId dep.dependencyProject.ext.artifactId
                                     version dep.version ?: dep.dependencyProject.version
                                     scope 'runtime'
                                     if (dep.hasProperty('optional') && dep.optional) {
@@ -112,7 +106,7 @@ configure(projectsWithFlags('publish', 'java')) {
                                 }
 
                                 if (unresolvedDep instanceof ExternalModuleDependency) {
-                                    if (isShaded && project.ext.relocations.find({
+                                    if (project.hasFlags('relocate') && project.ext.relocations.find({
                                         it.name == "${dep.moduleGroup}:${dep.moduleName}"
                                     })) {
                                         // Shaded dependency
@@ -148,17 +142,15 @@ configure(projectsWithFlags('publish', 'java')) {
                 // Find the main JAR and the task that generates it.
                 File mainJarFile
                 Task mainJarTask
-                if (!isShaded) {
+                if (tasks.findByName('trimShadedJar')) {
+                    mainJarFile = tasks.trimShadedJar.outJarFiles.find() as File
+                    mainJarTask = tasks.trimShadedJar
+                } else if (tasks.findByName('shadedJar')) {
+                    mainJarFile = tasks.shadedJar.archivePath
+                    mainJarTask = tasks.shadedJar
+                } else {
                     mainJarFile = tasks.jar.archivePath
                     mainJarTask = tasks.jar
-                } else {
-                    if (tasks.findByName('trimShadedJar')) {
-                        mainJarFile = tasks.trimShadedJar.outJarFiles.find() as File
-                        mainJarTask = tasks.trimShadedJar
-                    } else {
-                        mainJarFile = tasks.shadedJar.archivePath
-                        mainJarTask = tasks.shadedJar
-                    }
                 }
 
                 // Add the main JAR.
@@ -173,11 +165,6 @@ configure(projectsWithFlags('publish', 'java')) {
                 artifact(tasks.javadocJar) {
                     classifier = 'javadoc'
                 }
-            }
-
-            jar(MavenPublication, configureJarPublication.curry(false))
-            if (needsToPublishShadedJar) {
-                shadedJar(MavenPublication, configureJarPublication.curry(true))
             }
         }
     }

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -127,16 +125,16 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             final CompletableFuture<AggregatedHttpMessage> future =
                     httpClient.execute(ctx, httpReq).aggregate();
 
-            future.handle(voidFunction((res, cause) -> {
+            future.handle((res, cause) -> {
                 if (cause != null) {
                     handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));
-                    return;
+                    return null;
                 }
 
                 final HttpStatus status = res.headers().status();
                 if (status.code() != HttpStatus.OK.code()) {
                     handlePreDecodeException(ctx, reply, func, new InvalidResponseException(status.toString()));
-                    return;
+                    return null;
                 }
 
                 try {
@@ -144,7 +142,9 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
                 } catch (Throwable t) {
                     handlePreDecodeException(ctx, reply, func, t);
                 }
-            })).exceptionally(CompletionActions::log);
+
+                return null;
+            }).exceptionally(CompletionActions::log);
         } catch (Throwable cause) {
             handlePreDecodeException(ctx, reply, func, cause);
         }

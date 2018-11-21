@@ -170,15 +170,15 @@ public class GrpcMessageMarshaller<I, O> {
 
     private ByteBuf serializeProto(Message message) throws IOException {
         if (GrpcSerializationFormats.isProto(serializationFormat)) {
-            int serializedSize = message.getSerializedSize();
+            final int serializedSize = message.getSerializedSize();
             if (serializedSize == 0) {
                 return Unpooled.EMPTY_BUFFER;
             }
             final ByteBuf buf = alloc.buffer(serializedSize);
             boolean success = false;
             try {
-                message.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, buf.writableBytes())));
-                buf.writerIndex(buf.capacity());
+                message.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, serializedSize)));
+                buf.writerIndex(serializedSize);
                 success = true;
             } finally {
                 if (!success) {

@@ -136,11 +136,12 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc()),
                 this);
         executor = callOptions.getExecutor();
-        req.completionFuture().whenComplete((unused1, unused2) -> {
+        req.completionFuture().handle((unused1, unused2) -> {
             if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
                 // Can reach here if the request stream was empty.
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
             }
+            return null;
         });
     }
 
@@ -171,7 +172,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             return;
         }
         res.subscribe(responseReader, ctx.eventLoop(), true);
-        res.completionFuture().whenCompleteAsync(responseReader, ctx.eventLoop());
+        res.completionFuture().handleAsync(responseReader, ctx.eventLoop());
     }
 
     @Override
