@@ -321,7 +321,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             // - any write operation is failed with a cause.
             if (isSuccess) {
                 if (!loggedResponseHeadersFirstBytesTransferred) {
-                    logBuilder().responseHeadersFirstBytesTransferred();
+                    logBuilder().responseFirstBytesTransferred();
                     loggedResponseHeadersFirstBytesTransferred = true;
                 }
 

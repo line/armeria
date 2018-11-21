@@ -38,14 +38,14 @@ public enum RequestLogAvailability {
     SCHEME(1 | 2, 2),
 
     /**
-     * {@link RequestLog#requestHeadersFirstBytesTransferredTimeNanos()} is available, as well as all the
+     * {@link RequestLog#requestFirstBytesTransferredTimeNanos()} is available, as well as all the
      * properties mentioned in {@link #REQUEST_START}.
      */
-    REQUEST_HEADERS_FIRST_BYTES_TRANSFERRED(1 | 4, 4),
+    REQUEST_FIRST_BYTES_TRANSFERRED(1 | 4, 4),
 
     /**
      * {@link RequestLog#requestHeaders()} is available, as well as all the properties mentioned in
-     * {@link #REQUEST_START} and {@link #REQUEST_HEADERS_FIRST_BYTES_TRANSFERRED}.
+     * {@link #REQUEST_START} and {@link #REQUEST_FIRST_BYTES_TRANSFERRED}.
      */
     REQUEST_HEADERS(1 | 4 | 8, 8),
     /**
@@ -56,7 +56,7 @@ public enum RequestLogAvailability {
     /**
      * {@link RequestLog#requestLength()}, {@link RequestLog#requestCause()} and
      * {@link RequestLog#requestDurationNanos()} are available, as well as all the properties mentioned in
-     * {@link #REQUEST_START}, {@link #SCHEME}, {@link #REQUEST_HEADERS_FIRST_BYTES_TRANSFERRED}
+     * {@link #REQUEST_START}, {@link #SCHEME}, {@link #REQUEST_FIRST_BYTES_TRANSFERRED}
      * {@link #REQUEST_HEADERS} and {@link #REQUEST_CONTENT}.
      */
     REQUEST_END(1 | 2 | 4 | 8 | 16 | 32, 1 | 2 | 4 | 8 | 16 | 32),
@@ -68,14 +68,14 @@ public enum RequestLogAvailability {
     RESPONSE_START(1 << 16, 1 << 16),
 
     /**
-     * {@link RequestLog#responseHeadersFirstBytesTransferredTimeNanos()} is available, as well as all the
+     * {@link RequestLog#responseFirstBytesTransferredTimeNanos()} is available, as well as all the
      * properties mentioned in {@link #RESPONSE_START}.
      */
-    RESPONSE_HEADERS_FIRST_BYTES_TRANSFERRED((1 | 2) << 16, 2 << 16),
+    RESPONSE_FIRST_BYTES_TRANSFERRED((1 | 2) << 16, 2 << 16),
 
     /**
      * {@link RequestLog#responseHeaders()} is available, as well as all the properties mentioned in
-     * {@link #RESPONSE_START} and {@link #RESPONSE_HEADERS_FIRST_BYTES_TRANSFERRED}.
+     * {@link #RESPONSE_START} and {@link #RESPONSE_FIRST_BYTES_TRANSFERRED}.
      */
     RESPONSE_HEADERS((1 | 2 | 4) << 16, 4 << 16),
     /**
@@ -87,7 +87,7 @@ public enum RequestLogAvailability {
      * {@link RequestLog#responseLength()}, {@link RequestLog#responseCause()},
      * {@link RequestLog#responseDurationNanos()} and {@link RequestLog#totalDurationNanos()} are available,
      * as well as all the properties mentioned in {@link #RESPONSE_START},
-     * {@link #RESPONSE_HEADERS_FIRST_BYTES_TRANSFERRED}, {@link #RESPONSE_HEADERS} and
+     * {@link #RESPONSE_FIRST_BYTES_TRANSFERRED}, {@link #RESPONSE_HEADERS} and
      * {@link #RESPONSE_CONTENT}.
      */
     RESPONSE_END((1 | 2 | 4 | 8 | 16) << 16, (1 | 2 | 4 | 8 | 16) << 16),

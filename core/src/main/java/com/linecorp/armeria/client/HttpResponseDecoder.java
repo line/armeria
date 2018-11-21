@@ -126,7 +126,7 @@ abstract class HttpResponseDecoder {
         @Nullable
         private ScheduledFuture<?> responseTimeoutFuture;
 
-        private boolean loggedResponseHeadersFirstBytesTransferred;
+        private boolean loggedResponseFirstBytesTransferred;
 
         HttpResponseWrapper(@Nullable HttpRequest request, DecodedHttpResponse delegate,
                             RequestLogBuilder logBuilder, long responseTimeoutMillis, long maxContentLength) {
@@ -173,9 +173,9 @@ abstract class HttpResponseDecoder {
         }
 
         void logResponseHeadersFirstBytesTransferred() {
-            if (!loggedResponseHeadersFirstBytesTransferred) {
-                logBuilder.responseHeadersFirstBytesTransferred();
-                loggedResponseHeadersFirstBytesTransferred = true;
+            if (!loggedResponseFirstBytesTransferred) {
+                logBuilder.responseFirstBytesTransferred();
+                loggedResponseFirstBytesTransferred = true;
             }
         }
 

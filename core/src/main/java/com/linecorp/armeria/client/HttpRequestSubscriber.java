@@ -74,7 +74,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
     private boolean isSubscriptionCompleted;
 
-    private boolean loggedRequestHeadersFirstBytesTransferred;
+    private boolean loggedRequestFirstBytesTransferred;
 
     HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
@@ -101,9 +101,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (future.isSuccess()) {
             // The first write is always the first headers, so log that we finished our first transfer over the
             // wire.
-            if (!loggedRequestHeadersFirstBytesTransferred) {
-                logBuilder.requestHeadersFirstBytesTransferred();
-                loggedRequestHeadersFirstBytesTransferred = true;
+            if (!loggedRequestFirstBytesTransferred) {
+                logBuilder.requestFirstBytesTransferred();
+                loggedRequestFirstBytesTransferred = true;
             }
 
             if (state == State.DONE) {

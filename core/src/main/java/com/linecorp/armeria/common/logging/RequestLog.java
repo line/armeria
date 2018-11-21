@@ -218,7 +218,7 @@ public interface RequestLog {
      * them. This value can only be used to measure elapsed time and is not related to any other notion of
      * system or wall-clock time.
      */
-    long requestHeadersFirstBytesTransferredTimeNanos();
+    long requestFirstBytesTransferredTimeNanos();
 
     /**
      * Returns the time when the processing of the request finished, in nanoseconds. This value can only be
@@ -279,7 +279,7 @@ public interface RequestLog {
      * them. This value can only be used to measure elapsed time and is not related to any other notion of
      * system or wall-clock time.
      */
-    long responseHeadersFirstBytesTransferredTimeNanos();
+    long responseFirstBytesTransferredTimeNanos();
 
     /**
      * Returns the time when the processing of the response finished, in nanoseconds. This value can only be

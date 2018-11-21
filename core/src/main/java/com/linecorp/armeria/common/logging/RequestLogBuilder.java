@@ -97,9 +97,9 @@ public interface RequestLogBuilder {
     void requestLength(long requestLength);
 
     /**
-     * Sets {@link RequestLog#requestHeadersFirstBytesTransferredTimeNanos()}.
+     * Sets {@link RequestLog#requestFirstBytesTransferredTimeNanos()}.
      */
-    void requestHeadersFirstBytesTransferred();
+    void requestFirstBytesTransferred();
 
     /**
      * Sets the {@link RequestLog#requestHeaders()}.
@@ -154,9 +154,9 @@ public interface RequestLogBuilder {
     void responseLength(long responseLength);
 
     /**
-     * Sets {@link RequestLog#responseHeadersFirstBytesTransferredTimeNanos()}.
+     * Sets {@link RequestLog#responseFirstBytesTransferredTimeNanos()}.
      */
-    void responseHeadersFirstBytesTransferred();
+    void responseFirstBytesTransferred();
 
     /**
      * Sets the {@link RequestLog#responseHeaders()}.
