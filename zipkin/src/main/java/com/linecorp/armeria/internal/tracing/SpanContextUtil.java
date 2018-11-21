@@ -40,7 +40,7 @@ public final class SpanContextUtil {
         span.finish(wallTimeMicros(log, log.responseEndTimeNanos()));
     }
 
-    private static long wallTimeMicros(RequestLog log, long timeNanos) {
+    static long wallTimeMicros(RequestLog log, long timeNanos) {
         long relativeTimeNanos = timeNanos - log.requestStartTimeNanos();
         return log.requestStartTimeMicros() + TimeUnit.NANOSECONDS.toMicros(relativeTimeNanos);
     }

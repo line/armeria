@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
+import com.linecorp.armeria.internal.tracing.SpanTags;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -84,10 +85,16 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
         span.kind(Kind.SERVER).name(method);
         ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
                               RequestLogAvailability.REQUEST_START);
+        ctx.log().addListener(
+                log -> SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log),
+                RequestLogAvailability.REQUEST_FIRST_BYTES_TRANSFERRED);
 
         // Ensure the trace context propagates to children
         ctx.onChild(RequestContextCurrentTraceContext::copy);
 
+        ctx.log().addListener(
+                log -> SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log),
+                RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED);
         ctx.log().addListener(log -> SpanContextUtil.closeSpan(span, log), RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
