@@ -172,7 +172,7 @@ abstract class HttpResponseDecoder {
             return delegate.writtenBytes();
         }
 
-        void logResponseHeadersFirstBytesTransferred() {
+        void logResponseFirstBytesTransferred() {
             if (!loggedResponseFirstBytesTransferred) {
                 logBuilder.responseFirstBytesTransferred();
                 loggedResponseFirstBytesTransferred = true;

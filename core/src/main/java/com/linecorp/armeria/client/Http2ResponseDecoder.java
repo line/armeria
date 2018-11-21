@@ -173,7 +173,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                   streamId);
         }
 
-        res.logResponseHeadersFirstBytesTransferred();
+        res.logResponseFirstBytesTransferred();
 
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, endOfStream);
         try {

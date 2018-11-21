@@ -96,7 +96,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private long requestStartTimeMicros;
     private long requestStartTimeNanos;
-    private long requestHeadersFirstBytesTransferredTimeNanos;
+    private long requestFirstBytesTransferredTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
     @Nullable
@@ -104,7 +104,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private long responseStartTimeMicros;
     private long responseStartTimeNanos;
-    private long responseHeadersFirstBytesTransferredTimeNanos;
+    private long responseFirstBytesTransferredTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
     @Nullable
@@ -161,7 +161,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                           log.sessionProtocol(), true);
         }, REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
-        child.addListener(log -> requestHeadersFirstBytesTransferred(
+        child.addListener(log -> requestFirstBytesTransferred(
                 log.requestFirstBytesTransferredTimeNanos()), REQUEST_FIRST_BYTES_TRANSFERRED);
         child.addListener(log -> requestHeaders(log.requestHeaders()), REQUEST_HEADERS);
         child.addListener(log -> requestContent(log.requestContent(), log.rawRequestContent()),
@@ -191,7 +191,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (lastChild.isAvailable(RESPONSE_FIRST_BYTES_TRANSFERRED)) {
-            responseHeadersFirstBytesTransferred(lastChild.responseFirstBytesTransferredTimeNanos());
+            responseFirstBytesTransferred(lastChild.responseFirstBytesTransferredTimeNanos());
         }
 
         if (lastChild.isAvailable(RESPONSE_HEADERS)) {
@@ -208,7 +208,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         lastChild.addListener(log -> startResponse0(
                 log.responseStartTimeNanos(), log.responseStartTimeMicros(), true), RESPONSE_START);
-        lastChild.addListener(log -> responseHeadersFirstBytesTransferred(
+        lastChild.addListener(log -> responseFirstBytesTransferred(
                 log.responseFirstBytesTransferredTimeNanos()), RESPONSE_FIRST_BYTES_TRANSFERRED);
         lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
         lastChild.addListener(log -> responseContent(
@@ -378,7 +378,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public long requestFirstBytesTransferredTimeNanos() {
         ensureAvailability(REQUEST_FIRST_BYTES_TRANSFERRED);
-        return requestHeadersFirstBytesTransferredTimeNanos;
+        return requestFirstBytesTransferredTimeNanos;
     }
 
     @Override
@@ -452,17 +452,17 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestLength = requestLength;
     }
 
-    private void requestHeadersFirstBytesTransferred(long timestamp) {
+    private void requestFirstBytesTransferred(long timestamp) {
         if (isAvailabilityAlreadyUpdated(REQUEST_FIRST_BYTES_TRANSFERRED)) {
             return;
         }
-        requestHeadersFirstBytesTransferredTimeNanos = timestamp;
+        requestFirstBytesTransferredTimeNanos = timestamp;
         updateAvailability(REQUEST_FIRST_BYTES_TRANSFERRED);
     }
 
     @Override
     public void requestFirstBytesTransferred() {
-        requestHeadersFirstBytesTransferred(System.nanoTime());
+        requestFirstBytesTransferred(System.nanoTime());
     }
 
     @Override
@@ -603,7 +603,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public long responseFirstBytesTransferredTimeNanos() {
         ensureAvailability(RESPONSE_FIRST_BYTES_TRANSFERRED);
-        return responseHeadersFirstBytesTransferredTimeNanos;
+        return responseFirstBytesTransferredTimeNanos;
     }
 
     @Override
@@ -643,17 +643,17 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.responseLength = responseLength;
     }
 
-    private void responseHeadersFirstBytesTransferred(long timestamp) {
+    private void responseFirstBytesTransferred(long timestamp) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_FIRST_BYTES_TRANSFERRED)) {
             return;
         }
-        responseHeadersFirstBytesTransferredTimeNanos = timestamp;
+        responseFirstBytesTransferredTimeNanos = timestamp;
         updateAvailability(RESPONSE_FIRST_BYTES_TRANSFERRED);
     }
 
     @Override
     public void responseFirstBytesTransferred() {
-        responseHeadersFirstBytesTransferred(System.nanoTime());
+        responseFirstBytesTransferred(System.nanoTime());
     }
 
     @Override
