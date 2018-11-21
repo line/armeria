@@ -110,7 +110,7 @@ the response's status is ``409 Conflict``.
 .. note::
 
     :api:`UnprocessedRequestException` literally means that the request has not been processed by the server.
-    Therefore, you can safely retry as many times as you wish regardless of the idempotency of the request.
+    Therefore, you can safely retry the request without worrying about the idempotency of the request.
     For more information about idempotency, please refer to `What are idempotent and/or safe methods?`_.
 
 You can return a different :api:`Backoff` according to the response status.
@@ -354,7 +354,7 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClien
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
 
     CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
-    RetryStrategy myRetryStrategy = new RetryStrategy(){ ... };
+    RetryStrategy myRetryStrategy = new RetryStrategy() { ... };
 
     HttpClient client = new HttpClientBuilder(...)
             .decorator(new CircuitBreakerHttpClientBuilder(cbStrategy).newDecorator())
@@ -365,14 +365,40 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClien
 
 This decorates :api:`CircuitBreakerHttpClient` with :api:`RetryingHttpClient` so that the :api:`CircuitBreaker`
 judges every request and retried request as successful or failed. If the failure rate exceeds a certain
-threshold, it raises a :api:`FailFastException`.
+threshold, it raises a :api:`FailFastException`. When using both clients, you need to write a custom
+:api:`RetryStrategy` to handle this exception so that the :api:`RetryingHttpClient` does not attempt
+a retry unnecessarily when the circuit is open, e.g.
 
-You have to be very cautious implementing your own :api:`RetryStrategy` in this situation.
-When a :api:`FailFastException` is raised, you can retry or you shouldn't retry depending on
-you are using :ref:`client-service-discovery` or not. If you are doing client-side load balancing,
-you might want to retry because there's a chance that only small amount of the backends are unreachable
-so that you can send the requests to other hosts. On the contrary, if you are sending the requests to only
-one host, you will not want to retry because the circuit is already closed.
+.. code-block:: java
+
+    import com.linecorp.armeria.client.circuitbreaker.FailFastException;
+
+    new RetryStrategy() {
+        final Backoff backoff = Backoff.ofDefault();
+
+        @Override
+        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+            if (cause != null) {
+                if (cause instanceof FailFastException) {
+                    // The circuit is already open so returns null to stop retrying.
+                    return CompletableFuture.completedFuture(null);
+                }
+
+                if (cause instanceof ResponseTimeoutException ||
+                    cause instanceof UnprocessedRequestException) {
+                    // The response timed out or the request has not been handled by the server.
+                    return CompletableFuture.completedFuture(backoff);
+                }
+            }
+            ... // Implement the rest of your own strategy.
+        }
+    };
+
+.. note::
+
+    You may want to allow retrying even on :api:`FailFastException` when your endpoint is configured with
+    client-side load balancing because the next attempt might be sent to the next available endpoint.
+    See :ref:`client-service-discovery` for more information about client-side load balancing.
 
 See also
 --------
