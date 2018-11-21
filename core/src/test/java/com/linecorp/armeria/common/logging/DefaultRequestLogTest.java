@@ -130,6 +130,10 @@ public class DefaultRequestLogTest {
         child.serializationFormat(SerializationFormat.NONE);
         assertThat(log.serializationFormat()).isSameAs(SerializationFormat.NONE);
 
+        child.requestHeadersFirstBytesTransferred();
+        assertThat(log.requestHeadersFirstBytesTransferredTimeNanos())
+                .isEqualTo(child.requestHeadersFirstBytesTransferredTimeNanos());
+
         final HttpHeaders foo = HttpHeaders.of(AsciiString.of("foo"), "foo");
         child.requestHeaders(foo);
         assertThat(log.requestHeaders()).isSameAs(foo);
@@ -149,6 +153,10 @@ public class DefaultRequestLogTest {
         assertThatThrownBy(() -> log.responseStartTimeMicros())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
+        child.responseHeadersFirstBytesTransferred();
+        assertThatThrownBy(() -> log.responseHeadersFirstBytesTransferredTimeNanos())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+
         final HttpHeaders bar = HttpHeaders.of(AsciiString.of("bar"), "bar");
         child.responseHeaders(bar);
         assertThatThrownBy(() -> log.responseHeaders())
@@ -156,6 +164,9 @@ public class DefaultRequestLogTest {
 
         log.endResponseWithLastChild();
         assertThat(log.responseStartTimeMicros()).isEqualTo(child.responseStartTimeMicros());
+
+        assertThat(log.responseHeadersFirstBytesTransferredTimeNanos())
+                .isEqualTo(child.responseHeadersFirstBytesTransferredTimeNanos());
         assertThat(log.responseHeaders()).isSameAs(bar);
 
         final String responseContent = "baz1";

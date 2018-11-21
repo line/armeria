@@ -206,8 +206,6 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                 return;
             }
 
-            channel.pipeline().addFirst(new HttpClientFirstTransferLogger(ctx));
-
             if (session.invoke(ctx, req, res)) {
                 needsRelease = false;
 

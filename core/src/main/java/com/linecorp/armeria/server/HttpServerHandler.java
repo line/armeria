@@ -379,8 +379,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceCfg, channel, serviceCfg.server().meterRegistry(),
                 protocol, mappingCtx, mappingResult, req, getSSLSession(channel), proxiedAddresses);
 
-        channel.pipeline().addFirst(new HttpServerFirstTransferLogger(reqCtx));
-
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
             HttpResponse serviceResponse;
