@@ -291,21 +291,21 @@ public class HttpTracingIntegrationTest {
                                                    .findFirst().get().timestamp();
         long serverEndTime = serverStartTime + serviceFooSpan.durationAsLong();
 
-        // These values are taken at nanosecond precision and should be reliable to compare to each other.
+        // These values are taken at microsecond precision and should be reliable to compare to each other.
 
         assertThat(clientStartTime).isNotZero();
-        assertThat(clientWireSendTime).isGreaterThan(clientStartTime);
+        assertThat(clientWireSendTime).isGreaterThanOrEqualTo(clientStartTime);
 
         // Server start time and wire receive time are essentially the same in our current model, and whether
         // one is greater than the other is mostly an implementation detail, so we don't compare them to each
         // other.
-        assertThat(serverStartTime).isGreaterThan(clientWireSendTime);
+        assertThat(serverStartTime).isGreaterThanOrEqualTo(clientWireSendTime);
         assertThat(serverWireReceiveTime).isGreaterThanOrEqualTo(clientWireSendTime);
 
-        assertThat(serverWireSendTime).isGreaterThan(serverWireReceiveTime);
-        assertThat(clientWireReceiveTime).isGreaterThan(serverWireSendTime);
-        assertThat(serverEndTime).isGreaterThan(clientWireReceiveTime);
-        assertThat(clientEndTime).isGreaterThan(serverEndTime);
+        assertThat(serverWireSendTime).isGreaterThanOrEqualTo(serverWireReceiveTime);
+        assertThat(clientWireReceiveTime).isGreaterThanOrEqualTo(serverWireSendTime);
+        assertThat(serverEndTime).isGreaterThanOrEqualTo(clientWireReceiveTime);
+        assertThat(clientEndTime).isGreaterThanOrEqualTo(serverEndTime);
     }
 
     @Test(timeout = 10000)
