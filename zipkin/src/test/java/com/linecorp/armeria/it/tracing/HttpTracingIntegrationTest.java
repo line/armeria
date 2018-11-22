@@ -277,19 +277,19 @@ public class HttpTracingIntegrationTest {
         assertThat(spans).allMatch(s -> "hello".equals(s.name()));
 
         // Check wire times
-        long clientStartTime = clientFooSpan.timestampAsLong();
-        long clientWireSendTime = clientFooSpan.annotations().stream().filter(a -> a.value().equals("ws"))
-                                               .findFirst().get().timestamp();
-        long clientWireReceiveTime = clientFooSpan.annotations().stream().filter(a -> a.value().equals("wr"))
-                                               .findFirst().get().timestamp();
-        long clientEndTime = clientStartTime + clientFooSpan.durationAsLong();
+        final long clientStartTime = clientFooSpan.timestampAsLong();
+        final long clientWireSendTime = clientFooSpan.annotations().stream().filter(a -> a.value().equals("ws"))
+                                                     .findFirst().get().timestamp();
+        final long clientWireReceiveTime = clientFooSpan.annotations().stream().filter(a -> a.value().equals("wr"))
+                                                        .findFirst().get().timestamp();
+        final long clientEndTime = clientStartTime + clientFooSpan.durationAsLong();
 
-        long serverStartTime = serviceFooSpan.timestampAsLong();
-        long serverWireSendTime = serviceFooSpan.annotations().stream().filter(a -> a.value().equals("ws"))
-                                                .findFirst().get().timestamp();
-        long serverWireReceiveTime = serviceFooSpan.annotations().stream().filter(a -> a.value().equals("wr"))
-                                                   .findFirst().get().timestamp();
-        long serverEndTime = serverStartTime + serviceFooSpan.durationAsLong();
+        final long serverStartTime = serviceFooSpan.timestampAsLong();
+        final long serverWireSendTime = serviceFooSpan.annotations().stream().filter(a -> a.value().equals("ws"))
+                                                      .findFirst().get().timestamp();
+        final long serverWireReceiveTime = serviceFooSpan.annotations().stream().filter(a -> a.value().equals("wr"))
+                                                         .findFirst().get().timestamp();
+        final long serverEndTime = serverStartTime + serviceFooSpan.durationAsLong();
 
         // These values are taken at microsecond precision and should be reliable to compare to each other.
 
