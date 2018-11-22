@@ -16,29 +16,52 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import java.util.List;
+
 import org.junit.Test;
+
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 
 public class ServerBuilderTest {
 
     @Test
-    public void duplicatePort() {
-        final ServerBuilder sb = new ServerBuilder();
-        sb.http(8080);
-        assertDuplicatePort(() -> sb.https(8080));
+    public void acceptDuplicatePort() throws Exception {
+        final Server server = new ServerBuilder()
+                .http(8080)
+                .https(8080)
+                .tlsSelfSigned()
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .build();
+
+        final List<ServerPort> ports = server.config().ports();
+        assertThat(ports.size()).isOne(); // merged
+        assertThat(ports.get(0).protocols())
+                .contains(SessionProtocol.HTTP, SessionProtocol.HTTPS);
+    }
+
+    @Test
+    public void treatAsSeparatePortIfZeroIsSpecifiedManyTimes() throws Exception {
+        final Server server = new ServerBuilder()
+                .http(0)
+                .http(0)
+                .https(0)
+                .tlsSelfSigned()
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .build();
+
+        final List<ServerPort> ports = server.config().ports();
+        assertThat(ports.size()).isEqualTo(3);
+        assertThat(ports.get(0).protocols()).containsOnly(SessionProtocol.HTTP);
+        assertThat(ports.get(1).protocols()).containsOnly(SessionProtocol.HTTP);
+        assertThat(ports.get(2).protocols()).containsOnly(SessionProtocol.HTTPS);
     }
 
     @Test
     public void numMaxConnections() {
         final ServerBuilder sb = new ServerBuilder();
         assertThat(sb.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
-    }
-
-    private static void assertDuplicatePort(ThrowingCallable callable) {
-        assertThatThrownBy(callable)
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("duplicate");
     }
 }

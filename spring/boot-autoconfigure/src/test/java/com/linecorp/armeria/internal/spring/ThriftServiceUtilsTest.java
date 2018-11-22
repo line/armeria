@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring;
+package com.linecorp.armeria.internal.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

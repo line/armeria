@@ -1,0 +1,15 @@
+spring.profiles.active: local
+server:
+  port: 8443
+  ssl:
+    enabled: true # Uses self-signed certificate because no key-store configuration is specified.
+
+# Additional server ports specified with Armeria configuration.
+armeria:
+  ports:
+  - port: 8443    # Port 8443 will serve HTTPS, HTTP and PROXY protocol.
+    protocols:
+    - http
+    - proxy
+  - port: 8080    # Port 8080 will serve only HTTP.
+    protocol: http

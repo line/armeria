@@ -1,0 +1,8 @@
+server:
+  address: 127.0.0.1
+  ssl:
+    enabled: true # Use self-signed certificate because no key-store configuration is specified.
+
+logging:
+  level:
+    ROOT: DEBUG

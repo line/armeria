@@ -23,6 +23,8 @@ import javax.annotation.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -66,10 +68,10 @@ public class ArmeriaSettings {
         /**
          * Protocol that will be used in this ip/iface and port.
          */
-        private SessionProtocol protocol;
+        private List<SessionProtocol> protocols;
 
         /**
-         * Returns the IP address {@link Server} uses.
+         * Returns the IP address that the {@link Server} uses.
          */
         @Nullable
         public String getIp() {
@@ -77,7 +79,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Register an IP address {@link Server} uses.
+         * Registers an IP address that the {@link Server} uses.
          */
         public Port setIp(String ip) {
             this.ip = ip;
@@ -85,7 +87,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Returns the network interface {@link Server} use.
+         * Returns the network interface that the {@link Server} uses.
          */
         @Nullable
         public String getIface() {
@@ -93,7 +95,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Register a network interface {@link Server} use.
+         * Registers a network interface that the {@link Server} uses.
          */
         public Port setIface(String iface) {
             this.iface = iface;
@@ -101,14 +103,14 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Returns the port that {@link Server} use.
+         * Returns the port that the {@link Server} uses.
          */
         public int getPort() {
             return port;
         }
 
         /**
-         * Register a port that {@link Server} use.
+         * Registers a port that the {@link Server} uses.
          */
         public Port setPort(int port) {
             this.port = port;
@@ -116,17 +118,26 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Returns the {@link SessionProtocol} that {@link Server} use.
+         * Returns the list of {@link SessionProtocol}s that the {@link Server} uses.
          */
-        public SessionProtocol getProtocol() {
-            return protocol;
+        @Nullable
+        public List<SessionProtocol> getProtocols() {
+            return protocols;
         }
 
         /**
-         * Register a {@link SessionProtocol} that {@link Server} use.
+         * Registers a list of {@link SessionProtocol}s that the {@link Server} uses.
+         */
+        public Port setProtocols(List<SessionProtocol> protocols) {
+            this.protocols = ImmutableList.copyOf(protocols);
+            return this;
+        }
+
+        /**
+         * Registers a {@link SessionProtocol} that the {@link Server} uses.
          */
         public Port setProtocol(SessionProtocol protocol) {
-            this.protocol = protocol;
+            protocols = ImmutableList.of(protocol);
             return this;
         }
     }

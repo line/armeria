@@ -18,13 +18,8 @@ package com.linecorp.armeria.client;
 
 import static org.junit.Assert.assertEquals;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.AfterClass;
@@ -46,15 +41,10 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHostBuilder;
+import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.resolver.AddressResolver;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.InetNameResolver;
-import io.netty.resolver.InetSocketAddressResolver;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Promise;
 
 public class HttpClientSniTest {
 
@@ -97,7 +87,7 @@ public class HttpClientSniTest {
                           .getPort();
         clientFactory = new ClientFactoryBuilder()
                 .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                .addressResolverGroupFactory(eventLoopGroup -> new DummyAddressResolverGroup())
+                .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                 .build();
     }
 
@@ -159,35 +149,6 @@ public class HttpClientSniTest {
             final AggregatedHttpMessage response = client.get("/").aggregate().get();
             assertEquals(HttpStatus.OK, response.headers().status());
             assertEquals("a.com: CN=a.com", response.content().toStringUtf8());
-        }
-    }
-
-    private static class DummyAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
-        @Override
-        protected AddressResolver<InetSocketAddress> newResolver(EventExecutor eventExecutor) {
-            return new InetSocketAddressResolver(eventExecutor, new InetNameResolver(eventExecutor) {
-                @Override
-                protected void doResolve(String hostname, Promise<InetAddress> promise) {
-                    try {
-                        promise.setSuccess(newAddress(hostname));
-                    } catch (UnknownHostException e) {
-                        promise.setFailure(e);
-                    }
-                }
-
-                @Override
-                protected void doResolveAll(String hostname, Promise<List<InetAddress>> promise) {
-                    try {
-                        promise.setSuccess(Collections.singletonList(newAddress(hostname)));
-                    } catch (UnknownHostException e) {
-                        promise.setFailure(e);
-                    }
-                }
-
-                private InetAddress newAddress(String hostname) throws UnknownHostException {
-                    return InetAddress.getByAddress(hostname, new byte[] { 127, 0, 0, 1 });
-                }
-            });
         }
     }
 

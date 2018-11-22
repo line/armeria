@@ -30,10 +30,13 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
 
 /**
- * An abstract bean with information for registering an annotated service object. It enables micrometer
+ * An abstract bean with information for registering a service object. It enables micrometer
  * monitoring of the service automatically.
+ *
+ * @param <T> the type of the service object to be registered
+ * @param <U> the type of the implementation of this bean
  */
-class AbstractServiceRegistrationBean<T, U> {
+public class AbstractServiceRegistrationBean<T, U> {
     /**
      * The annotated service object to register.
      */
