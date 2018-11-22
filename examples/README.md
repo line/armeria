@@ -6,6 +6,9 @@
 - `spring-boot-tomcat`
   - Learn how to make Armeria serve your Spring Boot web application.
 
+- `spring-boot-webflux`
+  - Learn how to make Armeria serve your Spring Boot reactive web application.
+  
 ## License
 
 All files under this directory (`examples`) belong to

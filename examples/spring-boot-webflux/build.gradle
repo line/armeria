@@ -1,0 +1,8 @@
+dependencies {
+    compile project(':spring:boot-webflux-starter')
+
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    testCompile 'junit:junit'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+}

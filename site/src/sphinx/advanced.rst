@@ -13,3 +13,4 @@ Advanced topics
     advanced-zookeeper
     advanced-production-checklist
     advanced-saml
+    advanced-spring-webflux-integration

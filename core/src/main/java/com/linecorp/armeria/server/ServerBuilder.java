@@ -33,6 +33,8 @@ import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +48,7 @@ import javax.net.ssl.SSLException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -330,12 +333,7 @@ public final class ServerBuilder {
      * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
      */
     public ServerBuilder port(ServerPort port) {
-        requireNonNull(port, "port");
-        if (port.localAddress().getPort() != 0) {
-            ports.forEach(p -> checkArgument(!p.localAddress().equals(port.localAddress()),
-                                             "duplicate local address: %s", port.localAddress()));
-        }
-        ports.add(port);
+        ports.add(requireNonNull(port, "port"));
         return this;
     }
 
@@ -1115,11 +1113,11 @@ public final class ServerBuilder {
             virtualHosts = this.virtualHosts;
         }
 
-        final List<ServerPort> ports;
-
         // Pre-populate the domain name mapping for later matching.
         final DomainNameMapping<SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
+
+        final Collection<ServerPort> ports;
 
         this.ports.forEach(
                 port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
@@ -1129,7 +1127,7 @@ public final class ServerBuilder {
         if (defaultSslContext == null) {
             sslContexts = null;
             if (!this.ports.isEmpty()) {
-                ports = ImmutableList.copyOf(this.ports);
+                ports = resolveDistinctPorts(this.ports);
                 for (final ServerPort p : ports) {
                     if (p.hasTls()) {
                         throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
@@ -1140,7 +1138,7 @@ public final class ServerBuilder {
             }
         } else {
             if (!this.ports.isEmpty()) {
-                ports = ImmutableList.copyOf(this.ports);
+                ports = resolveDistinctPorts(this.ports);
             } else {
                 ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }
@@ -1169,6 +1167,38 @@ public final class ServerBuilder {
 
         serverListeners.forEach(server::addListener);
         return server;
+    }
+
+    /**
+     * Returns a list of {@link ServerPort}s which consists of distinct port numbers except for the port
+     * {@code 0}. If there are the same port numbers with different {@link SessionProtocol}s,
+     * their {@link SessionProtocol}s will be merged into a single {@link ServerPort} instance.
+     * The returned list is sorted as the same order of the specified {@code ports}.
+     */
+    private static List<ServerPort> resolveDistinctPorts(List<ServerPort> ports) {
+        final List<ServerPort> distinctPorts = new ArrayList<>();
+        for (final ServerPort p : ports) {
+            boolean found = false;
+            // Do not check the port number 0 because a user may want his or her server to be bound
+            // on multiple arbitrary ports.
+            if (p.localAddress().getPort() > 0) {
+                for (int i = 0; i < distinctPorts.size(); i++) {
+                    final ServerPort port = distinctPorts.get(i);
+                    if (port.localAddress().equals(p.localAddress())) {
+                        final ServerPort merged =
+                                new ServerPort(port.localAddress(),
+                                               Sets.union(port.protocols(), p.protocols()));
+                        distinctPorts.set(i, merged);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                distinctPorts.add(p);
+            }
+        }
+        return Collections.unmodifiableList(distinctPorts);
     }
 
     private VirtualHost normalizeDefaultVirtualHost(VirtualHost h,
