@@ -46,11 +46,11 @@ public class HelloConfiguration {
     }
 
     /**
-     * Returns a custom client factory which is configured as disabling the certificate validation,
-     * which means any certificate received from the server will be accepted.
-     * It is used for an example which makes the client send HTTPS request to the server running
-     * on localhost with a self-signed certificate. So you MUST NOT use the
-     * {@link InsecureTrustManagerFactory} in production.
+     * Returns a custom {@link ClientFactory} with TLS certificate validation disabled,
+     * which means any certificate received from the server will be accepted without any verification.
+     * It is used for an example which makes the client send an HTTPS request to the server running
+     * on localhost with a self-signed certificate. Do NOT use the {@link InsecureTrustManagerFactory}
+     * in production.
      */
     @Bean
     public ClientFactory clientFactory() {
