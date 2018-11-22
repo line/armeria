@@ -3,9 +3,6 @@ def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
 def checkstyleEnabled = new File(checkstyleConfigDir).isDirectory() &&
                         new File("${checkstyleConfigDir}/checkstyle.xml").isFile()
 
-// Enable JaCoCo test coverage when '-Pcoverage' option is specified.
-def jacocoEnabled = project.hasProperty('coverage')
-
 configure(rootProject) {
     apply plugin: 'eclipse'
     apply plugin: 'idea'
@@ -112,42 +109,6 @@ configure(projectsWithFlags('java')) {
 
         test {
             dependsOn tasks.checkstyle
-        }
-    }
-
-    // Generate JaCoCo reports.
-    if (jacocoEnabled && !project.hasFlags('no_aggregation')) {
-        apply plugin: 'jacoco'
-
-        project.addFlags('coverage')
-
-        tasks.withType(Test) {
-            jacoco {
-                enabled = true
-                append = false
-            }
-        }
-
-        jacocoTestReport {
-            reports {
-                csv.enabled = false
-                xml.enabled = true
-                html.enabled = true
-            }
-
-            afterEvaluate {
-                // Include all sources and classes directories so that the report includes other modules.
-                sourceDirectories = files(projectsWithFlags('java').inject([], { a, b ->
-                    a + b.sourceSets.main.java.srcDirs }
-                ))
-                classDirectories = files(projectsWithFlags('java').inject([], { a, b ->
-                    b.hasFlags('no_aggregation') ? a : a + b.sourceSets.main.output.classesDirs
-                }))
-            }
-        }
-
-        tasks.withType(Test) {
-            finalizedBy tasks.jacocoTestReport
         }
     }
 }

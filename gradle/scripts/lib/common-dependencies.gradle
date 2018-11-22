@@ -69,7 +69,10 @@ allprojects {
 
 // Create a new configuration called 'allDependencies'.
 rootProject.configurations {
-    allDependencies
+    allDependencies {
+        visible = false
+        transitive = false
+    }
 }
 
 // Add all dependencies declared in 'dependencies.yml' to 'allDependencies' because otherwise

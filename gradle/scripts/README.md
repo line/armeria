@@ -325,17 +325,31 @@ When a project has a `java` flag:
 - Checkstyle validation is enabled using `checkstyle` plugin if Checkstyle
   configuration file exists at `<project_root>/settings/checkstyle/checkstyle.xml`
 
-    - A special configuration property `checkstyleConfigDir` is set so you can
-      access the external files such as `suppressions.xml` from `checkstyle.xml`.
-    - You can choose Checkstyle version by specifying it in `dependencies.yml`:
+  - A special configuration property `checkstyleConfigDir` is set so you can
+    access the external files such as `suppressions.xml` from `checkstyle.xml`.
+  - You can choose Checkstyle version by specifying it in `dependencies.yml`:
 
-      ```yaml
-      com.puppycrawl.tools:
-        checkstyle: { version: '8.5' }
-      ```
+    ```yaml
+    com.puppycrawl.tools:
+      checkstyle: { version: '8.5' }
+    ```
 
 - Test coverage report is enabled using `jacoco` plugin if `-Pcoverage` option
   is specified.
+
+  - You can exclude certain packages from the coverage report using the
+    `jacocoExclusions` property:
+
+    ```groovy
+    rootProject {
+        ext {
+            jacocoExclusions = [
+                '/com/example/generated/sources/**',
+                '/com/example/third/party/**'
+            ]
+        }
+    }
+    ```
 
 - [Jetty ALPN agent](https://github.com/jetty-project/jetty-alpn-agent) is
   loaded automatically when launching a Java process if you specified it in
