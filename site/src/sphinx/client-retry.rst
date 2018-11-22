@@ -1,3 +1,4 @@
+.. _What are idempotent and/or safe methods?: http://restcookbook.com/HTTP%20Methods/idempotency/
 .. _decorator: client-decorator.html
 
 .. _client-retry:
@@ -92,7 +93,8 @@ You can customize the ``strategy`` by implementing :api:`RetryStrategy`.
         }
     };
 
-This will retry when the response's status is ``409 Conflict`` or :api:`ResponseTimeoutException` is raised.
+This will retry when one of :api:`ResponseTimeoutException` and :api:`UnprocessedRequestException` is raised or
+the response's status is ``409 Conflict``.
 
 .. note::
 
@@ -104,6 +106,12 @@ This will retry when the response's status is ``409 Conflict`` or :api:`Response
     you decided to change your :api:`Backoff` strategy. If you do not return the same one, when the
     :api:`Backoff` yields a different delay based on the number of retries, such as an exponential backoff,
     it will not work as expected. We will take a close look into a :api:`Backoff` at the next section.
+
+.. note::
+
+    :api:`UnprocessedRequestException` literally means that the request has not been processed by the server.
+    Therefore, you can safely retry the request without worrying about the idempotency of the request.
+    For more information about idempotency, please refer to `What are idempotent and/or safe methods?`_.
 
 You can return a different :api:`Backoff` according to the response status.
 
@@ -285,8 +293,8 @@ The :api:`RetryingClient`, at this point, stops retrying and finished the retry 
 
 .. _retry-with-logging:
 
-RetryingClient with logging
----------------------------
+``RetryingClient`` with logging
+-------------------------------
 
 You can use :api:`RetryingClient` with :api:`LoggingClient` to log. If you want to log all of the
 requests and responses, decorate :api:`LoggingClient` with :api:`RetryingClient`. That is:
@@ -334,6 +342,63 @@ This will produce only single request and response log pair regardless how many 
 .. note::
 
     Please refer to :ref:`nested-log`, if you are curious about how this works internally.
+
+``RetryingClient`` with circuit breaker
+---------------------------------------
+
+You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClient` using decorator_:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
+    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
+
+    CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
+    RetryStrategy myRetryStrategy = new RetryStrategy() { ... };
+
+    HttpClient client = new HttpClientBuilder(...)
+            .decorator(new CircuitBreakerHttpClientBuilder(cbStrategy).newDecorator())
+            .decorator(new RetryingHttpClientBuilder(myRetryStrategy).newDecorator())
+            .build();
+
+    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+
+This decorates :api:`CircuitBreakerHttpClient` with :api:`RetryingHttpClient` so that the :api:`CircuitBreaker`
+judges every request and retried request as successful or failed. If the failure rate exceeds a certain
+threshold, it raises a :api:`FailFastException`. When using both clients, you need to write a custom
+:api:`RetryStrategy` to handle this exception so that the :api:`RetryingHttpClient` does not attempt
+a retry unnecessarily when the circuit is open, e.g.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.circuitbreaker.FailFastException;
+
+    new RetryStrategy() {
+        final Backoff backoff = Backoff.ofDefault();
+
+        @Override
+        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+            if (cause != null) {
+                if (cause instanceof FailFastException) {
+                    // The circuit is already open so returns null to stop retrying.
+                    return CompletableFuture.completedFuture(null);
+                }
+
+                if (cause instanceof ResponseTimeoutException ||
+                    cause instanceof UnprocessedRequestException) {
+                    // The response timed out or the request has not been handled by the server.
+                    return CompletableFuture.completedFuture(backoff);
+                }
+            }
+            ... // Implement the rest of your own strategy.
+        }
+    };
+
+.. note::
+
+    You may want to allow retrying even on :api:`FailFastException` when your endpoint is configured with
+    client-side load balancing because the next attempt might be sent to the next available endpoint.
+    See :ref:`client-service-discovery` for more information about client-side load balancing.
 
 See also
 --------
