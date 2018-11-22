@@ -278,16 +278,20 @@ public class HttpTracingIntegrationTest {
 
         // Check wire times
         final long clientStartTime = clientFooSpan.timestampAsLong();
-        final long clientWireSendTime = clientFooSpan.annotations().stream().filter(a -> a.value().equals("ws"))
+        final long clientWireSendTime = clientFooSpan.annotations().stream()
+                                                     .filter(a -> a.value().equals("ws"))
                                                      .findFirst().get().timestamp();
-        final long clientWireReceiveTime = clientFooSpan.annotations().stream().filter(a -> a.value().equals("wr"))
+        final long clientWireReceiveTime = clientFooSpan.annotations().stream()
+                                                        .filter(a -> a.value().equals("wr"))
                                                         .findFirst().get().timestamp();
         final long clientEndTime = clientStartTime + clientFooSpan.durationAsLong();
 
         final long serverStartTime = serviceFooSpan.timestampAsLong();
-        final long serverWireSendTime = serviceFooSpan.annotations().stream().filter(a -> a.value().equals("ws"))
+        final long serverWireSendTime = serviceFooSpan.annotations().stream()
+                                                      .filter(a -> a.value().equals("ws"))
                                                       .findFirst().get().timestamp();
-        final long serverWireReceiveTime = serviceFooSpan.annotations().stream().filter(a -> a.value().equals("wr"))
+        final long serverWireReceiveTime = serviceFooSpan.annotations().stream()
+                                                         .filter(a -> a.value().equals("wr"))
                                                          .findFirst().get().timestamp();
         final long serverEndTime = serverStartTime + serviceFooSpan.durationAsLong();
 
