@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
@@ -92,8 +91,7 @@ public interface RetryStrategy {
     static RetryStrategy onServerErrorStatus(Backoff backoff) {
         requireNonNull(backoff, "backoff");
         return onStatus((status, thrown) -> {
-            if ((thrown != null && !(Exceptions.peel(thrown) instanceof FailFastException)) ||
-                (status != null && status.codeClass() == HttpStatusClass.SERVER_ERROR)) {
+            if (thrown != null || (status != null && status.codeClass() == HttpStatusClass.SERVER_ERROR)) {
                 return backoff;
             }
             return null;
