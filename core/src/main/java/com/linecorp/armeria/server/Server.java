@@ -92,6 +92,7 @@ public final class Server implements AutoCloseable {
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final Map<InetSocketAddress, ServerPort> unmodifiableActivePorts =
             Collections.unmodifiableMap(activePorts);
+    private volatile boolean isMutatingActivePorts = true;
 
     private final ConnectionLimitingHandler connectionLimitingHandler;
 
@@ -139,7 +140,13 @@ public final class Server implements AutoCloseable {
      * @see Server#activePort()
      */
     public Map<InetSocketAddress, ServerPort> activePorts() {
-        return unmodifiableActivePorts;
+        if (isMutatingActivePorts) {
+            synchronized (activePorts) {
+                return Collections.unmodifiableMap(new LinkedHashMap<>(activePorts));
+            }
+        } else {
+            return unmodifiableActivePorts;
+        }
     }
 
     /**
@@ -149,7 +156,13 @@ public final class Server implements AutoCloseable {
      * @return {@link Optional#empty()} if this {@link Server} did not start
      */
     public Optional<ServerPort> activePort() {
-        return Optional.ofNullable(Iterables.getFirst(unmodifiableActivePorts.values(), null));
+        if (isMutatingActivePorts) {
+            synchronized (activePorts) {
+                return Optional.ofNullable(Iterables.getFirst(activePorts.values(), null));
+            }
+        } else {
+            return Optional.ofNullable(Iterables.getFirst(activePorts.values(), null));
+        }
     }
 
     @Nullable
@@ -408,7 +421,9 @@ public final class Server implements AutoCloseable {
             final Set<Channel> serverChannels = ImmutableSet.copyOf(Server.this.serverChannels);
             ChannelUtil.close(serverChannels).handle((unused1, unused2) -> {
                 // All server ports have been closed.
-                activePorts.clear();
+                synchronized (activePorts) {
+                    activePorts.clear();
+                }
 
                 // Close all accepted sockets.
                 ChannelUtil.close(connectionLimitingHandler.children()).handle((unused3, unused4) -> {
@@ -467,21 +482,25 @@ public final class Server implements AutoCloseable {
 
         @Override
         protected void notifyStarting(ServerListener listener) throws Exception {
+            isMutatingActivePorts = true;
             listener.serverStarting(Server.this);
         }
 
         @Override
         protected void notifyStarted(ServerListener listener, @Nullable Void value) throws Exception {
+            isMutatingActivePorts = false;
             listener.serverStarted(Server.this);
         }
 
         @Override
         protected void notifyStopping(ServerListener listener) throws Exception {
+            isMutatingActivePorts = true;
             listener.serverStopping(Server.this);
         }
 
         @Override
         protected void notifyStopped(ServerListener listener) throws Exception {
+            isMutatingActivePorts = false;
             listener.serverStopped(Server.this);
         }
 
@@ -529,8 +548,10 @@ public final class Server implements AutoCloseable {
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
 
-                // Update the map of active ports.
-                activePorts.put(localAddress, actualPort);
+                synchronized (activePorts) {
+                    // Update the map of active ports.
+                    activePorts.put(localAddress, actualPort);
+                }
 
                 if (logger.isInfoEnabled()) {
                     if (localAddress.getAddress().isAnyLocalAddress() ||

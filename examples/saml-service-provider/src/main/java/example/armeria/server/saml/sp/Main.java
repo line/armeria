@@ -26,19 +26,23 @@ public class Main {
      * You can get the metadata of this service provider from {@code https://localhost:8443/saml/metadata}
      * after starting this server.
      *
-     * <p>The {@code signing} key pair in the keystore {@code sample.jks} can be generated with the following
-     * command. You can also generate the {@code encryption} key pair with the same command, or you can use
-     * the same key pair for encryption.
+     * <p>The {@code signing} and {@code encryption} key pair in the keystore {@code sample.jks} can be
+     * generated with the following commands:
      * <pre>{@code
      * $ keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa
      *     -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias signing
+     *
+     * $ keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa
+     *     -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias encryption
      * }</pre>
      *
      * <p>The certificate of the SSO Circle can be imported into the keystore with the following command.
      * You can specify its alias as the same as its entity ID so that you do not need to specify the alias
-     * when building a {@link SamlServiceProvider}.
+     * when building a {@link SamlServiceProvider}. You can make {@code sso_circle.crt} file with
+     * the certificate from <a href="https://www.ssocircle.com/en/idp-tips-tricks/public-idp-configuration/">
+     * Public IDP Configuration</a> of SSO Circle.
      * <pre>{@code
-     * $ keytool -importcert -keystore sample.jks -storepass 'N5^X[hvG' -file ssocircle.cert
+     * $ keytool -importcert -keystore sample.jks -storepass 'N5^X[hvG' -file sso_circle.crt
      *     -alias 'https://idp.ssocircle.com'
      * }</pre>
      */

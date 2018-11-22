@@ -33,6 +33,12 @@ import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 
+/**
+ * An example of an {@link Authorizer} and a {@link SamlSingleSignOnHandler}.
+ *
+ * <p>Note that the implementation in this class is purely for a demonstration purpose.
+ * You should perform proper authorization in a real world application.
+ */
 final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHandler {
     private static final Logger logger = LoggerFactory.getLogger(MyAuthHandler.class);
 

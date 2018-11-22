@@ -47,19 +47,22 @@ For Gradle:
 
 After that, you need to prepare your keystore file which contains a key pair for signing and encryption
 of a SAML message. Also, you need to import the certificate of your identity provider into the keystore
-which contains your key pairs. In this example, we are using an identity provider service hosted by
+which contains your key pairs. In this example, we are using a free identity provider service hosted by
 `SSO Circle <https://www.ssocircle.com/en/>`_ in order to authenticate an end user. The following commands
 may help you to get a keystore.
 
 .. code-block:: bash
 
-    # Generate a new key pair as alias 'signing'.
+    # Generate new key pairs as alias 'signing' and 'encryption'.
     keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa
       -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias signing
+    keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa
+      -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias encryption
 
     # Import a certificate into the keystore as alias 'https://idp.ssocircle.com', which is the entity ID
-    # of the SSO Circle.
-    keytool -importcert -keystore sample.jks -storepass 'N5^X[hvG' -file ssocircle.cert
+    # of the SSO Circle. You can make 'sso_circle.crt' file with the certificate from
+    # 'https://www.ssocircle.com/en/idp-tips-tricks/public-idp-configuration/'.
+    keytool -importcert -keystore sample.jks -storepass 'N5^X[hvG' -file sso_circle.crt
       -alias 'https://idp.ssocircle.com'
 
 Finally, you need to create your :api:`SamlServiceProvider` with a :api:`SamlServiceProviderBuilder`, and
@@ -111,15 +114,15 @@ How to handle the authentication response
 
 ``armeria-saml`` provides :api:`SamlSingleSignOnHandler` to handle the response from an identity provider.
 It consists of ``loginSucceeded()`` and ``loginFailed()`` methods which handle the response,
-and ``beforeInitiatingSso()`` which handle a request. Most of cases, you may only need to write the two methods
-which handle the response, but if you want to send a data to your identity provider and get it back
+and ``beforeInitiatingSso()`` which handle a request. In most cases, you only need to write the two methods
+which handle the response, but if you want to send data to your identity provider and get it back
 with a response, you need to implement ``beforeInitiatingSso()`` method.
 
 The following example shows a simple implementation of the :api:`SamlSingleSignOnHandler`. In the example,
 if an authentication is succeeded, an email address is retrieved from the response by referring to a ``name ID``
 element in the assertion, then it is sent to the end user via ``Set-Cookie`` header. It means that your
 :api:`Authorizer` can identify an authenticated session with a ``Cookie`` header in the following requests,
-like ``MyAuthorizer`` in the example.
+like ``MyAuthorizer`` in this example.
 
 .. code-block:: java
 
@@ -140,6 +143,8 @@ like ``MyAuthorizer`` in the example.
                                        "<html><body>Username is not found.</body></html>");
             }
 
+            // Note that you do not use this example in a real world application. You may consider encoding
+            // the value using JSON Web Tokens to prevent tempering.
             final Cookie cookie = new DefaultCookie("username", username);
             cookie.setHttpOnly(true);
             cookie.setDomain("localhost");
@@ -163,6 +168,8 @@ like ``MyAuthorizer`` in the example.
     class MyAuthorizer implements Authorizer<HttpRequest> {
         @Override
         public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest data) {
+            // Note that you do not use this example in a real world application. You have to perform
+            // proper validation in your application.
             final String cookie = data.headers().get(HttpHeaderNames.COOKIE);
             if (cookie == null) {
                 return CompletableFuture.completedFuture(false);
@@ -179,9 +186,29 @@ like ``MyAuthorizer`` in the example.
     The above implementation is just an example that shows you how to handle the response, so it is recommended
     that you write your own :api:`SamlSingleSignOnHandler` according to your authentication system.
 
-How to generate the metadata
-----------------------------
+What services are automatically configured
+------------------------------------------
 
-In order to your service acts as a service provider, you need to register your service to your identity provider,
-and providing your metadata is the easiest way to do that. You can get your metadata from
-``https://your-service-domain-name:your-service-port/saml/metadata`` so that you can find your information.
+``armeria-saml`` module automatically adds SAML services to your server with the following default paths:
+
+- ``/saml/acs/post`` and ``/saml/acs/redirect``
+
+  - SAML assertion consumer services via HTTP Post binding and HTTP Redirect binding. These services are invoked
+    by an identity provider when it responds to an authentication request received from your service.
+
+- ``/saml/slo/post`` and ``/saml/slo/redirect``
+
+  - SAML single logout services via HTTP Post binding and HTTP Redirect binding. These services may be invoked
+    by an identity provider when it performs global logout.
+
+- ``/saml/metadata``
+
+  - SAML metadata service. In the metadata, the endpoints for assertion consumer services and single logout
+    services are specified by ``md:AssertionConsumerService`` and ``md:SingleLogoutService`` elements,
+    respectively. The certificates of the ``signing`` and ``encryption`` key pair are also included.
+
+.. note::
+
+    In order to your service acts as a service provider, you need to register your service to your identity
+    provider, and providing your metadata is the easiest way to do that. You can get your metadata from
+    ``https://your-service-domain-name:your-service-port/saml/metadata``.
