@@ -7,7 +7,9 @@ configure(projectsWithFlags('java')) {
     // Use Jetty ALPN agent if dependencyManagement mentions it.
     if (managedVersions.containsKey('org.mortbay.jetty.alpn:jetty-alpn-agent')) {
         configurations {
-            alpnAgent
+            alpnAgent {
+                visible = false
+            }
         }
 
         dependencies {

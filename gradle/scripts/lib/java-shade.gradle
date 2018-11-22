@@ -20,7 +20,7 @@ configure(relocatedProjects) {
     task shadedJar(
             type: ShadowJar,
             group: 'Build',
-            description: 'Builds the shaded JAR.',
+            description: 'Builds the shaded main JAR.',
             dependsOn: tasks.classes) {
 
         configureShadowTask(project, delegate, true)
@@ -37,6 +37,20 @@ configure(relocatedProjects) {
 
     artifacts {
         archives shadedJar
+    }
+
+    task shadedClasses(
+            type: Copy,
+            group: 'Build',
+            description: 'Extracts the shaded main JAR.',
+            dependsOn: tasks.shadedJar) {
+
+        from(zipTree(tasks.shadedJar.archivePath))
+        from(sourceSets.main.output.classesDirs) {
+            // Add the JAR resources excluded in the 'shadedJar' task.
+            include '**/*.jar'
+        }
+        into "${project.buildDir}/classes/java/shaded-main"
     }
 
     task shadedTestJar(
@@ -173,12 +187,6 @@ configure(relocatedProjects) {
 
         project.ext.relocations.each {
             exclude "${it['to'].replace('.', '/')}/**"
-        }
-
-        if (project.hasFlags('coverage')) {
-            jacoco {
-                enabled = false
-            }
         }
     }
     tasks.check.dependsOn tasks.shadedTest
