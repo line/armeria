@@ -91,7 +91,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
         ctx.log().addListener(log -> {
             SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);
-            SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos()
+            SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
             SpanContextUtil.closeSpan(span, log);
         }, RequestLogAvailability.COMPLETE);
 
