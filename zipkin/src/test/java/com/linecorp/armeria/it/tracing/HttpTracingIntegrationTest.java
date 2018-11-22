@@ -297,19 +297,22 @@ public class HttpTracingIntegrationTest {
 
         // These values are taken at microsecond precision and should be reliable to compare to each other.
 
+        // Because of the small deltas among these numbers in a unit test, a thread context switch can cause
+        // client - server values to not compare correctly. We go ahead and only verify values recorded from the
+        // same thread.
+
         assertThat(clientStartTime).isNotZero();
         assertThat(clientWireSendTime).isGreaterThanOrEqualTo(clientStartTime);
+        assertThat(clientWireReceiveTime).isGreaterThanOrEqualTo(clientWireSendTime);
+        assertThat(clientEndTime).isGreaterThanOrEqualTo(clientWireReceiveTime);
 
         // Server start time and wire receive time are essentially the same in our current model, and whether
         // one is greater than the other is mostly an implementation detail, so we don't compare them to each
         // other.
-        assertThat(serverStartTime).isGreaterThanOrEqualTo(clientWireSendTime);
-        assertThat(serverWireReceiveTime).isGreaterThanOrEqualTo(clientWireSendTime);
 
+        assertThat(serverWireSendTime).isGreaterThanOrEqualTo(serverStartTime);
         assertThat(serverWireSendTime).isGreaterThanOrEqualTo(serverWireReceiveTime);
-        assertThat(clientWireReceiveTime).isGreaterThanOrEqualTo(serverWireSendTime);
-        assertThat(serverEndTime).isGreaterThanOrEqualTo(clientWireReceiveTime);
-        assertThat(clientEndTime).isGreaterThanOrEqualTo(serverEndTime);
+        assertThat(serverEndTime).isGreaterThanOrEqualTo(serverWireSendTime);
     }
 
     @Test(timeout = 10000)
