@@ -46,36 +46,40 @@ tasks.test.exclude '**/HttpServerStreamingTest**'
 tasks.shadedTest.exclude '**/HttpServerStreamingTest**'
 task testStreaming(type: Test,
                    group: 'Verification',
-                   description: 'Runs the streaming tests.') {
+                   description: 'Runs the streaming tests.',
+                   dependsOn: tasks.shadedTestClasses) {
     // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
     maxHeapSize = '64m'
 
-    testClassesDirs = tasks.test.testClassesDirs
-    classpath = tasks.test.classpath
-
     include '**/HttpServerStreamingTest**'
+    testClassesDirs = tasks.shadedTest.testClassesDirs
+
+    // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
+    afterProjectsWithFlag('java') {
+        classpath = tasks.shadedTest.classpath
+    }
 }
-tasks.test.finalizedBy tasks.testStreaming
+tasks.shadedTest.finalizedBy tasks.testStreaming
 tasks.check.dependsOn tasks.testStreaming
 
 // Run the test cases based on reactive-streams-tck
 task testNg(type: Test,
             group: 'Verification',
-            description: 'Runs the TestNG unit tests.') {
+            description: 'Runs the TestNG unit tests.',
+            dependsOn: tasks.shadedTestClasses) {
     useTestNG()
-    testClassesDirs = tasks.test.testClassesDirs
-    classpath = tasks.test.classpath
-    scanForTestClasses = false
-}
-tasks.test.finalizedBy tasks.testNg
-tasks.check.dependsOn tasks.testNg
+    include '/com/linecorp/armeria/common/**'
 
-if (project.hasFlags('coverage')) {
-    jacocoTestReport {
-        // Include the coverage data from the TestNG test cases.
-        executionData file("${project.buildDir}/jacoco/testNg.exec")
+    scanForTestClasses = false
+    testClassesDirs = tasks.shadedTest.testClassesDirs
+
+    // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
+    afterProjectsWithFlag('java') {
+        classpath = tasks.shadedTest.classpath
     }
 }
+tasks.shadedTest.finalizedBy tasks.testNg
+tasks.check.dependsOn tasks.testNg
 
 if (tasks.findByName('trimShadedJar')) {
     tasks.trimShadedJar.configure {
