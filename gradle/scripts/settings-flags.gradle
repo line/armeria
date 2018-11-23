@@ -1,3 +1,5 @@
+import java.util.concurrent.ConcurrentHashMap
+
 import static java.util.Objects.requireNonNull
 
 // Ensure the Gradle version first of all.
@@ -29,6 +31,8 @@ def includeWithFlags(CharSequence path, ...flags) {
                 p.ext.hasFlag = p.ext.hasFlags = this.&hasFlags.curry(p)
                 p.ext.assertFlag = p.ext.assertFlags = this.&assertFlags.curry(p)
                 p.ext.projectsWithFlag = p.ext.projectsWithFlags = this.&projectsWithFlags.curry(p)
+                p.ext.afterProjectsWithFlag = this.&afterProjectsWithFlag.curry(p)
+                p.ext.afterProjectsWithFlags = this.&afterProjectsWithFlags.curry(p)
                 p.ext.addFlag = p.ext.addFlags = { args -> p.ext.flags = addFlags(p.ext.flags, args) }
             }
         }
@@ -121,4 +125,23 @@ static def projectsWithFlags(Project project, ...flags) {
             project.rootProject.allprojects.findAll {
                 it.ext.has('hasFlags') && it.ext.hasFlags(flags)
             })
+}
+
+static void afterProjectsWithFlag(Project project, Object flag, Closure<Set<Project>> closure) {
+    afterProjectsWithFlags(project, [flag], closure)
+}
+
+static void afterProjectsWithFlags(Project project, Iterable<?> flags, Closure<Set<Project>> closure) {
+    def projects = projectsWithFlags(project, flags)
+    def remainingProjects = Collections.newSetFromMap(new ConcurrentHashMap<Project, Boolean>())
+    remainingProjects.addAll(projects)
+
+    projects.each { p ->
+        p.afterEvaluate {
+            remainingProjects.remove(p);
+            if (remainingProjects.isEmpty()) {
+                closure(projects)
+            }
+        }
+    }
 }

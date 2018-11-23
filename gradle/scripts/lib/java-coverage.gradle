@@ -51,9 +51,9 @@ configure(rootProject) {
 
         jacocoClasspath = configurations.jacocoAnt
 
-        afterEvaluate {
+        afterProjectsWithFlags(['java', 'coverage']) { projects ->
             // Set dependencies related with report generation and feed execution data.
-            projectsWithFlags('java', 'coverage').each { Project p ->
+            projects.each { Project p ->
                 if (p.hasFlags('relocate')) {
                     reportTask.dependsOn(p.tasks.shadedClasses)
                 }
