@@ -94,8 +94,8 @@ public class HttpTracingServiceTest {
         // only one span should be submitted
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
 
-        // check # of annotations (zipkin2 format does not use them by default)
-        assertThat(span.annotations()).isEmpty();
+        // check # of annotations (we add wire annotations)
+        assertThat(span.annotations()).hasSize(2);
 
         // check tags
         assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
@@ -140,6 +140,7 @@ public class HttpTracingServiceTest {
         final DefaultRequestLog log = new DefaultRequestLog(ctx);
         log.startRequest(mock(Channel.class), H2C);
         log.requestHeaders(req.headers());
+        log.requestFirstBytesTransferred();
         log.requestContent(rpcReq, req);
         log.endRequest();
 
@@ -155,6 +156,7 @@ public class HttpTracingServiceTest {
 
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
         log.responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        log.responseFirstBytesTransferred();
         log.responseContent(rpcRes, res);
         log.endResponse();
 

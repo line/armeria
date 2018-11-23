@@ -179,7 +179,7 @@ public class HttpTracingIntegrationTest {
                 .build(HelloService.Iface.class);
         zipClient = new ClientBuilder(server.uri(BINARY, "/zip"))
                 .decorator(HttpRequest.class, HttpResponse.class,
-                        HttpTracingClient.newDecorator(newTracing("client/zip")))
+                           HttpTracingClient.newDecorator(newTracing("client/zip")))
                 .build(HelloService.Iface.class);
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
@@ -275,6 +275,44 @@ public class HttpTracingIntegrationTest {
 
         // Check the span names.
         assertThat(spans).allMatch(s -> "hello".equals(s.name()));
+
+        // Check wire times
+        final long clientStartTime = clientFooSpan.timestampAsLong();
+        final long clientWireSendTime = clientFooSpan.annotations().stream()
+                                                     .filter(a -> a.value().equals("ws"))
+                                                     .findFirst().get().timestamp();
+        final long clientWireReceiveTime = clientFooSpan.annotations().stream()
+                                                        .filter(a -> a.value().equals("wr"))
+                                                        .findFirst().get().timestamp();
+        final long clientEndTime = clientStartTime + clientFooSpan.durationAsLong();
+
+        final long serverStartTime = serviceFooSpan.timestampAsLong();
+        final long serverWireSendTime = serviceFooSpan.annotations().stream()
+                                                      .filter(a -> a.value().equals("ws"))
+                                                      .findFirst().get().timestamp();
+        final long serverWireReceiveTime = serviceFooSpan.annotations().stream()
+                                                         .filter(a -> a.value().equals("wr"))
+                                                         .findFirst().get().timestamp();
+        final long serverEndTime = serverStartTime + serviceFooSpan.durationAsLong();
+
+        // These values are taken at microsecond precision and should be reliable to compare to each other.
+
+        // Because of the small deltas among these numbers in a unit test, a thread context switch can cause
+        // client - server values to not compare correctly. We go ahead and only verify values recorded from the
+        // same thread.
+
+        assertThat(clientStartTime).isNotZero();
+        assertThat(clientWireSendTime).isGreaterThanOrEqualTo(clientStartTime);
+        assertThat(clientWireReceiveTime).isGreaterThanOrEqualTo(clientWireSendTime);
+        assertThat(clientEndTime).isGreaterThanOrEqualTo(clientWireReceiveTime);
+
+        // Server start time and wire receive time are essentially the same in our current model, and whether
+        // one is greater than the other is mostly an implementation detail, so we don't compare them to each
+        // other.
+
+        assertThat(serverWireSendTime).isGreaterThanOrEqualTo(serverStartTime);
+        assertThat(serverWireSendTime).isGreaterThanOrEqualTo(serverWireReceiveTime);
+        assertThat(serverEndTime).isGreaterThanOrEqualTo(serverWireSendTime);
     }
 
     @Test(timeout = 10000)

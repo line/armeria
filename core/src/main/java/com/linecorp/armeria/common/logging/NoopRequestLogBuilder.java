@@ -45,6 +45,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void requestLength(long requestLength) {}
 
     @Override
+    public void requestFirstBytesTransferred() {}
+
+    @Override
     public void requestHeaders(HttpHeaders requestHeaders) {}
 
     @Override
@@ -72,6 +75,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void responseLength(long responseLength) {}
+
+    @Override
+    public void responseFirstBytesTransferred() {}
 
     @Override
     public void responseHeaders(HttpHeaders responseHeaders) {}

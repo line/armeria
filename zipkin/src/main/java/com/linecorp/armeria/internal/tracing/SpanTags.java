@@ -28,6 +28,12 @@ import brave.Span;
  */
 public final class SpanTags {
 
+    /** Semi-official annotation for the time the first bytes were sent on the wire. */
+    private static final String WIRE_SEND_ANNOTATION = "ws";
+
+    /** Semi-official annotation for the time the first bytes were received on the wire. */
+    private static final String WIRE_RECEIVE_ANNOTATION = "wr";
+
     /**
      * Adds information about the raw HTTP request, RPC request, and endpoint to the span.
      */
@@ -65,6 +71,14 @@ public final class SpanTags {
         if (requestContent instanceof RpcRequest) {
             span.name(((RpcRequest) requestContent).method());
         }
+    }
+
+    public static void logWireSend(Span span, long wireSendTimeNanos, RequestLog requestLog) {
+        span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos), WIRE_SEND_ANNOTATION);
+    }
+
+    public static void logWireReceive(Span span, long wireSendTimeNanos, RequestLog requestLog) {
+        span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos), WIRE_RECEIVE_ANNOTATION);
     }
 
     private SpanTags() {}

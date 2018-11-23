@@ -56,6 +56,7 @@ public class RequestMetricSupportTest {
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
 
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(null, null);
         ctx.logBuilder().requestLength(123);
 
@@ -63,6 +64,7 @@ public class RequestMetricSupportTest {
         assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0);
 
         ctx.logBuilder().responseHeaders(HttpHeaders.of(200));
+        ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseLength(456);
 
         ctx.logBuilder().endRequest();
@@ -94,7 +96,9 @@ public class RequestMetricSupportTest {
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
 
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(HttpHeaders.of(500));
+        ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseLength(456);
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
@@ -124,6 +128,7 @@ public class RequestMetricSupportTest {
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
 
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/bar"));
+        ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(new DefaultRpcRequest(Object.class, "baz"), null);
 
         assertThat(measureAll(registry)).containsEntry("bar.activeRequests#value{method=baz}", 1.0);

@@ -76,6 +76,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private State state = State.NEEDS_HEADERS;
     private boolean isComplete;
 
+    private boolean loggedResponseHeadersFirstBytesTransferred;
+
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
                            AccessLogWriter accessLogWriter) {
@@ -318,6 +320,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             // - every message has been sent successfully.
             // - any write operation is failed with a cause.
             if (isSuccess) {
+                if (!loggedResponseHeadersFirstBytesTransferred) {
+                    logBuilder().responseFirstBytesTransferred();
+                    loggedResponseHeadersFirstBytesTransferred = true;
+                }
+
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
                     reqCtx.log().addListener(accessLogWriter::log, RequestLogAvailability.COMPLETE);

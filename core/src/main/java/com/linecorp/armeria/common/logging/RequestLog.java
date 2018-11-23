@@ -213,6 +213,14 @@ public interface RequestLog {
     long requestStartTimeNanos();
 
     /**
+     * Returns the time when the first bytes of the request headers were transferred over the wire. For a
+     * client, this is the time the client sent the data, while for a server it is the time the server received
+     * them. This value can only be used to measure elapsed time and is not related to any other notion of
+     * system or wall-clock time.
+     */
+    long requestFirstBytesTransferredTimeNanos();
+
+    /**
      * Returns the time when the processing of the request finished, in nanoseconds. This value can only be
      * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
      *
@@ -264,6 +272,14 @@ public interface RequestLog {
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     long responseStartTimeNanos();
+
+    /**
+     * Returns the time when the first bytes of the response headers were transferred over the wire. For a
+     * client, this is the time the client received the data, while for a server it is the time the server sent
+     * them. This value can only be used to measure elapsed time and is not related to any other notion of
+     * system or wall-clock time.
+     */
+    long responseFirstBytesTransferredTimeNanos();
 
     /**
      * Returns the time when the processing of the response finished, in nanoseconds. This value can only be

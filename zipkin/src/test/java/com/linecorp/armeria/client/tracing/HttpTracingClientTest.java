@@ -105,8 +105,8 @@ public class HttpTracingClientTest {
         // only one span should be submitted
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
 
-        // check # of annotations (zipkin2 format does not use them by default)
-        assertThat(span.annotations()).isEmpty();
+        // check # of annotations (we add wire annotations)
+        assertThat(span.annotations()).hasSize(2);
 
         // check tags
         assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
@@ -180,6 +180,7 @@ public class HttpTracingClientTest {
 
         ctx.logBuilder().startRequest(mock(Channel.class), H2C);
         ctx.logBuilder().requestHeaders(req.headers());
+        ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(rpcReq, req);
         ctx.logBuilder().endRequest();
 
@@ -197,6 +198,7 @@ public class HttpTracingClientTest {
         verify(delegate, times(1)).execute(ctx, req);
 
         ctx.logBuilder().responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseContent(rpcRes, res);
         ctx.logBuilder().endResponse();
     }
