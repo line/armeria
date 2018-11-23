@@ -38,17 +38,17 @@ com.github.ben-manes.caffeine:
       to: com.linecorp.armeria.internal.shaded.caffeine
 
 com.github.jengelman.gradle.plugins:
-  shadow: { version: '2.0.3' }
+  shadow: { version: '4.0.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.34.0' }
+  gax-grpc: { version: '1.35.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '27.0-jre'
+    version: &GUAVA_VERSION '27.0.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -68,14 +68,14 @@ com.google.guava:
       to: com.linecorp.armeria.internal.shaded.guava
   # A transitive dependency of Guava which needs relocation as well.
   failureaccess:
-    version: '1.0'
+    version: '1.0.1'
     relocations:
     - from: com.google.common
       to: com.linecorp.armeria.internal.shaded.guava
 
 com.google.protobuf:
   protoc: { version: '3.5.1-1' }
-  protobuf-gradle-plugin: { version: '0.8.6' }
+  protobuf-gradle-plugin: { version: '0.8.7' }
 
 com.moowork.gradle:
   gradle-node-plugin: { version: '1.2.0' }
@@ -167,11 +167,11 @@ io.netty:
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.19.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.20.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.2.RELEASE'
+    version: &REACTOR_VERSION '3.2.3.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -190,9 +190,9 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: '5.5.0'
+    version: '5.5.1'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.5.0/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.5.1/
 
 it.unimi.dsi:
   fastutil:
@@ -226,7 +226,7 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.7' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.0.2' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.1.1' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -275,7 +275,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.12'
+    version: &TOMCAT_VERSION '9.0.13'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -293,7 +293,7 @@ org.assertj:
   assertj-core: { version: '3.11.1' }
 
 org.awaitility:
-  awaitility: { version: '3.1.2' }
+  awaitility: { version: '3.1.3' }
 
 org.bouncycastle:
   bcprov-jdk15on:
@@ -312,7 +312,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.12.v20180830' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.14.v20181114' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
@@ -345,10 +345,10 @@ org.jsoup:
   jsoup: { version: '1.11.3' }
 
 org.mockito:
-  mockito-core: { version: '2.23.0' }
+  mockito-core: { version: '2.23.4' }
 
 org.mortbay.jetty.alpn:
-  jetty-alpn-agent: { version: '2.0.7' }
+  jetty-alpn-agent: { version: '2.0.9' }
 
 org.openjdk.jmh:
   jmh-core: { version: &JMH_VERSION '1.21' }
