@@ -73,7 +73,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
                 getNameId(message.getMessage(), SamlNameIdFormat.EMAIL).map(NameIDType::getValue)
                                                                        .orElse(null);
         if (username == null) {
-            return HttpResponse.of(HttpStatus.OK, MediaType.HTML_UTF_8,
+            return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.HTML_UTF_8,
                                    "<html><body>Username is not found.</body></html>");
         }
 
@@ -97,7 +97,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
     @Override
     public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
                                     @Nullable MessageContext<Response> message, Throwable cause) {
-        return HttpResponse.of(HttpStatus.OK, MediaType.HTML_UTF_8,
+        return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.HTML_UTF_8,
                                "<html><body>Login failed.</body></html>");
     }
 }

@@ -37,7 +37,7 @@ public class Main {
      * }</pre>
      *
      * <p>The certificate of the SSOCircle can be imported into the keystore with the following command.
-     * You can specify its alias as the same as its entity ID so that you do not need to specify the alias
+     * You can specify its alias as same as its entity ID so that you do not need to specify the alias
      * when building a {@link SamlServiceProvider}. You can make {@code ssocircle.crt} file with
      * the certificate from <a href="https://www.ssocircle.com/en/idp-tips-tricks/public-idp-configuration/">
      * Public IDP Configuration</a> of SSOCircle.

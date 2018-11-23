@@ -114,11 +114,11 @@ How to handle the authentication response
 
 ``armeria-saml`` provides :api:`SamlSingleSignOnHandler` to handle the response from an identity provider.
 It consists of ``loginSucceeded()`` and ``loginFailed()`` methods which handle the response,
-and ``beforeInitiatingSso()`` which handle a request. In most cases, you only need to write the two methods
+and ``beforeInitiatingSso()`` which handles a request. In most cases, you only need to write the two methods
 which handle the response, but if you want to send data to your identity provider and get it back
 with a response, you need to implement ``beforeInitiatingSso()`` method.
 
-The following example shows a simple implementation of the :api:`SamlSingleSignOnHandler`. In the example,
+The following example shows a simple implementation of the :api:`SamlSingleSignOnHandler`. In this example,
 if an authentication is succeeded, an email address is retrieved from the response by referring to a ``name ID``
 element in the assertion, then it is sent to the end user via ``Set-Cookie`` header. It means that your
 :api:`Authorizer` can identify an authenticated session with a ``Cookie`` header in the following requests,
@@ -139,7 +139,7 @@ like ``MyAuthorizer`` in this example.
                                             .findFirst()
                                             .orElse(null);
             if (username == null) {
-                return HttpResponse.of(HttpStatus.OK, MediaType.HTML_UTF_8,
+                return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.HTML_UTF_8,
                                        "<html><body>Username is not found.</body></html>");
             }
 
@@ -160,7 +160,7 @@ like ``MyAuthorizer`` in this example.
         @Override
         public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
                                         @Nullable MessageContext<Response> message, Throwable cause) {
-            return HttpResponse.of(HttpStatus.OK, MediaType.HTML_UTF_8,
+            return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.HTML_UTF_8,
                                    "<html><body>Login failed.</body></html>");
         }
     }
@@ -209,6 +209,6 @@ What services are automatically configured
 
 .. note::
 
-    In order for your service acts as a service provider, you need to register your service to your identity
+    In order for your service to act as a service provider, you need to register your service to your identity
     provider, and providing your metadata is the easiest way to do that. You can get your metadata from
     ``https://your-service-domain-name:your-service-port/saml/metadata``.
