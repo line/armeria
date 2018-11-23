@@ -21,28 +21,28 @@ public class Main {
 
     /**
      * Configures an identity provider with <a href="https://idp.ssocircle.com/meta-idp.xml">
-     * the metadata of the SSO Circle</a>. You must <a href="https://idp.ssocircle.com/sso/hos/SPMetaInter.jsp">
-     * register</a> this service provider, which we are configuring here, to the SSO Circle.
+     * the metadata of the SSOCircle</a>. You must <a href="https://idp.ssocircle.com/sso/hos/SPMetaInter.jsp">
+     * register</a> this service provider, which we are configuring here, to the SSOCircle.
      * You can get the metadata of this service provider from {@code https://localhost:8443/saml/metadata}
      * after starting this server.
      *
      * <p>The {@code signing} and {@code encryption} key pair in the keystore {@code sample.jks} can be
      * generated with the following commands:
      * <pre>{@code
-     * $ keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa
+     * $ keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa \
      *     -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias signing
      *
-     * $ keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa
+     * $ keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa \
      *     -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias encryption
      * }</pre>
      *
-     * <p>The certificate of the SSO Circle can be imported into the keystore with the following command.
+     * <p>The certificate of the SSOCircle can be imported into the keystore with the following command.
      * You can specify its alias as the same as its entity ID so that you do not need to specify the alias
-     * when building a {@link SamlServiceProvider}. You can make {@code sso_circle.crt} file with
+     * when building a {@link SamlServiceProvider}. You can make {@code ssocircle.crt} file with
      * the certificate from <a href="https://www.ssocircle.com/en/idp-tips-tricks/public-idp-configuration/">
-     * Public IDP Configuration</a> of SSO Circle.
+     * Public IDP Configuration</a> of SSOCircle.
      * <pre>{@code
-     * $ keytool -importcert -keystore sample.jks -storepass 'N5^X[hvG' -file sso_circle.crt
+     * $ keytool -importcert -keystore sample.jks -storepass 'N5^X[hvG' -file ssocircle.crt \
      *     -alias 'https://idp.ssocircle.com'
      * }</pre>
      */

@@ -90,10 +90,6 @@ public final class Server implements AutoCloseable {
     private final StartStopSupport<Void, ServerListener> startStop;
     private final Set<Channel> serverChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
-    private final Map<InetSocketAddress, ServerPort> unmodifiableActivePorts =
-            Collections.unmodifiableMap(activePorts);
-    private volatile boolean isMutatingActivePorts = true;
-
     private final ConnectionLimitingHandler connectionLimitingHandler;
 
     @Nullable
@@ -140,12 +136,8 @@ public final class Server implements AutoCloseable {
      * @see Server#activePort()
      */
     public Map<InetSocketAddress, ServerPort> activePorts() {
-        if (isMutatingActivePorts) {
-            synchronized (activePorts) {
-                return Collections.unmodifiableMap(new LinkedHashMap<>(activePorts));
-            }
-        } else {
-            return unmodifiableActivePorts;
+        synchronized (activePorts) {
+            return Collections.unmodifiableMap(new LinkedHashMap<>(activePorts));
         }
     }
 
@@ -156,11 +148,7 @@ public final class Server implements AutoCloseable {
      * @return {@link Optional#empty()} if this {@link Server} did not start
      */
     public Optional<ServerPort> activePort() {
-        if (isMutatingActivePorts) {
-            synchronized (activePorts) {
-                return Optional.ofNullable(Iterables.getFirst(activePorts.values(), null));
-            }
-        } else {
+        synchronized (activePorts) {
             return Optional.ofNullable(Iterables.getFirst(activePorts.values(), null));
         }
     }
@@ -482,25 +470,21 @@ public final class Server implements AutoCloseable {
 
         @Override
         protected void notifyStarting(ServerListener listener) throws Exception {
-            isMutatingActivePorts = true;
             listener.serverStarting(Server.this);
         }
 
         @Override
         protected void notifyStarted(ServerListener listener, @Nullable Void value) throws Exception {
-            isMutatingActivePorts = false;
             listener.serverStarted(Server.this);
         }
 
         @Override
         protected void notifyStopping(ServerListener listener) throws Exception {
-            isMutatingActivePorts = true;
             listener.serverStopping(Server.this);
         }
 
         @Override
         protected void notifyStopped(ServerListener listener) throws Exception {
-            isMutatingActivePorts = false;
             listener.serverStopped(Server.this);
         }
 
