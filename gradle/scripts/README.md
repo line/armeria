@@ -276,6 +276,14 @@ configure(projectsWithFlags('java')) {
         println "A Java project '${project.path}' will be published to a Maven repository."
     }
 }
+
+// Running a certain task after all Java projects are evaluated:
+afterProjectsWithFlag('java') { Set<Project> projects ->
+    println 'All Java projects have been evaluated: ${projects}'
+}
+afterProjectsWithFlags(['java', 'relocated']) { Set<Project> projects ->
+    println 'All Java projects with class relocation have been evaluated: ${projects}'
+}
 ```
 
 If you added the snippet above to `build.gradle`, `./gradlew` will show the
