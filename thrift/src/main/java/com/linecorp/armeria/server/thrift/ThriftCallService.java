@@ -21,6 +21,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
@@ -28,10 +31,13 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
@@ -44,6 +50,18 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @see THttpService
  */
 public final class ThriftCallService implements Service<RpcRequest, RpcResponse> {
+
+    private static final Logger logger = LoggerFactory.getLogger(ThriftCallService.class);
+
+    private static final AsyncMethodCallback<Object> ONEWAY_CALLBACK = new AsyncMethodCallback<Object>() {
+        @Override
+        public void onComplete(Object response) {}
+
+        @Override
+        public void onError(Exception e) {
+            logOneWayFunctionFailure(RequestContext.mapCurrent(Function.identity(), null), e);
+        }
+    };
 
     /**
      * Creates a new {@link ThriftCallService} with the specified service implementation.
@@ -137,21 +155,22 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
             Object impl, ThriftFunction func, TBase<?, ?> args, DefaultRpcResponse reply) throws TException {
 
         final AsyncProcessFunction<Object, TBase<?, ?>, Object> f = func.asyncFunc();
-        f.start(impl, args, new AsyncMethodCallback<Object>() {
-            @Override
-            public void onComplete(Object response) {
-                if (func.isOneWay()) {
-                    reply.complete(null);
-                } else {
+        if (func.isOneWay()) {
+            f.start(impl, args, ONEWAY_CALLBACK);
+            reply.complete(null);
+        } else {
+            f.start(impl, args, new AsyncMethodCallback<Object>() {
+                @Override
+                public void onComplete(Object response) {
                     reply.complete(response);
                 }
-            }
 
-            @Override
-            public void onError(Exception e) {
-                reply.completeExceptionally(e);
-            }
-        });
+                @Override
+                public void onError(Exception e) {
+                    reply.completeExceptionally(e);
+                }
+            });
+        }
     }
 
     private static void invokeSynchronously(
@@ -166,15 +185,30 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
             }
 
             try {
-                final TBase<?, ?> result = f.getResult(impl, args);
                 if (func.isOneWay()) {
                     reply.complete(null);
+                    f.getResult(impl, args);
                 } else {
+                    final TBase<?, ?> result = f.getResult(impl, args);
                     reply.complete(func.getResult(result));
                 }
             } catch (Throwable t) {
-                reply.completeExceptionally(t);
+                if (func.isOneWay()) {
+                    reply.complete(null);
+                    logOneWayFunctionFailure(ctx, t);
+                } else {
+                    reply.completeExceptionally(t);
+                }
             }
         });
+    }
+
+    private static void logOneWayFunctionFailure(@Nullable RequestContext ctx, Throwable cause) {
+        if (ctx != null) {
+            logger.warn("{} Unexpected exception from a one-way function:", ctx, cause);
+        } else {
+            // Should never reach here, but for completeness.
+            logger.warn("Unexpected exception from a one-way function:", cause);
+        }
     }
 }

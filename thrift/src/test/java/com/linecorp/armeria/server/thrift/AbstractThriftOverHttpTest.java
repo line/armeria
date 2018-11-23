@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -57,6 +58,7 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
+import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
@@ -103,6 +105,22 @@ public abstract class AbstractThriftOverHttpTest {
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!')));
 
             sb.service("/hellochild", THttpService.of(new HelloServiceChild()));
+
+            sb.service("/hello_oneway_sync", THttpService.of(
+                    (OnewayHelloService.Iface) name -> {
+                        if (!"success".equals(name)) {
+                            throw new AnticipatedException("expected 'success'");
+                        }
+                    }));
+
+            sb.service("/hello_oneway_async", THttpService.of(
+                    (OnewayHelloService.AsyncIface) (name, resultHandler) -> {
+                        if ("success".equals(name)) {
+                            resultHandler.onComplete(null);
+                        } else {
+                            resultHandler.onError(new AnticipatedException("expected 'success'"));
+                        }
+                    }));
 
             sb.service("/exception", THttpService.of(
                     (AsyncIface) (name, resultHandler) ->
@@ -183,6 +201,67 @@ public abstract class AbstractThriftOverHttpTest {
 
             assertThat(client.hello("Trustin")).isEqualTo("Goodbye, Trustin!");
         }
+    }
+
+    @Test
+    public void testOnewaySyncInvocation() throws Exception {
+        recordMessageLogs = true;
+
+        try (TTransport transport = newTransport("http", "/hello_oneway_sync")) {
+            final OnewayHelloService.Client client =
+                    new OnewayHelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+            // Success
+            client.hello("success");
+            verifyOneWayInvocation(OnewayHelloService.Iface.class, "success");
+        }
+
+        try (TTransport transport = newTransport("http", "/hello_oneway_sync")) {
+            final OnewayHelloService.Client client =
+                    new OnewayHelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+            // Failure
+            client.hello("failure");
+            verifyOneWayInvocation(OnewayHelloService.Iface.class, "failure");
+        }
+    }
+
+    @Test
+    public void testOnewayAsyncInvocation() throws Exception {
+        recordMessageLogs = true;
+
+        try (TTransport transport = newTransport("http", "/hello_oneway_async")) {
+            final OnewayHelloService.Client client =
+                    new OnewayHelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+            // Success
+            client.hello("success");
+            verifyOneWayInvocation(OnewayHelloService.AsyncIface.class, "success");
+        }
+
+        try (TTransport transport = newTransport("http", "/hello_oneway_async")) {
+            final OnewayHelloService.Client client =
+                    new OnewayHelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+            // Failure
+            client.hello("failure");
+            verifyOneWayInvocation(OnewayHelloService.AsyncIface.class, "failure");
+        }
+    }
+
+    private static void verifyOneWayInvocation(Class<?> expectedServiceType, String expectedParam) {
+        await().untilAsserted(() -> {
+            final RequestLog log = requestLogs.poll();
+            assertThat(log).isNotNull();
+            final RpcRequest req = (RpcRequest) log.requestContent();
+            final RpcResponse res = (RpcResponse) log.responseContent();
+            assertThat(req).isNotNull();
+            assertThat(req.serviceType()).isSameAs(expectedServiceType);
+            assertThat(req.method()).isEqualTo("hello");
+            assertThat(req.params()).containsExactly(expectedParam);
+            assertThat((Object) res).isNotNull();
+            assertThat(res.get()).isNull();
+        });
     }
 
     @Test
