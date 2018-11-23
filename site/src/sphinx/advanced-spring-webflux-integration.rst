@@ -30,7 +30,7 @@ For Maven:
 
     <dependency>
         <groupId>com.linecorp.armeria</groupId>
-        <artifactId>spring-boot-webflux-starter</artifactId>
+        <artifactId>armeria-spring-boot-webflux-starter</artifactId>
         <version>\ |release|\ </version>
     </dependency>
 
@@ -40,7 +40,7 @@ For Gradle:
     :class: highlight-groovy
 
     dependencies {
-        compile 'com.linecorp.armeria:spring-boot-webflux-starter:\ |release|\ '
+        compile 'com.linecorp.armeria:armeria-spring-boot-webflux-starter:\ |release|\ '
     }
 
 The above starter configures Armeria as the HTTP server for WebFlux to run on by referring to ``application.yml``

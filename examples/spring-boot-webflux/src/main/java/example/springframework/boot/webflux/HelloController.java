@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.linecorp.armeria.spring.web.reactive.ArmeriaClientHttpConnector;
 
 import reactor.core.publisher.Mono;
@@ -32,7 +30,6 @@ public class HelloController {
         this(builder.baseUrl("https://127.0.0.1:" + port).build());
     }
 
-    @VisibleForTesting
     HelloController(WebClient webClient) {
         this.webClient = webClient;
     }
