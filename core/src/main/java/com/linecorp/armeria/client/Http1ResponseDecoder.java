@@ -143,6 +143,8 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         assert res != null;
                         this.res = res;
 
+                        res.logResponseFirstBytesTransferred();
+
                         if (nettyRes.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
                         } else {

@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
+import com.linecorp.armeria.internal.tracing.SpanTags;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -107,7 +108,11 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         // Ensure the trace context propagates to children
         ctx.onChild(RequestContextCurrentTraceContext::copy);
 
-        ctx.log().addListener(log -> finishSpan(span, log), RequestLogAvailability.COMPLETE);
+        ctx.log().addListener(log -> {
+            SpanTags.logWireSend(span, log.requestFirstBytesTransferredTimeNanos(), log);
+            SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
+            finishSpan(span, log);
+        }, RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().execute(ctx, req);

@@ -20,10 +20,12 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.COMPLETE;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_CONTENT;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_END;
+import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_FIRST_BYTES_TRANSFERRED;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_HEADERS;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_START;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_CONTENT;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_END;
+import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_HEADERS;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_START;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.SCHEME;
@@ -94,6 +96,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private long requestStartTimeMicros;
     private long requestStartTimeNanos;
+    private long requestFirstBytesTransferredTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
     @Nullable
@@ -101,6 +104,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private long responseStartTimeMicros;
     private long responseStartTimeNanos;
+    private long responseFirstBytesTransferredTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
     @Nullable
@@ -157,6 +161,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                           log.sessionProtocol(), true);
         }, REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
+        child.addListener(log -> requestFirstBytesTransferred(
+                log.requestFirstBytesTransferredTimeNanos()), REQUEST_FIRST_BYTES_TRANSFERRED);
         child.addListener(log -> requestHeaders(log.requestHeaders()), REQUEST_HEADERS);
         child.addListener(log -> requestContent(log.requestContent(), log.rawRequestContent()),
                           REQUEST_CONTENT);
@@ -184,6 +190,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             startResponse0(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMicros(), true);
         }
 
+        if (lastChild.isAvailable(RESPONSE_FIRST_BYTES_TRANSFERRED)) {
+            responseFirstBytesTransferred(lastChild.responseFirstBytesTransferredTimeNanos());
+        }
+
         if (lastChild.isAvailable(RESPONSE_HEADERS)) {
             responseHeaders(lastChild.responseHeaders());
         }
@@ -198,6 +208,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         lastChild.addListener(log -> startResponse0(
                 log.responseStartTimeNanos(), log.responseStartTimeMicros(), true), RESPONSE_START);
+        lastChild.addListener(log -> responseFirstBytesTransferred(
+                log.responseFirstBytesTransferredTimeNanos()), RESPONSE_FIRST_BYTES_TRANSFERRED);
         lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
@@ -364,6 +376,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public long requestFirstBytesTransferredTimeNanos() {
+        ensureAvailability(REQUEST_FIRST_BYTES_TRANSFERRED);
+        return requestFirstBytesTransferredTimeNanos;
+    }
+
+    @Override
     public long requestEndTimeNanos() {
         ensureAvailability(REQUEST_END);
         return requestEndTimeNanos;
@@ -432,6 +450,19 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.requestLength = requestLength;
+    }
+
+    private void requestFirstBytesTransferred(long timestamp) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_FIRST_BYTES_TRANSFERRED)) {
+            return;
+        }
+        requestFirstBytesTransferredTimeNanos = timestamp;
+        updateAvailability(REQUEST_FIRST_BYTES_TRANSFERRED);
+    }
+
+    @Override
+    public void requestFirstBytesTransferred() {
+        requestFirstBytesTransferred(System.nanoTime());
     }
 
     @Override
@@ -570,6 +601,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public long responseFirstBytesTransferredTimeNanos() {
+        ensureAvailability(RESPONSE_FIRST_BYTES_TRANSFERRED);
+        return responseFirstBytesTransferredTimeNanos;
+    }
+
+    @Override
     public long responseEndTimeNanos() {
         ensureAvailability(RESPONSE_END);
         return responseEndTimeNanos;
@@ -604,6 +641,19 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.responseLength = responseLength;
+    }
+
+    private void responseFirstBytesTransferred(long timestamp) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_FIRST_BYTES_TRANSFERRED)) {
+            return;
+        }
+        responseFirstBytesTransferredTimeNanos = timestamp;
+        updateAvailability(RESPONSE_FIRST_BYTES_TRANSFERRED);
+    }
+
+    @Override
+    public void responseFirstBytesTransferred() {
+        responseFirstBytesTransferred(System.nanoTime());
     }
 
     @Override

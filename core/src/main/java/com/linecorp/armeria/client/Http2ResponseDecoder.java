@@ -173,6 +173,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                   streamId);
         }
 
+        res.logResponseFirstBytesTransferred();
+
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, endOfStream);
         try {
             // If this tryWrite() returns false, it means the response stream has been closed due to
