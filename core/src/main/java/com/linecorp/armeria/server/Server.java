@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +48,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -86,14 +89,8 @@ public final class Server implements AutoCloseable {
 
     private final StartStopSupport<Void, ServerListener> startStop;
     private final Set<Channel> serverChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    private final Map<InetSocketAddress, ServerPort> activePorts = new ConcurrentHashMap<>();
-    private final Map<InetSocketAddress, ServerPort> unmodifiableActivePorts =
-            Collections.unmodifiableMap(activePorts);
-
+    private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
-
-    @Nullable
-    private volatile ServerPort primaryActivePort;
 
     @Nullable
     private ServerBootstrap serverBootstrap;
@@ -139,7 +136,9 @@ public final class Server implements AutoCloseable {
      * @see Server#activePort()
      */
     public Map<InetSocketAddress, ServerPort> activePorts() {
-        return unmodifiableActivePorts;
+        synchronized (activePorts) {
+            return Collections.unmodifiableMap(new LinkedHashMap<>(activePorts));
+        }
     }
 
     /**
@@ -149,7 +148,9 @@ public final class Server implements AutoCloseable {
      * @return {@link Optional#empty()} if this {@link Server} did not start
      */
     public Optional<ServerPort> activePort() {
-        return Optional.ofNullable(primaryActivePort);
+        synchronized (activePorts) {
+            return Optional.ofNullable(Iterables.getFirst(activePorts.values(), null));
+        }
     }
 
     @Nullable
@@ -284,10 +285,29 @@ public final class Server implements AutoCloseable {
             // Initialize the server sockets asynchronously.
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final List<ServerPort> ports = config().ports();
-            final AtomicInteger remainingPorts = new AtomicInteger(ports.size());
-            for (final ServerPort p: ports) {
-                doStart(p).addListener(new ServerPortStartListener(remainingPorts, future, p));
-            }
+
+            final Iterator<ServerPort> it = ports.iterator();
+            assert it.hasNext();
+
+            final ServerPort primary = it.next();
+            doStart(primary).addListener(new ServerPortStartListener(primary))
+                            .addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture f) throws Exception {
+                                    if (!f.isSuccess()) {
+                                        future.completeExceptionally(f.cause());
+                                        return;
+                                    }
+                                    if (!it.hasNext()) {
+                                        future.complete(null);
+                                        return;
+                                    }
+
+                                    final ServerPort next = it.next();
+                                    doStart(next).addListener(new ServerPortStartListener(next))
+                                                 .addListener(this);
+                                }
+                            });
 
             setupServerMetrics();
             return future;
@@ -389,8 +409,9 @@ public final class Server implements AutoCloseable {
             final Set<Channel> serverChannels = ImmutableSet.copyOf(Server.this.serverChannels);
             ChannelUtil.close(serverChannels).handle((unused1, unused2) -> {
                 // All server ports have been closed.
-                primaryActivePort = null;
-                activePorts.clear();
+                synchronized (activePorts) {
+                    activePorts.clear();
+                }
 
                 // Close all accepted sockets.
                 ChannelUtil.close(connectionLimitingHandler.children()).handle((unused3, unused4) -> {
@@ -489,15 +510,9 @@ public final class Server implements AutoCloseable {
 
     private final class ServerPortStartListener implements ChannelFutureListener {
 
-        private final AtomicInteger remainingPorts;
-        private final CompletableFuture<Void> startFuture;
         private final ServerPort port;
 
-        ServerPortStartListener(
-                AtomicInteger remainingPorts, CompletableFuture<Void> startFuture, ServerPort port) {
-
-            this.remainingPorts = requireNonNull(remainingPorts, "remainingPorts");
-            this.startFuture = requireNonNull(startFuture, "startFuture");
+        ServerPortStartListener(ServerPort port) {
             this.port = requireNonNull(port, "port");
         }
 
@@ -505,10 +520,6 @@ public final class Server implements AutoCloseable {
         public void operationComplete(ChannelFuture f) {
             final Channel ch = f.channel();
             assert ch.eventLoop().inEventLoop();
-
-            if (startFuture.isDone()) {
-                return;
-            }
 
             if (f.isSuccess()) {
                 serverChannels.add(ch);
@@ -521,12 +532,9 @@ public final class Server implements AutoCloseable {
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
 
-                // Update the map of active ports.
-                activePorts.put(localAddress, actualPort);
-
-                // The port that has been activated first becomes the primary port.
-                if (primaryActivePort == null) {
-                    primaryActivePort = actualPort;
+                synchronized (activePorts) {
+                    // Update the map of active ports.
+                    activePorts.put(localAddress, actualPort);
                 }
 
                 if (logger.isInfoEnabled()) {
@@ -539,12 +547,6 @@ public final class Server implements AutoCloseable {
                         logger.info("Serving {} at {}", Joiner.on('+').join(port.protocols()), localAddress);
                     }
                 }
-
-                if (remainingPorts.decrementAndGet() == 0) {
-                    startFuture.complete(null);
-                }
-            } else {
-                startFuture.completeExceptionally(f.cause());
             }
         }
     }
