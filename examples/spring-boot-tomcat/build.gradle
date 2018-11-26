@@ -15,7 +15,7 @@ springBoot {
 
 dependencies {
     compile project(':core')
-    compile project(':spring:boot-autoconfigure')
+    compile project(':spring:boot-starter')
     compile project(':tomcat')
 
     compile 'org.springframework.boot:spring-boot-starter-web'

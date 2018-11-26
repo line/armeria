@@ -3,11 +3,11 @@ package example.armeria.server.annotated;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -83,8 +83,8 @@ public class AnnotatedHttpServiceTest {
         assertThatJson(res.content().toStringUtf8()).isArray()
                                                     .ofLength(3)
                                                     .thatContains("armeria")
-                                                    .thatContains(ImmutableList.of(1, 2))
-                                                    .thatContains(ImmutableList.of("a", "b"));
+                                                    .thatContains(Arrays.asList(1, 2))
+                                                    .thatContains(Arrays.asList("a", "b"));
     }
 
     @Test
@@ -93,10 +93,10 @@ public class AnnotatedHttpServiceTest {
         String body;
 
         // JSON
-        for (final String path : ImmutableList.of("/messageConverter/node/node",
-                                                  "/messageConverter/node/obj",
-                                                  "/messageConverter/obj/obj",
-                                                  "/messageConverter/obj/future")) {
+        for (final String path : Arrays.asList("/messageConverter/node/node",
+                                               "/messageConverter/node/obj",
+                                               "/messageConverter/obj/obj",
+                                               "/messageConverter/obj/future")) {
             res = client.execute(HttpHeaders.of(HttpMethod.POST, path)
                                             .contentType(MediaType.JSON_UTF_8),
                                  "{\"name\":\"armeria\"}").aggregate().join();
