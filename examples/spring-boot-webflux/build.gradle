@@ -1,6 +1,22 @@
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
+    }
+}
+
+apply plugin: 'org.springframework.boot'
+
+springBoot {
+    mainClassName = 'example.springframework.boot.webflux.Main'
+}
+
 dependencies {
     compile project(':spring:boot-webflux-starter')
 
+    compileOnly 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     testCompile 'junit:junit'

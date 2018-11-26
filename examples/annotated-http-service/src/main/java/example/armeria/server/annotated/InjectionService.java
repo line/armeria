@@ -1,10 +1,11 @@
 package example.armeria.server.annotated;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -40,7 +41,7 @@ public class InjectionService {
                               @Param Gender gender /* from query string and converted into enum */)
             throws JsonProcessingException {
         return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                               mapper.writeValueAsBytes(ImmutableList.of(name, id, gender)));
+                               mapper.writeValueAsBytes(Arrays.asList(name, id, gender)));
     }
 
     /**
@@ -53,10 +54,9 @@ public class InjectionService {
                                Cookies cookies                         /* converted into Cookies object */)
             throws JsonProcessingException {
         return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, mapper.writeValueAsBytes(
-                ImmutableList.of(xArmeriaText,
-                                 xArmeriaSequence,
-                                 cookies.stream().map(Cookie::name)
-                                        .collect(ImmutableList.toImmutableList()))));
+                Arrays.asList(xArmeriaText,
+                              xArmeriaSequence,
+                              cookies.stream().map(Cookie::name).collect(Collectors.toList()))));
     }
 
     /**
