@@ -130,7 +130,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
                 }
                 final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
                 if (grpcMessage != null) {
-                    status = status.withDescription(grpcMessage);
+                    status = status.withDescription(StatusMessageEscaper.unescape(grpcMessage));
                 }
                 transportStatusListener.transportReportStatus(status);
                 return;
