@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.grpc;
 
 import static com.linecorp.armeria.grpc.testing.Messages.PayloadType.COMPRESSABLE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
@@ -1115,6 +1116,19 @@ public class GrpcClientTest {
         // status so we don't verify it for now.
         //assertThat(Status.fromThrowable(responseObserver.getError()).getCode())
         //.isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
+    }
+
+    @Test
+    public void nonAsciiStatusMessage() {
+        String statusMessage = "ほげほげ";
+        assertThatThrownBy(() -> blockingStub.unaryCall(
+                SimpleRequest.newBuilder()
+                             .setResponseStatus(EchoStatus.newBuilder()
+                                                          .setCode(2)
+                                                          .setMessage(statusMessage))
+                             .build())).isInstanceOfSatisfying(
+                                     StatusRuntimeException.class,
+                                     e -> assertThat(e.getStatus().getDescription()).isEqualTo(statusMessage));
     }
 
     private static void assertSuccess(StreamRecorder<?> recorder) {
