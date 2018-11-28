@@ -567,7 +567,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void startResponse0(boolean updateAvailability) {
-        startResponse0(System.nanoTime(), System.currentTimeMillis(), updateAvailability);
+        startResponse0(System.nanoTime(), currentTimeMicros(), updateAvailability);
     }
 
     private void startResponse0(long responseStartTimeNanos, long responseStartTimeMicros,
