@@ -161,6 +161,7 @@ can be used.
     ...
     sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
                                        .enableUnframedRequests(true)
+                                       // Needed to support JSON in addition to binary
                                        .supportedSerializationFormats(GrpcSerializationFormats.PROTO,
                                                                       GrpcSerializationFormats.JSON)
                                        .build());
