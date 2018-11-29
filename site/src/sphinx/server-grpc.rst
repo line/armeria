@@ -161,14 +161,17 @@ can be used.
     ...
     sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
                                        .enableUnframedRequests(true)
+                                       // Needed to support JSON in addition to binary
+                                       .supportedSerializationFormats(GrpcSerializationFormats.PROTO,
+                                                                      GrpcSerializationFormats.JSON)
                                        .build());
     ...
     Server server = sb.build();
     server.start();
 
 This service's unary methods can be accessed from any HTTP client at e.g., URL ``/grpc.hello.HelloService/Hello``
-with Content-Type ``application/protobuf`` for binary protobuf POST body or ``application/json`` for JSON POST
-body.
+with Content-Type ``application/protobuf`` for binary protobuf POST body or ``application/json; charset=utf-8``
+for JSON POST body.
 
 Blocking service implementation
 -------------------------------
