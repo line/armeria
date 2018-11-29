@@ -19,6 +19,9 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -39,7 +42,7 @@ import io.netty.util.AttributeKey;
 public class DefaultServiceRequestContextTest {
 
     @Test
-    public void deriveContext() {
+    public void deriveContext() throws UnknownHostException {
         final VirtualHost virtualHost = virtualHost();
         final DefaultPathMappingContext mappingCtx = new DefaultPathMappingContext(
                 virtualHost, "example.com", HttpMethod.GET, "/hello", null, MediaType.JSON_UTF_8,
@@ -49,7 +52,7 @@ public class DefaultServiceRequestContextTest {
                 virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),
                 SessionProtocol.H2,
                 mappingCtx, PathMappingResult.of("/foo"),
-                mock(Request.class), null, null);
+                mock(Request.class), null, null, InetAddress.getByName("127.0.0.1"));
 
         setAdditionalHeaders(originalCtx);
 

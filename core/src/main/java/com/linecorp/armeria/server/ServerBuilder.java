@@ -29,6 +29,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_B
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -52,6 +54,7 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -67,6 +70,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
+import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -170,6 +174,10 @@ public final class ServerBuilder {
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
     private AccessLogWriter accessLogWriter = AccessLogWriter.disabled();
     private boolean shutdownAccessLogWriterOnStop = true;
+    private List<AsciiString> clientAddressHeaders =
+            ImmutableList.of(HttpHeaderNames.FORWARDED, HttpHeaderNames.X_FORWARDED_FOR);
+    private Predicate<InetSocketAddress> clientAddressTrustedProxyFilter = remoteAddress -> true;
+    private Predicate<InetAddress> clientAddressFilter = address -> true;
 
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -1092,6 +1100,33 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets a list of HTTP headers which are used to determine a client address of a request.
+     */
+    public ServerBuilder clientAddressHeaders(List<AsciiString> clientAddressHeaders) {
+        this.clientAddressHeaders = ImmutableList.copyOf(
+                requireNonNull(clientAddressHeaders, "clientAddressHeaders"));
+        return this;
+    }
+
+    /**
+     * Sets a filter which evaluates whether an {@link InetSocketAddress} of a remote endpoint is trusted.
+     */
+    public ServerBuilder clientAddressTrustedProxyFilter(
+            Predicate<InetSocketAddress> clientAddressTrustedProxyFilter) {
+        this.clientAddressTrustedProxyFilter =
+                requireNonNull(clientAddressTrustedProxyFilter, "clientAddressTrustedProxyFilter");
+        return this;
+    }
+
+    /**
+     * Sets a filter which evaluates whether an {@link InetAddress} can be used as a client address.
+     */
+    public ServerBuilder clientAddressFilter(Predicate<InetAddress> clientAddressFilter) {
+        this.clientAddressFilter = requireNonNull(clientAddressFilter, "clientAddressFilter");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1163,7 +1198,8 @@ public final class ServerBuilder {
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
-                proxyProtocolMaxTlvSize, channelOptions, childChannelOptions), sslContexts);
+                proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
+                clientAddressHeaders, clientAddressTrustedProxyFilter, clientAddressFilter), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
@@ -1237,7 +1273,8 @@ public final class ServerBuilder {
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, meterRegistry, serviceLoggerPrefix,
                 accessLogWriter, shutdownAccessLogWriterOnStop,
-                channelOptions, childChannelOptions
+                channelOptions, childChannelOptions,
+                clientAddressHeaders, clientAddressTrustedProxyFilter, clientAddressFilter
         );
     }
 }

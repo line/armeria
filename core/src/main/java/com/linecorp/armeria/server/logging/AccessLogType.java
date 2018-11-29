@@ -48,6 +48,17 @@ import io.netty.util.AttributeMap;
  */
 enum AccessLogType {
     /**
+     * {@code "%A"} - the local IP address.
+     */
+    LOCAL_IP_ADDRESS('A', false, NO),
+
+    /**
+     * {@code "%a"} - the remote IP address. The underlying client IP of the connection is available in the
+     * {@code "%{c}a"} format string.
+     */
+    REMOTE_IP_ADDRESS('a', false, OPTIONAL),
+
+    /**
      * {@code "%h"} - the remote hostname or IP address if DNS hostname lookup is not available.
      */
     REMOTE_HOST('h', false, NO),

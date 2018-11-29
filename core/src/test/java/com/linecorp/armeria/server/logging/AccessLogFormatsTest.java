@@ -35,9 +35,12 @@ import static java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME;
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -67,6 +70,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.CommonComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponent;
@@ -156,6 +160,14 @@ public class AccessLogFormatsTest {
                 .usingRecursiveFieldByFieldElementComparator()
                 .containsSequence(AccessLogComponent.ofPredefinedCommon(AccessLogType.REMOTE_HOST),
                                   AccessLogComponent.ofText("00,300{abc}"));
+
+        assertThat(AccessLogFormats.parseCustom("%a %{c}a %A"))
+                .usingRecursiveFieldByFieldElementComparator()
+                .containsSequence(AccessLogComponent.ofPredefinedCommon(AccessLogType.REMOTE_IP_ADDRESS),
+                                  AccessLogComponent.ofText(" "),
+                                  AccessLogComponent.ofPredefinedCommon(AccessLogType.REMOTE_IP_ADDRESS, "c"),
+                                  AccessLogComponent.ofText(" "),
+                                  AccessLogComponent.ofPredefinedCommon(AccessLogType.LOCAL_IP_ADDRESS));
     }
 
     @Test
@@ -246,6 +258,27 @@ public class AccessLogFormatsTest {
 
         format = AccessLogFormats.parseCustom("%{content-type}o");
         assertThat(AccessLogger.format(format, log)).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
+    }
+
+    @Test
+    public void logClientAddress() throws Exception {
+        final RequestLog log = mock(RequestLog.class);
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        when(log.context()).thenReturn(ctx);
+        when(ctx.clientAddress()).thenReturn(InetAddress.getByName("10.0.0.1"));
+
+        final InetSocketAddress remote = new InetSocketAddress(InetAddress.getByName("10.1.0.1"), 5000);
+        when(ctx.remoteAddress()).thenReturn(remote);
+
+        List<AccessLogComponent> format;
+
+        // Client IP address
+        format = AccessLogFormats.parseCustom("%a");
+        assertThat(AccessLogger.format(format, log)).isEqualTo("10.0.0.1");
+
+        // Remote IP address of a channel
+        format = AccessLogFormats.parseCustom("%{c}a");
+        assertThat(AccessLogger.format(format, log)).isEqualTo("10.1.0.1");
     }
 
     @Test

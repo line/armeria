@@ -120,6 +120,12 @@ Tokens for the log format are listed in the following table.
 +---------------------------+-------------------+----------------------------------------------------+
 | Tokens                    | Condition support | Description                                        |
 +===========================+===================+====================================================+
+| ``%A``                    | No                | the local IP address                               |
++---------------------------+-------------------+----------------------------------------------------+
+| ``%A``                    | No                | the remote IP address. The underlying client IP of |
+|                           |                   | the connection is available in the ``%{c}a``       |
+|                           |                   | format string.                                     |
++---------------------------+-------------------+----------------------------------------------------+
 | ``%h``                    | No                | the remote hostname or IP address if DNS           |
 |                           |                   | hostname lookup is not available                   |
 +---------------------------+-------------------+----------------------------------------------------+
