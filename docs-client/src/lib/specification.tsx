@@ -85,7 +85,7 @@ export interface SpecificationData {
   enums: Enum[];
   structs: Struct[];
   exceptions: Struct[];
-  exampleHttpHeaders: any[];
+  exampleHttpHeaders: { [name: string]: string }[];
 }
 
 export function simpleName(fullName: string) {
@@ -140,6 +140,10 @@ export class Specification {
 
   public getStructs(): Struct[] {
     return this.data.structs;
+  }
+
+  public getExampleHttpHeaders(): { [name: string]: string }[] {
+    return this.data.exampleHttpHeaders;
   }
 
   public getEnumByName(name: string): Enum | undefined {
