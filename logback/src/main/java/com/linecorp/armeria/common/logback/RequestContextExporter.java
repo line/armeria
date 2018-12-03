@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.logback;
 
+import static com.linecorp.armeria.common.logback.BuiltInProperty.CLIENT_IP;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.ELAPSED_NANOS;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.LOCAL_HOST;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.LOCAL_IP;
@@ -39,6 +40,7 @@ import static com.linecorp.armeria.common.logback.BuiltInProperty.TLS_CIPHER;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.TLS_PROTO;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.TLS_SESSION_ID;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Set;
@@ -170,6 +172,8 @@ final class RequestContextExporter {
     private void exportAddresses(Map<String, String> out, RequestContext ctx) {
         final InetSocketAddress raddr = ctx.remoteAddress();
         final InetSocketAddress laddr = ctx.localAddress();
+        final InetAddress caddr =
+                ctx instanceof ServiceRequestContext ? ((ServiceRequestContext) ctx).clientAddress() : null;
 
         if (raddr != null) {
             if (builtIns.contains(REMOTE_HOST)) {
@@ -192,6 +196,12 @@ final class RequestContextExporter {
             }
             if (builtIns.contains(LOCAL_PORT)) {
                 out.put(LOCAL_PORT.mdcKey, String.valueOf(laddr.getPort()));
+            }
+        }
+
+        if (caddr != null) {
+            if (builtIns.contains(CLIENT_IP)) {
+                out.put(CLIENT_IP.mdcKey, caddr.getHostAddress());
             }
         }
     }

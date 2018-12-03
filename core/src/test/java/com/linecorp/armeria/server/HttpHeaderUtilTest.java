@@ -69,13 +69,13 @@ public class HttpHeaderUtilTest {
                              "for=\"[2001:db8:cafe::17]:4711\";proto=http;by=203.0.113.43,for=192.0.2.61"))
                 .isEqualTo(InetAddress.getByName("2001:db8:cafe::17"));
 
-        // Localhost
-        assertThat(forwarded("for=localhost;proto=http;by=203.0.113.43,for=192.0.2.61"))
-                .isEqualTo(InetAddress.getByName("localhost"));
+        // A obfuscated identifier
+        assertThat(forwarded("for=_superhost;proto=http;by=203.0.113.43,for=192.0.2.61"))
+                .isEqualTo(InetAddress.getByName("192.0.2.61"));
 
-        // Resolved by DNS
-        assertThat(forwarded("for=github.com;proto=http;by=203.0.113.43,for=192.0.2.61"))
-                .isIn(InetAddress.getAllByName("github.com"));
+        // The unknown identifier
+        assertThat(forwarded("for=unknown;proto=http;by=203.0.113.43,for=192.0.2.61"))
+                .isIn(InetAddress.getAllByName("192.0.2.61"));
     }
 
     @Nullable
@@ -105,13 +105,15 @@ public class HttpHeaderUtilTest {
         assertThat(xForwardedFor("[2001:db8:cafe::,[2001:db8:cafe::17]:4711,[2001:db8:cafe::18]:4711"))
                 .isEqualTo(InetAddress.getByName("2001:db8:cafe::17"));
 
-        // Localhost
-        assertThat(xForwardedFor("localhost,[2001:db8:cafe::17]:4711,[2001:db8:cafe::18]:4711"))
-                .isEqualTo(InetAddress.getByName("localhost"));
+        // The following cases are not a part of X-Forwarded-For specifications, but the first element is
+        // definitely not valid.
+        // A obfuscated identifier
+        assertThat(xForwardedFor("_superhost,[2001:db8:cafe::17]:4711,[2001:db8:cafe::18]:4711"))
+                .isEqualTo(InetAddress.getByName("2001:db8:cafe::17"));
 
-        // Resolved by DNS
-        assertThat(xForwardedFor("github.com,[2001:db8:cafe::17]:4711,[2001:db8:cafe::18]:4711"))
-                .isIn(InetAddress.getAllByName("github.com"));
+        // The unknown identifier
+        assertThat(xForwardedFor("unknown,[2001:db8:cafe::17]:4711,[2001:db8:cafe::18]:4711"))
+                .isIn(InetAddress.getAllByName("2001:db8:cafe::17"));
     }
 
     @Nullable

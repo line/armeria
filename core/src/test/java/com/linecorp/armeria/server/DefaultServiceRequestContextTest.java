@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import org.junit.Test;
@@ -38,6 +37,7 @@ import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import io.netty.channel.Channel;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
+import io.netty.util.NetUtil;
 
 public class DefaultServiceRequestContextTest {
 
@@ -52,7 +52,7 @@ public class DefaultServiceRequestContextTest {
                 virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),
                 SessionProtocol.H2,
                 mappingCtx, PathMappingResult.of("/foo"),
-                mock(Request.class), null, null, InetAddress.getByName("127.0.0.1"));
+                mock(Request.class), null, null, NetUtil.LOCALHOST4);
 
         setAdditionalHeaders(originalCtx);
 

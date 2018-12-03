@@ -23,7 +23,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.server.HttpHeaderUtil.determineClientAddress;
-import static com.linecorp.armeria.server.HttpHeaderUtil.tryResolveInetAddress;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -384,7 +383,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             clientAddress = determineClientAddress(headers, config.clientAddressHeaders(), proxiedAddresses,
                                                    remote, config.clientAddressFilter());
         } else {
-            clientAddress = tryResolveInetAddress(remote);
+            clientAddress = remote.getAddress();
         }
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(

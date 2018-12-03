@@ -53,8 +53,8 @@ enum AccessLogType {
     LOCAL_IP_ADDRESS('A', false, NO),
 
     /**
-     * {@code "%a"} - the remote IP address. The underlying client IP of the connection is available in the
-     * {@code "%{c}a"} format string.
+     * {@code "%a"} - the client IP address who initiated a request. Use {@code "%{c}a"} format string to get
+     * a remote IP address where the channel is connected to.
      */
     REMOTE_IP_ADDRESS('a', false, OPTIONAL),
 

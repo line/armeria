@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.logback;
 
+import static com.linecorp.armeria.common.logback.BuiltInProperty.CLIENT_IP;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.LOCAL_HOST;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.LOCAL_IP;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.LOCAL_PORT;
@@ -33,7 +34,7 @@ final class BuiltInProperties {
     private static final BuiltInProperty[] allValues = BuiltInProperty.values();
 
     private static final long MASK_ADDRESSES =
-            mask(REMOTE_HOST, REMOTE_IP, REMOTE_PORT, LOCAL_HOST, LOCAL_IP, LOCAL_PORT);
+            mask(REMOTE_HOST, REMOTE_IP, REMOTE_PORT, LOCAL_HOST, LOCAL_IP, LOCAL_PORT, CLIENT_IP);
     private static final long MASK_RPC = mask(REQ_RPC_METHOD, REQ_RPC_PARAMS, RES_RPC_RESULT);
     private static final long MASK_SSL = mask(TLS_SESSION_ID, TLS_CIPHER, TLS_PROTO);
 

@@ -176,7 +176,7 @@ public final class ServerBuilder {
     private boolean shutdownAccessLogWriterOnStop = true;
     private List<AsciiString> clientAddressHeaders =
             ImmutableList.of(HttpHeaderNames.FORWARDED, HttpHeaderNames.X_FORWARDED_FOR);
-    private Predicate<InetSocketAddress> clientAddressTrustedProxyFilter = remoteAddress -> true;
+    private Predicate<InetSocketAddress> clientAddressTrustedProxyFilter = remoteAddress -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
 
     @Nullable
@@ -1102,7 +1102,16 @@ public final class ServerBuilder {
     /**
      * Sets a list of HTTP headers which are used to determine a client address of a request.
      */
-    public ServerBuilder clientAddressHeaders(List<AsciiString> clientAddressHeaders) {
+    public ServerBuilder clientAddressHeaders(AsciiString... clientAddressHeaders) {
+        this.clientAddressHeaders = ImmutableList.copyOf(
+                requireNonNull(clientAddressHeaders, "clientAddressHeaders"));
+        return this;
+    }
+
+    /**
+     * Sets a list of HTTP headers which are used to determine a client address of a request.
+     */
+    public ServerBuilder clientAddressHeaders(Iterable<AsciiString> clientAddressHeaders) {
         this.clientAddressHeaders = ImmutableList.copyOf(
                 requireNonNull(clientAddressHeaders, "clientAddressHeaders"));
         return this;

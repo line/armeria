@@ -54,9 +54,9 @@ final class HttpHeaderUtil {
     static final Function<String, String> FORWARDED_CONVERTER = value -> TOKEN_SPLITTER.split(value).get("for");
 
     /**
-     * Returns an {@link InetAddress} of a client who initiates a request.
+     * Returns an {@link InetAddress} of a client who initiated a request.
      *
-     * @param headers the HTTP headers which is received from the client
+     * @param headers the HTTP headers which were received from the client
      * @param candidateHeaderNames a list of the HTTP header names that may contain a client address
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
      * @param remoteAddress a remote endpoint of a channel
@@ -70,6 +70,10 @@ final class HttpHeaderUtil {
                                               InetSocketAddress remoteAddress,
                                               Predicate<InetAddress> filter) {
         for (final AsciiString name : candidateHeaderNames) {
+            if (name == null || name.isEmpty()) {
+                continue;
+            }
+
             final InetAddress addr;
             if (name.equals(HttpHeaderNames.FORWARDED)) {
                 addr = getFirstValidAddress(
@@ -83,40 +87,13 @@ final class HttpHeaderUtil {
         }
 
         if (proxiedAddresses != null) {
-            final InetSocketAddress source = proxiedAddresses.sourceAddress();
-            final InetAddress addr = tryResolveInetAddress(source, false);
-            if (addr != null) {
+            final InetAddress addr = ((InetSocketAddress) proxiedAddresses.sourceAddress()).getAddress();
+            if (filter.test(addr)) {
                 return addr;
             }
-
-            logger.debug("Failed to resolve hostname: {}", source.getHostName());
         }
-
-        // Return the remote address as unresolved. A user may handle it later.
-        final InetAddress addr = tryResolveInetAddress(remoteAddress, true);
-        assert addr != null;
-        return addr;
-    }
-
-    /**
-     * Returns an {@link InetAddress} which was tried to resolve. It can be a unresolved one.
-     */
-    static InetAddress tryResolveInetAddress(InetSocketAddress addr) {
-        final InetAddress res = tryResolveInetAddress(addr, true);
-        assert res != null;
-        return res;
-    }
-
-    @Nullable
-    private static InetAddress tryResolveInetAddress(InetSocketAddress addr, boolean stayUnresolvedIfFailed) {
-        if (!addr.isUnresolved()) {
-            return addr.getAddress();
-        }
-        try {
-            return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(addr.getHostName()));
-        } catch (UnknownHostException e) {
-            return stayUnresolvedIfFailed ? addr.getAddress() : null;
-        }
+        // We do not apply the filter to the remote address.
+        return remoteAddress.getAddress();
     }
 
     @VisibleForTesting
@@ -134,7 +111,7 @@ final class HttpHeaderUtil {
             }
             try {
                 final InetAddress addr = createInetAddress(v);
-                if (filter.test(addr)) {
+                if (addr != null && filter.test(addr)) {
                     return addr;
                 }
             } catch (UnknownHostException e) {
@@ -144,10 +121,20 @@ final class HttpHeaderUtil {
         return null;
     }
 
+    @Nullable
     private static InetAddress createInetAddress(String address) throws UnknownHostException {
+        final char firstChar = address.charAt(0);
+        if (firstChar == '_' ||
+            (firstChar == 'u' && "unknown".equals(address))) {
+            // To early return when the address is not an IP address.
+            // - a obfuscated identifier which must start with '_'
+            //   - https://tools.ietf.org/html/rfc7239#section-6.3
+            // - the "unknown" identifier
+            return null;
+        }
+
         // Remote quotes. e.g. "[2001:db8:cafe::17]:4711" => [2001:db8:cafe::17]:4711
-        final String addr = address.charAt(0) == '"' ? QUOTED_STRING_TRIMMER.trimFrom(address)
-                                                     : address;
+        final String addr = firstChar == '"' ? QUOTED_STRING_TRIMMER.trimFrom(address) : address;
 
         if (NetUtil.isValidIpV4Address(addr) || NetUtil.isValidIpV6Address(addr)) {
             return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(addr));
@@ -155,31 +142,26 @@ final class HttpHeaderUtil {
 
         if (addr.charAt(0) == '[') {
             final int delim = addr.indexOf(']');
-            if (delim < 0) {
-                throw new UnknownHostException("Invalid IPv6 address format: " + addr);
+            if (delim > 0) {
+                // Remove the port part. e.g. [2001:db8:cafe::17]:4711 => [2001:db8:cafe::17]
+                final String withoutPort = addr.substring(0, delim + 1);
+                if (NetUtil.isValidIpV6Address(withoutPort)) {
+                    return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(withoutPort));
+                }
             }
-            // Remove the port part. e.g. [2001:db8:cafe::17]:4711 => [2001:db8:cafe::17]
-            final String withoutPort = addr.substring(0, delim + 1);
-            if (NetUtil.isValidIpV6Address(withoutPort)) {
-                return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(withoutPort));
-            } else {
-                return InetAddress.getByName(withoutPort);
-            }
-        }
-
-        final int delim = addr.indexOf(':');
-        if (delim >= 0) {
-            // Remove the port part. e.g. 192.168.1.1:4711 => 192.168.1.1
-            final String withoutPort = addr.substring(0, delim);
-            if (NetUtil.isValidIpV4Address(withoutPort)) {
-                return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(withoutPort));
-            } else {
-                return InetAddress.getByName(withoutPort);
+        } else {
+            final int delim = addr.indexOf(':');
+            if (delim > 0) {
+                // Remove the port part. e.g. 192.168.1.1:4711 => 192.168.1.1
+                final String withoutPort = addr.substring(0, delim);
+                if (NetUtil.isValidIpV4Address(withoutPort)) {
+                    return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(withoutPort));
+                }
             }
         }
-
-        // Try to lookup the host name.
-        return InetAddress.getByName(addr);
+        // Skip if it is invalid address.
+        logger.debug("Failed to parse an address: {}", address);
+        return null;
     }
 
     private HttpHeaderUtil() {}

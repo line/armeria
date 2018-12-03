@@ -122,9 +122,9 @@ Tokens for the log format are listed in the following table.
 +===========================+===================+====================================================+
 | ``%A``                    | No                | the local IP address                               |
 +---------------------------+-------------------+----------------------------------------------------+
-| ``%A``                    | No                | the remote IP address. The underlying client IP of |
-|                           |                   | the connection is available in the ``%{c}a``       |
-|                           |                   | format string.                                     |
+| ``%a``                    | No                | the client IP address who initiated a request.     |
+|                           |                   | Use ``%{c}a`` format string to get a remote IP     |
+|                           |                   | address where the channel is connected to.         |
 +---------------------------+-------------------+----------------------------------------------------+
 | ``%h``                    | No                | the remote hostname or IP address if DNS           |
 |                           |                   | hostname lookup is not available                   |

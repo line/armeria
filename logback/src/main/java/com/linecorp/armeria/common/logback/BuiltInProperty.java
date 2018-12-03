@@ -62,6 +62,11 @@ public enum BuiltInProperty {
      */
     LOCAL_PORT("local.port"),
     /**
+     * {@code "client.ip"} - the IP address who initiated a request. Unavailable if the connection is not
+     * established yet.
+     */
+    CLIENT_IP("client.ip"),
+    /**
      * {@code "scheme"} - the scheme of the request, represented by {@link Scheme#uriText()}.
      * e.g. {@code "tbinary+h2"}
      */

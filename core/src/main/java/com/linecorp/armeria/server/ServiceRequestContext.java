@@ -61,7 +61,7 @@ public interface ServiceRequestContext extends RequestContext {
     <A extends SocketAddress> A localAddress();
 
     /**
-     * Returns the address who initiates this request.
+     * Returns the address who initiated this request.
      */
     InetAddress clientAddress();
 
