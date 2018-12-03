@@ -46,6 +46,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okio.Buffer;
+import okio.Timeout;
 
 /**
  * A {@link Factory} that creates a {@link Call} instance for {@link HttpClient}.
@@ -226,6 +227,11 @@ final class ArmeriaCallFactory implements Factory {
         @Override
         public boolean isCanceled() {
             return executionState == ExecutionState.CANCELED;
+        }
+
+        @Override
+        public Timeout timeout() {
+            return Timeout.NONE;
         }
 
         boolean tryFinish() {
