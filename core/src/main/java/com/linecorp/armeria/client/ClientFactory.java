@@ -41,10 +41,10 @@ import io.netty.channel.EventLoopGroup;
  * other {@link ClientFactory} to protect itself from accidental premature termination.
  * </p><p>
  * Instead, when the current {@link ClassLoader} is {@linkplain ClassLoader#getSystemClassLoader() the system
- * class loader}, a {@link Runtime#addShutdownHook(Thread) shutdown hook} is registered so that they are
+ * class loader}, a {@linkplain Runtime#addShutdownHook(Thread) shutdown hook} is registered so that they are
  * released when the JVM exits.
  * </p><p>
- * If you are in an environment managed by a container or you desire the early termination of the default
+ * If you are in a multi-classloader environment or you desire an early/explicit termination of the default
  * {@link ClientFactory}, use {@link #closeDefault()}.
  * </p>
  */
@@ -62,6 +62,15 @@ public interface ClientFactory extends AutoCloseable {
         LoggerFactory.getLogger(ClientFactory.class).debug(
                 "Closing the default {}", ClientFactory.class.getSimpleName());
         ((DefaultClientFactory) DEFAULT).doClose();
+    }
+
+    /**
+     * Disables the {@linkplain Runtime#addShutdownHook(Thread) shutdown hook} which closes
+     * {@linkplain #DEFAULT the default <code>ClientFactory</code>}. This method is useful when you need
+     * full control over the life cycle of the default {@link ClientFactory}.
+     */
+    static void disableShutdownHook() {
+        DefaultClientFactory.disableShutdownHook0();
     }
 
     /**

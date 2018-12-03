@@ -52,10 +52,20 @@ final class DefaultClientFactory extends AbstractClientFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultClientFactory.class);
 
+    private static volatile boolean shutdownHookDisabled;
+
     static {
         if (DefaultClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
-            Runtime.getRuntime().addShutdownHook(new Thread(ClientFactory::closeDefault));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if (!shutdownHookDisabled) {
+                    ClientFactory.closeDefault();
+                }
+            }));
         }
+    }
+
+    static void disableShutdownHook0() {
+        shutdownHookDisabled = true;
     }
 
     private final HttpClientFactory httpClientFactory;
