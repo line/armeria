@@ -332,7 +332,7 @@ public final class Server implements AutoCloseable {
                 thread.setDaemon(false);
                 return thread;
             }), config.workerGroup());
-            b.channel(TransportType.detectTransportType().serverChannelClass());
+            b.channel(TransportType.detectTransportType().serverChannelType());
             b.handler(connectionLimitingHandler);
             b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
                                                               gracefulShutdownSupport));

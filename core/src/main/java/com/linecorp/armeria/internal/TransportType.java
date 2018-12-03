@@ -53,46 +53,23 @@ public enum TransportType {
     EPOLL(EpollServerSocketChannel.class, EpollSocketChannel.class, EpollDatagramChannel.class,
           EpollEventLoopGroup::new, EpollEventLoopGroup.class, ChannelUtil.epollEventLoopClass());
 
-    private final Class<? extends ServerChannel> serverChannelClass;
-    private final Class<? extends SocketChannel> socketChannelClass;
-    private final Class<? extends DatagramChannel> datagramClass;
+    private final Class<? extends ServerChannel> serverChannelType;
+    private final Class<? extends SocketChannel> socketChannelType;
+    private final Class<? extends DatagramChannel> datagramChannelType;
     private final Set<Class<? extends EventLoopGroup>> eventLoopGroupClasses;
     private final BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> eventLoopGroupConstructor;
 
     @SafeVarargs
-    TransportType(Class<? extends ServerChannel> serverChannelClass,
-                  Class<? extends SocketChannel> socketChannelClass,
-                  Class<? extends DatagramChannel> datagramClass,
+    TransportType(Class<? extends ServerChannel> serverChannelType,
+                  Class<? extends SocketChannel> socketChannelType,
+                  Class<? extends DatagramChannel> datagramChannelType,
                   BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> eventLoopGroupConstructor,
                   Class<? extends EventLoopGroup>... eventLoopGroupClasses) {
-        this.serverChannelClass = serverChannelClass;
-        this.socketChannelClass = socketChannelClass;
-        this.datagramClass = datagramClass;
+        this.serverChannelType = serverChannelType;
+        this.socketChannelType = socketChannelType;
+        this.datagramChannelType = datagramChannelType;
         this.eventLoopGroupClasses = ImmutableSet.copyOf(eventLoopGroupClasses);
         this.eventLoopGroupConstructor = eventLoopGroupConstructor;
-    }
-
-    /**
-     * Returns the {@link ServerChannel} class for {@code eventLoopGroup}.
-     */
-    public static Class<? extends ServerChannel> serverChannelClass(EventLoopGroup eventLoopGroup) {
-        return find(eventLoopGroup).serverChannelClass;
-    }
-
-    /**
-     * Returns the {@link ServerChannel} class that is available for this transport type.
-     */
-    public Class<? extends ServerChannel> serverChannelClass() {
-        return serverChannelClass;
-    }
-
-    /**
-     * Creates the available {@link EventLoopGroup}.
-     */
-    public EventLoopGroup newEventLoopGroup(int nThreads,
-                                            Function<TransportType, ThreadFactory> threadFactoryFactory) {
-        final ThreadFactory threadFactory = threadFactoryFactory.apply(this);
-        return eventLoopGroupConstructor.apply(nThreads, threadFactory);
     }
 
     /**
@@ -107,17 +84,31 @@ public enum TransportType {
     }
 
     /**
+     * Returns the {@link ServerChannel} class for {@code eventLoopGroup}.
+     */
+    public static Class<? extends ServerChannel> serverChannelType(EventLoopGroup eventLoopGroup) {
+        return find(eventLoopGroup).serverChannelType;
+    }
+
+    /**
+     * Returns the {@link ServerChannel} class that is available for this transport type.
+     */
+    public Class<? extends ServerChannel> serverChannelType() {
+        return serverChannelType;
+    }
+
+    /**
      * Returns the available {@link SocketChannel} class for {@code eventLoopGroup}.
      */
     public static Class<? extends SocketChannel> socketChannelType(EventLoopGroup eventLoopGroup) {
-        return find(eventLoopGroup).socketChannelClass;
+        return find(eventLoopGroup).socketChannelType;
     }
 
     /**
      * Returns the available {@link DatagramChannel} class for {@code eventLoopGroup}.
      */
     public static Class<? extends DatagramChannel> datagramChannelType(EventLoopGroup eventLoopGroup) {
-        return find(eventLoopGroup).datagramClass;
+        return find(eventLoopGroup).datagramChannelType;
     }
 
     /**
@@ -167,6 +158,15 @@ public enum TransportType {
      */
     public String lowerCasedName() {
         return Ascii.toLowerCase(name());
+    }
+
+    /**
+     * Creates the available {@link EventLoopGroup}.
+     */
+    public EventLoopGroup newEventLoopGroup(int nThreads,
+                                            Function<TransportType, ThreadFactory> threadFactoryFactory) {
+        final ThreadFactory threadFactory = threadFactoryFactory.apply(this);
+        return eventLoopGroupConstructor.apply(nThreads, threadFactory);
     }
 
     private static IllegalStateException unsupportedEventLoopType(EventLoopGroup eventLoopGroup) {

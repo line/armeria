@@ -101,8 +101,19 @@ public final class EventLoopGroups {
      * Returns the {@link ServerChannel} class that is available for this {@code eventLoopGroup}, for use in
      * configuring a custom {@link Bootstrap}.
      */
+    public static Class<? extends ServerChannel> serverChannelType(EventLoopGroup eventLoopGroup) {
+        return TransportType.serverChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
+    }
+
+    /**
+     * Returns the {@link ServerChannel} class that is available for this {@code eventLoopGroup}, for use in
+     * configuring a custom {@link Bootstrap}.
+     *
+     * @deprecated Use {@link #serverChannelType(EventLoopGroup)}.
+     */
+    @Deprecated
     public static Class<? extends ServerChannel> serverChannelClass(EventLoopGroup eventLoopGroup) {
-        return TransportType.serverChannelClass(requireNonNull(eventLoopGroup, "eventLoopGroup"));
+        return serverChannelType(eventLoopGroup);
     }
 
     /**
