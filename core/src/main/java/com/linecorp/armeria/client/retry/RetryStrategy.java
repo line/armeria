@@ -113,7 +113,8 @@ public interface RetryStrategy {
 
     /**
      * Returns a {@link CompletionStage} that contains {@link Backoff} which will be used for retry.
-     * If the condition does not match, this will return {@code null} to stop retry attempt.
+     * If the condition does not match, this will return a {@link CompletionStage} completed with
+     * {@code null} to stop retry attempt.
      * Note that {@link ResponseTimeoutException} is not retriable for the whole retry,
      * but only for each attempt.
      * To retrieve the response {@link HttpHeaders}, you can use the specified {@link ClientRequestContext}:
