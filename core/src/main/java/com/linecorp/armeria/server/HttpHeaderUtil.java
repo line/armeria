@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.ClientAddressSource.isProxyProtocol;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -57,7 +59,8 @@ final class HttpHeaderUtil {
      * Returns an {@link InetAddress} of a client who initiated a request.
      *
      * @param headers the HTTP headers which were received from the client
-     * @param candidateHeaderNames a list of the HTTP header names that may contain a client address
+     * @param clientAddressSources a list of {@link ClientAddressSource}s which are used to determine
+     *                             an address of a client who initiated a request
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
      * @param remoteAddress a remote endpoint of a channel
      * @param filter the filter which evaluates an {@link InetAddress} can be used as a client address
@@ -65,35 +68,34 @@ final class HttpHeaderUtil {
      * @see <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For">X-Forwarded-For</a>
      */
     static InetAddress determineClientAddress(HttpHeaders headers,
-                                              List<AsciiString> candidateHeaderNames,
+                                              List<ClientAddressSource> clientAddressSources,
                                               @Nullable ProxiedAddresses proxiedAddresses,
-                                              InetSocketAddress remoteAddress,
+                                              InetAddress remoteAddress,
                                               Predicate<InetAddress> filter) {
-        for (final AsciiString name : candidateHeaderNames) {
-            if (name == null || name.isEmpty()) {
-                continue;
-            }
-
+        for (final ClientAddressSource source : clientAddressSources) {
             final InetAddress addr;
-            if (name.equals(HttpHeaderNames.FORWARDED)) {
-                addr = getFirstValidAddress(
-                        headers.get(HttpHeaderNames.FORWARDED), FORWARDED_CONVERTER, filter);
+            if (isProxyProtocol(source)) {
+                if (proxiedAddresses != null) {
+                    addr = ((InetSocketAddress) proxiedAddresses.sourceAddress()).getAddress();
+                    if (filter.test(addr)) {
+                        return addr;
+                    }
+                }
             } else {
-                addr = getFirstValidAddress(headers.get(name), Function.identity(), filter);
-            }
-            if (addr != null) {
-                return addr;
-            }
-        }
-
-        if (proxiedAddresses != null) {
-            final InetAddress addr = ((InetSocketAddress) proxiedAddresses.sourceAddress()).getAddress();
-            if (filter.test(addr)) {
-                return addr;
+                final AsciiString name = source.header();
+                if (name.equals(HttpHeaderNames.FORWARDED)) {
+                    addr = getFirstValidAddress(
+                            headers.get(HttpHeaderNames.FORWARDED), FORWARDED_CONVERTER, filter);
+                } else {
+                    addr = getFirstValidAddress(headers.get(name), Function.identity(), filter);
+                }
+                if (addr != null) {
+                    return addr;
+                }
             }
         }
         // We do not apply the filter to the remote address.
-        return remoteAddress.getAddress();
+        return remoteAddress;
     }
 
     @VisibleForTesting
@@ -159,7 +161,7 @@ final class HttpHeaderUtil {
                 }
             }
         }
-        // Skip if it is invalid address.
+        // Skip if it is an invalid address.
         logger.debug("Failed to parse an address: {}", address);
         return null;
     }

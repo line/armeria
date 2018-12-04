@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,7 +41,6 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
@@ -97,8 +95,8 @@ public final class ServerConfig {
     private final Map<ChannelOption<?>, ?> channelOptions;
     private final Map<ChannelOption<?>, ?> childChannelOptions;
 
-    private final List<AsciiString> clientAddressHeaders;
-    private final Predicate<InetSocketAddress> clientAddressTrustedProxyFilter;
+    private final List<ClientAddressSource> clientAddressSources;
+    private final Predicate<InetAddress> clientAddressTrustedProxyFilter;
     private final Predicate<InetAddress> clientAddressFilter;
 
     @Nullable
@@ -118,8 +116,8 @@ public final class ServerConfig {
             AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
-            List<AsciiString> clientAddressHeaders,
-            Predicate<InetSocketAddress> clientAddressTrustedProxyFilter,
+            List<ClientAddressSource> clientAddressSources,
+            Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter) {
 
         requireNonNull(ports, "ports");
@@ -167,8 +165,8 @@ public final class ServerConfig {
                 new Object2ObjectArrayMap<>(requireNonNull(channelOptions, "channelOptions")));
         this.childChannelOptions = Collections.unmodifiableMap(
                 new Object2ObjectArrayMap<>(requireNonNull(childChannelOptions, "childChannelOptions")));
-        this.clientAddressHeaders = ImmutableList.copyOf(
-                requireNonNull(clientAddressHeaders, "clientAddressHeaders"));
+        this.clientAddressSources = ImmutableList.copyOf(
+                requireNonNull(clientAddressSources, "clientAddressSources"));
         this.clientAddressTrustedProxyFilter =
                 requireNonNull(clientAddressTrustedProxyFilter, "clientAddressTrustedProxyFilter");
         this.clientAddressFilter = requireNonNull(clientAddressFilter, "clientAddressFilter");
@@ -558,16 +556,16 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns a list of HTTP headers which are used to determine a client address of a request.
+     * Returns a list of {@link ClientAddressSource}s which are used to determine a client address of a request.
      */
-    public List<AsciiString> clientAddressHeaders() {
-        return clientAddressHeaders;
+    public List<ClientAddressSource> clientAddressSources() {
+        return clientAddressSources;
     }
 
     /**
-     * Returns a filter which evaluates whether an {@link InetSocketAddress} of a remote endpoint is trusted.
+     * Returns a filter which evaluates whether an {@link InetAddress} of a remote endpoint is trusted.
      */
-    public Predicate<InetSocketAddress> clientAddressTrustedProxyFilter() {
+    public Predicate<InetAddress> clientAddressTrustedProxyFilter() {
         return clientAddressTrustedProxyFilter;
     }
 
@@ -594,7 +592,7 @@ public final class ServerConfig {
                     blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(),
                     accessLogWriter(), shutdownAccessLogWriterOnStop(),
                     channelOptions(), childChannelOptions(),
-                    clientAddressHeaders(), clientAddressTrustedProxyFilter(), clientAddressFilter()
+                    clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter()
             );
         }
 
@@ -614,8 +612,8 @@ public final class ServerConfig {
             Executor blockingTaskExecutor, @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
             AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
-            List<AsciiString> clientAddressHeaders,
-            Predicate<InetSocketAddress> clientAddressTrustedProxyFilter,
+            List<ClientAddressSource> clientAddressSources,
+            Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter) {
 
         final StringBuilder buf = new StringBuilder();
@@ -711,8 +709,8 @@ public final class ServerConfig {
         buf.append(channelOptions);
         buf.append(", childChannelOptions: ");
         buf.append(childChannelOptions);
-        buf.append(", clientAddressHeaders: ");
-        buf.append(clientAddressHeaders);
+        buf.append(", clientAddressSources: ");
+        buf.append(clientAddressSources);
         buf.append(", clientAddressTrustedProxyFilter: ");
         buf.append(clientAddressTrustedProxyFilter);
         buf.append(", clientAddressFilter: ");

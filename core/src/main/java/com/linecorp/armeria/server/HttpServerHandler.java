@@ -376,14 +376,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ServiceConfig serviceCfg = mapped.value();
         final Service<HttpRequest, HttpResponse> service = serviceCfg.service();
         final Channel channel = ctx.channel();
-        final InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
+        final InetAddress remoteAddress = ((InetSocketAddress) channel.remoteAddress()).getAddress();
 
         final InetAddress clientAddress;
-        if (config.clientAddressTrustedProxyFilter().test(remote)) {
-            clientAddress = determineClientAddress(headers, config.clientAddressHeaders(), proxiedAddresses,
-                                                   remote, config.clientAddressFilter());
+        if (config.clientAddressTrustedProxyFilter().test(remoteAddress)) {
+            clientAddress = determineClientAddress(headers, config.clientAddressSources(), proxiedAddresses,
+                                                   remoteAddress, config.clientAddressFilter());
         } else {
-            clientAddress = remote.getAddress();
+            clientAddress = remoteAddress;
         }
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(

@@ -54,7 +54,6 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -70,7 +69,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -174,9 +172,8 @@ public final class ServerBuilder {
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
     private AccessLogWriter accessLogWriter = AccessLogWriter.disabled();
     private boolean shutdownAccessLogWriterOnStop = true;
-    private List<AsciiString> clientAddressHeaders =
-            ImmutableList.of(HttpHeaderNames.FORWARDED, HttpHeaderNames.X_FORWARDED_FOR);
-    private Predicate<InetSocketAddress> clientAddressTrustedProxyFilter = remoteAddress -> false;
+    private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
+    private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
 
     @Nullable
@@ -1100,28 +1097,32 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets a list of HTTP headers which are used to determine a client address of a request.
+     * Sets a list of {@link ClientAddressSource}s which are used to determine a client address of a request.
+     * {@code Forwarded} header, {@code X-Forwarded-For} header and the source address of a PROXY protocol
+     * header will be used by default.
      */
-    public ServerBuilder clientAddressHeaders(AsciiString... clientAddressHeaders) {
-        this.clientAddressHeaders = ImmutableList.copyOf(
-                requireNonNull(clientAddressHeaders, "clientAddressHeaders"));
+    public ServerBuilder clientAddressSources(ClientAddressSource... clientAddressSources) {
+        this.clientAddressSources = ImmutableList.copyOf(
+                requireNonNull(clientAddressSources, "clientAddressSources"));
         return this;
     }
 
     /**
-     * Sets a list of HTTP headers which are used to determine a client address of a request.
+     * Sets a list of {@link ClientAddressSource}s which are used to determine a client address of a request.
+     * {@code Forwarded} header, {@code X-Forwarded-For} header and the source address of a PROXY protocol
+     * header will be used by default.
      */
-    public ServerBuilder clientAddressHeaders(Iterable<AsciiString> clientAddressHeaders) {
-        this.clientAddressHeaders = ImmutableList.copyOf(
-                requireNonNull(clientAddressHeaders, "clientAddressHeaders"));
+    public ServerBuilder clientAddressSources(Iterable<ClientAddressSource> clientAddressSources) {
+        this.clientAddressSources = ImmutableList.copyOf(
+                requireNonNull(clientAddressSources, "clientAddressSources"));
         return this;
     }
 
     /**
-     * Sets a filter which evaluates whether an {@link InetSocketAddress} of a remote endpoint is trusted.
+     * Sets a filter which evaluates whether an {@link InetAddress} of a remote endpoint is trusted.
      */
     public ServerBuilder clientAddressTrustedProxyFilter(
-            Predicate<InetSocketAddress> clientAddressTrustedProxyFilter) {
+            Predicate<InetAddress> clientAddressTrustedProxyFilter) {
         this.clientAddressTrustedProxyFilter =
                 requireNonNull(clientAddressTrustedProxyFilter, "clientAddressTrustedProxyFilter");
         return this;
@@ -1208,7 +1209,7 @@ public final class ServerBuilder {
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
-                clientAddressHeaders, clientAddressTrustedProxyFilter, clientAddressFilter), sslContexts);
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
@@ -1283,7 +1284,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, meterRegistry, serviceLoggerPrefix,
                 accessLogWriter, shutdownAccessLogWriterOnStop,
                 channelOptions, childChannelOptions,
-                clientAddressHeaders, clientAddressTrustedProxyFilter, clientAddressFilter
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter
         );
     }
 }

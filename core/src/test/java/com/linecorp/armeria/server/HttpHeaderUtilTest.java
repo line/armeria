@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.ClientAddressSource.ofHeader;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.Inet6Address;
@@ -37,8 +38,6 @@ import io.netty.util.AsciiString;
 
 public class HttpHeaderUtilTest {
 
-    private static final ImmutableList<AsciiString> CANDIDATES =
-            ImmutableList.of(HttpHeaderNames.FORWARDED, HttpHeaderNames.X_FORWARDED_FOR);
     private static final Predicate<InetAddress> ACCEPT_ANY = addr -> true;
 
     @Test
@@ -177,17 +176,17 @@ public class HttpHeaderUtilTest {
 
     @Test
     public void testClientAddress() throws UnknownHostException {
-        final InetSocketAddress remoteAddr = new InetSocketAddress(5000);
+        final InetAddress remoteAddr = InetAddress.getByName("11.0.0.1");
 
         // The first address in Forwarded header.
         assertThat(HttpHeaderUtil.determineClientAddress(
                 HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=10.0.0.1,for=10.0.0.2",
                                HttpHeaderNames.X_FORWARDED_FOR, "10.1.0.1,10.1.0.2"),
-                CANDIDATES, null, remoteAddr, ACCEPT_ANY))
+                ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
                 .isEqualTo(InetAddress.getByName("10.0.0.1"));
         assertThat(HttpHeaderUtil.determineClientAddress(
                 HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=10.0.0.1,for=10.0.0.2"),
-                CANDIDATES, null, remoteAddr, ACCEPT_ANY))
+                ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
                 .isEqualTo(InetAddress.getByName("10.0.0.1"));
 
         // Get a client address from a custom header.
@@ -195,27 +194,27 @@ public class HttpHeaderUtilTest {
                 HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=10.0.0.1,for=10.0.0.2",
                                HttpHeaderNames.X_FORWARDED_FOR, "10.1.0.1,10.1.0.2",
                                AsciiString.of("x-real-ip"), "10.2.0.1,10.2.0.2"),
-                ImmutableList.of(AsciiString.of("x-real-ip"),
-                                 HttpHeaderNames.FORWARDED,
-                                 HttpHeaderNames.X_FORWARDED_FOR),
+                ImmutableList.of(ofHeader("x-real-ip"),
+                                 ofHeader(HttpHeaderNames.FORWARDED),
+                                 ofHeader(HttpHeaderNames.X_FORWARDED_FOR)),
                 null, remoteAddr, ACCEPT_ANY))
                 .isEqualTo(InetAddress.getByName("10.2.0.1"));
 
         // The first address in X-Forwarded-For header.
         assertThat(HttpHeaderUtil.determineClientAddress(
                 HttpHeaders.of(HttpHeaderNames.X_FORWARDED_FOR, "10.1.0.1,10.1.0.2"),
-                CANDIDATES, null, remoteAddr, ACCEPT_ANY))
+                ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
                 .isEqualTo(InetAddress.getByName("10.1.0.1"));
         assertThat(HttpHeaderUtil.determineClientAddress(
                 HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=10.0.0.1,for=10.0.0.2",
                                HttpHeaderNames.X_FORWARDED_FOR, "10.1.0.1,10.1.0.2"),
-                ImmutableList.of(HttpHeaderNames.X_FORWARDED_FOR),
+                ImmutableList.of(ofHeader(HttpHeaderNames.X_FORWARDED_FOR)),
                 null, remoteAddr, ACCEPT_ANY))
                 .isEqualTo(InetAddress.getByName("10.1.0.1"));
 
         // Source address of the proxied addresses.
         assertThat(HttpHeaderUtil.determineClientAddress(
-                HttpHeaders.of(), CANDIDATES,
+                HttpHeaders.of(), ClientAddressSource.DEFAULT_SOURCES,
                 ProxiedAddresses.of(new InetSocketAddress("10.2.0.1", 50001),
                                     new InetSocketAddress("10.2.0.2", 50002)),
                 remoteAddr, ACCEPT_ANY))
@@ -223,7 +222,7 @@ public class HttpHeaderUtilTest {
 
         // Remote address of the channel.
         assertThat(HttpHeaderUtil.determineClientAddress(
-                HttpHeaders.of(), CANDIDATES, null, remoteAddr, ACCEPT_ANY))
-                .isEqualTo(remoteAddr.getAddress());
+                HttpHeaders.of(), ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isEqualTo(remoteAddr);
     }
 }
