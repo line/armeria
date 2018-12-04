@@ -92,7 +92,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.4.0'
+    version: &RETROFIT2_VERSION '2.5.0'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   adapter-java8: { version: *RETROFIT2_VERSION }
