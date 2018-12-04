@@ -135,6 +135,39 @@ public class HttpHealthCheckedEndpointGroupTest {
     }
 
     @Test
+    public void endpoints_withIpAndNoIp() throws Exception {
+        serverOne.start();
+        serverTwo.start();
+
+        final int portOne = serverOne.port(protocol);
+        final int portTwo = serverTwo.port(protocol);
+
+        new HttpHealthCheckedEndpointGroupBuilder(
+                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne)),
+                HEALTH_CHECK_PATH)
+                .protocol(protocol)
+                .clientFactory(clientFactory)
+                .build().newMeterBinder("foo").bindTo(registry);
+
+        new HttpHealthCheckedEndpointGroupBuilder(
+                new StaticEndpointGroup(Endpoint.of("localhost", portTwo)),
+                HEALTH_CHECK_PATH)
+                .protocol(protocol)
+                .clientFactory(clientFactory)
+                .build().newMeterBinder("bar").bindTo(registry);
+
+        await().untilAsserted(() -> {
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 1.0)
+                    .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=healthy}", 1.0)
+                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
+                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                   "{authority=localhost:" + portTwo + ",ip=,name=bar}", 1.0);
+        });
+    }
+
+    @Test
     public void endpoints_customPort() throws Exception {
         serverOne.start();
         serverTwo.start();
