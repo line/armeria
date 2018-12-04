@@ -113,7 +113,7 @@ public interface RetryStrategy {
 
     /**
      * Returns a {@link CompletionStage} that contains {@link Backoff} which will be used for retry.
-     * If the condition does not match, this will return a {@link CompletionStage} that completed with 
+     * If the condition does not match, this will return a {@link CompletionStage} that completed with
      * {@code null} to stop retry attempt.
      * Note that {@link ResponseTimeoutException} is not retriable for the whole retry,
      * but only for each attempt.
