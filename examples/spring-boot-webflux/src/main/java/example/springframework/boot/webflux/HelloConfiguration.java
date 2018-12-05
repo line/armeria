@@ -9,9 +9,11 @@ import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaClientConfigurator;
 
@@ -72,5 +74,17 @@ public class HelloConfiguration {
             // Set a custom client factory.
             builder.factory(clientFactory);
         };
+    }
+
+    /**
+     * Returns an {@link AnnotatedServiceRegistrationBean} which will be used to add an annotated HTTP
+     * service object to a {@link ServerBuilder}. If you want to only use Spring controllers, you do not
+     * need to create this bean.
+     */
+    @Bean
+    public AnnotatedServiceRegistrationBean annotatedServiceRegistrationBean(HelloAnnotatedService service) {
+        return new AnnotatedServiceRegistrationBean().setServiceName("hello")
+                                                     .setPathPrefix("/armeria")
+                                                     .setService(service);
     }
 }
