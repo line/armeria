@@ -218,7 +218,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                 {this.state.additionalHeadersOpen && (
                   <>
                     <>
-                      {this.state.exampleHeaders.length > 1 && (
+                      {this.state.exampleHeaders.length > 0 && (
                         <Dropdown
                           placeholder="Select an example headers"
                           options={this.state.exampleHeaders}
@@ -428,7 +428,21 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     );
   }
 
-  private removeBrackets(headers: string) : string {
+  private addExampleHeadersIfExists(
+    dst: Option[],
+    src: { [name: string]: string }[],
+  ) {
+    if (src.length > 0) {
+      for (const headers of src) {
+        dst.push({
+          value: JSON.stringify(headers, null, 2),
+          label: this.removeBrackets(JSON.stringify(headers).trim()),
+        });
+      }
+    }
+  }
+
+  private removeBrackets(headers: string): string {
     const length = headers.length;
     return headers.substring(1, length - 1).trim();
   }
@@ -457,30 +471,12 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       : undefined;
 
     const exampleHeaders: Option[] = [];
-    if (method.exampleHttpHeaders.length > 0) {
-      exampleHeaders.push({
-        value: JSON.stringify(method.exampleHttpHeaders[0], null, 2),
-        label: this.removeBrackets(JSON.stringify(method.exampleHttpHeaders[0]).trim()),
-      });
-    }
-
-    if (service.exampleHttpHeaders.length > 0) {
-      exampleHeaders.push({
-        value: JSON.stringify(service.exampleHttpHeaders[0], null, 2),
-        label: this.removeBrackets(JSON.stringify(service.exampleHttpHeaders[0]).trim()),
-      });
-    }
-
-    if (this.props.specification.getExampleHttpHeaders().length > 0) {
-      exampleHeaders.push({
-        value: JSON.stringify(
-          this.props.specification.getExampleHttpHeaders()[0],
-          null,
-          2,
-        ),
-        label: this.removeBrackets(JSON.stringify(this.props.specification.getExampleHttpHeaders()[0]).trim()),
-      });
-    }
+    this.addExampleHeadersIfExists(exampleHeaders, method.exampleHttpHeaders);
+    this.addExampleHeadersIfExists(exampleHeaders, service.exampleHttpHeaders);
+    this.addExampleHeadersIfExists(
+      exampleHeaders,
+      this.props.specification.getExampleHttpHeaders(),
+    );
 
     const hasHeaders = !!(
       urlHeaders ||
