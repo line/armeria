@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.ClientAddressSource.isProxyProtocol;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -60,7 +58,7 @@ final class HttpHeaderUtil {
      *
      * @param headers the HTTP headers which were received from the client
      * @param clientAddressSources a list of {@link ClientAddressSource}s which are used to determine
-     *                             an address of a client who initiated a request
+     *                             where to look for the client address, in the order of preference
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
      * @param remoteAddress a remote endpoint of a channel
      * @param filter the filter which evaluates an {@link InetAddress} can be used as a client address
@@ -74,7 +72,7 @@ final class HttpHeaderUtil {
                                               Predicate<InetAddress> filter) {
         for (final ClientAddressSource source : clientAddressSources) {
             final InetAddress addr;
-            if (isProxyProtocol(source)) {
+            if (source.isProxyProtocol()) {
                 if (proxiedAddresses != null) {
                     addr = ((InetSocketAddress) proxiedAddresses.sourceAddress()).getAddress();
                     if (filter.test(addr)) {
@@ -129,7 +127,7 @@ final class HttpHeaderUtil {
         if (firstChar == '_' ||
             (firstChar == 'u' && "unknown".equals(address))) {
             // To early return when the address is not an IP address.
-            // - a obfuscated identifier which must start with '_'
+            // - an obfuscated identifier which must start with '_'
             //   - https://tools.ietf.org/html/rfc7239#section-6.3
             // - the "unknown" identifier
             return null;

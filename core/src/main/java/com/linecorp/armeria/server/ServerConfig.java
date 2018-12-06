@@ -556,7 +556,8 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns a list of {@link ClientAddressSource}s which are used to determine a client address of a request.
+     * Returns a list of {@link ClientAddressSource}s which are used to determine where to look for
+     * the client address, in the order of preference.
      */
     public List<ClientAddressSource> clientAddressSources() {
         return clientAddressSources;

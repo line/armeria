@@ -1097,9 +1097,9 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets a list of {@link ClientAddressSource}s which are used to determine a client address of a request.
-     * {@code Forwarded} header, {@code X-Forwarded-For} header and the source address of a PROXY protocol
-     * header will be used by default.
+     * Sets a list of {@link ClientAddressSource}s which are used to determine where to look for the
+     * client address, in the order of preference. {@code Forwarded} header, {@code X-Forwarded-For} header
+     * and the source address of a PROXY protocol header will be used by default.
      */
     public ServerBuilder clientAddressSources(ClientAddressSource... clientAddressSources) {
         this.clientAddressSources = ImmutableList.copyOf(
@@ -1108,9 +1108,9 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets a list of {@link ClientAddressSource}s which are used to determine a client address of a request.
-     * {@code Forwarded} header, {@code X-Forwarded-For} header and the source address of a PROXY protocol
-     * header will be used by default.
+     * Sets a list of {@link ClientAddressSource}s which are used to determine where to look for the
+     * client address, in the order of preference. {@code Forwarded} header, {@code X-Forwarded-For} header
+     * and the source address of a PROXY protocol header will be used by default.
      */
     public ServerBuilder clientAddressSources(Iterable<ClientAddressSource> clientAddressSources) {
         this.clientAddressSources = ImmutableList.copyOf(

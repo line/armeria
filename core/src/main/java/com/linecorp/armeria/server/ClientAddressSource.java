@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.List;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -32,7 +31,8 @@ import io.netty.util.AsciiString;
  * to provide a client address:
  * <ul>
  *     <li>an HTTP header, such as {@code Forwarded} and {@code X-Forwarded-For} header</li>
- *     <li>the source address of a PROXY protocol header</li>
+ *     <li>the source address specified in a
+ *     <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> message</li>
  * </ul>
  */
 public final class ClientAddressSource {
@@ -49,26 +49,18 @@ public final class ClientAddressSource {
                              ofProxyProtocol());
 
     /**
-     * Returns a {@link ClientAddressSource} of the specified {@code header} which will be used to determine
-     * a client address from a request.
+     * Returns a {@link ClientAddressSource} which indicates the value of the specified {@code header}
+     * in a request will be used to determine a client address.
      */
-    public static ClientAddressSource ofHeader(AsciiString header) {
-        checkArgument(header != null && !header.isEmpty(), "empty header");
-        return new ClientAddressSource(header);
+    public static ClientAddressSource ofHeader(CharSequence header) {
+        checkArgument(header != null && header.length() > 0, "empty header");
+        return new ClientAddressSource(AsciiString.of(header));
     }
 
     /**
-     * Returns a {@link ClientAddressSource} of the specified {@code header} which will be used to determine
-     * a client address from a request.
-     */
-    public static ClientAddressSource ofHeader(String header) {
-        checkArgument(!Strings.isNullOrEmpty(header), "empty header");
-        return new ClientAddressSource(AsciiString.cached(header));
-    }
-
-    /**
-     * Returns a {@link ClientAddressSource} of a PROXY protocol which indicates a {@link ProxiedAddresses}
-     * will be used to determine a client address if a request has came via PROXY protocol.
+     * Returns the {@link ClientAddressSource} which indicates the source address specified in
+     * a <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> message
+     * will be used to determine a client address.
      */
     public static ClientAddressSource ofProxyProtocol() {
         return PROXY_PROTOCOL;
@@ -77,8 +69,8 @@ public final class ClientAddressSource {
     /**
      * Returns {@code true} if the specified {@code source} is for a PROXY protocol.
      */
-    static boolean isProxyProtocol(ClientAddressSource source) {
-        return source == PROXY_PROTOCOL;
+    boolean isProxyProtocol() {
+        return this == PROXY_PROTOCOL;
     }
 
     private final AsciiString header;
