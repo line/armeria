@@ -301,7 +301,7 @@ final class AnnotatedHttpService implements HttpService {
     }
 
     /**
-     * Intercepts a {@link HttpResponse} and wraps the response with an {@link ExceptionFilteredHttpResponse}
+     * Intercepts an {@link HttpResponse} and wraps the response with an {@link ExceptionFilteredHttpResponse}
      * if it is not an instance of {@link ExceptionFilteredHttpResponse}. This decorator will make an
      * {@link Exception} to be handled by {@link ExceptionHandlerFunction}s even if the exception is raised
      * from a decorator.
