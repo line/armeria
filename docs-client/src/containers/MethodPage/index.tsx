@@ -14,6 +14,8 @@
  * under the License.
  */
 
+import 'react-dropdown/style.css';
+
 import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
@@ -34,6 +36,7 @@ import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import jsonMinify from 'jsonminify';
 import React, { ChangeEvent } from 'react';
+import Dropdown, { Option } from 'react-dropdown';
 import { RouteComponentProps } from 'react-router-dom';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
@@ -50,6 +53,7 @@ interface State {
   debugResponse: string;
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
+  exampleHeaders: Option[];
   stickyHeaders: boolean;
 }
 
@@ -66,6 +70,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     debugResponse: '',
     additionalHeadersOpen: false,
     additionalHeaders: '',
+    exampleHeaders: [],
     stickyHeaders: false,
   };
 
@@ -212,6 +217,15 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                 <Typography variant="body1" paragraph />
                 {this.state.additionalHeadersOpen && (
                   <>
+                    <>
+                      {this.state.exampleHeaders.length > 0 && (
+                        <Dropdown
+                          placeholder="Select an example headers..."
+                          options={this.state.exampleHeaders}
+                          onChange={this.onSelectedHeadersChange}
+                        />
+                      )}
+                    </>
                     <TextField
                       multiline
                       fullWidth
@@ -278,6 +292,12 @@ export default class MethodPage extends React.PureComponent<Props, State> {
   private onHeadersFormChange = (e: ChangeEvent<HTMLInputElement>) => {
     this.setState({
       additionalHeaders: e.target.value,
+    });
+  };
+
+  private onSelectedHeadersChange = (selectedHeaders: Option) => {
+    this.setState({
+      additionalHeaders: selectedHeaders.value,
     });
   };
 
@@ -408,6 +428,25 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     );
   }
 
+  private addExampleHeadersIfExists(
+    dst: Option[],
+    src: { [name: string]: string }[],
+  ) {
+    if (src.length > 0) {
+      for (const headers of src) {
+        dst.push({
+          value: JSON.stringify(headers, null, 2),
+          label: this.removeBrackets(JSON.stringify(headers).trim()),
+        });
+      }
+    }
+  }
+
+  private removeBrackets(headers: string): string {
+    const length = headers.length;
+    return headers.substring(1, length - 1).trim();
+  }
+
   private initializeState() {
     const service = this.getService();
     if (!service) {
@@ -431,16 +470,27 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       ? this.state.additionalHeaders
       : undefined;
 
-    const exampleHeaders =
-      service.exampleHttpHeaders.length > 0
-        ? JSON.stringify(service.exampleHttpHeaders[0], null, 2)
-        : undefined;
+    const exampleHeaders: Option[] = [];
+    this.addExampleHeadersIfExists(exampleHeaders, method.exampleHttpHeaders);
+    this.addExampleHeadersIfExists(exampleHeaders, service.exampleHttpHeaders);
+    this.addExampleHeadersIfExists(
+      exampleHeaders,
+      this.props.specification.getExampleHttpHeaders(),
+    );
 
-    const hasHeaders = !!(urlHeaders || stateHeaders || exampleHeaders);
+    const hasHeaders = !!(
+      urlHeaders ||
+      stateHeaders ||
+      exampleHeaders.length > 0
+    );
     this.setState({
+      exampleHeaders,
       debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
       debugResponse: '',
-      additionalHeaders: urlHeaders || stateHeaders || exampleHeaders || '',
+      additionalHeaders:
+        urlHeaders ||
+        stateHeaders ||
+        (exampleHeaders.length === 1 ? exampleHeaders[0].value || '' : ''),
       additionalHeadersOpen: hasHeaders,
       stickyHeaders:
         urlParams.has('http_headers_sticky') || this.state.stickyHeaders,
