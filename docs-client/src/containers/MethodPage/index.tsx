@@ -220,7 +220,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                     <>
                       {this.state.exampleHeaders.length > 0 && (
                         <Dropdown
-                          placeholder="Select an example headers"
+                          placeholder="Select an example headers..."
                           options={this.state.exampleHeaders}
                           onChange={this.onSelectedHeadersChange}
                         />
