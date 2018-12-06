@@ -82,6 +82,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private HttpObjectEncoder requestEncoder;
 
     /**
+     * The maximum number of unfinished requests. In HTTP/2, this value is identical to MAX_CONCURRENT_STREAMS.
+     * In HTTP/1, this value stays at {@link Integer#MAX_VALUE}.
+     */
+    private int maxUnfinishedResponses = Integer.MAX_VALUE;
+
+    /**
      * The number of requests sent. Disconnects when it reaches at {@link #MAX_NUM_REQUESTS_SENT}.
      */
     private int numRequestsSent;
@@ -113,9 +119,14 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public boolean hasUnfinishedResponses() {
+    public int unfinishedResponses() {
         assert responseDecoder != null;
-        return responseDecoder.hasUnfinishedResponses();
+        return responseDecoder.unfinishedResponses();
+    }
+
+    @Override
+    public int maxUnfinishedResponses() {
+        return maxUnfinishedResponses;
     }
 
     @Override
@@ -210,19 +221,28 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof Http2Settings) {
-            // Expected
-        } else {
-            try {
-                final String typeInfo;
-                if (msg instanceof ByteBuf) {
-                    typeInfo = msg + " HexDump: " + ByteBufUtil.hexDump((ByteBuf) msg);
-                } else {
-                    typeInfo = String.valueOf(msg);
-                }
-                throw new IllegalStateException("unexpected message type: " + typeInfo);
-            } finally {
-                ReferenceCountUtil.release(msg);
+            final Long maxConcurrentStreams = ((Http2Settings) msg).maxConcurrentStreams();
+            if (maxConcurrentStreams != null) {
+                maxUnfinishedResponses =
+                        maxConcurrentStreams > Integer.MAX_VALUE ? Integer.MAX_VALUE
+                                                                 : maxConcurrentStreams.intValue();
+            } else {
+                maxUnfinishedResponses = Integer.MAX_VALUE;
             }
+            return;
+        }
+
+        // Handle an unexpected message by raising an exception with debugging information.
+        try {
+            final String typeInfo;
+            if (msg instanceof ByteBuf) {
+                typeInfo = msg + " HexDump: " + ByteBufUtil.hexDump((ByteBuf) msg);
+            } else {
+                typeInfo = String.valueOf(msg);
+            }
+            throw new IllegalStateException("unexpected message type: " + typeInfo);
+        } finally {
+            ReferenceCountUtil.release(msg);
         }
     }
 

@@ -154,34 +154,10 @@ final class HttpChannelPool implements AutoCloseable {
     }
 
     /**
-     * Acquires a {@link Channel} which is matched by the specified condition.
-     */
-    CompletableFuture<PooledChannel> acquire(SessionProtocol desiredProtocol, PoolKey key) {
-        final CompletableFuture<PooledChannel> promise = new CompletableFuture<>();
-        acquire(desiredProtocol, key, promise);
-        return promise;
-    }
-
-    private void acquire(SessionProtocol desiredProtocol, PoolKey key,
-                         CompletableFuture<PooledChannel> promise) {
-        final PooledChannel ch = acquireNow(desiredProtocol, key);
-        if (ch != null) {
-            promise.complete(ch);
-            return;
-        }
-
-        if (usePendingAcquisition(desiredProtocol, key, promise)) {
-            return;
-        }
-
-        connect(desiredProtocol, key, promise);
-    }
-
-    /**
      * Attempts to acquire a {@link Channel} which is matched by the specified condition immediately.
      *
      * @return {@code null} is there's no match left in the pool and thus a new connection has to be
-     *         requested via {@link #acquire(SessionProtocol, PoolKey)}.
+     *         requested via {@link #acquireLater(SessionProtocol, PoolKey)}.
      */
     @Nullable
     PooledChannel acquireNow(SessionProtocol desiredProtocol, PoolKey key) {
@@ -213,14 +189,19 @@ final class HttpChannelPool implements AutoCloseable {
         }
 
         // Find the most recently released channel while cleaning up the unhealthy channels.
-        for (;;) {
+        for (int i = queue.size(); i > 0; i--) {
             final PooledChannel pooledChannel = queue.peekLast();
-            if (pooledChannel == null) {
-                return null;
-            }
-
             if (!isHealthy(pooledChannel)) {
                 queue.removeLast();
+                continue;
+            }
+
+            final HttpSession session = HttpSession.get(pooledChannel.get());
+            if (session.unfinishedResponses() >= session.maxUnfinishedResponses()) {
+                // The channel is full of streams so we cannot create a new one.
+                // Move the channel to the beginning of the queue so it has low priority.
+                queue.removeLast();
+                queue.addFirst(pooledChannel);
                 continue;
             }
 
@@ -229,6 +210,8 @@ final class HttpChannelPool implements AutoCloseable {
             }
             return pooledChannel;
         }
+
+        return null;
     }
 
     private static boolean isHealthy(PooledChannel pooledChannel) {
@@ -247,10 +230,16 @@ final class HttpChannelPool implements AutoCloseable {
         return HttpSession.get(ch).protocol();
     }
 
-    private static void closeChannel(Channel channel) {
-        if (channel.isActive()) {
-            channel.close();
+    /**
+     * Acquires a new {@link Channel} which is matched by the specified condition by making a connection
+     * attempt or waiting for the current connection attempt in progress.
+     */
+    CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key) {
+        final CompletableFuture<PooledChannel> promise = new CompletableFuture<>();
+        if (!usePendingAcquisition(desiredProtocol, key, promise)) {
+            connect(desiredProtocol, key, promise);
         }
+        return promise;
     }
 
     /**
@@ -276,14 +265,20 @@ final class HttpChannelPool implements AutoCloseable {
 
         pendingAcquisition.handle((pch, cause) -> {
             if (cause == null) {
-                if (pch.protocol().isMultiplex()) {
+                final SessionProtocol actualProtocol = pch.protocol();
+                if (actualProtocol.isMultiplex()) {
                     promise.complete(pch);
                 } else {
                     // Try to acquire again because the connection was not HTTP/2.
                     // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
                     // we do not waste our time looking for pending acquisitions for the host
                     // that does not support HTTP/2.
-                    acquire(pch.protocol(), key, promise);
+                    final PooledChannel ch = acquireNow(actualProtocol, key);
+                    if (ch != null) {
+                        promise.complete(ch);
+                    } else {
+                        connect(actualProtocol, key, promise);
+                    }
                 }
             } else {
                 // The pending connection attempt has failed.
@@ -319,13 +314,13 @@ final class HttpChannelPool implements AutoCloseable {
         }
 
         // Create a new connection.
-        final Promise<Channel> channelPromise = eventLoop.newPromise();
-        connect(remoteAddress, desiredProtocol, channelPromise);
+        final Promise<Channel> sessionPromise = eventLoop.newPromise();
+        connect(remoteAddress, desiredProtocol, sessionPromise);
 
-        if (channelPromise.isDone()) {
-            notifyConnect(desiredProtocol, key, channelPromise, promise);
+        if (sessionPromise.isDone()) {
+            notifyConnect(desiredProtocol, key, sessionPromise, promise);
         } else {
-            channelPromise.addListener((Future<Channel> future) -> {
+            sessionPromise.addListener((Future<Channel> future) -> {
                 notifyConnect(desiredProtocol, key, future, promise);
             });
         }
@@ -405,12 +400,19 @@ final class HttpChannelPool implements AutoCloseable {
                     }
                 }
 
-                if (protocol.isMultiplex()) {
-                    final Http2PooledChannel pooledChannel = new Http2PooledChannel(channel, protocol);
-                    addToPool(protocol, key, pooledChannel);
-                    promise.complete(pooledChannel);
+                final HttpSession session = HttpSession.get(channel);
+                if (session.unfinishedResponses() < session.maxUnfinishedResponses()) {
+                    if (protocol.isMultiplex()) {
+                        final Http2PooledChannel pooledChannel = new Http2PooledChannel(channel, protocol);
+                        addToPool(protocol, key, pooledChannel);
+                        promise.complete(pooledChannel);
+                    } else {
+                        promise.complete(new Http1PooledChannel(channel, protocol, key));
+                    }
                 } else {
-                    promise.complete(new Http1PooledChannel(channel, protocol, key));
+                    // Server set MAX_CONCURRENT_STREAMS to 0, which means we can't send anything.
+                    channel.close();
+                    promise.completeExceptionally(UnprocessedRequestException.get());
                 }
 
                 channel.closeFuture().addListener(f -> {
@@ -596,7 +598,10 @@ final class HttpChannelPool implements AutoCloseable {
                 addToPool(protocol(), key, this);
             } else {
                 // Channel not healthy, just releasing it.
-                closeChannel(get());
+                final Channel channel = get();
+                if (channel.isActive()) {
+                    channel.close();
+                }
             }
         }
     }
