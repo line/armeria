@@ -12,6 +12,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import com.linecorp.armeria.spring.web.reactive.ArmeriaClientHttpConnector;
 
+import example.springframework.boot.webflux.ValidationExceptionHandler.ErrorResponse;
+
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
 public class HelloApplicationIntegrationTest {
@@ -31,11 +33,28 @@ public class HelloApplicationIntegrationTest {
     }
 
     @Test
-    public void getHelloWorld() {
+    public void fromSpringController() {
         client.get()
               .uri("/hello")
               .exchange()
               .expectStatus().isOk()
               .expectBody(String.class).isEqualTo("Hello, World");
+    }
+
+    @Test
+    public void fromArmeriaAnnotatedService() {
+        client.get()
+              .uri("/armeria/hello/Spring")
+              .exchange()
+              .expectStatus().isOk()
+              .expectBody(String.class)
+              .isEqualTo("Hello, Spring! This message is from Armeria annotated service!");
+
+        // Validation failure because the 'name' value is too short.
+        client.get()
+              .uri("/armeria/hello/a")
+              .exchange()
+              .expectStatus().isBadRequest()
+              .expectBody(ErrorResponse.class);
     }
 }

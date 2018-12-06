@@ -28,8 +28,8 @@ public class ValidationExceptionHandler implements ExceptionHandlerFunction {
     @Override
     public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
         if (cause instanceof ValidationException) {
-            final HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
             try {
+                final HttpStatus status = HttpStatus.BAD_REQUEST;
                 return HttpResponse.of(status, MediaType.JSON_UTF_8, mapper.writeValueAsBytes(
                         new ErrorResponse(status.reasonPhrase(),
                                           cause.getMessage(),
@@ -37,7 +37,8 @@ public class ValidationExceptionHandler implements ExceptionHandlerFunction {
                                           status.code(),
                                           Instant.now().toString())));
             } catch (JsonProcessingException e) {
-                return HttpResponse.of(status, MediaType.PLAIN_TEXT_UTF_8, cause.getMessage());
+                return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
+                                       cause.getMessage());
             }
         }
         return ExceptionHandlerFunction.fallthrough();
@@ -46,7 +47,7 @@ public class ValidationExceptionHandler implements ExceptionHandlerFunction {
     /**
      * A sample HTTP response which is sent to a client when a {@link ValidationException} is raised.
      */
-    static class ErrorResponse {
+    public static class ErrorResponse {
         private final String error;
         private final String message;
         private final String path;
