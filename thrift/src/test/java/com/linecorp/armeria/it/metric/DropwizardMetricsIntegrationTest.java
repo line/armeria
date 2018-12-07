@@ -39,8 +39,6 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -163,9 +161,8 @@ public class DropwizardMetricsIntegrationTest {
     private static void makeRequest(String name) {
         final Iface client = new ClientBuilder(server.uri(BINARY, "/helloservice"))
                 .factory(clientFactory)
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           MetricCollectingClient.newDecorator(
-                                   MeterIdPrefixFunction.ofDefault("armeria.client.HelloService")))
+                .rpcDecorator(MetricCollectingClient.newDecorator(
+                        MeterIdPrefixFunction.ofDefault("armeria.client.HelloService")))
                 .build(Iface.class);
         try {
             client.hello(name);

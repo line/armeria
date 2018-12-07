@@ -174,12 +174,10 @@ public class HttpTracingIntegrationTest {
     @Before
     public void setupClients() {
         fooClient = new ClientBuilder(server.uri(BINARY, "/foo"))
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           HttpTracingClient.newDecorator(newTracing("client/foo")))
+                .decorator(HttpTracingClient.newDecorator(newTracing("client/foo")))
                 .build(HelloService.Iface.class);
         zipClient = new ClientBuilder(server.uri(BINARY, "/zip"))
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           HttpTracingClient.newDecorator(newTracing("client/zip")))
+                .decorator(HttpTracingClient.newDecorator(newTracing("client/zip")))
                 .build(HelloService.Iface.class);
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
@@ -203,8 +201,7 @@ public class HttpTracingIntegrationTest {
 
     private HelloService.AsyncIface newClient(String path) {
         return new ClientBuilder(server.uri(BINARY, path))
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           HttpTracingClient.newDecorator(newTracing("client" + path)))
+                .decorator(HttpTracingClient.newDecorator(newTracing("client" + path)))
                 .build(HelloService.AsyncIface.class);
     }
 

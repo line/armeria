@@ -147,20 +147,18 @@ public class ThriftHttpHeaderTest {
     @Test
     public void httpResponseHeaderContainsFoo() throws TException {
         final Iface client = new ClientBuilder(server.uri(BINARY, "/hello"))
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           (delegate, ctx, req) -> {
-                               final HttpResponse res = delegate.execute(ctx, req);
-                               return new FilteredHttpResponse(res) {
-                                   @Override
-                                   protected HttpObject filter(HttpObject obj) {
-                                       if (obj instanceof HttpHeaders) {
-                                           assertThat(((HttpHeaders) obj).get(AsciiString.of("foo")))
-                                                   .isEqualTo("bar");
-                                       }
-                                       return obj;
-                                   }
-                               };
-                           })
+                .decorator((delegate, ctx, req) -> {
+                    final HttpResponse res = delegate.execute(ctx, req);
+                    return new FilteredHttpResponse(res) {
+                        @Override
+                        protected HttpObject filter(HttpObject obj) {
+                            if (obj instanceof HttpHeaders) {
+                                assertThat(((HttpHeaders) obj).get(AsciiString.of("foo"))).isEqualTo("bar");
+                            }
+                            return obj;
+                        }
+                    };
+                })
                 .build(Iface.class);
         try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, SECRET)) {
             assertThat(client.hello("trustin")).isEqualTo("Hello, trustin!");

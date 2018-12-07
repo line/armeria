@@ -32,8 +32,7 @@ You can just use the ``decorator()`` method in :api:`ClientBuilder` to build a :
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
     HttpClient client = new ClientBuilder(...)
-            .decorator(HttpRequest.class, HttpResponse.class,
-                       RetryingHttpClient.newDecorator(strategy))
+            .decorator(RetryingHttpClient.newDecorator(strategy))
             .build(HttpClient.class);
 
     final AggregatedHttpMessage res = client.execute(...).aggregate().join();

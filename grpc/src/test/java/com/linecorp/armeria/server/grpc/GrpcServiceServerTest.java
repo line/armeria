@@ -751,15 +751,14 @@ public class GrpcServiceServerTest {
         final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
         final UnitTestServiceBlockingStub jsonStub =
                 new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
-                        .decorator(HttpRequest.class, HttpResponse.class,
-                                   client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
-                                       @Override
-                                       public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
-                                               throws Exception {
-                                           requestHeaders.set(req.headers());
-                                           return delegate().execute(ctx, req);
-                                       }
-                                   })
+                        .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
+                            @Override
+                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                    throws Exception {
+                                requestHeaders.set(req.headers());
+                                return delegate().execute(ctx, req);
+                            }
+                        })
                         .build(UnitTestServiceBlockingStub.class);
         final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
         assertThat(response).isEqualTo(RESPONSE_MESSAGE);

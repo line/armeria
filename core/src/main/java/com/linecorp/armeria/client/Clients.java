@@ -204,7 +204,7 @@ public final class Clients {
      * HttpClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
      *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
      *     builder.decorator(...);  // Add a decorator.
-     *     builder.httpHeader(...); // Add an HTTP header.
+     *     builder.addHttpHeader(...); // Add an HTTP header.
      *     return builder.build();
      * });
      * }</pre>

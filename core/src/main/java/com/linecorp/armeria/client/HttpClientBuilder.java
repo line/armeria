@@ -19,12 +19,9 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -75,26 +72,6 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     public HttpClientBuilder factory(ClientFactory factory) {
         this.factory = requireNonNull(factory, "factory");
         return this;
-    }
-
-    /**
-     * Adds the specified {@code decorator}.
-     *
-     * @param decorator the {@link Function} that transforms a {@link Client} to another
-     */
-    public HttpClientBuilder decorator(
-            Function<? extends Client<HttpRequest, HttpResponse>, ? extends Client<HttpRequest, HttpResponse>>
-                    decorator) {
-        return decorator(HttpRequest.class, HttpResponse.class, decorator);
-    }
-
-    /**
-     * Adds the specified {@code decorator}.
-     *
-     * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
-     */
-    public HttpClientBuilder decorator(DecoratingClientFunction<HttpRequest, HttpResponse> decorator) {
-        return decorator(HttpRequest.class, HttpResponse.class, decorator);
     }
 
     /**
