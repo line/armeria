@@ -462,17 +462,26 @@ final class AnnotatedValueResolver {
     }
 
     @Nullable
-    private static AnnotatedValueResolver ofInjectableTypes(AnnotatedElement annotatedElement, Class<?> type) {
+    private static AnnotatedValueResolver ofInjectableTypes(AnnotatedElement annotatedElement,
+                                                            Class<?> type) {
         // Unwrap Optional type to support a parameter like 'Optional<RequestContext> ctx'
         // which is always non-empty.
-        final Type actual;
-        if (type == Optional.class) {
-            logger.warn("Unnecessary Optional is used at '{}'", annotatedElement);
-            actual = ((ParameterizedType) parameterizedTypeOf(annotatedElement)).getActualTypeArguments()[0];
-        } else {
-            actual = type;
+        if (type != Optional.class) {
+            return ofInjectableTypes0(annotatedElement, type, type);
         }
 
+        final Type actual =
+                ((ParameterizedType) parameterizedTypeOf(annotatedElement)).getActualTypeArguments()[0];
+        final AnnotatedValueResolver resolver = ofInjectableTypes0(annotatedElement, type, actual);
+        if (resolver != null) {
+            logger.warn("Unnecessary Optional is used at '{}'", annotatedElement);
+        }
+        return resolver;
+    }
+
+    @Nullable
+    private static AnnotatedValueResolver ofInjectableTypes0(AnnotatedElement annotatedElement,
+                                                             Class<?> type, Type actual) {
         if (actual == RequestContext.class || actual == ServiceRequestContext.class) {
             return builder(annotatedElement, type)
                     .supportOptional(true)
