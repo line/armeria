@@ -64,7 +64,6 @@ import okhttp3.HttpUrl;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import retrofit2.adapter.java8.Java8CallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 import retrofit2.http.Body;
 import retrofit2.http.Field;
@@ -312,7 +311,6 @@ public class ArmeriaCallFactoryTest {
                 .baseUrl(server.uri("/"))
                 .streaming(streaming)
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
                 .create(Service.class);
     }
@@ -459,7 +457,6 @@ public class ArmeriaCallFactoryTest {
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl("http://group:foo/")
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
                 .create(Service.class);
         final Response<Pojo> response = service.postForm("Cony", 26).get();
@@ -479,7 +476,6 @@ public class ArmeriaCallFactoryTest {
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl("http://group:foo/")
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
                 .create(Service.class);
         final Pojo pojo = service.fullUrl("http://group_bar/pojo").get();
@@ -505,7 +501,6 @@ public class ArmeriaCallFactoryTest {
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl("h1c://127.0.0.1:" + server.httpPort())
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
                 .create(Service.class);
         final Pojo pojo = service.pojo().get();
@@ -517,7 +512,6 @@ public class ArmeriaCallFactoryTest {
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl(server.uri("/nest/"))
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
                 .create(Service.class);
         assertThat(service.pojoNotRoot().get()).isEqualTo(new Pojo("Leonard", 21));
@@ -552,7 +546,6 @@ public class ArmeriaCallFactoryTest {
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl("h1c://127.0.0.1:" + server.httpPort())
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .withClientOptions((url, optionsBuilder) -> {
                     optionsBuilder.decorator(HttpRequest.class, HttpResponse.class, (delegate, ctx, req) -> {
                         counter.incrementAndGet();

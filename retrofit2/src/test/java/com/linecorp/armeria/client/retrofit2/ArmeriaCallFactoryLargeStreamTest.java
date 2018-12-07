@@ -39,7 +39,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import okhttp3.ResponseBody;
-import retrofit2.adapter.java8.Java8CallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 import retrofit2.http.GET;
 import retrofit2.http.Streaming;
@@ -95,7 +94,6 @@ public class ArmeriaCallFactoryLargeStreamTest {
         final Service downloadService = new ArmeriaRetrofitBuilder()
                 .baseUrl(server.uri("/"))
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .withClientOptions((s, clientOptionsBuilder) -> {
                     clientOptionsBuilder.defaultMaxResponseLength(Long.MAX_VALUE);
                     clientOptionsBuilder.defaultResponseTimeout(Duration.of(30, ChronoUnit.SECONDS));

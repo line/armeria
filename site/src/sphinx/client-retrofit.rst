@@ -25,7 +25,6 @@ you get the following benefits:
     import com.linecorp.armeria.client.HttpClient;
 
     import retrofit2.Retrofit;
-    import retrofit2.adapter.java8.Java8CallAdapterFactory;
     import retrofit2.converter.jackson.JacksonConverterFactory;
     import retrofit2.http.GET;
     import retrofit2.http.Path;
@@ -40,7 +39,6 @@ you get the following benefits:
     Retrofit retrofit = new ArmeriaRetrofitBuilder()
             .baseUrl("http://localhost:8080/")
             .addConverterFactory(JacksonConverterFactory.create())
-            .addCallAdapterFactory(Java8CallAdapterFactory.create())
             .build();
 
     MyService service = retrofit.create(MyService.class);
