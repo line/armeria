@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.AnnotatedHttpServiceTest.validateContextAndRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
@@ -37,10 +38,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
+import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -62,6 +65,8 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
 
             sb.annotatedService("/4", new MyService4(),
                                 LoggingService.newDecorator());
+
+            sb.annotatedService("/5", new MyService5());
 
             sb.defaultRequestTimeoutMillis(500L);
         }
@@ -140,6 +145,28 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         @Get("/handler3")
         public HttpResponse handler3(ServiceRequestContext ctx, HttpRequest req) {
             return HttpResponse.from(completeExceptionallyLater(ctx));
+        }
+    }
+
+    @LoggingDecorator
+    @ExceptionHandler(AnticipatedExceptionHandler3.class)
+    public static class MyService5 extends MyService1 {
+        @Get("/handler3")
+        @Decorator(ExceptionThrowingDecorator.class)
+        public HttpResponse handler3(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+
+    public static final class ExceptionThrowingDecorator
+            implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+
+        @Override
+        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
+                                  ServiceRequestContext ctx,
+                                  HttpRequest req) throws Exception {
+            validateContextAndRequest(ctx, req);
+            throw new AnticipatedException();
         }
     }
 
@@ -272,5 +299,10 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         assertThat(response.content().toStringUtf8()).isEqualTo("handler3");
 
         assertThat(NoExceptionHandler.counter.get()).isZero();
+
+        // A decorator throws an exception.
+        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/5/handler3")).aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().toStringUtf8()).isEqualTo("handler3");
     }
 }

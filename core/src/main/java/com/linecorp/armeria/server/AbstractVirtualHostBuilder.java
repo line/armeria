@@ -361,7 +361,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
     public B annotatedService(Object service) {
-        return annotatedService("/", service, Function.identity(), ImmutableList.of());
+        return annotatedService0("/", service, null, ImmutableList.of());
     }
 
     /**
@@ -372,9 +372,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      *                                       {@link ResponseConverterFunction}
      */
     public B annotatedService(Object service, Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, Function.identity(),
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        return annotatedService0("/", service, null,
+                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                     "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -388,16 +388,16 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
                               Function<Service<HttpRequest, HttpResponse>,
                                       ? extends Service<HttpRequest, HttpResponse>> decorator,
                               Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, decorator,
-                                requireNonNull(exceptionHandlersAndConverters,
-                                               "exceptionHandlersAndConverters"));
+        return annotatedService0("/", service, requireNonNull(decorator, "decorator"),
+                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                     "exceptionHandlersAndConverters")));
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
     public B annotatedService(String pathPrefix, Object service) {
-        return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
+        return annotatedService0(pathPrefix, service, null, ImmutableList.of());
     }
 
     /**
@@ -409,9 +409,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      */
     public B annotatedService(String pathPrefix, Object service,
                               Object... exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(),
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        return annotatedService0(pathPrefix, service, null,
+                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                     "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -425,9 +425,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
                               Function<Service<HttpRequest, HttpResponse>,
                                       ? extends Service<HttpRequest, HttpResponse>> decorator,
                               Object... exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, decorator,
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        return annotatedService0(pathPrefix, service, requireNonNull(decorator, "decorator"),
+                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                     "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -441,15 +441,39 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
                               Function<Service<HttpRequest, HttpResponse>,
                                       ? extends Service<HttpRequest, HttpResponse>> decorator,
                               Iterable<?> exceptionHandlersAndConverters) {
+        return annotatedService0(pathPrefix, service, requireNonNull(decorator, "decorator"),
+                                 exceptionHandlersAndConverters);
+    }
 
+    private B annotatedService0(String pathPrefix, Object service,
+                                @Nullable Function<Service<HttpRequest, HttpResponse>,
+                                        ? extends Service<HttpRequest, HttpResponse>> globalDecorator,
+                                Iterable<?> exceptionHandlersAndConverters) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
 
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
-        elements.forEach(e -> service(e.pathMapping(), decorator.apply(e.decorator().apply(e.service()))));
+        elements.forEach(e -> {
+            Service<HttpRequest, HttpResponse> s = e.service();
+
+            final Function<Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>> serviceDecorator = e.decorator();
+            if (serviceDecorator != null) {
+                s = serviceDecorator.apply(s);
+            }
+            if (globalDecorator != null) {
+                s = globalDecorator.apply(s);
+            }
+
+            // If there is a decorator, we should add one more decorator which handles an exception
+            // raised from decorators.
+            if (s != e.service()) {
+                s = e.service().exceptionHandlingDecorator().apply(s);
+            }
+            service(e.pathMapping(), s);
+        });
         return self();
     }
 

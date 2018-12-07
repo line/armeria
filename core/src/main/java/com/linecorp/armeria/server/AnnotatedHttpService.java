@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -291,6 +292,42 @@ final class AnnotatedHttpService implements HttpService {
     }
 
     /**
+     * Returns a {@link Function} which produces a {@link Service} wrapped with an
+     * {@link ExceptionFilteredHttpResponseDecorator}.
+     */
+    Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> exceptionHandlingDecorator() {
+        return ExceptionFilteredHttpResponseDecorator::new;
+    }
+
+    /**
+     * Intercepts an {@link HttpResponse} and wraps the response with an {@link ExceptionFilteredHttpResponse}
+     * if it is not an instance of {@link ExceptionFilteredHttpResponse}. This decorator will make an
+     * {@link Exception} to be handled by {@link ExceptionHandlerFunction}s even if the exception is raised
+     * from a decorator.
+     */
+    private class ExceptionFilteredHttpResponseDecorator
+            extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+
+        ExceptionFilteredHttpResponseDecorator(Service<HttpRequest, HttpResponse> delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            try {
+                final HttpResponse response = delegate().serve(ctx, req);
+                if (response instanceof ExceptionFilteredHttpResponse) {
+                    return response;
+                }
+                return new ExceptionFilteredHttpResponse(ctx, req, response);
+            } catch (Exception cause) {
+                return convertException(ctx, req, cause);
+            }
+        }
+    }
+
+    /**
      * Intercepts a {@link Throwable} raised from {@link HttpResponse} and then rewrites it as an
      * {@link HttpResponseException} by {@link ExceptionHandlerFunction}.
      */
@@ -313,6 +350,10 @@ final class AnnotatedHttpService implements HttpService {
 
         @Override
         protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+            if (cause instanceof HttpResponseException) {
+                // Do not convert again if it has been already converted.
+                return cause;
+            }
             return HttpResponseException.of(convertException(ctx, req, cause));
         }
     }

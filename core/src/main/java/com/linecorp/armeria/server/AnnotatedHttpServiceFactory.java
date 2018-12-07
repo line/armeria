@@ -487,6 +487,7 @@ final class AnnotatedHttpServiceFactory {
      * Returns a decorator chain which is specified by {@link Decorator} annotations and user-defined
      * decorator annotations.
      */
+    @Nullable
     private static Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> decorator(Method method, Class<?> clazz) {
 
@@ -499,7 +500,7 @@ final class AnnotatedHttpServiceFactory {
             decorator = decorator == null ? d.decorator()
                                           : decorator.andThen(d.decorator());
         }
-        return decorator == null ? Function.identity() : decorator;
+        return decorator;
     }
 
     /**
@@ -856,16 +857,17 @@ final class AnnotatedHttpServiceFactory {
         /**
          * A decorator of the {@link AnnotatedHttpService} which will be evaluated at service registration time.
          */
+        @Nullable
         private final Function<Service<HttpRequest, HttpResponse>,
                 ? extends Service<HttpRequest, HttpResponse>> decorator;
 
         private AnnotatedHttpServiceElement(PathMapping pathMapping,
                                             AnnotatedHttpService service,
-                                            Function<Service<HttpRequest, HttpResponse>,
+                                            @Nullable Function<Service<HttpRequest, HttpResponse>,
                                                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
             this.pathMapping = requireNonNull(pathMapping, "pathMapping");
             this.service = requireNonNull(service, "service");
-            this.decorator = requireNonNull(decorator, "decorator");
+            this.decorator = decorator;
         }
 
         PathMapping pathMapping() {
@@ -876,6 +878,7 @@ final class AnnotatedHttpServiceFactory {
             return service;
         }
 
+        @Nullable
         Function<Service<HttpRequest, HttpResponse>,
                 ? extends Service<HttpRequest, HttpResponse>> decorator() {
             return decorator;
@@ -883,7 +886,7 @@ final class AnnotatedHttpServiceFactory {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this)
+            return MoreObjects.toStringHelper(this).omitNullValues()
                               .add("pathMapping", pathMapping())
                               .add("service", service())
                               .add("decorator", decorator())
