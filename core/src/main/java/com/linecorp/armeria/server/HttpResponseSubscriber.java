@@ -173,16 +173,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
-                if (!additionalHeaders.isEmpty()) {
-                    if (headers.isImmutable()) {
-                        // All headers are already validated.
-                        final HttpHeaders temp = headers;
-                        headers = new DefaultHttpHeaders(false, temp.size() + additionalHeaders.size());
-                        headers.set(temp);
-                        o = headers;
-                    }
-                    headers.setAllIfAbsent(additionalHeaders);
-                }
+                o = fillAdditionalHeaders(headers, additionalHeaders);
 
                 logBuilder().responseHeaders(headers);
 
@@ -215,6 +206,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                                 "published a trailing HttpHeaders with status: " + o +
                                 " (service: " + service() + ')');
                     }
+                    final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+                    o = fillAdditionalHeaders(trailingHeaders, additionalTrailers);
 
                     // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
@@ -226,6 +219,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 return;
         }
 
+        if (endOfStream && !(o instanceof HttpHeaders)) {
+            final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+            if (!additionalTrailers.isEmpty()) {
+                write(o, false);
+
+                o = additionalTrailers;
+            }
+        }
         write(o, endOfStream);
     }
 
@@ -277,7 +278,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         if (state != State.DONE) {
-            write(HttpData.EMPTY_DATA, true);
+            final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+            if (!additionalTrailers.isEmpty()) {
+                write(additionalTrailers, true);
+            } else {
+                write(HttpData.EMPTY_DATA, true);
+            }
         }
     }
 
@@ -417,6 +423,19 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private static boolean wroteNothing(State state) {
         return state == State.NEEDS_HEADERS;
+    }
+
+    private static HttpHeaders fillAdditionalHeaders(HttpHeaders headers, HttpHeaders additionalHeaders) {
+        if (!additionalHeaders.isEmpty()) {
+            if (headers.isImmutable()) {
+                // All headers are already validated.
+                final HttpHeaders temp = headers;
+                headers = new DefaultHttpHeaders(false, temp.size() + additionalHeaders.size());
+                headers.set(temp);
+            }
+            headers.setAllIfAbsent(additionalHeaders);
+        }
+        return headers;
     }
 
     private boolean cancelTimeout() {

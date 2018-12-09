@@ -52,6 +52,7 @@ public class DefaultServiceRequestContextTest {
                 mock(Request.class), null, null);
 
         setAdditionalHeaders(originalCtx);
+        setAdditionalTrailers(originalCtx);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
@@ -73,6 +74,13 @@ public class DefaultServiceRequestContextTest {
         assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#3")))
                 .isEqualTo("value#3");
         assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#4")))
+                .isEqualTo("value#4");
+        assertThat(derivedCtx.additionalResponseTrailers().get(AsciiString.of("my-trailer#1"))).isNull();
+        assertThat(derivedCtx.additionalResponseTrailers().get(AsciiString.of("my-trailer#2")))
+                .isEqualTo("value#2");
+        assertThat(derivedCtx.additionalResponseTrailers().get(AsciiString.of("my-trailer#3")))
+                .isEqualTo("value#3");
+        assertThat(derivedCtx.additionalResponseTrailers().get(AsciiString.of("my-trailer#4")))
                 .isEqualTo("value#4");
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
@@ -107,5 +115,19 @@ public class DefaultServiceRequestContextTest {
         originalCtx.addAdditionalResponseHeader(AsciiString.of("my-header#4"), "value#4");
         // Remove the first one.
         originalCtx.removeAdditionalResponseHeader(AsciiString.of("my-header#1"));
+    }
+
+    private static void setAdditionalTrailers(ServiceRequestContext originalCtx) {
+        final DefaultHttpHeaders trailers1 = new DefaultHttpHeaders();
+        trailers1.set(AsciiString.of("my-trailer#1"), "value#1");
+        originalCtx.setAdditionalResponseTrailers(trailers1);
+        originalCtx.setAdditionalResponseTrailer(AsciiString.of("my-trailer#2"), "value#2");
+
+        final DefaultHttpHeaders trailers2 = new DefaultHttpHeaders();
+        trailers2.set(AsciiString.of("my-trailer#3"), "value#3");
+        originalCtx.addAdditionalResponseTrailers(trailers2);
+        originalCtx.addAdditionalResponseTrailer(AsciiString.of("my-trailer#4"), "value#4");
+        // Remove the first one.
+        originalCtx.removeAdditionalResponseTrailer(AsciiString.of("my-trailer#1"));
     }
 }
