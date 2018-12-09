@@ -211,6 +211,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                     // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
+                } else if (endOfStream) { // Last DATA frame
+                    final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+                    if (!additionalTrailers.isEmpty()) {
+                        write(o, false);
+
+                        o = additionalTrailers;
+                    }
                 }
                 break;
             }
@@ -219,14 +226,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 return;
         }
 
-        if (endOfStream && !(o instanceof HttpHeaders)) {
-            final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-            if (!additionalTrailers.isEmpty()) {
-                write(o, false);
-
-                o = additionalTrailers;
-            }
-        }
         write(o, endOfStream);
     }
 
