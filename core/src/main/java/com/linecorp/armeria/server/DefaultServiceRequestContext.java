@@ -94,7 +94,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private volatile HttpHeaders additionalResponseHeaders; // set only via additionalResponseHeadersUpdater
     @Nullable
     @SuppressWarnings("unused")
-    private volatile HttpHeaders additionalResponseTrailers; // set only via additionalResponseHeadersUpdater
+    private volatile HttpHeaders additionalResponseTrailers; // set only via additionalResponseTrailersUpdater
 
     @Nullable
     private String strVal;
