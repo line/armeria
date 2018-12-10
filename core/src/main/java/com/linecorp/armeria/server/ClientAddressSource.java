@@ -66,21 +66,25 @@ public final class ClientAddressSource {
         return PROXY_PROTOCOL;
     }
 
-    /**
-     * Returns {@code true} if the specified {@code source} is for a PROXY protocol.
-     */
-    boolean isProxyProtocol() {
-        return this == PROXY_PROTOCOL;
-    }
-
     private final AsciiString header;
 
     private ClientAddressSource(AsciiString header) {
         this.header = header;
     }
 
+    /**
+     * Returns the name of an HTTP header. The value of the header in a request will be used to determine
+     * a client address.
+     */
     AsciiString header() {
         return header;
+    }
+
+    /**
+     * Returns {@code true} if the specified {@code source} is for a PROXY protocol.
+     */
+    boolean isProxyProtocol() {
+        return this == PROXY_PROTOCOL;
     }
 
     @Override

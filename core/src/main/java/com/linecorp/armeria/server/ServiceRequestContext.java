@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
@@ -63,7 +64,10 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the address of the client who initiated this request.
      */
-    InetAddress clientAddress();
+    default InetAddress clientAddress() {
+        final InetSocketAddress remoteAddress = remoteAddress();
+        return remoteAddress.getAddress();
+    }
 
     @Override
     ServiceRequestContext newDerivedContext();

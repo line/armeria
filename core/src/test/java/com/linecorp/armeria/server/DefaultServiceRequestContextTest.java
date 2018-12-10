@@ -19,8 +19,6 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import java.net.UnknownHostException;
-
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -42,7 +40,7 @@ import io.netty.util.NetUtil;
 public class DefaultServiceRequestContextTest {
 
     @Test
-    public void deriveContext() throws UnknownHostException {
+    public void deriveContext() {
         final VirtualHost virtualHost = virtualHost();
         final DefaultPathMappingContext mappingCtx = new DefaultPathMappingContext(
                 virtualHost, "example.com", HttpMethod.GET, "/hello", null, MediaType.JSON_UTF_8,
