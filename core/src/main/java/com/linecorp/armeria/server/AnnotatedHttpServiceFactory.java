@@ -23,17 +23,26 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
 import static com.linecorp.armeria.server.AnnotatedValueResolver.toRequestObjectResolvers;
 import static java.util.Objects.requireNonNull;
+import static org.reflections.ReflectionUtils.getAllAnnotations;
+import static org.reflections.ReflectionUtils.getAllMethods;
+import static org.reflections.ReflectionUtils.getConstructors;
+import static org.reflections.ReflectionUtils.getMethods;
+import static org.reflections.ReflectionUtils.withModifier;
+import static org.reflections.ReflectionUtils.withName;
+import static org.reflections.ReflectionUtils.withParametersCount;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -50,6 +59,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -70,6 +80,7 @@ import com.linecorp.armeria.server.annotation.Decorators;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.ExceptionHandlers;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
@@ -85,9 +96,11 @@ import com.linecorp.armeria.server.annotation.ProducesGroup;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
+import com.linecorp.armeria.server.annotation.RequestConverters;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.ResponseConverters;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Trace;
 
@@ -270,11 +283,14 @@ final class AnnotatedHttpServiceFactory {
      * Returns the list of {@link Path} annotated methods.
      */
     private static List<Method> requestMappingMethods(Object object) {
-        return Arrays.stream(object.getClass().getMethods())
-                     .filter(m -> m.getAnnotation(Path.class) != null ||
-                                  !httpMethodAnnotations(m).isEmpty())
-                     .sorted(Comparator.comparingInt(AnnotatedHttpServiceFactory::order))
-                     .collect(toImmutableList());
+        return getAllMethods(object.getClass(), withModifier(Modifier.PUBLIC))
+                .stream()
+                .filter(m -> getAllAnnotations(m).stream()
+                                                 .map(Annotation::annotationType)
+                                                 .anyMatch(a -> a == Path.class ||
+                                                                HTTP_METHOD_MAP.containsKey(a)))
+                .sorted(Comparator.comparingInt(AnnotatedHttpServiceFactory::order))
+                .collect(toImmutableList());
     }
 
     /**
@@ -282,7 +298,7 @@ final class AnnotatedHttpServiceFactory {
      * annotation. 0 would be returned if there is no specified {@link Order} annotation.
      */
     private static int order(Method method) {
-        final Order order = method.getAnnotation(Order.class);
+        final Order order = findAnnotation(method, Order.class).orElse(null);
         return order != null ? order.value() : 0;
     }
 
@@ -300,9 +316,10 @@ final class AnnotatedHttpServiceFactory {
      * @see Trace
      */
     private static Set<Annotation> httpMethodAnnotations(Method method) {
-        return Arrays.stream(method.getAnnotations())
-                     .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
-                     .collect(Collectors.toSet());
+        return getAllAnnotations(method)
+                .stream()
+                .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -335,7 +352,7 @@ final class AnnotatedHttpServiceFactory {
     private static List<MediaType> consumableMediaTypes(AnnotatedElement element) {
         final List<MediaType> mediaTypes = new ArrayList<>();
 
-        for (final Annotation annotation : element.getAnnotations()) {
+        for (final Annotation annotation : getAllAnnotations(element)) {
             if (annotation instanceof ConsumesGroup) {
                 Arrays.stream(((ConsumesGroup) annotation).value())
                       .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
@@ -347,8 +364,8 @@ final class AnnotatedHttpServiceFactory {
             } else if (annotation instanceof ConsumeType) {
                 addConsumableMediaType(mediaTypes, MediaType.parse(((ConsumeType) annotation).value()));
             } else {
-                Arrays.stream(annotation.annotationType().getAnnotationsByType(Consumes.class))
-                      .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
+                findAnnotations(annotation.annotationType(), Consumes.class)
+                        .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
             }
         }
         return mediaTypes;
@@ -369,7 +386,7 @@ final class AnnotatedHttpServiceFactory {
     private static List<MediaType> producibleMediaTypes(AnnotatedElement element) {
         final List<MediaType> mediaTypes = new ArrayList<>();
 
-        for (final Annotation annotation : element.getAnnotations()) {
+        for (final Annotation annotation : getAllAnnotations(element)) {
             if (annotation instanceof ProducesGroup) {
                 Arrays.stream(((ProducesGroup) annotation).value())
                       .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
@@ -381,8 +398,8 @@ final class AnnotatedHttpServiceFactory {
             } else if (annotation instanceof ProduceType) {
                 addProducibleMediaType(mediaTypes, MediaType.parse(((ProduceType) annotation).value()));
             } else {
-                Arrays.stream(annotation.annotationType().getAnnotationsByType(Produces.class))
-                      .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
+                findAnnotations(annotation.annotationType(), Produces.class)
+                        .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
             }
         }
         return mediaTypes;
@@ -461,12 +478,8 @@ final class AnnotatedHttpServiceFactory {
      * HTTP method annotations such as {@link Get} and {@link Post}.
      */
     private static String findPattern(Method method, Set<Annotation> methodAnnotations) {
-        String pattern = null;
-
-        final Path path = method.getAnnotation(Path.class);
-        if (path != null) {
-            pattern = method.getAnnotation(Path.class).value();
-        }
+        String pattern = findAnnotation(method, Path.class).map(Path::value)
+                                                           .orElse(null);
         for (Annotation a : methodAnnotations) {
             final String p = (String) invokeValueMethod(a);
             if (DefaultValues.isUnspecified(p)) {
@@ -558,9 +571,10 @@ final class AnnotatedHttpServiceFactory {
 
             // If user-defined decorators are repeatable and they are specified more than once.
             try {
-                final Annotation[] decorators = (Annotation[]) annotation.annotationType()
-                                                                         .getMethod("value")
-                                                                         .invoke(annotation);
+                final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
+                                                                    withName("value")), null);
+                assert method != null : "No 'value' method is found from " + annotation;
+                final Annotation[] decorators = (Annotation[]) method.invoke(annotation);
                 for (final Annotation decorator : decorators) {
                     udd = userDefinedDecorator(decorator);
                     if (udd == null) {
@@ -582,7 +596,8 @@ final class AnnotatedHttpServiceFactory {
     @Nullable
     private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
         // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
-        final DecoratorFactory d = annotation.annotationType().getAnnotation(DecoratorFactory.class);
+        final DecoratorFactory d =
+                findAnnotation(annotation.annotationType(), DecoratorFactory.class).orElse(null);
         if (d == null) {
             return null;
         }
@@ -594,9 +609,13 @@ final class AnnotatedHttpServiceFactory {
         // If the annotation has "order" attribute, we can use it when sorting decorators.
         int order = 0;
         try {
-            final Object value = annotation.annotationType().getMethod("order").invoke(annotation);
-            if (value instanceof Integer) {
-                order = (Integer) value;
+            final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
+                                                                withName("order")), null);
+            if (method != null) {
+                final Object value = method.invoke(annotation);
+                if (value instanceof Integer) {
+                    order = (Integer) value;
+                }
             }
         } catch (Throwable ignore) {
             // A user-defined decorator may not have an 'order' attribute.
@@ -621,7 +640,7 @@ final class AnnotatedHttpServiceFactory {
      */
     private static Builder<ExceptionHandlerFunction> exceptionHandlers(Method targetMethod,
                                                                        Class<?> targetClass) {
-        return annotationValues(targetMethod, targetClass, ExceptionHandler.class,
+        return annotationValues(targetMethod, targetClass, ExceptionHandler.class, ExceptionHandlers.class,
                                 ExceptionHandlerFunction.class);
     }
 
@@ -630,7 +649,7 @@ final class AnnotatedHttpServiceFactory {
      */
     private static Builder<RequestConverterFunction> requestConverters(Method targetMethod,
                                                                        Class<?> targetClass) {
-        return annotationValues(targetMethod, targetClass, RequestConverter.class,
+        return annotationValues(targetMethod, targetClass, RequestConverter.class, RequestConverters.class,
                                 RequestConverterFunction.class);
     }
 
@@ -639,7 +658,7 @@ final class AnnotatedHttpServiceFactory {
      */
     private static Builder<ResponseConverterFunction> responseConverters(Method targetMethod,
                                                                          Class<?> targetClass) {
-        return annotationValues(targetMethod, targetClass, ResponseConverter.class,
+        return annotationValues(targetMethod, targetClass, ResponseConverter.class, ResponseConverters.class,
                                 ResponseConverterFunction.class);
     }
 
@@ -648,20 +667,45 @@ final class AnnotatedHttpServiceFactory {
      * {@code T}.
      */
     private static <T extends Annotation, R> Builder<R> annotationValues(
-            Method targetMethod, Class<?> targetClass, Class<T> annotationClass, Class<R> expectedType) {
+            Method targetMethod, Class<?> targetClass, Class<T> annotationClass, Class<?> repeatableClass,
+            Class<R> expectedType) {
 
         requireNonNull(annotationClass, "annotationClass");
         requireNonNull(targetMethod, "targetMethod");
         requireNonNull(targetClass, "targetClass");
 
         final Builder<R> builder = new Builder<>();
-        for (final T annotation : targetMethod.getAnnotationsByType(annotationClass)) {
-            builder.add(getInstance(annotation, expectedType));
-        }
-        for (final T annotation : targetClass.getAnnotationsByType(annotationClass)) {
-            builder.add(getInstance(annotation, expectedType));
-        }
+        annotationValues0(builder, targetMethod, annotationClass, repeatableClass, expectedType);
+        getClasses(targetClass, new Builder<>()).forEach(
+                target -> annotationValues0(builder, target, annotationClass, repeatableClass, expectedType));
         return builder;
+    }
+
+    private static <T extends Annotation, R> void annotationValues0(
+            Builder<R> builder, AnnotatedElement target, Class<T> annotationClass, Class<?> repeatableClass,
+            Class<R> expectedType) {
+        for (final Annotation annotation : target.getAnnotations()) {
+            final Class<? extends Annotation> type = annotation.annotationType();
+            if (type == annotationClass) {
+                builder.add(getInstance(annotation, expectedType));
+            } else if (type == repeatableClass) {
+                @SuppressWarnings("unchecked")
+                final T[] annotations = (T[]) invokeValueMethod(annotation);
+                Arrays.stream(annotations).forEach(a -> builder.add(getInstance(a, expectedType)));
+            }
+        }
+    }
+
+    private static List<Class<?>> getClasses(Class<?> clazz, Builder<Class<?>> builder) {
+        final Class<?> superClass = clazz.getSuperclass();
+        if (superClass == null || superClass == Object.class) {
+            builder.add(clazz);
+            return builder.build();
+        }
+
+        // Subclass first.
+        builder.add(clazz);
+        return getClasses(superClass, builder);
     }
 
     /**
@@ -674,7 +718,10 @@ final class AnnotatedHttpServiceFactory {
             final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
             return expectedType.cast(instanceCache.computeIfAbsent(clazz, type -> {
                 try {
-                    final Constructor<? extends T> constructor = clazz.getDeclaredConstructor();
+
+                    final Constructor<? extends T> constructor =
+                            Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
+                    assert constructor != null : "No default constructor is found from " + clazz.getName();
                     constructor.setAccessible(true);
                     return constructor.newInstance();
                 } catch (Exception e) {
@@ -697,7 +744,9 @@ final class AnnotatedHttpServiceFactory {
     static <T> T getInstance(Class<T> clazz) {
         return (T) instanceCache.computeIfAbsent(clazz, type -> {
             try {
-                final Constructor<? extends T> constructor = clazz.getDeclaredConstructor();
+                final Constructor<? extends T> constructor =
+                        Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
+                assert constructor != null : "No default constructor is found from " + clazz.getName();
                 constructor.setAccessible(true);
                 return constructor.newInstance();
             } catch (Exception e) {
@@ -712,11 +761,35 @@ final class AnnotatedHttpServiceFactory {
      */
     private static Object invokeValueMethod(Annotation a) {
         try {
-            return a.getClass().getMethod("value").invoke(a);
+            final Method method = Iterables.getFirst(getMethods(a.getClass(), withName("value")), null);
+            assert method != null : "No 'value' method is found from " + a;
+            return method.invoke(a);
         } catch (Exception e) {
             throw new IllegalStateException("An annotation @" + a.getClass().getSimpleName() +
                                             " must have a 'value' method", e);
         }
+    }
+
+    /**
+     * Returns an {@link Annotation} of the specified {@link Class}.
+     */
+    private static <T extends Annotation> Optional<T> findAnnotation(AnnotatedElement element,
+                                                                     Class<T> target) {
+        final List<T> list = findAnnotations(element, target);
+        return list.isEmpty() ? Optional.empty()
+                              : Optional.of(list.get(0));
+    }
+
+    /**
+     * Returns {@link Annotation}s of the specified {@link Class}.
+     */
+    private static <T extends Annotation> List<T> findAnnotations(AnnotatedElement element,
+                                                                  Class<T> target) {
+        return getAllAnnotations(element)
+                .stream()
+                .filter(annotation -> annotation.annotationType() == target)
+                .map(target::cast)
+                .collect(toImmutableList());
     }
 
     private AnnotatedHttpServiceFactory() {}
