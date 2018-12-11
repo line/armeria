@@ -36,7 +36,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
 
         this.clientFactory = clientFactory;
-        responseDecoder = new Http2ResponseDecoder(channel, encoder());
+        responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory);
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);
 

@@ -84,7 +84,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         Http1ObjectEncoder writer) {
         this.cfg = cfg;
         this.scheme = scheme;
-        inboundTrafficController = new InboundTrafficController(channel);
+        inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.writer = writer;
     }
 

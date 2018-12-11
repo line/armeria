@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 
 public final class ChannelUtil {
@@ -41,6 +42,9 @@ public final class ChannelUtil {
             throw new IllegalStateException("failed to locate EpollEventLoop class", e);
         }
     }
+
+    private static final WriteBufferWaterMark DISABLED_WRITE_BUFFER_WATERMARK =
+            new WriteBufferWaterMark(0, Integer.MAX_VALUE);
 
     public static Class<? extends EventLoopGroup> epollEventLoopClass() {
         return EPOLL_EVENT_LOOP_CLASS;
@@ -65,6 +69,14 @@ public final class ChannelUtil {
         }
 
         return future;
+    }
+
+    /**
+     * Disables the write buffer water mark of the specified {@link Channel}, because we do not use this
+     * feature at all and thus we do not want {@code channelWritabilityChanged} events triggered often.
+     */
+    public static void disableWriterBufferWatermark(Channel channel) {
+        channel.config().setWriteBufferWaterMark(DISABLED_WRITE_BUFFER_WATERMARK);
     }
 
     private ChannelUtil() {}

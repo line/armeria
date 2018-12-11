@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http2GoAwayHandler;
+import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -56,8 +57,9 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
 
-    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder) {
-        super(channel);
+    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory) {
+        super(channel,
+              InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
         goAwayHandler = new Http2GoAwayHandler();

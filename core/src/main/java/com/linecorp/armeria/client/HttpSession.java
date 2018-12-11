@@ -29,10 +29,6 @@ import io.netty.channel.ChannelHandler;
 interface HttpSession {
 
     HttpSession INACTIVE = new HttpSession() {
-
-        private final InboundTrafficController inboundTrafficController =
-                new InboundTrafficController(null, 0, 0);
-
         @Nullable
         @Override
         public SessionProtocol protocol() {
@@ -46,7 +42,7 @@ interface HttpSession {
 
         @Override
         public InboundTrafficController inboundTrafficController() {
-            return inboundTrafficController;
+            return InboundTrafficController.disabled();
         }
 
         @Override

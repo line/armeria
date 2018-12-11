@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.math.IntMath;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -29,10 +30,29 @@ public final class InboundTrafficController extends AtomicInteger {
 
     private static final long serialVersionUID = 420503276551000218L;
 
+    private static final InboundTrafficController DISABLED = new InboundTrafficController(null, 0, 0);
     private static int numDeferredReads;
 
     public static int numDeferredReads() {
         return numDeferredReads;
+    }
+
+    public static InboundTrafficController ofHttp1(Channel channel) {
+        return new InboundTrafficController(channel, 128 * 1024, 64 * 1024);
+    }
+
+    public static InboundTrafficController ofHttp2(Channel channel, int connectionWindowSize) {
+        // Compensate for protocol overhead traffic incurred by frame headers, etc.
+        // This is a very rough estimate, but it should not hurt.
+        connectionWindowSize = IntMath.saturatedAdd(connectionWindowSize, 1024);
+
+        final int highWatermark = Math.max(connectionWindowSize, 128 * 1024);
+        final int lowWatermark = highWatermark >>> 1;
+        return new InboundTrafficController(channel, highWatermark, lowWatermark);
+    }
+
+    public static InboundTrafficController disabled() {
+        return DISABLED;
     }
 
     @Nullable
@@ -41,11 +61,7 @@ public final class InboundTrafficController extends AtomicInteger {
     private final int lowWatermark;
     private volatile boolean suspended;
 
-    public InboundTrafficController(@Nullable Channel channel) {
-        this(channel, 128 * 1024, 64 * 1024);
-    }
-
-    public InboundTrafficController(@Nullable Channel channel, int highWatermark, int lowWatermark) {
+    private InboundTrafficController(@Nullable Channel channel, int highWatermark, int lowWatermark) {
         cfg = channel != null ? channel.config() : null;
         this.highWatermark = highWatermark;
         this.lowWatermark = lowWatermark;

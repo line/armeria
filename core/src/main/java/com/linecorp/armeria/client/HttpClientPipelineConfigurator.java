@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ClientCodec;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
@@ -177,6 +178,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         // Configure the pipeline.
         final Channel ch = ctx.channel();
+        ChannelUtil.disableWriterBufferWatermark(ch);
 
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
