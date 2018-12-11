@@ -52,9 +52,9 @@ abstract class HttpResponseDecoder {
     private final InboundTrafficController inboundTrafficController;
     private boolean disconnectWhenFinished;
 
-    HttpResponseDecoder(Channel channel) {
+    HttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
         this.channel = channel;
-        inboundTrafficController = new InboundTrafficController(channel);
+        this.inboundTrafficController = inboundTrafficController;
     }
 
     final Channel channel() {

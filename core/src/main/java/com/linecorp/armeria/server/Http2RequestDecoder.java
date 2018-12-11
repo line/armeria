@@ -66,7 +66,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;
-        inboundTrafficController = new InboundTrafficController(channel);
+        inboundTrafficController =
+                InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
         goAwayHandler = new Http2GoAwayHandler();
     }
 

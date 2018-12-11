@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -61,7 +62,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private State state = State.NEED_HEADERS;
 
     Http1ResponseDecoder(Channel channel) {
-        super(channel);
+        super(channel, InboundTrafficController.ofHttp1(channel));
     }
 
     @Override

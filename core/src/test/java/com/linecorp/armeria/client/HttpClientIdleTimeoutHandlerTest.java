@@ -120,7 +120,7 @@ public class HttpClientIdleTimeoutHandlerTest {
 
         @Override
         public InboundTrafficController inboundTrafficController() {
-            return HttpSession.INACTIVE.inboundTrafficController();
+            return InboundTrafficController.disabled();
         }
 
         @Override
