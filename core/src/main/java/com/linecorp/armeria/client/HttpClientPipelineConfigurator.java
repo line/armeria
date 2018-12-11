@@ -59,6 +59,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -177,6 +178,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         // Configure the pipeline.
         final Channel ch = ctx.channel();
+        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(0, Integer.MAX_VALUE));
 
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());

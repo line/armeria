@@ -37,11 +37,11 @@ public final class InboundTrafficController extends AtomicInteger {
         return numDeferredReads;
     }
 
-    public static InboundTrafficController ofHttp1(@Nullable Channel channel) {
+    public static InboundTrafficController ofHttp1(Channel channel) {
         return new InboundTrafficController(channel, 128 * 1024, 64 * 1024);
     }
 
-    public static InboundTrafficController ofHttp2(@Nullable Channel channel, int connectionWindowSize) {
+    public static InboundTrafficController ofHttp2(Channel channel, int connectionWindowSize) {
         // Compensate for protocol overhead traffic incurred by frame headers, etc.
         // This is a very rough estimate, but it should not hurt.
         connectionWindowSize = IntMath.saturatedAdd(connectionWindowSize, 1024);
