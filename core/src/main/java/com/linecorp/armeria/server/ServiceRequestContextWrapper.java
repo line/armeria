@@ -187,6 +187,36 @@ public class ServiceRequestContextWrapper
         return delegate().removeAdditionalResponseHeader(name);
     }
 
+    @Override
+    public HttpHeaders additionalResponseTrailers() {
+        return delegate().additionalResponseTrailers();
+    }
+
+    @Override
+    public void setAdditionalResponseTrailer(AsciiString name, String value) {
+        delegate().setAdditionalResponseTrailer(name, value);
+    }
+
+    @Override
+    public void setAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        delegate().setAdditionalResponseTrailers(headers);
+    }
+
+    @Override
+    public void addAdditionalResponseTrailer(AsciiString name, String value) {
+        delegate().addAdditionalResponseTrailer(name, value);
+    }
+
+    @Override
+    public void addAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        delegate().addAdditionalResponseTrailers(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalResponseTrailer(AsciiString name) {
+        return delegate().removeAdditionalResponseTrailer(name);
+    }
+
     @Nullable
     @Override
     public ProxiedAddresses proxiedAddresses() {

@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,6 +58,14 @@ import io.netty.util.Attribute;
  */
 public class DefaultServiceRequestContext extends NonWrappingRequestContext implements ServiceRequestContext {
 
+    private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
+            additionalResponseHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseHeaders");
+
+    private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
+            additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
+
     private final Channel ch;
     private final ServiceConfig cfg;
     private final PathMappingContext pathMappingContext;
@@ -81,7 +90,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Nullable
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
     @Nullable
-    private volatile HttpHeaders additionalResponseHeaders;
+    @SuppressWarnings("unused")
+    private volatile HttpHeaders additionalResponseHeaders; // set only via additionalResponseHeadersUpdater
+    @Nullable
+    @SuppressWarnings("unused")
+    private volatile HttpHeaders additionalResponseTrailers; // set only via additionalResponseTrailersUpdater
 
     @Nullable
     private String strVal;
@@ -167,6 +180,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             ctx.setAdditionalResponseHeaders(additionalHeaders);
         }
 
+        final HttpHeaders additionalTrailers = additionalResponseTrailers();
+        if (!additionalTrailers.isEmpty()) {
+            ctx.setAdditionalResponseTrailers(additionalTrailers);
+        }
+
         for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();/* noop */) {
             ctx.addAttr(i.next());
         }
@@ -177,10 +195,31 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
         if (additionalResponseHeaders == null) {
             final HttpHeaders newHeaders = new DefaultHttpHeaders();
-            this.additionalResponseHeaders = newHeaders;
-            return newHeaders;
+            if (additionalResponseHeadersUpdater.compareAndSet(this, null, newHeaders)) {
+                return newHeaders;
+            } else {
+                final HttpHeaders additionalResponseHeadersSetByOtherThread = this.additionalResponseHeaders;
+                assert additionalResponseHeadersSetByOtherThread != null;
+                return additionalResponseHeadersSetByOtherThread;
+            }
         } else {
             return additionalResponseHeaders;
+        }
+    }
+
+    private HttpHeaders createAdditionalTrailersIfAbsent() {
+        final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
+        if (additionalResponseTrailers == null) {
+            final HttpHeaders newTrailers = new DefaultHttpHeaders();
+            if (additionalResponseTrailersUpdater.compareAndSet(this, null, newTrailers)) {
+                return newTrailers;
+            } else {
+                final HttpHeaders additionalResponseTrailersSetByOtherThread = this.additionalResponseTrailers;
+                assert additionalResponseTrailersSetByOtherThread != null;
+                return additionalResponseTrailersSetByOtherThread;
+            }
+        } else {
+            return additionalResponseTrailers;
         }
     }
 
@@ -357,11 +396,48 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public boolean removeAdditionalResponseHeader(AsciiString name) {
         requireNonNull(name, "name");
-        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
-        if (additionalResponseHeaders == null) {
-            return false;
+        return createAdditionalHeadersIfAbsent().remove(name);
+    }
+
+    @Override
+    public HttpHeaders additionalResponseTrailers() {
+        final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
+        if (additionalResponseTrailers == null) {
+            return HttpHeaders.EMPTY_HEADERS;
         }
-        return additionalResponseHeaders.remove(name);
+        return additionalResponseTrailers.asImmutable();
+    }
+
+    @Override
+    public void setAdditionalResponseTrailer(AsciiString name, String value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        createAdditionalTrailersIfAbsent().set(name, value);
+    }
+
+    @Override
+    public void setAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        requireNonNull(headers, "headers");
+        createAdditionalTrailersIfAbsent().set(headers);
+    }
+
+    @Override
+    public void addAdditionalResponseTrailer(AsciiString name, String value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        createAdditionalTrailersIfAbsent().add(name, value);
+    }
+
+    @Override
+    public void addAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+        requireNonNull(headers, "headers");
+        createAdditionalTrailersIfAbsent().add(headers);
+    }
+
+    @Override
+    public boolean removeAdditionalResponseTrailer(AsciiString name) {
+        requireNonNull(name, "name");
+        return createAdditionalTrailersIfAbsent().remove(name);
     }
 
     @Nullable

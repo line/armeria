@@ -69,6 +69,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.DefaultHttpData;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -374,6 +375,29 @@ public class HttpServerTest {
             });
 
             sb.service("/head-headers-only", (ctx, req) -> HttpResponse.of(HttpHeaders.of(HttpStatus.OK)));
+
+            sb.service("/additional-trailers-other-trailers", (ctx, req) -> {
+                ctx.addAdditionalResponseTrailer(AsciiString.of("additional-trailer"), "value2");
+                return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                                       HttpData.ofAscii("foobar"),
+                                       HttpHeaders.of(AsciiString.of("original-trailer"), "value1"));
+            });
+
+            sb.service("/additional-trailers-no-other-trailers", (ctx, req) -> {
+                ctx.addAdditionalResponseTrailer(AsciiString.of("additional-trailer"), "value2");
+                String payload = "foobar";
+                return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                                       new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
+                                                           0, payload.length(), true));
+            });
+
+            sb.service("/additional-trailers-no-eos", (ctx, req) -> {
+                ctx.addAdditionalResponseTrailer(AsciiString.of("additional-trailer"), "value2");
+                String payload = "foobar";
+                return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                                       new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
+                                                           0, payload.length(), false));
+            });
 
             sb.serviceUnder("/not-cached-paths", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
@@ -835,6 +859,37 @@ public class HttpServerTest {
                                        .isEqualTo(HttpStatus.OK);
         assertThat(PathAndQuery.cachedPaths())
                                        .contains("/cached-paths/hoge");
+    }
+
+    @Test(timeout = 10000)
+    public void testAdditionalTrailersOtherTrailers() {
+        if (!protocol.isMultiplex()) {
+            return;
+        }
+        HttpHeaders trailers = client().get("/additional-trailers-other-trailers")
+                                       .aggregate().join().trailingHeaders();
+        assertThat(trailers.get(AsciiString.of("original-trailer"))).isEqualTo("value1");
+        assertThat(trailers.get(AsciiString.of("additional-trailer"))).isEqualTo("value2");
+    }
+
+    @Test(timeout = 10000)
+    public void testAdditionalTrailersNoEndOfStream() {
+        if (!protocol.isMultiplex()) {
+            return;
+        }
+        HttpHeaders trailers = client().get("/additional-trailers-no-eos")
+                                       .aggregate().join().trailingHeaders();
+        assertThat(trailers.get(AsciiString.of("additional-trailer"))).isEqualTo("value2");
+    }
+
+    @Test(timeout = 10000)
+    public void testAdditionalTrailersNoOtherTrailers() {
+        if (!protocol.isMultiplex()) {
+            return;
+        }
+        HttpHeaders trailers = client().get("/additional-trailers-no-other-trailers")
+                                       .aggregate().join().trailingHeaders();
+        assertThat(trailers.get(AsciiString.of("additional-trailer"))).isEqualTo("value2");
     }
 
     private HttpClient client() {

@@ -247,6 +247,44 @@ public interface ServiceRequestContext extends RequestContext {
     boolean removeAdditionalResponseHeader(AsciiString name);
 
     /**
+     * Returns an immutable {@link HttpHeaders} which is returned along with any other trailers when a
+     * {@link Service} completes an {@link HttpResponse}.
+     */
+    HttpHeaders additionalResponseTrailers();
+
+    /**
+     * Sets a trailer with the specified {@code name} and {@code value}. This will remove all previous values
+     * associated with the specified {@code name}.
+     * The trailer will be included when a {@link Service} completes an {@link HttpResponse}.
+     */
+    void setAdditionalResponseTrailer(AsciiString name, String value);
+
+    /**
+     * Clears the current trailer and sets the specified {@link Headers} which is included when a
+     * {@link Service} completes an {@link HttpResponse}.
+     */
+    void setAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers);
+
+    /**
+     * Adds a trailer with the specified {@code name} and {@code value}. The trailer will be included when
+     * a {@link Service} completes an {@link HttpResponse}.
+     */
+    void addAdditionalResponseTrailer(AsciiString name, String value);
+
+    /**
+     * Adds the specified {@link Headers} which is included when a {@link Service} completes an
+     * {@link HttpResponse}.
+     */
+    void addAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers);
+
+    /**
+     * Removes all trailers with the specified {@code name}.
+     *
+     * @return {@code true} if at least one entry has been removed
+     */
+    boolean removeAdditionalResponseTrailer(AsciiString name);
+
+    /**
      * Returns the proxied addresses if the current {@link Request} is received through a proxy.
      */
     @Nullable
