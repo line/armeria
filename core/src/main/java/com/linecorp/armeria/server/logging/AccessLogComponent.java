@@ -271,7 +271,7 @@ interface AccessLogComponent {
                         return remote == null || remote.isUnresolved() ? null
                                                                        : remote.getAddress().getHostAddress();
                     } else {
-                        // %a means the client address who initiates a request.
+                        // %a means the client address who initiated a request.
                         final ServiceRequestContext ctx = (ServiceRequestContext) log.context();
                         return ctx.clientAddress().getHostAddress();
                     }

@@ -100,7 +100,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
-     * @param clientAddress the address of a client who initiates the request
+     * @param clientAddress the address of a client who initiated the request
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
