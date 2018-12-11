@@ -170,12 +170,12 @@ public class GrpcClientTest {
 
         blockingStub = new ClientBuilder("gproto+" + server.httpUri("/"))
                 .defaultMaxResponseLength(MAX_MESSAGE_SIZE)
-                .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
-                .decorator(HttpRequest.class, HttpResponse.class, requestLogRecorder)
+                .decorator(new LoggingClientBuilder().newDecorator())
+                .decorator(requestLogRecorder)
                 .build(TestServiceBlockingStub.class);
         asyncStub = new ClientBuilder("gproto+" + server.httpUri("/"))
-                .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
-                .decorator(HttpRequest.class, HttpResponse.class, requestLogRecorder)
+                .decorator(new LoggingClientBuilder().newDecorator())
+                .decorator(requestLogRecorder)
                 .build(TestServiceStub.class);
     }
 
@@ -235,7 +235,7 @@ public class GrpcClientTest {
 
         final TestServiceStub stub = new ClientBuilder("gproto+" + server.httpUri("/"))
                 .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
-                .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
+                .decorator(new LoggingClientBuilder().newDecorator())
                 .build(TestServiceStub.class);
 
         final BlockingQueue<Object> resultQueue = new LinkedTransferQueue<>();

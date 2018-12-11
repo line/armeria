@@ -47,8 +47,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -298,9 +296,8 @@ public class PrometheusMetricsIntegrationTest {
     private static void makeRequest(String path, String serviceName, String name) throws TException {
         final Iface client = new ClientBuilder(server.uri(BINARY, path))
                 .factory(clientFactory)
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           MetricCollectingClient.newDecorator(
-                                   (registry, log) -> meterIdPrefix(registry, log, "client", serviceName)))
+                .rpcDecorator(MetricCollectingClient.newDecorator(
+                        (registry, log) -> meterIdPrefix(registry, log, "client", serviceName)))
                 .build(Iface.class);
         client.hello(name);
     }

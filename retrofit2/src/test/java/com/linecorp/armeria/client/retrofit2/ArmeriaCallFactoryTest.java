@@ -547,7 +547,7 @@ public class ArmeriaCallFactoryTest {
                 .baseUrl("h1c://127.0.0.1:" + server.httpPort())
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .withClientOptions((url, optionsBuilder) -> {
-                    optionsBuilder.decorator(HttpRequest.class, HttpResponse.class, (delegate, ctx, req) -> {
+                    optionsBuilder.decorator((delegate, ctx, req) -> {
                         counter.incrementAndGet();
                         return delegate.execute(ctx, req);
                     });

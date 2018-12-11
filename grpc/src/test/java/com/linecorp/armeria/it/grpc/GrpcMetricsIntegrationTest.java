@@ -41,8 +41,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -204,9 +202,7 @@ public class GrpcMetricsIntegrationTest {
         final String uri = server.uri(GrpcSerializationFormats.PROTO, "/");
         final TestServiceBlockingStub client = new ClientBuilder(uri)
                 .factory(clientFactory)
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           MetricCollectingClient.newDecorator(
-                                   MeterIdPrefixFunction.ofDefault("client")))
+                .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("client")))
                 .build(TestServiceBlockingStub.class);
 
         final SimpleRequest request =

@@ -77,11 +77,10 @@ If you want more freedom on how you manipulate the request headers, use a decora
     ClientBuilder cb = new ClientBuilder("tbinary+http://example.com/hello");
 
     // Add a decorator that inserts the custom header.
-    cb.decorator(HttpRequest.class, HttpResponse.class,
-                 (delegate, ctx, req) -> { // See DecoratingClientFunction.
-                     req.headers().set(AUTHORIZATION, credential);
-                     return delegate.execute(ctx, req);
-                 });
+    cb.decorator((delegate, ctx, req) -> { // See DecoratingClientFunction.
+        req.headers().set(AUTHORIZATION, credential);
+        return delegate.execute(ctx, req);
+    });
 
     HelloService.Iface client = cb.build(HelloService.Iface.class);
     client.hello("authorized personnel");

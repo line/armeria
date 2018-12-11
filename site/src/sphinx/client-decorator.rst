@@ -30,11 +30,10 @@ decorating client. It enables you to write a decorating client with a single lam
 
     ClientBuilder cb = new ClientBuilder(...);
     ...
-    cb.decorator(HttpRequest.class, HttpResponse.class,
-                 (delegate, ctx, req) -> {
-                     auditRequest(req);
-                     return delegate.execute(ctx, req);
-                 });
+    cb.decorator((delegate, ctx, req) -> {
+        auditRequest(req);
+        return delegate.execute(ctx, req);
+    });
 
     MyService.Iface client = cb.build(MyService.Iface.class);
 
@@ -61,8 +60,7 @@ If your decorator is expected to be reusable, it is recommended to define a new 
     ClientBuilder cb = new ClientBuilder(...);
     ...
     // Using a lambda expression:
-    cb.decorator(HttpRequest.class, HttpResponse.class,
-                 delegate -> new AuditClient(delegate));
+    cb.decorator(delegate -> new AuditClient(delegate));
 
 See also
 --------

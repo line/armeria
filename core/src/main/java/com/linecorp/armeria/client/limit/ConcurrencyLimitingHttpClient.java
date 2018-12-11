@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.HttpResponse;
  * <p>For example:
  * <pre>{@code
  * ClientBuilder builder = new ClientBuilder(...);
- * builder.decorator(HttpRequest.class, HttpResponse.class, ConcurrencyLimitingHttpClient.newDecorator(16));
+ * builder.decorator(ConcurrencyLimitingHttpClient.newDecorator(16));
  * client = builder.build(...);
  * }</pre>
  *

@@ -101,7 +101,7 @@ public class ThriftDynamicTimeoutTest {
     @Test
     public void testDynamicTimeout() throws Exception {
         final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/sleep"))
-                .decorator(RpcRequest.class, RpcResponse.class, clientDecorator)
+                .rpcDecorator(clientDecorator)
                 .defaultResponseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
 
         final long delay = 1500;
@@ -113,7 +113,7 @@ public class ThriftDynamicTimeoutTest {
     @Test(timeout = 10000)
     public void testDisabledTimeout() throws Exception {
         final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/fakeSleep"))
-                .decorator(RpcRequest.class, RpcResponse.class, clientDecorator)
+                .rpcDecorator(clientDecorator)
                 .defaultResponseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
 
         // This call should take very short amount of time because the fakeSleep service does not sleep.

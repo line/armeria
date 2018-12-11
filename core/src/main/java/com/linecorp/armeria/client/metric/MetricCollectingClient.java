@@ -35,9 +35,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  * <p>Example:
  * <pre>{@code
  * MyService.Iface client = new ClientBuilder(uri)
- *         .decorator(HttpRequest.class, HttpResponse.class,
- *                    MetricCollectingClient.newDecorator(
- *                            MeterIdPrefixFunction.ofDefault("myClient)))
+ *         .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient)))
  *         .build(MyService.Iface.class);
  * }
  * </pre>

@@ -45,7 +45,6 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClientBuilder;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -127,17 +126,16 @@ public class RetryingRpcClientTest {
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts) {
         return new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           new RetryingRpcClientBuilder(strategy).maxTotalAttempts(maxAttempts).newDecorator())
+                .rpcDecorator(new RetryingRpcClientBuilder(strategy)
+                                      .maxTotalAttempts(maxAttempts)
+                                      .newDecorator())
                 .build(HelloService.Iface.class);
     }
 
     @Test
     public void execute_void() throws Exception {
         final DevNullService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-devnull"))
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           RetryingRpcClient.newDecorator(retryOnException, 10)
-                )
+                .rpcDecorator(RetryingRpcClient.newDecorator(retryOnException, 10))
                 .build(DevNullService.Iface.class);
 
         doThrow(new IllegalArgumentException())
@@ -162,8 +160,7 @@ public class RetryingRpcClientTest {
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .defaultResponseTimeoutMillis(10000)
                 .factory(factory)
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           new RetryingRpcClientBuilder(strategy).newDecorator())
+                .rpcDecorator(new RetryingRpcClientBuilder(strategy).newDecorator())
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
@@ -177,14 +174,12 @@ public class RetryingRpcClientTest {
     @Test
     public void doNotRetryWhenResponseIsCancelled() throws Exception {
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           new RetryingRpcClientBuilder(retryAlways).newDecorator())
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           (delegate, ctx, req) -> {
-                               final RpcResponse res = delegate.execute(ctx, req);
-                               res.cancel(true);
-                               return res;
-                           })
+                .rpcDecorator(new RetryingRpcClientBuilder(retryAlways).newDecorator())
+                .rpcDecorator((delegate, ctx, req) -> {
+                    final RpcResponse res = delegate.execute(ctx, req);
+                    res.cancel(true);
+                    return res;
+                })
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 

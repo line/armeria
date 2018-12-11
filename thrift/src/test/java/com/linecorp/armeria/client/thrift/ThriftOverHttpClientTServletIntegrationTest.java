@@ -68,8 +68,6 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
@@ -300,12 +298,11 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             String uri, AtomicReference<SessionProtocol> sessionProtocol) {
 
         return new ClientBuilder(uri)
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           (delegate, ctx, req) -> {
-                               ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
-                                                     RequestLogAvailability.REQUEST_START);
-                               return delegate.execute(ctx, req);
-                           })
+                .rpcDecorator((delegate, ctx, req) -> {
+                    ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
+                                          RequestLogAvailability.REQUEST_START);
+                    return delegate.execute(ctx, req);
+                })
                 .build(HelloService.Iface.class);
     }
 
