@@ -94,6 +94,10 @@ abstract class HttpResponseDecoder {
         return responses.remove(id);
     }
 
+    final int unfinishedResponses() {
+        return responses.size();
+    }
+
     final boolean hasUnfinishedResponses() {
         return !responses.isEmpty();
     }

@@ -114,7 +114,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         if (pooledChannel != null) {
             doExecute(pooledChannel, ctx, req, res);
         } else {
-            pool.acquire(protocol, key).handle((newPooledChannel, cause) -> {
+            pool.acquireLater(protocol, key).handle((newPooledChannel, cause) -> {
                 if (cause == null) {
                     doExecute(newPooledChannel, ctx, req, res);
                 } else {

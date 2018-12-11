@@ -50,8 +50,8 @@ interface HttpSession {
         }
 
         @Override
-        public boolean hasUnfinishedResponses() {
-            return false;
+        public int unfinishedResponses() {
+            return 0;
         }
 
         @Override
@@ -84,7 +84,15 @@ interface HttpSession {
 
     InboundTrafficController inboundTrafficController();
 
-    boolean hasUnfinishedResponses();
+    int unfinishedResponses();
+
+    default boolean hasUnfinishedResponses() {
+        return unfinishedResponses() != 0;
+    }
+
+    default int maxUnfinishedResponses() {
+        return Integer.MAX_VALUE;
+    }
 
     boolean invoke(ClientRequestContext ctx, HttpRequest req, DecodedHttpResponse res);
 

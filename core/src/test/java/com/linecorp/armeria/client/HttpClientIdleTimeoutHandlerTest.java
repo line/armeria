@@ -124,8 +124,8 @@ public class HttpClientIdleTimeoutHandlerTest {
         }
 
         @Override
-        public boolean hasUnfinishedResponses() {
-            return unfinishedResponses != 0;
+        public int unfinishedResponses() {
+            return unfinishedResponses;
         }
 
         @Override
