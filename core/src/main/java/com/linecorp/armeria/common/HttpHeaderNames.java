@@ -224,6 +224,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString EXPIRES = AsciiString.cached("expires");
     /**
+     * {@code "forwarded"}.
+     */
+    public static final AsciiString FORWARDED = AsciiString.cached("forwarded");
+    /**
      * {@code "from"}.
      */
     public static final AsciiString FROM = AsciiString.cached("from");
@@ -409,6 +413,10 @@ public final class HttpHeaderNames {
      * {@code "www-authenticate"}.
      */
     public static final AsciiString WWW_AUTHENTICATE = AsciiString.cached("www-authenticate");
+    /**
+     * {@code "x-forwarded-for"}.
+     */
+    public static final AsciiString X_FORWARDED_FOR = AsciiString.cached("x-forwarded-for");
     /**
      * {@code "x-frame-options"}.
      */

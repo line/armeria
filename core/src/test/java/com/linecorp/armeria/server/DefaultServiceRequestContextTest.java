@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import io.netty.channel.Channel;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
+import io.netty.util.NetUtil;
 
 public class DefaultServiceRequestContextTest {
 
@@ -49,7 +50,7 @@ public class DefaultServiceRequestContextTest {
                 virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),
                 SessionProtocol.H2,
                 mappingCtx, PathMappingResult.of("/foo"),
-                mock(Request.class), null, null);
+                mock(Request.class), null, null, NetUtil.LOCALHOST4);
 
         setAdditionalHeaders(originalCtx);
         setAdditionalTrailers(originalCtx);

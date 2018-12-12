@@ -22,9 +22,11 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.server.HttpHeaderUtil.determineClientAddress;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -373,11 +375,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final PathMappingResult mappingResult = mapped.mappingResult();
         final ServiceConfig serviceCfg = mapped.value();
         final Service<HttpRequest, HttpResponse> service = serviceCfg.service();
-
         final Channel channel = ctx.channel();
+        final InetAddress remoteAddress = ((InetSocketAddress) channel.remoteAddress()).getAddress();
+
+        final InetAddress clientAddress;
+        if (config.clientAddressTrustedProxyFilter().test(remoteAddress)) {
+            clientAddress = determineClientAddress(headers, config.clientAddressSources(), proxiedAddresses,
+                                                   remoteAddress, config.clientAddressFilter());
+        } else {
+            clientAddress = remoteAddress;
+        }
+
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceCfg.server().meterRegistry(),
-                protocol, mappingCtx, mappingResult, req, getSSLSession(channel), proxiedAddresses);
+                protocol, mappingCtx, mappingResult, req, getSSLSession(channel),
+                proxiedAddresses, clientAddress);
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();

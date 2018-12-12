@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
@@ -76,7 +77,11 @@ interface AccessLogComponent {
     }
 
     static AccessLogComponent ofPredefinedCommon(AccessLogType type) {
-        return new CommonComponent(type, type == AccessLogType.REQUEST_LINE, null);
+        return ofPredefinedCommon(type, null);
+    }
+
+    static AccessLogComponent ofPredefinedCommon(AccessLogType type, @Nullable String variable) {
+        return new CommonComponent(type, type == AccessLogType.REQUEST_LINE, null, variable);
     }
 
     static AccessLogComponent ofQuotedRequestHeader(AsciiString headerName) {
@@ -222,6 +227,8 @@ interface AccessLogComponent {
 
         static boolean isSupported(AccessLogType type) {
             switch (type) {
+                case LOCAL_IP_ADDRESS:
+                case REMOTE_IP_ADDRESS:
                 case REMOTE_HOST:
                 case RFC931:
                 case AUTHENTICATED_USER:
@@ -235,20 +242,39 @@ interface AccessLogComponent {
         }
 
         private final AccessLogType type;
+        @Nullable
+        private final String variable;
 
         CommonComponent(AccessLogType type, boolean addQuote,
-                        @Nullable Function<HttpHeaders, Boolean> condition) {
+                        @Nullable Function<HttpHeaders, Boolean> condition,
+                        @Nullable String variable) {
             super(condition, addQuote);
             checkArgument(isSupported(requireNonNull(type, "type")),
                           "Type '" + type + "' is not acceptable by " +
                           CommonComponent.class.getName());
             this.type = type;
+            this.variable = variable;
         }
 
         @Nullable
         @Override
         public Object getMessage0(RequestLog log) {
             switch (type) {
+                case LOCAL_IP_ADDRESS:
+                    final InetSocketAddress local = log.context().localAddress();
+                    return local == null || local.isUnresolved() ? null : local.getAddress().getHostAddress();
+
+                case REMOTE_IP_ADDRESS:
+                    if ("c".equals(variable)) {
+                        // %{c}a means the remote address of the underlying channel.
+                        final InetSocketAddress remote = log.context().remoteAddress();
+                        return remote == null || remote.isUnresolved() ? null
+                                                                       : remote.getAddress().getHostAddress();
+                    } else {
+                        // %a means the client address who initiated a request.
+                        final ServiceRequestContext ctx = (ServiceRequestContext) log.context();
+                        return ctx.clientAddress().getHostAddress();
+                    }
                 case REMOTE_HOST:
                     final SocketAddress ra = log.context().remoteAddress();
                     return ra instanceof InetSocketAddress ? ((InetSocketAddress) ra).getHostString() : null;

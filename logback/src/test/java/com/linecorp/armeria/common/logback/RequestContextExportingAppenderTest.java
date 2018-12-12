@@ -276,6 +276,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("remote.host", "client.com")
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "5678")
+                           .containsEntry("client.ip", "9.10.11.12")
                            .containsEntry("req.direction", "INBOUND")
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
@@ -285,7 +286,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .hasSize(15);
+                           .hasSize(16);
         }
     }
 
@@ -312,6 +313,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("remote.host", "client.com")
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "5678")
+                           .containsEntry("client.ip", "9.10.11.12")
                            .containsEntry("req.direction", "INBOUND")
                            .containsEntry("req.authority", "?")
                            .containsEntry("req.method", "GET")
@@ -325,7 +327,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("elapsed_nanos")
-                           .hasSize(19);
+                           .hasSize(20);
         }
     }
 
@@ -364,6 +366,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("remote.host", "client.com")
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "5678")
+                           .containsEntry("client.ip", "9.10.11.12")
                            .containsEntry("req.direction", "INBOUND")
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
@@ -383,7 +386,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsEntry("attrs.my_attr", "some-attr")
                            .containsKey("elapsed_nanos")
-                           .hasSize(25);
+                           .hasSize(26);
         }
     }
 
@@ -424,7 +427,8 @@ public class RequestContextExportingAppenderTest {
 
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
                 serviceConfig, ch, NoopMeterRegistry.get(), SessionProtocol.H2, mappingCtx,
-                PathMappingResult.of(path, query), req, newSslSession(), null);
+                PathMappingResult.of(path, query), req, newSslSession(), null,
+                InetAddress.getByName("9.10.11.12"));
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;

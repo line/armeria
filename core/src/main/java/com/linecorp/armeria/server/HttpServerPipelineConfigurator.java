@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -78,6 +79,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.NetUtil;
 
 /**
  * Configures Netty {@link ChannelPipeline} to serve HTTP/1 and 2 requests.
@@ -335,9 +337,13 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                              proxiedCandidates);
             }
             final ChannelPipeline p = ctx.pipeline();
-            final ProxiedAddresses proxiedAddresses = ProxiedAddresses.of(
-                    InetSocketAddress.createUnresolved(msg.sourceAddress(), msg.sourcePort()),
-                    InetSocketAddress.createUnresolved(msg.destinationAddress(), msg.destinationPort()));
+            final InetAddress src = InetAddress.getByAddress(
+                    NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress()));
+            final InetAddress dst = InetAddress.getByAddress(
+                    NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress()));
+            final ProxiedAddresses proxiedAddresses =
+                    ProxiedAddresses.of(new InetSocketAddress(src, msg.sourcePort()),
+                                        new InetSocketAddress(dst, msg.destinationPort()));
             configurePipeline(p, proxiedCandidates, proxiedAddresses);
             p.remove(this);
         }

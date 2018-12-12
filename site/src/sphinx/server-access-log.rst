@@ -120,6 +120,14 @@ Tokens for the log format are listed in the following table.
 +---------------------------+-------------------+----------------------------------------------------+
 | Tokens                    | Condition support | Description                                        |
 +===========================+===================+====================================================+
+| ``%A``                    | No                | the local IP address                               |
++---------------------------+-------------------+----------------------------------------------------+
+| ``%a``                    | No                | the IP address of the client who initiated a       |
+|                           |                   | request. Use ``%{c}a`` format string to get the    |
+|                           |                   | remote IP address where the channel is connected   |
+|                           |                   | to, which may yield a different value when there   |
+|                           |                   | is an intermediary proxy server.                   |
++---------------------------+-------------------+----------------------------------------------------+
 | ``%h``                    | No                | the remote hostname or IP address if DNS           |
 |                           |                   | hostname lookup is not available                   |
 +---------------------------+-------------------+----------------------------------------------------+

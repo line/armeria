@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -75,6 +76,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
+    private final InetAddress clientAddress;
 
     private final DefaultRequestLog log;
     private final Logger logger;
@@ -102,16 +104,22 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     /**
      * Creates a new instance.
      *
+     * @param cfg the {@link ServiceConfig}
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param pathMappingContext the parameters which is used when finding a matched {@link PathMapping}
+     * @param pathMappingResult the result of finding a matched {@link PathMapping}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
+     * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
+     * @param clientAddress the address of a client who initiated the request
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Request request,
-            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses) {
+            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
+            InetAddress clientAddress) {
 
         super(meterRegistry, sessionProtocol,
               requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
@@ -124,6 +132,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.pathMappingResult = pathMappingResult;
         this.sslSession = sslSession;
         this.proxiedAddresses = proxiedAddresses;
+        this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
         log = new DefaultRequestLog(this);
         log.startRequest(ch, sessionProtocol);
@@ -165,6 +174,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
+    public InetAddress clientAddress() {
+        return clientAddress;
+    }
+
+    @Override
     public ServiceRequestContext newDerivedContext() {
         return newDerivedContext(request());
     }
@@ -173,7 +187,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public ServiceRequestContext newDerivedContext(Request request) {
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
-                pathMappingResult, request, sslSession(), proxiedAddresses());
+                pathMappingResult, request, sslSession(), proxiedAddresses(), clientAddress);
 
         final HttpHeaders additionalHeaders = additionalResponseHeaders();
         if (!additionalHeaders.isEmpty()) {
@@ -490,6 +504,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         final boolean hasChannel = ch != null;
         if (hasChannel) {
             buf.append(ch);
+
+            final InetAddress remote = ((InetSocketAddress) remoteAddress()).getAddress();
+            final InetAddress client = clientAddress();
+            if (remote != null && !remote.equals(client)) {
+                buf.append("[C:").append(client.getHostAddress()).append(']');
+            }
         }
 
         buf.append('[')

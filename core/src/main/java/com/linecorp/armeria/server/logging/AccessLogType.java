@@ -48,61 +48,60 @@ import io.netty.util.AttributeMap;
  */
 enum AccessLogType {
     /**
+     * {@code "%A"} - the local IP address.
+     */
+    LOCAL_IP_ADDRESS('A', false, NO),
+    /**
+     * {@code "%a"} - the IP address of the client who initiated a request. Use {@code "%{c}a"} format string
+     * to get the remote IP address where the channel is connected to, which may yield a different value
+     * when there is an intermediary proxy server.
+     */
+    REMOTE_IP_ADDRESS('a', false, OPTIONAL),
+    /**
      * {@code "%h"} - the remote hostname or IP address if DNS hostname lookup is not available.
      */
     REMOTE_HOST('h', false, NO),
-
     /**
      * {@code "%l"} - the remote logname of the user.
      */
     RFC931('l', false, NO),
-
     /**
      * {@code "%u"} - the name of the authenticated remote user.
      */
     AUTHENTICATED_USER('u', false, NO),
-
     /**
      * {@code "%t"} - the date, time and time zone that the request was received.
      */
     REQUEST_TIMESTAMP('t', false, OPTIONAL),
-
     /**
      * {@code "%r"} - the request line from the client.
      */
     REQUEST_LINE('r', true, NO),
-
     /**
      * {@code "%s"} - the HTTP status code returned to the client.
      */
     RESPONSE_STATUS_CODE('s', false, NO),
-
     /**
      * {@code "%b"} - the size of the object returned to the client, measured in bytes.
      */
     RESPONSE_LENGTH('b', true, NO),
-
     /**
      * {@code "%{HEADER_NAME}i"} - the name of HTTP request header.
      */
     REQUEST_HEADER('i', true, YES),
-
     /**
      * {@code "%{HEADER_NAME}o"} - the name of HTTP response header.
      */
     RESPONSE_HEADER('o', true, YES),
-
     /**
      * {@code "%{ATTRIBUTE_NAME}j"} - the attribute name of the {@link AttributeMap} of the
      * {@link RequestContext}.
      */
     ATTRIBUTE('j', true, YES),
-
     /**
      * {@code "%{REQUEST_LOG_NAME}L"} - the name of the attributes in the {@link RequestLog}.
      */
     REQUEST_LOG('L', true, YES),
-
     /**
      * A plain text which would be written to access log message.
      */

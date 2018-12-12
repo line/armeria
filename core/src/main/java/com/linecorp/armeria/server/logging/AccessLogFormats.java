@@ -213,7 +213,7 @@ final class AccessLogFormats {
             return new TimestampComponent(addQuote, variable);
         }
         if (CommonComponent.isSupported(type)) {
-            return new CommonComponent(type, addQuote, condition);
+            return new CommonComponent(type, addQuote, condition, variable);
         }
         if (HttpHeaderComponent.isSupported(type)) {
             assert variable != null;
