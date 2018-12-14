@@ -41,7 +41,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '4.0.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.35.0' }
+  gax-grpc: { version: '1.35.1' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -81,7 +81,7 @@ com.moowork.gradle:
   gradle-node-plugin: { version: '1.2.0' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.14' }
+  checkstyle: { version: '8.15' }
 
 com.spotify:
   completable-futures:
@@ -109,7 +109,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.16.1'
+    version: &GRPC_VERSION '1.17.1'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -134,24 +134,24 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.1.0'
+    version: &MICROMETER_VERSION '1.1.1'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.1/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.1/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.1/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.31.Final'
+    version: &NETTY_VERSION '4.1.32.Final'
     javadocs:
     - https://netty.io/4.1/api/
   netty-buffer: { version: *NETTY_VERSION }
@@ -177,21 +177,21 @@ io.projectreactor:
 
 io.prometheus:
   simpleclient_common:
-    version: '0.5.0'
+    version: '0.6.0'
     javadocs:
     - https://prometheus.github.io/client_java/
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.3'
+    version: '2.2.4'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: '5.5.1'
+    version: '5.6.0'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.5.1/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.6.0/
 
 it.unimi.dsi:
   fastutil:
@@ -225,7 +225,7 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.7' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.1.1' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.2.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -292,7 +292,7 @@ org.assertj:
   assertj-core: { version: '3.11.1' }
 
 org.awaitility:
-  awaitility: { version: '3.1.3' }
+  awaitility: { version: '3.1.5' }
 
 org.bouncycastle:
   bcprov-jdk15on:
@@ -387,7 +387,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.0.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.1.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
@@ -402,3 +402,7 @@ org.springframework.boot:
 
 pl.project13.scala:
   sbt-jmh-extras: { version: 0.3.4 }
+
+# Needed to work around the problem with Gradle not supporting POM relocation correctly.
+xml-apis:
+  xml-apis: { version: '1.0.b2' }
