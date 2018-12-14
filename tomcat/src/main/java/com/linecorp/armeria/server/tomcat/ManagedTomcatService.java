@@ -61,7 +61,7 @@ final class ManagedTomcatService extends TomcatService {
     private boolean started;
 
     ManagedTomcatService(@Nullable String hostName,
-                          Function<String, Connector> connectorFactory, Consumer<Connector> postStopTask) {
+                         Function<String, Connector> connectorFactory, Consumer<Connector> postStopTask) {
         this.hostName = hostName;
         this.connectorFactory = connectorFactory;
         this.postStopTask = postStopTask;

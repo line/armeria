@@ -106,6 +106,18 @@ public abstract class TomcatService implements HttpService {
                     "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
                     "; using a wrong armeria-tomcat JAR?", e);
         }
+
+        if (TomcatVersion.major() >= 9) {
+            try {
+                final Class<?> initClass =
+                        Class.forName(prefix + "ConfigFileLoaderInitializer", true, classLoader);
+                MethodHandles.lookup()
+                             .findStatic(initClass, "init", MethodType.methodType(void.class))
+                             .invoke();
+            } catch (Throwable cause) {
+                logger.debug("Failed to initialize Tomcat ConfigFileLoader.source:", cause);
+            }
+        }
     }
 
     TomcatService() {}
