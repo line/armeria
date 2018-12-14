@@ -1,0 +1,114 @@
+/*
+ * Copyright 2018 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package com.linecorp.armeria.server.misc;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.util.function.Predicate;
+
+import com.google.common.base.MoreObjects;
+
+final class Inet4AddressBlock implements Predicate<InetAddress> {
+
+    private final Inet4Address baseAddress;
+    private final int maskBits;
+    private final int lowerBound;
+    private final int upperBound;
+
+    Inet4AddressBlock(Inet4Address baseAddress, int maskBits) {
+        this.baseAddress = requireNonNull(baseAddress, "baseAddress");
+        checkArgument(maskBits >= 0 && maskBits <= 32,
+                      "maskBits: %s (expected: 0-32)", maskBits);
+        this.maskBits = maskBits;
+
+        // Calculate the lower and upper bounds of this address block.
+        // e.g. mask is 256(0x00000100) if maskBits is 24.
+        final int mask = 1 << 32 - maskBits;
+        // e.g. (-mask) is 0xFFFFFF00 if mask is 256.
+        lowerBound = ipv4AddressToInt(baseAddress.getAddress()) & -mask;
+        // e.g. (mask-1) is 0x000000FF if mask is 256.
+        upperBound = lowerBound + mask - 1;
+    }
+
+    @Override
+    public boolean test(InetAddress address) {
+        requireNonNull(address, "address");
+        if (maskBits == 0) {
+            return true;
+        }
+        final int addr = inetAddressToInt(address);
+        return addr >= lowerBound && addr <= upperBound;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("baseAddress", baseAddress)
+                          .add("maskBits", maskBits)
+                          .add("lowerBound", "0x" + Integer.toHexString(lowerBound))
+                          .add("upperBound", "0x" + Integer.toHexString(upperBound))
+                          .toString();
+    }
+
+    /**
+     * Returns the integer representation of the specified {@link InetAddress}.
+     */
+    private static int inetAddressToInt(InetAddress inetAddress) {
+        final byte[] address;
+        if (inetAddress instanceof Inet6Address) {
+            address = ipv6ToIpv4Address((Inet6Address) inetAddress);
+        } else {
+            address = inetAddress.getAddress();
+        }
+        return ipv4AddressToInt(address);
+    }
+
+    /**
+     * Returns IPv4 byte representation of the specified {@link Inet6Address}.
+     *
+     * @throws IllegalArgumentException if the IPv6 cannot be mapped to IPv6
+     */
+    private static byte[] ipv6ToIpv4Address(Inet6Address address) {
+        final byte[] addr = address.getAddress();
+        for (int i = 0; i < 9; i++) {
+            if (addr[i] != 0) {
+                throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context");
+            }
+        }
+        if (addr[10] != 0 && addr[10] != (byte) 0xFF ||
+            addr[11] != 0 && addr[11] != (byte) 0xFF) {
+            throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context");
+        }
+        return new byte[] { addr[12], addr[13], addr[14], addr[15] };
+    }
+
+    /**
+     * Returns the integer representation of the specified {@code address} which is a byte array of
+     * an IPv4 address.
+     */
+    private static int ipv4AddressToInt(byte[] address) {
+        int val = 0;
+        for (final byte a : address) {
+            val <<= 8;
+            val |= a & 0xFF;
+        }
+        return val;
+    }
+}
