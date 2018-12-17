@@ -126,4 +126,4 @@ in your configuration as follows:
 
     If you are not familiar with Spring Boot and Spring WebFlux, please refer to
     `Spring Boot Reference Guide <https://docs.spring.io/spring-boot/docs/current/reference/html/>`_ and
-    `Web on Reactive Stack <https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html/>`_.
+    `Web on Reactive Stack <https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html>`_.
