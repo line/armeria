@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.tomcat;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
@@ -57,12 +58,41 @@ public final class Tomcat90ProtocolHandler implements ProtocolHandler {
         return id;
     }
 
+    /**
+     * Accessed by {@link Connector} via reflection.
+     */
+    public int getPort() {
+       return 0;
+    }
+
     @Nullable
     @Override
     public Executor getExecutor() {
         // Doesn't seem to be used.
         return null;
     }
+
+    /**
+     * Not available in Tomcat 8.5.
+     */
+    @SuppressWarnings("override")
+    public void setExecutor(Executor executor) {}
+
+    /**
+     * Not available in Tomcat 8.5.
+     */
+    @Nullable
+    @SuppressWarnings("override")
+    public ScheduledExecutorService getUtilityExecutor() {
+        // Doesn't seem to be used.
+        return null;
+    }
+
+    /**
+     * Not available in Tomcat 8.5.
+     */
+    @SuppressWarnings("override")
+    public void setUtilityExecutor(ScheduledExecutorService utilityExecutor) {}
 
     @Override
     public void init() throws Exception {}

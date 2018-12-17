@@ -24,11 +24,14 @@ dependencies {
 //     will confuse IDEs such as IntelliJ IDEA.
 tasks.compileJava.source "${rootProject.projectDir}/tomcat/src/main/java"
 tasks.compileJava.exclude '**/Tomcat90*'
+tasks.compileJava.exclude '**/ConfigFileLoaderInitializer*'
 tasks.processResources.from "${rootProject.projectDir}/tomcat/src/main/resources"
 tasks.compileTestJava.source "${rootProject.projectDir}/tomcat/src/test/java"
 tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources"
 tasks.sourceJar.from "${rootProject.projectDir}/tomcat/src/main/java"
 tasks.sourceJar.from "${rootProject.projectDir}/tomcat/src/main/resources"
 tasks.sourceJar.exclude '**/Tomcat90*'
+tasks.sourceJar.exclude '**/ConfigFileLoaderInitializer*'
 tasks.javadoc.source "${rootProject.projectDir}/tomcat/src/main/java"
 tasks.javadoc.exclude '**/Tomcat90*'
+tasks.javadoc.exclude '**/ConfigFileLoaderInitializer*'
