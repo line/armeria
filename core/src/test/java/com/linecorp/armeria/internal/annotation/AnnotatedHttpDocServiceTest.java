@@ -14,10 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,12 +31,11 @@ import java.util.stream.Stream;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -48,6 +47,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumesBinary;
 import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.Header;
@@ -87,7 +87,7 @@ public class AnnotatedHttpDocServiceTest {
                     .exampleHttpHeaders(MyService.class, "pathParam", EXAMPLE_HEADERS_METHOD)
                     .exampleRequestForMethod(MyService.class, "pathParam",
                                              ImmutableList.of(mapper.readTree(
-                                                     "{\"hello2\":\"arm\", \"hello4\":\"eria\"}")))
+                                                     "{\"hello\":\"armeria\"}")))
                     .build());
         }
     };
@@ -101,8 +101,10 @@ public class AnnotatedHttpDocServiceTest {
         addRegexMethodInfo(methodInfos);
         addPrefixMethodInfo(methodInfos);
         addConsumesMethodInfo(methodInfos);
+        final Map<Class<?>, String> serviceDescription = ImmutableMap.of(MyService.class, "My service class");
 
-        final JsonNode expectedJson = mapper.valueToTree(AnnotatedHttpDocServicePlugin.generate(methodInfos));
+        final JsonNode expectedJson = mapper.valueToTree(AnnotatedHttpDocServicePlugin.generate(
+                serviceDescription, methodInfos));
         addExamples(expectedJson);
 
         final HttpClient client = HttpClient.of(server.uri("/"));
@@ -112,26 +114,26 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "/service/foo")
+        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/foo")
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 new FieldInfo("header", "header", REQUIRED, toTypeSignature(int.class), "header parameter"),
                 new FieldInfo("query", "query", REQUIRED, toTypeSignature(long.class), "query parameter"));
         final MethodInfo methodInfo = new MethodInfo(
                 "foo", toTypeSignature(String.class), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET);
+                ImmutableList.of(endpoint), HttpMethod.GET, "foo method");
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addFooAllMethodInfos(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "/service/fooAll")
+        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/fooAll")
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         Stream.of(HttpMethod.values())
               .filter(httpMethod -> httpMethod != HttpMethod.CONNECT && httpMethod != HttpMethod.UNKNOWN)
               .forEach(httpMethod -> {
                   final MethodInfo methodInfo =
                           new MethodInfo("fooAll", toTypeSignature(String.class), ImmutableList.of(),
-                                         ImmutableList.of(), ImmutableList.of(endpoint), httpMethod);
+                                         ImmutableList.of(), ImmutableList.of(endpoint), httpMethod, null);
                   methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
               });
     }
@@ -144,18 +146,18 @@ public class AnnotatedHttpDocServiceTest {
                 new FieldInfo("hello4", "path", REQUIRED, toTypeSignature(String.class)));
         final MethodInfo methodInfo = new MethodInfo(
                 "pathParam", toTypeSignature(String.class), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private void addRegexMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = new EndpointInfoBuilder("*", "regex:/(bar|baz)")
-                .regexPathPrefix("/service/").availableMimeTypes(MediaType.JSON_UTF_8).build();
+                .regexPathPrefix("prefix:/service/").availableMimeTypes(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 new FieldInfo("myEnum", "query", REQUIRED, toTypeSignature(MyEnum.class)));
         final MethodInfo methodInfo = new MethodInfo(
                 "regex", toTypeSignature(String.class), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -164,16 +166,16 @@ public class AnnotatedHttpDocServiceTest {
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         final MethodInfo methodInfo = new MethodInfo(
                 "prefix", toTypeSignature(String.class), ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addConsumesMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "/service/consumes")
+        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/consumes")
                 .availableMimeTypes(MediaType.APPLICATION_BINARY, MediaType.JSON_UTF_8).build();
         final MethodInfo methodInfo = new MethodInfo(
                 "consumes", toTypeSignature(String.class), ImmutableList.of(),
-                ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET);
+                ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -198,20 +200,21 @@ public class AnnotatedHttpDocServiceTest {
                     exampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_METHOD));
                     final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                     exampleRequests.add('{' + System.lineSeparator() +
-                                        "  \"hello2\" : \"arm\"," + System.lineSeparator() +
-                                        "  \"hello4\" : \"eria\"" + System.lineSeparator() +
+                                        "  \"hello\" : \"armeria\"" + System.lineSeparator() +
                                         '}');
                 }
             });
         });
     }
 
+    @Description("My service class")
     @ResponseConverter(UnformattedStringConverterFunction.class)
     private static class MyService {
 
         @Get("/foo")
-        public String foo(@Header(value = "header", description = "header parameter") int header,
-                          @Param(value = "query", description = "query parameter") long query) {
+        @Description("foo method")
+        public String foo(@Header @Description("header parameter") int header,
+                          @Param @Description("query parameter") long query) {
             return "foo";
         }
 
@@ -229,12 +232,12 @@ public class AnnotatedHttpDocServiceTest {
         }
 
         @Get("/hello1/:hello2/hello3/:hello4")
-        public String pathParam(@Param("hello2") String hello2, @Param("hello4") String hello4) {
+        public String pathParam(@Param String hello2, @Param String hello4) {
             return "pathParam";
         }
 
         @Get("regex:/(bar|baz)")
-        public String regex(@Param("myEnum") MyEnum myEnum) {
+        public String regex(@Param MyEnum myEnum) {
             return myEnum.toString();
         }
 
@@ -254,32 +257,5 @@ public class AnnotatedHttpDocServiceTest {
         A,
         B,
         C
-    }
-
-    private static class RequestJsonObj1 {
-        private final int intVal;
-        private final String strVal;
-
-        @JsonCreator
-        RequestJsonObj1(@JsonProperty("intVal") int intVal,
-                        @JsonProperty("strVal") String strVal) {
-            this.intVal = intVal;
-            this.strVal = strVal;
-        }
-
-        @JsonProperty
-        int intVal() {
-            return intVal;
-        }
-
-        @JsonProperty
-        String strVal() {
-            return strVal;
-        }
-
-        @Override
-        public String toString() {
-            return getClass().getSimpleName() + ':' + intVal() + ':' + strVal();
-        }
     }
 }

@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceRequestConverterTest.Gender.MALE;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.Gender.MALE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,6 +44,11 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean1;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean2;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean3;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean4;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean5;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.ByteArrayConverterFunction;
@@ -56,11 +61,6 @@ import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean1;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean2;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean3;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean4;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean5;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 

@@ -13,19 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
+
+import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.CaseFormat;
 
 import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 
@@ -66,6 +70,22 @@ final class AnnotatedElementNameUtil {
             return value;
         }
         return toHeaderName(getName(nameRetrievalTarget));
+    }
+
+    @Nullable
+    static String findDescription(AnnotatedElement annotatedElement) {
+        requireNonNull(annotatedElement, "annotatedElement");
+
+        final Description description = annotatedElement.getAnnotation(Description.class);
+        if (description != null) {
+            final String value = description.value();
+            if (DefaultValues.isSpecified(value)) {
+                checkArgument(!value.isEmpty(), "value is empty");
+                return value;
+            }
+        }
+
+        return null;
     }
 
     private static String getName(Object element) {

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

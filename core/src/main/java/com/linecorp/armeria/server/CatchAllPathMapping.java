@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.internal.PathMappingUtil.ROOT_LOGGER_NAME;
+import static com.linecorp.armeria.internal.PathMappingUtil.ROOT_LOGGER_NAME;
 
 import java.util.Optional;
 import java.util.Set;

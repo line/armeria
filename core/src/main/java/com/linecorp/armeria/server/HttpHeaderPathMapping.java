@@ -208,6 +208,14 @@ final class HttpHeaderPathMapping implements PathMapping {
         return buf.toString();
     }
 
+    @Override
+    public PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods, List<MediaType> consumeTypes,
+                                          List<MediaType> produceTypes) {
+        throw new UnsupportedOperationException(
+                "cannot create " + PathMapping.class.getSimpleName() +
+                " with HTTP headers information because this already contains them: " + this);
+    }
+
     private static String generateLoggerName(String prefix, Set<HttpMethod> supportedMethods,
                                              List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         final StringJoiner name = new StringJoiner(".");

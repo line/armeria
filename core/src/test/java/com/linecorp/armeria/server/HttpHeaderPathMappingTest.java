@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.PathMappingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import org.junit.Test;
 
@@ -157,13 +157,5 @@ public class HttpHeaderPathMappingTest {
         headers.add(HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, headers, PRODUCIBLE_MEDIA_TYPES);
-    }
-
-    private static VirtualHost virtualHost() {
-        final HttpService service = mock(HttpService.class);
-        final Server server = new ServerBuilder().withVirtualHost("example.com")
-                                                 .serviceUnder("/", service)
-                                                 .and().build();
-        return server.config().findVirtualHost("example.com");
     }
 }

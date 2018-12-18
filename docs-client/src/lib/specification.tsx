@@ -106,20 +106,20 @@ export function methodKey(
   methodName: string,
   httpMethod: string,
 ): string {
-  if (httpMethod != null) {
+  if (httpMethod) {
     return `${serviceName}/${methodName}/${httpMethod}`;
   }
   return `${serviceName}/${methodName}`;
 }
 
 export function endpointPathString(endpoint: Endpoint): string {
-  if (!endpoint.regexPathPrefix) {
-    return endpoint.pathMapping;
+  if (endpoint.regexPathPrefix) {
+    return `${endpoint.regexPathPrefix} ${endpoint.pathMapping}`;
   }
-  return `prefix:${endpoint.regexPathPrefix} ${endpoint.pathMapping}`;
+  return endpoint.pathMapping;
 }
 
-export function isPrefixOrRegexMapping(method: Method): boolean {
+export function isExactPathMapping(method: Method): boolean {
   const endpoints = method.endpoints;
   if (endpoints.length !== 1) {
     throw new Error(`
@@ -128,11 +128,7 @@ export function isPrefixOrRegexMapping(method: Method): boolean {
     }`);
   }
   const endpoint = endpoints[0];
-  return (
-    !!endpoint.regexPathPrefix ||
-    endpoint.pathMapping.startsWith('prefix:') ||
-    endpoint.pathMapping.startsWith('regex:')
-  );
+  return endpoint.pathMapping.startsWith('exact:');
 }
 
 interface NamedObject {

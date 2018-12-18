@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.internal.PathMappingUtil.UNKNOWN_LOGGER_NAME;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.UNKNOWN_LOGGER_NAME;
+import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
 
 import java.util.Optional;
 

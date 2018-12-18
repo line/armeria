@@ -14,14 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpDocServicePlugin.INT64;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpDocServicePlugin.STRING;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpDocServicePlugin.VOID;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpDocServicePlugin.endpointInfo;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT64;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.STRING;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.VOID;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.endpointInfo;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHost;
@@ -54,7 +55,6 @@ import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 
 public class AnnotatedHttpDocServicePluginTest {
 
@@ -102,7 +102,7 @@ public class AnnotatedHttpDocServicePluginTest {
 
         // Other than above, every type is named type signature.
         assertThat(toTypeSignature(FieldContainer.class).name())
-                .isEqualTo("com.linecorp.armeria.server.internal.annotation." +
+                .isEqualTo("com.linecorp.armeria.internal.annotation." +
                            "AnnotatedHttpDocServicePluginTest$FieldContainer");
     }
 
@@ -112,14 +112,7 @@ public class AnnotatedHttpDocServicePluginTest {
 
         PathMapping mapping = newHttpHeaderPathMapping(PathMapping.of("/path"));
         EndpointInfo endpointInfo = endpointInfo(mapping, hostnamePattern);
-        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "/path")
-                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
-                                                                       MediaType.JSON_UTF_8)
-                                                   .build());
-
-        mapping = newHttpHeaderPathMapping(PathMapping.of("exact:/:foo/bar"));
-        endpointInfo = endpointInfo(mapping, hostnamePattern);
-        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "/:foo/bar")
+        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "exact:/path")
                                                    .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
                                                                        MediaType.JSON_UTF_8)
                                                    .build());
@@ -140,7 +133,7 @@ public class AnnotatedHttpDocServicePluginTest {
 
         mapping = newHttpHeaderPathMapping(PathMapping.of("glob:/foo"));
         endpointInfo = endpointInfo(mapping, hostnamePattern);
-        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "/foo")
+        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "exact:/foo")
                                                    .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
                                                                        MediaType.JSON_UTF_8)
                                                    .build());
@@ -166,7 +159,7 @@ public class AnnotatedHttpDocServicePluginTest {
         endpointInfo = endpointInfo(mapping, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
                 new EndpointInfoBuilder("*", "regex:^/home/([^/]+)/files/(.*)$")
-                        .regexPathPrefix("/glob/")
+                        .regexPathPrefix("prefix:/glob/")
                         .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
                         .build());
 
@@ -176,13 +169,13 @@ public class AnnotatedHttpDocServicePluginTest {
         endpointInfo = endpointInfo(mapping, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
                 new EndpointInfoBuilder("*", "regex:^/files/(?<filePath>.*)$")
-                        .regexPathPrefix("/prefix: regex:/")
+                        .regexPathPrefix("prefix:/prefix: regex:/")
                         .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
                         .build());
     }
 
     private static PathMapping newHttpHeaderPathMapping(PathMapping pathMapping) {
-        return PathMapping.withHttpHeaderInfo(pathMapping, ImmutableSet.of(HttpMethod.GET),
+        return pathMapping.withHttpHeaderInfo(ImmutableSet.of(HttpMethod.GET),
                                               ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
                                               ImmutableList.of(MediaType.JSON_UTF_8));
     }
@@ -219,7 +212,7 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(fooMethod.returnTypeSignature()).isEqualTo(VOID);
 
         assertThat(fooMethod.endpoints()).containsExactly(
-                new EndpointInfoBuilder("*", "/foo").defaultMimeType(MediaType.JSON).build());
+                new EndpointInfoBuilder("*", "exact:/foo").defaultMimeType(MediaType.JSON).build());
         final ServiceInfo barServiceInfo = services.get(BarClass.class.getName());
     }
 
@@ -249,16 +242,16 @@ public class AnnotatedHttpDocServicePluginTest {
     private static class FooClass {
 
         @Get("/foo")
-        public void fooMethod(@Param("foo") String foo, @Header("foo1") long foo1) {}
+        public void fooMethod(@Param String foo, @Header long foo1) {}
 
         @Get("/foo2")
-        public long foo2Method(@Param("foo2") String foo2) {
+        public long foo2Method(@Param String foo2) {
             return 0;
         }
     }
 
     private static class BarClass {
         @Get("/bar")
-        public void barMethod(@Param("bar") String bar) {}
+        public void barMethod(@Param String bar) {}
     }
 }

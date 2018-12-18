@@ -21,34 +21,6 @@ import Transport from './transport';
 export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
 
 export default class AnnotatedHttpTransport extends Transport {
-  private static newPath(
-    endpointPath: string,
-    bodyJson: string,
-    queries: string | undefined,
-  ): string {
-    let newPath = endpointPath;
-    const parsed = JSON.parse(bodyJson);
-    const findingPathParamRegex = /(?:\{\w+\})/g;
-    let match = findingPathParamRegex.exec(newPath);
-    while (match != null) {
-      const pathParam = match[0].substring(1, match[0].length - 1); // Remove '{' and '}'.
-      const pathParamValue = parsed[pathParam];
-      if (pathParamValue == null) {
-        throw new Error(`The body should contain path parameter: ${pathParam}`);
-      }
-      newPath = newPath.replace(match[0], pathParamValue);
-      match = findingPathParamRegex.exec(newPath);
-    }
-    if (queries && queries.length > 1) {
-      if (queries.charAt(0) === '?') {
-        newPath += queries;
-      } else {
-        newPath = `${newPath}?${queries}`;
-      }
-    }
-    return newPath;
-  }
-
   public supportsMimeType(mimeType: string): boolean {
     return mimeType === ANNOTATED_HTTP_MIME_TYPE;
   }
@@ -75,25 +47,29 @@ export default class AnnotatedHttpTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    const newPath = encodeURI(
-      endpointPath
-        ? endpointPath
-        : AnnotatedHttpTransport.newPath(
-            endpoint.pathMapping,
-            bodyJson,
-            queries,
-          ),
-    );
+    let newPath;
+    if (endpointPath) {
+      newPath = endpointPath;
+    } else {
+      newPath = endpoint.pathMapping.substring('exact:'.length);
+      if (queries && queries.length > 1) {
+        if (queries.charAt(0) === '?') {
+          newPath += queries;
+        } else {
+          newPath = `${newPath}?${queries}`;
+        }
+      }
+    }
     const sendBody =
       method.httpMethod === 'GET' || method.httpMethod === 'HEAD'
         ? null
         : bodyJson;
-    const httpResponse = await fetch(newPath, {
+    const httpResponse = await fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
       body: sendBody,
     });
     const response = await httpResponse.text();
-    return response.length > 0 ? response : 'No response really?';
+    return response.length > 0 ? response : '&lt;zero-length response&gt;';
   }
 }

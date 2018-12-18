@@ -45,7 +45,7 @@ import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
 import jsonPrettify from '../../lib/json-prettify';
 import {
   endpointPathString,
-  isPrefixOrRegexMapping,
+  isExactPathMapping,
   simpleName,
   Specification,
 } from '../../lib/specification';
@@ -119,9 +119,10 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       return <>Not found.</>;
     }
 
-    const isAnnotatedHttpService = TRANSPORTS.getDebugTransport(
-      method,
-    )!.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
+    const debugTransport = TRANSPORTS.getDebugTransport(method);
+    const isAnnotatedHttpService =
+      debugTransport !== undefined &&
+      debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
 
     return (
       <>
@@ -135,7 +136,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
           <VariableList
             title="Parameters"
             variables={method.parameters}
-            containsLocation={isAnnotatedHttpService}
+            hasLocation={isAnnotatedHttpService}
             specification={specification}
           />
         </Section>
@@ -237,7 +238,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                   }}
                 />
                 {isAnnotatedHttpService &&
-                  ((!isPrefixOrRegexMapping(method) && (
+                  ((isExactPathMapping(method) && (
                     <>
                       <Typography variant="body1" paragraph />
                       <Button
@@ -263,7 +264,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                       )}
                     </>
                   )) ||
-                    (isPrefixOrRegexMapping(method) && (
+                    (!isExactPathMapping(method) && (
                       <>
                         <Typography variant="body1" paragraph />
                         <Button
@@ -471,69 +472,15 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     params.set('args', minifiedArgs);
 
     if (endpointPath) {
-      const method = this.getMethod()!;
-      // This method contains endpointPath from the debug form so it is annotated HTTP service.
-      // Annotated HTTP service has only one endpoint.
-      const endpoint = method.endpoints[0];
-      const regexPathPrefix = endpoint.regexPathPrefix;
-      const originalPath = endpoint.pathMapping;
-
-      if (regexPathPrefix) {
-        // Prefix adding path mapping.
-        if (!endpointPath.startsWith(regexPathPrefix)) {
-          this.setState({
-            debugResponse: `The path should start with prefix path: ${regexPathPrefix}`,
-          });
-          return;
-        }
-
-        if (!originalPath.startsWith('regex:')) {
-          this.setState({
-            debugResponse: `The path should start with 'regex:'. path: ${originalPath}`,
-          });
-          return;
-        }
-
-        // Remove the prefix part excluding ending '/'.
-        const regexPart = endpointPath.substr(regexPathPrefix.length - 1);
-        const regex = originalPath.substr('regex:'.length);
-        const regExp = new RegExp(regex);
-
-        if (!regExp.test(regexPart)) {
-          this.setState({
-            debugResponse: `Endpoint path: ${endpointPath} (expected: prefix=${regexPathPrefix} regex=${regex})`,
-          });
-          return;
-        }
-      } else if (originalPath.startsWith('prefix:')) {
-        // Prefix path mapping.
-        const prefix = originalPath.substr('prefix:'.length);
-        if (!endpointPath.startsWith(prefix)) {
-          this.setState({
-            debugResponse: `The path: '${endpointPath}' should start with prefix: ${prefix}`,
-          });
-          return;
-        }
-      } else {
-        // Regex path mapping
-        if (!originalPath.startsWith('regex:')) {
-          // Should be regex path mapping.
-          this.setState({
-            debugResponse: `The path should start with 'regex:'. path: ${originalPath}`,
-          });
-          return;
-        }
-        const regex = originalPath.substr('regex:'.length);
-        const regExp = new RegExp(regex);
-        if (!regExp.test(endpointPath)) {
-          this.setState({
-            debugResponse: `Endpoint path: ${endpointPath} (expected: ${regex})`,
-          });
-          return;
-        }
+      try {
+        this.validateEndpointPath(endpointPath);
+      } catch (e) {
+        this.setState({ debugResponse: e.toString() });
+        return;
       }
-      params.set('endpointPath', endpointPath);
-    } else if (queries) {
+      params.set('endpoint_path', endpointPath);
+    }
+    if (queries) {
       params.set('queries', queries);
     }
 
@@ -575,6 +522,50 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     }
   };
 
+  private validateEndpointPath(endpointPath: string) {
+    const method = this.getMethod()!;
+    const endpoint = method.endpoints[0];
+    const regexPathPrefix = endpoint.regexPathPrefix;
+    const originalPath = endpoint.pathMapping;
+
+    if (originalPath.startsWith('prefix:')) {
+      // Prefix path mapping.
+      const prefix = originalPath.substring('prefix:'.length);
+      if (!endpointPath.startsWith(prefix)) {
+        throw new Error(
+          `The path: '${endpointPath}' should start with the prefix: ${prefix}`,
+        );
+      }
+    }
+
+    if (originalPath.startsWith('regex:')) {
+      let regexPart;
+      if (regexPathPrefix) {
+        // Prefix adding path mapping.
+        const prefix = regexPathPrefix.substring('prefix:'.length);
+        if (!endpointPath.startsWith(prefix)) {
+          throw new Error(
+            `The path: '${endpointPath}' should start with the prefix: ${prefix}`,
+          );
+        }
+
+        // Remove the prefix from the endpointPath so that we can test the regex.
+        regexPart = endpointPath.substring(prefix.length - 1);
+      } else {
+        regexPart = endpointPath;
+      }
+      const regExp = new RegExp(originalPath.substring('regex:'.length));
+      if (!regExp.test(regexPart)) {
+        const expectedPath = regexPathPrefix
+          ? `${regexPathPrefix} ${originalPath}`
+          : originalPath;
+        throw new Error(
+          `Endpoint path: ${endpointPath} (expected: ${expectedPath})`,
+        );
+      }
+    }
+  }
+
   private async executeRequest() {
     const params = new URLSearchParams(this.props.location.search);
     const argsText = params.get('args');
@@ -582,8 +573,8 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       return;
     }
 
-    const endpointPathText = params.get('endpointPath');
-    const endpointPath = endpointPathText ? endpointPathText : '';
+    const endpointPathText = params.get('endpoint_path');
+    const endpointPath = endpointPathText ? endpointPathText : undefined;
 
     const queriesText = params.get('queries');
     const queries = queriesText ? queriesText : '';
@@ -661,6 +652,14 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       ? jsonPrettify(urlParams.get('http_headers')!)
       : undefined;
 
+    const urlEndpointPath = urlParams.has('endpoint_path')
+      ? urlParams.get('endpoint_path')!
+      : '';
+
+    const urlQueries = urlParams.has('queries')
+      ? urlParams.get('queries')!
+      : '';
+
     const stateHeaders = this.state.stickyHeaders
       ? this.state.additionalHeaders
       : undefined;
@@ -682,8 +681,10 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       exampleHeaders,
       debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
       debugResponse: '',
-      additionalQueries: '',
-      endpointPath: '',
+      additionalQueries: urlQueries,
+      additionalQueriesOpen: !!urlQueries,
+      endpointPath: urlEndpointPath,
+      endpointPathOpen: !!urlEndpointPath,
       regexPathPrefix: '',
       originalPath: '',
       additionalHeaders:

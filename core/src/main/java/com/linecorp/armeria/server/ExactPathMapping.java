@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.internal.PathMappingUtil.EXACT;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.createLoggerName;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
+import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
 
 import java.util.Optional;
 import java.util.Set;
@@ -35,7 +35,7 @@ final class ExactPathMapping extends AbstractPathMapping {
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
-        loggerName = createLoggerName(exactPath);
+        loggerName = newLoggerName(exactPath);
         meterTag = EXACT + exactPath;
     }
 

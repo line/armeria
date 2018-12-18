@@ -15,10 +15,10 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.internal.PathMappingUtil.EXACT;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.GLOB;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.PREFIX;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.REGEX;
+import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
+import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
+import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
+import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -167,21 +167,6 @@ public interface PathMapping {
     }
 
     /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} using
-     * the specified {@link PathMapping} and checks whether the request is valid using the specified
-     * {@code supportedMethods}, {@code consumeTypes} and {@code produceTypes}.
-     *
-     * @param pathMapping the {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
-     * @param supportedMethods the set of {@link HttpMethod}s that this {@link PathMapping} supports
-     * @param consumeTypes the list of {@link MediaType}s that this {@link PathMapping} consumes
-     * @param produceTypes the list of {@link MediaType}s that this {@link PathMapping} produces
-     */
-    static PathMapping withHttpHeaderInfo(PathMapping pathMapping, Set<HttpMethod> supportedMethods,
-                                          List<MediaType> consumeTypes, List<MediaType> produceTypes) {
-        return new HttpHeaderPathMapping(pathMapping, supportedMethods, consumeTypes, produceTypes);
-    }
-
-    /**
      * Matches the specified {@code path} and extracts the path parameters from it.
      *
      * @param mappingCtx a context to find the {@link Service}.
@@ -267,5 +252,19 @@ public interface PathMapping {
      */
     default List<MediaType> produceTypes() {
         return ImmutableList.of();
+    }
+
+    /**
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} using
+     * the specified {@link PathMapping} and checks whether the request is valid using the specified
+     * {@code supportedMethods}, {@code consumeTypes} and {@code produceTypes}.
+     *
+     * @param supportedMethods the set of {@link HttpMethod}s that this {@link PathMapping} supports
+     * @param consumeTypes the list of {@link MediaType}s that this {@link PathMapping} consumes
+     * @param produceTypes the list of {@link MediaType}s that this {@link PathMapping} produces
+     */
+    default PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods,
+                                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+        return new HttpHeaderPathMapping(this, supportedMethods, consumeTypes, produceTypes);
     }
 }

@@ -44,7 +44,6 @@ export default abstract class Transport {
       ...filledHeaders,
       ...headers,
     };
-
     return this.doSend(method, bodyJson, filledHeaders, endpointPath, queries);
   }
 

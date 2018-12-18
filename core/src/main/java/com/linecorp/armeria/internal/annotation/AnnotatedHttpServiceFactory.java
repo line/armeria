@@ -14,19 +14,19 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.EXACT;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.GLOB;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.PREFIX;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.REGEX;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.createLoggerName;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.ensureAbsolutePath;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
+import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
+import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
+import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
+import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
+import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
+import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllAnnotations;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -72,6 +72,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.server.AbstractPathMapping;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
 import com.linecorp.armeria.server.PathMapping;
@@ -113,13 +114,12 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverters;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Trace;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedValueResolver.NoParameterException;
 
 /**
  * Builds a list of {@link AnnotatedHttpService}s from an {@link Object}.
  * This class is not supposed to be used by a user. Please check out the documentation
  * <a href="https://line.github.io/armeria/server-annotated-service.html#annotated-http-service">
- * Annotated HTTP Service</a> to use {@link AnnotatedHttpService}s.
+ * Annotated HTTP Service</a> to use {@link AnnotatedHttpService}.
  */
 public final class AnnotatedHttpServiceFactory {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServiceFactory.class);
@@ -241,9 +241,9 @@ public final class AnnotatedHttpServiceFactory {
         }
 
         final Class<?> clazz = object.getClass();
-        final PathMapping pathMapping = PathMapping.withHttpHeaderInfo(
-                pathStringMapping(pathPrefix, method, methodAnnotations),
-                methods, consumableMediaTypes(method, clazz), producibleMediaTypes(method, clazz));
+        final PathMapping pathMapping = pathStringMapping(pathPrefix, method, methodAnnotations)
+                .withHttpHeaderInfo(methods, consumableMediaTypes(method, clazz),
+                                    producibleMediaTypes(method, clazz));
 
         final List<ExceptionHandlerFunction> eh =
                 exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
@@ -825,7 +825,7 @@ public final class AnnotatedHttpServiceFactory {
             assert mapping.regex().isPresent() : "unexpected mapping type: " + mapping.getClass().getName();
             this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
             this.mapping = mapping;
-            loggerName = createLoggerName(pathPrefix) + '.' + mapping.loggerName();
+            loggerName = newLoggerName(pathPrefix) + '.' + mapping.loggerName();
             meterTag = PREFIX + pathPrefix + ',' + mapping.meterTag();
         }
 

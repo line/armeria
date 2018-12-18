@@ -243,7 +243,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
         final Optional<Object> namedTypeDescriptor = typeSignature.namedTypeDescriptor();
         if (!namedTypeDescriptor.isPresent()) {
-            throw new IllegalArgumentException("cannot create named type from: " + typeSignature);
+            throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
         }
         final Class<?> type = (Class<?>) namedTypeDescriptor.get();
         if (type.isEnum()) {

@@ -35,14 +35,14 @@ interface Variable {
 interface Props {
   title: string;
   variables: Variable[];
-  containsLocation: boolean;
+  hasLocation: boolean;
   specification: Specification;
 }
 
 export default function({
   title,
   variables,
-  containsLocation,
+  hasLocation,
   specification,
 }: Props) {
   return (
@@ -52,7 +52,7 @@ export default function({
         <TableHead>
           <TableRow>
             <TableCell>Name</TableCell>
-            {containsLocation && <TableCell>Location</TableCell>}
+            {hasLocation && <TableCell>Location</TableCell>}
             <TableCell>Required</TableCell>
             <TableCell>Type</TableCell>
             <TableCell>Description</TableCell>
@@ -65,7 +65,7 @@ export default function({
                 <TableCell>
                   <code>{variable.name}</code>
                 </TableCell>
-                {containsLocation && (
+                {hasLocation && (
                   <TableCell>
                     <code>{variable.location}</code>
                   </TableCell>

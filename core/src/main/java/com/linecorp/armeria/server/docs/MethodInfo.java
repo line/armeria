@@ -65,7 +65,7 @@ public final class MethodInfo {
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints, HttpMethod.POST);
+        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints, HttpMethod.POST, null);
     }
 
     /**
@@ -75,9 +75,11 @@ public final class MethodInfo {
                       TypeSignature returnTypeSignature,
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
-                      Iterable<EndpointInfo> endpoints, HttpMethod httpMethod) {
+                      Iterable<EndpointInfo> endpoints,
+                      HttpMethod httpMethod,
+                      @Nullable String docString) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures,
-             endpoints, ImmutableList.of(), ImmutableList.of(), httpMethod, null);
+             endpoints, ImmutableList.of(), ImmutableList.of(), httpMethod, docString);
     }
 
     /**

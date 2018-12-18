@@ -72,9 +72,4 @@ import java.lang.annotation.Target;
         ElementType.CONSTRUCTOR,
         ElementType.FIELD
 })
-public @interface RequestObject {
-    /**
-     * The description of the {@link RequestObject} parameter.
-     */
-    String description() default "";
-}
+public @interface RequestObject {}

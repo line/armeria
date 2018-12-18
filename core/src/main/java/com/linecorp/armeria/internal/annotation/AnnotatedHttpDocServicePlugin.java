@@ -14,13 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.PREFIX;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.REGEX;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
+import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
+import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
+import static com.linecorp.armeria.internal.annotation.AnnotatedElementNameUtil.findDescription;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
@@ -69,7 +71,7 @@ import com.linecorp.armeria.server.docs.TypeSignature;
 /**
  * A {@link DocServicePlugin} implementation that supports the {@link AnnotatedHttpService}.
  */
-public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
+public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     private static final String PATH_PARAM = "path";
     private static final String QUERY_PARAM = "query";
@@ -107,13 +109,22 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
+        final Map<Class<?>, String> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
             final Optional<AnnotatedHttpService> service = sc.service().as(AnnotatedHttpService.class);
             service.ifPresent(
-                    httpService -> addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), httpService));
+                    httpService -> {
+                        addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), httpService);
+                        addServiceDescription(serviceDescription, httpService);
+                    });
         });
 
-        return generate(methodInfos);
+        return generate(serviceDescription, methodInfos);
+    }
+
+    private void addServiceDescription(Map<Class<?>, String> serviceDescription, AnnotatedHttpService service) {
+        final Class<?> clazz = service.object().getClass();
+        serviceDescription.computeIfAbsent(clazz, AnnotatedElementNameUtil::findDescription);
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
@@ -133,7 +144,7 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
                             name, returnTypeSignature, fieldInfos, ImmutableList.of(), // Ignore exceptions.
-                            ImmutableList.of(endpoint), httpMethod);
+                            ImmutableList.of(endpoint), httpMethod, findDescription(method));
                     methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
                 });
     }
@@ -141,30 +152,38 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     @Nullable
     @VisibleForTesting
     static EndpointInfo endpointInfo(PathMapping pathMapping, String hostnamePattern) {
-        final String endpointPath;
-        String regexPathPrefix = null;
-        if (pathMapping.prefix().isPresent()) {
-            if (pathMapping.regex().isPresent()) { // PrefixAddingPathMapping.
-                regexPathPrefix = pathMapping.prefix().get();
-                endpointPath = REGEX + pathMapping.regex().get();
-            } else { // PrefixPathMapping.
-                endpointPath = PREFIX + pathMapping.prefix().get();
-            }
-        } else {
-            endpointPath = getNormalizedTriePathOrRegex(pathMapping);
-        }
-
-        if (isNullOrEmpty(endpointPath)) {
+        final String endpointPathMapping = endpointPathMapping(pathMapping);
+        if (isNullOrEmpty(endpointPathMapping)) {
             return null;
         }
 
-        final EndpointInfoBuilder builder = new EndpointInfoBuilder(hostnamePattern, endpointPath);
-        if (!isNullOrEmpty(regexPathPrefix)) {
-            builder.regexPathPrefix(regexPathPrefix);
+        final EndpointInfoBuilder builder = new EndpointInfoBuilder(hostnamePattern, endpointPathMapping);
+        if (endpointPathMapping.startsWith(REGEX) && pathMapping.prefix().isPresent()) {
+            // PrefixAddingPathMapping
+            builder.regexPathPrefix(PREFIX + pathMapping.prefix().get());
         }
 
         builder.availableMimeTypes(availableMimeTypes(pathMapping));
         return builder.build();
+    }
+
+    private static String endpointPathMapping(PathMapping pathMapping) {
+        final Optional<String> exactPath = pathMapping.exactPath();
+        if (exactPath.isPresent()) {
+            return EXACT + exactPath.get();
+        }
+
+        final Optional<String> regex = pathMapping.regex();
+        if (regex.isPresent()) {
+            return REGEX + regex.get();
+        }
+
+        final Optional<String> prefix = pathMapping.prefix();
+        if (prefix.isPresent()) {
+            return PREFIX + prefix.get();
+        }
+
+        return getNormalizedTriePath(pathMapping);
     }
 
     private static List<MediaType> availableMimeTypes(PathMapping pathMapping) {
@@ -175,16 +194,6 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             builder.add(MediaType.JSON_UTF_8);
         }
         return builder.build();
-    }
-
-    @Nullable
-    private static String getNormalizedTriePathOrRegex(PathMapping pathMapping) {
-        final String normalizedTriePath = getNormalizedTriePath(pathMapping);
-        if (normalizedTriePath != null) {
-            return normalizedTriePath;
-        }
-        final Optional<String> regex = pathMapping.regex();
-        return regex.map(s -> REGEX + s).orElse(null);
     }
 
     @VisibleForTesting
@@ -295,10 +304,15 @@ public class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+    static ServiceSpecification generate(Map<Class<?>, String> serviceDescription,
+                                         Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final Set<ServiceInfo> serviceInfos = methodInfos
                 .entrySet().stream()
-                .map(entry -> new ServiceInfo(entry.getKey().getName(), entry.getValue()))
+                .map(entry -> {
+                    final Class<?> service = entry.getKey();
+                    return new ServiceInfo(service.getName(), entry.getValue(),
+                                           serviceDescription.get(service));
+                })
                 .collect(toImmutableSet());
 
         return ServiceSpecification.generate(serviceInfos, AnnotatedHttpDocServicePlugin::newNamedTypeInfo);

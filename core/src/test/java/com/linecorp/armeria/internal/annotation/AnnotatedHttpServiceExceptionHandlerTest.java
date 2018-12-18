@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceTest.validateContextAndRequest;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTest.validateContextAndRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;

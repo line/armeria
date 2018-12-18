@@ -55,7 +55,16 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods) {
-        this(name, methods, ImmutableList.of(), null);
+        this(name, methods, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ServiceInfo(String name,
+                       Iterable<MethodInfo> methods,
+                       @Nullable String docString) {
+        this(name, methods, ImmutableList.of(), docString);
     }
 
     /**

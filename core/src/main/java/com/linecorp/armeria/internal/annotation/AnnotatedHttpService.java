@@ -14,10 +14,10 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedValueResolver.AggregationStrategy.aggregationRequired;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedValueResolver.toArguments;
+import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.AggregationStrategy.aggregationRequired;
+import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toArguments;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
@@ -50,6 +50,8 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.internal.PublisherToHttpResponseConverter;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.AggregationStrategy;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.PathMapping;
@@ -61,8 +63,6 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedValueResolver.AggregationStrategy;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedValueResolver.ResolverContext;
 
 /**
  * A {@link Service} which is defined by a {@link Path} or HTTP method annotations.

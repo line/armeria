@@ -87,77 +87,37 @@ const styles = (theme: Theme) =>
       },
     },
     toolbar: theme.mixins.toolbar,
-    options: {
+    httpMethodCommon: {
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
+    httpMethodOptions: {
       background: '#FF8E53',
-      borderRadius: 3,
-      border: 0,
-      color: 'white',
-      height: 20,
-      width: 80,
-      textAlign: 'center',
     },
-    get: {
+    httpMethodGet: {
       background: '#6abe45',
-      borderRadius: 3,
-      border: 0,
-      color: 'white',
-      height: 20,
-      width: 80,
-      textAlign: 'center',
     },
-    head: {
+    httpMethodHead: {
       background: '#FE6B8B',
-      borderRadius: 3,
-      border: 0,
-      color: 'white',
-      height: 20,
-      width: 80,
-      textAlign: 'center',
     },
-    post: {
+    httpMethodPost: {
       background: '#1e91ca',
-      borderRadius: 3,
-      border: 0,
-      color: 'white',
-      height: 20,
-      width: 80,
-      textAlign: 'center',
     },
-    put: {
+    httpMethodPut: {
       background: '#824ea0',
-      borderRadius: 3,
-      border: 0,
-      color: 'white',
-      height: 20,
-      width: 80,
-      textAlign: 'center',
     },
-    patch: {
+    httpMethodPatch: {
       background: '#e6cc1d',
-      borderRadius: 3,
-      border: 0,
-      color: 'white',
-      height: 20,
-      width: 80,
-      textAlign: 'center',
     },
-    delete: {
+    httpMethodDelete: {
       background: '#ec1d23',
-      borderRadius: 3,
-      border: 0,
-      color: 'white',
-      height: 20,
-      width: 80,
-      textAlign: 'center',
     },
-    trace: {
+    httpMethodTrace: {
       background: '#5d12ec',
-      borderRadius: 3,
-      border: 0,
-      color: 'white',
-      height: 20,
-      width: 80,
-      textAlign: 'center',
     },
   });
 
@@ -175,7 +135,7 @@ type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
 interface AppDrawerProps extends WithStyles<typeof styles> {
   specification: Specification;
   navigateTo: (url: string) => void;
-  httpMethod: (httpMethod: string) => string;
+  httpMethodClass: (httpMethod: string) => string;
   servicesOpen: boolean;
   enumsOpen: boolean;
   structsOpen: boolean;
@@ -186,7 +146,7 @@ interface AppDrawerProps extends WithStyles<typeof styles> {
 function AppDrawer({
   classes,
   navigateTo,
-  httpMethod,
+  httpMethodClass,
   specification,
   servicesOpen,
   enumsOpen,
@@ -232,7 +192,11 @@ function AppDrawer({
                     }
                   >
                     {method.httpMethod && (
-                      <Typography className={httpMethod(method.httpMethod)}>
+                      <Typography
+                        className={`${
+                          classes.httpMethodCommon
+                        } ${httpMethodClass(method.httpMethod)}`}
+                      >
                         {method.httpMethod}
                       </Typography>
                     )}
@@ -411,7 +375,7 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={this.navigateTo}
-              httpMethod={this.httpMethod}
+              httpMethodClass={this.httpMethodClass}
               servicesOpen={this.state.servicesOpen}
               enumsOpen={this.state.enumsOpen}
               structsOpen={this.state.structsOpen}
@@ -434,7 +398,7 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={this.navigateTo}
-              httpMethod={this.httpMethod}
+              httpMethodClass={this.httpMethodClass}
               servicesOpen={this.state.servicesOpen}
               enumsOpen={this.state.enumsOpen}
               structsOpen={this.state.structsOpen}
@@ -481,31 +445,31 @@ class App extends React.PureComponent<Props, State> {
     });
   };
 
-  private httpMethod = (httpMethod: string) => {
+  private httpMethodClass = (httpMethod: string) => {
     const classes = this.props.classes;
     if (httpMethod === 'OPTIONS') {
-      return classes.options;
+      return classes.httpMethodOptions;
     }
     if (httpMethod === 'GET') {
-      return classes.get;
+      return classes.httpMethodGet;
     }
     if (httpMethod === 'HEAD') {
-      return classes.head;
+      return classes.httpMethodHead;
     }
     if (httpMethod === 'POST') {
-      return classes.post;
+      return classes.httpMethodPost;
     }
     if (httpMethod === 'PUT') {
-      return classes.put;
+      return classes.httpMethodPut;
     }
     if (httpMethod === 'PATCH') {
-      return classes.patch;
+      return classes.httpMethodPatch;
     }
     if (httpMethod === 'DELETE') {
-      return classes.delete;
+      return classes.httpMethodDelete;
     }
     if (httpMethod === 'TRACE') {
-      return classes.trace;
+      return classes.httpMethodTrace;
     }
 
     throw new Error(`unsupported http method: ${httpMethod}`);

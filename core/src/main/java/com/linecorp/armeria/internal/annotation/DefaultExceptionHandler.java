@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -223,20 +223,19 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     static MethodInfo newMethodInfo(MethodDescriptor method, ServiceEntry service) {
         final Set<EndpointInfo> methodEndpoints =
-                service.endpointInfos
-                        .stream()
-                        .map(e -> {
-                            final EndpointInfoBuilder builder = new EndpointInfoBuilder(
-                                    e.hostnamePattern(), e.pathMapping() + method.getName());
-                            if (e.fragment() != null) {
-                                builder.fragment(e.fragment());
-                            }
-                            if (e.defaultMimeType() != null) {
-                                builder.defaultMimeType(e.defaultMimeType());
-                            }
-                            return builder.availableMimeTypes(e.availableMimeTypes()).build();
-                        })
-                        .collect(toImmutableSet());
+                service.endpointInfos.stream()
+                                     .map(e -> {
+                                         final EndpointInfoBuilder builder = new EndpointInfoBuilder(
+                                                 e.hostnamePattern(), e.pathMapping() + method.getName());
+                                         if (e.fragment() != null) {
+                                             builder.fragment(e.fragment());
+                                         }
+                                         if (e.defaultMimeType() != null) {
+                                             builder.defaultMimeType(e.defaultMimeType());
+                                         }
+                                         return builder.availableMimeTypes(e.availableMimeTypes()).build();
+                                     })
+                                     .collect(toImmutableSet());
         return new MethodInfo(
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.internal;
+package com.linecorp.armeria.internal;
 
 import static java.util.Objects.requireNonNull;
 
@@ -70,7 +70,7 @@ public final class PathMappingUtil {
     /**
      * Returns the logger name from the specified {@code pathish}.
      */
-    public static String createLoggerName(@Nullable String pathish) {
+    public static String newLoggerName(@Nullable String pathish) {
         if (pathish == null) {
             return UNKNOWN_LOGGER_NAME;
         }

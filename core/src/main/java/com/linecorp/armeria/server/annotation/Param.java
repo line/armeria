@@ -50,9 +50,4 @@ public @interface Param {
      * or the name of a multipart.
      */
     String value() default DefaultValues.UNSPECIFIED;
-
-    /**
-     * The description of the request parameter.
-     */
-    String description() default "";
 }

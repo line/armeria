@@ -131,7 +131,7 @@ public class PathMappingContextTest {
                                             path, query, headers, null);
     }
 
-    private static VirtualHost virtualHost() {
+    static VirtualHost virtualHost() {
         final HttpService service = mock(HttpService.class);
         final Server server = new ServerBuilder().withVirtualHost("example.com")
                                                  .serviceUnder("/", service)

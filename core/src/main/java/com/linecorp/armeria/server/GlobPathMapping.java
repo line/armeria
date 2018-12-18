@@ -17,8 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.GLOB;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.createLoggerName;
+import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
+import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
 
 import java.util.Optional;
 import java.util.Set;
@@ -72,7 +72,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         // Make the glob pattern as an absolute form to distinguish 'glob:foo' from 'exact:/foo'
         // when generating logger and metric names.
         final String aGlob = glob.startsWith("/") ? glob : "/**/" + glob;
-        loggerName = createLoggerName(aGlob);
+        loggerName = newLoggerName(aGlob);
         meterTag = GLOB + aGlob;
     }
 

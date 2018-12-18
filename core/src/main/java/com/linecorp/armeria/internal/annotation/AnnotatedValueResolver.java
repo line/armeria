@@ -13,15 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.internal.annotation;
+package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceTypeUtil.stringToType;
-import static com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceTypeUtil.validateElementType;
+import static com.linecorp.armeria.internal.annotation.AnnotatedElementNameUtil.findDescription;
+import static com.linecorp.armeria.internal.annotation.AnnotatedElementNameUtil.findName;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.stringToType;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.validateElementType;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -69,6 +71,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Cookies;
@@ -80,7 +83,6 @@ import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedBeanFactory.BeanFactoryId;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -334,21 +336,24 @@ final class AnnotatedValueResolver {
         requireNonNull(pathParams, "pathParams");
         requireNonNull(objectResolvers, "objectResolvers");
 
+        final String description = findDescription(annotatedElement);
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
-            final String name = AnnotatedElementNameUtil.findName(param, typeElement);
-            final String description = param.description();
+            final String name = findName(param, typeElement);
             if (pathParams.contains(name)) {
-                return Optional.of(ofPathVariable(name, annotatedElement, typeElement, type, description));
+                return Optional.of(ofPathVariable(name, annotatedElement, typeElement,
+                                                  type, description));
             } else {
-                return Optional.of(ofHttpParameter(name, annotatedElement, typeElement, type, description));
+                return Optional.of(ofHttpParameter(name, annotatedElement,
+                                                   typeElement, type, description));
             }
         }
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
-            final String name = AnnotatedElementNameUtil.findName(header, typeElement);
-            return Optional.of(ofHeader(name, annotatedElement, typeElement, type, header.description()));
+            final String name = findName(header, typeElement);
+            return Optional.of(ofHeader(name, annotatedElement, typeElement,
+                                        type, description));
         }
 
         final RequestObject requestObject = annotatedElement.getAnnotation(RequestObject.class);
@@ -357,7 +362,7 @@ final class AnnotatedValueResolver {
             final RequestConverter[] converters = typeElement.getAnnotationsByType(RequestConverter.class);
             return Optional.of(ofRequestObject(annotatedElement, type, pathParams,
                                                addToFirstIfExists(objectResolvers, converters),
-                                               requestObject.description()));
+                                               description));
         }
 
         // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
@@ -376,11 +381,12 @@ final class AnnotatedValueResolver {
         if (converters.length > 0) {
             // Apply @RequestObject implicitly when a @RequestConverter is specified.
             return Optional.of(ofRequestObject(annotatedElement, type, pathParams,
-                                               addToFirstIfExists(objectResolvers, converters), null));
+                                               addToFirstIfExists(objectResolvers, converters), description));
         }
 
         if (implicitRequestObjectAnnotation) {
-            return Optional.of(ofRequestObject(annotatedElement, type, pathParams, objectResolvers, null));
+            return Optional.of(ofRequestObject(annotatedElement, type, pathParams, objectResolvers,
+                                               description));
         }
 
         return Optional.empty();

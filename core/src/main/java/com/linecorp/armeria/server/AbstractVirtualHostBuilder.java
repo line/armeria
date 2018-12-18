@@ -44,12 +44,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceElement;
-import com.linecorp.armeria.server.internal.annotation.AnnotatedHttpServiceFactory;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;

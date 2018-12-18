@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.internal.PathMappingUtil.PREFIX;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.createLoggerName;
-import static com.linecorp.armeria.server.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
+import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
 
 import java.util.Optional;
 import java.util.Set;
@@ -42,7 +42,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
         this.prefix = prefix;
         this.stripPrefix = stripPrefix;
-        loggerName = createLoggerName(prefix);
+        loggerName = newLoggerName(prefix);
         meterTag = PREFIX + prefix;
         triePath = Optional.of(prefix + '*');
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';

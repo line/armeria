@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.internal.PathMappingUtil.REGEX;
+import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
