@@ -56,7 +56,8 @@ import Section from '../../components/Section';
 import VariableList from '../../components/VariableList';
 
 interface State {
-  debugRequest: string;
+  requestBodyOpen: boolean;
+  requestBody: string;
   debugResponse: string;
   additionalQueriesOpen: boolean;
   additionalQueries: string;
@@ -79,7 +80,8 @@ type Props = OwnProps &
 
 export default class MethodPage extends React.PureComponent<Props, State> {
   public state: State = {
-    debugRequest: '',
+    requestBodyOpen: true,
+    requestBody: '',
     debugResponse: '',
     additionalQueriesOpen: false,
     additionalQueries: '',
@@ -123,6 +125,18 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     const isAnnotatedHttpService =
       debugTransport !== undefined &&
       debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
+
+    const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
+    let endpointPathPlaceHolder;
+    let queryPlaceHolder;
+
+    if (isAnnotatedHttpService) {
+      endpointPathPlaceHolder = '/foo/bar';
+      queryPlaceHolder = 'foo=bar&baz=bax';
+    } else {
+      endpointPathPlaceHolder = '';
+      queryPlaceHolder = '';
+    }
 
     return (
       <>
@@ -227,25 +241,15 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                 <Typography variant="title" paragraph>
                   Debug
                 </Typography>
-                <TextField
-                  multiline
-                  fullWidth
-                  rows={15}
-                  value={this.state.debugRequest}
-                  onChange={this.onDebugFormChange}
-                  inputProps={{
-                    className: 'code',
-                  }}
-                />
                 {isAnnotatedHttpService &&
                   ((isExactPathMapping(method) && (
                     <>
                       <Typography variant="body1" paragraph />
                       <Button
                         color="secondary"
-                        onClick={this.onAddHttpQueriesClick}
+                        onClick={this.onEditHttpQueriesClick}
                       >
-                        Add HTTP queries
+                        HTTP query string
                       </Button>
                       <Typography variant="body1" paragraph />
                       {this.state.additionalQueriesOpen && (
@@ -255,6 +259,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                             fullWidth
                             rows={1}
                             value={this.state.additionalQueries}
+                            placeholder={queryPlaceHolder}
                             onChange={this.onQueriesFormChange}
                             inputProps={{
                               className: 'code',
@@ -269,9 +274,9 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                         <Typography variant="body1" paragraph />
                         <Button
                           color="secondary"
-                          onClick={this.onInsertEndpointPathClick}
+                          onClick={this.onEditEndpointPathClick}
                         >
-                          Insert the endpoint path
+                          Endpoint path
                         </Button>
                         <Typography variant="body1" paragraph />
                         {this.state.endpointPathOpen && (
@@ -281,6 +286,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                               fullWidth
                               rows={1}
                               value={this.state.endpointPath}
+                              placeholder={endpointPathPlaceHolder}
                               onChange={this.onEndpointPathChange.bind(
                                 this,
                                 method.endpoints[0].regexPathPrefix,
@@ -296,7 +302,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                     )))}
                 <Typography variant="body1" paragraph />
                 <Button color="secondary" onClick={this.onEditHttpHeadersClick}>
-                  Edit HTTP headers
+                  HTTP headers
                 </Button>
                 <Typography variant="body1" paragraph />
                 {this.state.additionalHeadersOpen && (
@@ -315,6 +321,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                       fullWidth
                       rows={8}
                       value={this.state.additionalHeaders}
+                      placeholder={jsonPlaceHolder}
                       onChange={this.onHeadersFormChange}
                       inputProps={{
                         className: 'code',
@@ -332,6 +339,23 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                     />
                     <Typography variant="body1" paragraph />
                   </>
+                )}
+                <Button color="secondary" onClick={this.onEditRequestBodyClick}>
+                  Request body
+                </Button>
+                <Typography variant="body1" paragraph />
+                {this.state.requestBodyOpen && (
+                  <TextField
+                    multiline
+                    fullWidth
+                    rows={15}
+                    value={this.state.requestBody}
+                    placeholder={jsonPlaceHolder}
+                    onChange={this.onDebugFormChange}
+                    inputProps={{
+                      className: 'code',
+                    }}
+                  />
                 )}
                 <Button
                   variant="contained"
@@ -369,7 +393,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
   private onDebugFormChange = (e: ChangeEvent<HTMLInputElement>) => {
     this.setState({
-      debugRequest: e.target.value,
+      requestBody: e.target.value,
     });
   };
 
@@ -409,13 +433,13 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     });
   };
 
-  private onAddHttpQueriesClick = () => {
+  private onEditHttpQueriesClick = () => {
     this.setState({
       additionalQueriesOpen: !this.state.additionalQueriesOpen,
     });
   };
 
-  private onInsertEndpointPathClick = () => {
+  private onEditEndpointPathClick = () => {
     this.setState({
       endpointPathOpen: !this.state.endpointPathOpen,
     });
@@ -424,6 +448,12 @@ export default class MethodPage extends React.PureComponent<Props, State> {
   private onEditHttpHeadersClick = () => {
     this.setState({
       additionalHeadersOpen: !this.state.additionalHeadersOpen,
+    });
+  };
+
+  private onEditRequestBodyClick = () => {
+    this.setState({
+      requestBodyOpen: !this.state.requestBodyOpen,
     });
   };
 
@@ -446,17 +476,17 @@ export default class MethodPage extends React.PureComponent<Props, State> {
   };
 
   private onSubmit = () => {
-    const args = this.state.debugRequest;
+    const requestBody = this.state.requestBody;
     const endpointPath = this.state.endpointPath;
     const queries = this.state.additionalQueries;
     const headers = this.state.additionalHeaders;
     const params = new URLSearchParams(this.props.location.search);
 
     try {
-      const parsedArgs = JSON.parse(args);
+      const parsedArgs = JSON.parse(requestBody);
       if (typeof parsedArgs !== 'object') {
         this.setState({
-          debugResponse: `Arguments must be a JSON object.\nYou entered: ${typeof parsedArgs}`,
+          debugResponse: `The request body must be a JSON object.\nYou entered: ${typeof parsedArgs}`,
         });
       }
     } catch (e) {
@@ -468,8 +498,8 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     // See: https://github.com/line/armeria/issues/273
 
     // For some reason jsonMinify minifies {} as empty string, so work around it.
-    const minifiedArgs = jsonMinify(args) || '{}';
-    params.set('args', minifiedArgs);
+    const minifiedRequestBody = jsonMinify(requestBody) || '{}';
+    params.set('request_body', minifiedRequestBody);
 
     if (endpointPath) {
       try {
@@ -568,8 +598,8 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
   private async executeRequest() {
     const params = new URLSearchParams(this.props.location.search);
-    const argsText = params.get('args');
-    if (!argsText) {
+    const requestBody = params.get('request_body');
+    if (!requestBody) {
       return;
     }
 
@@ -588,7 +618,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     try {
       debugResponse = await transport.send(
         method,
-        argsText,
+        requestBody,
         headers,
         endpointPath,
         queries,
@@ -644,8 +674,8 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     }
 
     const urlParams = new URLSearchParams(this.props.location.search);
-    const urlDebugRequest = urlParams.has('args')
-      ? jsonPrettify(urlParams.get('args')!)
+    const urlRequestBody = urlParams.has('request_body')
+      ? jsonPrettify(urlParams.get('request_body')!)
       : undefined;
 
     const urlHeaders = urlParams.has('http_headers')
@@ -672,14 +702,11 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       this.props.specification.getExampleHttpHeaders(),
     );
 
-    const hasHeaders = !!(
-      urlHeaders ||
-      stateHeaders ||
-      exampleHeaders.length > 0
-    );
+    const headersOpen = !!(urlHeaders || stateHeaders);
     this.setState({
       exampleHeaders,
-      debugRequest: urlDebugRequest || method.exampleRequests[0] || '',
+      requestBody: urlRequestBody || method.exampleRequests[0] || '',
+      requestBodyOpen: !!(urlRequestBody || method.exampleRequests[0]),
       debugResponse: '',
       additionalQueries: urlQueries,
       additionalQueriesOpen: !!urlQueries,
@@ -691,7 +718,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
         urlHeaders ||
         stateHeaders ||
         (exampleHeaders.length === 1 ? exampleHeaders[0].value || '' : ''),
-      additionalHeadersOpen: hasHeaders,
+      additionalHeadersOpen: headersOpen,
       stickyHeaders:
         urlParams.has('http_headers_sticky') || this.state.stickyHeaders,
     });

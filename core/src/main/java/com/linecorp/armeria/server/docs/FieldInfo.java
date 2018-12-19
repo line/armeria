@@ -86,6 +86,7 @@ public final class FieldInfo {
 
     /**
      * Returns the location of the field.
+     * e.g. {@code "param"}, {@code "header"} and {@code "query"}
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)

@@ -21,8 +21,8 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
 import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
 import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
-import static com.linecorp.armeria.internal.annotation.AnnotatedElementNameUtil.findDescription;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
@@ -124,7 +124,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     private void addServiceDescription(Map<Class<?>, String> serviceDescription, AnnotatedHttpService service) {
         final Class<?> clazz = service.object().getClass();
-        serviceDescription.computeIfAbsent(clazz, AnnotatedElementNameUtil::findDescription);
+        serviceDescription.computeIfAbsent(clazz, AnnotatedHttpServiceFactory::findDescription);
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,

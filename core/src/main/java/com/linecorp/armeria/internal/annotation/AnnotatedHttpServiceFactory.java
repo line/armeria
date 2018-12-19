@@ -89,6 +89,7 @@ import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.Decorators;
 import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlers;
@@ -782,6 +783,23 @@ public final class AnnotatedHttpServiceFactory {
             throw new IllegalStateException("An annotation @" + a.getClass().getSimpleName() +
                                             " must have a 'value' method", e);
         }
+    }
+
+    /**
+     * Returns the description of the specified {@link AnnotatedElement}.
+     */
+    @Nullable
+    static String findDescription(AnnotatedElement annotatedElement) {
+        requireNonNull(annotatedElement, "annotatedElement");
+        final Optional<Description> description = findAnnotation(annotatedElement, Description.class);
+        if (description.isPresent()) {
+            final String value = description.get().value();
+            if (DefaultValues.isSpecified(value)) {
+                checkArgument(!value.isEmpty(), "value is empty");
+                return value;
+            }
+        }
+        return null;
     }
 
     /**

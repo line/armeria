@@ -211,9 +211,7 @@ final class HttpHeaderPathMapping implements PathMapping {
     @Override
     public PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods, List<MediaType> consumeTypes,
                                           List<MediaType> produceTypes) {
-        throw new UnsupportedOperationException(
-                "cannot create " + PathMapping.class.getSimpleName() +
-                " with HTTP headers information because this already contains them: " + this);
+        return new HttpHeaderPathMapping(pathStringMapping, supportedMethods, consumeTypes, produceTypes);
     }
 
     private static String generateLoggerName(String prefix, Set<HttpMethod> supportedMethods,

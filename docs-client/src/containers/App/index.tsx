@@ -193,9 +193,7 @@ function AppDrawer({
                   >
                     {method.httpMethod && (
                       <Typography
-                        className={`${
-                          classes.httpMethodCommon
-                        } ${httpMethodClass(method.httpMethod)}`}
+                        className={httpMethodClass(method.httpMethod)}
                       >
                         {method.httpMethod}
                       </Typography>
@@ -447,32 +445,36 @@ class App extends React.PureComponent<Props, State> {
 
   private httpMethodClass = (httpMethod: string) => {
     const classes = this.props.classes;
+    let httpMethodClass;
     if (httpMethod === 'OPTIONS') {
-      return classes.httpMethodOptions;
+      httpMethodClass = classes.httpMethodOptions;
     }
     if (httpMethod === 'GET') {
-      return classes.httpMethodGet;
+      httpMethodClass = classes.httpMethodGet;
     }
     if (httpMethod === 'HEAD') {
-      return classes.httpMethodHead;
+      httpMethodClass = classes.httpMethodHead;
     }
     if (httpMethod === 'POST') {
-      return classes.httpMethodPost;
+      httpMethodClass = classes.httpMethodPost;
     }
     if (httpMethod === 'PUT') {
-      return classes.httpMethodPut;
+      httpMethodClass = classes.httpMethodPut;
     }
     if (httpMethod === 'PATCH') {
-      return classes.httpMethodPatch;
+      httpMethodClass = classes.httpMethodPatch;
     }
     if (httpMethod === 'DELETE') {
-      return classes.httpMethodDelete;
+      httpMethodClass = classes.httpMethodDelete;
     }
     if (httpMethod === 'TRACE') {
-      return classes.httpMethodTrace;
+      httpMethodClass = classes.httpMethodTrace;
     }
 
-    throw new Error(`unsupported http method: ${httpMethod}`);
+    if (httpMethodClass === undefined) {
+      throw new Error(`unsupported http method: ${httpMethod}`);
+    }
+    return `${classes.httpMethodCommon} ${httpMethodClass}`;
   };
 
   private fetchSpecification = async () => {
