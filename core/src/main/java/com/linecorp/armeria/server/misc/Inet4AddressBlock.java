@@ -83,7 +83,7 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
     /**
      * Returns IPv4 byte representation of the specified {@link Inet6Address}.
      *
-     * @throws IllegalArgumentException if the IPv6 cannot be mapped to IPv6
+     * @throws IllegalArgumentException if the IPv6 cannot be mapped to IPv4
      */
     private static byte[] ipv6ToIpv4Address(Inet6Address address) {
         final byte[] addr = address.getAddress();
