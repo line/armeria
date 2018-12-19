@@ -21,6 +21,8 @@ import static com.linecorp.armeria.server.misc.InetAddressPredicates.toMaskBits;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -29,6 +31,8 @@ import java.util.function.Predicate;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+
+import io.netty.util.NetUtil;
 
 public class InetAddressPredicatesTest {
 
@@ -41,6 +45,14 @@ public class InetAddressPredicatesTest {
             assertThat(filter.test(InetAddress.getByName("10.0.0.1"))).isTrue();
             assertThat(filter.test(InetAddress.getByName("10.0.0.2"))).isFalse();
         }
+
+        assertThat(ofExact(NetUtil.LOCALHOST4).test(NetUtil.LOCALHOST6)).isTrue();
+        assertThat(ofExact(NetUtil.LOCALHOST6).test(NetUtil.LOCALHOST4)).isTrue();
+
+        assertThat(ofExact("0:0:0:0:0:0:0A01:0101").test(ipv4(10, 1, 1, 1))).isTrue();
+        assertThat(ofExact("0:0:0:0:0:0:0A01:0101").test(ipv4(10, 1, 1, 2))).isFalse();
+        assertThat(ofExact("10.1.1.1").test(ipv6(10, 1, 1, 1))).isTrue();
+        assertThat(ofExact("10.1.1.1").test(ipv6(10, 1, 1, 2))).isFalse();
     }
 
     @Test
@@ -50,26 +62,42 @@ public class InetAddressPredicatesTest {
         filter = ofCidr("10.1.1.0/8");
         assertThat(filter.test(InetAddress.getByName("10.0.0.0"))).isTrue();
         assertThat(filter.test(InetAddress.getByName("10.255.255.255"))).isTrue();
+        assertThat(filter.test(ipv6(10, 0, 0, 0))).isTrue();
+        assertThat(filter.test(ipv6(10, 255, 255, 255))).isTrue();
         assertThat(filter.test(InetAddress.getByName("11.1.1.1"))).isFalse();
         assertThat(filter.test(InetAddress.getByName("255.255.255.255"))).isFalse();
+        assertThat(filter.test(ipv6(11, 1, 1, 1))).isFalse();
+        assertThat(filter.test(ipv6(255, 255, 255, 255))).isFalse();
 
         filter = ofCidr("10.1.1.0/16");
         assertThat(filter.test(InetAddress.getByName("10.1.0.0"))).isTrue();
         assertThat(filter.test(InetAddress.getByName("10.1.255.255"))).isTrue();
+        assertThat(filter.test(ipv6(10, 1, 0, 0))).isTrue();
+        assertThat(filter.test(ipv6(10, 1, 25, 255))).isTrue();
         assertThat(filter.test(InetAddress.getByName("10.2.1.1"))).isFalse();
         assertThat(filter.test(InetAddress.getByName("10.255.255.255"))).isFalse();
+        assertThat(filter.test(ipv6(10, 2, 1, 1))).isFalse();
+        assertThat(filter.test(ipv6(10, 255, 255, 255))).isFalse();
 
         filter = ofCidr("10.1.1.0/24");
         assertThat(filter.test(InetAddress.getByName("10.1.1.0"))).isTrue();
         assertThat(filter.test(InetAddress.getByName("10.1.1.255"))).isTrue();
+        assertThat(filter.test(ipv6(10, 1, 1, 0))).isTrue();
+        assertThat(filter.test(ipv6(10, 1, 1, 255))).isTrue();
         assertThat(filter.test(InetAddress.getByName("10.1.2.1"))).isFalse();
         assertThat(filter.test(InetAddress.getByName("10.1.255.255"))).isFalse();
+        assertThat(filter.test(ipv6(10, 1, 2, 1))).isFalse();
+        assertThat(filter.test(ipv6(10, 1, 255, 255))).isFalse();
 
         filter = ofCidr("10.1.1.0/26");
         assertThat(filter.test(InetAddress.getByName("10.1.1.0"))).isTrue();
         assertThat(filter.test(InetAddress.getByName("10.1.1.63"))).isTrue();
+        assertThat(filter.test(ipv6(10, 1, 1, 0))).isTrue();
+        assertThat(filter.test(ipv6(10, 1, 1, 63))).isTrue();
         assertThat(filter.test(InetAddress.getByName("10.1.1.64"))).isFalse();
         assertThat(filter.test(InetAddress.getByName("10.1.1.255"))).isFalse();
+        assertThat(filter.test(ipv6(10, 1, 1, 64))).isFalse();
+        assertThat(filter.test(ipv6(10, 1, 1, 255))).isFalse();
     }
 
     @Test
@@ -128,6 +156,16 @@ public class InetAddressPredicatesTest {
         assertThat(filter.test(InetAddress.getByName("10FF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"))).isTrue();
         assertThat(filter.test(InetAddress.getByName("1100:0:0:0:0:0:0:0"))).isFalse();
         assertThat(filter.test(InetAddress.getByName("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"))).isFalse();
+
+        filter = ofCidr("0:0:0:0:0:0:0A01:0100/120");
+        assertThat(filter.test(InetAddress.getByName("0:0:0:0:0:0:0A01:0101"))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("0:0:0:0:0:0:0A01:01FF"))).isTrue();
+        assertThat(filter.test(ipv4(10, 1, 1, 1))).isTrue();
+        assertThat(filter.test(ipv4(10, 1, 1, 255))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("0:0:0:0:0:0:0A01:0201"))).isFalse();
+        assertThat(filter.test(InetAddress.getByName("0:0:0:0:0:0:FFFF:FFFF"))).isFalse();
+        assertThat(filter.test(ipv4(10, 1, 2, 1))).isFalse();
+        assertThat(filter.test(ipv4(255, 255, 255, 255))).isFalse();
     }
 
     @Test
@@ -173,5 +211,22 @@ public class InetAddressPredicatesTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> toMaskBits("255.192.192.0"))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static InetAddress ipv6(int ip1, int ip2, int ip3, int ip4) throws UnknownHostException {
+        final InetAddress inetAddress = InetAddress.getByAddress(new byte[] {
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                (byte) ip1, (byte) ip2, (byte) ip3, (byte) ip4
+        });
+        assert inetAddress instanceof Inet6Address;
+        return inetAddress;
+    }
+
+    private static InetAddress ipv4(int ip1, int ip2, int ip3, int ip4) throws UnknownHostException {
+        final InetAddress inetAddress = InetAddress.getByAddress(new byte[] {
+                (byte) ip1, (byte) ip2, (byte) ip3, (byte) ip4
+        });
+        assert inetAddress instanceof Inet4Address;
+        return inetAddress;
     }
 }

@@ -71,7 +71,13 @@ public final class InetAddressPredicates {
      */
     public static Predicate<InetAddress> ofExact(InetAddress address) {
         requireNonNull(address, "address");
-        return address::equals;
+        if (address instanceof Inet4Address) {
+            return ofCidr(address, 32);
+        }
+        if (address instanceof Inet6Address) {
+            return ofCidr(address, 128);
+        }
+        throw new IllegalArgumentException("Invalid InetAddress type: " + address.getClass().getName());
     }
 
     /**
@@ -84,7 +90,7 @@ public final class InetAddressPredicates {
         requireNonNull(address, "address");
         try {
             final InetAddress inetAddress = InetAddress.getByName(address);
-            return inetAddress::equals;
+            return ofExact(inetAddress);
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException("Invalid address: " + address, e);
         }
@@ -114,7 +120,7 @@ public final class InetAddressPredicates {
         requireNonNull(baseAddress, "baseAddress");
         requireNonNull(subnetMask, "subnetMask");
         checkArgument(validIpV4Address.matcher(subnetMask).matches(),
-                      "subnetMask: %s (expected: IP v4 address string)", subnetMask);
+                      "subnetMask: %s (expected: an IPv4 address string)", subnetMask);
         final int maskBits = toMaskBits(subnetMask);
         return ofCidr(baseAddress, maskBits, maskBits + 96);
     }

@@ -27,6 +27,8 @@ import com.google.common.base.MoreObjects;
 
 final class Inet4AddressBlock implements Predicate<InetAddress> {
 
+    private static final byte[] localhost = { 127, 0, 0, 1 };
+
     private final Inet4Address baseAddress;
     private final int maskBits;
     private final int lowerBound;
@@ -38,13 +40,19 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
                       "maskBits: %s (expected: 0-32)", maskBits);
         this.maskBits = maskBits;
 
-        // Calculate the lower and upper bounds of this address block.
-        // e.g. mask is 256(0x00000100) if maskBits is 24.
-        final int mask = 1 << 32 - maskBits;
-        // e.g. (-mask) is 0xFFFFFF00 if mask is 256.
-        lowerBound = ipv4AddressToInt(baseAddress.getAddress()) & -mask;
-        // e.g. (mask-1) is 0x000000FF if mask is 256.
-        upperBound = lowerBound + mask - 1;
+        if (maskBits == 32) {
+            lowerBound = upperBound = ipv4AddressToInt(baseAddress.getAddress());
+        } else if (maskBits == 0) {
+            lowerBound = upperBound = 0;
+        } else {
+            // Calculate the lower and upper bounds of this address block.
+            // e.g. mask is 256(0x00000100) if maskBits is 24.
+            final int mask = 1 << 32 - maskBits;
+            // e.g. (-mask) is 0xFFFFFF00 if mask is 256.
+            lowerBound = ipv4AddressToInt(baseAddress.getAddress()) & -mask;
+            // e.g. (mask-1) is 0x000000FF if mask is 256.
+            upperBound = lowerBound + mask - 1;
+        }
     }
 
     @Override
@@ -53,8 +61,12 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
         if (maskBits == 0) {
             return true;
         }
-        final int addr = inetAddressToInt(address);
-        return addr >= lowerBound && addr <= upperBound;
+        try {
+            final int addr = inetAddressToInt(address);
+            return addr >= lowerBound && addr <= upperBound;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override
@@ -87,16 +99,27 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
      */
     private static byte[] ipv6ToIpv4Address(Inet6Address address) {
         final byte[] addr = address.getAddress();
-        for (int i = 0; i < 9; i++) {
-            if (addr[i] != 0) {
-                throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context");
+        // The first 10 bytes should be 0.
+        for (int i = 0; i < 10; i++) {
+            if (addr[i] != 0x00) {
+                throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context" +
+                                                   address.getHostAddress());
             }
         }
-        if (addr[10] != 0 && addr[10] != (byte) 0xFF ||
-            addr[11] != 0 && addr[11] != (byte) 0xFF) {
-            throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context");
+
+        if (addr[10] == 0x00 && addr[11] == 0x00) {
+            if (addr[12] == 0x00 && addr[13] == 0x00 && addr[14] == 0x00 && addr[15] == 0x01) {
+                return localhost;
+            }
+            return new byte[] { addr[12], addr[13], addr[14], addr[15] };
         }
-        return new byte[] { addr[12], addr[13], addr[14], addr[15] };
+
+        if (addr[10] == (byte) 0xFF && addr[11] == (byte) 0xFF) {
+            return new byte[] { addr[12], addr[13], addr[14], addr[15] };
+        }
+
+        throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context" +
+                                           address.getHostAddress());
     }
 
     /**

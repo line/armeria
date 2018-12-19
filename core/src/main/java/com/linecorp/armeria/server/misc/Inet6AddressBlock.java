@@ -28,6 +28,8 @@ import com.google.common.base.MoreObjects;
 
 final class Inet6AddressBlock implements Predicate<InetAddress> {
 
+    private static final byte[] localhost = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
+
     private final Inet6Address baseAddress;
     private final int maskBits;
     private final BigInteger lowerBound;
@@ -39,11 +41,17 @@ final class Inet6AddressBlock implements Predicate<InetAddress> {
                       "maskBits: %s (expected: 0-128)", maskBits);
         this.maskBits = maskBits;
 
-        // Calculate the lower and upper bounds of this address block.
-        // See Inet4AddressBlock if you want to know how they are calculated.
-        final BigInteger mask = BigInteger.ONE.shiftLeft(128 - maskBits);
-        lowerBound = ipv6AddressToBigInteger(baseAddress).and(mask.negate());
-        upperBound = lowerBound.add(mask.subtract(BigInteger.ONE));
+        if (maskBits == 128) {
+            lowerBound = upperBound = ipv6AddressToBigInteger(baseAddress);
+        } else if (maskBits == 0) {
+            lowerBound = upperBound = BigInteger.ZERO;
+        } else {
+            // Calculate the lower and upper bounds of this address block.
+            // See Inet4AddressBlock if you want to know how they are calculated.
+            final BigInteger mask = BigInteger.ONE.shiftLeft(128 - maskBits);
+            lowerBound = ipv6AddressToBigInteger(baseAddress).and(mask.negate());
+            upperBound = lowerBound.add(mask.subtract(BigInteger.ONE));
+        }
     }
 
     @Override
@@ -52,8 +60,12 @@ final class Inet6AddressBlock implements Predicate<InetAddress> {
         if (maskBits == 0) {
             return true;
         }
-        final BigInteger addr = ipv6AddressToBigInteger(address);
-        return addr.compareTo(lowerBound) >= 0 && addr.compareTo(upperBound) <= 0;
+        try {
+            final BigInteger addr = ipv6AddressToBigInteger(address);
+            return addr.compareTo(lowerBound) >= 0 && addr.compareTo(upperBound) <= 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override
@@ -73,8 +85,13 @@ final class Inet6AddressBlock implements Predicate<InetAddress> {
         final byte[] ipv6;
         if (inetAddress instanceof Inet4Address) {
             final byte[] ipv4 = inetAddress.getAddress();
-            // Fill the lower 4 bytes with the IPv4 address.
-            ipv6 = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ipv4[0], ipv4[1], ipv4[2], ipv4[3] };
+            if (ipv4[0] == 0x7F && ipv4[1] == 0x00 && ipv4[2] == 0x00 && ipv4[3] == 0x01) {
+                // Convert 127.0.0.1 to ::1.
+                ipv6 = localhost;
+            } else {
+                // Fill the lower 4 bytes with the IPv4 address.
+                ipv6 = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ipv4[0], ipv4[1], ipv4[2], ipv4[3] };
+            }
         } else {
             ipv6 = inetAddress.getAddress();
         }
