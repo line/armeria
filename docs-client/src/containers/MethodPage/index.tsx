@@ -132,7 +132,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
 
     if (isAnnotatedHttpService) {
       endpointPathPlaceHolder = '/foo/bar';
-      queryPlaceHolder = 'foo=bar&baz=bax';
+      queryPlaceHolder = 'foo=bar&baz=qux';
     } else {
       endpointPathPlaceHolder = '';
       queryPlaceHolder = '';
