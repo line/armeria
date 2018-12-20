@@ -177,11 +177,12 @@ public class InetAddressPredicatesTest {
         assertThat(filter.test(ipv4(10, 1, 2, 1))).isFalse();
         assertThat(filter.test(ipv4(255, 255, 255, 255))).isFalse();
 
-        filter = ofCidr("F080:0:0:0:8:800:200C:4100/120");
-        assertThat(filter.test(InetAddress.getByName("F080:0:0:0:8:800:200C:4100"))).isTrue();
-        assertThat(filter.test(InetAddress.getByName("F080:0:0:0:8:800:200C:41FF"))).isTrue();
-        assertThat(filter.test(InetAddress.getByName("F080:0:0:0:8:800:200C:4200"))).isFalse();
-        assertThat(filter.test(InetAddress.getByName("F080:0:0:0:8:800:200C:FFFF"))).isFalse();
+        filter = ofCidr("FF80:0:0:0:8:800:200C:4100/120");
+        assertThat(filter.test(InetAddress.getByName("FF80:0:0:0:8:800:200C:4100"))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("FF80:0:0:0:8:800:200C:41FF"))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("FF80:0:0:0:8:800:200C:4200"))).isFalse();
+        assertThat(filter.test(InetAddress.getByName("FF80:0:0:0:8:800:200C:FFFF"))).isFalse();
+        assertThat(filter.test(ipv4(10, 1, 2, 1))).isFalse();
     }
 
     @Test
