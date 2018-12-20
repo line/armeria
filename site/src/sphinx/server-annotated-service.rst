@@ -670,7 +670,7 @@ Let's see the following example about the default response conversion.
 
         // JacksonResponseConverterFunction will convert the return values to JSON documents:
         @Get("/json1")
-        @ProduceJson    // the same as @Produces("application/json; charset=utf-8")
+        @ProducesJson    // the same as @Produces("application/json; charset=utf-8")
         public MyObject json1() { ... }
 
         @Get("/json2")
@@ -678,7 +678,7 @@ Let's see the following example about the default response conversion.
 
         // StringResponseConverterFunction will convert the return values to strings:
         @Get("/string1")
-        @ProduceText    // the same as @Produces("text/plain; charset=utf-8")
+        @ProducesText    // the same as @Produces("text/plain; charset=utf-8")
         public int string1() { ... }
 
         @Get("/string2")
@@ -686,7 +686,7 @@ Let's see the following example about the default response conversion.
 
         // ByteArrayResponseConverterFunction will convert the return values to byte arrays:
         @Get("/byte1")
-        @ProduceBinary  // the same as @Produces("application/binary")
+        @ProducesBinary  // the same as @Produces("application/binary")
         public HttpData byte1() { ... }
 
         @Get("/byte2")
