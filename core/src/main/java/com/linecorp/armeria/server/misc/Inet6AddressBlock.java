@@ -85,8 +85,9 @@ final class Inet6AddressBlock implements Predicate<InetAddress> {
         final byte[] ipv6;
         if (inetAddress instanceof Inet4Address) {
             final byte[] ipv4 = inetAddress.getAddress();
-            if (ipv4[0] == 0x7F && ipv4[1] == 0x00 && ipv4[2] == 0x00 && ipv4[3] == 0x01) {
-                // Convert 127.0.0.1 to ::1.
+            if (ipv4[0] == 0x7F) {
+                // Convert 127.0.0.0/8 to ::1 because this block is assigned for use as the Internet host
+                // loopback address. See https://tools.ietf.org/html/rfc5735#section-3.
                 ipv6 = localhost;
             } else {
                 // Fill the lower 4 bytes with the IPv4 address.

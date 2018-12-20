@@ -102,7 +102,7 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
         // The first 10 bytes should be 0.
         for (int i = 0; i < 10; i++) {
             if (addr[i] != 0x00) {
-                throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context" +
+                throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context: " +
                                                    address.getHostAddress());
             }
         }
@@ -118,7 +118,7 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
             return new byte[] { addr[12], addr[13], addr[14], addr[15] };
         }
 
-        throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context" +
+        throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context: " +
                                            address.getHostAddress());
     }
 
