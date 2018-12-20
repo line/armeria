@@ -25,24 +25,18 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap.Builder;
+
+import io.netty.util.NetUtil;
 
 /**
  * A utility class which provides factory methods in order to easily create a {@link Predicate} of an
  * {@link InetAddress}.
  */
 public final class InetAddressPredicates {
-
-    /**
-     * A {@link Pattern} of a valid IP address.
-     */
-    private static final Pattern validIpV4Address =
-            Pattern.compile("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}" +
-                            "(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
 
     /**
      * A {@link Splitter} for splitting an IP address.
@@ -120,7 +114,7 @@ public final class InetAddressPredicates {
     public static Predicate<InetAddress> ofCidr(InetAddress baseAddress, String subnetMask) {
         requireNonNull(baseAddress, "baseAddress");
         requireNonNull(subnetMask, "subnetMask");
-        checkArgument(validIpV4Address.matcher(subnetMask).matches(),
+        checkArgument(NetUtil.isValidIpV4Address(subnetMask),
                       "subnetMask: %s (expected: an IPv4 address string)", subnetMask);
         final int maskBits = toMaskBits(subnetMask);
         return ofCidr(baseAddress, maskBits, maskBits + 96);
@@ -151,7 +145,7 @@ public final class InetAddressPredicates {
 
         final int maskBits;
 
-        if (validIpV4Address.matcher(subnetMask).matches()) {
+        if (NetUtil.isValidIpV4Address(subnetMask)) {
             maskBits = toMaskBits(subnetMask);
             return ofCidr(baseAddress, maskBits, maskBits + 96);
         }
