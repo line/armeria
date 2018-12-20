@@ -14,7 +14,8 @@
  * under the License.
  */
 
-import { providers } from '../header-provider';
+import { docServiceDebug, providers } from '../header-provider';
+
 import { Method } from '../specification';
 
 export default abstract class Transport {
@@ -22,11 +23,17 @@ export default abstract class Transport {
     method: Method,
     bodyJson: string,
     headers: { [name: string]: string },
+    endpointPath?: string,
+    queries?: string,
   ): Promise<string> {
     const providedHeaders = await Promise.all(
       providers.map((provider) => provider()),
     );
     let filledHeaders = {};
+    if (process.env.WEBPACK_SERVE === 'true') {
+      filledHeaders = { [docServiceDebug]: 'true' };
+    }
+
     for (const hdrs of providedHeaders) {
       filledHeaders = {
         ...filledHeaders,
@@ -37,8 +44,7 @@ export default abstract class Transport {
       ...filledHeaders,
       ...headers,
     };
-
-    return this.doSend(method, bodyJson, filledHeaders);
+    return this.doSend(method, bodyJson, filledHeaders, endpointPath, queries);
   }
 
   public abstract supportsMimeType(mimeType: string): boolean;
@@ -47,5 +53,7 @@ export default abstract class Transport {
     method: Method,
     bodyJson: string,
     headers: { [name: string]: string },
+    endpointPath?: string,
+    queries?: string,
   ): Promise<string>;
 }

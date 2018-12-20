@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.server.AnnotatedHttpServiceFactory.collectDecorators;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.collectDecorators;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.annotation.ElementType;
@@ -32,7 +32,11 @@ import org.junit.Test;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.DecoratorAndOrder;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.DecoratorAndOrder;
+import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;

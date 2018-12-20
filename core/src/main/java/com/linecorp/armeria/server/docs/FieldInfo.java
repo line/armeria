@@ -34,6 +34,8 @@ import com.google.common.base.Strings;
 public final class FieldInfo {
 
     private final String name;
+    @Nullable
+    private final String location;
     private final FieldRequirement requirement;
     private final TypeSignature typeSignature;
     @Nullable
@@ -43,7 +45,15 @@ public final class FieldInfo {
      * Creates a new instance.
      */
     public FieldInfo(String name, FieldRequirement requirement, TypeSignature typeSignature) {
-        this(name, requirement, typeSignature, null);
+        this(name, null, requirement, typeSignature, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public FieldInfo(String name, @Nullable String location, FieldRequirement requirement,
+                     TypeSignature typeSignature) {
+        this(name, location, requirement, typeSignature, null);
     }
 
     /**
@@ -51,7 +61,16 @@ public final class FieldInfo {
      */
     public FieldInfo(String name, FieldRequirement requirement,
                      TypeSignature typeSignature, @Nullable String docString) {
+        this(name, null, requirement, typeSignature, docString);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public FieldInfo(String name, @Nullable String location, FieldRequirement requirement,
+                     TypeSignature typeSignature, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
+        this.location = Strings.emptyToNull(location);
         this.requirement = requireNonNull(requirement, "requirement");
         this.typeSignature = requireNonNull(typeSignature, "typeSignature");
         this.docString = Strings.emptyToNull(docString);
@@ -63,6 +82,17 @@ public final class FieldInfo {
     @JsonProperty
     public String name() {
         return name;
+    }
+
+    /**
+     * Returns the location of the field.
+     * e.g. {@code "param"}, {@code "header"} and {@code "query"}
+     */
+    @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public String location() {
+        return location;
     }
 
     /**
@@ -114,10 +144,12 @@ public final class FieldInfo {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("name", name)
+                          .add("location", location)
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
+                          .add("docString", docString)
                           .toString();
     }
 }

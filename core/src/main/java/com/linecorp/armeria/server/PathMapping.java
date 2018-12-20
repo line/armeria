@@ -15,12 +15,22 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
+import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
+import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
+import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.docs.DocService;
 
 import io.micrometer.core.instrument.Meter;
@@ -48,17 +58,17 @@ public interface PathMapping {
     static PathMapping of(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
 
-        if (pathPattern.startsWith(ExactPathMapping.PREFIX)) {
-            return ofExact(pathPattern.substring(ExactPathMapping.PREFIX_LEN));
+        if (pathPattern.startsWith(EXACT)) {
+            return ofExact(pathPattern.substring(EXACT.length()));
         }
-        if (pathPattern.startsWith(PrefixPathMapping.PREFIX)) {
-            return ofPrefix(pathPattern.substring(PrefixPathMapping.PREFIX_LEN));
+        if (pathPattern.startsWith(PREFIX)) {
+            return ofPrefix(pathPattern.substring(PREFIX.length()));
         }
-        if (pathPattern.startsWith(GlobPathMapping.PREFIX)) {
-            return ofGlob(pathPattern.substring(GlobPathMapping.PREFIX_LEN));
+        if (pathPattern.startsWith(GLOB)) {
+            return ofGlob(pathPattern.substring(GLOB.length()));
         }
-        if (pathPattern.startsWith(RegexPathMapping.PREFIX)) {
-            return ofRegex(pathPattern.substring(RegexPathMapping.PREFIX_LEN));
+        if (pathPattern.startsWith(REGEX)) {
+            return ofRegex(pathPattern.substring(REGEX.length()));
         }
         if (!pathPattern.startsWith("/")) {
             throw new IllegalArgumentException(
@@ -191,9 +201,9 @@ public interface PathMapping {
     Optional<String> exactPath();
 
     /**
-     * Returns the prefix of this path mapping if it is a prefix mapping, or {@link Optional#empty}
-     * otherwise. This can be useful for services which provide logic after scanning the server's mapped
-     * services, e.g. {@link DocService}
+     * Returns the prefix of this path mapping if it is a prefix mapping or a prefix adding path mapping,
+     * {@link Optional#empty} otherwise. This can be useful for services which provide logic after scanning
+     * the server's mapped services, e.g. {@link DocService}
      *
      * @return the prefix that ends with '/' if this mapping is a prefix mapping
      */
@@ -207,10 +217,54 @@ public interface PathMapping {
     }
 
     /**
+     * Returns the regular expression of this path mapping if it is created with the regular expression or
+     * glob pattern. Please note that this regex does not include the {@code pathPrefix} if this is
+     * created with prefix adding path mapping. You should call {@link #prefix()} to retrieve that.
+     */
+    default Optional<String> regex() {
+        return Optional.empty();
+    }
+
+    /**
      * Returns the complexity of this path mapping. It would be increased if this path mapping has
      * more conditions to check.
      */
     default int complexity() {
         return 0;
+    }
+
+    /**
+     * Returns the {@link Set} of {@link HttpMethod}s that this {@link PathMapping} supports.
+     */
+    default Set<HttpMethod> supportedMethods() {
+        return ImmutableSet.of();
+    }
+
+    /**
+     * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} consumes.
+     */
+    default List<MediaType> consumeTypes() {
+        return ImmutableList.of();
+    }
+
+    /**
+     * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} produces.
+     */
+    default List<MediaType> produceTypes() {
+        return ImmutableList.of();
+    }
+
+    /**
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} using
+     * the specified {@link PathMapping} and checks whether the request is valid using the specified
+     * {@code supportedMethods}, {@code consumeTypes} and {@code produceTypes}.
+     *
+     * @param supportedMethods the set of {@link HttpMethod}s that this {@link PathMapping} supports
+     * @param consumeTypes the list of {@link MediaType}s that this {@link PathMapping} consumes
+     * @param produceTypes the list of {@link MediaType}s that this {@link PathMapping} produces
+     */
+    default PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods,
+                                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+        return new HttpHeaderPathMapping(this, supportedMethods, consumeTypes, produceTypes);
     }
 }

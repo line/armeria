@@ -40,14 +40,13 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
-import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
@@ -119,24 +118,32 @@ public class ThriftDocServiceTest {
         final Set<SerializationFormat> allThriftFormats = ThriftSerializationFormats.values();
         final List<Entry> entries = ImmutableList.of(
                 new EntryBuilder(HelloService.class)
-                        .endpoint(new EndpointInfo("*", "/", "hello", BINARY, allThriftFormats))
+                        .endpoint(new EndpointInfoBuilder("*", "/").fragment("hello").defaultFormat(BINARY)
+                                                                   .availableFormats(allThriftFormats)
+                                                                   .build())
                         .build(),
                 new EntryBuilder(SleepService.class)
-                        .endpoint(new EndpointInfo("*", "/", "sleep", BINARY, allThriftFormats))
+                        .endpoint(new EndpointInfoBuilder("*", "/").fragment("sleep").defaultFormat(BINARY)
+                                                                   .availableFormats(allThriftFormats)
+                                                                   .build())
                         .build(),
                 new EntryBuilder(FooService.class)
-                        .endpoint(new EndpointInfo("*", "/foo", "", COMPACT, ImmutableSet.of(COMPACT)))
-                        .endpoint(new EndpointInfo("*", "/foo/", "", COMPACT, ImmutableSet.of(COMPACT)))
+                        .endpoint(new EndpointInfoBuilder("*", "/foo").defaultFormat(COMPACT).build())
+                        .endpoint(new EndpointInfoBuilder("*", "/foo/").defaultFormat(COMPACT).build())
                         .build(),
                 new EntryBuilder(Cassandra.class)
-                        .endpoint(new EndpointInfo("*", "/cassandra", "", BINARY, ImmutableSet.of(BINARY)))
-                        .endpoint(new EndpointInfo("*", "/cassandra/debug", "", TEXT, ImmutableSet.of(TEXT)))
+                        .endpoint(new EndpointInfoBuilder("*", "/cassandra").defaultFormat(BINARY).build())
+                        .endpoint(new EndpointInfoBuilder("*", "/cassandra/debug").defaultFormat(TEXT).build())
                         .build(),
                 new EntryBuilder(Hbase.class)
-                        .endpoint(new EndpointInfo("*", "/hbase", "", BINARY, allThriftFormats))
+                        .endpoint(new EndpointInfoBuilder("*", "/hbase").defaultFormat(BINARY)
+                                                                        .availableFormats(allThriftFormats)
+                                                                        .build())
                         .build(),
                 new EntryBuilder(OnewayHelloService.class)
-                        .endpoint(new EndpointInfo("*", "/oneway", "", BINARY, allThriftFormats))
+                        .endpoint(new EndpointInfoBuilder("*", "/oneway").defaultFormat(BINARY)
+                                                                         .availableFormats(allThriftFormats)
+                                                                         .build())
                         .build());
 
         final JsonNode expectedJson = mapper.valueToTree(ThriftDocServicePlugin.generate(entries));

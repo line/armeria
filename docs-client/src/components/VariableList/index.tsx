@@ -26,6 +26,7 @@ import { Specification } from '../../lib/specification';
 
 interface Variable {
   name: string;
+  location?: string;
   requirement: string;
   typeSignature: string;
   docString?: string | JSX.Element;
@@ -34,10 +35,16 @@ interface Variable {
 interface Props {
   title: string;
   variables: Variable[];
+  hasLocation: boolean;
   specification: Specification;
 }
 
-export default function({ title, variables, specification }: Props) {
+export default function({
+  title,
+  variables,
+  hasLocation,
+  specification,
+}: Props) {
   return (
     <>
       <Typography variant="title">{title}</Typography>
@@ -45,6 +52,7 @@ export default function({ title, variables, specification }: Props) {
         <TableHead>
           <TableRow>
             <TableCell>Name</TableCell>
+            {hasLocation && <TableCell>Location</TableCell>}
             <TableCell>Required</TableCell>
             <TableCell>Type</TableCell>
             <TableCell>Description</TableCell>
@@ -57,7 +65,12 @@ export default function({ title, variables, specification }: Props) {
                 <TableCell>
                   <code>{variable.name}</code>
                 </TableCell>
-                <TableCell>{variable.requirement}</TableCell>
+                {hasLocation && (
+                  <TableCell>
+                    <code>{variable.location}</code>
+                  </TableCell>
+                )}
+                <TableCell>{variable.requirement.toLowerCase()}</TableCell>
                 <TableCell>
                   <code>
                     {specification.getTypeSignatureHtml(variable.typeSignature)}

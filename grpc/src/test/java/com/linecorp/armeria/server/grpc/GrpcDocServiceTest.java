@@ -36,7 +36,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
@@ -50,7 +49,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
-import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -123,32 +122,20 @@ public class GrpcDocServiceTest {
     @Test
     public void testOk() throws Exception {
         final List<ServiceEntry> entries = ImmutableList.of(
-                new ServiceEntry(
-                        TEST_SERVICE_DESCRIPTOR,
-                        ImmutableList.of(
-                                new EndpointInfo("*",
-                                                 "/test/armeria.grpc.testing.TestService/",
-                                                 "",
-                                                 GrpcSerializationFormats.PROTO.mediaType(),
-                                                 ImmutableSet.of(
-                                                         GrpcSerializationFormats.PROTO.mediaType(),
-                                                         GrpcSerializationFormats.JSON.mediaType(),
-                                                         GrpcSerializationFormats.PROTO_WEB.mediaType(),
-                                                         GrpcSerializationFormats.JSON_WEB.mediaType(),
-                                                         MediaType.PROTOBUF
-                                                                 .withParameter("protocol", "gRPC"),
-                                                         MediaType.JSON_UTF_8
-                                                                 .withParameter("protocol", "gRPC"))))),
-                new ServiceEntry(
-                        RECONNECT_SERVICE_DESCRIPTOR,
-                        ImmutableList.of(new EndpointInfo(
-                                "*",
-                                "/armeria.grpc.testing.ReconnectService/",
-                                "",
-                                GrpcSerializationFormats.PROTO,
-                                ImmutableSet.of(
-                                        GrpcSerializationFormats.PROTO,
-                                        GrpcSerializationFormats.PROTO_WEB)))));
+                new ServiceEntry(TEST_SERVICE_DESCRIPTOR, ImmutableList.of(
+                        new EndpointInfoBuilder("*", "/test/armeria.grpc.testing.TestService/")
+                                .availableMimeTypes(GrpcSerializationFormats.PROTO.mediaType(),
+                                                    GrpcSerializationFormats.JSON.mediaType(),
+                                                    GrpcSerializationFormats.PROTO_WEB.mediaType(),
+                                                    GrpcSerializationFormats.JSON_WEB.mediaType(),
+                                                    MediaType.PROTOBUF.withParameter("protocol", "gRPC"),
+                                                    MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"))
+                                .build())),
+                new ServiceEntry(RECONNECT_SERVICE_DESCRIPTOR, ImmutableList.of(
+                        new EndpointInfoBuilder("*", "/armeria.grpc.testing.ReconnectService/")
+                                .availableFormats(GrpcSerializationFormats.PROTO,
+                                                  GrpcSerializationFormats.PROTO_WEB)
+                                .build())));
         final ObjectMapper mapper = new ObjectMapper();
 
         final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(entries));
@@ -205,7 +192,7 @@ public class GrpcDocServiceTest {
                 final String methodName = method.get("name").textValue();
                 final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                 if (TestServiceGrpc.SERVICE_NAME.equals(serviceName) &&
-                        "UnaryCall".equals(methodName)) {
+                    "UnaryCall".equals(methodName)) {
                     exampleRequests.add("{\n" +
                                         "  \"payload\": {\n" +
                                         "    \"body\": \"d29ybGQ=\"\n" +

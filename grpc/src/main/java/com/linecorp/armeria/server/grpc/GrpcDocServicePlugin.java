@@ -32,7 +32,6 @@ import java.util.Set;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
@@ -51,6 +50,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -157,16 +157,12 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
             for (ServerServiceDefinition service : grpcService.services()) {
                 final String serviceName = service.getServiceDescriptor().getName();
                 map.get(serviceName).endpoint(
-                        new EndpointInfo(
-                                serviceConfig.virtualHost().hostnamePattern(),
-                                // Only the URL prefix, each method is served at a different path.
-                                pathPrefix + serviceName + '/',
-                                "",
-                                // No default mime type for gRPC, so just pick arbitrarily for now.
-                                // TODO(anuraag): Consider allowing default mime type to be null.
-                                Iterables.getFirst(supportedMediaTypes,
-                                                   GrpcSerializationFormats.PROTO.mediaType()),
-                                supportedMediaTypes));
+                        new EndpointInfoBuilder(serviceConfig.virtualHost().hostnamePattern(),
+                                                // Only the URL prefix, each method is served
+                                                // at a different path.
+                                                pathPrefix + serviceName + '/')
+                                .availableMimeTypes(supportedMediaTypes)
+                                .build());
             }
         }
         return generate(map.values().stream()
@@ -177,10 +173,10 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     @Override
     public Map<String, String> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return serviceConfigs.stream()
-                .flatMap(c -> c.service().as(GrpcService.class).get().services().stream())
-                .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
-                                                .entrySet().stream())
-                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
+                             .flatMap(c -> c.service().as(GrpcService.class).get().services().stream())
+                             .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
+                                                             .entrySet().stream())
+                             .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
     }
 
     @Override
@@ -228,12 +224,17 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     static MethodInfo newMethodInfo(MethodDescriptor method, ServiceEntry service) {
         final Set<EndpointInfo> methodEndpoints =
                 service.endpointInfos.stream()
-                                     .map(e -> new EndpointInfo(
-                                             e.hostnamePattern(),
-                                             e.path() + method.getName(),
-                                             e.fragment(),
-                                             e.defaultMimeType(),
-                                             e.availableMimeTypes()))
+                                     .map(e -> {
+                                         final EndpointInfoBuilder builder = new EndpointInfoBuilder(
+                                                 e.hostnamePattern(), e.pathMapping() + method.getName());
+                                         if (e.fragment() != null) {
+                                             builder.fragment(e.fragment());
+                                         }
+                                         if (e.defaultMimeType() != null) {
+                                             builder.defaultMimeType(e.defaultMimeType());
+                                         }
+                                         return builder.availableMimeTypes(e.availableMimeTypes()).build();
+                                     })
                                      .collect(toImmutableSet());
         return new MethodInfo(
                 method.getName(),

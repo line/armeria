@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.server.AnnotatedHttpServiceTest.validateContextAndRequest;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTest.validateContextAndRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +37,10 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;

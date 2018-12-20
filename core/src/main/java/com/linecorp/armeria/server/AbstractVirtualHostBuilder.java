@@ -44,8 +44,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
-import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -514,13 +515,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     protected VirtualHost build() {
         final List<MediaType> producibleTypes = new ArrayList<>();
 
-        services.forEach(e -> {
-            final PathMapping mapping = e.pathMapping();
-            if (mapping instanceof HttpHeaderPathMapping) {
-                // Collect producible media types over this virtual host.
-                producibleTypes.addAll(((HttpHeaderPathMapping) mapping).produceTypes());
-            }
-        });
+        // Collect producible media types over this virtual host.
+        services.forEach(s -> producibleTypes.addAll(s.pathMapping().produceTypes()));
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,

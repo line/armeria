@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,10 +45,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 
 import com.google.common.collect.ImmutableList;
 
@@ -63,6 +60,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.NaiveIntConverterFunction;
 import com.linecorp.armeria.server.TestConverters.NaiveStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.TypedNumberConverterFunction;
@@ -126,14 +126,6 @@ public class AnnotatedHttpServiceTest {
 
             sb.annotatedService("/11", new MyAnnotatedService11(),
                                 LoggingService.newDecorator());
-        }
-    };
-
-    @Rule
-    public TestWatcher watchman = new TestWatcher() {
-        @Override
-        protected void failed(Throwable e, Description description) {
-            rule.server().config().virtualHosts().forEach(vh -> vh.router().dump(System.err));
         }
     };
 

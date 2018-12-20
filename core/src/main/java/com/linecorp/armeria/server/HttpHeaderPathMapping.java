@@ -50,6 +50,9 @@ final class HttpHeaderPathMapping implements PathMapping {
 
     private final int complexity;
 
+    /**
+     * Creates a new instance.
+     */
     HttpHeaderPathMapping(PathMapping pathStringMapping, Set<HttpMethod> supportedMethods,
                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         this.pathStringMapping = requireNonNull(pathStringMapping, "pathStringMapping");
@@ -167,18 +170,26 @@ final class HttpHeaderPathMapping implements PathMapping {
     }
 
     @Override
+    public Optional<String> regex() {
+        return pathStringMapping.regex();
+    }
+
+    @Override
     public int complexity() {
         return complexity;
     }
 
+    @Override
     public Set<HttpMethod> supportedMethods() {
         return supportedMethods;
     }
 
+    @Override
     public List<MediaType> consumeTypes() {
         return consumeTypes;
     }
 
+    @Override
     public List<MediaType> produceTypes() {
         return produceTypes;
     }
@@ -195,6 +206,12 @@ final class HttpHeaderPathMapping implements PathMapping {
                               .add("produceTypes", produceTypes));
         buf.append(']');
         return buf.toString();
+    }
+
+    @Override
+    public PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods, List<MediaType> consumeTypes,
+                                          List<MediaType> produceTypes) {
+        return new HttpHeaderPathMapping(pathStringMapping, supportedMethods, consumeTypes, produceTypes);
     }
 
     private static String generateLoggerName(String prefix, Set<HttpMethod> supportedMethods,

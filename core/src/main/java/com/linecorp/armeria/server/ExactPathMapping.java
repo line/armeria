@@ -16,15 +16,16 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
+import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
+
 import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
 final class ExactPathMapping extends AbstractPathMapping {
-
-    static final String PREFIX = "exact:";
-    static final int PREFIX_LEN = PREFIX.length();
 
     private final String exactPath;
     private final String loggerName;
@@ -34,8 +35,8 @@ final class ExactPathMapping extends AbstractPathMapping {
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
-        loggerName = loggerName(exactPath);
-        meterTag = PREFIX + exactPath;
+        loggerName = newLoggerName(exactPath);
+        meterTag = EXACT + exactPath;
     }
 
     @Override

@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.server.AnnotatedValueResolver.addToFirstIfExists;
+import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.addToFirstIfExists;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -46,9 +46,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.MapMaker;
 
-import com.linecorp.armeria.server.AnnotatedValueResolver.NoAnnotatedParameterException;
-import com.linecorp.armeria.server.AnnotatedValueResolver.RequestObjectResolver;
-import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 
 /**

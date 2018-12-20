@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.server.AnnotatedBeanFactory.find;
-import static com.linecorp.armeria.server.AnnotatedBeanFactory.register;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.find;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.register;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -31,8 +31,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.server.AnnotatedBeanFactory.BeanFactoryId;
-import com.linecorp.armeria.server.AnnotatedValueResolver.RequestObjectResolver;
+import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.BeanFactoryId;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 

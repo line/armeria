@@ -14,15 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.server.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
+import com.linecorp.armeria.server.PathMapping;
 
 public class PrefixAddingPathMappingTest {
+
+    @Test
+    public void prefix() {
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).prefix().get())
+                .isEqualTo("/foo/");
+    }
 
     @Test
     public void testLoggerName() {

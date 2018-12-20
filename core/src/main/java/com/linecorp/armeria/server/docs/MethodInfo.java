@@ -36,6 +36,7 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -52,6 +53,7 @@ public final class MethodInfo {
     private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHttpHeaders;
     private final List<String> exampleRequests;
+    private final HttpMethod httpMethod;
     @Nullable
     private final String docString;
 
@@ -63,8 +65,21 @@ public final class MethodInfo {
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints) {
+        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints, HttpMethod.POST, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public MethodInfo(String name,
+                      TypeSignature returnTypeSignature,
+                      Iterable<FieldInfo> parameters,
+                      Iterable<TypeSignature> exceptionTypeSignatures,
+                      Iterable<EndpointInfo> endpoints,
+                      HttpMethod httpMethod,
+                      @Nullable String docString) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures,
-             endpoints, ImmutableList.of(), ImmutableList.of(), null);
+             endpoints, ImmutableList.of(), ImmutableList.of(), httpMethod, docString);
     }
 
     /**
@@ -77,8 +92,8 @@ public final class MethodInfo {
                       Iterable<EndpointInfo> endpoints,
                       Iterable<HttpHeaders> exampleHttpHeaders,
                       Iterable<String> exampleRequests,
+                      HttpMethod httpMethod,
                       @Nullable String docString) {
-
         this.name = requireNonNull(name, "name");
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
@@ -88,13 +103,14 @@ public final class MethodInfo {
                         comparing(TypeSignature::signature),
                         requireNonNull(exceptionTypeSignatures, "exceptionTypeSignatures"));
         this.endpoints = ImmutableSortedSet.copyOf(
-                comparing(e -> e.hostnamePattern() + ':' + e.path()),
+                comparing(e -> e.hostnamePattern() + ':' + e.pathMapping()),
                 requireNonNull(endpoints, "endpoints"));
         this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
                                          .map(HttpHeaders::copyOf)
                                          .map(HttpHeaders::asImmutable)
                                          .collect(toImmutableList());
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
+        this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.docString = Strings.emptyToNull(docString);
     }
 
@@ -156,6 +172,14 @@ public final class MethodInfo {
     }
 
     /**
+     * Returns the HTTP method of this method.
+     */
+    @JsonProperty
+    public HttpMethod httpMethod() {
+        return httpMethod;
+    }
+
+    /**
      * Returns the documentation string of the function.
      */
     @JsonProperty
@@ -176,26 +200,29 @@ public final class MethodInfo {
         }
 
         final MethodInfo that = (MethodInfo) o;
-        return name.equals(that.name) &&
-               returnTypeSignature.equals(that.returnTypeSignature) &&
-               parameters.equals(that.parameters) &&
-               exceptionTypeSignatures.equals(that.exceptionTypeSignatures) &&
-               endpoints.equals(that.endpoints);
+        return name().equals(that.name()) &&
+               returnTypeSignature().equals(that.returnTypeSignature()) &&
+               parameters().equals(that.parameters()) &&
+               exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
+               endpoints().equals(that.endpoints()) &&
+               Objects.equals(httpMethod(), that.httpMethod());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints);
+        return Objects.hash(name(), returnTypeSignature(), parameters(), exceptionTypeSignatures(),
+                            endpoints(), httpMethod());
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("name", name)
-                          .add("returnTypeSignature", returnTypeSignature)
-                          .add("parameters", parameters)
-                          .add("exceptionTypeSignatures", exceptionTypeSignatures)
-                          .add("endpoints", endpoints)
+        return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("name", name())
+                          .add("returnTypeSignature", returnTypeSignature())
+                          .add("parameters", parameters())
+                          .add("exceptionTypeSignatures", exceptionTypeSignatures())
+                          .add("endpoints", endpoints())
+                          .add("httpMethod", httpMethod())
                           .toString();
     }
 }

@@ -14,16 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.server.AnnotatedHttpServiceTest.validateContextAndRequest;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTest.validateContextAndRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -33,6 +30,11 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
@@ -50,14 +52,6 @@ public class AnnotatedHttpServiceDecorationTest {
             sb.annotatedService("/2", new MyDecorationService2());
             sb.annotatedService("/3", new MyDecorationService3());
             sb.annotatedService("/4", new MyDecorationService4());
-        }
-    };
-
-    @Rule
-    public TestWatcher watchman = new TestWatcher() {
-        @Override
-        protected void failed(Throwable e, Description description) {
-            rule.server().config().virtualHosts().forEach(vh -> vh.router().dump(System.err));
         }
     };
 

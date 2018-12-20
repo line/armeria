@@ -16,11 +16,10 @@
 
 package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
+import static com.linecorp.armeria.internal.PathMappingUtil.UNKNOWN_LOGGER_NAME;
+import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
 
 import java.util.Optional;
-
-import javax.annotation.Nullable;
 
 /**
  * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(PathMappingContext)}.
@@ -38,22 +37,6 @@ public abstract class AbstractPathMapping implements PathMapping {
     }
 
     /**
-     * Ensures that the specified {@code path} is an absolute path.
-     *
-     * @return {@code path}
-     *
-     * @throws NullPointerException if {@code path} is {@code null}
-     * @throws IllegalArgumentException if {@code path} is not an absolute path
-     */
-    protected static String ensureAbsolutePath(String path, String paramName) {
-        requireNonNull(path, paramName);
-        if (path.isEmpty() || path.charAt(0) != '/') {
-            throw new IllegalArgumentException(paramName + ": " + path + " (expected: an absolute path)");
-        }
-        return path;
-    }
-
-    /**
      * Invoked by {@link #apply(PathMappingContext)} to perform the actual path matching and path parameter
      * extraction.
      *
@@ -66,59 +49,7 @@ public abstract class AbstractPathMapping implements PathMapping {
 
     @Override
     public String loggerName() {
-        return "__UNKNOWN__";
-    }
-
-    static String loggerName(@Nullable String pathish) {
-        if (pathish == null) {
-            return "__UNKNOWN__";
-        }
-
-        String normalized = pathish;
-        if ("/".equals(normalized)) {
-            return "__ROOT__";
-        }
-
-        if (normalized.startsWith("/")) {
-            normalized = normalized.substring(1); // Strip the first slash.
-        }
-
-        final int end;
-        if (normalized.endsWith("/")) {
-            end = normalized.length() - 1;
-        } else {
-            end = normalized.length();
-        }
-
-        final StringBuilder buf = new StringBuilder(end);
-        boolean start = true;
-        for (int i = 0; i < end; i++) {
-            final char ch = normalized.charAt(i);
-            if (ch != '/') {
-                if (start) {
-                    start = false;
-                    if (Character.isJavaIdentifierStart(ch)) {
-                        buf.append(ch);
-                    } else {
-                        buf.append('_');
-                        if (Character.isJavaIdentifierPart(ch)) {
-                            buf.append(ch);
-                        }
-                    }
-                } else {
-                    if (Character.isJavaIdentifierPart(ch)) {
-                        buf.append(ch);
-                    } else {
-                        buf.append('_');
-                    }
-                }
-            } else {
-                start = true;
-                buf.append('.');
-            }
-        }
-
-        return buf.toString();
+        return UNKNOWN_LOGGER_NAME;
     }
 
     @Override

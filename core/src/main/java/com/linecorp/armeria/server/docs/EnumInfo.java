@@ -42,6 +42,20 @@ public final class EnumInfo implements NamedTypeInfo {
     /**
      * Creates a new instance.
      */
+    public EnumInfo(Class<? extends Enum<?>> enumType) {
+        this(enumType.getName(), enumType);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public EnumInfo(Class<? extends Enum<?>> enumType, String docString) {
+        this(enumType.getName(), enumType, requireNonNull(docString, "docString"));
+    }
+
+    /**
+     * Creates a new instance.
+     */
     public EnumInfo(String name, Class<? extends Enum<?>> enumType) {
         this(name, enumType, null);
     }

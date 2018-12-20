@@ -55,7 +55,16 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods) {
-        this(name, methods, ImmutableList.of(), null);
+        this(name, methods, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ServiceInfo(String name,
+                       Iterable<MethodInfo> methods,
+                       @Nullable String docString) {
+        this(name, methods, ImmutableList.of(), docString);
     }
 
     /**
@@ -70,7 +79,8 @@ public final class ServiceInfo {
 
         requireNonNull(methods, "methods");
 
-        this.methods = ImmutableSortedSet.copyOf(comparing(MethodInfo::name), methods);
+        this.methods = ImmutableSortedSet.copyOf(comparing(MethodInfo::name)
+                                                         .thenComparing(MethodInfo::httpMethod), methods);
         this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
                                          .map(HttpHeaders::copyOf)
                                          .map(HttpHeaders::asImmutable)

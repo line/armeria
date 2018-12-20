@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -259,8 +258,7 @@ public final class VirtualHost {
         return router.find(mappingCtx);
     }
 
-    @VisibleForTesting
-    Router<ServiceConfig> router() {
+    private Router<ServiceConfig> router() {
         return router;
     }
 

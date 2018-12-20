@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.server.AnnotatedValueResolver.toArguments;
-import static com.linecorp.armeria.server.AnnotatedValueResolver.toRequestObjectResolvers;
+import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toArguments;
+import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -48,9 +48,10 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.server.AnnotatedValueResolver.NoAnnotatedParameterException;
-import com.linecorp.armeria.server.AnnotatedValueResolver.RequestObjectResolver;
-import com.linecorp.armeria.server.AnnotatedValueResolver.ResolverContext;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
+import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;

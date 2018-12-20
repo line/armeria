@@ -139,7 +139,7 @@ public class DefaultRequestLogTest {
         assertThat(log.requestHeaders()).isSameAs(foo);
 
         final String requestContent = "baz";
-        final String rawRequestContent = "bax";
+        final String rawRequestContent = "qux";
 
         child.requestContent(requestContent, rawRequestContent);
         assertThat(log.requestContent()).isSameAs(requestContent);
@@ -170,7 +170,7 @@ public class DefaultRequestLogTest {
         assertThat(log.responseHeaders()).isSameAs(bar);
 
         final String responseContent = "baz1";
-        final String rawResponseContent = "bax1";
+        final String rawResponseContent = "qux1";
         child.responseContent(responseContent, rawResponseContent);
         assertThat(log.responseContent()).isSameAs(responseContent);
         assertThat(log.rawResponseContent()).isSameAs(rawResponseContent);

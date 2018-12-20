@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.PathMappingUtil.ROOT_LOGGER_NAME;
+
 import java.util.Optional;
 import java.util.Set;
 
@@ -27,7 +29,6 @@ final class CatchAllPathMapping extends AbstractPathMapping {
 
     private static final Optional<String> PREFIX_PATH_OPT = Optional.of("/");
     private static final Optional<String> TRIE_PATH_OPT = Optional.of("/*");
-    private static final String LOGGER_NAME = loggerName("/"); // "__ROOT__"
 
     private CatchAllPathMapping() {}
 
@@ -43,7 +44,7 @@ final class CatchAllPathMapping extends AbstractPathMapping {
 
     @Override
     public String loggerName() {
-        return LOGGER_NAME;
+        return ROOT_LOGGER_NAME;
     }
 
     @Override

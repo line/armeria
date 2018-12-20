@@ -18,41 +18,58 @@ import { Method } from '../specification';
 
 import Transport from './transport';
 
-const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
+export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
 
-export default class ThriftTransport extends Transport {
+export default class AnnotatedHttpTransport extends Transport {
   public supportsMimeType(mimeType: string): boolean {
-    return mimeType === TTEXT_MIME_TYPE;
+    return mimeType === ANNOTATED_HTTP_MIME_TYPE;
   }
 
   protected async doSend(
     method: Method,
     bodyJson: string,
     headers: { [name: string]: string },
+    endpointPath?: string,
+    queries?: string,
   ): Promise<string> {
     const endpoint = method.endpoints.find((ep) =>
-      ep.availableMimeTypes.includes(TTEXT_MIME_TYPE),
+      ep.availableMimeTypes.includes(ANNOTATED_HTTP_MIME_TYPE),
     );
     if (!endpoint) {
-      throw new Error('Endpoint does not support Thrift debug transport');
+      throw new Error(
+        'Endpoint does not support annotated HTTP debug transport',
+      );
     }
 
-    const thriftMethod = endpoint.fragment
-      ? `${endpoint.fragment}:${method.name}`
-      : method.name;
-
     const hdrs = new Headers();
-    hdrs.set('content-type', TTEXT_MIME_TYPE);
+    hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
     }
 
-    const httpResponse = await fetch(endpoint.pathMapping, {
+    let newPath;
+    if (endpointPath) {
+      newPath = endpointPath;
+    } else {
+      newPath = endpoint.pathMapping.substring('exact:'.length);
+      if (queries && queries.length > 1) {
+        if (queries.charAt(0) === '?') {
+          newPath += queries;
+        } else {
+          newPath = `${newPath}?${queries}`;
+        }
+      }
+    }
+    const sendBody =
+      method.httpMethod === 'GET' || method.httpMethod === 'HEAD'
+        ? null
+        : bodyJson;
+    const httpResponse = await fetch(encodeURI(newPath), {
       headers: hdrs,
-      method: 'POST',
-      body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,
+      method: method.httpMethod,
+      body: sendBody,
     });
     const response = await httpResponse.text();
-    return response.length > 0 ? response : 'Request sent to one-way function';
+    return response.length > 0 ? response : '&lt;zero-length response&gt;';
   }
 }

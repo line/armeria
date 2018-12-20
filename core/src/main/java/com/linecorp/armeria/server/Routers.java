@@ -174,29 +174,26 @@ public final class Routers {
                     continue;
                 }
 
-                if (!(mapping instanceof HttpHeaderPathMapping)) {
-                    assert mapping.complexity() == 0;
-                    assert existingMapping.complexity() == 0;
+                if (mapping.complexity() == 0) {
+                    // If it's not an HttpHeaderPathMapping, it's duplicate so we should reject it.
                     rejectionHandler.accept(mapping, existingMapping);
                     return;
                 }
 
-                final HttpHeaderPathMapping headerMapping = (HttpHeaderPathMapping) mapping;
-                final HttpHeaderPathMapping existingHeaderMapping = (HttpHeaderPathMapping) existingMapping;
-                if (headerMapping.supportedMethods().stream().noneMatch(
-                        method -> existingHeaderMapping.supportedMethods().contains(method))) {
+                if (mapping.supportedMethods().stream().noneMatch(
+                        method -> existingMapping.supportedMethods().contains(method))) {
                     // No overlap in supported methods.
                     continue;
                 }
-                if (!headerMapping.consumeTypes().isEmpty() &&
-                    headerMapping.consumeTypes().stream().noneMatch(
-                            mediaType -> existingHeaderMapping.consumeTypes().contains(mediaType))) {
+                if (!mapping.consumeTypes().isEmpty() &&
+                    mapping.consumeTypes().stream().noneMatch(
+                            mediaType -> existingMapping.consumeTypes().contains(mediaType))) {
                     // No overlap in consume types.
                     continue;
                 }
-                if (!headerMapping.produceTypes().isEmpty() &&
-                    headerMapping.produceTypes().stream().noneMatch(
-                            mediaType -> existingHeaderMapping.produceTypes().contains(mediaType))) {
+                if (!mapping.produceTypes().isEmpty() &&
+                    mapping.produceTypes().stream().noneMatch(
+                            mediaType -> existingMapping.produceTypes().contains(mediaType))) {
                     // No overlap in produce types.
                     continue;
                 }

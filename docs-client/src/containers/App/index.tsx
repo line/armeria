@@ -46,6 +46,7 @@ import MethodPage from '../MethodPage';
 import StructPage from '../StructPage';
 
 import {
+  methodKey,
   simpleName,
   Specification,
   SpecificationData,
@@ -86,6 +87,38 @@ const styles = (theme: Theme) =>
       },
     },
     toolbar: theme.mixins.toolbar,
+    httpMethodCommon: {
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 20,
+      width: 80,
+      textAlign: 'center',
+    },
+    httpMethodOptions: {
+      background: '#FF8E53',
+    },
+    httpMethodGet: {
+      background: '#6abe45',
+    },
+    httpMethodHead: {
+      background: '#FE6B8B',
+    },
+    httpMethodPost: {
+      background: '#1e91ca',
+    },
+    httpMethodPut: {
+      background: '#824ea0',
+    },
+    httpMethodPatch: {
+      background: '#e6cc1d',
+    },
+    httpMethodDelete: {
+      background: '#ec1d23',
+    },
+    httpMethodTrace: {
+      background: '#5d12ec',
+    },
   });
 
 interface State {
@@ -102,6 +135,7 @@ type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
 interface AppDrawerProps extends WithStyles<typeof styles> {
   specification: Specification;
   navigateTo: (url: string) => void;
+  httpMethodClass: (httpMethod: string) => string;
   servicesOpen: boolean;
   enumsOpen: boolean;
   structsOpen: boolean;
@@ -112,6 +146,7 @@ interface AppDrawerProps extends WithStyles<typeof styles> {
 function AppDrawer({
   classes,
   navigateTo,
+  httpMethodClass,
   specification,
   servicesOpen,
   enumsOpen,
@@ -140,12 +175,29 @@ function AppDrawer({
                 {service.methods.map((method) => (
                   <ListItem
                     dense
-                    key={`${service.name}/${method.name}`}
+                    key={methodKey(
+                      service.name,
+                      method.name,
+                      method.httpMethod,
+                    )}
                     button
                     onClick={() =>
-                      navigateTo(`/methods/${service.name}/${method.name}`)
+                      navigateTo(
+                        `/methods/${methodKey(
+                          service.name,
+                          method.name,
+                          method.httpMethod,
+                        )}`,
+                      )
                     }
                   >
+                    {method.httpMethod && (
+                      <Typography
+                        className={httpMethodClass(method.httpMethod)}
+                      >
+                        {method.httpMethod}
+                      </Typography>
+                    )}
                     <ListItemText
                       inset
                       primaryTypographyProps={{
@@ -321,6 +373,7 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={this.navigateTo}
+              httpMethodClass={this.httpMethodClass}
               servicesOpen={this.state.servicesOpen}
               enumsOpen={this.state.enumsOpen}
               structsOpen={this.state.structsOpen}
@@ -343,6 +396,7 @@ class App extends React.PureComponent<Props, State> {
               classes={classes}
               specification={specification}
               navigateTo={this.navigateTo}
+              httpMethodClass={this.httpMethodClass}
               servicesOpen={this.state.servicesOpen}
               enumsOpen={this.state.enumsOpen}
               structsOpen={this.state.structsOpen}
@@ -387,6 +441,40 @@ class App extends React.PureComponent<Props, State> {
     this.setState({
       mobileDrawerOpen: false,
     });
+  };
+
+  private httpMethodClass = (httpMethod: string) => {
+    const classes = this.props.classes;
+    let httpMethodClass;
+    if (httpMethod === 'OPTIONS') {
+      httpMethodClass = classes.httpMethodOptions;
+    }
+    if (httpMethod === 'GET') {
+      httpMethodClass = classes.httpMethodGet;
+    }
+    if (httpMethod === 'HEAD') {
+      httpMethodClass = classes.httpMethodHead;
+    }
+    if (httpMethod === 'POST') {
+      httpMethodClass = classes.httpMethodPost;
+    }
+    if (httpMethod === 'PUT') {
+      httpMethodClass = classes.httpMethodPut;
+    }
+    if (httpMethod === 'PATCH') {
+      httpMethodClass = classes.httpMethodPatch;
+    }
+    if (httpMethod === 'DELETE') {
+      httpMethodClass = classes.httpMethodDelete;
+    }
+    if (httpMethod === 'TRACE') {
+      httpMethodClass = classes.httpMethodTrace;
+    }
+
+    if (httpMethodClass === undefined) {
+      throw new Error(`unsupported http method: ${httpMethod}`);
+    }
+    return `${classes.httpMethodCommon} ${httpMethodClass}`;
   };
 
   private fetchSpecification = async () => {

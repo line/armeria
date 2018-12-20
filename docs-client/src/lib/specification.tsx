@@ -25,6 +25,7 @@ interface HasDocString {
 
 export interface Parameter {
   name: string;
+  location?: string;
   requirement: string;
   typeSignature: string;
   docString?: DocString;
@@ -32,9 +33,10 @@ export interface Parameter {
 
 export interface Endpoint {
   hostnamePattern: string;
-  path: string;
+  pathMapping: string;
   defaultMimeType: string;
   availableMimeTypes: string[];
+  regexPathPrefix?: string;
   fragment?: string;
 }
 
@@ -46,6 +48,7 @@ export interface Method {
   endpoints: Endpoint[];
   exampleHttpHeaders: { [name: string]: string }[];
   exampleRequests: string[];
+  httpMethod: string;
   docString?: DocString;
 }
 
@@ -88,14 +91,44 @@ export interface SpecificationData {
   exampleHttpHeaders: { [name: string]: string }[];
 }
 
-export function simpleName(fullName: string) {
+export function simpleName(fullName: string): string {
   const lastDotIdx = fullName.lastIndexOf('.');
   return lastDotIdx >= 0 ? fullName.substring(lastDotIdx + 1) : fullName;
 }
 
-export function packageName(fullName: string) {
+export function packageName(fullName: string): string {
   const lastDotIdx = fullName.lastIndexOf('.');
   return lastDotIdx >= 0 ? fullName.substring(0, lastDotIdx) : fullName;
+}
+
+export function methodKey(
+  serviceName: string,
+  methodName: string,
+  httpMethod: string,
+): string {
+  if (httpMethod) {
+    return `${serviceName}/${methodName}/${httpMethod}`;
+  }
+  return `${serviceName}/${methodName}`;
+}
+
+export function endpointPathString(endpoint: Endpoint): string {
+  if (endpoint.regexPathPrefix) {
+    return `${endpoint.regexPathPrefix} ${endpoint.pathMapping}`;
+  }
+  return endpoint.pathMapping;
+}
+
+export function isExactPathMapping(method: Method): boolean {
+  const endpoints = method.endpoints;
+  if (endpoints.length !== 1) {
+    throw new Error(`
+    Endpoints size should be 1 to determine prefix or regex. size: ${
+      endpoints.length
+    }`);
+  }
+  const endpoint = endpoints[0];
+  return endpoint.pathMapping.startsWith('exact:');
 }
 
 interface NamedObject {

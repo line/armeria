@@ -16,15 +16,16 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
+import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
+
 import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
 final class PrefixPathMapping extends AbstractPathMapping {
-
-    static final String PREFIX = "prefix:";
-    static final int PREFIX_LEN = PREFIX.length();
 
     private final String prefix;
     private final boolean stripPrefix;
@@ -41,7 +42,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
         this.prefix = prefix;
         this.stripPrefix = stripPrefix;
-        loggerName = loggerName(prefix);
+        loggerName = newLoggerName(prefix);
         meterTag = PREFIX + prefix;
         triePath = Optional.of(prefix + '*');
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
