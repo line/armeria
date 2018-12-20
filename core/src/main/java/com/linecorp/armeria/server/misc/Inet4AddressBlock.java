@@ -23,6 +23,8 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 final class Inet4AddressBlock implements Predicate<InetAddress> {
@@ -61,12 +63,19 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
         if (maskBits == 0) {
             return true;
         }
-        try {
-            final int addr = inetAddressToInt(address);
-            return addr >= lowerBound && addr <= upperBound;
-        } catch (Exception e) {
+
+        final byte[] bytes;
+        if (address instanceof Inet6Address) {
+            bytes = ipv6ToIpv4Address((Inet6Address) address);
+        } else {
+            bytes = address.getAddress();
+        }
+        if (bytes == null) {
             return false;
         }
+
+        final int addr = ipv4AddressToInt(bytes);
+        return addr >= lowerBound && addr <= upperBound;
     }
 
     @Override
@@ -80,30 +89,18 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
     }
 
     /**
-     * Returns the integer representation of the specified {@link InetAddress}.
+     * Returns IPv4 byte representation of the specified {@link Inet6Address}. {@code null} is returned
+     * if the specified {@link Inet6Address} is not able to be converted to IPv4.
      */
-    private static int inetAddressToInt(InetAddress inetAddress) {
-        final byte[] address;
-        if (inetAddress instanceof Inet6Address) {
-            address = ipv6ToIpv4Address((Inet6Address) inetAddress);
-        } else {
-            address = inetAddress.getAddress();
-        }
-        return ipv4AddressToInt(address);
-    }
-
-    /**
-     * Returns IPv4 byte representation of the specified {@link Inet6Address}.
-     *
-     * @throws IllegalArgumentException if the IPv6 cannot be mapped to IPv4
-     */
-    private static byte[] ipv6ToIpv4Address(Inet6Address address) {
+    @Nullable
+    static byte[] ipv6ToIpv4Address(Inet6Address address) {
         final byte[] addr = address.getAddress();
+        assert addr.length == 16
+                : "the length of " + address.getClass().getSimpleName() + ": " + addr.length;
         // The first 10 bytes should be 0.
         for (int i = 0; i < 10; i++) {
             if (addr[i] != 0x00) {
-                throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context: " +
-                                                   address.getHostAddress());
+                return null;
             }
         }
 
@@ -118,8 +115,7 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
             return new byte[] { addr[12], addr[13], addr[14], addr[15] };
         }
 
-        throw new IllegalArgumentException("This IPv6 address cannot be used in IPv4 context: " +
-                                           address.getHostAddress());
+        return null;
     }
 
     /**

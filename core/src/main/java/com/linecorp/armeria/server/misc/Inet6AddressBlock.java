@@ -28,8 +28,6 @@ import com.google.common.base.MoreObjects;
 
 final class Inet6AddressBlock implements Predicate<InetAddress> {
 
-    private static final byte[] localhost = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
-
     private final Inet6Address baseAddress;
     private final int maskBits;
     private final BigInteger lowerBound;
@@ -60,12 +58,19 @@ final class Inet6AddressBlock implements Predicate<InetAddress> {
         if (maskBits == 0) {
             return true;
         }
-        try {
-            final BigInteger addr = ipv6AddressToBigInteger(address);
-            return addr.compareTo(lowerBound) >= 0 && addr.compareTo(upperBound) <= 0;
-        } catch (Exception e) {
+        if (address instanceof Inet4Address) {
+            // This block never accepts IPv6-mapped IPv4 addresses.
             return false;
         }
+        if (address instanceof Inet6Address) {
+            try {
+                final BigInteger addr = ipv6AddressToBigInteger((Inet6Address) address);
+                return addr.compareTo(lowerBound) >= 0 && addr.compareTo(upperBound) <= 0;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -81,24 +86,9 @@ final class Inet6AddressBlock implements Predicate<InetAddress> {
     /**
      * Returns the {@link BigInteger} representation of the specified {@link InetAddress}.
      */
-    private static BigInteger ipv6AddressToBigInteger(InetAddress inetAddress) {
-        final byte[] ipv6;
-        if (inetAddress instanceof Inet4Address) {
-            final byte[] ipv4 = inetAddress.getAddress();
-            if (ipv4[0] == 0x7F) {
-                // Convert 127.0.0.0/8 to ::1 because this block is assigned for use as the Internet host
-                // loopback address. See https://tools.ietf.org/html/rfc5735#section-3.
-                ipv6 = localhost;
-            } else {
-                // Fill the lower 4 bytes with the IPv4 address.
-                ipv6 = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ipv4[0], ipv4[1], ipv4[2], ipv4[3] };
-            }
-        } else {
-            ipv6 = inetAddress.getAddress();
-        }
-        if (ipv6[0] == -1) {
-            return new BigInteger(1, ipv6);
-        }
-        return new BigInteger(ipv6);
+    private static BigInteger ipv6AddressToBigInteger(Inet6Address inetAddress) {
+        final byte[] ipv6 = inetAddress.getAddress();
+        return ipv6[0] == -1 ? new BigInteger(1, ipv6)
+                             : new BigInteger(ipv6);
     }
 }

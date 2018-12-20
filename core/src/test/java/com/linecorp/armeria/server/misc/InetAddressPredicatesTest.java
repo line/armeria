@@ -98,6 +98,16 @@ public class InetAddressPredicatesTest {
         assertThat(filter.test(InetAddress.getByName("10.1.1.255"))).isFalse();
         assertThat(filter.test(ipv6(10, 1, 1, 64))).isFalse();
         assertThat(filter.test(ipv6(10, 1, 1, 255))).isFalse();
+
+        filter = ofCidr("250.1.1.0/8");
+        assertThat(filter.test(InetAddress.getByName("250.1.1.1"))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("250.255.255.255"))).isTrue();
+        assertThat(filter.test(ipv6(250, 1, 1, 1))).isTrue();
+        assertThat(filter.test(ipv6(250, 255, 255, 255))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("249.1.1.1"))).isFalse();
+        assertThat(filter.test(InetAddress.getByName("249.255.255.255"))).isFalse();
+        assertThat(filter.test(ipv6(249, 1, 1, 1))).isFalse();
+        assertThat(filter.test(ipv6(249, 255, 255, 255))).isFalse();
     }
 
     @Test
@@ -166,6 +176,12 @@ public class InetAddressPredicatesTest {
         assertThat(filter.test(InetAddress.getByName("0:0:0:0:0:0:FFFF:FFFF"))).isFalse();
         assertThat(filter.test(ipv4(10, 1, 2, 1))).isFalse();
         assertThat(filter.test(ipv4(255, 255, 255, 255))).isFalse();
+
+        filter = ofCidr("F080:0:0:0:8:800:200C:4100/120");
+        assertThat(filter.test(InetAddress.getByName("F080:0:0:0:8:800:200C:4100"))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("F080:0:0:0:8:800:200C:41FF"))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("F080:0:0:0:8:800:200C:4200"))).isFalse();
+        assertThat(filter.test(InetAddress.getByName("F080:0:0:0:8:800:200C:FFFF"))).isFalse();
     }
 
     @Test

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.misc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.misc.Inet4AddressBlock.ipv6ToIpv4Address;
 import static java.util.Objects.requireNonNull;
 
 import java.net.Inet4Address;
@@ -170,7 +171,17 @@ public final class InetAddressPredicates {
             return new Inet4AddressBlock((Inet4Address) baseAddress, inet4MaskBits);
         }
         if (baseAddress instanceof Inet6Address) {
-            return new Inet6AddressBlock((Inet6Address) baseAddress, inet6MaskBits);
+            final byte[] bytes = ipv6ToIpv4Address((Inet6Address) baseAddress);
+            if (bytes == null) {
+                return new Inet6AddressBlock((Inet6Address) baseAddress, inet6MaskBits);
+            }
+
+            try {
+                final Inet4Address inet4Address = (Inet4Address) InetAddress.getByAddress(bytes);
+                return new Inet4AddressBlock(inet4Address, inet6MaskBits - 96);
+            } catch (UnknownHostException e) {
+                throw new IllegalArgumentException("Invalid address: " + baseAddress.getHostAddress(), e);
+            }
         }
         throw new IllegalArgumentException(
                 "Unknown baseAddress type: " + baseAddress.getClass().getName() +
