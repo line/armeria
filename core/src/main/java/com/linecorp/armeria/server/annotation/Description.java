@@ -24,10 +24,15 @@ import java.lang.annotation.Target;
 import com.linecorp.armeria.internal.DefaultValues;
 
 /**
- * Annotation to describe a type, a field, a method or a parameter.
+ * An annotation used in annotated HTTP service. This describes:
+ * <ul>
+ *     <li>method parameters which are annotated with {@link Param} and {@link Header}</li>
+ *     <li>methods which are annotated with {@link Path} or HTTP method annotations</li>
+ *     <li>classes which contain the methods above</li>
+ * </ul>
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER })
+@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER })
 public @interface Description {
 
     /**
