@@ -224,8 +224,8 @@ your :api:`ServerBuilder` before doing that:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.common.util.InetAddressPredicates;
     import com.linecorp.armeria.server.ClientAddressSource;
-    import com.linecorp.armeria.server.misc.InetAddressPredicates;
 
     ServerBuilder sb = new ServerBuilder();
 
