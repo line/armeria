@@ -244,7 +244,27 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
         if (endStream) {
             req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
-            req.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+
+            // Set or remove the 'content-length' header depending on request method.
+            // See: https://tools.ietf.org/html/rfc7230#section-3.3.2
+            //
+            // > A user agent SHOULD send a Content-Length in a request message when
+            // > no Transfer-Encoding is sent and the request method defines a meaning
+            // > for an enclosed payload body.  For example, a Content-Length header
+            // > field is normally sent in a POST request even when the value is 0
+            // > (indicating an empty payload body).  A user agent SHOULD NOT send a
+            // > Content-Length header field when the request message does not contain
+            // > a payload body and the method semantics do not anticipate such a
+            // > body.
+            switch (method) {
+                case POST:
+                case PUT:
+                case PATCH:
+                    req.headers().set(HttpHeaderNames.CONTENT_LENGTH, "0");
+                    break;
+                default:
+                    req.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+            }
         } else if (HttpUtil.getContentLength(req, -1L) >= 0) {
             // Avoid the case where both 'content-length' and 'transfer-encoding' are set.
             req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
