@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.annotation;
 
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT32;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
@@ -26,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import org.junit.ClassRule;
@@ -41,6 +43,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -64,6 +67,7 @@ import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.util.AsciiString;
@@ -93,9 +97,10 @@ public class AnnotatedHttpDocServiceTest {
     };
 
     @Test
-    public void jsonSpecification() {
+    public void jsonSpecification() throws InterruptedException {
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         addFooMethodInfo(methodInfos);
+        addListOfIntegerMethodInfo(methodInfos);
         addFooAllMethodInfos(methodInfos);
         addPathParamMethodInfo(methodInfos);
         addRegexMethodInfo(methodInfos);
@@ -122,6 +127,18 @@ public class AnnotatedHttpDocServiceTest {
         final MethodInfo methodInfo = new MethodInfo(
                 "foo", toTypeSignature(String.class), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, "foo method");
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
+    private static void addListOfIntegerMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/list")
+                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of(
+                new FieldInfo("listOfInteger", "query", REQUIRED, TypeSignature.ofList(INT32)));
+        final MethodInfo methodInfo = new MethodInfo(
+                "listOfInteger", TypeSignature.ofContainer("CompletableFuture", TypeSignature.ofUnresolved("")),
+                fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -216,6 +233,11 @@ public class AnnotatedHttpDocServiceTest {
         public String foo(@Header @Description("header parameter") int header,
                           @Param @Description("query parameter") long query) {
             return "foo";
+        }
+
+        @Get("/list")
+        public CompletableFuture<?> listOfInteger(@Param List<Integer> listOfInteger) {
+            return CompletableFuture.completedFuture(HttpResponse.of("hello"));
         }
 
         @Options

@@ -85,6 +85,10 @@ public class AnnotatedHttpDocServicePluginTest {
 
         assertThat(toTypeSignature(int[].class)).isEqualTo(TypeSignature.ofList(TypeSignature.ofBase("int32")));
 
+        final TypeSignature typeVariable = toTypeSignature(FieldContainer.class.getDeclaredField("typeVariable")
+                                                                               .getGenericType());
+        assertThat(typeVariable).isEqualTo(TypeSignature.ofBase("T"));
+
         // Container types.
 
         final TypeSignature list = toTypeSignature(FieldContainer.class.getDeclaredField("list")
@@ -100,10 +104,18 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(future).isEqualTo(TypeSignature.ofContainer("CompletableFuture",
                                                                TypeSignature.ofBase("double")));
 
+        final TypeSignature wildcardFuture =
+                toTypeSignature(FieldContainer.class.getDeclaredField("wildcardFuture").getGenericType());
+        assertThat(wildcardFuture).isEqualTo(TypeSignature.ofContainer("CompletableFuture",
+                                                                       TypeSignature.ofUnresolved("")));
+        final TypeSignature typeVariableFuture =
+                toTypeSignature(FieldContainer.class.getDeclaredField("typeVariableFuture").getGenericType());
+        assertThat(typeVariableFuture).isEqualTo(TypeSignature.ofContainer("CompletableFuture",
+                                                                           TypeSignature.ofBase("T")));
+
         // Other than above, every type is named type signature.
         assertThat(toTypeSignature(FieldContainer.class).name())
-                .isEqualTo("com.linecorp.armeria.internal.annotation." +
-                           "AnnotatedHttpDocServicePluginTest$FieldContainer");
+                .isEqualTo("FieldContainer");
     }
 
     @Test
@@ -230,13 +242,21 @@ public class AnnotatedHttpDocServicePluginTest {
         return builder.build();
     }
 
-    private static class FieldContainer {
+    private static class FieldContainer<T> {
+        @Nullable
+        T typeVariable;
         @Nullable
         List<String> list;
         @Nullable
         Set<Float> set;
         @Nullable
         CompletableFuture<Double> future;
+        @Nullable
+        CompletableFuture<?> wildcardFuture;
+        @Nullable
+        CompletableFuture<T> typeVariableFuture;
+        @Nullable
+        CompletableFuture<Object> objectFuture;
     }
 
     private static class FooClass {
