@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.misc;
+package com.linecorp.armeria.common.util;
 
-import static com.linecorp.armeria.server.misc.InetAddressPredicates.ofCidr;
-import static com.linecorp.armeria.server.misc.InetAddressPredicates.ofExact;
-import static com.linecorp.armeria.server.misc.InetAddressPredicates.toMaskBits;
+import static com.linecorp.armeria.common.util.InetAddressPredicates.ofCidr;
+import static com.linecorp.armeria.common.util.InetAddressPredicates.ofExact;
+import static com.linecorp.armeria.common.util.InetAddressPredicates.toMaskBits;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.misc;
+package com.linecorp.armeria.common.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.server.misc.Inet4AddressBlock.ipv6ToIpv4Address;
+import static com.linecorp.armeria.common.util.Inet4AddressBlock.ipv6ToIpv4Address;
 import static java.util.Objects.requireNonNull;
 
 import java.net.Inet4Address;
