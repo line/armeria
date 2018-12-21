@@ -215,6 +215,41 @@ Use ``ServerBuilder.withVirtualHost()`` to configure `a name-based virtual host`
       .tls(...);
     ...
 
+Getting an IP address of a client who initiated a request
+---------------------------------------------------------
+
+You may want to get an IP address of a client who initiated a request in your service. In that case,
+you can use the ``clientAddress()`` method of the :api:`ServiceRequestContext`. But you need to configure
+your :api:`ServerBuilder` before doing that:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.common.util.InetAddressPredicates;
+    import com.linecorp.armeria.server.ClientAddressSource;
+
+    ServerBuilder sb = new ServerBuilder();
+
+    // Configure a filter which evaluates whether an address of a remote endpoint is trusted.
+    // If unspecified, no remote endpoint is trusted.
+    // e.g. servers who have an IP address in 10.0.0.0/8.
+    sb.clientAddressTrustedProxyFilter(InetAddressPredicates.ofCidr("10.0.0.0/8"));
+
+    // Configure a filter which evaluates whether an address can be used as a client address.
+    // If unspecified, any address would be accepted.
+    // e.g. public addresses
+    sb.clientAddressFilter(address -> !address.isSiteLocalAddress());
+
+    // Configure a list of sources which are used to determine where to look for the client address,
+    // in the order of preference. If unspecified, 'Forwarded', 'X-Forwarded-For' and the source address
+    // of a PROXY protocol header would be used.
+    sb.clientAddressSources(ClientAddressSource.ofHeader(HttpHeaderNames.FORWARDED),
+                            ClientAddressSource.ofHeader(HttpHeaderNames.X_FORWARDED_FOR),
+                            ClientAddressSource.ofProxyProtocol());
+
+    // Get an IP address of a client who initiated a request.
+    sb.service("/", (ctx, res) ->
+            HttpResponse.of("A request was initiated by %s!", ctx.clientAddress().getHostAddress()));
+
 See also
 --------
 
