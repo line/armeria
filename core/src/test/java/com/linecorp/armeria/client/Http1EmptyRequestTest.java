@@ -67,7 +67,6 @@ public class Http1EmptyRequestTest {
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
-
     private final HttpMethod method;
     private final boolean hasContentLength;
 
@@ -85,11 +84,12 @@ public class Http1EmptyRequestTest {
             client.execute(HttpRequest.of(method, "/")).aggregate();
 
             try (Socket s = ss.accept()) {
-                final BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
+                final BufferedReader in = new BufferedReader(
+                        new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
                 assertThat(in.readLine()).isEqualTo(method.name() + " / HTTP/1.1");
                 assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
                 assertThat(in.readLine()).startsWith("user-agent: armeria/");
-                if (hasContentLength){
+                if (hasContentLength) {
                     assertThat(in.readLine()).isEqualTo("content-length: 0");
                 }
                 assertThat(in.readLine()).isEmpty();
