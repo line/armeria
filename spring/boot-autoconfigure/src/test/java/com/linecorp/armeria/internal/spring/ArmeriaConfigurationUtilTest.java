@@ -32,12 +32,13 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 
@@ -55,9 +56,7 @@ public class ArmeriaConfigurationUtilTest {
         final ServerBuilder sb1 = new ServerBuilder();
         configureAnnotatedHttpServices(sb1, ImmutableList.of(bean), MeterIdPrefixFunctionFactory.DEFAULT);
         verify(decorator).apply(any());
-        assertThat(service(sb1)).isNotInstanceOf(AnnotatedHttpService.class)
-                                .satisfies(s -> assertThat(s.getClass().getName())
-                                        .endsWith("$ExceptionFilteredHttpResponseDecorator"));
+        assertThat(service(sb1).as(MetricCollectingService.class)).isPresent();
 
         reset(decorator);
 
@@ -79,9 +78,7 @@ public class ArmeriaConfigurationUtilTest {
         final ServerBuilder sb = new ServerBuilder();
         configureAnnotatedHttpServices(sb, ImmutableList.of(bean), null);
         verify(decorator).apply(any());
-        assertThat(service(sb)).isNotInstanceOf(AnnotatedHttpService.class)
-                               .satisfies(s -> assertThat(s.getClass().getName())
-                                       .endsWith("$ExceptionFilteredHttpResponseDecorator"));
+        assertThat(service(sb).as(SimpleDecorator.class)).isPresent();
     }
 
     private static Service<?, ?> service(ServerBuilder sb) {
@@ -107,12 +104,19 @@ public class ArmeriaConfigurationUtilTest {
             implements Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> {
         @Override
         public Service<HttpRequest, HttpResponse> apply(Service<HttpRequest, HttpResponse> delegate) {
-            return new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of(HttpStatus.NO_CONTENT);
-                }
-            };
+            return new SimpleDecorator(delegate);
+        }
+    }
+
+    static class SimpleDecorator
+            extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+        SimpleDecorator(Service<HttpRequest, HttpResponse> delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            return HttpResponse.of(HttpStatus.NO_CONTENT);
         }
     }
 
