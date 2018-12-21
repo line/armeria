@@ -267,7 +267,8 @@ public final class ArmeriaConfigurationUtil {
                 decorator = decorator.andThen(d);
             }
             if (meterIdPrefixFunctionFactory != null) {
-                decorator = metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory);
+                decorator = decorator.andThen(
+                        metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory));
             }
             final ImmutableList<Object> exceptionHandlersAndConverters =
                     ImmutableList.builder()
