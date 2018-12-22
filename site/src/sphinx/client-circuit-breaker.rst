@@ -218,8 +218,8 @@ Therefore, Armeria provides various ways that let users group the range of circu
 
         // Create a CircuitBreaker with the key name
         final Function<String, CircuitBreaker> factory = key -> CircuitBreaker.of("my-cb-" + key);
-        final CircuitBreakerStrategy<HttpResponse> httpStrategy = CircuitBreakerStrategy.onServerErrorStatus();
-        final CircuitBreakerStrategy<RpcResponse> rpcStrategy =
+        final CircuitBreakerStrategy httpStrategy = CircuitBreakerStrategy.onServerErrorStatus();
+        final CircuitBreakerStrategy rpcStrategy =
                 response -> response.completionFuture().handle((res, cause) -> cause == null);
 
         // Create CircuitBreakers per host (a.com, b.com ...)
