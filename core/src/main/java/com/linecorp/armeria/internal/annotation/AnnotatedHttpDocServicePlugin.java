@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
 import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
@@ -26,6 +27,7 @@ import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFacto
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -38,7 +40,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -80,12 +81,16 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     private static final String QUERY_PARAM = "query";
     private static final String HEADER_PARAM = "header";
 
+    // The formats defined by OpenAPI Specification
+    // (https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#dataTypes):
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     @VisibleForTesting
     static final TypeSignature BOOL = TypeSignature.ofBase("boolean");
+    // Not defined in the spec, but added to support char and byte types.
     @VisibleForTesting
     static final TypeSignature INT8 = TypeSignature.ofBase("int8");
+    // Not defined in the spec, but added to support short type.
     @VisibleForTesting
     static final TypeSignature INT16 = TypeSignature.ofBase("int16");
     @VisibleForTesting
@@ -243,6 +248,10 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     @Nullable
     @VisibleForTesting
     static TypeSignature toTypeSignature(Type type) {
+        requireNonNull(type, "type");
+
+        // The data types defined by the OpenAPI Specification:
+
         if (type == Void.class || type == void.class) {
             return VOID;
         } else if (type == Boolean.class || type == boolean.class) {
@@ -259,21 +268,12 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             return FLOAT;
         } else if (type == Double.class || type == double.class) {
             return DOUBLE;
-        } else if (type.equals(String.class)) {
+        } else if (type == String.class) {
             return STRING;
-        }
-
-        if (type == byte[].class || type == Byte[].class) {
+        } else if (type == byte[].class || type == Byte[].class) {
             return BINARY;
         }
-
-        if (type instanceof WildcardType) {
-            return TypeSignature.ofUnresolved("");
-        }
-
-        if (type instanceof TypeVariable) {
-            return TypeSignature.ofBase(type.getTypeName());
-        }
+        // End of data types defined by the OpenAPI Specification.
 
         if (type instanceof ParameterizedType) {
             final ParameterizedType parameterizedType = (ParameterizedType) type;
@@ -302,13 +302,30 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 return TypeSignature.ofMap(key, value);
             }
 
-            if (CompletionStage.class.isAssignableFrom(rawType)) {
-                final TypeSignature signature = toTypeSignature(parameterizedType.getActualTypeArguments()[0]);
-                if (signature == null) {
-                    return null;
-                }
-                return TypeSignature.ofContainer(rawType.getSimpleName(), signature);
+            final List<TypeSignature> actualTypes = Stream.of(parameterizedType.getActualTypeArguments())
+                                                          .map(AnnotatedHttpDocServicePlugin::toTypeSignature)
+                                                          .filter(Objects::nonNull)
+                                                          .collect(toImmutableList());
+            if (actualTypes.isEmpty()) {
+                return null;
             }
+            return TypeSignature.ofContainer(rawType.getSimpleName(), actualTypes);
+        }
+
+        if (type instanceof WildcardType) {
+            // Create an unresolved type with an empty string so that the type name will be '?'.
+            return TypeSignature.ofUnresolved("");
+        }
+        if (type instanceof TypeVariable) {
+            return TypeSignature.ofBase(type.getTypeName());
+        }
+        if (type instanceof GenericArrayType) {
+            final TypeSignature signature =
+                    toTypeSignature(((GenericArrayType) type).getGenericComponentType());
+            if (signature == null) {
+                return null;
+            }
+            return TypeSignature.ofList(signature);
         }
 
         if (!(type instanceof Class)) {
