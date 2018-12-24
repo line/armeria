@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -87,10 +86,10 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     @VisibleForTesting
     static final TypeSignature BOOL = TypeSignature.ofBase("boolean");
-    // Not defined in the spec, but added to support char and byte types.
+    // Not defined in the spec, but added to support byte type.
     @VisibleForTesting
     static final TypeSignature INT8 = TypeSignature.ofBase("int8");
-    // Not defined in the spec, but added to support short type.
+    // Not defined in the spec, but added to support char and short types.
     @VisibleForTesting
     static final TypeSignature INT16 = TypeSignature.ofBase("int16");
     @VisibleForTesting
@@ -145,8 +144,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
         final Method method = service.method();
         final String name = method.getName();
-        final TypeSignature signature = toTypeSignature(method.getGenericReturnType());
-        final TypeSignature returnTypeSignature = signature != null ? signature : VOID;
+        final TypeSignature returnTypeSignature = toTypeSignature(method.getGenericReturnType());
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
         final Class<?> clazz = service.object().getClass();
         pathMapping.supportedMethods().forEach(
@@ -217,9 +215,6 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 final Class<?> containerType = resolver.containerType();
                 assert containerType != null;
                 final TypeSignature parameterTypeSignature = toTypeSignature(resolver.elementType());
-                if (parameterTypeSignature == null) {
-                    continue;
-                }
                 if (List.class.isAssignableFrom(containerType)) {
                     signature = TypeSignature.ofList(parameterTypeSignature);
                 } else if (Set.class.isAssignableFrom(containerType)) {
@@ -230,9 +225,6 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 }
             } else {
                 signature = toTypeSignature(resolver.elementType());
-            }
-            if (signature == null) {
-                continue;
             }
             final String name = resolver.httpElementName();
             assert name != null;
@@ -245,7 +237,6 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         return fieldInfoBuilder.build();
     }
 
-    @Nullable
     @VisibleForTesting
     static TypeSignature toTypeSignature(Type type) {
         requireNonNull(type, "type");
@@ -279,36 +270,21 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
             if (List.class.isAssignableFrom(rawType)) {
-                final TypeSignature signature = toTypeSignature(parameterizedType.getActualTypeArguments()[0]);
-                if (signature == null) {
-                    return null;
-                }
-                return TypeSignature.ofList(signature);
+                return TypeSignature.ofList(toTypeSignature(parameterizedType.getActualTypeArguments()[0]));
             }
             if (Set.class.isAssignableFrom(rawType)) {
-                final TypeSignature signature = toTypeSignature(parameterizedType.getActualTypeArguments()[0]);
-                if (signature == null) {
-                    return null;
-                }
-                return TypeSignature.ofSet(signature);
+                return TypeSignature.ofSet(toTypeSignature(parameterizedType.getActualTypeArguments()[0]));
             }
 
             if (Map.class.isAssignableFrom(rawType)) {
                 final TypeSignature key = toTypeSignature(parameterizedType.getActualTypeArguments()[0]);
                 final TypeSignature value = toTypeSignature(parameterizedType.getActualTypeArguments()[1]);
-                if (key == null || value == null) {
-                    return null;
-                }
                 return TypeSignature.ofMap(key, value);
             }
 
             final List<TypeSignature> actualTypes = Stream.of(parameterizedType.getActualTypeArguments())
                                                           .map(AnnotatedHttpDocServicePlugin::toTypeSignature)
-                                                          .filter(Objects::nonNull)
                                                           .collect(toImmutableList());
-            if (actualTypes.isEmpty()) {
-                return null;
-            }
             return TypeSignature.ofContainer(rawType.getSimpleName(), actualTypes);
         }
 
@@ -320,27 +296,17 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             return TypeSignature.ofBase(type.getTypeName());
         }
         if (type instanceof GenericArrayType) {
-            final TypeSignature signature =
-                    toTypeSignature(((GenericArrayType) type).getGenericComponentType());
-            if (signature == null) {
-                return null;
-            }
-            return TypeSignature.ofList(signature);
+            return TypeSignature.ofList(toTypeSignature(((GenericArrayType) type).getGenericComponentType()));
         }
 
         if (!(type instanceof Class)) {
-            // Unsupported type.
-            return null;
+            return TypeSignature.ofBase(type.getTypeName());
         }
 
         final Class<?> clazz = (Class<?>) type;
         if (clazz.isArray()) {
             // If it's an array, return it as a list.
-            final TypeSignature signature = toTypeSignature(clazz.getComponentType());
-            if (signature == null) {
-                return null;
-            }
-            return TypeSignature.ofList(signature);
+            return TypeSignature.ofList(toTypeSignature(clazz.getComponentType()));
         }
 
         return TypeSignature.ofBase(clazz.getSimpleName());
@@ -396,14 +362,8 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final Field[] declaredFields = structClass.getDeclaredFields();
         final List<FieldInfo> fields =
                 Stream.of(declaredFields)
-                      .map(f -> {
-                          final TypeSignature signature = toTypeSignature(f.getGenericType());
-                          if (signature == null) {
-                              return null;
-                          }
-                          return new FieldInfo(f.getName(), FieldRequirement.DEFAULT, signature);
-                      })
-                      .filter(Objects::nonNull)
+                      .map(f -> new FieldInfo(f.getName(), FieldRequirement.DEFAULT,
+                                              toTypeSignature(f.getGenericType())))
                       .collect(Collectors.toList());
         return new StructInfo(name, fields);
     }

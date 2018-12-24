@@ -142,9 +142,9 @@ public class AnnotatedHttpDocServiceTest {
               .filter(httpMethod -> httpMethod != HttpMethod.CONNECT && httpMethod != HttpMethod.UNKNOWN)
               .forEach(httpMethod -> {
                   final MethodInfo methodInfo =
-                          new MethodInfo("allMethods", TypeSignature.ofContainer("CompletableFuture",
-                                                                                 TypeSignature
-                                                                                         .ofUnresolved("")),
+                          new MethodInfo("allMethods",
+                                         TypeSignature.ofContainer("CompletableFuture",
+                                                                   TypeSignature.ofUnresolved("")),
                                          ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint),
                                          httpMethod, null);
                   methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
@@ -275,7 +275,7 @@ public class AnnotatedHttpDocServiceTest {
             @SuppressWarnings("unchecked")
             final List<String>[] genericArray = (List<String>[]) Array.newInstance(List.class, values.length);
             for (int i = 0; i < genericArray.length; i++) {
-                genericArray[i].add(values[i].toString());
+                genericArray[i] = ImmutableList.of(values[i].toString());
             }
             return genericArray;
         }
