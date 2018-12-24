@@ -30,6 +30,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 import javax.annotation.Nullable;
@@ -45,7 +48,11 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
 
@@ -57,9 +64,11 @@ import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.handler.codec.DateFormatter;
 
+@RunWith(Parameterized.class)
 public class HttpFileServiceTest {
 
     private static final ZoneId UTC = ZoneId.of("UTC");
+    private static final Pattern ETAG_PATTERN = Pattern.compile("^\"[^\"]+\"$");
 
     private static final String baseResourceDir =
             HttpFileServiceTest.class.getPackage().getName().replace('.', '/') + '/';
@@ -67,6 +76,11 @@ public class HttpFileServiceTest {
 
     private static final Server server;
     private static int httpPort;
+
+    @Parameters(name = "{index}: cached={0}")
+    public static Collection<Boolean> parameters() {
+        return ImmutableSet.of(true, false);
+    }
 
     static {
         try {
@@ -79,21 +93,50 @@ public class HttpFileServiceTest {
 
         try {
             sb.serviceUnder(
-                    "/fs/",
-                    HttpFileService.forFileSystem(tmpDir.toPath()).decorate(LoggingService.newDecorator()));
+                    "/cached/fs/",
+                    HttpFileService.forFileSystem(tmpDir.toPath()));
 
             sb.serviceUnder(
-                    "/compressed/",
+                    "/uncached/fs/",
+                    HttpFileServiceBuilder.forFileSystem(tmpDir.toPath())
+                                          .maxCacheEntries(0)
+                                          .build());
+
+            sb.serviceUnder(
+                    "/cached/compressed/",
+                    HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
+                                          .serveCompressedFiles(true)
+                                          .build());
+            sb.serviceUnder(
+                    "/uncached/compressed/",
                     HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
                                           .serveCompressedFiles(true)
                                           .maxCacheEntries(0)
                                           .build());
 
             sb.serviceUnder(
-                    "/",
+                    "/cached/classes/",
+                    HttpFileService.forClassPath("/"));
+            sb.serviceUnder(
+                    "/uncached/classes/",
+                    HttpFileServiceBuilder.forClassPath("/")
+                                          .maxCacheEntries(0)
+                                          .build());
+
+            sb.serviceUnder(
+                    "/cached/",
                     HttpFileService.forClassPath(baseResourceDir + "foo")
-                                   .orElse(HttpFileService.forClassPath(baseResourceDir + "bar"))
-                                   .decorate(LoggingService.newDecorator()));
+                                   .orElse(HttpFileService.forClassPath(baseResourceDir + "bar")));
+            sb.serviceUnder(
+                    "/uncached/",
+                    HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
+                                          .maxCacheEntries(0)
+                                          .build()
+                                          .orElse(HttpFileServiceBuilder.forClassPath(baseResourceDir + "bar")
+                                                                        .maxCacheEntries(0)
+                                                                        .build()));
+
+            sb.decorator(LoggingService.newDecorator());
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -128,6 +171,12 @@ public class HttpFileServiceTest {
         });
     }
 
+    private final boolean cached;
+
+    public HttpFileServiceTest(boolean cached) {
+        this.cached = cached;
+    }
+
     @Before
     public void setUp() {
         PathAndQuery.clearCachedPaths();
@@ -151,8 +200,9 @@ public class HttpFileServiceTest {
             }
 
             // Confirm file service paths are cached when cache is enabled.
-            assertThat(PathAndQuery.cachedPaths())
-                    .contains("/foo.txt");
+            if (cached) {
+                assertThat(PathAndQuery.cachedPaths()).contains("/cached/foo.txt");
+            }
         }
     }
 
@@ -161,6 +211,28 @@ public class HttpFileServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/%C2%A2.txt")))) {
                 assert200Ok(res, "text/plain", "¢");
+            }
+        }
+    }
+
+    @Test
+    public void testClassPathGetFromModule() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Read a class from a JDK module (java.base).
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(newUri("/classes/java/lang/Object.class")))) {
+                assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
+            }
+        }
+    }
+
+    @Test
+    public void testClassPathGetFromJar() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Read a class from a third-party library JAR.
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(newUri("/classes/io/netty/util/NetUtil.class")))) {
+                assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
             }
         }
     }
@@ -363,6 +435,8 @@ public class HttpFileServiceTest {
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
             }
+        } finally {
+            barFile.delete();
         }
     }
 
@@ -380,11 +454,24 @@ public class HttpFileServiceTest {
         }
     }
 
-    private static String assert200Ok(
-            CloseableHttpResponse res, @Nullable String expectedContentType, String expectedContent)
-            throws Exception {
+    private static String assert200Ok(CloseableHttpResponse res,
+                                      @Nullable String expectedContentType,
+                                      String expectedContent) throws Exception {
+        return assert200Ok(res, expectedContentType,
+                           content -> assertThat(content).isEqualTo(expectedContent));
+    }
+
+    private static String assert200Ok(CloseableHttpResponse res,
+                                      @Nullable String expectedContentType,
+                                      Consumer<String> contentAssertions) throws Exception {
 
         assertStatusLine(res, "HTTP/1.1 200 OK");
+
+        // Ensure that the 'Date' header exists and is well-formed.
+        final String date;
+        assertThat(res.containsHeader(HttpHeaders.DATE)).isTrue();
+        date = res.getFirstHeader(HttpHeaders.DATE).getValue();
+        DateFormatter.parseHttpDate(date);
 
         // Ensure that the 'Last-Modified' header exists and is well-formed.
         final String lastModified;
@@ -392,9 +479,13 @@ public class HttpFileServiceTest {
         lastModified = res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue();
         DateFormatter.parseHttpDate(lastModified);
 
-        // Ensure the content and its type are correct.
-        assertThat(EntityUtils.toString(res.getEntity()).trim()).isEqualTo(expectedContent);
+        // Ensure that the 'ETag' header exists and is well-formed.
+        final String entityTag;
+        assertThat(res.containsHeader(HttpHeaders.ETAG)).isTrue();
+        entityTag = res.getFirstHeader(HttpHeaders.ETAG).getValue();
+        assertThat(entityTag).matches(ETAG_PATTERN);
 
+        // Ensure the content type is correct.
         if (expectedContentType != null) {
             assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isTrue();
             assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue())
@@ -402,6 +493,9 @@ public class HttpFileServiceTest {
         } else {
             assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isFalse();
         }
+
+        // Ensure the content satisfies the condition.
+        contentAssertions.accept(EntityUtils.toString(res.getEntity()).trim());
 
         return lastModified;
     }
@@ -433,7 +527,7 @@ public class HttpFileServiceTest {
         return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(UTC));
     }
 
-    private static String newUri(String path) {
-        return "http://127.0.0.1:" + httpPort + path;
+    private String newUri(String path) {
+        return "http://127.0.0.1:" + httpPort + '/' + (cached ? "cached" : "uncached") + path;
     }
 }
