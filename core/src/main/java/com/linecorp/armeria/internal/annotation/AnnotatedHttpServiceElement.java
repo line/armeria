@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,11 +41,11 @@ public final class AnnotatedHttpServiceElement {
 
     AnnotatedHttpServiceElement(PathMapping pathMapping,
                                 AnnotatedHttpService service,
-                                @Nullable Function<Service<HttpRequest, HttpResponse>,
+                                Function<Service<HttpRequest, HttpResponse>,
                                         ? extends Service<HttpRequest, HttpResponse>> decorator) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.service = requireNonNull(service, "service");
-        this.decorator = decorator;
+        this.decorator = requireNonNull(decorator, "decorator");
     }
 
     /**
@@ -68,7 +66,6 @@ public final class AnnotatedHttpServiceElement {
      * Returns the decorator of the {@link AnnotatedHttpService} which will be evaluated at service
      * registration time.
      */
-    @Nullable
     public Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> decorator() {
         return decorator;

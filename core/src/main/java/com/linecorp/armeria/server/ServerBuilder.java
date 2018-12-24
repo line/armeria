@@ -904,8 +904,8 @@ public final class ServerBuilder {
     public ServerBuilder annotatedService(Object service,
                                           Object... exceptionHandlersAndConverters) {
         return annotatedService("/", service, Function.identity(),
-                                requireNonNull(exceptionHandlersAndConverters,
-                                               "exceptionHandlersAndConverters"));
+                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                    "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -920,8 +920,8 @@ public final class ServerBuilder {
                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
                                           Object... exceptionHandlersAndConverters) {
         return annotatedService("/", service, decorator,
-                                requireNonNull(exceptionHandlersAndConverters,
-                                               "exceptionHandlersAndConverters"));
+                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                    "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -941,8 +941,8 @@ public final class ServerBuilder {
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Object... exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, Function.identity(),
-                                requireNonNull(exceptionHandlersAndConverters,
-                                               "exceptionHandlersAndConverters"));
+                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
+                                                                    "exceptionHandlersAndConverters")));
     }
 
     /**
@@ -970,9 +970,25 @@ public final class ServerBuilder {
      *                                       {@link ResponseConverterFunction}
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Iterable<?> exceptionHandlersAndConverters) {
+        return annotatedService(pathPrefix, service, Function.identity(), exceptionHandlersAndConverters);
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlersAndConverters an iterable object of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
+     */
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<Service<HttpRequest, HttpResponse>,
                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
                                           Iterable<?> exceptionHandlersAndConverters) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
 
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.annotatedService(pathPrefix, service, decorator,
