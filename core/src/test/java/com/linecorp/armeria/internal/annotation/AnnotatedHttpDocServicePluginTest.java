@@ -28,12 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -85,6 +85,10 @@ public class AnnotatedHttpDocServicePluginTest {
 
         assertThat(toTypeSignature(int[].class)).isEqualTo(TypeSignature.ofList(TypeSignature.ofBase("int32")));
 
+        final TypeSignature typeVariable = toTypeSignature(FieldContainer.class.getDeclaredField("typeVariable")
+                                                                               .getGenericType());
+        assertThat(typeVariable).isEqualTo(TypeSignature.ofBase("T"));
+
         // Container types.
 
         final TypeSignature list = toTypeSignature(FieldContainer.class.getDeclaredField("list")
@@ -95,15 +99,34 @@ public class AnnotatedHttpDocServicePluginTest {
                                                                       .getGenericType());
         assertThat(set).isEqualTo(TypeSignature.ofSet(TypeSignature.ofBase("float")));
 
+        final TypeSignature map = toTypeSignature(FieldContainer.class.getDeclaredField("map")
+                                                                      .getGenericType());
+        assertThat(map).isEqualTo(TypeSignature.ofMap(TypeSignature.ofBase("int64"),
+                                                      TypeSignature.ofUnresolved("")));
+
         final TypeSignature future = toTypeSignature(FieldContainer.class.getDeclaredField("future")
                                                                          .getGenericType());
         assertThat(future).isEqualTo(TypeSignature.ofContainer("CompletableFuture",
                                                                TypeSignature.ofBase("double")));
 
-        // Other than above, every type is named type signature.
-        assertThat(toTypeSignature(FieldContainer.class).name())
-                .isEqualTo("com.linecorp.armeria.internal.annotation." +
-                           "AnnotatedHttpDocServicePluginTest$FieldContainer");
+        final TypeSignature typeVariableFuture =
+                toTypeSignature(FieldContainer.class.getDeclaredField("typeVariableFuture").getGenericType());
+        assertThat(typeVariableFuture).isEqualTo(TypeSignature.ofContainer("CompletableFuture",
+                                                                           TypeSignature.ofBase("T")));
+
+        final TypeSignature genericArray =
+                toTypeSignature(FieldContainer.class.getDeclaredField("genericArray").getGenericType());
+        assertThat(genericArray).isEqualTo(
+                TypeSignature.ofList(TypeSignature.ofList(TypeSignature.ofBase("string"))));
+
+        final TypeSignature biFunction =
+                toTypeSignature(FieldContainer.class.getDeclaredField("biFunction").getGenericType());
+        assertThat(biFunction).isEqualTo(TypeSignature.ofContainer("BiFunction",
+                                                                   TypeSignature.ofBase("JsonNode"),
+                                                                   TypeSignature.ofUnresolved(""),
+                                                                   TypeSignature.ofBase("string")));
+
+        assertThat(toTypeSignature(FieldContainer.class)).isEqualTo(TypeSignature.ofBase("FieldContainer"));
     }
 
     @Test
@@ -230,13 +253,15 @@ public class AnnotatedHttpDocServicePluginTest {
         return builder.build();
     }
 
-    private static class FieldContainer {
-        @Nullable
+    private static class FieldContainer<T> {
+        T typeVariable;
         List<String> list;
-        @Nullable
         Set<Float> set;
-        @Nullable
+        Map<Long, ?> map;
         CompletableFuture<Double> future;
+        CompletableFuture<T> typeVariableFuture;
+        List<String>[] genericArray;
+        BiFunction<JsonNode, ?, String> biFunction;
     }
 
     private static class FooClass {

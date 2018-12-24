@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
 import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
@@ -26,16 +27,18 @@ import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFacto
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -77,12 +80,16 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     private static final String QUERY_PARAM = "query";
     private static final String HEADER_PARAM = "header";
 
+    // The formats defined by OpenAPI Specification
+    // (https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#dataTypes):
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     @VisibleForTesting
     static final TypeSignature BOOL = TypeSignature.ofBase("boolean");
+    // Not defined in the spec, but added to support byte type.
     @VisibleForTesting
     static final TypeSignature INT8 = TypeSignature.ofBase("int8");
+    // Not defined in the spec, but added to support char and short types.
     @VisibleForTesting
     static final TypeSignature INT16 = TypeSignature.ofBase("int16");
     @VisibleForTesting
@@ -207,18 +214,18 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             if (resolver.hasContainer()) {
                 final Class<?> containerType = resolver.containerType();
                 assert containerType != null;
+                final TypeSignature parameterTypeSignature = toTypeSignature(resolver.elementType());
                 if (List.class.isAssignableFrom(containerType)) {
-                    signature = TypeSignature.ofList(resolver.elementType());
+                    signature = TypeSignature.ofList(parameterTypeSignature);
                 } else if (Set.class.isAssignableFrom(containerType)) {
-                    signature = TypeSignature.ofSet(resolver.elementType());
+                    signature = TypeSignature.ofSet(parameterTypeSignature);
                 } else {
-                    throw new IllegalStateException(
-                            "Only List and Set are supported for the containerType: " + containerType);
+                    // Only List and Set are supported for the containerType.
+                    continue;
                 }
             } else {
                 signature = toTypeSignature(resolver.elementType());
             }
-
             final String name = resolver.httpElementName();
             assert name != null;
 
@@ -232,6 +239,10 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     static TypeSignature toTypeSignature(Type type) {
+        requireNonNull(type, "type");
+
+        // The data types defined by the OpenAPI Specification:
+
         if (type == Void.class || type == void.class) {
             return VOID;
         } else if (type == Boolean.class || type == boolean.class) {
@@ -248,13 +259,12 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             return FLOAT;
         } else if (type == Double.class || type == double.class) {
             return DOUBLE;
-        } else if (type.equals(String.class)) {
+        } else if (type == String.class) {
             return STRING;
-        }
-
-        if (type == byte[].class || type == Byte[].class) {
+        } else if (type == byte[].class || type == Byte[].class) {
             return BINARY;
         }
+        // End of data types defined by the OpenAPI Specification.
 
         if (type instanceof ParameterizedType) {
             final ParameterizedType parameterizedType = (ParameterizedType) type;
@@ -262,31 +272,44 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             if (List.class.isAssignableFrom(rawType)) {
                 return TypeSignature.ofList(toTypeSignature(parameterizedType.getActualTypeArguments()[0]));
             }
-
             if (Set.class.isAssignableFrom(rawType)) {
                 return TypeSignature.ofSet(toTypeSignature(parameterizedType.getActualTypeArguments()[0]));
             }
 
             if (Map.class.isAssignableFrom(rawType)) {
-                return TypeSignature.ofMap(toTypeSignature(parameterizedType.getActualTypeArguments()[0]),
-                                           toTypeSignature(parameterizedType.getActualTypeArguments()[1]));
+                final TypeSignature key = toTypeSignature(parameterizedType.getActualTypeArguments()[0]);
+                final TypeSignature value = toTypeSignature(parameterizedType.getActualTypeArguments()[1]);
+                return TypeSignature.ofMap(key, value);
             }
 
-            if (CompletionStage.class.isAssignableFrom(rawType)) {
-                return TypeSignature.ofContainer(rawType.getSimpleName(),
-                                                 toTypeSignature(
-                                                         parameterizedType.getActualTypeArguments()[0]));
-            }
+            final List<TypeSignature> actualTypes = Stream.of(parameterizedType.getActualTypeArguments())
+                                                          .map(AnnotatedHttpDocServicePlugin::toTypeSignature)
+                                                          .collect(toImmutableList());
+            return TypeSignature.ofContainer(rawType.getSimpleName(), actualTypes);
         }
 
-        assert type instanceof Class : "type: " + type;
+        if (type instanceof WildcardType) {
+            // Create an unresolved type with an empty string so that the type name will be '?'.
+            return TypeSignature.ofUnresolved("");
+        }
+        if (type instanceof TypeVariable) {
+            return TypeSignature.ofBase(type.getTypeName());
+        }
+        if (type instanceof GenericArrayType) {
+            return TypeSignature.ofList(toTypeSignature(((GenericArrayType) type).getGenericComponentType()));
+        }
+
+        if (!(type instanceof Class)) {
+            return TypeSignature.ofBase(type.getTypeName());
+        }
+
         final Class<?> clazz = (Class<?>) type;
         if (clazz.isArray()) {
             // If it's an array, return it as a list.
             return TypeSignature.ofList(toTypeSignature(clazz.getComponentType()));
         }
 
-        return TypeSignature.ofNamed(clazz);
+        return TypeSignature.ofBase(clazz.getSimpleName());
     }
 
     @Nullable
@@ -337,10 +360,11 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final String name = structClass.getName();
 
         final Field[] declaredFields = structClass.getDeclaredFields();
-        final List<FieldInfo> fields = Stream.of(declaredFields)
-                                             .map(f -> new FieldInfo(f.getName(), FieldRequirement.DEFAULT,
-                                                                     toTypeSignature(f.getGenericType())))
-                                             .collect(Collectors.toList());
+        final List<FieldInfo> fields =
+                Stream.of(declaredFields)
+                      .map(f -> new FieldInfo(f.getName(), FieldRequirement.DEFAULT,
+                                              toTypeSignature(f.getGenericType())))
+                      .collect(Collectors.toList());
         return new StructInfo(name, fields);
     }
 
