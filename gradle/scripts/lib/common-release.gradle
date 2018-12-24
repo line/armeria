@@ -97,7 +97,7 @@ task release(
         project.ext.executeGit('commit', '-m', "Update the project version to ${actualNextVersion}")
 
         // Push the commits and tags.
-        project.ext.executeGit('push', 'origin')
+        //project.ext.executeGit('push', 'origin')
         project.ext.executeGit('push', 'origin', tag)
 
         println()
