@@ -66,15 +66,15 @@ public class GrpcMetricsIntegrationTest {
     private static final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
     private static class TestServiceImpl extends TestServiceImplBase {
-            @Override
-            public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-                if ("world".equals(request.getPayload().getBody().toStringUtf8())) {
-                    responseObserver.onNext(SimpleResponse.getDefaultInstance());
-                    responseObserver.onCompleted();
-                    return;
-                }
-                responseObserver.onError(new IllegalArgumentException("bad argument"));
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            if ("world".equals(request.getPayload().getBody().toStringUtf8())) {
+                responseObserver.onNext(SimpleResponse.getDefaultInstance());
+                responseObserver.onCompleted();
+                return;
             }
+            responseObserver.onError(new IllegalArgumentException("bad argument"));
+        }
 
         @Override
         public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
