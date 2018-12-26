@@ -17,11 +17,13 @@ package com.linecorp.armeria.server.annotation;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -33,19 +35,24 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        @Nullable Object result) throws Exception {
-
-        final MediaType mediaType = ctx.negotiatedResponseMediaType();
+                                        HttpHeaders headers,
+                                        @Nullable Object result,
+                                        @Nullable HttpHeaders trailingHeaders) throws Exception {
+        final MediaType mediaType = headers.contentType();
         if (mediaType != null) {
             // @Produces("text/plain") or @ProducesText is specified.
             if (mediaType.is(MediaType.ANY_TEXT_TYPE)) {
                 // Use 'utf-8' charset by default.
                 final Charset charset = mediaType.charset().orElse(StandardCharsets.UTF_8);
-                return HttpResponse.of(HttpStatus.OK, mediaType.withCharset(charset),
-                                       String.valueOf(result).getBytes(charset));
+                final HttpData body = HttpData.of(String.valueOf(result).getBytes(charset));
+                return HttpResponse.of(headers, body, Optional.ofNullable(trailingHeaders));
             }
         } else if (result instanceof CharSequence) {
-            return HttpResponse.of(((CharSequence) result).toString());
+            final HttpHeaders responseHeaders =
+                    headers.isImmutable() ? HttpHeaders.copyOf(headers).contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                          : headers.contentType(MediaType.PLAIN_TEXT_UTF_8);
+            final HttpData body = HttpData.ofUtf8(((CharSequence) result).toString());
+            return HttpResponse.of(responseHeaders, body, Optional.ofNullable(trailingHeaders));
         }
 
         return ResponseConverterFunction.fallthrough();

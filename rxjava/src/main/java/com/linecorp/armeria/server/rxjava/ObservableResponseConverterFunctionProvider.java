@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.rxjava;
 
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceUtil.typeToClass;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
@@ -34,31 +36,26 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
             Type returnType,
             ResponseConverterFunction responseConverter,
             ExceptionHandlerFunction exceptionHandler) {
-
-        if (!ObservableSource.class.isAssignableFrom(toClass(returnType))) {
-            return null;
+        if (ObservableSource.class.isAssignableFrom(typeToClass(returnType))) {
+            assert returnType instanceof ParameterizedType;
+            ensureNoMoreObservableSource(returnType, returnType);
+            return new ObservableResponseConverterFunction(responseConverter, exceptionHandler);
         }
-
-        if (returnType instanceof ParameterizedType) {
-            final ParameterizedType p = (ParameterizedType) returnType;
-            if (ObservableSource.class.isAssignableFrom(toClass(p.getRawType())) &&
-                ObservableSource.class.isAssignableFrom(toClass(p.getActualTypeArguments()[0]))) {
-                throw new IllegalStateException(
-                        "Cannot support '" + p.getActualTypeArguments()[0].getTypeName() +
-                        "' as a generic type of " + ObservableSource.class.getSimpleName());
-            }
-        }
-
-        return new ObservableResponseConverterFunction(responseConverter, exceptionHandler);
+        return null;
     }
 
-    private static Class<?> toClass(Type type) {
-        if (type instanceof Class) {
-            return (Class<?>) type;
-        }
+    private static void ensureNoMoreObservableSource(Type returnType, Type type) {
         if (type instanceof ParameterizedType) {
-            return (Class<?>) ((ParameterizedType) type).getRawType();
+            final Type[] args = ((ParameterizedType) type).getActualTypeArguments();
+            for (Type arg : args) {
+                final Class<?> clazz = typeToClass(arg);
+                if (ObservableSource.class.isAssignableFrom(clazz)) {
+                    throw new IllegalStateException(
+                            "Not allowed type exists in the generic type arguments of the return type '" +
+                            returnType + "': " + clazz.getName());
+                }
+                ensureNoMoreObservableSource(returnType, arg);
+            }
         }
-        return Void.class;
     }
 }

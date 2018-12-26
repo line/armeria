@@ -19,14 +19,16 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -56,8 +58,10 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        @Nullable Object result) throws Exception {
-        final MediaType mediaType = ctx.negotiatedResponseMediaType();
+                                        HttpHeaders headers,
+                                        @Nullable Object result,
+                                        @Nullable HttpHeaders trailingHeaders) throws Exception {
+        final MediaType mediaType = headers.contentType();
         if (mediaType != null) {
             // @Produces("application/json") or @ProducesJson is specified.
             // Any MIME type which ends with '+json' such as 'application/json-patch+json' can be also accepted.
@@ -67,13 +71,17 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
                 // Convert the object only if the charset supports UTF-8,
                 // because ObjectMapper always writes JSON document as UTF-8.
                 if (charset.contains(StandardCharsets.UTF_8)) {
-                    return HttpResponse.of(HttpStatus.OK, mediaType.withCharset(StandardCharsets.UTF_8),
-                                           mapper.writeValueAsBytes(result));
+                    final HttpData body = HttpData.of(mapper.writeValueAsBytes(result));
+                    return HttpResponse.of(headers, body, Optional.ofNullable(trailingHeaders));
                 }
             }
         } else if (result instanceof JsonNode) {
             // No media type is specified, but the result is a JsonNode type.
-            return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, mapper.writeValueAsBytes(result));
+            final HttpHeaders responseHeaders =
+                    headers.isImmutable() ? HttpHeaders.copyOf(headers).contentType(MediaType.JSON_UTF_8)
+                                          : headers.contentType(MediaType.JSON_UTF_8);
+            final HttpData body = HttpData.of(mapper.writeValueAsBytes(result));
+            return HttpResponse.of(responseHeaders, body, Optional.ofNullable(trailingHeaders));
         }
 
         return ResponseConverterFunction.fallthrough();

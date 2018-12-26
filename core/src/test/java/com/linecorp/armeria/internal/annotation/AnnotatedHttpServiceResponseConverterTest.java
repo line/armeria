@@ -17,7 +17,6 @@ package com.linecorp.armeria.internal.annotation;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.lang.annotation.ElementType;
@@ -49,10 +48,17 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.HttpResult;
+import com.linecorp.armeria.server.annotation.HttpResultBuilder;
+import com.linecorp.armeria.server.annotation.NullToNoContentResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesText;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ResponseStatusCode;
 import com.linecorp.armeria.testing.server.ServerRule;
+
+import io.netty.util.AsciiString;
 
 public class AnnotatedHttpServiceResponseConverterTest {
 
@@ -130,16 +136,23 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
                 @Get("/defer")
                 public Publisher<String> defer() {
-                    return s -> s.onSubscribe(new Subscription() {
-                        @Override
-                        public void request(long n) {
-                            s.onNext("a");
-                            s.onError(new IllegalArgumentException("Bad request!"));
-                        }
+                    return exceptionRaisingPublisher();
+                }
+            });
 
-                        @Override
-                        public void cancel() {}
-                    });
+            sb.annotatedService("/publish/http-result", new Object() {
+                @Get("/jsonNode")
+                public HttpResult<Publisher<JsonNode>> jsonNode() throws IOException {
+                    return new HttpResultBuilder<Publisher<JsonNode>>()
+                            .body(new ObjectPublisher<>(mapper.readTree("{\"a\":\"¥\"}")))
+                            .build();
+                }
+
+                @Get("/defer")
+                public HttpResult<Publisher<String>> defer() {
+                    return new HttpResultBuilder<Publisher<String>>()
+                            .body(exceptionRaisingPublisher())
+                            .build();
                 }
             });
 
@@ -167,6 +180,84 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 public Map<String, String> jsonNode() throws IOException {
                     return ImmutableMap.of("a", "¥");
                 }
+            });
+
+            sb.annotatedService("/custom-status", new Object() {
+                @Get("/expect-specified-status")
+                @ResponseStatusCode(202)
+                public Void expectSpecifiedStatus() {
+                    // Will send '202 Accepted' because a user specified it with @ResponseStatusCode annotation.
+                    return null;
+                }
+
+                @Get("/expect-no-content")
+                public void expectNoContent() {
+                    // Will send '204 No Content' because the return type is 'void'.
+                    return;
+                }
+
+                @Get("/expect-ok")
+                public Object expectOk() {
+                    // Will send '200 Ok' because there is no @ResponseStatusCode annotation, that means
+                    // '200 Ok' will be used by default because the return type is not a 'void' or 'Void'.
+                    return null;
+                }
+
+                @Get("/expect-specified-no-content")
+                @ResponseStatusCode(204)
+                public HttpResult<Object> expectSpecifiedNoContent() {
+                    // Will send '204 No Content' because it is specified with @ResponseStatusCode annotation.
+                    return null;
+                }
+
+                @Get("/expect-not-modified")
+                @ResponseStatusCode(204)
+                public HttpResult<Object> expectNotModified() {
+                    // Will send '304 Not Modified' because HttpResult overrides the @ResponseStatusCode
+                    // annotation.
+                    return new HttpResultBuilder<>().status(HttpStatus.NOT_MODIFIED)
+                                                    .build();
+                }
+
+                @Get("/expect-no-content-from-converter")
+                @ResponseConverter(NullToNoContentResponseConverterFunction.class)
+                public HttpResult<Object> expectNoContentFromConverter() {
+                    // Will send '204 No Content' which is converted by
+                    // NullToNoContentResponseConverterFunction.
+                    return null;
+                }
+
+                @Get("/expect-custom-header")
+                @ProducesJson
+                public HttpResult<Map<String, String>> expectCustomHeader() {
+                    return new HttpResultBuilder<Map<String, String>>()
+                            .header("x-custom-header", "value")
+                            .body(ImmutableMap.of("a", "b"))
+                            .build();
+                }
+
+                @Get("/expect-custom-trailing-header")
+                @ProducesJson
+                public HttpResult<List<String>> expectCustomTrailingHeader() {
+                    return new HttpResultBuilder<List<String>>()
+                            .header("x-custom-header", "value")
+                            .body(ImmutableList.of("a", "b"))
+                            .trailingHeader("x-custom-trailing-header", "value")
+                            .build();
+                }
+            });
+        }
+
+        private Publisher<String> exceptionRaisingPublisher() {
+            return s -> s.onSubscribe(new Subscription() {
+                @Override
+                public void request(long n) {
+                    s.onNext("a");
+                    s.onError(new IllegalArgumentException("Bad request!"));
+                }
+
+                @Override
+                public void cancel() {}
             });
         }
     };
@@ -269,21 +360,6 @@ public class AnnotatedHttpServiceResponseConverterTest {
     }
 
     @Test
-    public void unsupportedReturnType() {
-        final ServerBuilder sb = new ServerBuilder();
-        assertThatThrownBy(() -> {
-            sb.annotatedService("/", new Object() {
-                @Get("/unsupported")
-                public Publisher<Publisher<Object>> unsupported() {
-                    return new ObjectPublisher<>(new ObjectPublisher<>("a", "b", "c"),
-                                                 new ObjectPublisher<>("d", "e", "f"));
-                }
-            });
-        }).isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Invalid return type");
-    }
-
-    @Test
     public void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/produce"));
 
@@ -305,6 +381,57 @@ public class AnnotatedHttpServiceResponseConverterTest {
         assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final JsonNode expected = mapper.readTree("{\"a\":\"¥\"}");
         assertThat(msg.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
+    }
+
+    @Test
+    public void customStatusCode() {
+        final HttpClient client = HttpClient.of(rule.uri("/custom-status"));
+
+        AggregatedHttpMessage msg;
+
+        msg = aggregated(client.get("/expect-specified-status"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.ACCEPTED);
+
+        msg = aggregated(client.get("/expect-no-content"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        msg = aggregated(client.get("/expect-ok"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+
+        msg = aggregated(client.get("/expect-specified-no-content"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        msg = aggregated(client.get("/expect-not-modified"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.NOT_MODIFIED);
+
+        msg = aggregated(client.get("/expect-no-content-from-converter"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        msg = aggregated(client.get("/expect-custom-header"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(AsciiString.of("x-custom-header"))).isEqualTo("value");
+        assertThatJson(msg.content().toStringUtf8()).isEqualTo(ImmutableMap.of("a", "b"));
+
+        msg = aggregated(client.get("/expect-custom-trailing-header"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(AsciiString.of("x-custom-header"))).isEqualTo("value");
+        assertThatJson(msg.content().toStringUtf8()).isEqualTo(ImmutableList.of("a", "b"));
+        assertThat(msg.trailingHeaders().get(AsciiString.of("x-custom-trailing-header"))).isEqualTo("value");
+    }
+
+    @Test
+    public void httpResultWithPublisher() {
+        final HttpClient client = HttpClient.of(rule.uri("/publish/http-result"));
+
+        AggregatedHttpMessage msg;
+
+        msg = aggregated(client.get("/jsonNode"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.content().toStringUtf8()).isEqualTo(ImmutableMap.of("a", "¥"));
+
+        msg = aggregated(client.get("/defer"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     private static AggregatedHttpMessage aggregated(HttpResponse response) {

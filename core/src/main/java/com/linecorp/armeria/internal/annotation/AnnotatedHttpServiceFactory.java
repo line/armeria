@@ -70,6 +70,7 @@ import com.google.common.collect.Sets;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
@@ -113,6 +114,7 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverters;
+import com.linecorp.armeria.server.annotation.ResponseStatusCode;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Trace;
 
@@ -289,9 +291,19 @@ public final class AnnotatedHttpServiceFactory {
                         "' do not have their corresponding parameters annotated with @Param. " +
                         "They would not be automatically injected: " + missing);
         }
+
+        final Optional<HttpStatus> defaultResponseStatus = findAnnotation(method, ResponseStatusCode.class)
+                .map(code -> {
+                    final int statusCode = code.value();
+                    checkArgument(statusCode >= 0,
+                                  "invalid HTTP status code: %s (expected: >= 0)", statusCode);
+                    return HttpStatus.valueOf(statusCode);
+                });
+
         return new AnnotatedHttpServiceElement(pathMapping,
                                                new AnnotatedHttpService(object, method, resolvers, eh,
-                                                                        res, pathMapping),
+                                                                        res, pathMapping,
+                                                                        defaultResponseStatus),
                                                decorator(method, clazz));
     }
 

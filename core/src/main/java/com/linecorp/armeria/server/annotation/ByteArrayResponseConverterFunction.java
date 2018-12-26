@@ -15,11 +15,13 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import java.util.Optional;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -31,29 +33,37 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        @Nullable Object result) throws Exception {
+                                        HttpHeaders headers,
+                                        @Nullable Object result,
+                                        @Nullable HttpHeaders trailingHeaders) throws Exception {
         if (result instanceof HttpData) {
-            return HttpResponse.of(HttpStatus.OK, mediaType(ctx.negotiatedResponseMediaType()),
-                                   ((HttpData) result).array());
+            return response(headers, ((HttpData) result).array(), trailingHeaders);
         }
         if (result instanceof byte[]) {
-            return HttpResponse.of(HttpStatus.OK, mediaType(ctx.negotiatedResponseMediaType()),
-                                   (byte[]) result);
+            return response(headers, (byte[]) result, trailingHeaders);
         }
         return ResponseConverterFunction.fallthrough();
     }
 
-    private static MediaType mediaType(@Nullable MediaType mediaType) {
-        if (mediaType == null) {
-            return MediaType.APPLICATION_BINARY;
+    private static HttpResponse response(HttpHeaders headers, byte[] body,
+                                         @Nullable HttpHeaders trailingHeaders) {
+        final MediaType contentType = headers.contentType();
+        if (contentType == null) {
+            final HttpHeaders responseHeaders =
+                    headers.isImmutable() ? HttpHeaders.copyOf(headers)
+                                                       .contentType(MediaType.APPLICATION_BINARY)
+                                          : headers;
+            final HttpData responseBody = HttpData.of(body);
+            return HttpResponse.of(responseHeaders, responseBody, Optional.ofNullable(trailingHeaders));
         }
 
         // A user expects 'binary'.
-        if (mediaType.is(MediaType.APPLICATION_BINARY) ||
-            mediaType.is(MediaType.OCTET_STREAM)) {
+        if (contentType.is(MediaType.APPLICATION_BINARY) ||
+            contentType.is(MediaType.OCTET_STREAM)) {
             // @Produces("application/binary") or @ProducesBinary
             // @Produces("application/octet-stream") or @ProducesOctetStream
-            return mediaType;
+            final HttpData responseBody = HttpData.of(body);
+            return HttpResponse.of(headers, responseBody, Optional.ofNullable(trailingHeaders));
         }
 
         return ResponseConverterFunction.fallthrough();
