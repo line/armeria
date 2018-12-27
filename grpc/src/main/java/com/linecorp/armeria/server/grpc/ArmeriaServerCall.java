@@ -483,7 +483,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             trailers.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(status.getDescription()));
         }
         if (Flags.verboseResponses() && status.getCause() != null) {
-            ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
+            final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
             trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLE,
                          Base64.getEncoder().encodeToString(proto.toByteArray()));
         }

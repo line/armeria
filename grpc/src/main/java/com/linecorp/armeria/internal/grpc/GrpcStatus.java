@@ -173,10 +173,10 @@ public final class GrpcStatus {
      * returning to a client.
      */
     public static ThrowableProto serializeThrowable(Throwable t) {
-        ThrowableProto.Builder builder = ThrowableProto.newBuilder();
+        final ThrowableProto.Builder builder = ThrowableProto.newBuilder();
 
         if (t instanceof StatusCauseException) {
-            StatusCauseException statusCause = (StatusCauseException) t;
+            final StatusCauseException statusCause = (StatusCauseException) t;
             builder.setExceptionClassName(statusCause.getClassName());
             builder.setMessage(statusCause.getOriginalMessage());
         } else {
@@ -195,7 +195,7 @@ public final class GrpcStatus {
     }
 
     private static StackTraceElementProto serializeStackTraceElement(StackTraceElement element) {
-        StackTraceElementProto.Builder builder = StackTraceElementProto.newBuilder()
+        final StackTraceElementProto.Builder builder = StackTraceElementProto.newBuilder()
                 .setClassName(element.getClassName())
                 .setMethodName(element.getMethodName())
                 .setLineNumber(element.getLineNumber());
