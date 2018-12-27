@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.grpc.StackTraceElementProto;
 import com.linecorp.armeria.grpc.ThrowableProto;
 
@@ -29,7 +28,7 @@ import com.linecorp.armeria.grpc.ThrowableProto;
  * response containing information about the cause of the exception at the server
  * side.
  */
-public class StatusCauseException extends RuntimeException {
+public final class StatusCauseException extends RuntimeException {
 
     private final String className;
     private final String originalMessage;
@@ -47,8 +46,6 @@ public class StatusCauseException extends RuntimeException {
             setStackTrace(proto.getStackTraceList().stream()
                                .map(StatusCauseException::deserializeStackTraceElement)
                                .toArray(StackTraceElement[]::new));
-        } else {
-            Exceptions.clearTrace(this);
         }
 
         if (proto.hasCause()) {
@@ -76,5 +73,11 @@ public class StatusCauseException extends RuntimeException {
                 proto.getMethodName(),
                 Strings.emptyToNull(proto.getFileName()),
                 proto.getLineNumber());
+    }
+
+    @Override
+    public Throwable fillInStackTrace() {
+        // We set the stack trace based on ThrowableProto so don't need to fill it automatically.
+        return this;
     }
 }
