@@ -34,6 +34,7 @@ import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
 import MenuIcon from '@material-ui/icons/Menu';
+import update from 'immutability-helper';
 import React from 'react';
 import Helmet from 'react-helmet';
 import { hot } from 'react-hot-loader';
@@ -126,7 +127,7 @@ interface State {
   mobileDrawerOpen: boolean;
   specification?: Specification;
   servicesSectionOpen: boolean;
-  serviceOpens: { [key: string]: boolean };
+  openServices: { [key: string]: boolean };
   enumsSectionOpen: boolean;
   structsSectionOpen: boolean;
   exceptionsOpen: boolean;
@@ -139,7 +140,7 @@ interface AppDrawerProps extends WithStyles<typeof styles> {
   navigateTo: (url: string) => void;
   httpMethodClass: (httpMethod: string) => string;
   servicesSectionOpen: boolean;
-  serviceOpens: { [key: string]: boolean };
+  openServices: { [key: string]: boolean };
   enumsSectionOpen: boolean;
   structsSectionOpen: boolean;
   exceptionsOpen: boolean;
@@ -152,7 +153,7 @@ function AppDrawer({
   httpMethodClass,
   specification,
   servicesSectionOpen,
-  serviceOpens,
+  openServices,
   enumsSectionOpen,
   structsSectionOpen,
   exceptionsOpen,
@@ -181,9 +182,9 @@ function AppDrawer({
                       <code>{simpleName(service.name)}</code>
                     </Typography>
                   </ListItemText>
-                  {serviceOpens[service.name] ? <ExpandLess /> : <ExpandMore />}
+                  {openServices[service.name] ? <ExpandLess /> : <ExpandMore />}
                 </ListItem>
-                <Collapse in={serviceOpens[service.name]} timeout="auto">
+                <Collapse in={openServices[service.name]} timeout="auto">
                   {service.methods.map((method) => (
                     <ListItem
                       dense
@@ -322,7 +323,7 @@ class App extends React.PureComponent<Props, State> {
     mobileDrawerOpen: false,
     specification: undefined,
     servicesSectionOpen: true,
-    serviceOpens: {},
+    openServices: {},
     enumsSectionOpen: true,
     structsSectionOpen: true,
     exceptionsOpen: true,
@@ -389,7 +390,7 @@ class App extends React.PureComponent<Props, State> {
               navigateTo={this.navigateTo}
               httpMethodClass={this.httpMethodClass}
               servicesSectionOpen={this.state.servicesSectionOpen}
-              serviceOpens={this.state.serviceOpens}
+              openServices={this.state.openServices}
               enumsSectionOpen={this.state.enumsSectionOpen}
               structsSectionOpen={this.state.structsSectionOpen}
               exceptionsOpen={this.state.exceptionsOpen}
@@ -414,7 +415,7 @@ class App extends React.PureComponent<Props, State> {
               navigateTo={this.navigateTo}
               httpMethodClass={this.httpMethodClass}
               servicesSectionOpen={this.state.servicesSectionOpen}
-              serviceOpens={this.state.serviceOpens}
+              openServices={this.state.openServices}
               enumsSectionOpen={this.state.enumsSectionOpen}
               structsSectionOpen={this.state.structsSectionOpen}
               exceptionsOpen={this.state.exceptionsOpen}
@@ -499,11 +500,11 @@ class App extends React.PureComponent<Props, State> {
     const httpResponse = await fetch('specification.json');
     const specificationData: SpecificationData = await httpResponse.json();
     const specification = new Specification(specificationData);
-    let serviceOpens = {};
+    let openServices = {};
     specification.getServices().forEach((service) => {
-      serviceOpens = { ...serviceOpens, ...{ [service.name]: true } };
+      openServices = { ...openServices, ...{ [service.name]: true } };
     });
-    this.setState({ specification, serviceOpens });
+    this.setState({ specification, openServices });
   };
 
   private toggleMobileDrawer = () => {
@@ -538,9 +539,11 @@ class App extends React.PureComponent<Props, State> {
   };
 
   private handleServiceCollapse = (serviceName: string) => {
-    const serviceOpens = this.state.serviceOpens;
-    serviceOpens[serviceName] = !serviceOpens[serviceName];
-    this.forceUpdate(); // Call forceUpdate to render the service collapse.
+    this.setState({
+      openServices: update(this.state.openServices, {
+        [serviceName]: { $set: !this.state.openServices[serviceName] },
+      }),
+    });
   };
 }
 
