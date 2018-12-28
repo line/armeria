@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Optional;
 
 import com.linecorp.armeria.common.HttpData;
@@ -31,6 +33,48 @@ import com.linecorp.armeria.common.HttpStatus;
  */
 @FunctionalInterface
 public interface HttpResult<T> {
+
+    static <T> HttpResult<T> of(HttpHeaders headers) {
+        return new DefaultHttpResult<>(headers);
+    }
+
+    static <T> HttpResult<T> of(HttpHeaders headers, T body) {
+        return new DefaultHttpResult<>(headers,
+                                       requireNonNull(body, "body"));
+    }
+
+    static <T> HttpResult<T> of(HttpHeaders headers, T body, HttpHeaders trailingHeaders) {
+        return new DefaultHttpResult<>(headers,
+                                       requireNonNull(body, "body"),
+                                       trailingHeaders);
+    }
+
+    static <T> HttpResult<T> of(HttpStatus status) {
+        return new DefaultHttpResult<>(HttpHeaders.of(status));
+    }
+
+    static <T> HttpResult<T> of(HttpStatus status, T body) {
+        return new DefaultHttpResult<>(HttpHeaders.of(status),
+                                       requireNonNull(body, "body"));
+    }
+
+    static <T> HttpResult<T> of(HttpStatus status, T body, HttpHeaders trailingHeaders) {
+        return new DefaultHttpResult<>(HttpHeaders.of(status),
+                                       requireNonNull(body, "body"),
+                                       trailingHeaders);
+    }
+
+    static <T> HttpResult<T> of(T body) {
+        return new DefaultHttpResult<>(HttpHeaders.of(HttpStatus.OK),
+                                       requireNonNull(body, "body"));
+    }
+
+    static <T> HttpResult<T> of(T body, HttpHeaders trailingHeaders) {
+        return new DefaultHttpResult<>(HttpHeaders.of(HttpStatus.OK),
+                                       requireNonNull(body, "body"),
+                                       trailingHeaders);
+    }
+
     /**
      * Returns {@link HttpHeaders} of a response.
      */
@@ -46,7 +90,7 @@ public interface HttpResult<T> {
     /**
      * Returns trailing {@link HttpHeaders} of a response.
      */
-    default Optional<HttpHeaders> trailingHeaders() {
-        return Optional.empty();
+    default HttpHeaders trailingHeaders() {
+        return HttpHeaders.EMPTY_HEADERS;
     }
 }

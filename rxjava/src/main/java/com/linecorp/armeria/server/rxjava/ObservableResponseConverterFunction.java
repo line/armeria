@@ -59,7 +59,7 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         HttpHeaders headers,
                                         @Nullable Object result,
-                                        @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailingHeaders) throws Exception {
         if (result instanceof ObservableSource) {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final ObservableSource<?> observable = (ObservableSource<?>) result;

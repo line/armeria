@@ -42,6 +42,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -49,13 +50,12 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.HttpResult;
-import com.linecorp.armeria.server.annotation.HttpResultBuilder;
 import com.linecorp.armeria.server.annotation.NullToNoContentResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
-import com.linecorp.armeria.server.annotation.ResponseStatusCode;
+import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.util.AsciiString;
@@ -143,16 +143,12 @@ public class AnnotatedHttpServiceResponseConverterTest {
             sb.annotatedService("/publish/http-result", new Object() {
                 @Get("/jsonNode")
                 public HttpResult<Publisher<JsonNode>> jsonNode() throws IOException {
-                    return new HttpResultBuilder<Publisher<JsonNode>>()
-                            .body(new ObjectPublisher<>(mapper.readTree("{\"a\":\"¥\"}")))
-                            .build();
+                    return HttpResult.of(new ObjectPublisher<>(mapper.readTree("{\"a\":\"¥\"}")));
                 }
 
                 @Get("/defer")
                 public HttpResult<Publisher<String>> defer() {
-                    return new HttpResultBuilder<Publisher<String>>()
-                            .body(exceptionRaisingPublisher())
-                            .build();
+                    return HttpResult.of(exceptionRaisingPublisher());
                 }
             });
 
@@ -184,9 +180,9 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
             sb.annotatedService("/custom-status", new Object() {
                 @Get("/expect-specified-status")
-                @ResponseStatusCode(202)
+                @StatusCode(202)
                 public Void expectSpecifiedStatus() {
-                    // Will send '202 Accepted' because a user specified it with @ResponseStatusCode annotation.
+                    // Will send '202 Accepted' because a user specified it with @StatusCode annotation.
                     return null;
                 }
 
@@ -198,25 +194,24 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
                 @Get("/expect-ok")
                 public Object expectOk() {
-                    // Will send '200 Ok' because there is no @ResponseStatusCode annotation, that means
+                    // Will send '200 Ok' because there is no @StatusCode annotation, that means
                     // '200 Ok' will be used by default because the return type is not a 'void' or 'Void'.
                     return null;
                 }
 
                 @Get("/expect-specified-no-content")
-                @ResponseStatusCode(204)
+                @StatusCode(204)
                 public HttpResult<Object> expectSpecifiedNoContent() {
-                    // Will send '204 No Content' because it is specified with @ResponseStatusCode annotation.
+                    // Will send '204 No Content' because it is specified with @StatusCode annotation.
                     return null;
                 }
 
                 @Get("/expect-not-modified")
-                @ResponseStatusCode(204)
+                @StatusCode(204)
                 public HttpResult<Object> expectNotModified() {
-                    // Will send '304 Not Modified' because HttpResult overrides the @ResponseStatusCode
+                    // Will send '304 Not Modified' because HttpResult overrides the @StatusCode
                     // annotation.
-                    return new HttpResultBuilder<>().status(HttpStatus.NOT_MODIFIED)
-                                                    .build();
+                    return HttpResult.of(HttpStatus.NOT_MODIFIED);
                 }
 
                 @Get("/expect-no-content-from-converter")
@@ -230,20 +225,16 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @Get("/expect-custom-header")
                 @ProducesJson
                 public HttpResult<Map<String, String>> expectCustomHeader() {
-                    return new HttpResultBuilder<Map<String, String>>()
-                            .header("x-custom-header", "value")
-                            .body(ImmutableMap.of("a", "b"))
-                            .build();
+                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                                         ImmutableMap.of("a", "b"));
                 }
 
                 @Get("/expect-custom-trailing-header")
                 @ProducesJson
                 public HttpResult<List<String>> expectCustomTrailingHeader() {
-                    return new HttpResultBuilder<List<String>>()
-                            .header("x-custom-header", "value")
-                            .body(ImmutableList.of("a", "b"))
-                            .trailingHeader("x-custom-trailing-header", "value")
-                            .build();
+                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                                         ImmutableList.of("a", "b"),
+                                         HttpHeaders.of(AsciiString.of("x-custom-trailing-header"), "value"));
                 }
             });
         }

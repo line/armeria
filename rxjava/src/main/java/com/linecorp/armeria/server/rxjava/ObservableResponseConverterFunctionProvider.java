@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server.rxjava;
 
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceUtil.typeToClass;
-
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
@@ -36,7 +34,8 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
             Type returnType,
             ResponseConverterFunction responseConverter,
             ExceptionHandlerFunction exceptionHandler) {
-        if (ObservableSource.class.isAssignableFrom(typeToClass(returnType))) {
+        final Class<?> clazz = typeToClass(returnType);
+        if (clazz != null && ObservableSource.class.isAssignableFrom(clazz)) {
             assert returnType instanceof ParameterizedType;
             ensureNoMoreObservableSource(returnType, returnType);
             return new ObservableResponseConverterFunction(responseConverter, exceptionHandler);
@@ -49,13 +48,27 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
             final Type[] args = ((ParameterizedType) type).getActualTypeArguments();
             for (Type arg : args) {
                 final Class<?> clazz = typeToClass(arg);
-                if (ObservableSource.class.isAssignableFrom(clazz)) {
+                if (clazz != null && ObservableSource.class.isAssignableFrom(clazz)) {
                     throw new IllegalStateException(
-                            "Not allowed type exists in the generic type arguments of the return type '" +
+                            "Disallowed type exists in the generic type arguments of the return type '" +
                             returnType + "': " + clazz.getName());
                 }
                 ensureNoMoreObservableSource(returnType, arg);
             }
         }
+    }
+
+    /**
+     * Converts the specified {@link Type} to a {@link Class} instance.
+     */
+    @Nullable
+    private static Class<?> typeToClass(Type type) {
+        if (type instanceof Class) {
+            return (Class<?>) type;
+        }
+        if (type instanceof ParameterizedType) {
+            return (Class<?>) ((ParameterizedType) type).getRawType();
+        }
+        return null;
     }
 }

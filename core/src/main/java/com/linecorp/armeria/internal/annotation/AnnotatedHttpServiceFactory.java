@@ -114,7 +114,7 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverters;
-import com.linecorp.armeria.server.annotation.ResponseStatusCode;
+import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Trace;
 
@@ -292,7 +292,7 @@ public final class AnnotatedHttpServiceFactory {
                         "They would not be automatically injected: " + missing);
         }
 
-        final Optional<HttpStatus> defaultResponseStatus = findAnnotation(method, ResponseStatusCode.class)
+        final Optional<HttpStatus> defaultResponseStatus = findAnnotation(method, StatusCode.class)
                 .map(code -> {
                     final int statusCode = code.value();
                     checkArgument(statusCode >= 0,

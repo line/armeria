@@ -45,7 +45,6 @@ public class PublisherToHttpResponseConverter implements Subscriber<Object> {
     private final ServiceRequestContext ctx;
     private final HttpRequest req;
     private final HttpHeaders headers;
-    @Nullable
     private final HttpHeaders trailingHeaders;
     private final CompletableFuture<HttpResponse> future;
     private final ResponseConverterFunction responseConverter;
@@ -73,14 +72,14 @@ public class PublisherToHttpResponseConverter implements Subscriber<Object> {
      *                         {@link #onError(Throwable)} is invoked
      */
     public PublisherToHttpResponseConverter(ServiceRequestContext ctx, HttpRequest req,
-                                            HttpHeaders headers, @Nullable HttpHeaders trailingHeaders,
+                                            HttpHeaders headers, HttpHeaders trailingHeaders,
                                             CompletableFuture<HttpResponse> future,
                                             ResponseConverterFunction responseConverter,
                                             ExceptionHandlerFunction exceptionHandler) {
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = requireNonNull(req, "req");
         this.headers = requireNonNull(headers, "headers");
-        this.trailingHeaders = trailingHeaders;
+        this.trailingHeaders = requireNonNull(trailingHeaders, "trailingHeaders");
         this.future = requireNonNull(future, "future");
         this.responseConverter = requireNonNull(responseConverter, "responseConverter");
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");

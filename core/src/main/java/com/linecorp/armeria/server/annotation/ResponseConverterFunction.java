@@ -40,7 +40,7 @@ public interface ResponseConverterFunction {
     HttpResponse convertResponse(ServiceRequestContext ctx,
                                  HttpHeaders headers,
                                  @Nullable Object result,
-                                 @Nullable HttpHeaders trailingHeaders) throws Exception;
+                                 HttpHeaders trailingHeaders) throws Exception;
 
     /**
      * Throws a {@link FallthroughException} in order to try to convert {@code result} to

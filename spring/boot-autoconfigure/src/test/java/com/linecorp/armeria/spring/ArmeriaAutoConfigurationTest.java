@@ -136,7 +136,7 @@ public class ArmeriaAutoConfigurationTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof String) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.ANY_TEXT_TYPE,

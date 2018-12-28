@@ -246,10 +246,10 @@ public class AnnotatedHttpService implements HttpService {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             headers = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
             result = httpResult.body().orElse(null);
-            trailingHeaders = httpResult.trailingHeaders().orElse(null);
+            trailingHeaders = httpResult.trailingHeaders();
         } else {
             headers = addNegotiatedResponseMediaType(ctx, defaultHttpHeaders);
-            trailingHeaders = null;
+            trailingHeaders = HttpHeaders.EMPTY_HEADERS;
         }
 
         try {
@@ -378,7 +378,7 @@ public class AnnotatedHttpService implements HttpService {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             try (SafeCloseable ignored = ctx.push(false)) {
                 for (final ResponseConverterFunction func : functions) {
                     try {
@@ -397,7 +397,7 @@ public class AnnotatedHttpService implements HttpService {
             // If you want to force to send '204 No Content' for this case, add
             // 'NullToNoContentResponseConverterFunction' to the list of response converters.
             if (result == null) {
-                return HttpResponse.of(headers, HttpData.EMPTY_DATA, Optional.ofNullable(trailingHeaders));
+                return HttpResponse.of(headers, HttpData.EMPTY_DATA, trailingHeaders);
             }
             throw new IllegalStateException(
                     "No response converter exists for a result: " + result.getClass().getSimpleName());
@@ -470,7 +470,7 @@ public class AnnotatedHttpService implements HttpService {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof Publisher) {
                 final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
                 final Publisher<?> publisher = (Publisher<?>) result;

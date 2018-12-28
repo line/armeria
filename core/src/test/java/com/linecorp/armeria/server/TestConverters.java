@@ -35,7 +35,7 @@ public final class TestConverters {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof Integer) {
                 return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", result)));
             }
@@ -48,7 +48,7 @@ public final class TestConverters {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof String) {
                 return httpResponse(HttpData.ofUtf8(String.format("String: %s", result)));
             }
@@ -61,7 +61,7 @@ public final class TestConverters {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof Number) {
                 return httpResponse(HttpData.ofUtf8(String.format("Number[%s]", result)));
             }
@@ -74,7 +74,7 @@ public final class TestConverters {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof String) {
                 return httpResponse(HttpData.ofUtf8(String.format("String[%s]", result)));
             }
@@ -87,7 +87,7 @@ public final class TestConverters {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof byte[]) {
                 return httpResponse(HttpData.of((byte[]) result));
             }
@@ -100,7 +100,7 @@ public final class TestConverters {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof byte[]) {
                 return httpResponse(HttpData.of((byte[]) result));
             }
@@ -115,7 +115,7 @@ public final class TestConverters {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             return httpResponse(HttpData.ofUtf8(result != null ? result.toString() : "(null)"));
         }
     }

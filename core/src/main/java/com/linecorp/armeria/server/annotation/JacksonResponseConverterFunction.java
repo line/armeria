@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -60,7 +59,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         HttpHeaders headers,
                                         @Nullable Object result,
-                                        @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailingHeaders) throws Exception {
         final MediaType mediaType = headers.contentType();
         if (mediaType != null) {
             // @Produces("application/json") or @ProducesJson is specified.
@@ -72,7 +71,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
                 // because ObjectMapper always writes JSON document as UTF-8.
                 if (charset.contains(StandardCharsets.UTF_8)) {
                     final HttpData body = HttpData.of(mapper.writeValueAsBytes(result));
-                    return HttpResponse.of(headers, body, Optional.ofNullable(trailingHeaders));
+                    return HttpResponse.of(headers, body, trailingHeaders);
                 }
             }
         } else if (result instanceof JsonNode) {
@@ -81,7 +80,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
                     headers.isImmutable() ? HttpHeaders.copyOf(headers).contentType(MediaType.JSON_UTF_8)
                                           : headers.contentType(MediaType.JSON_UTF_8);
             final HttpData body = HttpData.of(mapper.writeValueAsBytes(result));
-            return HttpResponse.of(responseHeaders, body, Optional.ofNullable(trailingHeaders));
+            return HttpResponse.of(responseHeaders, body, trailingHeaders);
         }
 
         return ResponseConverterFunction.fallthrough();

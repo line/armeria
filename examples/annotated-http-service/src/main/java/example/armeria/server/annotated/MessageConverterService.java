@@ -1,6 +1,5 @@
 package example.armeria.server.annotated;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -185,11 +184,11 @@ public class MessageConverterService {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             HttpHeaders headers,
                                             @Nullable Object result,
-                                            @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof Response) {
                 final Response response = (Response) result;
                 final HttpData body = HttpData.ofUtf8(response.result() + ':' + response.from());
-                return HttpResponse.of(headers, body, Optional.ofNullable(trailingHeaders));
+                return HttpResponse.of(headers, body, trailingHeaders);
             }
             return ResponseConverterFunction.fallthrough();
         }

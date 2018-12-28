@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import java.util.Optional;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
@@ -35,7 +33,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         HttpHeaders headers,
                                         @Nullable Object result,
-                                        @Nullable HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailingHeaders) throws Exception {
         if (result instanceof HttpData) {
             return response(headers, ((HttpData) result).array(), trailingHeaders);
         }
@@ -46,7 +44,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
     }
 
     private static HttpResponse response(HttpHeaders headers, byte[] body,
-                                         @Nullable HttpHeaders trailingHeaders) {
+                                         HttpHeaders trailingHeaders) {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
             final HttpHeaders responseHeaders =
@@ -54,7 +52,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                                                        .contentType(MediaType.APPLICATION_BINARY)
                                           : headers;
             final HttpData responseBody = HttpData.of(body);
-            return HttpResponse.of(responseHeaders, responseBody, Optional.ofNullable(trailingHeaders));
+            return HttpResponse.of(responseHeaders, responseBody, trailingHeaders);
         }
 
         // A user expects 'binary'.
@@ -63,7 +61,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
             // @Produces("application/binary") or @ProducesBinary
             // @Produces("application/octet-stream") or @ProducesOctetStream
             final HttpData responseBody = HttpData.of(body);
-            return HttpResponse.of(headers, responseBody, Optional.ofNullable(trailingHeaders));
+            return HttpResponse.of(headers, responseBody, trailingHeaders);
         }
 
         return ResponseConverterFunction.fallthrough();

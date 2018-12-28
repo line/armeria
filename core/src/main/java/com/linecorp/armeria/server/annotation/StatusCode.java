@@ -22,13 +22,13 @@ import java.lang.annotation.Target;
 
 /**
  * An annotation which specifies a default HTTP status code of a response produced by an annotated HTTP service.
- * If this annotation is missing, {@code @ResponseStatusCode(200)} would be applied by default.
+ * If this annotation is missing, {@code @StatusCode(200)} would be applied by default.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface ResponseStatusCode {
+public @interface StatusCode {
     /**
      * A default HTTP status code of a response produced by an annotated HTTP service.
      */
-    int value() default 200;
+    int value();
 }

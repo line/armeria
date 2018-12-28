@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -270,17 +269,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         } else {
             return new OneElementFixedHttpResponse(headers);
         }
-    }
-
-    /**
-     * Creates a new HTTP response of the specified objects and closes the stream.
-     */
-    static HttpResponse of(HttpHeaders headers, HttpData content, Optional<HttpHeaders> trailingHeaders) {
-        requireNonNull(headers, "headers");
-        requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
-        return trailingHeaders.map(trailer -> of(headers, content, trailer))
-                              .orElseGet(() -> of(headers, content));
     }
 
     /**
