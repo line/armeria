@@ -201,7 +201,7 @@ entire service implementation in ``RequestContext.current().blockingTaskExecutor
     }
 
 Exception propagation
-======================
+=====================
 
 It can be very useful to enable ``Flags.verboseResponses()`` in your server by specifying the
 ``-Dcom.linecorp.armeria.verboseResponses=true`` system property, which will automatically return

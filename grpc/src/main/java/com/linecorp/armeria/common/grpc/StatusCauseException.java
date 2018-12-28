@@ -27,7 +27,7 @@ import com.google.common.base.Strings;
  */
 public final class StatusCauseException extends RuntimeException {
 
-    private final String className;
+    private final String originalClassName;
     private final String originalMessage;
 
     /**
@@ -36,7 +36,7 @@ public final class StatusCauseException extends RuntimeException {
     public StatusCauseException(ThrowableProto proto) {
         super(requireNonNull(proto, "proto").getOriginalClassName() + ": " + proto.getOriginalMessage());
 
-        this.className = proto.getOriginalClassName();
+        this.originalClassName = proto.getOriginalClassName();
         this.originalMessage = proto.getOriginalMessage();
 
         if (proto.getStackTraceCount() > 0) {
@@ -54,7 +54,7 @@ public final class StatusCauseException extends RuntimeException {
      * Returns the class name of the original exception in the server.
      */
     public String getOriginalClassName() {
-        return className;
+        return originalClassName;
     }
 
     /**
