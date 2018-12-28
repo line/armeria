@@ -502,7 +502,7 @@ class App extends React.PureComponent<Props, State> {
     const specification = new Specification(specificationData);
     let openServices = {};
     specification.getServices().forEach((service) => {
-      openServices = { ...openServices, ...{ [service.name]: true } };
+      openServices = { ...openServices, [service.name]: true };
     });
     this.setState({ specification, openServices });
   };
