@@ -87,7 +87,7 @@ public class GrpcStatusCauseTest {
                     assertThat(t.getCause()).isInstanceOfSatisfying(
                             StatusCauseException.class,
                             cause -> {
-                                assertThat(cause.getClassName())
+                                assertThat(cause.getOriginalClassName())
                                         .isEqualTo("java.lang.IllegalStateException");
                                 assertThat(cause.getOriginalMessage()).isEqualTo("Exception 1");
                                 assertThat(cause.getMessage())

@@ -18,12 +18,12 @@ syntax = "proto3";
 
 package armeria.grpc;
 
-option java_package = "com.linecorp.armeria.grpc";
+option java_package = "com.linecorp.armeria.common.grpc";
 option java_multiple_files = true;
 
 // An element in a stack trace, based on the Java type of the same name.
 //
-// See: https://docs.oracle.com/javase/11/docs/api/java/lang/StackTraceElement.html
+// See: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/StackTraceElement.html
 message StackTraceElementProto {
     // The fully qualified name of the class containing the execution point
     // represented by the stack trace element.
@@ -45,15 +45,15 @@ message StackTraceElementProto {
 
 // An exception that was thrown by some code, based on the Java type of the same name.
 //
-// See: https://docs.oracle.com/javase/11/docs/api/java/lang/Throwable.html
+// See: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Throwable.html
 message ThrowableProto {
     // The name of the class of the exception that was actually thrown. Downstream readers
     // of this message may or may not have the actual class available to initialize, so
     // this is just used to prefix the message of a generic exception type.
-    string exception_class_name = 1;
+    string original_class_name = 1;
 
     // The message of this throwable. Not filled if there is no message.
-    string message = 2;
+    string original_message = 2;
 
     // The stack trace of this Throwable.
     repeated StackTraceElementProto stack_trace = 3;

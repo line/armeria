@@ -49,9 +49,9 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.grpc.ThrowableProto;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
@@ -484,7 +484,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
         if (Flags.verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
-            trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLE,
+            trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
                          Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 

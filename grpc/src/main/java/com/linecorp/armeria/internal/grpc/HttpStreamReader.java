@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
-import com.linecorp.armeria.grpc.ThrowableProto;
+import com.linecorp.armeria.common.grpc.ThrowableProto;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
@@ -140,7 +140,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
                 if (grpcMessage != null) {
                     status = status.withDescription(StatusMessageEscaper.unescape(grpcMessage));
                 }
-                final String grpcThrowable = headers.get(GrpcHeaderNames.ARMERIA_GRPC_THROWABLE);
+                final String grpcThrowable = headers.get(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
                 if (grpcThrowable != null) {
                     status = addCause(status, grpcThrowable);
                 }

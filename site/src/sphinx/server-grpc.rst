@@ -203,7 +203,8 @@ entire service implementation in ``RequestContext.current().blockingTaskExecutor
 Exception propagation
 ======================
 
-It can be very useful to enable ``Flags.verboseResponses()` in your server, which will automatically return
+It can be very useful to enable ``Flags.verboseResponses()`` in your server by specifying the
+``-Dcom.linecorp.armeria.verboseResponses=true`` system property, which will automatically return
 information about an exception thrown in the server to gRPC clients. Armeria clients will automatically
 convert it back into an exception for structured logging, etc. This response will include information about
 the actual source code in the server - make sure it is safe to send such potentially sensitive information

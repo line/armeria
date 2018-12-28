@@ -20,12 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.grpc.StackTraceElementProto;
-import com.linecorp.armeria.grpc.ThrowableProto;
-
 /**
  * A {@link RuntimeException} reconstructed from debug information in a failed gRPC
- * response containing information about the cause of the exception at the server
+ * response, containing information about the cause of the exception at the server
  * side.
  */
 public final class StatusCauseException extends RuntimeException {
@@ -37,10 +34,10 @@ public final class StatusCauseException extends RuntimeException {
      * Constructs a {@link StatusCauseException} from the information in the {@link ThrowableProto}.
      */
     public StatusCauseException(ThrowableProto proto) {
-        super(requireNonNull(proto, "proto").getExceptionClassName() + ": " + proto.getMessage());
+        super(requireNonNull(proto, "proto").getOriginalClassName() + ": " + proto.getOriginalMessage());
 
-        this.className = proto.getExceptionClassName();
-        this.originalMessage = proto.getMessage();
+        this.className = proto.getOriginalClassName();
+        this.originalMessage = proto.getOriginalMessage();
 
         if (proto.getStackTraceCount() > 0) {
             setStackTrace(proto.getStackTraceList().stream()
@@ -56,7 +53,7 @@ public final class StatusCauseException extends RuntimeException {
     /**
      * Returns the class name of the original exception in the server.
      */
-    public String getClassName() {
+    public String getOriginalClassName() {
         return className;
     }
 

@@ -41,9 +41,9 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
-import com.linecorp.armeria.grpc.StackTraceElementProto;
-import com.linecorp.armeria.grpc.ThrowableProto;
+import com.linecorp.armeria.common.grpc.ThrowableProto;
 
 import io.grpc.Status;
 import io.grpc.Status.Code;
@@ -177,11 +177,11 @@ public final class GrpcStatus {
 
         if (t instanceof StatusCauseException) {
             final StatusCauseException statusCause = (StatusCauseException) t;
-            builder.setExceptionClassName(statusCause.getClassName());
-            builder.setMessage(statusCause.getOriginalMessage());
+            builder.setOriginalClassName(statusCause.getOriginalClassName());
+            builder.setOriginalMessage(statusCause.getOriginalMessage());
         } else {
-            builder.setExceptionClassName(t.getClass().getCanonicalName());
-            builder.setMessage(Strings.nullToEmpty(t.getMessage()));
+            builder.setOriginalClassName(t.getClass().getCanonicalName());
+            builder.setOriginalMessage(Strings.nullToEmpty(t.getMessage()));
         }
 
         for (StackTraceElement element : t.getStackTrace()) {
