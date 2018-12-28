@@ -59,6 +59,8 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.service.test.thrift.main.BinaryService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
@@ -633,20 +635,25 @@ public class ThriftServiceTest {
 
     private static void invoke0(THttpService service, HttpData content,
                                 CompletableFuture<HttpData> promise) throws Exception {
+        final Server server = new ServerBuilder()
+                .service("/", service)
+                .verboseResponses(true)
+                .build();
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         when(ctx.eventLoop()).thenReturn(eventLoop.get());
-        final DefaultRequestLog reqLogBuilder = new DefaultRequestLog(ctx);
-
+        when(ctx.server()).thenReturn(server);
         when(ctx.blockingTaskExecutor()).thenReturn(ImmediateEventExecutor.INSTANCE);
+
+        final DefaultRequestLog reqLogBuilder = new DefaultRequestLog(ctx);
         when(ctx.log()).thenReturn(reqLogBuilder);
         when(ctx.logBuilder()).thenReturn(reqLogBuilder);
+
         doNothing().when(ctx).invokeOnEnterCallbacks();
         doNothing().when(ctx).invokeOnExitCallbacks();
 
         final HttpRequestWriter req = HttpRequest.streaming(HttpHeaders.of(HttpMethod.POST, "/"));
-
         req.write(content);
         req.close();
 

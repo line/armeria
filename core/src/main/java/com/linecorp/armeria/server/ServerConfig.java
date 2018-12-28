@@ -69,6 +69,7 @@ public final class ServerConfig {
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
     private final long defaultMaxRequestLength;
+    private final boolean verboseResponses;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
     private final long http2MaxStreamsPerConnection;
@@ -107,7 +108,7 @@ public final class ServerConfig {
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis,
-            long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
+            long defaultRequestTimeoutMillis, long defaultMaxRequestLength, boolean verboseResponses,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
             long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
             int http1MaxInitialLineLength, int http1MaxHeaderSize, int http1MaxChunkSize,
@@ -132,6 +133,7 @@ public final class ServerConfig {
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
+        this.verboseResponses = verboseResponses;
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
@@ -436,6 +438,15 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns whether the verbose response mode is enabled. When enabled, the server responses will contain
+     * the exception type and its full stack trace, which may be useful for debugging while potentially
+     * insecure. When disabled, the server responses will not expose such server-side details to the client.
+     */
+    public boolean verboseResponses() {
+        return verboseResponses;
+    }
+
+    /**
      * Returns the maximum length of an HTTP/1 response initial line.
      */
     public int http1MaxInitialLineLength() {
@@ -585,7 +596,7 @@ public final class ServerConfig {
                     getClass(), ports(), null, virtualHosts(),
                     workerGroup(), shutdownWorkerGroupOnStop(),
                     maxNumConnections(), idleTimeoutMillis(),
-                    defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
+                    defaultRequestTimeoutMillis(), defaultMaxRequestLength(), verboseResponses(),
                     http2InitialConnectionWindowSize(), http2InitialStreamWindowSize(),
                     http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
@@ -605,7 +616,7 @@ public final class ServerConfig {
             @Nullable VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis, long defaultRequestTimeoutMillis,
-            long defaultMaxRequestLength, int http2InitialConnectionWindowSize,
+            long defaultMaxRequestLength, boolean verboseResponses, int http2InitialConnectionWindowSize,
             int http2InitialStreamWindowSize, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
@@ -671,7 +682,9 @@ public final class ServerConfig {
         buf.append(defaultRequestTimeoutMillis);
         buf.append("ms, defaultMaxRequestLength: ");
         buf.append(defaultMaxRequestLength);
-        buf.append("B, http2InitialConnectionWindowSize: ");
+        buf.append("B, verboseResponses: ");
+        buf.append(verboseResponses);
+        buf.append(", http2InitialConnectionWindowSize: ");
         buf.append(http2InitialConnectionWindowSize);
         buf.append("B, http2InitialStreamWindowSize: ");
         buf.append(http2InitialStreamWindowSize);

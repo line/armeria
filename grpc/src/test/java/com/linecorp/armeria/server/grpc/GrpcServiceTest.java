@@ -39,6 +39,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -59,6 +61,8 @@ public class GrpcServiceTest {
         grpcService = (GrpcService) new GrpcServiceBuilder()
                 .addService(mock(TestServiceImplBase.class))
                 .build();
+        final Server server = new ServerBuilder().service(grpcService).build();
+        when(ctx.server()).thenReturn(server);
         when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
     }
 

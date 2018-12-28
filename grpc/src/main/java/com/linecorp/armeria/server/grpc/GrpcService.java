@@ -137,6 +137,7 @@ public final class GrpcService extends AbstractHttpService
         if (method == null) {
             return HttpResponse.of(
                     ArmeriaServerCall.statusToTrailers(
+                            ctx,
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
                             false));
         }
@@ -147,7 +148,7 @@ public final class GrpcService extends AbstractHttpService
                 final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
                 ctx.setRequestTimeout(Duration.ofNanos(timeout));
             } catch (IllegalArgumentException e) {
-                return HttpResponse.of(ArmeriaServerCall.statusToTrailers(Status.fromThrowable(e), false));
+                return HttpResponse.of(ArmeriaServerCall.statusToTrailers(ctx, Status.fromThrowable(e), false));
             }
         }
 
