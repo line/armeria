@@ -49,6 +49,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
@@ -101,6 +102,7 @@ public class ArmeriaServerCallTest {
         when(res.completionFuture()).thenReturn(completionFuture);
         when(ctx.eventLoop()).thenReturn(eventLoop.get());
         when(ctx.contextAwareEventLoop()).thenReturn(eventLoop.get());
+        when(ctx.server()).thenReturn(new ServerBuilder().service("/", (ctx, req) -> null).build());
 
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         call = new ArmeriaServerCall<>(

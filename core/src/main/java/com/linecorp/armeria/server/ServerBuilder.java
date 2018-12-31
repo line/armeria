@@ -156,6 +156,7 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
     private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
+    private boolean verboseResponses = Flags.verboseResponses();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -471,10 +472,21 @@ public final class ServerBuilder {
      * Sets the maximum allowed length of the content decoded at the session layer.
      * e.g. the content length of an HTTP request.
      *
-     *  @param defaultMaxRequestLength the maximum allowed length. {@code 0} disables the length limit.
+     * @param defaultMaxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
     public ServerBuilder defaultMaxRequestLength(long defaultMaxRequestLength) {
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
+        return this;
+    }
+
+    /**
+     * Sets whether the verbose response mode is enabled. When enabled, the server responses will contain
+     * the exception type and its full stack trace, which may be useful for debugging while potentially
+     * insecure. When disabled, the server responses will not expose such server-side details to the client.
+     * The default value of this property is retrieved from {@link Flags#verboseResponses()}.
+     */
+    public ServerBuilder verboseResponses(boolean verboseResponses) {
+        this.verboseResponses = verboseResponses;
         return this;
     }
 
@@ -1218,7 +1230,7 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, normalizeDefaultVirtualHost(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength, verboseResponses,
                 http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
@@ -1293,8 +1305,8 @@ public final class ServerBuilder {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
-                http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
-                http2MaxFrameSize, http2MaxHeaderListSize,
+                verboseResponses, http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
+                http2MaxStreamsPerConnection, http2MaxFrameSize, http2MaxHeaderListSize,
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, meterRegistry, serviceLoggerPrefix,

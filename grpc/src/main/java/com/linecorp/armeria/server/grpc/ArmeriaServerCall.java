@@ -40,7 +40,6 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -466,7 +465,11 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
     }
 
-    static HttpHeaders statusToTrailers(Status status, boolean headersSent) {
+    private HttpHeaders statusToTrailers(Status status, boolean headersSent) {
+        return statusToTrailers(ctx, status, headersSent);
+    }
+
+    static HttpHeaders statusToTrailers(ServiceRequestContext ctx, Status status, boolean headersSent) {
         final HttpHeaders trailers;
         if (headersSent) {
             // Normal trailers.
@@ -482,7 +485,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (status.getDescription() != null) {
             trailers.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(status.getDescription()));
         }
-        if (Flags.verboseResponses() && status.getCause() != null) {
+        if (ctx.server().config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
             trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
                          Base64.getEncoder().encodeToString(proto.toByteArray()));

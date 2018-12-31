@@ -285,7 +285,7 @@ public final class Flags {
      * insecure. When disabled, the server responses will not expose such server-side details to the client.
      *
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.verboseResponses=true}
-     * JVM option to enable it.
+     * JVM option or use {@link ServerBuilder#verboseResponses(boolean)} to enable it.
      */
     public static boolean verboseResponses() {
         return VERBOSE_RESPONSES;

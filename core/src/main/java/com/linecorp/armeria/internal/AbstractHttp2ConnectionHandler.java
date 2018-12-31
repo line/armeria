@@ -20,8 +20,10 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 
@@ -41,6 +43,8 @@ import io.netty.handler.codec.http2.Http2StreamVisitor;
  * An {@link Http2ConnectionHandler} with some workarounds and additional extension points.
  */
 public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractHttp2ConnectionHandler.class);
 
     /**
      * XXX(trustin): Don't know why, but {@link Http2ConnectionHandler} does not close the last stream
@@ -79,6 +83,9 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         }
 
         handlingConnectionError = true;
+        if (!Exceptions.isExpected(cause)) {
+            logger.warn("{} HTTP/2 connection error:", ctx.channel(), cause);
+        }
         super.onConnectionError(ctx, outbound, cause, filterHttp2Exception(cause, http2Ex));
     }
 
@@ -87,45 +94,9 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
             return http2Ex;
         }
 
-        if (Flags.verboseResponses()) {
-            return new Http2Exception(INTERNAL_ERROR, goAwayDebugData(null, cause), cause);
-        } else {
-            // Do not let Netty use the exception message as debug data, just in case the exception message
-            // exposes sensitive information.
-            return new Http2Exception(INTERNAL_ERROR, null, cause);
-        }
-    }
-
-    private static String goAwayDebugData(@Nullable Http2Exception http2Ex, @Nullable Throwable cause) {
-        final String type;
-        final String message;
-
-        if (http2Ex != null) {
-            type = http2Ex.getClass().getName();
-            message = http2Ex.getMessage();
-        } else {
-            type = null;
-            message = null;
-            if (cause == null) {
-                return "";
-            }
-        }
-
-        final StringBuilder buf = new StringBuilder(256);
-        if (type != null) {
-            buf.append(", type: ");
-            buf.append(type);
-        }
-        if (message != null) {
-            buf.append(", message: ");
-            buf.append(message);
-        }
-        if (cause != null) {
-            buf.append(", cause: ");
-            buf.append(Exceptions.traceText(cause));
-        }
-
-        return buf.substring(2); // Strip the leading comma.
+        // Do not let Netty use the exception message as debug data, just in case the exception message
+        // exposes sensitive information.
+        return new Http2Exception(INTERNAL_ERROR, null, cause);
     }
 
     @Override
