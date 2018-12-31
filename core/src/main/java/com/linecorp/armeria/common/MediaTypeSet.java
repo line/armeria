@@ -197,21 +197,21 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
         int matchNumParams = Integer.MIN_VALUE;    // higher = better
         for (MediaType range : ranges) {
             requireNonNull(range, "ranges contains null.");
+            float qValue = range.qualityFactor(Float.NEGATIVE_INFINITY);
+            final int numWildcards = range.numWildcards();
+            final int numParams;
+            if (qValue < 0) {
+                // qvalue does not exist; use the default value of 1.0.
+                qValue = 1.0f;
+                numParams = range.parameters().size();
+            } else {
+                // Do not count the qvalue.
+                numParams = range.parameters().size() - 1;
+            }
+
             for (MediaType candidate : mediaTypes) {
                 if (!candidate.belongsTo(range)) {
                     continue;
-                }
-
-                float qValue = range.qualityFactor(Float.NEGATIVE_INFINITY);
-                final int numWildcards = range.numWildcards();
-                final int numParams;
-                if (qValue < 0) {
-                    // qvalue does not exist; use the default value of 1.0.
-                    qValue = 1.0f;
-                    numParams = range.parameters().size();
-                } else {
-                    // Do not count the qvalue.
-                    numParams = range.parameters().size() - 1;
                 }
 
                 final boolean isBetter;
@@ -234,6 +234,9 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
                     matchQ = qValue;
                     matchNumWildcards = numWildcards;
                     matchNumParams = numParams;
+
+                    // Won't find another better candidate for this range.
+                    break;
                 }
             }
         }

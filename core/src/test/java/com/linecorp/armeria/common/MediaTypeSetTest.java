@@ -46,6 +46,10 @@ public class MediaTypeSetTest {
         // No ranges
         assertThat(set.match(ImmutableList.of())).isEmpty();
 
+        // One match
+        assertThat(set.match(PLAIN_TEXT_UTF_8)).contains(PLAIN_TEXT_UTF_8);
+        assertThat(set.match(HTML_UTF_8)).contains(HTML_UTF_8);
+
         // More than one range
         assertThat(set.match(HTML_UTF_8.withParameter("q", "0.5"), PLAIN_TEXT_UTF_8))
                 .contains(PLAIN_TEXT_UTF_8);
