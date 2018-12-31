@@ -37,8 +37,13 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.grpc.StackTraceElementProto;
+import com.linecorp.armeria.common.grpc.StatusCauseException;
+import com.linecorp.armeria.common.grpc.ThrowableProto;
 
 import io.grpc.Status;
 import io.grpc.Status.Code;
@@ -161,6 +166,43 @@ public final class GrpcStatus {
             default:
                 return Status.Code.UNKNOWN;
         }
+    }
+
+    /**
+     * Fills the information from the {@link Throwable} into a {@link ThrowableProto} for
+     * returning to a client.
+     */
+    public static ThrowableProto serializeThrowable(Throwable t) {
+        final ThrowableProto.Builder builder = ThrowableProto.newBuilder();
+
+        if (t instanceof StatusCauseException) {
+            final StatusCauseException statusCause = (StatusCauseException) t;
+            builder.setOriginalClassName(statusCause.getOriginalClassName());
+            builder.setOriginalMessage(statusCause.getOriginalMessage());
+        } else {
+            builder.setOriginalClassName(t.getClass().getCanonicalName());
+            builder.setOriginalMessage(Strings.nullToEmpty(t.getMessage()));
+        }
+
+        for (StackTraceElement element : t.getStackTrace()) {
+            builder.addStackTrace(serializeStackTraceElement(element));
+        }
+
+        if (t.getCause() != null) {
+            builder.setCause(serializeThrowable(t.getCause()));
+        }
+        return builder.build();
+    }
+
+    private static StackTraceElementProto serializeStackTraceElement(StackTraceElement element) {
+        final StackTraceElementProto.Builder builder = StackTraceElementProto.newBuilder()
+                .setClassName(element.getClassName())
+                .setMethodName(element.getMethodName())
+                .setLineNumber(element.getLineNumber());
+        if (element.getFileName() != null) {
+            builder.setFileName(element.getFileName());
+        }
+        return builder.build();
     }
 
     private GrpcStatus() {}

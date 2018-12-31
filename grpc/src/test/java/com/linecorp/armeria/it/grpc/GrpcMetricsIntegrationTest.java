@@ -39,7 +39,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -167,14 +166,7 @@ public class GrpcMetricsIntegrationTest {
         assertThat(findServerMeter("UnaryCall2", "responseLength", COUNT, "httpStatus", "200")).contains(4.0);
         assertThat(findServerMeter("UnaryCall2", "responseLength", COUNT, "httpStatus", "500")).contains(3.0);
         assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL, "httpStatus", "200")).contains(0.0);
-        assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL, "httpStatus", "500"))
-                .hasValueSatisfying(value -> {
-                    if (Flags.verboseResponses()) {
-                        assertThat(value).isGreaterThan(225.0); // As larger as the stack trace
-                    } else {
-                        assertThat(value).isEqualTo(225.0);
-                    }
-                });
+        assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL, "httpStatus", "500")).contains(225.0);
     }
 
     private static Optional<Double> findServerMeter(

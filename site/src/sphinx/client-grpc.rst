@@ -157,6 +157,50 @@ As you might have noticed already, we decorated the client using :api:`LoggingCl
 requests and responses. You might be interested in decorating a client using other decorators, for example
 to gather metrics. Please also refer to :api:`ClientBuilder` for more configuration options.
 
+Exception propagation
+=====================
+
+If you have enabled ``Flags.verboseResponses()`` in the server being accessed by specifying
+``-Dcom.linecorp.armeria.verboseResponses=true`` system property, then any exception during processing
+in the server will be returned to the client as a :api:`StatusCauseException` attached to the normal gRPC
+``Status``. This can be used for programmatic access to the exception that happened in the server. In this
+example, the server always fails with ``throw new IllegalStateException("Failed!");``
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.Clients;
+    import com.linecorp.armeria.common.grpc.StatusCauseException;
+
+    import io.grpc.StatusRuntimeException;
+
+    HelloServiceBlockingStub helloService = Clients.newClient(
+            "gproto+http://127.0.0.1:8080/",
+            HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class or HelloServiceStub.class
+
+    HelloRequest request = HelloRequest.newBuilder().setName("Armerian World").build();
+    try {
+        HelloReply reply = helloService.hello(request);
+    } catch (StatusRuntimeException e) {
+        if (e.getCause() instanceof StatusCauseException) {
+            StatusCauseException cause = (StatusCauseException) e.getCause();
+            // The name of the class of the exception and its message in the server can be accessed.
+            assert cause.getOriginalClassName().equals("java.lang.IllegalStateException");
+            assert cause.getOriginalMessage().equals("Failed!");
+
+            // The exception's message is a combination of both the class name and original message.
+            assert cause.getMessage().equals("java.lang.IllegalStateException: Failed!");
+
+            // The exception's stack trace is that which occurred when the server threw the exception.
+            cause.printStackTrace();
+
+            // Logging frameworks, as used by e.g., LoggingClient, will print the stack trace if configured
+            // to do so.
+
+            // Now you know exactly where to look in the server to figure out what may have gone wrong.
+        }
+    }
+
+
 See also
 --------
 

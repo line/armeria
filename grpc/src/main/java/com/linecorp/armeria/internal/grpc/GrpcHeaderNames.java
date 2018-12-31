@@ -17,7 +17,9 @@
 package com.linecorp.armeria.internal.grpc;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.grpc.ThrowableProto;
 
+import io.grpc.protobuf.ProtoUtils;
 import io.netty.util.AsciiString;
 
 public final class GrpcHeaderNames {
@@ -31,6 +33,10 @@ public final class GrpcHeaderNames {
     public static final AsciiString GRPC_ACCEPT_ENCODING = HttpHeaderNames.of("grpc-accept-encoding");
 
     public static final AsciiString GRPC_TIMEOUT = HttpHeaderNames.of("grpc-timeout");
+
+    // Header name is armeria.grpc.ThrowableProto-bin
+    public static final AsciiString ARMERIA_GRPC_THROWABLEPROTO_BIN =
+            HttpHeaderNames.of(ProtoUtils.keyForProto(ThrowableProto.getDefaultInstance()).name());
 
     private GrpcHeaderNames() {}
 }

@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -48,8 +49,8 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
@@ -57,6 +58,7 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
+import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.grpc.StatusMessageEscaper;
 import com.linecorp.armeria.internal.grpc.TransportStatusListener;
@@ -477,29 +479,16 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
         trailers.add(GrpcHeaderNames.GRPC_STATUS, Integer.toString(status.getCode().value()));
 
-        final String description = statusToDescription(status);
-        if (description != null) {
-            trailers.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(description));
+        if (status.getDescription() != null) {
+            trailers.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(status.getDescription()));
+        }
+        if (Flags.verboseResponses() && status.getCause() != null) {
+            final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
+            trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
+                         Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 
         return trailers;
-    }
-
-    @Nullable
-    private static String statusToDescription(Status status) {
-        final String description = status.getDescription();
-        if (Flags.verboseResponses()) {
-            final Throwable cause = status.getCause();
-            if (cause != null) {
-                final String trace = Exceptions.traceText(cause);
-                if (Strings.isNullOrEmpty(description)) {
-                    return "Caused by: " + trace;
-                } else {
-                    return description + "\nCaused by: " + trace;
-                }
-            }
-        }
-        return description;
     }
 
     HttpStreamReader messageReader() {
