@@ -303,10 +303,10 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      * Returns whether any of the specified media ranges is accepted by any of the {@link #mediaTypes()}
      * defined by this format.
      */
-    public boolean isAccepted(MediaType first, MediaType... others) {
+    public boolean isAccepted(MediaType first, MediaType... rest) {
         requireNonNull(first, "first");
-        requireNonNull(others, "others");
-        return isAccepted(Lists.asList(first, others));
+        requireNonNull(rest, "rest");
+        return isAccepted(Lists.asList(first, rest));
     }
 
     /**
