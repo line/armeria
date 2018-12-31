@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.MediaType.create;
+import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
@@ -294,7 +295,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      */
     public boolean isAccepted(MediaType... ranges) {
         requireNonNull(ranges, "ranges");
-        return mediaTypes.match(ranges).isPresent();
+        return mediaTypes.match(asList(ranges)).isPresent();
     }
 
     @Override
