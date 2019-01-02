@@ -30,22 +30,20 @@ final class DefaultHttpResult<T> implements HttpResult<T> {
 
     private final HttpHeaders headers;
     @Nullable
-    private final T body;
+    private final T content;
     private final HttpHeaders trailingHeaders;
 
     DefaultHttpResult(HttpHeaders headers) {
-        this(headers, null);
+        this(headers, null, HttpHeaders.EMPTY_HEADERS);
     }
 
-    DefaultHttpResult(HttpHeaders headers, @Nullable T body) {
-        this(headers, body, HttpHeaders.EMPTY_HEADERS);
+    DefaultHttpResult(HttpHeaders headers, T content) {
+        this(headers, requireNonNull(content, "content"), HttpHeaders.EMPTY_HEADERS);
     }
 
-    DefaultHttpResult(HttpHeaders headers,
-                      @Nullable T body,
-                      HttpHeaders trailingHeaders) {
+    DefaultHttpResult(HttpHeaders headers, @Nullable T content, HttpHeaders trailingHeaders) {
         this.headers = requireNonNull(headers, "headers");
-        this.body = body;
+        this.content = content;
         this.trailingHeaders = requireNonNull(trailingHeaders, "trailingHeaders");
     }
 
@@ -55,8 +53,8 @@ final class DefaultHttpResult<T> implements HttpResult<T> {
     }
 
     @Override
-    public Optional<T> body() {
-        return Optional.ofNullable(body);
+    public Optional<T> content() {
+        return Optional.ofNullable(content);
     }
 
     @Override

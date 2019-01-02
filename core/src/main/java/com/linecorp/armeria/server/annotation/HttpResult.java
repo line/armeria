@@ -34,44 +34,90 @@ import com.linecorp.armeria.common.HttpStatus;
 @FunctionalInterface
 public interface HttpResult<T> {
 
+    /**
+     * Creates a new {@link HttpResult} with the specified headers.
+     *
+     * @param headers the HTTP headers
+     */
     static <T> HttpResult<T> of(HttpHeaders headers) {
         return new DefaultHttpResult<>(headers);
     }
 
-    static <T> HttpResult<T> of(HttpHeaders headers, T body) {
-        return new DefaultHttpResult<>(headers,
-                                       requireNonNull(body, "body"));
+    /**
+     * Creates a new {@link HttpResult} with the specified headers and content.
+     *
+     * @param headers the HTTP headers
+     * @param content the content of the response
+     */
+    static <T> HttpResult<T> of(HttpHeaders headers, T content) {
+        return new DefaultHttpResult<>(headers, requireNonNull(content, "content"));
     }
 
-    static <T> HttpResult<T> of(HttpHeaders headers, T body, HttpHeaders trailingHeaders) {
+    /**
+     * Creates a new {@link HttpResult} with the specified headers and content.
+     *
+     * @param headers the HTTP headers
+     * @param content the content of the response
+     * @param trailingHeaders the trailing HTTP headers
+     */
+    static <T> HttpResult<T> of(HttpHeaders headers, T content, HttpHeaders trailingHeaders) {
         return new DefaultHttpResult<>(headers,
-                                       requireNonNull(body, "body"),
+                                       requireNonNull(content, "content"),
                                        trailingHeaders);
     }
 
+    /**
+     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}.
+     *
+     * @param status the HTTP status
+     */
     static <T> HttpResult<T> of(HttpStatus status) {
         return new DefaultHttpResult<>(HttpHeaders.of(status));
     }
 
-    static <T> HttpResult<T> of(HttpStatus status, T body) {
-        return new DefaultHttpResult<>(HttpHeaders.of(status),
-                                       requireNonNull(body, "body"));
+    /**
+     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}.
+     *
+     * @param status the HTTP status
+     * @param content the content of the response
+     */
+    static <T> HttpResult<T> of(HttpStatus status, T content) {
+        return new DefaultHttpResult<>(HttpHeaders.of(status), requireNonNull(content, "content"));
     }
 
-    static <T> HttpResult<T> of(HttpStatus status, T body, HttpHeaders trailingHeaders) {
+    /**
+     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}.
+     *
+     * @param status the HTTP status
+     * @param content the content of the response
+     * @param trailingHeaders the trailing HTTP headers
+     */
+    static <T> HttpResult<T> of(HttpStatus status, T content, HttpHeaders trailingHeaders) {
         return new DefaultHttpResult<>(HttpHeaders.of(status),
-                                       requireNonNull(body, "body"),
+                                       requireNonNull(content, "content"),
                                        trailingHeaders);
     }
 
-    static <T> HttpResult<T> of(T body) {
+    /**
+     * Creates a new {@link HttpResult} with the specified {@code content} and the {@link HttpStatus#OK} status.
+     *
+     * @param content the content of the response
+     */
+    static <T> HttpResult<T> of(T content) {
         return new DefaultHttpResult<>(HttpHeaders.of(HttpStatus.OK),
-                                       requireNonNull(body, "body"));
+                                       requireNonNull(content, "content"));
     }
 
-    static <T> HttpResult<T> of(T body, HttpHeaders trailingHeaders) {
+    /**
+     * Creates a new {@link HttpResult} with the specified {@code content}, the {@link HttpStatus#OK} status
+     * and the specified trailing {@link HttpHeaders}.
+     *
+     * @param content the content of the response
+     * @param trailingHeaders the trailing HTTP headers
+     */
+    static <T> HttpResult<T> of(T content, HttpHeaders trailingHeaders) {
         return new DefaultHttpResult<>(HttpHeaders.of(HttpStatus.OK),
-                                       requireNonNull(body, "body"),
+                                       requireNonNull(content, "content"),
                                        trailingHeaders);
     }
 
@@ -83,7 +129,7 @@ public interface HttpResult<T> {
     /**
      * Returns an object which would be converted into {@link HttpData} instances.
      */
-    default Optional<T> body() {
+    default Optional<T> content() {
         return Optional.empty();
     }
 

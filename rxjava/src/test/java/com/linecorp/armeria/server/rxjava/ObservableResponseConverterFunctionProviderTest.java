@@ -65,7 +65,7 @@ public class ObservableResponseConverterFunctionProviderTest {
                                                                new DummyExceptionHandler()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
-                        "Not allowed type exists in the generic type arguments of the return type " +
+                        "Disallowed type exists in the generic type arguments of the return type " +
                         "'io.reactivex.Observable<io.reactivex.Observable<java.lang.Object>>': " +
                         "io.reactivex.Observable");
     }

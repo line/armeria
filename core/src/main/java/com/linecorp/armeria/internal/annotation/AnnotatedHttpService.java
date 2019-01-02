@@ -63,12 +63,15 @@ import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.HttpResult;
+import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 /**
  * A {@link Service} which is defined by a {@link Path} or HTTP method annotations.
@@ -82,6 +85,14 @@ public class AnnotatedHttpService implements HttpService {
     static final ServiceLoader<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                AnnotatedHttpService.class.getClassLoader());
+
+    /**
+     * A default {@link ResponseConverterFunction}s.
+     */
+    private static final List<ResponseConverterFunction> defaultResponseConverters =
+            ImmutableList.of(new JacksonResponseConverterFunction(),
+                             new StringResponseConverterFunction(),
+                             new ByteArrayResponseConverterFunction());
 
     private final Object object;
     private final Method method;
@@ -133,18 +144,25 @@ public class AnnotatedHttpService implements HttpService {
                                                         ExceptionHandlerFunction exceptionHandler) {
         final Type actualType;
         if (HttpResult.class.isAssignableFrom(method.getReturnType())) {
-            actualType = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
+            final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
+            warnIfHttpResponseArgumentExists(type, type);
+            actualType = type.getActualTypeArguments()[0];
         } else {
             actualType = method.getGenericReturnType();
         }
 
+        final List<ResponseConverterFunction> backingConverters =
+                new Builder<ResponseConverterFunction>().addAll(responseConverters)
+                                                        .addAll(defaultResponseConverters)
+                                                        .build();
         final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
                 new Builder<ResponseConverterFunction>()
                         .addAll(responseConverters)
                         // Just in case a user specifies a response converter for 'Publisher' type,
-                        // we add the default implementation to the last of the list.
+                        // we add the default implementation behind user-specified converters.
                         .add(new PublisherResponseConverterFunction(
-                                new CompositeResponseConverterFunction(responseConverters), exceptionHandler))
+                                new CompositeResponseConverterFunction(backingConverters), exceptionHandler))
+                        .addAll(defaultResponseConverters)
                         .build());
 
         for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
@@ -156,6 +174,21 @@ public class AnnotatedHttpService implements HttpService {
         }
 
         return responseConverter;
+    }
+
+    private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
+        for (final Type arg : type.getActualTypeArguments()) {
+            if (arg instanceof ParameterizedType) {
+                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg);
+            } else if (arg instanceof Class) {
+                final Class<?> clazz = (Class<?>) arg;
+                if (HttpResponse.class.isAssignableFrom(clazz) ||
+                    AggregatedHttpMessage.class.isAssignableFrom(clazz)) {
+                    logger.warn("{} in the return type '{}' may take precedence over {}.",
+                                clazz.getSimpleName(), returnType, HttpResult.class.getSimpleName());
+                }
+            }
+        }
     }
 
     private static HttpStatus defaultResponseStatus(Optional<HttpStatus> defaultResponseStatus,
@@ -201,16 +234,17 @@ public class AnnotatedHttpService implements HttpService {
         switch (responseType) {
             case HTTP_RESPONSE:
                 return f.thenApply(
-                        msg -> new ExceptionFilteredHttpResponse(ctx, req,
-                                                                 (HttpResponse) invoke(ctx, req, msg),
+                        msg -> new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) invoke(ctx, req, msg),
                                                                  exceptionHandler));
             case COMPLETION_STAGE:
                 return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
-                        .handle((result, cause) -> cause == null ? convertResponse(ctx, req, result)
+                        .handle((result, cause) -> cause == null ? convertResponse(ctx, req, null, result,
+                                                                                   HttpHeaders.EMPTY_HEADERS)
                                                                  : exceptionHandler.handleException(ctx, req,
                                                                                                     cause));
             default:
-                return f.thenApplyAsync(msg -> convertResponse(ctx, req, invoke(ctx, req, msg)),
+                return f.thenApplyAsync(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
+                                                               HttpHeaders.EMPTY_HEADERS),
                                         ctx.blockingTaskExecutor());
         }
     }
@@ -232,28 +266,36 @@ public class AnnotatedHttpService implements HttpService {
      * Converts the specified {@code result} to an {@link HttpResponse}.
      */
     private HttpResponse convertResponse(ServiceRequestContext ctx, HttpRequest req,
-                                         @Nullable Object result) {
+                                         @Nullable HttpHeaders headers, @Nullable Object result,
+                                         HttpHeaders trailingHeaders) {
+        final HttpHeaders newHeaders;
+        final HttpHeaders newTrailingHeaders;
+        if (result instanceof HttpResult) {
+            final HttpResult<?> httpResult = (HttpResult<?>) result;
+            newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
+            result = httpResult.content().orElse(null);
+            newTrailingHeaders = httpResult.trailingHeaders();
+        } else {
+            newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, defaultHttpHeaders) : headers;
+            newTrailingHeaders = trailingHeaders;
+        }
+
         if (result instanceof HttpResponse) {
-            return (HttpResponse) result;
+            return new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) result, exceptionHandler);
         }
         if (result instanceof AggregatedHttpMessage) {
             return HttpResponse.of((AggregatedHttpMessage) result);
         }
-
-        final HttpHeaders headers;
-        final HttpHeaders trailingHeaders;
-        if (result instanceof HttpResult) {
-            final HttpResult<?> httpResult = (HttpResult<?>) result;
-            headers = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
-            result = httpResult.body().orElse(null);
-            trailingHeaders = httpResult.trailingHeaders();
-        } else {
-            headers = addNegotiatedResponseMediaType(ctx, defaultHttpHeaders);
-            trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        if (result instanceof CompletionStage) {
+            return HttpResponse.from(
+                    ((CompletionStage<?>) result)
+                            .thenApply(object -> convertResponse(ctx, req, newHeaders, object,
+                                                                 newTrailingHeaders))
+                            .exceptionally(cause -> exceptionHandler.handleException(ctx, req, cause)));
         }
 
         try {
-            return responseConverter.convertResponse(ctx, headers, result, trailingHeaders);
+            return responseConverter.convertResponse(ctx, newHeaders, result, newTrailingHeaders);
         } catch (Exception cause) {
             return exceptionHandler.handleException(ctx, req, cause);
         }
