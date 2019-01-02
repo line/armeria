@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.MediaType.create;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -33,6 +34,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
 /**
@@ -230,7 +232,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
         }
 
         for (SerializationFormat f : values()) {
-            if (f.isAccepted(ranges)) {
+            if (f.isAccepted(Arrays.asList(ranges))) {
                 return Optional.of(f);
             }
         }
@@ -289,10 +291,29 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     }
 
     /**
+     * Returns whether the specified media range is accepted by any of the {@link #mediaTypes()}
+     * defined by this format.
+     */
+    public boolean isAccepted(MediaType range) {
+        requireNonNull(range, "range");
+        return mediaTypes.match(range).isPresent();
+    }
+
+    /**
      * Returns whether any of the specified media ranges is accepted by any of the {@link #mediaTypes()}
      * defined by this format.
      */
-    public boolean isAccepted(MediaType... ranges) {
+    public boolean isAccepted(MediaType first, MediaType... rest) {
+        requireNonNull(first, "first");
+        requireNonNull(rest, "rest");
+        return isAccepted(Lists.asList(first, rest));
+    }
+
+    /**
+     * Returns whether any of the specified media ranges is accepted by any of the {@link #mediaTypes()}
+     * defined by this format.
+     */
+    public boolean isAccepted(Iterable<MediaType> ranges) {
         requireNonNull(ranges, "ranges");
         return mediaTypes.match(ranges).isPresent();
     }

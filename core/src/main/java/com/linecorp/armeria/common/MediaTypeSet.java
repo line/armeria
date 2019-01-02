@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.AbstractSet;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -31,11 +30,12 @@ import java.util.Set;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 
 /**
  * An immutable {@link Set} of {@link MediaType}s which provides useful methods for content negotiation.
  *
- * <p>This {@link Set} provides {@link #match(MediaType...)} and {@link #matchHeaders(CharSequence...)}
+ * <p>This {@link Set} provides {@link #match(MediaType)} and {@link #matchHeaders(CharSequence...)}
  * so that a user can find the preferred {@link MediaType} that matches the specified media ranges. For example:
  * <pre>{@code
  * MediaTypeSet set = new MediaTypeSet(MediaType.HTML_UTF_8, MediaType.PLAIN_TEXT_UTF_8);
@@ -151,14 +151,34 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
     }
 
     /**
+     * Finds the {@link MediaType} in this {@link List} that matches the specified media range.
+     *
+     * @return the {@link MediaType} that matches the specified media range.
+     *         {@link Optional#empty()} if there are no matches
+     */
+    public Optional<MediaType> match(MediaType range) {
+        requireNonNull(range, "range");
+        for (MediaType candidate : mediaTypes) {
+            if (candidate.belongsTo(range)) {
+                // With only one specified range, there is no way for candidates to have priority over each
+                // other, we just return the first match.
+                return Optional.of(candidate);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Finds the {@link MediaType} in this {@link List} that matches one of the specified media ranges.
      *
      * @return the most preferred {@link MediaType} that matches one of the specified media ranges.
-     *         {@link Optional#empty()} if there are no matches or {@code ranges} does not contain
+     *         {@link Optional#empty()} if there are no matches or the specified ranges do not contain
      *         any valid ranges.
      */
-    public Optional<MediaType> match(MediaType... ranges) {
-        return match(Arrays.asList(requireNonNull(ranges, "ranges")));
+    public Optional<MediaType> match(MediaType first, MediaType... rest) {
+        requireNonNull(first, "first");
+        requireNonNull(rest, "rest");
+        return match(Lists.asList(first, rest));
     }
 
     /**
@@ -177,21 +197,21 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
         int matchNumParams = Integer.MIN_VALUE;    // higher = better
         for (MediaType range : ranges) {
             requireNonNull(range, "ranges contains null.");
+            float qValue = range.qualityFactor(Float.NEGATIVE_INFINITY);
+            final int numWildcards = range.numWildcards();
+            final int numParams;
+            if (qValue < 0) {
+                // qvalue does not exist; use the default value of 1.0.
+                qValue = 1.0f;
+                numParams = range.parameters().size();
+            } else {
+                // Do not count the qvalue.
+                numParams = range.parameters().size() - 1;
+            }
+
             for (MediaType candidate : mediaTypes) {
                 if (!candidate.belongsTo(range)) {
                     continue;
-                }
-
-                float qValue = range.qualityFactor(Float.NEGATIVE_INFINITY);
-                final int numWildcards = range.numWildcards();
-                final int numParams;
-                if (qValue < 0) {
-                    // qvalue does not exist; use the default value of 1.0.
-                    qValue = 1.0f;
-                    numParams = range.parameters().size();
-                } else {
-                    // Do not count the qvalue.
-                    numParams = range.parameters().size() - 1;
                 }
 
                 final boolean isBetter;
@@ -214,6 +234,9 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
                     matchQ = qValue;
                     matchNumWildcards = numWildcards;
                     matchNumParams = numParams;
+
+                    // Won't find another better candidate for this range.
+                    break;
                 }
             }
         }
