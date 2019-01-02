@@ -63,7 +63,6 @@ interface State {
   additionalQueries: string;
   endpointPathOpen: boolean;
   endpointPath: string;
-  regexPathPrefix: string;
   originalPath: string;
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
@@ -87,7 +86,6 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     additionalQueries: '',
     endpointPathOpen: false,
     endpointPath: '',
-    regexPathPrefix: '',
     originalPath: '',
     additionalHeadersOpen: false,
     additionalHeaders: '',
@@ -289,7 +287,6 @@ export default class MethodPage extends React.PureComponent<Props, State> {
                               placeholder={endpointPathPlaceHolder}
                               onChange={this.onEndpointPathChange.bind(
                                 this,
-                                method.endpoints[0].regexPathPrefix,
                                 method.endpoints[0].pathMapping,
                               )}
                               inputProps={{
@@ -416,12 +413,10 @@ export default class MethodPage extends React.PureComponent<Props, State> {
   };
 
   private onEndpointPathChange = (
-    regexPathPrefix: string,
     originalPath: string,
     e: ChangeEvent<HTMLInputElement>,
   ) => {
     this.setState({
-      regexPathPrefix,
       originalPath,
       endpointPath: e.target.value,
     });
@@ -712,7 +707,6 @@ export default class MethodPage extends React.PureComponent<Props, State> {
       additionalQueriesOpen: !!urlQueries,
       endpointPath: urlEndpointPath,
       endpointPathOpen: !!urlEndpointPath,
-      regexPathPrefix: '',
       originalPath: '',
       additionalHeaders:
         urlHeaders ||

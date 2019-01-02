@@ -15,7 +15,15 @@ buildscript {
 apply plugin: 'base'
 apply plugin: 'com.moowork.node'
 
+tasks.yarn.doFirst {
+    deleteBrokenSymlinks()
+}
+
 tasks.yarn.doLast {
+    deleteBrokenSymlinks()
+}
+
+def deleteBrokenSymlinks() {
     // Delete the broken symlinks so that Gradle does not fail the build.
     // - https://github.com/gradle/gradle/issues/1365
     // Note that this is primarily due to a bug in Yarn 1.11+:

@@ -23,7 +23,6 @@ import IconButton from '@material-ui/core/IconButton';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
-import ListSubheader from '@material-ui/core/ListSubheader';
 import {
   createStyles,
   Theme,
@@ -35,6 +34,7 @@ import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
 import MenuIcon from '@material-ui/icons/Menu';
+import update from 'immutability-helper';
 import React from 'react';
 import Helmet from 'react-helmet';
 import { hot } from 'react-hot-loader';
@@ -69,6 +69,8 @@ const styles = (theme: Theme) =>
       [theme.breakpoints.down('sm')]: {
         width: '80%',
       },
+      height: '100vh',
+      overflowY: 'auto',
     },
     content: {
       backgroundColor: theme.palette.background.default,
@@ -124,9 +126,10 @@ const styles = (theme: Theme) =>
 interface State {
   mobileDrawerOpen: boolean;
   specification?: Specification;
-  servicesOpen: boolean;
-  enumsOpen: boolean;
-  structsOpen: boolean;
+  servicesSectionOpen: boolean;
+  openServices: { [key: string]: boolean };
+  enumsSectionOpen: boolean;
+  structsSectionOpen: boolean;
   exceptionsOpen: boolean;
 }
 
@@ -136,23 +139,26 @@ interface AppDrawerProps extends WithStyles<typeof styles> {
   specification: Specification;
   navigateTo: (url: string) => void;
   httpMethodClass: (httpMethod: string) => string;
-  servicesOpen: boolean;
-  enumsOpen: boolean;
-  structsOpen: boolean;
+  servicesSectionOpen: boolean;
+  openServices: { [key: string]: boolean };
+  enumsSectionOpen: boolean;
+  structsSectionOpen: boolean;
   exceptionsOpen: boolean;
   handleCollapse: (itemName: string) => void;
+  handleServiceCollapse: (serviceName: string) => void;
 }
 
 function AppDrawer({
-  classes,
   navigateTo,
   httpMethodClass,
   specification,
-  servicesOpen,
-  enumsOpen,
-  structsOpen,
+  servicesSectionOpen,
+  openServices,
+  enumsSectionOpen,
+  structsSectionOpen,
   exceptionsOpen,
   handleCollapse,
+  handleServiceCollapse,
 }: AppDrawerProps) {
   return (
     <List component="nav">
@@ -162,52 +168,60 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Services</Typography>
             </ListItemText>
-            {servicesOpen ? <ExpandLess /> : <ExpandMore />}
+            {servicesSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={servicesOpen} timeout="auto">
+          <Collapse in={servicesSectionOpen} timeout="auto">
             {specification.getServices().map((service) => (
               <div key={service.name}>
-                <ListSubheader className={classes.methodHeader}>
-                  <Typography variant="subheading">
-                    <code>{simpleName(service.name)}</code>
-                  </Typography>
-                </ListSubheader>
-                {service.methods.map((method) => (
-                  <ListItem
-                    dense
-                    key={methodKey(
-                      service.name,
-                      method.name,
-                      method.httpMethod,
-                    )}
-                    button
-                    onClick={() =>
-                      navigateTo(
-                        `/methods/${methodKey(
-                          service.name,
-                          method.name,
-                          method.httpMethod,
-                        )}`,
-                      )
-                    }
-                  >
-                    {method.httpMethod && (
-                      <Typography
-                        className={httpMethodClass(method.httpMethod)}
-                      >
-                        {method.httpMethod}
-                      </Typography>
-                    )}
-                    <ListItemText
-                      inset
-                      primaryTypographyProps={{
-                        variant: 'body1',
-                      }}
+                <ListItem
+                  button
+                  onClick={() => handleServiceCollapse(service.name)}
+                >
+                  <ListItemText>
+                    <Typography variant="subheading">
+                      <code>{simpleName(service.name)}</code>
+                    </Typography>
+                  </ListItemText>
+                  {openServices[service.name] ? <ExpandLess /> : <ExpandMore />}
+                </ListItem>
+                <Collapse in={openServices[service.name]} timeout="auto">
+                  {service.methods.map((method) => (
+                    <ListItem
+                      dense
+                      key={methodKey(
+                        service.name,
+                        method.name,
+                        method.httpMethod,
+                      )}
+                      button
+                      onClick={() =>
+                        navigateTo(
+                          `/methods/${methodKey(
+                            service.name,
+                            method.name,
+                            method.httpMethod,
+                          )}`,
+                        )
+                      }
                     >
-                      <code>{`${method.name}()`}</code>
-                    </ListItemText>
-                  </ListItem>
-                ))}
+                      {method.httpMethod && (
+                        <Typography
+                          className={httpMethodClass(method.httpMethod)}
+                        >
+                          {method.httpMethod}
+                        </Typography>
+                      )}
+                      <ListItemText
+                        inset
+                        primaryTypographyProps={{
+                          variant: 'body1',
+                        }}
+                      >
+                        <code>{`${method.name}()`}</code>
+                      </ListItemText>
+                    </ListItem>
+                  ))}
+                </Collapse>
               </div>
             ))}
           </Collapse>
@@ -219,9 +233,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Enums</Typography>
             </ListItemText>
-            {enumsOpen ? <ExpandLess /> : <ExpandMore />}
+            {enumsSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={enumsOpen} timeout="auto">
+          <Collapse in={enumsSectionOpen} timeout="auto">
             {specification.getEnums().map((enm) => (
               <ListItem
                 dense
@@ -248,9 +262,9 @@ function AppDrawer({
             <ListItemText disableTypography>
               <Typography variant="headline">Structs</Typography>
             </ListItemText>
-            {structsOpen ? <ExpandLess /> : <ExpandMore />}
+            {structsSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
-          <Collapse in={structsOpen} timeout="auto">
+          <Collapse in={structsSectionOpen} timeout="auto">
             {specification.getStructs().map((struct) => (
               <ListItem
                 dense
@@ -308,14 +322,15 @@ class App extends React.PureComponent<Props, State> {
   public state: State = {
     mobileDrawerOpen: false,
     specification: undefined,
-    servicesOpen: true,
-    enumsOpen: true,
-    structsOpen: true,
+    servicesSectionOpen: true,
+    openServices: {},
+    enumsSectionOpen: true,
+    structsSectionOpen: true,
     exceptionsOpen: true,
   };
 
   public componentWillMount() {
-    this.fetchSpecification();
+    this.initSpecification();
   }
 
   public render() {
@@ -374,11 +389,13 @@ class App extends React.PureComponent<Props, State> {
               specification={specification}
               navigateTo={this.navigateTo}
               httpMethodClass={this.httpMethodClass}
-              servicesOpen={this.state.servicesOpen}
-              enumsOpen={this.state.enumsOpen}
-              structsOpen={this.state.structsOpen}
+              servicesSectionOpen={this.state.servicesSectionOpen}
+              openServices={this.state.openServices}
+              enumsSectionOpen={this.state.enumsSectionOpen}
+              structsSectionOpen={this.state.structsSectionOpen}
               exceptionsOpen={this.state.exceptionsOpen}
               handleCollapse={this.handleCollapse}
+              handleServiceCollapse={this.handleServiceCollapse}
             />
           </Drawer>
         </Hidden>
@@ -397,11 +414,13 @@ class App extends React.PureComponent<Props, State> {
               specification={specification}
               navigateTo={this.navigateTo}
               httpMethodClass={this.httpMethodClass}
-              servicesOpen={this.state.servicesOpen}
-              enumsOpen={this.state.enumsOpen}
-              structsOpen={this.state.structsOpen}
+              servicesSectionOpen={this.state.servicesSectionOpen}
+              openServices={this.state.openServices}
+              enumsSectionOpen={this.state.enumsSectionOpen}
+              structsSectionOpen={this.state.structsSectionOpen}
               exceptionsOpen={this.state.exceptionsOpen}
               handleCollapse={this.handleCollapse}
+              handleServiceCollapse={this.handleServiceCollapse}
             />
           </Drawer>
         </Hidden>
@@ -477,12 +496,15 @@ class App extends React.PureComponent<Props, State> {
     return `${classes.httpMethodCommon} ${httpMethodClass}`;
   };
 
-  private fetchSpecification = async () => {
+  private initSpecification = async () => {
     const httpResponse = await fetch('specification.json');
-    const specification: SpecificationData = await httpResponse.json();
-    this.setState({
-      specification: new Specification(specification),
+    const specificationData: SpecificationData = await httpResponse.json();
+    const specification = new Specification(specificationData);
+    let openServices = {};
+    specification.getServices().forEach((service) => {
+      openServices = { ...openServices, [service.name]: true };
     });
+    this.setState({ specification, openServices });
   };
 
   private toggleMobileDrawer = () => {
@@ -495,17 +517,17 @@ class App extends React.PureComponent<Props, State> {
     switch (itemName) {
       case 'services':
         this.setState({
-          servicesOpen: !this.state.servicesOpen,
+          servicesSectionOpen: !this.state.servicesSectionOpen,
         });
         break;
       case 'enums':
         this.setState({
-          enumsOpen: !this.state.enumsOpen,
+          enumsSectionOpen: !this.state.enumsSectionOpen,
         });
         break;
       case 'structs':
         this.setState({
-          structsOpen: !this.state.structsOpen,
+          structsSectionOpen: !this.state.structsSectionOpen,
         });
         break;
       case 'exceptions':
@@ -514,6 +536,14 @@ class App extends React.PureComponent<Props, State> {
         });
         break;
     }
+  };
+
+  private handleServiceCollapse = (serviceName: string) => {
+    this.setState({
+      openServices: update(this.state.openServices, {
+        [serviceName]: { $set: !this.state.openServices[serviceName] },
+      }),
+    });
   };
 }
 
