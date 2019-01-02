@@ -172,7 +172,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
      * Finds the {@link MediaType} in this {@link List} that matches one of the specified media ranges.
      *
      * @return the most preferred {@link MediaType} that matches one of the specified media ranges.
-     *         {@link Optional#empty()} if there are no matches or {@code ranges} does not contain
+     *         {@link Optional#empty()} if there are no matches or the specified ranges do not contain
      *         any valid ranges.
      */
     public Optional<MediaType> match(MediaType first, MediaType... rest) {

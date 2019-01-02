@@ -35,7 +35,7 @@ public class MediaTypesBenchmark {
             MediaType.parse("application/grpc; charset=utf-8; q=0.9");
 
     private static final MediaType NOT_GRPC_MEDIA_TYPE_WITH_PARAMS =
-            MediaType.parse("application/grpc; charset=utf-8; q=0.9");
+            MediaType.parse("application/json; charset=utf-8; q=0.9");
 
     @Benchmark
     public void simpleMatch(Blackhole bh) {
