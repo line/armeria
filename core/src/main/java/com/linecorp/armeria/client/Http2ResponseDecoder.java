@@ -135,6 +135,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         } else {
             res.close(ClosedSessionException.get());
         }
+
+        // Send a GOAWAY frame if the connection has been scheduled for disconnection and
+        // it did not receive or send a GOAWAY frame.
+        if (needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway()) {
+            channel().close();
+        }
     }
 
     @Override
