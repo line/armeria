@@ -142,11 +142,13 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
+        disconnectWhenFinished();
         goAwayHandler.onGoAwaySent(channel(), lastStreamId, errorCode, debugData);
     }
 
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+        disconnectWhenFinished();
         goAwayHandler.onGoAwayReceived(channel(), lastStreamId, errorCode, debugData);
     }
 

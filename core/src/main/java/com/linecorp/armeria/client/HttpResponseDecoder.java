@@ -116,8 +116,12 @@ abstract class HttpResponseDecoder {
         disconnectWhenFinished = true;
     }
 
-    final boolean needsToDisconnect() {
+    final boolean needsToDisconnectNow() {
         return disconnectWhenFinished && !hasUnfinishedResponses();
+    }
+
+    final boolean needsToDisconnectWhenFinished() {
+        return disconnectWhenFinished;
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject>, Runnable {

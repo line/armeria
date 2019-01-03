@@ -216,7 +216,7 @@ final class HttpChannelPool implements AutoCloseable {
 
     private static boolean isHealthy(PooledChannel pooledChannel) {
         final Channel ch = pooledChannel.get();
-        return ch.isActive() && HttpSession.get(ch).isActive();
+        return ch.isActive() && HttpSession.get(ch).canSendRequest();
     }
 
     @Nullable
@@ -497,9 +497,6 @@ final class HttpChannelPool implements AutoCloseable {
 
             final int numChannels = allChannels.size();
             final CountDownLatch latch = new CountDownLatch(numChannels);
-            if (numChannels == 0) {
-                return latch;
-            }
             final List<ChannelFuture> closeFutures = new ArrayList<>(numChannels);
             for (Channel ch : allChannels.keySet()) {
                 // NB: Do not call close() here, because it will trigger the closeFuture listener
@@ -598,10 +595,6 @@ final class HttpChannelPool implements AutoCloseable {
                 addToPool(protocol(), key, this);
             } else {
                 // Channel not healthy, just releasing it.
-                final Channel channel = get();
-                if (channel.isActive()) {
-                    channel.close();
-                }
             }
         }
     }
