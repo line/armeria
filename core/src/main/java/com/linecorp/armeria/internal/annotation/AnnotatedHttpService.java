@@ -382,6 +382,8 @@ public class AnnotatedHttpService implements HttpService {
         private final HttpRequest req;
         private final ExceptionHandlerFunction exceptionHandler;
 
+        // TODO(hyangtack) Remove this class if we could provide a better way to handle an exception
+        //                 without this class. See https://github.com/line/armeria/issues/1514.
         ExceptionFilteredHttpResponse(ServiceRequestContext ctx, HttpRequest req,
                                       HttpResponse delegate, ExceptionHandlerFunction exceptionHandler) {
             super(delegate);
