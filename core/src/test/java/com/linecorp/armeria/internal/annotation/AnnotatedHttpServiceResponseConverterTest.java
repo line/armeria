@@ -272,6 +272,19 @@ public class AnnotatedHttpServiceResponseConverterTest {
                     future.completeExceptionally(new IllegalArgumentException("Bad arguments"));
                     return HttpResult.of(HttpHeaders.of(HttpStatus.OK), future);
                 }
+
+                @Get("/wildcard")
+                @ProducesJson
+                public HttpResult<?> wildcard() {
+                    return HttpResult.of(ImmutableList.of("a", "b"));
+                }
+
+                @Get("/generic")
+                @ProducesJson
+                @SuppressWarnings("unchecked")
+                public <T> HttpResult<T> generic() {
+                    return (HttpResult<T>) HttpResult.of(ImmutableList.of("a", "b"));
+                }
             });
         }
 
@@ -457,6 +470,12 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         msg = aggregated(client.get("/async/expect-bad-request"));
         assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        ImmutableList.of("/wildcard", "/generic").forEach(path -> {
+            final AggregatedHttpMessage message = aggregated(client.get(path));
+            assertThat(message.status()).isEqualTo(HttpStatus.OK);
+            assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableList.of("a", "b"));
+        });
     }
 
     @Test

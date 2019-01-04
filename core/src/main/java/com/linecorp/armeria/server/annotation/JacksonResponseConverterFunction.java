@@ -70,8 +70,8 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
                 // Convert the object only if the charset supports UTF-8,
                 // because ObjectMapper always writes JSON document as UTF-8.
                 if (charset.contains(StandardCharsets.UTF_8)) {
-                    final HttpData body = HttpData.of(mapper.writeValueAsBytes(result));
-                    return HttpResponse.of(headers, body, trailingHeaders);
+                    final HttpData content = HttpData.of(mapper.writeValueAsBytes(result));
+                    return HttpResponse.of(headers, content, trailingHeaders);
                 }
             }
         } else if (result instanceof JsonNode) {
@@ -79,8 +79,8 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
             final HttpHeaders responseHeaders =
                     headers.isImmutable() ? HttpHeaders.copyOf(headers).contentType(MediaType.JSON_UTF_8)
                                           : headers.contentType(MediaType.JSON_UTF_8);
-            final HttpData body = HttpData.of(mapper.writeValueAsBytes(result));
-            return HttpResponse.of(responseHeaders, body, trailingHeaders);
+            final HttpData content = HttpData.of(mapper.writeValueAsBytes(result));
+            return HttpResponse.of(responseHeaders, content, trailingHeaders);
         }
 
         return ResponseConverterFunction.fallthrough();

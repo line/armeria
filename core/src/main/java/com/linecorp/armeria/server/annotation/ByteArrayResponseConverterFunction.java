@@ -43,16 +43,16 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
         return ResponseConverterFunction.fallthrough();
     }
 
-    private static HttpResponse response(HttpHeaders headers, byte[] body,
+    private static HttpResponse response(HttpHeaders headers, byte[] content,
                                          HttpHeaders trailingHeaders) {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
             final HttpHeaders responseHeaders =
                     headers.isImmutable() ? HttpHeaders.copyOf(headers)
-                                                       .contentType(MediaType.APPLICATION_BINARY)
+                                                       .contentType(MediaType.OCTET_STREAM)
                                           : headers;
-            final HttpData responseBody = HttpData.of(body);
-            return HttpResponse.of(responseHeaders, responseBody, trailingHeaders);
+            final HttpData responseContent = HttpData.of(content);
+            return HttpResponse.of(responseHeaders, responseContent, trailingHeaders);
         }
 
         // A user expects 'binary'.
@@ -60,8 +60,8 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
             contentType.is(MediaType.OCTET_STREAM)) {
             // @Produces("application/binary") or @ProducesBinary
             // @Produces("application/octet-stream") or @ProducesOctetStream
-            final HttpData responseBody = HttpData.of(body);
-            return HttpResponse.of(headers, responseBody, trailingHeaders);
+            final HttpData responseContent = HttpData.of(content);
+            return HttpResponse.of(headers, responseContent, trailingHeaders);
         }
 
         return ResponseConverterFunction.fallthrough();

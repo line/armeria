@@ -43,15 +43,15 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
             if (mediaType.is(MediaType.ANY_TEXT_TYPE)) {
                 // Use 'utf-8' charset by default.
                 final Charset charset = mediaType.charset().orElse(StandardCharsets.UTF_8);
-                final HttpData body = HttpData.of(String.valueOf(result).getBytes(charset));
-                return HttpResponse.of(headers, body, trailingHeaders);
+                final HttpData content = HttpData.of(String.valueOf(result).getBytes(charset));
+                return HttpResponse.of(headers, content, trailingHeaders);
             }
         } else if (result instanceof CharSequence) {
             final HttpHeaders responseHeaders =
                     headers.isImmutable() ? HttpHeaders.copyOf(headers).contentType(MediaType.PLAIN_TEXT_UTF_8)
                                           : headers.contentType(MediaType.PLAIN_TEXT_UTF_8);
-            final HttpData body = HttpData.ofUtf8(((CharSequence) result).toString());
-            return HttpResponse.of(responseHeaders, body, trailingHeaders);
+            final HttpData content = HttpData.ofUtf8(((CharSequence) result).toString());
+            return HttpResponse.of(responseHeaders, content, trailingHeaders);
         }
 
         return ResponseConverterFunction.fallthrough();

@@ -104,21 +104,27 @@ a path and use the HTTP method annotations without a path to map multiple HTTP m
         public HttpResponse hello() { ... }
     }
 
-Every service method assumes that they returns an HTTP response with ``200 Ok`` status. So If you want to
-return another status for a specific method, you can use :api:`@StatusCode` annotation as follows.
+Every service method assumes that they returns an HTTP response with ``200 Ok`` or ``204 No Content`` status
+according to its return type. If the return type is ``void`` or ``Void``, ``204 No Content`` would be applied.
+``200 Ok`` would be applied for the other types. If you want to return an alternative status code for a method,
+you can use :api:`@StatusCode` annotation as follows.
 
 .. code-block:: java
 
     public class MyAnnotatedService {
 
-        @Get("/user/{name}")
-        public HttpResponse getUser(@Param("name") String name) { ... }
-
         @StatusCode(201)
-        @Post("/user/{name}")
-        public HttpResponse createUser(@Param("name") String name) { ... }
-    }
+        @Post("/users/{name}")
+        public User createUser(@Param("name") String name) { ... }
 
+        // @StatusCode(200) would be applied by default.
+        @Get("/users/{name}")
+        public User getUser(@Param("name") String name) { ... }
+
+        // @StatusCode(204) would be applied by default.
+        @Delete("/users/{name}")
+        public void deleteUser(@Param("name") String name) { ... }
+    }
 
 
 .. _parameter-injection:
@@ -790,9 +796,22 @@ more response types which can be used in the annotated service.
 
 - :api:`HttpResult`
 
-  - It contains the :api:`HttpHeaders` and the object which can be converted into :api:`HttpData` by
+  - It contains the :api:`HttpHeaders` and the object which can be converted into HTTP response body by
     response converters. A user can customize the HTTP status and headers including the trailing headers,
     with this type.
+
+  .. code-block:: java
+
+      public class MyAnnotatedService {
+          @Get("/users")
+          public HttpResult<User> getUsers(@Param int start) {
+              List<User> users = ...;
+              HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+              headers.add(HttpHeaderNames.LINK,
+                          String.format("<https://example.com/users?start=%s>; rel=\"next\"", start + 10));
+              return HttpResult.of(headers, users);
+          }
+
 
 - Reactive Streams Publisher_
 

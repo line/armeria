@@ -19,23 +19,21 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 
 /**
  * An interface which helps a user specify an {@link HttpStatus} and {@link HttpHeaders} for a response
- * produced by an annotated HTTP service method. The HTTP content can be specified as {@code body} as well,
- * and it would be converted into {@link HttpData} instances by a {@link ResponseConverterFunction}.
+ * produced by an annotated HTTP service method. The HTTP content can be specified as {@code content} as well,
+ * and it would be converted into response body by a {@link ResponseConverterFunction}.
  *
- * @param <T> the type of a body which is to be contained in an {@link HttpResponse}
+ * @param <T> the type of a content which is to be converted into response body
  */
 @FunctionalInterface
 public interface HttpResult<T> {
 
     /**
-     * Creates a new {@link HttpResult} with the specified headers.
+     * Creates a new {@link HttpResult} with the specified headers and without content.
      *
      * @param headers the HTTP headers
      */
@@ -54,7 +52,7 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified headers and content.
+     * Creates a new {@link HttpResult} with the specified headers, content and trailing headers.
      *
      * @param headers the HTTP headers
      * @param content the content of the response
@@ -67,7 +65,7 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}.
+     * Creates a new {@link HttpResult} with the specified {@link HttpStatus} and without content.
      *
      * @param status the HTTP status
      */
@@ -76,7 +74,7 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}.
+     * Creates a new {@link HttpResult} with the specified {@link HttpStatus} and content.
      *
      * @param status the HTTP status
      * @param content the content of the response
@@ -86,7 +84,7 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}.
+     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}, content and trailing headers.
      *
      * @param status the HTTP status
      * @param content the content of the response
@@ -99,7 +97,7 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified {@code content} and the {@link HttpStatus#OK} status.
+     * Creates a new {@link HttpResult} with the specified content and the {@link HttpStatus#OK} status.
      *
      * @param content the content of the response
      */
@@ -109,25 +107,12 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified {@code content}, the {@link HttpStatus#OK} status
-     * and the specified trailing {@link HttpHeaders}.
-     *
-     * @param content the content of the response
-     * @param trailingHeaders the trailing HTTP headers
-     */
-    static <T> HttpResult<T> of(T content, HttpHeaders trailingHeaders) {
-        return new DefaultHttpResult<>(HttpHeaders.of(HttpStatus.OK),
-                                       requireNonNull(content, "content"),
-                                       trailingHeaders);
-    }
-
-    /**
      * Returns {@link HttpHeaders} of a response.
      */
     HttpHeaders headers();
 
     /**
-     * Returns an object which would be converted into {@link HttpData} instances.
+     * Returns an object which would be converted into response body.
      */
     default Optional<T> content() {
         return Optional.empty();

@@ -26,7 +26,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A response converter implementation which creates an {@link HttpResponse} of {@link HttpStatus#NO_CONTENT}
  * when the specified {@code result} is {@code null}.
  */
-public class NullToNoContentResponseConverterFunction implements ResponseConverterFunction {
+public final class NullToNoContentResponseConverterFunction implements ResponseConverterFunction {
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
