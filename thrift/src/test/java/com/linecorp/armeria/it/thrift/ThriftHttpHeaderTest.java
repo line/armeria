@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -45,8 +46,6 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.server.ServerRule;
-
-import io.netty.util.AsciiString;
 
 /**
  * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters.
@@ -71,7 +70,7 @@ public class ThriftHttpHeaderTest {
             resultHandler.onError(new Exception(errorMessage));
         }
 
-        final HttpHeaders responseHeaders = new DefaultHttpHeaders().set(AsciiString.of("foo"), "bar");
+        final HttpHeaders responseHeaders = new DefaultHttpHeaders().set(HttpHeaderNames.of("foo"), "bar");
         ctx.setAdditionalResponseHeaders(responseHeaders);
     };
 
@@ -153,7 +152,7 @@ public class ThriftHttpHeaderTest {
                         @Override
                         protected HttpObject filter(HttpObject obj) {
                             if (obj instanceof HttpHeaders) {
-                                assertThat(((HttpHeaders) obj).get(AsciiString.of("foo"))).isEqualTo("bar");
+                                assertThat(((HttpHeaders) obj).get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
                             }
                             return obj;
                         }

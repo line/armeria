@@ -41,6 +41,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -58,8 +59,6 @@ import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-import io.netty.util.AsciiString;
-
 public class ThriftDocServiceTest {
 
     private static final HelloService.AsyncIface HELLO_SERVICE_HANDLER =
@@ -69,10 +68,10 @@ public class ThriftDocServiceTest {
             (duration, resultHandler) -> resultHandler.onComplete(duration);
 
     private static final hello_args EXAMPLE_HELLO = new hello_args("sample user");
-    private static final HttpHeaders EXAMPLE_HEADERS_ALL = HttpHeaders.of(AsciiString.of("a"), "b");
-    private static final HttpHeaders EXAMPLE_HEADERS_HELLO = HttpHeaders.of(AsciiString.of("c"), "d");
-    private static final HttpHeaders EXAMPLE_HEADERS_FOO = HttpHeaders.of(AsciiString.of("e"), "f");
-    private static final HttpHeaders EXAMPLE_HEADERS_FOO_BAR1 = HttpHeaders.of(AsciiString.of("g"), "h");
+    private static final HttpHeaders EXAMPLE_HEADERS_ALL = HttpHeaders.of(HttpHeaderNames.of("a"), "b");
+    private static final HttpHeaders EXAMPLE_HEADERS_HELLO = HttpHeaders.of(HttpHeaderNames.of("c"), "d");
+    private static final HttpHeaders EXAMPLE_HEADERS_FOO = HttpHeaders.of(HttpHeaderNames.of("e"), "f");
+    private static final HttpHeaders EXAMPLE_HEADERS_FOO_BAR1 = HttpHeaders.of(HttpHeaderNames.of("g"), "h");
 
     private static final ObjectMapper mapper = new ObjectMapper();
 

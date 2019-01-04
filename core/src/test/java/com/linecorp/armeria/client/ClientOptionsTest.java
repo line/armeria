@@ -22,13 +22,11 @@ import org.junit.Test;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 
-import io.netty.util.AsciiString;
-
 public class ClientOptionsTest {
 
     @Test
     public void testSetHttpHeader() {
-        final HttpHeaders httpHeader = HttpHeaders.of(AsciiString.of("x-user-defined"), "HEADER_VALUE");
+        final HttpHeaders httpHeader = HttpHeaders.of(HttpHeaderNames.of("x-user-defined"), "HEADER_VALUE");
 
         final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
         assertThat(options.get(ClientOption.HTTP_HEADERS)).contains(httpHeader);

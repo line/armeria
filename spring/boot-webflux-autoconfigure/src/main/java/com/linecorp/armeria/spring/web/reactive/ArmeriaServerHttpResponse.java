@@ -46,7 +46,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
-import io.netty.util.AsciiString;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -122,7 +121,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
     @Override
     protected void applyHeaders() {
-        getHeaders().forEach((name, values) -> headers.add(AsciiString.of(name), values));
+        getHeaders().forEach((name, values) -> headers.add(HttpHeaderNames.of(name), values));
     }
 
     @Override

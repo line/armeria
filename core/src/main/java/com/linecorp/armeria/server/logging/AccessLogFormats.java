@@ -50,8 +50,6 @@ import com.linecorp.armeria.server.logging.AccessLogComponent.TextComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.TimestampComponent;
 import com.linecorp.armeria.server.logging.AccessLogType.VariableRequirement;
 
-import io.netty.util.AsciiString;
-
 /**
  * Pre-defined access log formats and the utility methods for {@link AccessLogComponent}.
  */
@@ -217,7 +215,7 @@ final class AccessLogFormats {
         }
         if (HttpHeaderComponent.isSupported(type)) {
             assert variable != null;
-            return new HttpHeaderComponent(type, AsciiString.of(variable), addQuote, condition);
+            return new HttpHeaderComponent(type, HttpHeaderNames.of(variable), addQuote, condition);
         }
         if (AttributeComponent.isSupported(type)) {
             assert variable != null;

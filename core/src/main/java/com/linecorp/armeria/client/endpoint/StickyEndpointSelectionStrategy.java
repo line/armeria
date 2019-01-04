@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.HttpRequest;
  *
  * <pre>{@code
  * ToLongFunction<ClientRequestContext> hasher = (ClientRequestContext ctx) -> {
- *     return ((HttpRequest) ctx.request()).headers().get(AsciiString.of("cookie")).hashCode();
+ *     return ((HttpRequest) ctx.request()).headers().get(HttpHeaderNames.COOKIE).hashCode();
  * };
  * final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
  * }</pre>
