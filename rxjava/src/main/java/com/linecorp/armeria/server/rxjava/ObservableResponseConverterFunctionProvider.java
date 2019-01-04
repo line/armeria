@@ -24,7 +24,10 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
-import io.reactivex.ObservableSource;
+import io.reactivex.Completable;
+import io.reactivex.Maybe;
+import io.reactivex.Observable;
+import io.reactivex.Single;
 
 public class ObservableResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
@@ -35,8 +38,7 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
             ResponseConverterFunction responseConverter,
             ExceptionHandlerFunction exceptionHandler) {
         final Class<?> clazz = typeToClass(returnType);
-        if (clazz != null && ObservableSource.class.isAssignableFrom(clazz)) {
-            assert returnType instanceof ParameterizedType;
+        if (clazz != null && isSupportedClass(clazz)) {
             ensureNoMoreObservableSource(returnType, returnType);
             return new ObservableResponseConverterFunction(responseConverter, exceptionHandler);
         }
@@ -48,7 +50,7 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
             final Type[] args = ((ParameterizedType) type).getActualTypeArguments();
             for (Type arg : args) {
                 final Class<?> clazz = typeToClass(arg);
-                if (clazz != null && ObservableSource.class.isAssignableFrom(clazz)) {
+                if (clazz != null && isSupportedClass(clazz)) {
                     throw new IllegalStateException(
                             "Disallowed type exists in the generic type arguments of the return type '" +
                             returnType + "': " + clazz.getName());
@@ -56,6 +58,17 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
                 ensureNoMoreObservableSource(returnType, arg);
             }
         }
+    }
+
+    /**
+     * Returns {@code true} if the specified {@link Class} can be handled by the
+     * {@link ObservableResponseConverterFunction}.
+     */
+    private static boolean isSupportedClass(Class<?> clazz) {
+        return Observable.class.isAssignableFrom(clazz) ||
+               Maybe.class.isAssignableFrom(clazz) ||
+               Single.class.isAssignableFrom(clazz) ||
+               Completable.class.isAssignableFrom(clazz);
     }
 
     /**

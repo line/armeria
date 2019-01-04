@@ -27,6 +27,9 @@ dependencies {
     compile "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     compile 'io.netty:netty-tcnative-boringssl-static'
 
+    // Project Reactor
+    testCompile 'io.projectreactor:reactor-test'
+
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'
     testCompile 'org.reactivestreams:reactive-streams-tck'
