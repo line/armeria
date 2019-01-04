@@ -36,9 +36,9 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaTypeSet;
-import com.linecorp.armeria.common.logging.LoggerNamePrefix;
-import com.linecorp.armeria.common.logging.LoggerNameStrategy;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.server.logging.LoggerNamePrefix;
+import com.linecorp.armeria.server.logging.LoggerNameStrategy;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
@@ -99,7 +99,7 @@ public final class VirtualHost {
                 MediaTypeSet producibleMediaTypes, LoggerNameStrategy accessLoggerNameStrategy) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
                 (virtualHost, mapping, existingMapping) -> {},
-                LoggerNameStrategy.reverseDomain(LoggerNamePrefix.ACCESS));
+                accessLoggerNameStrategy);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,

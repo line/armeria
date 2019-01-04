@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.server.logging;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -22,9 +22,10 @@ import java.util.List;
 import com.linecorp.armeria.server.VirtualHost;
 
 /**
- * the strategy class for logger name.
+ * the default strategy class for logger name.
+ * it converts the host pattern to the reversed domain name with logger name prefix.
  */
-public class ReversedDomainStrategy implements LoggerNameStrategy {
+public class ReversedDomainLoggerNameStrategy implements LoggerNameStrategy {
 
     private final String loggerNamePrefix;
 
@@ -32,7 +33,7 @@ public class ReversedDomainStrategy implements LoggerNameStrategy {
      * reversed domain name strategy.
      * @param loggerNamePrefix logger name prefix
      */
-    public ReversedDomainStrategy(String loggerNamePrefix) {
+    public ReversedDomainLoggerNameStrategy(String loggerNamePrefix) {
         this.loggerNamePrefix = loggerNamePrefix;
     }
 
@@ -55,7 +56,7 @@ public class ReversedDomainStrategy implements LoggerNameStrategy {
         final StringBuilder name = new StringBuilder();
         Collections.reverse(elements);
         for (final String element : elements) {
-            if ("*".equals(element)) {
+            if (element.isEmpty() || "*".equals(element)) {
                 continue;
             }
             name.append(element);

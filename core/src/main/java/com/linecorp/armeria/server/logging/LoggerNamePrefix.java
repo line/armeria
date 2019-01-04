@@ -13,17 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.server.logging;
 
-import com.linecorp.armeria.server.VirtualHost;
+public final class LoggerNamePrefix {
+    public static final String ACCESS;
 
-/**
- * define the strategy for logger name.
- */
-public interface LoggerNameStrategy {
-    String name(VirtualHost virtualHost);
-
-    static LoggerNameStrategy reverseDomain(String prefix) {
-        return new ReversedDomainStrategy(prefix);
+    static {
+        ACCESS = "com.linecorp.armeria.logging.access";
     }
+    private LoggerNamePrefix(){}
 }

@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.logging.LoggerNamePrefix;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;

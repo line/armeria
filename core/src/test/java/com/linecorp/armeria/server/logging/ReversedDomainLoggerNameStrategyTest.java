@@ -14,17 +14,18 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-public class ReversedDomainStrategyTest {
+public class ReversedDomainLoggerNameStrategyTest {
     @Test
     public void testReverseName() {
-        assertThat(ReversedDomainStrategy.reverseName("*.example.com")).isEqualTo("com.example");
-        assertThat(ReversedDomainStrategy.reverseName("example.com")).isEqualTo("com.example");
-        assertThat(ReversedDomainStrategy.reverseName("a.b.c")).isEqualTo("c.b.a");
+        assertThat(ReversedDomainLoggerNameStrategy.reverseName("*.example.com")).isEqualTo("com.example");
+        assertThat(ReversedDomainLoggerNameStrategy.reverseName("example.com")).isEqualTo("com.example");
+        assertThat(ReversedDomainLoggerNameStrategy.reverseName("a.b.c")).isEqualTo("c.b.a");
+        assertThat(ReversedDomainLoggerNameStrategy.reverseName("a.b..c")).isEqualTo("c.b.a");
     }
 }

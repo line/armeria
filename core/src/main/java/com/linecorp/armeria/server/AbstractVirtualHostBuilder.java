@@ -44,14 +44,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.LoggerNamePrefix;
-import com.linecorp.armeria.common.logging.LoggerNameStrategy;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.logging.LoggerNamePrefix;
+import com.linecorp.armeria.server.logging.LoggerNameStrategy;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -535,7 +535,13 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * Sets the {@link LoggerNameStrategy} for this {@link VirtualHost}.
      */
     public B accessLogger(LoggerNameStrategy strategy) {
-        accessLoggerNameStrategy = requireNonNull(strategy, "accessLoggerNameStrategy");
+        this.accessLoggerNameStrategy = requireNonNull(strategy, "accessLoggerNameStrategy");
+        return self();
+    }
+
+    public B accessLogger(String loggerName) {
+        requireNonNull(loggerName, "loggerName");
+        this.accessLoggerNameStrategy = (host) -> loggerName;
         return self();
     }
 
