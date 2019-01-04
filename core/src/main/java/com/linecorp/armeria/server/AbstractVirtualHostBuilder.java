@@ -44,6 +44,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.LoggerNamePrefix;
+import com.linecorp.armeria.common.logging.LoggerNameStrategy;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
@@ -129,6 +131,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private SslContext sslContext;
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+    private LoggerNameStrategy accessLoggerNameStrategy;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -152,6 +155,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         }
 
         this.hostnamePattern = hostnamePattern;
+        this.accessLoggerNameStrategy = LoggerNameStrategy.reverseDomain(LoggerNamePrefix.ACCESS);
     }
 
     /**
@@ -167,6 +171,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
+        this.accessLoggerNameStrategy = LoggerNameStrategy.reverseDomain(LoggerNamePrefix.ACCESS);
     }
 
     /**
@@ -522,8 +527,16 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,
-                                new MediaTypeSet(producibleTypes));
+                                new MediaTypeSet(producibleTypes), accessLoggerNameStrategy);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
+    }
+
+    /**
+     * Sets the {@link LoggerNameStrategy} for this {@link VirtualHost}.
+     */
+    public B accessLogger(LoggerNameStrategy strategy) {
+        accessLoggerNameStrategy = requireNonNull(strategy, "accessLoggerNameStrategy");
+        return self();
     }
 
     @Override

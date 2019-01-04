@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.logging.LoggerNamePrefix;
+
 public class VirtualHostBuilderTest {
 
     @Test
@@ -55,6 +57,15 @@ public class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com").build();
         assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
+    }
+
+    @Test
+    public void defaultAccessLogNameStrategy() {
+        final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com").build();
+        assertThat(h.accessLogger().getName()).isEqualTo(LoggerNamePrefix.ACCESS + ".com.foo");
+
+        final VirtualHost h2 = new VirtualHostBuilder("foo.com", "foo.com").build();
+        assertThat(h2.accessLogger().getName()).isEqualTo(LoggerNamePrefix.ACCESS + ".com.foo");
     }
 
     @Test(expected = IllegalArgumentException.class)
