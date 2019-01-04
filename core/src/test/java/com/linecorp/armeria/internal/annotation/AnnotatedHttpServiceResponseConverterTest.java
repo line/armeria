@@ -355,11 +355,11 @@ public class AnnotatedHttpServiceResponseConverterTest {
         assertThat(msg.content().toStringAscii()).isNotEqualTo("¥");
 
         msg = aggregated(client.get("/byteArray"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.APPLICATION_BINARY);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/httpData"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.APPLICATION_BINARY);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/jsonNode"));
@@ -410,7 +410,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
         assertThat(msg.content().array()).isEqualTo("100".getBytes());
 
         msg = aggregated(client.get("/byteArray"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.APPLICATION_BINARY);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/httpData"));
