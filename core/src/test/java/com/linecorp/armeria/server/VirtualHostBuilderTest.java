@@ -19,8 +19,7 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
-
-import com.linecorp.armeria.server.logging.LoggerNamePrefix;
+import org.slf4j.LoggerFactory;
 
 public class VirtualHostBuilderTest {
 
@@ -62,22 +61,22 @@ public class VirtualHostBuilderTest {
     @Test
     public void defaultAccessLoggerNameStrategy() {
         final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com").build();
-        assertThat(h.accessLogger().getName()).isEqualTo(LoggerNamePrefix.ACCESS + ".com.foo");
+        assertThat(h.accessLogger().getName()).isEqualTo("com.linecorp.armeria.logging.access.com.foo");
 
         final VirtualHost h2 = new VirtualHostBuilder("foo.com", "foo.com").build();
-        assertThat(h2.accessLogger().getName()).isEqualTo(LoggerNamePrefix.ACCESS + ".com.foo");
+        assertThat(h2.accessLogger().getName()).isEqualTo("com.linecorp.armeria.logging.access.com.foo");
     }
 
     @Test
     public void accessLoggerCustomize() {
         final VirtualHost h2 = new VirtualHostBuilder("bar.foo.com","*.foo.com")
                 .accessLogger((host) -> {
-                    return "customize.test";
+                    return LoggerFactory.getLogger("customize.test");
                 }).build();
         assertThat(h2.accessLogger().getName()).isEqualTo("customize.test");
 
         final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com")
-                .accessLogger("com.foo.test").build();
+                .accessLogger(LoggerFactory.getLogger("com.foo.test")).build();
         assertThat(h.accessLogger().getName()).isEqualTo("com.foo.test");
     }
 

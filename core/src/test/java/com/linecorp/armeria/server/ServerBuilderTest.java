@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -63,5 +64,16 @@ public class ServerBuilderTest {
     public void numMaxConnections() {
         final ServerBuilder sb = new ServerBuilder();
         assertThat(sb.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
+    }
+
+    @Test
+    public void setAccessLoggerTest() {
+        final VirtualHost vhost = new ServerBuilder().accessLogger(
+                LoggerFactory.getLogger("com.example")).withDefaultVirtualHost().build();
+        assertThat(vhost.accessLogger().getName()).isEqualTo("com.example");
+        final VirtualHost vhost2 = new ServerBuilder().accessLogger(
+                (host) -> LoggerFactory.getLogger("com.example2")
+        ).withVirtualHost("*.example.com").build();
+        assertThat(vhost2.accessLogger().getName()).isEqualTo("com.example2");
     }
 }

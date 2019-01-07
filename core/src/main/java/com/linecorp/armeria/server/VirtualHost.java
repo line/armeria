@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
@@ -37,8 +36,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.server.logging.LoggerNamePrefix;
-import com.linecorp.armeria.server.logging.LoggerNameStrategy;
+import com.linecorp.armeria.server.logging.DefaultAccessLoggerStrategy;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
@@ -90,29 +88,27 @@ public final class VirtualHost {
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {},
-                LoggerNameStrategy.reverseDomain(LoggerNamePrefix.ACCESS));
+                (virtualHost, mapping, existingMapping) -> {}, DefaultAccessLoggerStrategy.get());
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes, LoggerNameStrategy accessLoggerNameStrategy) {
+                MediaTypeSet producibleMediaTypes, Function<VirtualHost, Logger> accessLoggerStrategy) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-                (virtualHost, mapping, existingMapping) -> {},
-                accessLoggerNameStrategy);
+                (virtualHost, mapping, existingMapping) -> {}, accessLoggerStrategy);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-                rejectionHandler, LoggerNameStrategy.reverseDomain(LoggerNamePrefix.ACCESS));
+                rejectionHandler, DefaultAccessLoggerStrategy.get());
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler,
-                LoggerNameStrategy accessLoggerNameStrategy) {
+                Function<VirtualHost, Logger> accessLoggerStrategy) {
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
@@ -135,11 +131,7 @@ public final class VirtualHost {
         services = Collections.unmodifiableList(servicesCopy);
         router = Routers.ofVirtualHost(this, services, rejectionHandler);
 
-        accessLogger = LoggerFactory.getLogger(accessLoggerNameStrategy.name(this));
-    }
-
-    public Logger accessLogger() {
-        return accessLogger;
+        accessLogger = accessLoggerStrategy.apply(this);
     }
 
     /**
@@ -273,6 +265,13 @@ public final class VirtualHost {
      */
     public MediaTypeSet producibleMediaTypes() {
         return producibleMediaTypes;
+    }
+
+    /**
+     * Returns the {@link Logger} for access of this virtual host.
+     */
+    public Logger accessLogger() {
+        return accessLogger;
     }
 
     /**

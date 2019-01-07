@@ -50,8 +50,7 @@ import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.logging.LoggerNamePrefix;
-import com.linecorp.armeria.server.logging.LoggerNameStrategy;
+import com.linecorp.armeria.server.logging.DefaultAccessLoggerStrategy;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -131,7 +130,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private SslContext sslContext;
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
-    private LoggerNameStrategy accessLoggerNameStrategy;
+    private Function<VirtualHost, Logger> accessLoggerStrategy = DefaultAccessLoggerStrategy.get();
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -155,7 +154,6 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         }
 
         this.hostnamePattern = hostnamePattern;
-        this.accessLoggerNameStrategy = LoggerNameStrategy.reverseDomain(LoggerNamePrefix.ACCESS);
     }
 
     /**
@@ -171,7 +169,6 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
-        this.accessLoggerNameStrategy = LoggerNameStrategy.reverseDomain(LoggerNamePrefix.ACCESS);
     }
 
     /**
@@ -527,21 +524,24 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,
-                                new MediaTypeSet(producibleTypes), accessLoggerNameStrategy);
+                                new MediaTypeSet(producibleTypes), accessLoggerStrategy);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
     /**
-     * Sets the {@link LoggerNameStrategy} for this {@link VirtualHost}.
+     * Sets the LoggerStrategy for this {@link VirtualHost}.
      */
-    public B accessLogger(LoggerNameStrategy strategy) {
-        this.accessLoggerNameStrategy = requireNonNull(strategy, "accessLoggerNameStrategy");
+    public B accessLogger(Function<VirtualHost, Logger> strategy) {
+        this.accessLoggerStrategy = requireNonNull(strategy, "strategy");
         return self();
     }
 
-    public B accessLogger(String loggerName) {
-        requireNonNull(loggerName, "loggerName");
-        this.accessLoggerNameStrategy = (host) -> loggerName;
+    /**
+     * Sets the logger name for this {@link VirtualHost}.
+     */
+    public B accessLogger(Logger logger) {
+        requireNonNull(logger, "logger");
+        this.accessLoggerStrategy = (host) -> logger;
         return self();
     }
 

@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
@@ -103,19 +102,12 @@ import com.linecorp.armeria.server.VirtualHost;
 final class AccessLogger {
     private static final Logger logger = LoggerFactory.getLogger(AccessLogger.class);
 
-    private static final Logger accessLogger =
-            LoggerFactory.getLogger(LoggerNamePrefix.ACCESS);
-
     /**
      * Writes an access log for the specified {@link RequestLog}.
      */
     static void write(List<AccessLogComponent> format, RequestLog log) {
-        final RequestContext context = log.context();
-        Logger logger = accessLogger;
-        if (context instanceof ServiceRequestContext) {
-            VirtualHost host = ((ServiceRequestContext)context).virtualHost();
-            logger = host.accessLogger();
-        }
+        final VirtualHost host = ((ServiceRequestContext)log.context()).virtualHost();
+        final Logger logger = host.accessLogger();
         if (!format.isEmpty()) {
             logger.info(format(format, log));
         }

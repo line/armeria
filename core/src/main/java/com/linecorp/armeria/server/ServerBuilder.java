@@ -47,6 +47,8 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
+import org.slf4j.Logger;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -62,6 +64,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.DefaultAccessLoggerStrategy;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -179,6 +182,8 @@ public final class ServerBuilder {
 
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+
+    private Function<VirtualHost, Logger> accessLoggerStrategy = DefaultAccessLoggerStrategy.get();
 
     /**
      * Adds an HTTP port that listens on all available network interfaces.
@@ -1070,6 +1075,7 @@ public final class ServerBuilder {
     public ChainedVirtualHostBuilder withVirtualHost(String hostnamePattern) {
         final ChainedVirtualHostBuilder virtualHostBuilder =
                 new ChainedVirtualHostBuilder(hostnamePattern, this);
+        virtualHostBuilder.accessLogger(accessLoggerStrategy);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1085,6 +1091,7 @@ public final class ServerBuilder {
     public ChainedVirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
         final ChainedVirtualHostBuilder virtualHostBuilder =
                 new ChainedVirtualHostBuilder(defaultHostname, hostnamePattern, this);
+        virtualHostBuilder.accessLogger(accessLoggerStrategy);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1162,6 +1169,28 @@ public final class ServerBuilder {
     public ServerBuilder clientAddressFilter(Predicate<InetAddress> clientAddressFilter) {
         this.clientAddressFilter = requireNonNull(clientAddressFilter, "clientAddressFilter");
         return this;
+    }
+
+    /**
+     * Sets the default access logger strategy for all of virtual hosts.
+     * This method doesn't overwrite the strategy of virtual hosts set already but that of default virtual host.
+     * You might need to use the method before using withVirtualHost method.
+     */
+    public ServerBuilder accessLogger(Function<VirtualHost, Logger> strategy) {
+        requireNonNull(strategy, "strategy");
+        accessLoggerStrategy = strategy;
+        defaultVirtualHostBuilder.accessLogger(strategy);
+        return this;
+    }
+
+    /**
+     * Sets the default access logger for all of virtual hosts.
+     * This method doesn't overwrite the strategy of virtual hosts set already but that of default virtual host.
+     * You might need to use the method before using withVirtualHost method.
+     */
+    public ServerBuilder accessLogger(Logger logger) {
+        requireNonNull(logger, "logger");
+        return accessLogger((host) -> logger);
     }
 
     /**

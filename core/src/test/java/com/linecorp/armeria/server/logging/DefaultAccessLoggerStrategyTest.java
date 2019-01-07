@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,13 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.logging;
 
-public final class LoggerNamePrefix {
-    public static final String ACCESS;
+import static org.assertj.core.api.Assertions.assertThat;
 
-    static {
-        ACCESS = "com.linecorp.armeria.logging.access";
+import org.junit.Test;
+
+public class DefaultAccessLoggerStrategyTest {
+
+    @Test
+    public void reverseNameTest() {
+        assertThat(DefaultAccessLoggerStrategy.reverseName("*.example.com")).isEqualTo("com.example");
+        assertThat(DefaultAccessLoggerStrategy.reverseName("example.com")).isEqualTo("com.example");
+        assertThat(DefaultAccessLoggerStrategy.reverseName("a.b.c")).isEqualTo("c.b.a");
+        assertThat(DefaultAccessLoggerStrategy.reverseName("a.b..c")).isEqualTo("c.b.a");
     }
-    private LoggerNamePrefix(){}
 }
