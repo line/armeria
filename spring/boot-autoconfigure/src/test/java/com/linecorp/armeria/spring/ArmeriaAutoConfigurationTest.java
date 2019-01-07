@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -63,8 +64,6 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService.hello_args;
-
-import io.netty.util.AsciiString;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
@@ -109,7 +108,7 @@ public class ArmeriaAutoConfigurationTest {
                     .setDecorators(ImmutableList.of(LoggingService.newDecorator()))
                     .setExampleRequests(Collections.singleton(new hello_args("nameVal")))
                     .setExampleHeaders(Collections.singleton(HttpHeaders.of(
-                            AsciiString.of("x-additional-header"), "headerVal")));
+                            HttpHeaderNames.of("x-additional-header"), "headerVal")));
         }
     }
 

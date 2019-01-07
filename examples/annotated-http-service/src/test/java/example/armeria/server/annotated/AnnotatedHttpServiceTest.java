@@ -18,8 +18,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
 
-import io.netty.util.AsciiString;
-
 public class AnnotatedHttpServiceTest {
 
     private static Server server;
@@ -72,9 +70,9 @@ public class AnnotatedHttpServiceTest {
                                                     .thatContains("MALE");
 
         final HttpHeaders headers = HttpHeaders.of(HttpMethod.GET, "/injection/header")
-                                               .add(AsciiString.of("x-armeria-text"), "armeria")
-                                               .add(AsciiString.of("x-armeria-sequence"), "1")
-                                               .add(AsciiString.of("x-armeria-sequence"), "2")
+                                               .add(HttpHeaderNames.of("x-armeria-text"), "armeria")
+                                               .add(HttpHeaderNames.of("x-armeria-sequence"), "1")
+                                               .add(HttpHeaderNames.of("x-armeria-sequence"), "2")
                                                .add(HttpHeaderNames.COOKIE, "a=1")
                                                .add(HttpHeaderNames.COOKIE, "b=1");
 

@@ -319,7 +319,7 @@ public final class ArmeriaHttpUtil {
         final HttpHeaders converted = new DefaultHttpHeaders(false, headers.size(), endOfStream);
         StringJoiner cookieJoiner = null;
         for (Entry<CharSequence, CharSequence> e : headers) {
-            final AsciiString name = AsciiString.of(e.getKey());
+            final AsciiString name = HttpHeaderNames.of(e.getKey());
             final CharSequence value = e.getValue();
 
             // Cookies must be concatenated into a single octet string.
@@ -409,7 +409,7 @@ public final class ArmeriaHttpUtil {
         StringJoiner cookieJoiner = null;
         while (iter.hasNext()) {
             final Entry<CharSequence, CharSequence> entry = iter.next();
-            final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
+            final AsciiString aName = HttpHeaderNames.of(entry.getKey()).toLowerCase();
             if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName) || connectionBlacklist.contains(aName)) {
                 continue;
             }
@@ -443,7 +443,7 @@ public final class ArmeriaHttpUtil {
         final CharSequenceMap result = new CharSequenceMap(arraySizeHint);
 
         while (valuesIter.hasNext()) {
-            final AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
+            final AsciiString lowerCased = HttpHeaderNames.of(valuesIter.next()).toLowerCase();
             try {
                 int index = lowerCased.forEachByte(FIND_COMMA);
                 if (index != -1) {

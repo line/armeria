@@ -22,13 +22,13 @@ import static org.mockito.Mockito.mock;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
 public class DefaultClientRequestContextTest {
@@ -57,12 +57,12 @@ public class DefaultClientRequestContextTest {
         assertThat(derivedCtx.maxResponseLength()).isEqualTo(originalCtx.maxResponseLength());
         assertThat(derivedCtx.responseTimeoutMillis()).isEqualTo(originalCtx.responseTimeoutMillis());
         assertThat(derivedCtx.writeTimeoutMillis()).isEqualTo(originalCtx.writeTimeoutMillis());
-        assertThat(derivedCtx.additionalRequestHeaders().get(AsciiString.of("my-header#1"))).isNull();
-        assertThat(derivedCtx.additionalRequestHeaders().get(AsciiString.of("my-header#2")))
+        assertThat(derivedCtx.additionalRequestHeaders().get(HttpHeaderNames.of("my-header#1"))).isNull();
+        assertThat(derivedCtx.additionalRequestHeaders().get(HttpHeaderNames.of("my-header#2")))
                 .isEqualTo("value#2");
-        assertThat(derivedCtx.additionalRequestHeaders().get(AsciiString.of("my-header#3")))
+        assertThat(derivedCtx.additionalRequestHeaders().get(HttpHeaderNames.of("my-header#3")))
                 .isEqualTo("value#3");
-        assertThat(derivedCtx.additionalRequestHeaders().get(AsciiString.of("my-header#4")))
+        assertThat(derivedCtx.additionalRequestHeaders().get(HttpHeaderNames.of("my-header#4")))
                 .isEqualTo("value#4");
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
@@ -79,15 +79,15 @@ public class DefaultClientRequestContextTest {
 
     private static void setAdditionalHeaders(ClientRequestContext originalCtx) {
         final DefaultHttpHeaders headers1 = new DefaultHttpHeaders();
-        headers1.set(AsciiString.of("my-header#1"), "value#1");
+        headers1.set(HttpHeaderNames.of("my-header#1"), "value#1");
         originalCtx.setAdditionalRequestHeaders(headers1);
-        originalCtx.setAdditionalRequestHeader(AsciiString.of("my-header#2"), "value#2");
+        originalCtx.setAdditionalRequestHeader(HttpHeaderNames.of("my-header#2"), "value#2");
 
         final DefaultHttpHeaders headers2 = new DefaultHttpHeaders();
-        headers2.set(AsciiString.of("my-header#3"), "value#3");
+        headers2.set(HttpHeaderNames.of("my-header#3"), "value#3");
         originalCtx.addAdditionalRequestHeaders(headers2);
-        originalCtx.addAdditionalRequestHeader(AsciiString.of("my-header#4"), "value#4");
+        originalCtx.addAdditionalRequestHeader(HttpHeaderNames.of("my-header#4"), "value#4");
         // Remove the first one.
-        originalCtx.removeAdditionalRequestHeader(AsciiString.of("my-header#1"));
+        originalCtx.removeAdditionalRequestHeader(HttpHeaderNames.of("my-header#1"));
     }
 }

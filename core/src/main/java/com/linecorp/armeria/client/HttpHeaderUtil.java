@@ -24,7 +24,7 @@ final class HttpHeaderUtil {
 
     private static final String CLIENT_ARTIFACT_ID = "armeria";
 
-    static final AsciiString USER_AGENT = AsciiString.of(createUserAgentName());
+    static final AsciiString USER_AGENT = AsciiString.cached(createUserAgentName());
 
     static String hostHeader(String host, int port, int defaultPort) {
         if (port == defaultPort) {

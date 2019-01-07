@@ -49,6 +49,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -139,7 +140,7 @@ public class ThriftOverHttpClientTest {
     private static final HeaderService.AsyncIface headerServiceHandler =
             (name, resultHandler) -> {
                 final HttpRequest req = RequestContext.current().request();
-                resultHandler.onComplete(req.headers().get(AsciiString.of(name), ""));
+                resultHandler.onComplete(req.headers().get(HttpHeaderNames.of(name), ""));
             };
 
     private enum Handlers {
@@ -512,10 +513,12 @@ public class ThriftOverHttpClientTest {
         assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
 
         final HeaderService.Iface clientA =
-                Clients.newDerivedClient(client, newHttpHeaderOption(AsciiString.of(AUTHORIZATION), TOKEN_A));
+                Clients.newDerivedClient(client,
+                                         newHttpHeaderOption(HttpHeaderNames.of(AUTHORIZATION), TOKEN_A));
 
         final HeaderService.Iface clientB =
-                Clients.newDerivedClient(client, newHttpHeaderOption(AsciiString.of(AUTHORIZATION), TOKEN_B));
+                Clients.newDerivedClient(client,
+                                         newHttpHeaderOption(HttpHeaderNames.of(AUTHORIZATION), TOKEN_B));
 
         assertThat(clientA.header(AUTHORIZATION)).isEqualTo(TOKEN_A);
         assertThat(clientB.header(AUTHORIZATION)).isEqualTo(TOKEN_B);
