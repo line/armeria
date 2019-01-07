@@ -202,7 +202,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                             res.close();
 
-                            if (needsToDisconnect()) {
+                            if (needsToDisconnectNow()) {
                                 ctx.close();
                             }
                         }

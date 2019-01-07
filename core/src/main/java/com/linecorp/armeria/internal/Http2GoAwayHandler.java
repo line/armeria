@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal;
 
 import java.nio.charset.StandardCharsets;
@@ -35,6 +34,13 @@ public final class Http2GoAwayHandler {
 
     private boolean goAwaySent;
     private long goAwayReceived; // -1 if not received, errorCode if received.
+
+    /**
+     * Returns {@code true} if the connection has sent a GOAWAY frame.
+     */
+    public boolean sentGoAway() {
+        return goAwaySent;
+    }
 
     /**
      * Returns {@code true} if the connection has received a GOAWAY frame.
