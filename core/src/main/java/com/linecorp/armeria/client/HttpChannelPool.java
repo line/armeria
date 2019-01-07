@@ -591,10 +591,10 @@ final class HttpChannelPool implements AutoCloseable {
         @Override
         public void release() {
             if (isHealthy(this)) {
-                // Channel turns out to be healthy, offering and releasing it.
+                // Channel turns out to be healthy. Add it back to the pool.
                 addToPool(protocol(), key, this);
             } else {
-                // Channel not healthy, just releasing it.
+                // Channel not healthy. Do not add it back to the pool.
             }
         }
     }
