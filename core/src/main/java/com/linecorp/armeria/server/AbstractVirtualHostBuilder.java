@@ -529,7 +529,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Sets the LoggerStrategy for this {@link VirtualHost}.
+     * Sets the access logger strategy for this {@link VirtualHost}.
      */
     public B accessLogger(Function<VirtualHost, Logger> strategy) {
         this.accessLoggerStrategy = requireNonNull(strategy, "strategy");
