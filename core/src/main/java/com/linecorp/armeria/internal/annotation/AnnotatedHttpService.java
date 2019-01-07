@@ -449,7 +449,7 @@ public class AnnotatedHttpService implements HttpService {
     }
 
     /**
-     * A {@link ExceptionHandlerFunction} which wraps a list of {@link ExceptionHandlerFunction}s.
+     * An {@link ExceptionHandlerFunction} which wraps a list of {@link ExceptionHandlerFunction}s.
      */
     private static final class CompositeExceptionHandlerFunction implements ExceptionHandlerFunction {
 

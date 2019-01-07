@@ -47,12 +47,11 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                                          HttpHeaders trailingHeaders) {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
-            final HttpHeaders responseHeaders =
-                    headers.isImmutable() ? HttpHeaders.copyOf(headers)
-                                                       .contentType(MediaType.OCTET_STREAM)
-                                          : headers;
+            final HttpHeaders responseHeaders = headers.isImmutable() ? HttpHeaders.copyOf(headers)
+                                                                      : headers;
             final HttpData responseContent = HttpData.of(content);
-            return HttpResponse.of(responseHeaders, responseContent, trailingHeaders);
+            return HttpResponse.of(responseHeaders.contentType(MediaType.OCTET_STREAM),
+                                   responseContent, trailingHeaders);
         }
 
         // A user expects 'binary'.

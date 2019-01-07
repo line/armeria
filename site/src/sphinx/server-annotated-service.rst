@@ -104,9 +104,9 @@ a path and use the HTTP method annotations without a path to map multiple HTTP m
         public HttpResponse hello() { ... }
     }
 
-Every service method assumes that they returns an HTTP response with ``200 Ok`` or ``204 No Content`` status
+Every service method assumes that it returns an HTTP response with ``200 OK`` or ``204 No Content`` status
 according to its return type. If the return type is ``void`` or ``Void``, ``204 No Content`` would be applied.
-``200 Ok`` would be applied for the other types. If you want to return an alternative status code for a method,
+``200 OK`` would be applied for the other types. If you want to return an alternative status code for a method,
 you can use :api:`@StatusCode` annotation as follows.
 
 .. code-block:: java
@@ -811,7 +811,6 @@ more response types which can be used in the annotated service.
                           String.format("<https://example.com/users?start=%s>; rel=\"next\"", start + 10));
               return HttpResult.of(headers, users);
           }
-
 
 - Reactive Streams Publisher_
 

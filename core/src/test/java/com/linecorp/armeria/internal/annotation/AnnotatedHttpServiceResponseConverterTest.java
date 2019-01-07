@@ -198,8 +198,8 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
                 @Get("/expect-ok")
                 public Object expectOk() {
-                    // Will send '200 Ok' because there is no @StatusCode annotation, that means
-                    // '200 Ok' will be used by default because the return type is not a 'void' or 'Void'.
+                    // Will send '200 OK' because there is no @StatusCode annotation, that means
+                    // '200 OK' will be used by default because the return type is not a 'void' or 'Void'.
                     return null;
                 }
 
