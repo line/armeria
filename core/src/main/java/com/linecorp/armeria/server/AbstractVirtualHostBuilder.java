@@ -528,7 +528,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Sets the access logger mapper for this {@link VirtualHost}.
+     * Sets the access logger mapper of this {@link VirtualHost}.
      * When {@link #build()} is called, this {@link VirtualHost} gets {@link Logger}
      * via the {@code mapper} for writing access logs.
      */
@@ -538,7 +538,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Sets the {@link Logger} which is used for writing access logs for this {@link VirtualHost}.
+     * Sets the {@link Logger} of this {@link VirtualHost}, which is used for writing access logs.
      */
     public B accessLogger(Logger logger) {
         requireNonNull(logger, "logger");
@@ -547,7 +547,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Sets the {@link Logger} named {@code loggerName} for this {@link VirtualHost}
+     * Sets the {@link Logger} named {@code loggerName} of this {@link VirtualHost},
      * which is used for writing access logs.
      */
     public B accessLogger(String loggerName) {
