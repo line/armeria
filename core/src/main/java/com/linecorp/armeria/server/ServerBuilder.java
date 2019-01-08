@@ -1196,7 +1196,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the default access logger name for all {@link VirtualHost}.
+     * Sets the default access logger name for all {@link VirtualHost}s.
      * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
      * or {@link VirtualHost#accessLogger(Logger)},
      * all of {@link VirtualHost} will have an access {@link Logger} named the {@code loggerName}
@@ -1209,7 +1209,7 @@ public final class ServerBuilder {
 
     /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
-     * @exception IllegalStateException if the access logger mapper set by a user gives {@code null}
+     * @exception IllegalStateException if {@link #accessLoggerMapper} gives {@code null}
      */
     public Server build() {
         final VirtualHost defaultVirtualHost;

@@ -244,6 +244,14 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the {@link Logger} which is used for writing access logs of this virtual host.
+     */
+    @Nullable
+    public Logger accessLogger() {
+        return accessLogger;
+    }
+
+    /**
      * Returns the default hostname of this virtual host.
      */
     public String defaultHostname() {
@@ -278,14 +286,6 @@ public final class VirtualHost {
      */
     public MediaTypeSet producibleMediaTypes() {
         return producibleMediaTypes;
-    }
-
-    /**
-     * Returns the {@link Logger} which is used for writing access logs of this virtual host.
-     */
-    @Nullable
-    public Logger accessLogger() {
-        return accessLogger;
     }
 
     /**
