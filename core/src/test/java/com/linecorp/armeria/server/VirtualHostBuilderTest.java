@@ -59,15 +59,6 @@ public class VirtualHostBuilderTest {
     }
 
     @Test
-    public void defaultAccessLoggerNameStrategy() {
-        final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com").build();
-        assertThat(h.accessLogger().getName()).isEqualTo("com.linecorp.armeria.logging.access.com.foo");
-
-        final VirtualHost h2 = new VirtualHostBuilder("foo.com", "foo.com").build();
-        assertThat(h2.accessLogger().getName()).isEqualTo("com.linecorp.armeria.logging.access.com.foo");
-    }
-
-    @Test
     public void accessLoggerCustomize() {
         final VirtualHost h2 = new VirtualHostBuilder("bar.foo.com", "*.foo.com")
                 .accessLogger((host) -> LoggerFactory.getLogger("customize.test")).build();
