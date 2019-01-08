@@ -1178,8 +1178,7 @@ public final class ServerBuilder {
      * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
-        requireNonNull(mapper, "mapper");
-        accessLoggerMapper = mapper;
+        accessLoggerMapper = requireNonNull(mapper, "mapper");
         return this;
     }
 
@@ -1209,7 +1208,6 @@ public final class ServerBuilder {
 
     /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
-     * @exception IllegalStateException if {@link #accessLoggerMapper} gives {@code null}
      */
     public Server build() {
         final VirtualHost defaultVirtualHost;
@@ -1236,7 +1234,7 @@ public final class ServerBuilder {
                 final Logger logger = accessLoggerMapper.apply(vh);
                 if (logger == null) {
                     throw new IllegalStateException(
-                            String.format("Access Logger for the virtual host (%s) is null",
+                            String.format("accessLoggerMapper.apply() has returned null for virtual hosts: %s.",
                                           vh.hostnamePattern()));
                 }
                 vh.accessLogger(logger);
@@ -1245,7 +1243,8 @@ public final class ServerBuilder {
         if (defaultVirtualHost.accessLogger() == null) {
             final Logger logger = accessLoggerMapper.apply(defaultVirtualHost);
             if (logger == null) {
-                throw new IllegalStateException("Access Logger for default virtual host is null");
+                throw new IllegalStateException(
+                        "accessLoggerMapper.apply() has returned null for the default virtual host.");
             }
             defaultVirtualHost.accessLogger(logger);
         }
@@ -1365,9 +1364,9 @@ public final class ServerBuilder {
         return lastSslContext;
     }
 
-    private static String defaultAccessLoggerName(String hostPattern) {
-        requireNonNull(hostPattern, "hostPattern");
-        final String[] elements = hostPattern.split("\\.");
+    private static String defaultAccessLoggerName(String hostnamePattern) {
+        requireNonNull(hostnamePattern, "hostnamePattern");
+        final String[] elements = hostnamePattern.split("\\.");
         final StringBuilder name = new StringBuilder("com.linecorp.armeria.logging.access");
         for (int i = elements.length - 1; i >= 0; i--) {
             final String element = elements[i];

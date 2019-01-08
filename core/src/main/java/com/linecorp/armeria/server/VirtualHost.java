@@ -93,21 +93,23 @@ public final class VirtualHost {
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {}, host -> null);
+             (virtualHost, mapping, existingMapping) -> {
+             }, null);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, Function<VirtualHost, Logger> accessLoggerMapper) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-                (virtualHost, mapping, existingMapping) -> {}, accessLoggerMapper);
+             (virtualHost, mapping, existingMapping) -> {
+             }, accessLoggerMapper);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             rejectionHandler, host -> null);
+             rejectionHandler, null);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
@@ -135,8 +137,9 @@ public final class VirtualHost {
 
         services = Collections.unmodifiableList(servicesCopy);
         router = Routers.ofVirtualHost(this, services, rejectionHandler);
-
-        accessLogger = accessLoggerMapper.apply(this);
+        if (accessLoggerMapper != null) {
+            accessLogger = accessLoggerMapper.apply(this);
+        }
     }
 
     /**
@@ -239,8 +242,7 @@ public final class VirtualHost {
      * Sets the {@link Logger} which is used for writing access logs of this virtual host.
      */
     void accessLogger(Logger logger) {
-        requireNonNull(logger, "logger");
-        accessLogger = logger;
+        accessLogger = requireNonNull(logger, "logger");
     }
 
     /**
@@ -306,7 +308,7 @@ public final class VirtualHost {
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
-                                            Service<HttpRequest, HttpResponse>> decorator) {
+            Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {
             return this;
         }

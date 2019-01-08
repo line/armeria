@@ -74,10 +74,8 @@ public class ServerBuilderTest {
     @Test
     public void setAccessLoggerTest1() {
         final Server sb = new ServerBuilder()
-                .http(0)
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .accessLogger(
-                        LoggerFactory.getLogger("default"))
+                .accessLogger(LoggerFactory.getLogger("default"))
                 .withVirtualHost("*.example.com")
                 .and()
                 .withVirtualHost("*.example2.com")
@@ -109,10 +107,13 @@ public class ServerBuilderTest {
                 .isEqualTo("com.ex5");
     }
 
+    /**
+     * Makes sure that {@link VirtualHost}s can have a proper {@link Logger} used for writing access
+     * when a user specify the default access logger via {@link ServerBuilder#accessLogger(String)}.
+     */
     @Test
     public void setAccessLoggerTest2() {
         final Server sb = new ServerBuilder()
-                .http(0)
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger("test.default")
                 .withVirtualHost("*.example.com")
@@ -125,13 +126,12 @@ public class ServerBuilderTest {
     }
 
     /**
-     * Makes sure that {@link VirtualHost} can have a proper {@link Logger} used for writing access
+     * Makes sure that {@link VirtualHost}s can have a proper {@link Logger} used for writing access
      * when a user doesn't specify it.
      */
     @Test
     public void defaultAccessLoggerTest() {
         final Server sb = new ServerBuilder()
-                .http(0)
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .withVirtualHost("*.example.com")
                 .and()
@@ -151,13 +151,10 @@ public class ServerBuilderTest {
     @Test
     public void buildIllegalExceptionTest() {
         final ServerBuilder sb = new ServerBuilder()
-                .http(0)
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger(host -> null);
-        assertThatThrownBy(sb::build)
-                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(sb::build).isInstanceOf(IllegalStateException.class);
         final ServerBuilder sb2 = new ServerBuilder()
-                .http(0)
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger(host -> {
                     if (host.hostnamePattern().equals("*.example.com")) {
@@ -166,7 +163,6 @@ public class ServerBuilderTest {
                     return LoggerFactory.getLogger("default");
                 })
                 .withVirtualHost("*.example.com").and();
-        assertThatThrownBy(sb2::build)
-                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(sb2::build).isInstanceOf(IllegalStateException.class);
     }
 }

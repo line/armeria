@@ -129,7 +129,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private SslContext sslContext;
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
-    private Function<VirtualHost, Logger> accessLoggerMapper = host -> null;
+    @Nullable
+    private Function<VirtualHost, Logger> accessLoggerMapper;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
