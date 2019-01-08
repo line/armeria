@@ -1,0 +1,25 @@
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
+    }
+}
+
+apply plugin: 'org.springframework.boot'
+
+springBoot {
+    mainClassName = 'example.springframework.boot.armeria.Main'
+}
+
+dependencies {
+    compile project(':spring:boot-starter')
+    compile 'org.hibernate.validator:hibernate-validator'
+
+    compileOnly 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    testCompile 'junit:junit'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+}
