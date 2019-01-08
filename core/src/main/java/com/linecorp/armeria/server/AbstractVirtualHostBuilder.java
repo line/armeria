@@ -50,7 +50,6 @@ import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.logging.DefaultAccessLoggerStrategy;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -130,7 +129,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private SslContext sslContext;
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
-    private Function<VirtualHost, Logger> accessLoggerStrategy = DefaultAccessLoggerStrategy.get();
+    @Nullable
+    private Function<VirtualHost, Logger> accessLoggerMapper = (host) -> null;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -524,24 +524,35 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,
-                                new MediaTypeSet(producibleTypes), accessLoggerStrategy);
+                                new MediaTypeSet(producibleTypes), accessLoggerMapper);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
     /**
-     * Sets the access logger strategy for this {@link VirtualHost}.
+     * Sets the access logger mapper for this {@link VirtualHost}.
+     * When {@link #build} is called, this {@link VirtualHost} gets {@link Logger}
+     * for access via the {@code mapper}.
      */
-    public B accessLogger(Function<VirtualHost, Logger> strategy) {
-        this.accessLoggerStrategy = requireNonNull(strategy, "strategy");
+    public B accessLogger(Function<VirtualHost, Logger> mapper) {
+        accessLoggerMapper = requireNonNull(mapper, "mapper");
         return self();
     }
 
     /**
-     * Sets the logger name for this {@link VirtualHost}.
+     * Sets the {@link Logger} for this {@link VirtualHost}.
      */
     public B accessLogger(Logger logger) {
         requireNonNull(logger, "logger");
-        this.accessLoggerStrategy = (host) -> logger;
+        accessLoggerMapper = (host) -> logger;
+        return self();
+    }
+
+    /**
+     * Sets the {@link Logger} named loggerName for this {@link VirtualHost}.
+     */
+    public B accessLogger(String loggerName) {
+        requireNonNull(loggerName, "loggerName");
+        accessLoggerMapper = (host) -> LoggerFactory.getLogger(loggerName);
         return self();
     }
 

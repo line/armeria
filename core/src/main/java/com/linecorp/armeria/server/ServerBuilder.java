@@ -48,6 +48,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -64,7 +65,6 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
-import com.linecorp.armeria.server.logging.DefaultAccessLoggerStrategy;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -183,7 +183,8 @@ public final class ServerBuilder {
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
 
-    private Function<VirtualHost, Logger> accessLoggerStrategy = DefaultAccessLoggerStrategy.get();
+    private Function<VirtualHost, Logger> accessLoggerMapper = (host) -> LoggerFactory.getLogger(
+            reverseName(host.hostnamePattern()));
 
     /**
      * Adds an HTTP port that listens on all available network interfaces.
@@ -1075,7 +1076,6 @@ public final class ServerBuilder {
     public ChainedVirtualHostBuilder withVirtualHost(String hostnamePattern) {
         final ChainedVirtualHostBuilder virtualHostBuilder =
                 new ChainedVirtualHostBuilder(hostnamePattern, this);
-        virtualHostBuilder.accessLogger(accessLoggerStrategy);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1091,7 +1091,6 @@ public final class ServerBuilder {
     public ChainedVirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
         final ChainedVirtualHostBuilder virtualHostBuilder =
                 new ChainedVirtualHostBuilder(defaultHostname, hostnamePattern, this);
-        virtualHostBuilder.accessLogger(accessLoggerStrategy);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1172,25 +1171,40 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the default access logger strategy for all of virtual hosts.
-     * This method doesn't overwrite the strategy of virtual hosts set already but that of default virtual host.
-     * You might need to use the method before using withVirtualHost method.
+     * Sets the default access logger mapper for all of virtual hosts.
+     * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
+     *  or {@link VirtualHost#accessLogger(Logger)},
+     * all of {@link VirtualHost} will have an access logger set by {@code mapper}
+     * when {@link ServerBuilder#build} is called
      */
-    public ServerBuilder accessLogger(Function<VirtualHost, Logger> strategy) {
-        requireNonNull(strategy, "strategy");
-        accessLoggerStrategy = strategy;
-        defaultVirtualHostBuilder.accessLogger(strategy);
+    public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
+        requireNonNull(mapper, "mapper");
+        accessLoggerMapper = mapper;
         return this;
     }
 
     /**
-     * Sets the default access logger for all of virtual hosts.
-     * This method doesn't overwrite the strategy of virtual hosts set already but that of default virtual host.
-     * You might need to use the method before using withVirtualHost method.
+     * Sets the default access {@link Logger} for all of virtual hosts.
+     * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
+     *  or {@link VirtualHost#accessLogger(Logger)},
+     * all of {@link VirtualHost} will have the same access {@link Logger}
+     * when {@link ServerBuilder#build} is called
      */
     public ServerBuilder accessLogger(Logger logger) {
         requireNonNull(logger, "logger");
         return accessLogger((host) -> logger);
+    }
+
+    /**
+     * Sets the default access logger name for all of virtual hosts.
+     * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
+     *  or {@link VirtualHost#accessLogger(Logger)},
+     * all of {@link VirtualHost} will have an access {@link Logger} named the loggerName
+     * when {@link ServerBuilder#build} is called
+     */
+    public ServerBuilder accessLogger(String loggerName) {
+        requireNonNull(loggerName, "loggerName");
+        return accessLogger(LoggerFactory.getLogger(loggerName));
     }
 
     /**
@@ -1213,6 +1227,16 @@ public final class ServerBuilder {
                                             .collect(Collectors.toList());
         } else {
             virtualHosts = this.virtualHosts;
+        }
+
+        // Gets the access logger for an each virtual host.
+        virtualHosts.forEach((vh) -> {
+            if (vh.accessLogger() == null) {
+                vh.accessLogger(accessLoggerMapper.apply(vh));
+            }
+        });
+        if (defaultVirtualHost.accessLogger() == null) {
+            defaultVirtualHost.accessLogger(accessLoggerMapper.apply(defaultVirtualHost));
         }
 
         // Pre-populate the domain name mapping for later matching.
@@ -1311,7 +1335,8 @@ public final class ServerBuilder {
                 h.defaultHostname(), "*", sslCtx,
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
-                 .collect(Collectors.toList()), h.producibleMediaTypes(), rejectedPathMappingHandler);
+                 .collect(Collectors.toList()), h.producibleMediaTypes(), rejectedPathMappingHandler,
+                (host) -> h.accessLogger());
     }
 
     @Nullable
@@ -1327,6 +1352,21 @@ public final class ServerBuilder {
             lastSslContext = defaultVirtualHost.sslContext();
         }
         return lastSslContext;
+    }
+
+    private static String reverseName(String hostPattern) {
+        requireNonNull(hostPattern, "hostPattern");
+        final String[] elements = hostPattern.split("\\.");
+        final StringBuilder name = new StringBuilder("com.linecorp.armeria.logging.access");
+        for (int i = elements.length - 1; i >= 0; i--) {
+            final String element = elements[i];
+            if (element.isEmpty() || "*".equals(element)) {
+                continue;
+            }
+            name.append(".");
+            name.append(element);
+        }
+        return name.toString();
     }
 
     @Override

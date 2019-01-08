@@ -67,13 +67,61 @@ public class ServerBuilderTest {
     }
 
     @Test
-    public void setAccessLoggerTest() {
-        final VirtualHost vhost = new ServerBuilder().accessLogger(
-                LoggerFactory.getLogger("com.example")).withDefaultVirtualHost().build();
-        assertThat(vhost.accessLogger().getName()).isEqualTo("com.example");
-        final VirtualHost vhost2 = new ServerBuilder().accessLogger(
-                (host) -> LoggerFactory.getLogger("com.example2")
-        ).withVirtualHost("*.example.com").build();
-        assertThat(vhost2.accessLogger().getName()).isEqualTo("com.example2");
+    public void setAccessLoggerTest1() {
+        final Server sb = new ServerBuilder()
+                .http(0)
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .accessLogger(
+                LoggerFactory.getLogger("default"))
+                .withVirtualHost("*.example.com")
+                .and()
+                .withVirtualHost("*.example2.com")
+                .accessLogger("com.ex2")
+                .and()
+                .withVirtualHost("*.example3.com")
+                .accessLogger((host) -> LoggerFactory.getLogger("com.ex3"))
+                .and().build();
+        assertThat(sb.config().defaultVirtualHost()).isNotNull();
+        assertThat(sb.config().defaultVirtualHost().accessLogger().getName()).isEqualTo("default");
+
+        assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
+                .isEqualTo("default");
+
+        assertThat(sb.config().findVirtualHost("*.example2.com").accessLogger().getName())
+                .isEqualTo("com.ex2");
+
+        assertThat(sb.config().findVirtualHost("*.example3.com").accessLogger().getName())
+                .isEqualTo("com.ex3");
+    }
+
+    @Test
+    public void setAccessLoggerTest2() {
+        final Server sb = new ServerBuilder()
+                .http(0)
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .accessLogger("test.default")
+                .withVirtualHost("*.example.com")
+                .and()
+                .build();
+        assertThat(sb.config().defaultVirtualHost().accessLogger().getName())
+                .isEqualTo("test.default");
+        assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
+                .isEqualTo("test.default");
+    }
+
+    @Test
+    public void defaultAccessLoggerTest() {
+        final Server sb = new ServerBuilder()
+                .http(0)
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .withVirtualHost("*.example.com")
+                .and()
+                .withVirtualHost("*.example2.com")
+                .and()
+                .build();
+        assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
+                .isEqualTo("com.linecorp.armeria.logging.access.com.example");
+        assertThat(sb.config().findVirtualHost("*.example2.com").accessLogger().getName())
+                .isEqualTo("com.linecorp.armeria.logging.access.com.example2");
     }
 }
