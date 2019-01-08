@@ -1,4 +1,4 @@
-package example.springframework.boot.webflux;
+package example.springframework.boot.minimal;
 
 import static java.util.Objects.requireNonNull;
 
