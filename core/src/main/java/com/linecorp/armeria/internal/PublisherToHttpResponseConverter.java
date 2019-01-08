@@ -27,6 +27,7 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -43,6 +44,8 @@ public class PublisherToHttpResponseConverter implements Subscriber<Object> {
 
     private final ServiceRequestContext ctx;
     private final HttpRequest req;
+    private final HttpHeaders headers;
+    private final HttpHeaders trailingHeaders;
     private final CompletableFuture<HttpResponse> future;
     private final ResponseConverterFunction responseConverter;
     private final ExceptionHandlerFunction exceptionHandler;
@@ -57,6 +60,9 @@ public class PublisherToHttpResponseConverter implements Subscriber<Object> {
      *
      * @param ctx the {@link ServiceRequestContext} of the {@code req}
      * @param req the {@link HttpRequest} received by the server
+     * @param headers the {@link HttpHeaders} which would be used to create an {@link HttpResponse}
+     * @param trailingHeaders the trailing {@link HttpHeaders} which would be used to create an
+     *                        {@link HttpResponse}
      * @param future the {@link CompletableFuture} which waits for an {@link HttpResponse}
      * @param responseConverter the {@link ResponseConverterFunction} which is used to convert the
      *                          collected objects into an {@link HttpResponse} when the {@link #onComplete()}
@@ -66,11 +72,14 @@ public class PublisherToHttpResponseConverter implements Subscriber<Object> {
      *                         {@link #onError(Throwable)} is invoked
      */
     public PublisherToHttpResponseConverter(ServiceRequestContext ctx, HttpRequest req,
+                                            HttpHeaders headers, HttpHeaders trailingHeaders,
                                             CompletableFuture<HttpResponse> future,
                                             ResponseConverterFunction responseConverter,
                                             ExceptionHandlerFunction exceptionHandler) {
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = requireNonNull(req, "req");
+        this.headers = requireNonNull(headers, "headers");
+        this.trailingHeaders = requireNonNull(trailingHeaders, "trailingHeaders");
         this.future = requireNonNull(future, "future");
         this.responseConverter = requireNonNull(responseConverter, "responseConverter");
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
@@ -111,7 +120,7 @@ public class PublisherToHttpResponseConverter implements Subscriber<Object> {
         firstElement = null;
 
         try {
-            future.complete(responseConverter.convertResponse(ctx, obj));
+            future.complete(responseConverter.convertResponse(ctx, headers, obj, trailingHeaders));
         } catch (Exception e) {
             onError(e);
         }

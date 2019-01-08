@@ -17,7 +17,6 @@ package com.linecorp.armeria.internal.annotation;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.lang.annotation.ElementType;
@@ -27,6 +26,9 @@ import java.lang.annotation.Target;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -43,16 +45,24 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.HttpResult;
+import com.linecorp.armeria.server.annotation.NullToNoContentResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesText;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.testing.server.ServerRule;
+
+import io.netty.util.AsciiString;
 
 public class AnnotatedHttpServiceResponseConverterTest {
 
@@ -130,16 +140,19 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
                 @Get("/defer")
                 public Publisher<String> defer() {
-                    return s -> s.onSubscribe(new Subscription() {
-                        @Override
-                        public void request(long n) {
-                            s.onNext("a");
-                            s.onError(new IllegalArgumentException("Bad request!"));
-                        }
+                    return exceptionRaisingPublisher();
+                }
+            });
 
-                        @Override
-                        public void cancel() {}
-                    });
+            sb.annotatedService("/publish/http-result", new Object() {
+                @Get("/jsonNode")
+                public HttpResult<Publisher<JsonNode>> jsonNode() throws IOException {
+                    return HttpResult.of(new ObjectPublisher<>(mapper.readTree("{\"a\":\"¥\"}")));
+                }
+
+                @Get("/defer")
+                public HttpResult<Publisher<String>> defer() {
+                    return HttpResult.of(exceptionRaisingPublisher());
                 }
             });
 
@@ -167,6 +180,124 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 public Map<String, String> jsonNode() throws IOException {
                     return ImmutableMap.of("a", "¥");
                 }
+            });
+
+            sb.annotatedService("/custom-response", new Object() {
+                @Get("/expect-specified-status")
+                @StatusCode(202)
+                public Void expectSpecifiedStatus() {
+                    // Will send '202 Accepted' because a user specified it with @StatusCode annotation.
+                    return null;
+                }
+
+                @Get("/expect-no-content")
+                public void expectNoContent() {
+                    // Will send '204 No Content' because the return type is 'void'.
+                    return;
+                }
+
+                @Get("/expect-ok")
+                public Object expectOk() {
+                    // Will send '200 OK' because there is no @StatusCode annotation, that means
+                    // '200 OK' will be used by default because the return type is not a 'void' or 'Void'.
+                    return null;
+                }
+
+                @Get("/expect-specified-no-content")
+                @StatusCode(204)
+                public HttpResult<Object> expectSpecifiedNoContent() {
+                    // Will send '204 No Content' because it is specified with @StatusCode annotation.
+                    return null;
+                }
+
+                @Get("/expect-not-modified")
+                @StatusCode(204)
+                public HttpResult<Object> expectNotModified() {
+                    // Will send '304 Not Modified' because HttpResult overrides the @StatusCode
+                    // annotation.
+                    return HttpResult.of(HttpStatus.NOT_MODIFIED);
+                }
+
+                @Get("/expect-unauthorized")
+                public HttpResult<HttpResponse> expectUnauthorized() {
+                    // Will send '401 Unauthorized' because the content of HttpResult is HttpResponse.
+                    return HttpResult.of(HttpStatus.OK, HttpResponse.of(HttpStatus.UNAUTHORIZED));
+                }
+
+                @Get("/expect-no-content-from-converter")
+                @ResponseConverter(NullToNoContentResponseConverterFunction.class)
+                public HttpResult<Object> expectNoContentFromConverter() {
+                    // Will send '204 No Content' which is converted by
+                    // NullToNoContentResponseConverterFunction.
+                    return null;
+                }
+
+                @Get("/expect-custom-header")
+                @ProducesJson
+                public HttpResult<Map<String, String>> expectCustomHeader() {
+                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                                         ImmutableMap.of("a", "b"));
+                }
+
+                @Get("/expect-custom-trailing-header")
+                @ProducesJson
+                public HttpResult<List<String>> expectCustomTrailingHeader() {
+                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                                         ImmutableList.of("a", "b"),
+                                         HttpHeaders.of(AsciiString.of("x-custom-trailing-header"), "value"));
+                }
+
+                @Get("/async/expect-custom-header")
+                @ProducesJson
+                public HttpResult<CompletionStage<Map<String, String>>> asyncExpectCustomHeader() {
+                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                                         CompletableFuture.completedFuture(ImmutableMap.of("a", "b")));
+                }
+
+                @Get("/async/expect-custom-trailing-header")
+                @ProducesJson
+                public HttpResult<CompletionStage<List<String>>> asyncExpectCustomTrailingHeader(
+                        ServiceRequestContext ctx) {
+                    final CompletableFuture<List<String>> future = new CompletableFuture<>();
+                    ctx.eventLoop().schedule(() -> future.complete(ImmutableList.of("a", "b")),
+                                             1, TimeUnit.SECONDS);
+                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                                         future,
+                                         HttpHeaders.of(AsciiString.of("x-custom-trailing-header"), "value"));
+                }
+
+                @Get("/async/expect-bad-request")
+                public HttpResult<CompletionStage<Object>> asyncExpectBadRequest() {
+                    final CompletableFuture<Object> future = new CompletableFuture<>();
+                    future.completeExceptionally(new IllegalArgumentException("Bad arguments"));
+                    return HttpResult.of(HttpHeaders.of(HttpStatus.OK), future);
+                }
+
+                @Get("/wildcard")
+                @ProducesJson
+                public HttpResult<?> wildcard() {
+                    return HttpResult.of(ImmutableList.of("a", "b"));
+                }
+
+                @Get("/generic")
+                @ProducesJson
+                @SuppressWarnings("unchecked")
+                public <T> HttpResult<T> generic() {
+                    return (HttpResult<T>) HttpResult.of(ImmutableList.of("a", "b"));
+                }
+            });
+        }
+
+        private Publisher<String> exceptionRaisingPublisher() {
+            return s -> s.onSubscribe(new Subscription() {
+                @Override
+                public void request(long n) {
+                    s.onNext("a");
+                    s.onError(new IllegalArgumentException("Bad request!"));
+                }
+
+                @Override
+                public void cancel() {}
             });
         }
     };
@@ -224,11 +355,11 @@ public class AnnotatedHttpServiceResponseConverterTest {
         assertThat(msg.content().toStringAscii()).isNotEqualTo("¥");
 
         msg = aggregated(client.get("/byteArray"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.APPLICATION_BINARY);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/httpData"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.APPLICATION_BINARY);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/jsonNode"));
@@ -269,21 +400,6 @@ public class AnnotatedHttpServiceResponseConverterTest {
     }
 
     @Test
-    public void unsupportedReturnType() {
-        final ServerBuilder sb = new ServerBuilder();
-        assertThatThrownBy(() -> {
-            sb.annotatedService("/", new Object() {
-                @Get("/unsupported")
-                public Publisher<Publisher<Object>> unsupported() {
-                    return new ObjectPublisher<>(new ObjectPublisher<>("a", "b", "c"),
-                                                 new ObjectPublisher<>("d", "e", "f"));
-                }
-            });
-        }).isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Invalid return type");
-    }
-
-    @Test
     public void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/produce"));
 
@@ -294,7 +410,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
         assertThat(msg.content().array()).isEqualTo("100".getBytes());
 
         msg = aggregated(client.get("/byteArray"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.APPLICATION_BINARY);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/httpData"));
@@ -305,6 +421,76 @@ public class AnnotatedHttpServiceResponseConverterTest {
         assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final JsonNode expected = mapper.readTree("{\"a\":\"¥\"}");
         assertThat(msg.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
+    }
+
+    @Test
+    public void customizedHttpResponse() {
+        final HttpClient client = HttpClient.of(rule.uri("/custom-response"));
+
+        AggregatedHttpMessage msg;
+
+        msg = aggregated(client.get("/expect-specified-status"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.ACCEPTED);
+
+        msg = aggregated(client.get("/expect-no-content"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        msg = aggregated(client.get("/expect-ok"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+
+        msg = aggregated(client.get("/expect-specified-no-content"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        msg = aggregated(client.get("/expect-not-modified"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.NOT_MODIFIED);
+
+        msg = aggregated(client.get("/expect-unauthorized"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        msg = aggregated(client.get("/expect-no-content-from-converter"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ImmutableList.of("/expect-custom-header",
+                         "/async/expect-custom-header").forEach(path -> {
+            final AggregatedHttpMessage message = aggregated(client.get(path));
+            assertThat(message.status()).isEqualTo(HttpStatus.OK);
+            assertThat(message.headers().get(AsciiString.of("x-custom-header"))).isEqualTo("value");
+            assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableMap.of("a", "b"));
+        });
+
+        ImmutableList.of("/expect-custom-trailing-header",
+                         "/async/expect-custom-trailing-header").forEach(path -> {
+            final AggregatedHttpMessage message = aggregated(client.get(path));
+            assertThat(message.status()).isEqualTo(HttpStatus.OK);
+            assertThat(message.headers().get(AsciiString.of("x-custom-header"))).isEqualTo("value");
+            assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableList.of("a", "b"));
+            assertThat(message.trailingHeaders().get(AsciiString.of("x-custom-trailing-header")))
+                    .isEqualTo("value");
+        });
+
+        msg = aggregated(client.get("/async/expect-bad-request"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        ImmutableList.of("/wildcard", "/generic").forEach(path -> {
+            final AggregatedHttpMessage message = aggregated(client.get(path));
+            assertThat(message.status()).isEqualTo(HttpStatus.OK);
+            assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableList.of("a", "b"));
+        });
+    }
+
+    @Test
+    public void httpResultWithPublisher() {
+        final HttpClient client = HttpClient.of(rule.uri("/publish/http-result"));
+
+        AggregatedHttpMessage msg;
+
+        msg = aggregated(client.get("/jsonNode"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.content().toStringUtf8()).isEqualTo(ImmutableMap.of("a", "¥"));
+
+        msg = aggregated(client.get("/defer"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     private static AggregatedHttpMessage aggregated(HttpResponse response) {

@@ -70,6 +70,7 @@ import com.google.common.collect.Sets;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
@@ -79,7 +80,6 @@ import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Consumes;
@@ -95,7 +95,6 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlers;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
-import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
@@ -113,7 +112,7 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverters;
-import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.Trace;
 
 /**
@@ -129,14 +128,6 @@ public final class AnnotatedHttpServiceFactory {
      * An instance map for reusing converters, exception handlers and decorators.
      */
     private static final ConcurrentMap<Class<?>, Object> instanceCache = new ConcurrentHashMap<>();
-
-    /**
-     * A default {@link ResponseConverterFunction}s.
-     */
-    private static final List<ResponseConverterFunction> defaultResponseConverters =
-            ImmutableList.of(new JacksonResponseConverterFunction(),
-                             new StringResponseConverterFunction(),
-                             new ByteArrayResponseConverterFunction());
 
     /**
      * A default {@link ExceptionHandlerFunction}.
@@ -252,8 +243,7 @@ public final class AnnotatedHttpServiceFactory {
         final List<RequestConverterFunction> req =
                 requestConverters(method, clazz).addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
-                responseConverters(method, clazz).addAll(baseResponseConverters)
-                                                 .addAll(defaultResponseConverters).build();
+                responseConverters(method, clazz).addAll(baseResponseConverters).build();
 
         List<AnnotatedValueResolver> resolvers;
         try {
@@ -289,9 +279,19 @@ public final class AnnotatedHttpServiceFactory {
                         "' do not have their corresponding parameters annotated with @Param. " +
                         "They would not be automatically injected: " + missing);
         }
+
+        final Optional<HttpStatus> defaultResponseStatus = findAnnotation(method, StatusCode.class)
+                .map(code -> {
+                    final int statusCode = code.value();
+                    checkArgument(statusCode >= 0,
+                                  "invalid HTTP status code: %s (expected: >= 0)", statusCode);
+                    return HttpStatus.valueOf(statusCode);
+                });
+
         return new AnnotatedHttpServiceElement(pathMapping,
                                                new AnnotatedHttpService(object, method, resolvers, eh,
-                                                                        res, pathMapping),
+                                                                        res, pathMapping,
+                                                                        defaultResponseStatus),
                                                decorator(method, clazz));
     }
 

@@ -114,7 +114,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
         if (httpStatus != null) {
             headers.status(httpStatus.value());
         } else {
-            // If there is no status code specified, set 200 Ok by default.
+            // If there is no status code specified, set 200 OK by default.
             headers.status(com.linecorp.armeria.common.HttpStatus.OK);
         }
     }

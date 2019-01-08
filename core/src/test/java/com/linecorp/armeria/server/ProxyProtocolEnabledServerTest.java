@@ -144,7 +144,7 @@ public class ProxyProtocolEnabledServerTest {
     }
 
     private static void checkResponse(BufferedReader reader) throws IOException {
-        assertThat(reader.readLine()).isEqualToIgnoringCase("HTTP/1.1 200 Ok");
+        assertThat(reader.readLine()).isEqualToIgnoringCase("HTTP/1.1 200 OK");
 
         // Content-Length header, Content-Type header, an empty line
         reader.readLine();

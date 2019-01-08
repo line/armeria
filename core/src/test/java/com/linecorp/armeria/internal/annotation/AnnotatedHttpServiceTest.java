@@ -229,8 +229,10 @@ public class AnnotatedHttpServiceTest {
 
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result)
-                throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result == null) {
                 return HttpResponse.of(HttpStatus.OK);
             }

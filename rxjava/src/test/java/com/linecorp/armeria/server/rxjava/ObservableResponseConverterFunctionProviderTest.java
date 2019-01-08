@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -63,7 +64,10 @@ public class ObservableResponseConverterFunctionProviderTest {
                                                                new DummyResponseConverter(),
                                                                new DummyExceptionHandler()))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Cannot support 'io.reactivex.Observable<java.lang.Object>'");
+                .hasMessageContaining(
+                        "Disallowed type exists in the generic type arguments of the return type " +
+                        "'io.reactivex.Observable<io.reactivex.Observable<java.lang.Object>>': " +
+                        "io.reactivex.Observable");
     }
 
     public static class Sample {
@@ -75,7 +79,10 @@ public class ObservableResponseConverterFunctionProviderTest {
 
     private static class DummyResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

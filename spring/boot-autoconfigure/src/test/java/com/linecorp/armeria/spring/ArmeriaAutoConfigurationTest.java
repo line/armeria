@@ -132,8 +132,10 @@ public class ArmeriaAutoConfigurationTest {
 
     public static class StringResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result)
-                throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof String) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.ANY_TEXT_TYPE,

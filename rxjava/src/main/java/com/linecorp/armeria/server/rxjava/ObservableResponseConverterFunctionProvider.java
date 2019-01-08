@@ -34,31 +34,41 @@ public class ObservableResponseConverterFunctionProvider implements ResponseConv
             Type returnType,
             ResponseConverterFunction responseConverter,
             ExceptionHandlerFunction exceptionHandler) {
-
-        if (!ObservableSource.class.isAssignableFrom(toClass(returnType))) {
-            return null;
+        final Class<?> clazz = typeToClass(returnType);
+        if (clazz != null && ObservableSource.class.isAssignableFrom(clazz)) {
+            assert returnType instanceof ParameterizedType;
+            ensureNoMoreObservableSource(returnType, returnType);
+            return new ObservableResponseConverterFunction(responseConverter, exceptionHandler);
         }
-
-        if (returnType instanceof ParameterizedType) {
-            final ParameterizedType p = (ParameterizedType) returnType;
-            if (ObservableSource.class.isAssignableFrom(toClass(p.getRawType())) &&
-                ObservableSource.class.isAssignableFrom(toClass(p.getActualTypeArguments()[0]))) {
-                throw new IllegalStateException(
-                        "Cannot support '" + p.getActualTypeArguments()[0].getTypeName() +
-                        "' as a generic type of " + ObservableSource.class.getSimpleName());
-            }
-        }
-
-        return new ObservableResponseConverterFunction(responseConverter, exceptionHandler);
+        return null;
     }
 
-    private static Class<?> toClass(Type type) {
+    private static void ensureNoMoreObservableSource(Type returnType, Type type) {
+        if (type instanceof ParameterizedType) {
+            final Type[] args = ((ParameterizedType) type).getActualTypeArguments();
+            for (Type arg : args) {
+                final Class<?> clazz = typeToClass(arg);
+                if (clazz != null && ObservableSource.class.isAssignableFrom(clazz)) {
+                    throw new IllegalStateException(
+                            "Disallowed type exists in the generic type arguments of the return type '" +
+                            returnType + "': " + clazz.getName());
+                }
+                ensureNoMoreObservableSource(returnType, arg);
+            }
+        }
+    }
+
+    /**
+     * Converts the specified {@link Type} to a {@link Class} instance.
+     */
+    @Nullable
+    private static Class<?> typeToClass(Type type) {
         if (type instanceof Class) {
             return (Class<?>) type;
         }
         if (type instanceof ParameterizedType) {
             return (Class<?>) ((ParameterizedType) type).getRawType();
         }
-        return Void.class;
+        return null;
     }
 }
