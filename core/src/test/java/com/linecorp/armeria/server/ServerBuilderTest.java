@@ -16,10 +16,12 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
 import org.junit.Test;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpResponse;
@@ -66,13 +68,16 @@ public class ServerBuilderTest {
         assertThat(sb.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
     }
 
+    /**
+     * Makes sure each virtual host can have its custom logger name.
+     */
     @Test
     public void setAccessLoggerTest1() {
         final Server sb = new ServerBuilder()
                 .http(0)
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger(
-                LoggerFactory.getLogger("default"))
+                        LoggerFactory.getLogger("default"))
                 .withVirtualHost("*.example.com")
                 .and()
                 .withVirtualHost("*.example2.com")
@@ -80,7 +85,11 @@ public class ServerBuilderTest {
                 .and()
                 .withVirtualHost("*.example3.com")
                 .accessLogger((host) -> LoggerFactory.getLogger("com.ex3"))
-                .and().build();
+                .and()
+                .virtualHost(new VirtualHostBuilder("*.example4.com", "def.example4.com").build())
+                .virtualHost(new VirtualHostBuilder("*.example5.com", "def.example5.com")
+                                     .accessLogger("com.ex5").build())
+                .build();
         assertThat(sb.config().defaultVirtualHost()).isNotNull();
         assertThat(sb.config().defaultVirtualHost().accessLogger().getName()).isEqualTo("default");
 
@@ -92,6 +101,12 @@ public class ServerBuilderTest {
 
         assertThat(sb.config().findVirtualHost("*.example3.com").accessLogger().getName())
                 .isEqualTo("com.ex3");
+
+        assertThat(sb.config().findVirtualHost("*.example4.com").accessLogger().getName())
+                .isEqualTo("default");
+
+        assertThat(sb.config().findVirtualHost("*.example5.com").accessLogger().getName())
+                .isEqualTo("com.ex5");
     }
 
     @Test
@@ -109,6 +124,10 @@ public class ServerBuilderTest {
                 .isEqualTo("test.default");
     }
 
+    /**
+     * Makes sure that {@link VirtualHost} can have a proper {@link Logger} used for writing access
+     * when a user doesn't specify it.
+     */
     @Test
     public void defaultAccessLoggerTest() {
         final Server sb = new ServerBuilder()
@@ -123,5 +142,31 @@ public class ServerBuilderTest {
                 .isEqualTo("com.linecorp.armeria.logging.access.com.example");
         assertThat(sb.config().findVirtualHost("*.example2.com").accessLogger().getName())
                 .isEqualTo("com.linecorp.armeria.logging.access.com.example2");
+    }
+
+    /**
+     * Makes sure that {@link ServerBuilder#build()} throws {@link IllegalStateException}
+     * when the access logger of {@link VirtualHost} set by a user is {@code null}.å
+     */
+    @Test
+    public void buildIllegalExceptionTest() {
+        final ServerBuilder sb = new ServerBuilder()
+                .http(0)
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .accessLogger(host -> null);
+        assertThatThrownBy(sb::build)
+                .isInstanceOf(IllegalStateException.class);
+        final ServerBuilder sb2 = new ServerBuilder()
+                .http(0)
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .accessLogger(host -> {
+                    if (host.hostnamePattern().equals("*.example.com")) {
+                        return null;
+                    }
+                    return LoggerFactory.getLogger("default");
+                })
+                .withVirtualHost("*.example.com").and();
+        assertThatThrownBy(sb2::build)
+                .isInstanceOf(IllegalStateException.class);
     }
 }

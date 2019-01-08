@@ -183,8 +183,8 @@ public final class ServerBuilder {
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
 
-    private Function<VirtualHost, Logger> accessLoggerMapper = (host) -> LoggerFactory.getLogger(
-            reverseName(host.hostnamePattern()));
+    private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
+            defaultAccessLoggerName(host.hostnamePattern()));
 
     /**
      * Adds an HTTP port that listens on all available network interfaces.
@@ -1171,11 +1171,11 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the default access logger mapper for all of virtual hosts.
+     * Sets the default access logger mapper for all {@link VirtualHost}s.
      * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
-     *  or {@link VirtualHost#accessLogger(Logger)},
+     * or {@link VirtualHost#accessLogger(Logger)},
      * all of {@link VirtualHost} will have an access logger set by {@code mapper}
-     * when {@link ServerBuilder#build} is called
+     * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
         requireNonNull(mapper, "mapper");
@@ -1184,23 +1184,23 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the default access {@link Logger} for all of virtual hosts.
+     * Sets the default access {@link Logger} for all {@link VirtualHost}s.
      * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
-     *  or {@link VirtualHost#accessLogger(Logger)},
+     * or {@link VirtualHost#accessLogger(Logger)},
      * all of {@link VirtualHost} will have the same access {@link Logger}
-     * when {@link ServerBuilder#build} is called
+     * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Logger logger) {
         requireNonNull(logger, "logger");
-        return accessLogger((host) -> logger);
+        return accessLogger(host -> logger);
     }
 
     /**
-     * Sets the default access logger name for all of virtual hosts.
+     * Sets the default access logger name for all {@link VirtualHost}.
      * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
-     *  or {@link VirtualHost#accessLogger(Logger)},
-     * all of {@link VirtualHost} will have an access {@link Logger} named the loggerName
-     * when {@link ServerBuilder#build} is called
+     * or {@link VirtualHost#accessLogger(Logger)},
+     * all of {@link VirtualHost} will have an access {@link Logger} named the {@code loggerName}
+     * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
@@ -1209,6 +1209,7 @@ public final class ServerBuilder {
 
     /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
+     * @exception IllegalStateException if the access logger mapper set by a user gives {@code null}
      */
     public Server build() {
         final VirtualHost defaultVirtualHost;
@@ -1230,13 +1231,23 @@ public final class ServerBuilder {
         }
 
         // Gets the access logger for an each virtual host.
-        virtualHosts.forEach((vh) -> {
+        virtualHosts.forEach(vh -> {
             if (vh.accessLogger() == null) {
-                vh.accessLogger(accessLoggerMapper.apply(vh));
+                final Logger logger = accessLoggerMapper.apply(vh);
+                if (logger == null) {
+                    throw new IllegalStateException(
+                            String.format("Access Logger for the virtual host (%s) is null",
+                                          vh.hostnamePattern()));
+                }
+                vh.accessLogger(logger);
             }
         });
         if (defaultVirtualHost.accessLogger() == null) {
-            defaultVirtualHost.accessLogger(accessLoggerMapper.apply(defaultVirtualHost));
+            final Logger logger = accessLoggerMapper.apply(defaultVirtualHost);
+            if (logger == null) {
+                throw new IllegalStateException("Access Logger for default virtual host is null");
+            }
+            defaultVirtualHost.accessLogger(logger);
         }
 
         // Pre-populate the domain name mapping for later matching.
@@ -1336,7 +1347,7 @@ public final class ServerBuilder {
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
                  .collect(Collectors.toList()), h.producibleMediaTypes(), rejectedPathMappingHandler,
-                (host) -> h.accessLogger());
+                host -> h.accessLogger());
     }
 
     @Nullable
@@ -1354,7 +1365,7 @@ public final class ServerBuilder {
         return lastSslContext;
     }
 
-    private static String reverseName(String hostPattern) {
+    private static String defaultAccessLoggerName(String hostPattern) {
         requireNonNull(hostPattern, "hostPattern");
         final String[] elements = hostPattern.split("\\.");
         final StringBuilder name = new StringBuilder("com.linecorp.armeria.logging.access");
@@ -1363,7 +1374,7 @@ public final class ServerBuilder {
             if (element.isEmpty() || "*".equals(element)) {
                 continue;
             }
-            name.append(".");
+            name.append('.');
             name.append(element);
         }
         return name.toString();

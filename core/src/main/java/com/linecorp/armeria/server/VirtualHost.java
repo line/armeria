@@ -74,9 +74,9 @@ public final class VirtualHost {
     private final MediaTypeSet producibleMediaTypes;
 
     /**
-     * If accessLogger is null, it is initialized later
-     *  by {@link ServerBuilder} via {@link #accessLogger(Logger)}.
-     * If it is not null, it is initialized later by {@link VirtualHostBuilder} via the constructor.
+     * If accessLogger is {@code null}, it is initialized later
+     * by {@link ServerBuilder} via {@link #accessLogger(Logger)}.
+     * If it is not {@code null}, it is initialized later by {@link VirtualHostBuilder} via the constructor.
      */
     @Nullable
     private Logger accessLogger;
@@ -93,7 +93,7 @@ public final class VirtualHost {
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-                (virtualHost, mapping, existingMapping) -> {}, (host) -> null);
+             (virtualHost, mapping, existingMapping) -> {}, host -> null);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
@@ -107,7 +107,7 @@ public final class VirtualHost {
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-                rejectionHandler, (host) -> null);
+             rejectionHandler, host -> null);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
@@ -236,6 +236,14 @@ public final class VirtualHost {
     }
 
     /**
+     * Sets the {@link Logger} which is used for writing access logs of this virtual host.
+     */
+    void accessLogger(Logger logger) {
+        requireNonNull(logger, "logger");
+        accessLogger = logger;
+    }
+
+    /**
      * Returns the default hostname of this virtual host.
      */
     public String defaultHostname() {
@@ -273,18 +281,11 @@ public final class VirtualHost {
     }
 
     /**
-     * Returns the {@link Logger} for access of this virtual host.
+     * Returns the {@link Logger} which is used for writing access logs of this virtual host.
      */
+    @Nullable
     public Logger accessLogger() {
         return accessLogger;
-    }
-
-    /**
-     * Sets the {@link Logger} for access of this virtual host.
-     */
-    public void accessLogger(Logger logger) {
-        requireNonNull(logger, "logger");
-        accessLogger = logger;
     }
 
     /**

@@ -129,8 +129,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private SslContext sslContext;
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
-    @Nullable
-    private Function<VirtualHost, Logger> accessLoggerMapper = (host) -> null;
+    private Function<VirtualHost, Logger> accessLoggerMapper = host -> null;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -530,8 +529,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
     /**
      * Sets the access logger mapper for this {@link VirtualHost}.
-     * When {@link #build} is called, this {@link VirtualHost} gets {@link Logger}
-     * for access via the {@code mapper}.
+     * When {@link #build()} is called, this {@link VirtualHost} gets {@link Logger}
+     * via the {@code mapper} for writing access logs.
      */
     public B accessLogger(Function<VirtualHost, Logger> mapper) {
         accessLoggerMapper = requireNonNull(mapper, "mapper");
@@ -539,20 +538,21 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Sets the {@link Logger} for this {@link VirtualHost}.
+     * Sets the {@link Logger} which is used for writing access logs for this {@link VirtualHost}.
      */
     public B accessLogger(Logger logger) {
         requireNonNull(logger, "logger");
-        accessLoggerMapper = (host) -> logger;
+        accessLoggerMapper = host -> logger;
         return self();
     }
 
     /**
-     * Sets the {@link Logger} named loggerName for this {@link VirtualHost}.
+     * Sets the {@link Logger} named {@code loggerName} for this {@link VirtualHost}
+     * which is used for writing access logs.
      */
     public B accessLogger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
-        accessLoggerMapper = (host) -> LoggerFactory.getLogger(loggerName);
+        accessLoggerMapper = host -> LoggerFactory.getLogger(loggerName);
         return self();
     }
 
