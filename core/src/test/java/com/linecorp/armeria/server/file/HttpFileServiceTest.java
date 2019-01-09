@@ -500,7 +500,7 @@ public class HttpFileServiceTest {
                                       String expectedETag, String expectedLastModified) throws IOException {
         final String uri = newUri(path);
 
-        // Test if the 'If-None-Match' header works as expected.
+        // Test if the 'If-None-Match' header works as expected. (a single etag)
         final HttpUriRequest req1 = new HttpGet(uri);
         req1.setHeader(HttpHeaders.IF_NONE_MATCH, expectedETag);
 
@@ -508,11 +508,27 @@ public class HttpFileServiceTest {
             assert304NotModified(resCached, expectedETag, expectedLastModified);
         }
 
-        // Test if the 'If-Modified-Since' header works as expected.
+        // Test if the 'If-None-Match' header works as expected. (multiple etags)
         final HttpUriRequest req2 = new HttpGet(uri);
-        req2.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
+        req2.setHeader(HttpHeaders.IF_NONE_MATCH, "\"an-etag-that-never-matches\", " + expectedETag);
 
         try (CloseableHttpResponse resCached = hc.execute(req2)) {
+            assert304NotModified(resCached, expectedETag, expectedLastModified);
+        }
+
+        // Test if the 'If-None-Match' header works as expected. (an asterisk)
+        final HttpUriRequest req3 = new HttpGet(uri);
+        req3.setHeader(HttpHeaders.IF_NONE_MATCH, "*");
+
+        try (CloseableHttpResponse resCached = hc.execute(req3)) {
+            assert304NotModified(resCached, expectedETag, expectedLastModified);
+        }
+
+        // Test if the 'If-Modified-Since' header works as expected.
+        final HttpUriRequest req4 = new HttpGet(uri);
+        req4.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
+
+        try (CloseableHttpResponse resCached = hc.execute(req4)) {
             assert304NotModified(resCached, expectedETag, expectedLastModified);
         }
     }
