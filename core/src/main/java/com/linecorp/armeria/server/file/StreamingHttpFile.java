@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Clock;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
@@ -59,6 +60,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
      *
      * @param contentType the {@link MediaType} of the file which will be used as the {@code "content-type"}
      *                    header value. {@code null} to disable setting the {@code "content-type"} header.
+     * @param clock the {@link Clock} which provides the current date and time
      * @param dateEnabled whether to set the {@code "date"} header automatically
      * @param lastModifiedEnabled whether to add the {@code "last-modified"} header automatically
      * @param entityTagFunction the {@link BiFunction} that generates an entity tag from the file's attributes.
@@ -66,11 +68,12 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
      * @param headers the additional headers to set
      */
     protected StreamingHttpFile(@Nullable MediaType contentType,
+                                Clock clock,
                                 boolean dateEnabled,
                                 boolean lastModifiedEnabled,
                                 @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                                 HttpHeaders headers) {
-        super(contentType, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
+        super(contentType, clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
     }
 
     @Override
@@ -212,8 +215,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                                                          : new ByteBufHttpData(buf, true),
                                            attrs.lastModifiedMillis())
                                        .date(isDateEnabled())
-                                       .lastModified(isLastModifiedEnabled())
-                                       .entityTag(false);
+                                       .lastModified(isLastModifiedEnabled());
 
                 if (contentType() != null) {
                     builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType());
@@ -221,7 +223,9 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
 
                 final String etag = generateEntityTag(attrs);
                 if (etag != null) {
-                    builder.setHeader(HttpHeaderNames.ETAG, '\"' + etag + '\"');
+                    builder.entityTag((unused1, unused2) -> etag);
+                } else {
+                    builder.entityTag(false);
                 }
 
                 builder.setHeaders(headers());

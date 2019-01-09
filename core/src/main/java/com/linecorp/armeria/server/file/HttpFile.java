@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -163,27 +162,5 @@ public interface HttpFile {
     /**
      * Returns an {@link HttpService} which serves the file for {@code HEAD} and {@code GET} requests.
      */
-    default HttpService asService() {
-        return (ctx, req) -> {
-            // TODO(trustin): Move the logic of HttpFileService.doGet() here.
-            switch (ctx.method()) {
-                case HEAD:
-                    final HttpHeaders headers = readHeaders();
-                    if (headers != null) {
-                        return HttpResponse.of(headers);
-                    }
-                    break;
-                case GET:
-                    final HttpResponse res = read(ctx.blockingTaskExecutor(), ctx.alloc());
-                    if (res != null) {
-                        return res;
-                    }
-                    break;
-                default:
-                    return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
-            }
-
-            return HttpResponse.of(HttpStatus.NOT_FOUND);
-        };
-    }
+    HttpService asService();
 }

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Clock;
 
 import javax.annotation.Nullable;
 
@@ -65,6 +66,7 @@ public interface HttpVfs {
      * Finds the file at the specified {@code path}.
      *
      * @param path an absolute path whose component separator is {@code '/'}
+     * @param clock the {@link Clock} which provides the current date and time
      * @param contentType the desired {@code 'content-type'} header value of the file.
      *                    {@code null} to omit the header.
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
@@ -72,7 +74,7 @@ public interface HttpVfs {
      *
      * @return the {@link HttpFile} at the specified {@code path}
      */
-    HttpFile get(String path, @Nullable MediaType contentType, @Nullable String contentEncoding);
+    HttpFile get(String path, Clock clock, @Nullable MediaType contentType, @Nullable String contentEncoding);
 
     /**
      * Returns the value of the {@code "vfs"} {@link Tag} in a {@link Meter}.

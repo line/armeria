@@ -23,6 +23,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Clock;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -39,13 +40,13 @@ final class FileSystemHttpFile extends StreamingHttpFile<ByteChannel> {
 
     FileSystemHttpFile(Path path,
                        boolean contentTypeAutoDetectionEnabled,
+                       Clock clock,
                        boolean dateEnabled,
                        boolean lastModifiedEnabled,
                        @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                        HttpHeaders headers) {
         super(contentTypeAutoDetectionEnabled ? MimeTypeUtil.guessFromPath(path.toString()) : null,
-              dateEnabled, lastModifiedEnabled,
-              entityTagFunction, headers);
+              clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
         this.path = path;
     }
 

@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.file;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Clock;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -35,6 +36,7 @@ import io.netty.util.AsciiString;
  */
 public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<B>> {
 
+    private Clock clock = Clock.systemUTC();
     private boolean dateEnabled = true;
     private boolean lastModifiedEnabled = true;
     private boolean contentTypeAutoDetectionEnabled = true;
@@ -49,6 +51,22 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
     @SuppressWarnings("unchecked")
     protected final B self() {
         return (B) this;
+    }
+
+    /**
+     * Returns the {@link Clock} that provides the current date and time.
+     */
+    protected final Clock clock() {
+        return clock;
+    }
+
+    /**
+     * Sets the {@link Clock} that provides the current date and time. By default, {@link Clock#systemUTC()}
+     * is used.
+     */
+    public final B clock(Clock clock) {
+        this.clock = requireNonNull(clock, "clock");
+        return self();
     }
 
     /**

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.file;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Date;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
@@ -40,23 +41,25 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     private final HttpFileAttributes attrs;
 
     HttpDataFile(HttpData content,
+                 Clock clock,
                  long lastModifiedMillis,
                  boolean dateEnabled,
                  boolean lastModifiedEnabled,
                  @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                  HttpHeaders headers) {
-        this(content, null, new HttpFileAttributes(content.length(), lastModifiedMillis),
+        this(content, null, clock, new HttpFileAttributes(content.length(), lastModifiedMillis),
              dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
     }
 
     private HttpDataFile(HttpData content,
                          @Nullable MediaType contentType,
+                         Clock clock,
                          HttpFileAttributes attrs,
                          boolean dateEnabled,
                          boolean lastModifiedEnabled,
                          @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                          HttpHeaders headers) {
-        super(contentType, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
+        super(contentType, clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
         this.content = content;
         this.attrs = attrs;
     }

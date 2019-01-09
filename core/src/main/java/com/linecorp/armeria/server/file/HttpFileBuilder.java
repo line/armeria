@@ -151,7 +151,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
 
         @Override
         public HttpFile build() {
-            return new FileSystemHttpFile(path, isContentTypeAutoDetectionEnabled(), isDateEnabled(),
+            return new FileSystemHttpFile(path, isContentTypeAutoDetectionEnabled(), clock(), isDateEnabled(),
                                           isLastModifiedEnabled(), entityTagFunction(), headers());
         }
     }
@@ -166,7 +166,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
 
         @Override
         public HttpFile build() {
-            return new ClassPathHttpFile(url, isContentTypeAutoDetectionEnabled(), isDateEnabled(),
+            return new ClassPathHttpFile(url, isContentTypeAutoDetectionEnabled(), clock(), isDateEnabled(),
                                          isLastModifiedEnabled(), entityTagFunction(), headers());
         }
     }
@@ -190,7 +190,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
 
         @Override
         public AggregatedHttpFile build() {
-            return new HttpDataFile(content, lastModifiedMillis,
+            return new HttpDataFile(content, clock(), lastModifiedMillis,
                                     isDateEnabled(), isLastModifiedEnabled(),
                                     entityTagFunction(), headers());
         }

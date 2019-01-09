@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.time.Clock;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -37,13 +38,13 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
 
     ClassPathHttpFile(URL url,
                       boolean contentTypeAutoDetectionEnabled,
+                      Clock clock,
                       boolean dateEnabled,
                       boolean lastModifiedEnabled,
                       @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                       HttpHeaders headers) {
         super(contentTypeAutoDetectionEnabled ? MimeTypeUtil.guessFromPath(url.toString()) : null,
-              dateEnabled, lastModifiedEnabled,
-              entityTagFunction, headers);
+              clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
         this.url = url;
     }
 

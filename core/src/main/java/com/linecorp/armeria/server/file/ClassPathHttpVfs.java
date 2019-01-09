@@ -13,10 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.file;
 
 import static java.util.Objects.requireNonNull;
+
+import java.time.Clock;
 
 import javax.annotation.Nullable;
 
@@ -46,10 +47,11 @@ final class ClassPathHttpVfs extends AbstractHttpVfs {
     }
 
     @Override
-    public HttpFile get(String path, @Nullable MediaType contentType, @Nullable String contentEncoding) {
+    public HttpFile get(String path, Clock clock,
+                        @Nullable MediaType contentType, @Nullable String contentEncoding) {
         final String resourcePath = rootDir.isEmpty() ? path.substring(1) : rootDir + path;
         final HttpFileBuilder builder = HttpFileBuilder.ofResource(classLoader, resourcePath);
-        return FileSystemHttpVfs.build(builder, contentType, contentEncoding);
+        return FileSystemHttpVfs.build(builder, clock, contentType, contentEncoding);
     }
 
     @Override

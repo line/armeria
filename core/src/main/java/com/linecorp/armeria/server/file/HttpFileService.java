@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.text.ParseException;
 import java.util.EnumSet;
 import java.util.Objects;
 
@@ -37,7 +36,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -162,41 +160,8 @@ public final class HttpFileService extends AbstractHttpService {
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final HttpFile file = findFile(ctx, req);
         if (file == null) {
-            return new404Response();
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
-
-        final HttpFileAttributes attrs = file.readAttributes();
-        if (attrs == null) {
-            return new404Response();
-        }
-
-        long ifModifiedSinceMillis = Long.MIN_VALUE;
-        try {
-            ifModifiedSinceMillis =
-                    req.headers().getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE, Long.MIN_VALUE);
-        } catch (Exception e) {
-            // Ignore the ParseException, which is raised on malformed date.
-            //noinspection ConstantConditions
-            if (!(e instanceof ParseException)) {
-                throw e;
-            }
-        }
-
-        // HTTP-date does not have subsecond-precision; add 999ms to it.
-        if (ifModifiedSinceMillis > Long.MAX_VALUE - 999) {
-            ifModifiedSinceMillis = Long.MAX_VALUE;
-        } else {
-            ifModifiedSinceMillis += 999;
-        }
-
-        final long lastModifiedMillis = attrs.lastModifiedMillis();
-        if (lastModifiedMillis < ifModifiedSinceMillis) {
-            return HttpResponse.of(
-                    HttpHeaders.of(HttpStatus.NOT_MODIFIED)
-                               .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
-                               .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis));
-        }
-
         return file.asService().serve(ctx, req);
     }
 
@@ -254,7 +219,7 @@ public final class HttpFileService extends AbstractHttpService {
     private HttpFile findFile(ServiceRequestContext ctx, String path,
                               @Nullable MediaType contentType,
                               @Nullable String contentEncoding) throws IOException {
-        final HttpFile uncachedFile = config.vfs().get(path, contentType, contentEncoding);
+        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentType, contentEncoding);
         final HttpFileAttributes uncachedAttrs = uncachedFile.readAttributes();
         if (cache == null) {
             return uncachedAttrs != null ? uncachedFile : null;
@@ -308,10 +273,6 @@ public final class HttpFileService extends AbstractHttpService {
         });
 
         return cachedFile != null ? cachedFile : file;
-    }
-
-    private static HttpResponse new404Response() {
-        return HttpResponse.of(HttpStatus.NOT_FOUND);
     }
 
     /**

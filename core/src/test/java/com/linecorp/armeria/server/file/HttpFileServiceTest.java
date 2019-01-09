@@ -186,18 +186,14 @@ public class HttpFileServiceTest {
     public void testClassPathGet() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final String lastModified;
+            final String etag;
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/foo.txt")))) {
-                lastModified = assert200Ok(res, "text/plain", "foo");
+                assert200Ok(res, "text/plain", "foo");
+                lastModified = header(res, HttpHeaders.LAST_MODIFIED);
+                etag = header(res, HttpHeaders.ETAG);
             }
 
-            // Test if the 'If-Modified-Since' header works as expected.
-            final HttpUriRequest req = new HttpGet(newUri("/foo.txt"));
-            req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
-            req.setHeader(HttpHeaders.CONNECTION, "close");
-
-            try (CloseableHttpResponse res = hc.execute(req)) {
-                assert304NotModified(res, lastModified);
-            }
+            assert304NotModified(hc, "/foo.txt", etag, lastModified);
 
             // Confirm file service paths are cached when cache is enabled.
             if (cached) {
@@ -258,15 +254,10 @@ public class HttpFileServiceTest {
     public void testUnknownMediaType() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal();
              CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.unknown")))) {
-            final String lastModified = assert200Ok(res, null, "Unknown Media Type");
-
-            final HttpUriRequest req = new HttpGet(newUri("/bar.unknown"));
-            req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
-            req.setHeader(HttpHeaders.CONNECTION, "close");
-
-            try (CloseableHttpResponse resCached = hc.execute(req)) {
-                assert304NotModified(resCached, lastModified);
-            }
+            assert200Ok(res, null, "Unknown Media Type");
+            final String lastModified = header(res, HttpHeaders.LAST_MODIFIED);
+            final String etag = header(res, HttpHeaders.ETAG);
+            assert304NotModified(hc, "/bar.unknown", etag, lastModified);
         }
     }
 
@@ -276,7 +267,7 @@ public class HttpFileServiceTest {
             final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(res.getFirstHeader("Content-Encoding")).isNull();
-                assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
+                assertThat(headerOrNull(res, "Content-Type")).isEqualTo(
                         "text/plain; charset=utf-8");
                 final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
                 assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo");
@@ -294,8 +285,8 @@ public class HttpFileServiceTest {
             final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "gzip");
             try (CloseableHttpResponse res = hc.execute(request)) {
-                assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("gzip");
-                assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
+                assertThat(headerOrNull(res, "Content-Encoding")).isEqualTo("gzip");
+                assertThat(headerOrNull(res, "Content-Type")).isEqualTo(
                         "text/plain; charset=utf-8");
                 final byte[] content;
                 try (GZIPInputStream unzipper = new GZIPInputStream(res.getEntity().getContent())) {
@@ -312,8 +303,8 @@ public class HttpFileServiceTest {
             final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "br");
             try (CloseableHttpResponse res = hc.execute(request)) {
-                assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("br");
-                assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
+                assertThat(headerOrNull(res, "Content-Encoding")).isEqualTo("br");
+                assertThat(headerOrNull(res, "Content-Type")).isEqualTo(
                         "text/plain; charset=utf-8");
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
@@ -330,8 +321,8 @@ public class HttpFileServiceTest {
             final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
             request.setHeader("Accept-Encoding", "gzip, br");
             try (CloseableHttpResponse res = hc.execute(request)) {
-                assertThat(res.getFirstHeader("Content-Encoding").getValue()).isEqualTo("br");
-                assertThat(res.getFirstHeader("Content-Type").getValue()).isEqualTo(
+                assertThat(headerOrNull(res, "Content-Encoding")).isEqualTo("br");
+                assertThat(headerOrNull(res, "Content-Type")).isEqualTo(
                         "text/plain; charset=utf-8");
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
@@ -351,18 +342,15 @@ public class HttpFileServiceTest {
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final String lastModified;
+            final String etag;
             HttpUriRequest req = new HttpGet(newUri("/fs/bar.html"));
             try (CloseableHttpResponse res = hc.execute(req)) {
-                lastModified = assert200Ok(res, "text/html", expectedContentA);
+                assert200Ok(res, "text/html", expectedContentA);
+                lastModified = header(res, HttpHeaders.LAST_MODIFIED);
+                etag = header(res, HttpHeaders.ETAG);
             }
 
-            // Test if the 'If-Modified-Since' header works as expected.
-            req = new HttpGet(newUri("/fs/bar.html"));
-            req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
-
-            try (CloseableHttpResponse res = hc.execute(req)) {
-                assert304NotModified(res, lastModified);
-            }
+            assert304NotModified(hc, "/fs/bar.html", etag, lastModified);
 
             // Test if the 'If-Modified-Since' header works as expected after the file is modified.
             req = new HttpGet(newUri("/fs/bar.html"));
@@ -374,11 +362,28 @@ public class HttpFileServiceTest {
             Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
             assertThat(barFile.setLastModified(now.toEpochMilli() + 5000)).isTrue();
 
+            final String newLastModified;
+            final String newETag;
             try (CloseableHttpResponse res = hc.execute(req)) {
-                final String newLastModified = assert200Ok(res, "text/html", expectedContentB);
+                assert200Ok(res, "text/html", expectedContentB);
+                newLastModified = header(res, HttpHeaders.LAST_MODIFIED);
+                newETag = header(res, HttpHeaders.ETAG);
 
-                // Ensure that the 'Last-Modified' changed.
+                // Ensure that both 'Last-Modified' and 'ETag' changed.
                 assertThat(newLastModified).isNotEqualTo(lastModified);
+                assertThat(newETag).isNotEqualTo(etag);
+            }
+
+            // Test if the 'If-None-Match' header works as expected after the file is modified.
+            req = new HttpGet(newUri("/fs/bar.html"));
+            req.setHeader(HttpHeaders.IF_NONE_MATCH, etag);
+
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assert200Ok(res, "text/html", expectedContentB);
+
+                // Ensure that both 'Last-Modified' and 'ETag' changed.
+                assertThat(header(res, HttpHeaders.LAST_MODIFIED)).isEqualTo(newLastModified);
+                assertThat(header(res, HttpHeaders.ETAG)).isEqualTo(newETag);
             }
 
             // Test if the cache detects the file removal correctly.
@@ -454,60 +459,74 @@ public class HttpFileServiceTest {
         }
     }
 
-    private static String assert200Ok(CloseableHttpResponse res,
-                                      @Nullable String expectedContentType,
-                                      String expectedContent) throws Exception {
-        return assert200Ok(res, expectedContentType,
-                           content -> assertThat(content).isEqualTo(expectedContent));
+    private static void assert200Ok(CloseableHttpResponse res,
+                                    @Nullable String expectedContentType,
+                                    String expectedContent) throws Exception {
+        assert200Ok(res, expectedContentType, content -> assertThat(content).isEqualTo(expectedContent));
     }
 
-    private static String assert200Ok(CloseableHttpResponse res,
-                                      @Nullable String expectedContentType,
-                                      Consumer<String> contentAssertions) throws Exception {
+    private static void assert200Ok(CloseableHttpResponse res,
+                                    @Nullable String expectedContentType,
+                                    Consumer<String> contentAssertions) throws Exception {
 
         assertStatusLine(res, "HTTP/1.1 200 OK");
 
         // Ensure that the 'Date' header exists and is well-formed.
-        final String date;
-        assertThat(res.containsHeader(HttpHeaders.DATE)).isTrue();
-        date = res.getFirstHeader(HttpHeaders.DATE).getValue();
+        final String date = headerOrNull(res, HttpHeaders.DATE);
+        assertThat(date).isNotNull();
         DateFormatter.parseHttpDate(date);
 
         // Ensure that the 'Last-Modified' header exists and is well-formed.
-        final String lastModified;
-        assertThat(res.containsHeader(HttpHeaders.LAST_MODIFIED)).isTrue();
-        lastModified = res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue();
+        final String lastModified = headerOrNull(res, HttpHeaders.LAST_MODIFIED);
+        assertThat(lastModified).isNotNull();
         DateFormatter.parseHttpDate(lastModified);
 
         // Ensure that the 'ETag' header exists and is well-formed.
-        final String entityTag;
-        assertThat(res.containsHeader(HttpHeaders.ETAG)).isTrue();
-        entityTag = res.getFirstHeader(HttpHeaders.ETAG).getValue();
+        final String entityTag = headerOrNull(res, HttpHeaders.ETAG);
         assertThat(entityTag).matches(ETAG_PATTERN);
 
         // Ensure the content type is correct.
         if (expectedContentType != null) {
-            assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isTrue();
-            assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue())
-                    .startsWith(expectedContentType);
+            assertThat(headerOrNull(res, HttpHeaders.CONTENT_TYPE)).startsWith(expectedContentType);
         } else {
             assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE)).isFalse();
         }
 
         // Ensure the content satisfies the condition.
         contentAssertions.accept(EntityUtils.toString(res.getEntity()).trim());
+    }
 
-        return lastModified;
+    private void assert304NotModified(CloseableHttpClient hc, String path,
+                                      String expectedETag, String expectedLastModified) throws IOException {
+        final String uri = newUri(path);
+
+        // Test if the 'If-None-Match' header works as expected.
+        final HttpUriRequest req1 = new HttpGet(uri);
+        req1.setHeader(HttpHeaders.IF_NONE_MATCH, expectedETag);
+
+        try (CloseableHttpResponse resCached = hc.execute(req1)) {
+            assert304NotModified(resCached, expectedETag, expectedLastModified);
+        }
+
+        // Test if the 'If-Modified-Since' header works as expected.
+        final HttpUriRequest req2 = new HttpGet(uri);
+        req2.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
+
+        try (CloseableHttpResponse resCached = hc.execute(req2)) {
+            assert304NotModified(resCached, expectedETag, expectedLastModified);
+        }
     }
 
     private static void assert304NotModified(
-            CloseableHttpResponse res, String expectedLastModified) {
+            CloseableHttpResponse res, String expectedEtag, String expectedLastModified) {
 
         assertStatusLine(res, "HTTP/1.1 304 Not Modified");
 
+        // Ensure that the 'ETag' header did not change.
+        assertThat(headerOrNull(res, HttpHeaders.ETAG)).isEqualTo(expectedEtag);
+
         // Ensure that the 'Last-Modified' header did not change.
-        assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue()).isEqualTo(
-                expectedLastModified);
+        assertThat(headerOrNull(res, HttpHeaders.LAST_MODIFIED)).isEqualTo(expectedLastModified);
 
         // Ensure that the content does not exist.
         assertThat(res.getEntity()).isNull();
@@ -521,6 +540,20 @@ public class HttpFileServiceTest {
 
     private static void assertStatusLine(CloseableHttpResponse res, String expectedStatusLine) {
         assertThat(res.getStatusLine().toString()).isEqualTo(expectedStatusLine);
+    }
+
+    private static String header(CloseableHttpResponse res, String name) {
+        final String value = headerOrNull(res, name);
+        assertThat(value).withFailMessage("The response must contains the header '%s'.", name).isNotNull();
+        return value;
+    }
+
+    @Nullable
+    private static String headerOrNull(CloseableHttpResponse res, String name) {
+        if (!res.containsHeader(name)) {
+            return null;
+        }
+        return res.getFirstHeader(name).getValue();
     }
 
     private static String currentHttpDate() {

@@ -23,6 +23,7 @@ import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofCa
 import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofExact;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -323,7 +324,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         private volatile HttpFile file = HttpFile.nonExistent();
 
         @Override
-        public HttpFile get(String path, @Nullable MediaType contentType, @Nullable String contentEncoding) {
+        public HttpFile get(String path, Clock clock,
+                            @Nullable MediaType contentType, @Nullable String contentEncoding) {
             return file;
         }
 

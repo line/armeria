@@ -22,6 +22,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Clock;
 
 import javax.annotation.Nullable;
 
@@ -42,20 +43,23 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
     }
 
     @Override
-    public HttpFile get(String path, @Nullable MediaType contentType, @Nullable String contentEncoding) {
+    public HttpFile get(String path, Clock clock,
+                        @Nullable MediaType contentType, @Nullable String contentEncoding) {
         // Replace '/' with the platform dependent file separator if necessary.
         if (FILE_SEPARATOR_IS_NOT_SLASH) {
             path = path.replace(File.separatorChar, '/');
         }
 
         final HttpFileBuilder builder = HttpFileBuilder.of(Paths.get(rootDir + path));
-        return build(builder, contentType, contentEncoding);
+        return build(builder, clock, contentType, contentEncoding);
     }
 
     static HttpFile build(HttpFileBuilder builder,
+                          Clock clock,
                           @Nullable MediaType contentType,
                           @Nullable String contentEncoding) {
         builder.autoDetectedContentType(false);
+        builder.clock(clock);
         if (contentType != null) {
             builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
         }

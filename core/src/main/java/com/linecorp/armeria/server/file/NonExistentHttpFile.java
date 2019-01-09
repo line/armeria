@@ -22,6 +22,8 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -51,5 +53,18 @@ final class NonExistentHttpFile implements AggregatedHttpFile {
     @Override
     public HttpData content() {
         return null;
+    }
+
+    @Override
+    public HttpService asService() {
+        return (ctx, req) -> {
+            switch (ctx.method()) {
+                case HEAD:
+                case GET:
+                    return HttpResponse.of(HttpStatus.NOT_FOUND);
+                default:
+                    return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+            }
+        };
     }
 }

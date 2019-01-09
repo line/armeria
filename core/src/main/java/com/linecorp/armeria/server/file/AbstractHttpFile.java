@@ -18,16 +18,21 @@ package com.linecorp.armeria.server.file;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -38,6 +43,7 @@ public abstract class AbstractHttpFile implements HttpFile {
 
     @Nullable
     private final MediaType contentType;
+    private final Clock clock;
     private final boolean dateEnabled;
     private final boolean lastModifiedEnabled;
     @Nullable
@@ -49,6 +55,7 @@ public abstract class AbstractHttpFile implements HttpFile {
      *
      * @param contentType the {@link MediaType} of the file which will be used as the {@code "content-type"}
      *                    header value. {@code null} to disable setting the {@code "content-type"} header.
+     * @param clock the {@link Clock} which provides the current date and time
      * @param dateEnabled whether to set the {@code "date"} header automatically
      * @param lastModifiedEnabled whether to add the {@code "last-modified"} header automatically
      * @param entityTagFunction the {@link BiFunction} that generates an entity tag from the file's attributes.
@@ -56,22 +63,42 @@ public abstract class AbstractHttpFile implements HttpFile {
      * @param headers the additional headers to set
      */
     protected AbstractHttpFile(@Nullable MediaType contentType,
+                               Clock clock,
                                boolean dateEnabled,
                                boolean lastModifiedEnabled,
                                @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                                HttpHeaders headers) {
 
+        this.contentType = contentType;
+        this.clock = requireNonNull(clock, "clock");
         this.dateEnabled = dateEnabled;
         this.lastModifiedEnabled = lastModifiedEnabled;
-        this.contentType = contentType;
         this.entityTagFunction = entityTagFunction;
         this.headers = requireNonNull(headers, "headers").asImmutable();
     }
 
     /**
+     * Returns the {@link MediaType} of the file, which will be used for setting the {@code "content-type"}
+     * header.
+     *
+     * @return the {@link MediaType} of the file, or {@code null} if the {@code "content-type"} header will not
+     *         be set automatically.
+     */
+    @Nullable
+    protected final MediaType contentType() {
+        return contentType;
+    }
+
+    /**
+     * Returns the {@link Clock} which provides the current date and time.
+     */
+    protected final Clock clock() {
+        return clock;
+    }
+
+    /**
      * Returns the {@link String} representation of the file path or URI, which is given to the
-     * {@code entityTagFunction} specified in
-     * {@linkplain #AbstractHttpFile(MediaType, boolean, boolean, BiFunction, HttpHeaders) the constructor}.
+     * {@code entityTagFunction} specified with the constructor.
      */
     protected abstract String pathOrUri();
 
@@ -90,18 +117,6 @@ public abstract class AbstractHttpFile implements HttpFile {
     }
 
     /**
-     * Returns the {@link MediaType} of the file, which will be used for setting the {@code "content-type"}
-     * header.
-     *
-     * @return the {@link MediaType} of the file, or {@code null} if the {@code "content-type"} header will not
-     *         be set automatically.
-     */
-    @Nullable
-    protected final MediaType contentType() {
-        return contentType;
-    }
-
-    /**
      * Returns the immutable additional {@link HttpHeaders} which will be set when building an
      * {@link HttpResponse}.
      */
@@ -111,8 +126,7 @@ public abstract class AbstractHttpFile implements HttpFile {
 
     /**
      * Generates an entity tag of the file with the given attributes using the {@code entityTagFunction}
-     * which was specified with
-     * {@linkplain #AbstractHttpFile(MediaType, boolean, boolean, BiFunction, HttpHeaders) the constructor}.
+     * which was specified with the constructor.
      *
      * @return the entity tag or {@code null} if {@code entityTagFunction} is {@code null}.
      */
@@ -134,17 +148,19 @@ public abstract class AbstractHttpFile implements HttpFile {
             return null;
         }
 
-        // TODO(trustin): Cache the headers (sans the'date' header') if attrs did not change.
-        final long length = attrs.length();
+        // TODO(trustin): Cache the headers (sans the 'date' header') if attrs did not change.
         final String etag = generateEntityTag(attrs);
+        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+        return addCommonHeaders(headers, attrs, etag);
+    }
 
-        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.STATUS, HttpStatus.OK.codeAsText(),
-                                                   HttpHeaderNames.CONTENT_LENGTH, Long.toString(length));
+    private HttpHeaders addCommonHeaders(HttpHeaders headers, HttpFileAttributes attrs, @Nullable String etag) {
+        headers.set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(attrs.length()));
         if (contentType != null) {
             headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
         }
         if (dateEnabled) {
-            headers.setTimeMillis(HttpHeaderNames.DATE, System.currentTimeMillis());
+            headers.setTimeMillis(HttpHeaderNames.DATE, clock.millis());
         }
         if (lastModifiedEnabled) {
             headers.setTimeMillis(HttpHeaderNames.LAST_MODIFIED, attrs.lastModifiedMillis());
@@ -198,4 +214,101 @@ public abstract class AbstractHttpFile implements HttpFile {
     protected abstract HttpResponse doRead(HttpHeaders headers, long length,
                                            Executor fileReadExecutor,
                                            ByteBufAllocator alloc) throws IOException;
+
+    @Override
+    public HttpService asService() {
+        return (ctx, req) -> {
+            final HttpMethod method = ctx.method();
+            if (method != HttpMethod.GET && method != HttpMethod.HEAD) {
+                return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            final HttpFileAttributes attrs = readAttributes();
+            if (attrs == null) {
+                return HttpResponse.of(HttpStatus.NOT_FOUND);
+            }
+
+            // Handle 'if-none-match' header.
+            final String etag = generateEntityTag(attrs);
+            final HttpHeaders reqHeaders = req.headers();
+            if (etag != null) {
+                final String ifNoneMatch = findEntityTag(reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH));
+                if (etag.equals(ifNoneMatch)) {
+                    return newNotModified(attrs, etag);
+                }
+            }
+
+            // Handle 'if-modified-since' header.
+            try {
+                final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
+                if (ifModifiedSince != null) {
+                    // HTTP-date does not have subsecond-precision; add 999ms to it.
+                    final long ifModifiedSinceMillis = LongMath.saturatedAdd(ifModifiedSince, 999);
+                    if (attrs.lastModifiedMillis() < ifModifiedSinceMillis) {
+                        return newNotModified(attrs, etag);
+                    }
+                }
+            } catch (Exception ignore) {
+                // Malformed date.
+            }
+
+            // Precondition did not match. Handle as usual.
+            switch (ctx.method()) {
+                case HEAD:
+                    final HttpHeaders resHeaders = readHeaders();
+                    if (resHeaders != null) {
+                        return HttpResponse.of(resHeaders);
+                    }
+                    break;
+                case GET:
+                    final HttpResponse res = read(ctx.blockingTaskExecutor(), ctx.alloc());
+                    if (res != null) {
+                        return res;
+                    }
+                    break;
+                default:
+                    throw new Error(); // Never reaches here.
+            }
+
+            // readHeaders() or read() returned null above.
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
+        };
+    }
+
+    @Nullable
+    private static String findEntityTag(@Nullable String value) {
+        if (value == null) {
+            return null;
+        }
+
+        int i = 0;
+        int etagStart = -1;
+        int etagEnd = -1;
+        for (; i < value.length(); i++) {
+            if (value.charAt(i) == '\"') {
+                etagStart = i + 1;
+                i++;
+                break;
+            }
+        }
+
+        if (etagStart < 0) {
+            // Not surrounded by double quotes.
+            return value;
+        }
+
+        for (; i < value.length(); i++) {
+            if (value.charAt(i) == '\"') {
+                etagEnd = i;
+                break;
+            }
+        }
+
+        return etagEnd > 0 ? value.substring(etagStart, etagEnd) : value.substring(etagStart);
+    }
+
+    private HttpResponse newNotModified(HttpFileAttributes attrs, @Nullable String etag) {
+        final HttpHeaders headers = HttpHeaders.of(HttpStatus.NOT_MODIFIED);
+        return HttpResponse.of(addCommonHeaders(headers, attrs, etag));
+    }
 }
