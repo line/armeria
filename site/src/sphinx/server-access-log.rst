@@ -311,7 +311,7 @@ You can specify your own log writer which implements a ``Consumer`` of :api:`Req
 Customizing an access logger
 ----------------------------
 
-Armeria use an access logger depending on the reversed domain name of an each :api:`VirtualHost` by default.
+Armeria uses an access logger depending on the reversed domain name of an each :api:`VirtualHost` by default.
 
 For example,
     ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
@@ -332,8 +332,9 @@ However, You can specify your own policy or your own logger for a :api:`VirtualH
 
     // Using the mapper which sets an access logger with the given VirtualHost instance.
     sb.accessLogger(virtualHost -> {
-        // Write your access logger with the given VirtualHost instance.
         ....
+        // Return your access logger with the given VirtualHost instance.
+        return ....
     });
 
     // You can use VirtualHostBuilder.accessLogger to specify your own logger for the VirtualHost.
@@ -352,6 +353,7 @@ However, You can specify your own policy or your own logger for a :api:`VirtualH
     // Using the mapper which sets an access logger with the given VirtualHost instance.
     sb.withVirtualHost("*.example3.com")
     .accessLogger(virtualHost -> {
-        // Write your acess logger with the given VirtualHost instance.
         ....
+        // Return your access logger with the given VirtualHost instance.
+        return ....
     }).and()
