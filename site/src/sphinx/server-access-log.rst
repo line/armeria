@@ -311,13 +311,15 @@ You can specify your own log writer which implements a ``Consumer`` of :api:`Req
 Customizing an access logger
 ----------------------------
 
-Armeria uses an access logger depending on the reversed domain name of an each :api:`VirtualHost` by default.
+Armeria uses an access logger depending on the reversed hostname pattern of an each :api:`VirtualHost` by default.
 
 For example,
     ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
     ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
 
-However, You can specify your own policy or your own logger for a :api:`VirtualHost`.
+However, You can specify your own mapper or your own logger for a :api:`VirtualHost`.
+
+This is an example of setting your own mapper for a :api:`VirtualHost` below.
 
 .. code-block:: java
 
@@ -333,11 +335,15 @@ However, You can specify your own policy or your own logger for a :api:`VirtualH
     // Using the mapper which sets an access logger with the given VirtualHost instance.
     sb.accessLogger(virtualHost -> {
         ....
-        // Return your access logger with the given VirtualHost instance.
+        // Return the logger.
+        // Do not return null. Otherwise, it will raise ``IllegalStateException``
         return ....
     });
 
-    // You can use VirtualHostBuilder.accessLogger to specify your own logger for the VirtualHost.
+You can also specify your own logger for the specific :api:`VirtualHost`.
+In this case, the :api:`VirtualHost` doesn't follow the mapper you set via ``ServerBuilder.accessLogger()``.
+
+    // Using the specific logger name.
     sb.withVirtualHost("*.example.com")
     .accessLogger("Write your access logger name you want.")
     .and()
@@ -354,6 +360,7 @@ However, You can specify your own policy or your own logger for a :api:`VirtualH
     sb.withVirtualHost("*.example3.com")
     .accessLogger(virtualHost -> {
         ....
-        // Return your access logger with the given VirtualHost instance.
+        // Return the logger.
+        // Do not return null. Otherwise, it will raise ``IllegalStateException``
         return ....
     }).and()
