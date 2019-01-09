@@ -1173,8 +1173,8 @@ public final class ServerBuilder {
 
     /**
      * Sets the default access logger mapper for all {@link VirtualHost}s.
-     * the {@link VirtualHost}s which are not set by a user via {@link VirtualHostBuilder#accessLogger(Logger)}
-     * or {@link VirtualHost#accessLogger(Logger)} will have an access logger set by the {@code mapper}
+     * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
+     * will have an access logger set by the {@code mapper}
      * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
@@ -1184,8 +1184,8 @@ public final class ServerBuilder {
 
     /**
      * Sets the default access {@link Logger} for all {@link VirtualHost}s.
-     * the {@link VirtualHost}s which are not set by a user via {@link VirtualHostBuilder#accessLogger(Logger)}
-     * or {@link VirtualHost#accessLogger(Logger)} will have the same access {@link Logger}
+     * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
+     * will have the same access {@link Logger}
      * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Logger logger) {
@@ -1195,9 +1195,9 @@ public final class ServerBuilder {
 
     /**
      * Sets the default access logger name for all {@link VirtualHost}s.
-     * the {@link VirtualHost}s which are not set by a user via {@link VirtualHostBuilder#accessLogger(Logger)}
-     * or {@link VirtualHost#accessLogger(Logger)} will have the same access {@link Logger}
-     * named the {@code loggerName} when {@link ServerBuilder#build()} is called.
+     * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
+     * will have the same access {@link Logger} named the {@code loggerName}
+     * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
@@ -1228,22 +1228,18 @@ public final class ServerBuilder {
 
         // Gets the access logger for an each virtual host.
         virtualHosts.forEach(vh -> {
-            if (vh.accessLogger() == null) {
+            if (vh.accessLoggerOrNull() == null) {
                 final Logger logger = accessLoggerMapper.apply(vh);
-                if (logger == null) {
-                    throw new IllegalStateException(
-                            String.format("accessLoggerMapper.apply() has returned null for virtual host: %s.",
-                                          vh.hostnamePattern()));
-                }
+
+                checkState(logger != null, "accessLoggerMapper.apply() has returned null for virtual host: %s.",
+                           vh.hostnamePattern());
                 vh.accessLogger(logger);
             }
         });
-        if (defaultVirtualHost.accessLogger() == null) {
+        if (defaultVirtualHost.accessLoggerOrNull() == null) {
             final Logger logger = accessLoggerMapper.apply(defaultVirtualHost);
-            if (logger == null) {
-                throw new IllegalStateException(
-                        "accessLoggerMapper.apply() has returned null for the default virtual host.");
-            }
+            checkState(logger != null,
+                       "accessLoggerMapper.apply() has returned null for the default virtual host.");
             defaultVirtualHost.accessLogger(logger);
         }
 
@@ -1343,8 +1339,8 @@ public final class ServerBuilder {
                 h.defaultHostname(), "*", sslCtx,
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
-                 .collect(Collectors.toList()), h.producibleMediaTypes(), rejectedPathMappingHandler,
-                        host -> h.accessLogger());
+                 .collect(Collectors.toList()), h.producibleMediaTypes(),
+                          rejectedPathMappingHandler, host -> h.accessLogger());
     }
 
     @Nullable

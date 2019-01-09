@@ -543,8 +543,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      */
     public B accessLogger(Logger logger) {
         requireNonNull(logger, "logger");
-        accessLoggerMapper = host -> logger;
-        return self();
+        return accessLogger(host -> logger);
     }
 
     /**
@@ -553,8 +552,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      */
     public B accessLogger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
-        accessLoggerMapper = host -> LoggerFactory.getLogger(loggerName);
-        return self();
+        return accessLogger(host -> LoggerFactory.getLogger(loggerName));
     }
 
     @Override

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
@@ -136,6 +137,8 @@ public final class VirtualHost {
         router = Routers.ofVirtualHost(this, services, rejectionHandler);
         if (accessLoggerMapper != null) {
             accessLogger = accessLoggerMapper.apply(this);
+            checkState(accessLogger != null,
+                       "accessLoggerMapper.apply() has returned null for virtual host: %s.", hostnamePattern);
         }
     }
 
@@ -245,8 +248,13 @@ public final class VirtualHost {
     /**
      * Returns the {@link Logger} which is used for writing access logs of this virtual host.
      */
-    @Nullable
     public Logger accessLogger() {
+        checkState(accessLogger != null, "accessLogger not initialized yet.");
+        return accessLogger;
+    }
+
+    @Nullable
+    Logger accessLoggerOrNull() {
         return accessLogger;
     }
 

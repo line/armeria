@@ -82,7 +82,7 @@ public class ServerBuilderTest {
                 .accessLogger("com.ex2")
                 .and()
                 .withVirtualHost("*.example3.com")
-                .accessLogger((host) -> LoggerFactory.getLogger("com.ex3"))
+                .accessLogger(host -> LoggerFactory.getLogger("com.ex3"))
                 .and()
                 .virtualHost(new VirtualHostBuilder("def.example4.com", "*.example4.com").build())
                 .virtualHost(new VirtualHostBuilder("def.example5.com", "*.example5.com")
@@ -157,7 +157,7 @@ public class ServerBuilderTest {
         final ServerBuilder sb2 = new ServerBuilder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger(host -> {
-                    if (host.hostnamePattern().equals("*.example.com")) {
+                    if ("*.example.com".equals(host.hostnamePattern())) {
                         return null;
                     }
                     return LoggerFactory.getLogger("default");
