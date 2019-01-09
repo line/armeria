@@ -312,8 +312,10 @@ Customizing an access logger
 ----------------------------
 
 Armeria use an access logger depending on the reversed domain name of an each VirtualHost by default.
-e.g) `com.linecorp.armeria.logging.access.com.example` for `*.example.com`
-     `com.linecorp.armeria.logging.access.com.linecorp` for `*.linecorp.com`
+
+For example,
+    `com.linecorp.armeria.logging.access.com.example` for `*.example.com`
+    `com.linecorp.armeria.logging.access.com.linecorp` for `*.linecorp.com`
 
 However, You can specify your own policy or your own logger for a VirtualHost.
 
