@@ -24,6 +24,7 @@ import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Splitter;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -40,6 +41,8 @@ import io.netty.buffer.ByteBufAllocator;
  * A skeletal {@link HttpFile} implementation.
  */
 public abstract class AbstractHttpFile implements HttpFile {
+
+    private static final Splitter etagSplitter = Splitter.on(',').trimResults().omitEmptyStrings();
 
     @Nullable
     private final MediaType contentType;
@@ -232,9 +235,11 @@ public abstract class AbstractHttpFile implements HttpFile {
             final String etag = generateEntityTag(attrs);
             final HttpHeaders reqHeaders = req.headers();
             if (etag != null) {
-                final String ifNoneMatch = findEntityTag(reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH));
-                if (etag.equals(ifNoneMatch)) {
-                    return newNotModified(attrs, etag);
+                final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
+                if (ifNoneMatch != null) {
+                    if ("*".equals(ifNoneMatch) || entityTagMatches(etag, ifNoneMatch)) {
+                        return newNotModified(attrs, etag);
+                    }
                 }
             }
 
@@ -275,12 +280,18 @@ public abstract class AbstractHttpFile implements HttpFile {
         };
     }
 
-    @Nullable
-    private static String findEntityTag(@Nullable String value) {
-        if (value == null) {
-            return null;
+    private static boolean entityTagMatches(String entityTag, String ifNoneMatch) {
+        for (String candidate : etagSplitter.split(ifNoneMatch)) {
+            final String candidateETag = extractEntityTag(candidate);
+            if (entityTag.equals(candidateETag)) {
+                return true;
+            }
         }
 
+        return false;
+    }
+
+    private static String extractEntityTag(String value) {
         int i = 0;
         int etagStart = -1;
         int etagEnd = -1;
