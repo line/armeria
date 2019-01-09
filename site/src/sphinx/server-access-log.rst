@@ -363,5 +363,5 @@ In this case, the :api:`VirtualHost` doesn't follow the mapper you set via ``Ser
         // Return the logger.
         // Do not return null. Otherwise, it will raise IllegalStateException
         return LoggerFactory.getLogger("com.example.my.access.logs." + virtualHost.defaultHostname());
-    })
+      })
     ....
