@@ -318,7 +318,7 @@ default, e.g.
 
 - ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
 
-Alternatively, you can specify your own mapper or your own logger for a :api:`VirtualHost`, e.g.
+Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost`, e.g.
 
 .. code-block:: java
 
@@ -334,7 +334,7 @@ Alternatively, you can specify your own mapper or your own logger for a :api:`Vi
     // Using the mapper which sets an access logger with the given VirtualHost instance.
     sb.accessLogger(virtualHost -> {
         // Return the logger.
-        // Do not return null. Otherwise, it will raise IllegalStateException
+        // Do not return null. Otherwise, it will raise an IllegalStateException.
         return LoggerFactory.getLogger("com.example.my.access.logs." + virtualHost.defaultHostname());
     });
 
@@ -361,7 +361,7 @@ In this case, the mapper or logger you set for a specific :api:`VirtualHost` wil
     sb.withVirtualHost("*.example3.com")
       .accessLogger(virtualHost -> {
         // Return the logger.
-        // Do not return null. Otherwise, it will raise IllegalStateException
+        // Do not return null. Otherwise, it will raise an IllegalStateException.
         return LoggerFactory.getLogger("com.example.my.access.logs." + virtualHost.defaultHostname());
       })
     ....
