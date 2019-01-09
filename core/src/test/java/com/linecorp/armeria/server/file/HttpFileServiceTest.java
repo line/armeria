@@ -554,6 +554,9 @@ public class HttpFileServiceTest {
         // Ensure that the 'Last-Modified' header did not change.
         assertThat(headerOrNull(res, HttpHeaders.LAST_MODIFIED)).isEqualTo(expectedLastModified);
 
+        // Ensure that the 'Content-Length' header does not exist.
+        assertThat(res.containsHeader(HttpHeaders.CONTENT_LENGTH)).isFalse();
+
         // Ensure that the content does not exist.
         assertThat(res.getEntity()).isNull();
     }

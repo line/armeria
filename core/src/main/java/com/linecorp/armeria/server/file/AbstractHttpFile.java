@@ -154,11 +154,11 @@ public abstract class AbstractHttpFile implements HttpFile {
         // TODO(trustin): Cache the headers (sans the 'date' header') if attrs did not change.
         final String etag = generateEntityTag(attrs);
         final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+        headers.set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(attrs.length()));
         return addCommonHeaders(headers, attrs, etag);
     }
 
     private HttpHeaders addCommonHeaders(HttpHeaders headers, HttpFileAttributes attrs, @Nullable String etag) {
-        headers.set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(attrs.length()));
         if (contentType != null) {
             headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
         }
