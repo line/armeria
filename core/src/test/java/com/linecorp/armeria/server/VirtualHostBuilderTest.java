@@ -61,7 +61,7 @@ public class VirtualHostBuilderTest {
     @Test
     public void accessLoggerCustomization() {
         final VirtualHost h2 = new VirtualHostBuilder("bar.foo.com", "*.foo.com")
-                .accessLogger((host) -> LoggerFactory.getLogger("customize.test")).build();
+                .accessLogger(host -> LoggerFactory.getLogger("customize.test")).build();
         assertThat(h2.accessLogger().getName()).isEqualTo("customize.test");
 
         final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com")
