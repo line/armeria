@@ -504,32 +504,32 @@ public class HttpFileServiceTest {
         final HttpUriRequest req1 = new HttpGet(uri);
         req1.setHeader(HttpHeaders.IF_NONE_MATCH, expectedETag);
 
-        try (CloseableHttpResponse resCached = hc.execute(req1)) {
-            assert304NotModified(resCached, expectedETag, expectedLastModified);
+        try (CloseableHttpResponse res = hc.execute(req1)) {
+            assert304NotModified(res, expectedETag, expectedLastModified);
         }
 
         // Test if the 'If-None-Match' header works as expected. (multiple etags)
         final HttpUriRequest req2 = new HttpGet(uri);
         req2.setHeader(HttpHeaders.IF_NONE_MATCH, "\"an-etag-that-never-matches\", " + expectedETag);
 
-        try (CloseableHttpResponse resCached = hc.execute(req2)) {
-            assert304NotModified(resCached, expectedETag, expectedLastModified);
+        try (CloseableHttpResponse res = hc.execute(req2)) {
+            assert304NotModified(res, expectedETag, expectedLastModified);
         }
 
         // Test if the 'If-None-Match' header works as expected. (an asterisk)
         final HttpUriRequest req3 = new HttpGet(uri);
         req3.setHeader(HttpHeaders.IF_NONE_MATCH, "*");
 
-        try (CloseableHttpResponse resCached = hc.execute(req3)) {
-            assert304NotModified(resCached, expectedETag, expectedLastModified);
+        try (CloseableHttpResponse res = hc.execute(req3)) {
+            assert304NotModified(res, expectedETag, expectedLastModified);
         }
 
         // Test if the 'If-Modified-Since' header works as expected.
         final HttpUriRequest req4 = new HttpGet(uri);
         req4.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
 
-        try (CloseableHttpResponse resCached = hc.execute(req4)) {
-            assert304NotModified(resCached, expectedETag, expectedLastModified);
+        try (CloseableHttpResponse res = hc.execute(req4)) {
+            assert304NotModified(res, expectedETag, expectedLastModified);
         }
 
         // 'If-Modified-Since' should never be evaluated if 'If-None-Match' exists.
@@ -537,11 +537,10 @@ public class HttpFileServiceTest {
         req5.setHeader(HttpHeaders.IF_NONE_MATCH, "\"an-etag-that-never-matches\"");
         req5.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
 
-        try (CloseableHttpResponse resCached = hc.execute(req5)) {
+        try (CloseableHttpResponse res = hc.execute(req5)) {
             // Should not receive '304 Not Modified' because the etag did not match.
-            assertStatusLine(resCached, "HTTP/1.1 200 OK");
+            assertStatusLine(res, "HTTP/1.1 200 OK");
         }
-
     }
 
     private static void assert304NotModified(

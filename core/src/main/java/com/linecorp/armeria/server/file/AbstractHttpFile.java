@@ -234,6 +234,9 @@ public abstract class AbstractHttpFile implements HttpFile {
                 return HttpResponse.of(HttpStatus.NOT_FOUND);
             }
 
+            // See https://tools.ietf.org/html/rfc7232#section-6 for more information
+            // about how conditional requests are handled.
+
             // Handle 'if-none-match' header.
             final HttpHeaders reqHeaders = req.headers();
             final String etag = generateEntityTag(attrs);
@@ -246,7 +249,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                 }
             }
 
-            // Handle 'if-modified-since' header, only if 'if-none-match' exists.
+            // Handle 'if-modified-since' header, only if 'if-none-match' does not exist.
             if (ifNoneMatch == null) {
                 try {
                     final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
