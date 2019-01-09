@@ -336,7 +336,7 @@ This is an example of setting your own mapper for a :api:`VirtualHost` below.
     sb.accessLogger(virtualHost -> {
         ....
         // Return the logger.
-        // Do not return null. Otherwise, it will raise ``IllegalStateException``
+        // Do not return null. Otherwise, it will raise IllegalStateException
         return ....
     });
 
@@ -364,6 +364,6 @@ In this case, the :api:`VirtualHost` doesn't follow the mapper you set via ``Ser
     .accessLogger(virtualHost -> {
         ....
         // Return the logger.
-        // Do not return null. Otherwise, it will raise ``IllegalStateException``
+        // Do not return null. Otherwise, it will raise IllegalStateException
         return ....
     }).and()
