@@ -343,6 +343,7 @@ This is an example of setting your own mapper for a :api:`VirtualHost` below.
 You can also specify your own logger for the specific :api:`VirtualHost`.
 In this case, the :api:`VirtualHost` doesn't follow the mapper you set via ``ServerBuilder.accessLogger()``.
 
+.. code-block:: java
     // Using the specific logger name.
     sb.withVirtualHost("*.example.com")
     .accessLogger("Write your access logger name you want.")
