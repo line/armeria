@@ -316,7 +316,7 @@ default, e.g.
 - ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
 - ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
 
-Alternatively, You can specify your own mapper or your own logger for a :api:`VirtualHost`.
+Alternatively, you can specify your own mapper or your own logger for a :api:`VirtualHost`.
 
 This is an example of setting your own mapper for a :api:`VirtualHost` below.
 
