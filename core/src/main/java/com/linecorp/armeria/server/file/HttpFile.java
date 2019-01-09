@@ -106,7 +106,7 @@ public interface HttpFile {
     /**
      * Retrieves the attributes of this file.
      *
-     * @return the attributes of this file, or {@code null} if the file does not exist
+     * @return the attributes of this file, or {@code null} if the file does not exist.
      * @throws IOException if failed to retrieve the attributes of this file.
      */
     @Nullable

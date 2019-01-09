@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.BiFunction;
 
 import com.google.common.io.BaseEncoding;
@@ -33,6 +35,9 @@ final class DefaultEntityTagFunction implements BiFunction<String, HttpFileAttri
 
     @Override
     public String apply(String pathOrUri, HttpFileAttributes attrs) {
+        requireNonNull(pathOrUri, "pathOrUri");
+        requireNonNull(attrs, "attrs");
+
         final byte[] data = new byte[4 + 8 + 8];
         final long hashCode = pathOrUri.hashCode() & 0xFFFFFFFFL;
         final long length = attrs.length();

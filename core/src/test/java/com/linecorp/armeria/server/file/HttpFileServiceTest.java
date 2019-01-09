@@ -531,6 +531,17 @@ public class HttpFileServiceTest {
         try (CloseableHttpResponse resCached = hc.execute(req4)) {
             assert304NotModified(resCached, expectedETag, expectedLastModified);
         }
+
+        // 'If-Modified-Since' should never be evaluated if 'If-None-Match' exists.
+        final HttpUriRequest req5 = new HttpGet(uri);
+        req5.setHeader(HttpHeaders.IF_NONE_MATCH, "\"an-etag-that-never-matches\"");
+        req5.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
+
+        try (CloseableHttpResponse resCached = hc.execute(req5)) {
+            // Should not receive '304 Not Modified' because the etag did not match.
+            assertStatusLine(resCached, "HTTP/1.1 200 OK");
+        }
+
     }
 
     private static void assert304NotModified(

@@ -179,6 +179,9 @@ public abstract class AbstractHttpFile implements HttpFile {
 
     @Override
     public final HttpResponse read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+        requireNonNull(fileReadExecutor, "fileReadExecutor");
+        requireNonNull(alloc, "alloc");
+
         try {
             final HttpFileAttributes attrs = readAttributes();
             final HttpHeaders headers = readHeaders(attrs);
@@ -232,10 +235,10 @@ public abstract class AbstractHttpFile implements HttpFile {
             }
 
             // Handle 'if-none-match' header.
-            final String etag = generateEntityTag(attrs);
             final HttpHeaders reqHeaders = req.headers();
+            final String etag = generateEntityTag(attrs);
+            final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
             if (etag != null) {
-                final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
                 if (ifNoneMatch != null) {
                     if ("*".equals(ifNoneMatch) || entityTagMatches(etag, ifNoneMatch)) {
                         return newNotModified(attrs, etag);
@@ -243,18 +246,20 @@ public abstract class AbstractHttpFile implements HttpFile {
                 }
             }
 
-            // Handle 'if-modified-since' header.
-            try {
-                final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
-                if (ifModifiedSince != null) {
-                    // HTTP-date does not have subsecond-precision; add 999ms to it.
-                    final long ifModifiedSinceMillis = LongMath.saturatedAdd(ifModifiedSince, 999);
-                    if (attrs.lastModifiedMillis() < ifModifiedSinceMillis) {
-                        return newNotModified(attrs, etag);
+            // Handle 'if-modified-since' header, only if 'if-none-match' exists.
+            if (ifNoneMatch == null) {
+                try {
+                    final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
+                    if (ifModifiedSince != null) {
+                        // HTTP-date does not have subsecond-precision; add 999ms to it.
+                        final long ifModifiedSinceMillis = LongMath.saturatedAdd(ifModifiedSince, 999);
+                        if (attrs.lastModifiedMillis() < ifModifiedSinceMillis) {
+                            return newNotModified(attrs, etag);
+                        }
                     }
+                } catch (Exception ignore) {
+                    // Malformed date.
                 }
-            } catch (Exception ignore) {
-                // Malformed date.
             }
 
             // Precondition did not match. Handle as usual.
