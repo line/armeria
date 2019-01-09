@@ -325,10 +325,12 @@ Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost
 
     // Using the specific logger name.
     sb.accessLogger("com.example.my.access.logs");
+    ....
 
     // Using your own logger.
     Logger logger = LoggerFactory.getLogger("com.example2.my.access.logs");
     sb.accessLogger(Logger);
+    ....
 
     // Using the mapper which sets an access logger with the given VirtualHost instance.
     sb.accessLogger(virtualHost -> {
@@ -336,6 +338,7 @@ Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost
         // Do not return null. Otherwise, it will raise an IllegalStateException.
         return LoggerFactory.getLogger("com.example.my.access.logs." + virtualHost.defaultHostname());
     });
+    ....
 
 You can also specify your own logger for the specific :api:`VirtualHost`.
 In this case, the mapper or logger you set for a specific :api:`VirtualHost` will override the access logger set via ``ServerBuilder.accessLogger()``.
