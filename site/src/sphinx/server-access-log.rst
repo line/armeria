@@ -313,7 +313,9 @@ Customizing an access logger
 
 Armeria uses an SLF4J logger whose name is based on a reversed domain name of each virtual host by
 default, e.g.
+
 - ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
+
 - ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
 
 Alternatively, you can specify your own mapper or your own logger for a :api:`VirtualHost`, e.g.
