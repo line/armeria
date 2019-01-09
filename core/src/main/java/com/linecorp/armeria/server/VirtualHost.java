@@ -74,9 +74,8 @@ public final class VirtualHost {
     private final MediaTypeSet producibleMediaTypes;
 
     /**
-     * If accessLogger is {@code null}, it is initialized later
+     * If {@code accessLogger} is {@code null}, it is initialized later
      * by {@link ServerBuilder} via {@link #accessLogger(Logger)}.
-     * If it is not {@code null}, it is initialized later by {@link VirtualHostBuilder} via the constructor.
      */
     @Nullable
     private Logger accessLogger;
@@ -93,16 +92,14 @@ public final class VirtualHost {
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {
-             }, null);
+             (virtualHost, mapping, existingMapping) -> {}, null);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, Function<VirtualHost, Logger> accessLoggerMapper) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {
-             }, accessLoggerMapper);
+             (virtualHost, mapping, existingMapping) -> {}, accessLoggerMapper);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
@@ -308,7 +305,7 @@ public final class VirtualHost {
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
-            Service<HttpRequest, HttpResponse>> decorator) {
+                                            Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {
             return this;
         }

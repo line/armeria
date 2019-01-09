@@ -109,7 +109,7 @@ public class ServerBuilderTest {
 
     /**
      * Makes sure that {@link VirtualHost}s can have a proper {@link Logger} used for writing access
-     * when a user specify the default access logger via {@link ServerBuilder#accessLogger(String)}.
+     * when a user specifies the default access logger via {@link ServerBuilder#accessLogger(String)}.
      */
     @Test
     public void setAccessLoggerTest2() {
@@ -146,7 +146,7 @@ public class ServerBuilderTest {
 
     /**
      * Makes sure that {@link ServerBuilder#build()} throws {@link IllegalStateException}
-     * when the access logger of {@link VirtualHost} set by a user is {@code null}.å
+     * when the access logger of a {@link VirtualHost} set by a user is {@code null}.
      */
     @Test
     public void buildIllegalExceptionTest() {

@@ -131,6 +131,7 @@ public final class ServerBuilder {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
+    private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
 
     // Prohibit deprecate option
     @SuppressWarnings("deprecation")
@@ -1172,9 +1173,8 @@ public final class ServerBuilder {
 
     /**
      * Sets the default access logger mapper for all {@link VirtualHost}s.
-     * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
-     * or {@link VirtualHost#accessLogger(Logger)},
-     * all of {@link VirtualHost} will have an access logger set by {@code mapper}
+     * the {@link VirtualHost}s which are not set by a user via {@link VirtualHostBuilder#accessLogger(Logger)}
+     * or {@link VirtualHost#accessLogger(Logger)} will have an access logger set by the {@code mapper}
      * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
@@ -1184,9 +1184,8 @@ public final class ServerBuilder {
 
     /**
      * Sets the default access {@link Logger} for all {@link VirtualHost}s.
-     * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
-     * or {@link VirtualHost#accessLogger(Logger)},
-     * all of {@link VirtualHost} will have the same access {@link Logger}
+     * the {@link VirtualHost}s which are not set by a user via {@link VirtualHostBuilder#accessLogger(Logger)}
+     * or {@link VirtualHost#accessLogger(Logger)} will have the same access {@link Logger}
      * when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Logger logger) {
@@ -1196,10 +1195,9 @@ public final class ServerBuilder {
 
     /**
      * Sets the default access logger name for all {@link VirtualHost}s.
-     * Unless you specify the access {@link Logger} by using {@link VirtualHostBuilder#accessLogger(Logger)}
-     * or {@link VirtualHost#accessLogger(Logger)},
-     * all of {@link VirtualHost} will have an access {@link Logger} named the {@code loggerName}
-     * when {@link ServerBuilder#build()} is called.
+     * the {@link VirtualHost}s which are not set by a user via {@link VirtualHostBuilder#accessLogger(Logger)}
+     * or {@link VirtualHost#accessLogger(Logger)} will have the same access {@link Logger}
+     * named the {@code loggerName} when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
@@ -1234,7 +1232,7 @@ public final class ServerBuilder {
                 final Logger logger = accessLoggerMapper.apply(vh);
                 if (logger == null) {
                     throw new IllegalStateException(
-                            String.format("accessLoggerMapper.apply() has returned null for virtual hosts: %s.",
+                            String.format("accessLoggerMapper.apply() has returned null for virtual host: %s.",
                                           vh.hostnamePattern()));
                 }
                 vh.accessLogger(logger);
@@ -1346,7 +1344,7 @@ public final class ServerBuilder {
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
                  .collect(Collectors.toList()), h.producibleMediaTypes(), rejectedPathMappingHandler,
-                host -> h.accessLogger());
+                        host -> h.accessLogger());
     }
 
     @Nullable
@@ -1367,7 +1365,9 @@ public final class ServerBuilder {
     private static String defaultAccessLoggerName(String hostnamePattern) {
         requireNonNull(hostnamePattern, "hostnamePattern");
         final String[] elements = hostnamePattern.split("\\.");
-        final StringBuilder name = new StringBuilder("com.linecorp.armeria.logging.access");
+        final StringBuilder name = new StringBuilder(
+                DEFAULT_ACCESS_LOGGER_PREFIX.length() + hostnamePattern.length() + 1);
+        name.append(DEFAULT_ACCESS_LOGGER_PREFIX);
         for (int i = elements.length - 1; i >= 0; i--) {
             final String element = elements[i];
             if (element.isEmpty() || "*".equals(element)) {
