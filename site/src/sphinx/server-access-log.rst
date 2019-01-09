@@ -340,7 +340,7 @@ Alternatively, you can specify your own mapper or your own logger for a :api:`Vi
 
 You can also specify your own logger for the specific :api:`VirtualHost`.
 
-In this case, the :api:`VirtualHost` doesn't follow the mapper you set via ``ServerBuilder.accessLogger()``.
+In this case, the mapper or logger you set for a specific :api:`VirtualHost` will override the access logger set via ``ServerBuilder.accessLogger()``.
 
 .. code-block:: java
 
