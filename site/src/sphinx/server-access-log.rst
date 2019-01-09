@@ -306,3 +306,62 @@ You can specify your own log writer which implements a ``Consumer`` of :api:`Req
         // Write your access log with the given RequestLog instance.
         ....
     });
+
+
+Customizing an access logger
+----------------------------
+
+Armeria uses an access logger depending on the reversed hostname pattern of an each :api:`VirtualHost` by default.
+
+For example,
+    ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
+    ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
+
+However, You can specify your own mapper or your own logger for a :api:`VirtualHost`.
+
+This is an example of setting your own mapper for a :api:`VirtualHost` below.
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+
+    // Using the specific logger name.
+    sb.accessLogger("Write your access logger name you want.");
+
+    // Using your own logger.
+    Logger logger = ...;
+    sb.accessLogger(Logger);
+
+    // Using the mapper which sets an access logger with the given VirtualHost instance.
+    sb.accessLogger(virtualHost -> {
+        ....
+        // Return the logger.
+        // Do not return null. Otherwise, it will raise ``IllegalStateException``
+        return ....
+    });
+
+You can also specify your own logger for the specific :api:`VirtualHost`.
+In this case, the :api:`VirtualHost` doesn't follow the mapper you set via ``ServerBuilder.accessLogger()``.
+
+.. code-block:: java
+    // Using the specific logger name.
+    sb.withVirtualHost("*.example.com")
+    .accessLogger("Write your access logger name you want.")
+    .and()
+    ....
+
+    // Using your own logger.
+    Logger logger = ...;
+    sb.withVirtualHost("*.example2.com")
+    .accessLogger(Logger)
+    .and()
+    ....
+
+    // Using the mapper which sets an access logger with the given VirtualHost instance.
+    sb.withVirtualHost("*.example3.com")
+    .accessLogger(virtualHost -> {
+        ....
+        // Return the logger.
+        // Do not return null. Otherwise, it will raise ``IllegalStateException``
+        return ....
+    }).and()
