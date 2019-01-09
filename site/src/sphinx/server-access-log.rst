@@ -315,7 +315,6 @@ Armeria uses an SLF4J logger whose name is based on a reversed domain name of ea
 default, e.g.
 
 - ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
-
 - ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
 
 Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost`, e.g.
@@ -339,7 +338,6 @@ Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost
     });
 
 You can also specify your own logger for the specific :api:`VirtualHost`.
-
 In this case, the mapper or logger you set for a specific :api:`VirtualHost` will override the access logger set via ``ServerBuilder.accessLogger()``.
 
 .. code-block:: java

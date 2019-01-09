@@ -1174,8 +1174,7 @@ public final class ServerBuilder {
     /**
      * Sets the default access logger mapper for all {@link VirtualHost}s.
      * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
-     * will have an access logger set by the {@code mapper}
-     * when {@link ServerBuilder#build()} is called.
+     * will have an access logger set by the {@code mapper} when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
         accessLoggerMapper = requireNonNull(mapper, "mapper");
@@ -1185,8 +1184,7 @@ public final class ServerBuilder {
     /**
      * Sets the default access {@link Logger} for all {@link VirtualHost}s.
      * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
-     * will have the same access {@link Logger}
-     * when {@link ServerBuilder#build()} is called.
+     * will have the same access {@link Logger} when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Logger logger) {
         requireNonNull(logger, "logger");
@@ -1226,7 +1224,7 @@ public final class ServerBuilder {
             virtualHosts = this.virtualHosts;
         }
 
-        // Gets the access logger for an each virtual host.
+        // Gets the access logger for each virtual host.
         virtualHosts.forEach(vh -> {
             if (vh.accessLoggerOrNull() == null) {
                 final Logger logger = accessLoggerMapper.apply(vh);
