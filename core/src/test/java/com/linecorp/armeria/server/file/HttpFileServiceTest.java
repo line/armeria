@@ -24,7 +24,6 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -416,8 +415,7 @@ public class HttpFileServiceTest {
 
             // Modify the file cached by the service. Update last modification time explicitly
             // so that it differs from the old value.
-            Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8),
-                        StandardOpenOption.TRUNCATE_EXISTING);
+            Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
             assertThat(barFile.setLastModified(barFileLastModified + 5000)).isTrue();
 
             try (CloseableHttpResponse res = hc.execute(req)) {
