@@ -241,11 +241,9 @@ public abstract class AbstractHttpFile implements HttpFile {
             final HttpHeaders reqHeaders = req.headers();
             final String etag = generateEntityTag(attrs);
             final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
-            if (etag != null) {
-                if (ifNoneMatch != null) {
-                    if ("*".equals(ifNoneMatch) || entityTagMatches(etag, ifNoneMatch)) {
-                        return newNotModified(attrs, etag);
-                    }
+            if (etag != null && ifNoneMatch != null) {
+                if ("*".equals(ifNoneMatch) || entityTagMatches(etag, ifNoneMatch)) {
+                    return newNotModified(attrs, etag);
                 }
             }
 
@@ -256,7 +254,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                     if (ifModifiedSince != null) {
                         // HTTP-date does not have subsecond-precision; add 999ms to it.
                         final long ifModifiedSinceMillis = LongMath.saturatedAdd(ifModifiedSince, 999);
-                        if (attrs.lastModifiedMillis() < ifModifiedSinceMillis) {
+                        if (attrs.lastModifiedMillis() <= ifModifiedSinceMillis) {
                             return newNotModified(attrs, etag);
                         }
                     }

@@ -21,8 +21,6 @@ import java.time.Clock;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.MediaType;
-
 final class ClassPathHttpVfs extends AbstractHttpVfs {
 
     private final ClassLoader classLoader;
@@ -48,10 +46,10 @@ final class ClassPathHttpVfs extends AbstractHttpVfs {
 
     @Override
     public HttpFile get(String path, Clock clock,
-                        @Nullable MediaType contentType, @Nullable String contentEncoding) {
+                        @Nullable String contentEncoding) {
         final String resourcePath = rootDir.isEmpty() ? path.substring(1) : rootDir + path;
         final HttpFileBuilder builder = HttpFileBuilder.ofResource(classLoader, resourcePath);
-        return FileSystemHttpVfs.build(builder, clock, contentType, contentEncoding);
+        return FileSystemHttpVfs.build(builder, clock, path, contentEncoding);
     }
 
     @Override

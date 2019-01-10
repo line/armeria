@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
@@ -203,23 +202,21 @@ public final class HttpFileService extends AbstractHttpService {
     @Nullable
     private HttpFile findFile(ServiceRequestContext ctx, String path,
                               EnumSet<FileServiceContentEncoding> supportedEncodings) throws IOException {
-        final MediaType contentType = MimeTypeUtil.guessFromPath(path);
         for (FileServiceContentEncoding encoding : supportedEncodings) {
             final String contentEncoding = encoding.headerValue;
-            final HttpFile file = findFile(ctx, path + encoding.extension, contentType, contentEncoding);
+            final HttpFile file = findFile(ctx, path + encoding.extension, contentEncoding);
             if (file != null) {
                 return file;
             }
         }
 
-        return findFile(ctx, path, contentType, null);
+        return findFile(ctx, path, (String) null);
     }
 
     @Nullable
     private HttpFile findFile(ServiceRequestContext ctx, String path,
-                              @Nullable MediaType contentType,
                               @Nullable String contentEncoding) throws IOException {
-        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentType, contentEncoding);
+        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentEncoding);
         final HttpFileAttributes uncachedAttrs = uncachedFile.readAttributes();
         if (cache == null) {
             return uncachedAttrs != null ? uncachedFile : null;
@@ -232,14 +229,16 @@ public final class HttpFileService extends AbstractHttpService {
             return null;
         }
 
+        if (uncachedAttrs.length() > config.maxCacheEntrySizeBytes()) {
+            // Invalidate the cache just in case the file was small previously.
+            cache.invalidate(pathAndEncoding);
+            return uncachedFile;
+        }
+
         final AggregatedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
         if (cachedFile == null) {
-            // Cache miss. Cache if small enough.
-            if (uncachedAttrs.length() <= config.maxCacheEntrySizeBytes()) {
-                return cache(ctx, pathAndEncoding, uncachedFile);
-            } else {
-                return uncachedFile;
-            }
+            // Cache miss. Add a new entry to the cache.
+            return cache(ctx, pathAndEncoding, uncachedFile);
         }
 
         final HttpFileAttributes cachedAttrs = cachedFile.readAttributes();
@@ -249,13 +248,9 @@ public final class HttpFileService extends AbstractHttpService {
             return cachedFile;
         }
 
-        // Cache hit, but the cached file is out of date. Cache if small enough.
+        // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
         cache.invalidate(pathAndEncoding);
-        if (uncachedAttrs.length() <= config.maxCacheEntrySizeBytes()) {
-            return cache(ctx, pathAndEncoding, uncachedFile);
-        } else {
-            return uncachedFile;
-        }
+        return cache(ctx, pathAndEncoding, uncachedFile);
     }
 
     private HttpFile cache(ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile file) {

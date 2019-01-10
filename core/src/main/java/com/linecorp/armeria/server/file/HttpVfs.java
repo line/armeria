@@ -24,8 +24,6 @@ import java.time.Clock;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.MediaType;
-
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 
@@ -67,14 +65,12 @@ public interface HttpVfs {
      *
      * @param path an absolute path whose component separator is {@code '/'}
      * @param clock the {@link Clock} which provides the current date and time
-     * @param contentType the desired {@code 'content-type'} header value of the file.
-     *                    {@code null} to omit the header.
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      *
      * @return the {@link HttpFile} at the specified {@code path}
      */
-    HttpFile get(String path, Clock clock, @Nullable MediaType contentType, @Nullable String contentEncoding);
+    HttpFile get(String path, Clock clock, @Nullable String contentEncoding);
 
     /**
      * Returns the value of the {@code "vfs"} {@link Tag} in a {@link Meter}.

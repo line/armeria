@@ -325,7 +325,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
         @Override
         public HttpFile get(String path, Clock clock,
-                            @Nullable MediaType contentType, @Nullable String contentEncoding) {
+                            @Nullable String contentEncoding) {
             return file;
         }
 

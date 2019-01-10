@@ -44,28 +44,32 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
 
     @Override
     public HttpFile get(String path, Clock clock,
-                        @Nullable MediaType contentType, @Nullable String contentEncoding) {
+                        @Nullable String contentEncoding) {
         // Replace '/' with the platform dependent file separator if necessary.
         if (FILE_SEPARATOR_IS_NOT_SLASH) {
             path = path.replace(File.separatorChar, '/');
         }
 
         final HttpFileBuilder builder = HttpFileBuilder.of(Paths.get(rootDir + path));
-        return build(builder, clock, contentType, contentEncoding);
+        return build(builder, clock, path, contentEncoding);
     }
 
     static HttpFile build(HttpFileBuilder builder,
                           Clock clock,
-                          @Nullable MediaType contentType,
+                          String pathOrUri,
                           @Nullable String contentEncoding) {
+
         builder.autoDetectedContentType(false);
         builder.clock(clock);
+
+        final MediaType contentType = MimeTypeUtil.guessFromPath(pathOrUri, contentEncoding);
         if (contentType != null) {
             builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
         }
         if (contentEncoding != null) {
             builder.setHeader(HttpHeaderNames.CONTENT_ENCODING, contentEncoding);
         }
+
         return builder.build();
     }
 
