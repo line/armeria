@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
 import io.netty.util.AsciiString;
 
-public class CorsPolicyBuilder {
+public final class CorsPolicyBuilder {
     Set<String> origins;
     boolean credentialsAllowed;
     boolean nullOriginAllowed;
@@ -89,7 +89,7 @@ public class CorsPolicyBuilder {
      */
     public CorsServiceBuilder and() {
         checkState(serviceBuilder != null, "ServiceBuilder has not been initialized.");
-        serviceBuilder.policies.add(build());
+        serviceBuilder.addPolicy(build());
         return serviceBuilder;
     }
 
@@ -393,7 +393,7 @@ public class CorsPolicyBuilder {
      * TODO: add javadocs.
      */
     public CorsPolicyBuilder andForOrigins(final String... origins) {
-        return and().newOrigins(origins);
+        return and().andForOrigins(origins);
     }
 
     /**

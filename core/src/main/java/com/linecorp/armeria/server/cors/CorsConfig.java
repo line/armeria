@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.cors;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
@@ -48,27 +46,17 @@ public final class CorsConfig {
     private final boolean enabled;
     private final boolean anyOriginSupported;
     private final Set<CorsPolicy> policies;
-    @Nullable
-    private final CorsPolicy defaultPolicy;
 
     CorsConfig() {
         enabled = false;
         anyOriginSupported = false;
         policies = Collections.emptySet();
-        defaultPolicy = null;
     }
 
     CorsConfig(final CorsServiceBuilder builder) {
         enabled = true;
         anyOriginSupported = builder.anyOriginSupported;
-        checkState(!(builder.anyOriginSupported && builder.policies.size() > 1),
-                   "You can only have 1 policy for any origin supported CORS service.");
-        policies = builder.policies;
-        if (anyOriginSupported) {
-            defaultPolicy = builder.policies.iterator().next();
-        } else {
-            defaultPolicy = null;
-        }
+        policies = builder.policies();
     }
 
     /**
@@ -119,7 +107,7 @@ public final class CorsConfig {
     @Nullable
     CorsPolicy getPolicy(String origin) {
         if (isAnyOriginSupported() && ANY_ORIGIN.equals(origin)) {
-            return defaultPolicy;
+            return policies.iterator().next();
         }
         final boolean isNullOrigin = NULL_ORIGIN.equals(origin);
         final String lowerCaseOrigin = Ascii.toLowerCase(origin);
