@@ -71,7 +71,7 @@ public class HttpServerCorsTest {
                                          .exposeHeaders(HttpHeaderNames.of("expose_header_1"),
                                                         HttpHeaderNames.of("expose_header_2"))
                                          .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                                         .newDecorator()));
+                                         .and().newDecorator()));
         }
     };
 
