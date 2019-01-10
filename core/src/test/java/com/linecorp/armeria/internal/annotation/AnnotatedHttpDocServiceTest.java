@@ -45,6 +45,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -75,15 +76,13 @@ import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-import io.netty.util.AsciiString;
-
 public class AnnotatedHttpDocServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private static final HttpHeaders EXAMPLE_HEADERS_ALL = HttpHeaders.of(AsciiString.of("a"), "b");
-    private static final HttpHeaders EXAMPLE_HEADERS_SERVICE = HttpHeaders.of(AsciiString.of("c"), "d");
-    private static final HttpHeaders EXAMPLE_HEADERS_METHOD = HttpHeaders.of(AsciiString.of("e"), "f");
+    private static final HttpHeaders EXAMPLE_HEADERS_ALL = HttpHeaders.of(HttpHeaderNames.of("a"), "b");
+    private static final HttpHeaders EXAMPLE_HEADERS_SERVICE = HttpHeaders.of(HttpHeaderNames.of("c"), "d");
+    private static final HttpHeaders EXAMPLE_HEADERS_METHOD = HttpHeaders.of(HttpHeaderNames.of("e"), "f");
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {

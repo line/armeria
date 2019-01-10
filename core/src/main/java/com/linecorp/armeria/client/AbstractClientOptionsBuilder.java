@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -263,10 +264,10 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
     /**
      * Adds the specified HTTP header.
      */
-    public B addHttpHeader(AsciiString name, Object value) {
+    public B addHttpHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        httpHeaders.addObject(name, value);
+        httpHeaders.addObject(HttpHeaderNames.of(name), value);
         return self();
     }
 
@@ -282,10 +283,10 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
     /**
      * Sets the specified HTTP header.
      */
-    public B setHttpHeader(AsciiString name, Object value) {
+    public B setHttpHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        httpHeaders.setObject(name, value);
+        httpHeaders.setObject(HttpHeaderNames.of(name), value);
         return self();
     }
 

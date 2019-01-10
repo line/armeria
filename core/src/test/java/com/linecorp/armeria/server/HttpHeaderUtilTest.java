@@ -34,8 +34,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 
-import io.netty.util.AsciiString;
-
 public class HttpHeaderUtilTest {
 
     private static final Predicate<InetAddress> ACCEPT_ANY = addr -> true;
@@ -193,7 +191,7 @@ public class HttpHeaderUtilTest {
         assertThat(HttpHeaderUtil.determineClientAddress(
                 HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=10.0.0.1,for=10.0.0.2",
                                HttpHeaderNames.X_FORWARDED_FOR, "10.1.0.1,10.1.0.2",
-                               AsciiString.of("x-real-ip"), "10.2.0.1,10.2.0.2"),
+                               HttpHeaderNames.of("x-real-ip"), "10.2.0.1,10.2.0.2"),
                 ImmutableList.of(ofHeader("x-real-ip"),
                                  ofHeader(HttpHeaderNames.FORWARDED),
                                  ofHeader(HttpHeaderNames.X_FORWARDED_FOR)),

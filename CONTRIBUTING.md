@@ -33,6 +33,8 @@ After importing the project, import the IDE settings as well.
 - [`settings.jar`](https://raw.githubusercontent.com/line/armeria/master/settings/intellij_idea/settings.jar) -
   See [Importing settings from a JAR archive](https://www.jetbrains.com/help/idea/2016.3/exporting-and-importing-settings.html#d2016665e55).
 - Make sure to use 'LINE OSS' code style and inspection profile.
+  - Go to `Preferences` > `Editors` > `Code Style` and set `Scheme` option to `LINE OSS`.
+  - Go to `Preferences` > `Editors` > `Inspections` and set `Profile` option to `LINE OSS`.
 - Although optional, if you want to run Checkstyle from IDEA, install the
   [Checkstyle-IDEA plugin](https://github.com/jshiell/checkstyle-idea), import and activate
   the rule file at `settings/checkstyle/checkstyle.xml`.

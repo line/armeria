@@ -11,8 +11,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -20,6 +21,7 @@ import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
@@ -121,6 +123,7 @@ public class MessageConverterService {
      * }</pre>
      */
     @Post("/custom")
+    @ProducesText
     @RequestConverter(CustomRequestConverter.class)
     @ResponseConverter(CustomResponseConverter.class)
     public Response custom(@RequestObject Request request) {
@@ -178,12 +181,14 @@ public class MessageConverterService {
 
     public static final class CustomResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result)
-                throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof Response) {
                 final Response response = (Response) result;
-                return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
-                                       response.result() + ':' + response.from());
+                final HttpData body = HttpData.ofUtf8(response.result() + ':' + response.from());
+                return HttpResponse.of(headers, body, trailingHeaders);
             }
             return ResponseConverterFunction.fallthrough();
         }

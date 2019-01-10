@@ -38,7 +38,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.util.AsciiString;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -128,7 +127,7 @@ public class ArmeriaServerHttpResponseTest {
                         final HttpHeaders headers = (HttpHeaders) o;
                         assertThat(headers.status())
                                 .isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
-                        assertThat(headers.get(AsciiString.of("Armeria"))).isEqualTo("awesome");
+                        assertThat(headers.get(HttpHeaderNames.of("Armeria"))).isEqualTo("awesome");
                         final Cookie setCookie =
                                 ClientCookieDecoder.LAX.decode(headers.get(HttpHeaderNames.SET_COOKIE));
                         assertThat(setCookie.name()).isEqualTo("a");

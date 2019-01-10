@@ -28,20 +28,21 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-
-import io.netty.util.AsciiString;
 
 public class StickyEndpointSelectionStrategyTest {
 
     private static final String STICKY_HEADER_NAME = "USER_COOKIE";
 
-    final ToLongFunction<ClientRequestContext> hasher =
-            (ClientRequestContext ctx) -> ((HttpRequest) ctx.request()).headers()
-                                                                       .get(AsciiString.of(STICKY_HEADER_NAME))
-                                                                       .hashCode();
+    final ToLongFunction<ClientRequestContext> hasher = (ClientRequestContext ctx) -> {
+        return ((HttpRequest) ctx.request()).headers()
+                                            .get(HttpHeaderNames.of(STICKY_HEADER_NAME))
+                                            .hashCode();
+    };
+
     final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
 
     private static final EndpointGroup STATIC_ENDPOINT_GROUP = new StaticEndpointGroup(
@@ -100,7 +101,7 @@ public class StickyEndpointSelectionStrategyTest {
     private static ClientRequestContext contextWithHeader(String k, String v) {
         final ClientRequestContext ctx = mock(ClientRequestContext.class);
         when(ctx.request()).thenReturn(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
-                                                                 .set(AsciiString.of(k), v)));
+                                                                 .set(HttpHeaderNames.of(k), v)));
         return ctx;
     }
 }

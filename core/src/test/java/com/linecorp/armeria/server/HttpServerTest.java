@@ -357,8 +357,8 @@ public class HttpServerTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     return HttpResponse.of(
                             HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                       .add(AsciiString.of("x-custom-header1"), "custom1")
-                                       .add(AsciiString.of("X-Custom-Header2"), "custom2"),
+                                       .add(HttpHeaderNames.of("x-custom-header1"), "custom1")
+                                       .add(HttpHeaderNames.of("X-Custom-Header2"), "custom2"),
                             HttpData.ofUtf8("headers"));
                 }
             }.decorate(HttpEncodingService.class));
@@ -370,21 +370,21 @@ public class HttpServerTest {
                     return HttpResponse.of(
                             HttpHeaders.of(HttpStatus.OK),
                             HttpData.ofAscii("trailers incoming!"),
-                            HttpHeaders.of(AsciiString.of("foo"), "bar"));
+                            HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
                 }
             });
 
             sb.service("/head-headers-only", (ctx, req) -> HttpResponse.of(HttpHeaders.of(HttpStatus.OK)));
 
             sb.service("/additional-trailers-other-trailers", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(AsciiString.of("additional-trailer"), "value2");
+                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
                                        HttpData.ofAscii("foobar"),
-                                       HttpHeaders.of(AsciiString.of("original-trailer"), "value1"));
+                                       HttpHeaders.of(HttpHeaderNames.of("original-trailer"), "value1"));
             });
 
             sb.service("/additional-trailers-no-other-trailers", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(AsciiString.of("additional-trailer"), "value2");
+                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 String payload = "foobar";
                 return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
@@ -392,7 +392,7 @@ public class HttpServerTest {
             });
 
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(AsciiString.of("additional-trailer"), "value2");
+                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 String payload = "foobar";
                 return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
@@ -820,8 +820,8 @@ public class HttpServerTest {
                       .forEach(c -> assertTrue(Character.isLowerCase(c)));
         }
 
-        assertThat(res.headers().get(AsciiString.of("x-custom-header1"))).isEqualTo("custom1");
-        assertThat(res.headers().get(AsciiString.of("x-custom-header2"))).isEqualTo("custom2");
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header1"))).isEqualTo("custom1");
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header2"))).isEqualTo("custom2");
         assertThat(res.content().toStringUtf8()).isEqualTo("headers");
     }
 
@@ -831,7 +831,7 @@ public class HttpServerTest {
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
-        assertThat(res.trailingHeaders().get(AsciiString.of("foo"))).isEqualTo("bar");
+        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
     }
 
     @Test(timeout = 10000)
@@ -868,8 +868,8 @@ public class HttpServerTest {
         }
         HttpHeaders trailers = client().get("/additional-trailers-other-trailers")
                                        .aggregate().join().trailingHeaders();
-        assertThat(trailers.get(AsciiString.of("original-trailer"))).isEqualTo("value1");
-        assertThat(trailers.get(AsciiString.of("additional-trailer"))).isEqualTo("value2");
+        assertThat(trailers.get(HttpHeaderNames.of("original-trailer"))).isEqualTo("value1");
+        assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 
     @Test(timeout = 10000)
@@ -879,7 +879,7 @@ public class HttpServerTest {
         }
         HttpHeaders trailers = client().get("/additional-trailers-no-eos")
                                        .aggregate().join().trailingHeaders();
-        assertThat(trailers.get(AsciiString.of("additional-trailer"))).isEqualTo("value2");
+        assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 
     @Test(timeout = 10000)
@@ -889,7 +889,7 @@ public class HttpServerTest {
         }
         HttpHeaders trailers = client().get("/additional-trailers-no-other-trailers")
                                        .aggregate().join().trailingHeaders();
-        assertThat(trailers.get(AsciiString.of("additional-trailer"))).isEqualTo("value2");
+        assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 
     private HttpClient client() {

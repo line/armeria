@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
+
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -28,6 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -148,7 +151,10 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class MethodLevelResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isZero();
             }
@@ -158,7 +164,10 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class ClassLevelResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isOne();
             }
@@ -168,7 +177,10 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class ServiceLevelResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isEqualTo(2);
                 return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8(

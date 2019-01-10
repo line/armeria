@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.PublisherToHttpResponseConverter;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -56,12 +57,14 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        @Nullable Object result) throws Exception {
+                                        HttpHeaders headers,
+                                        @Nullable Object result,
+                                        HttpHeaders trailingHeaders) throws Exception {
         if (result instanceof ObservableSource) {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final ObservableSource<?> observable = (ObservableSource<?>) result;
             final PublisherToHttpResponseConverter subscriber =
-                    new PublisherToHttpResponseConverter(ctx, ctx.request(), future,
+                    new PublisherToHttpResponseConverter(ctx, ctx.request(), headers, trailingHeaders, future,
                                                          responseConverter, exceptionHandler);
             observable.subscribe(new Observer<Object>() {
                 @Override

@@ -35,8 +35,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-import io.netty.util.AsciiString;
-
 public class HttpServerCorsTest {
 
     private static final ClientFactory clientFactory = ClientFactory.DEFAULT;
@@ -87,7 +85,7 @@ public class HttpServerCorsTest {
 
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertEquals("Hello CORS", response.headers().get(AsciiString.of("x-preflight-cors")));
+        assertEquals("Hello CORS", response.headers().get(HttpHeaderNames.of("x-preflight-cors")));
     }
 
     @Test
