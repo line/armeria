@@ -306,3 +306,63 @@ You can specify your own log writer which implements a ``Consumer`` of :api:`Req
         // Write your access log with the given RequestLog instance.
         ....
     });
+
+
+Customizing an access logger
+----------------------------
+
+Armeria uses an SLF4J logger whose name is based on a reversed domain name of each virtual host by
+default, e.g.
+
+- ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
+- ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
+
+Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost`, e.g.
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+
+    // Using the specific logger name.
+    sb.accessLogger("com.example.my.access.logs");
+    ....
+
+    // Using your own logger.
+    Logger logger = LoggerFactory.getLogger("com.example2.my.access.logs");
+    sb.accessLogger(Logger);
+    ....
+
+    // Using the mapper which sets an access logger with the given VirtualHost instance.
+    sb.accessLogger(virtualHost -> {
+        // Return the logger.
+        // Do not return null. Otherwise, it will raise an IllegalStateException.
+        return LoggerFactory.getLogger("com.example.my.access.logs." + virtualHost.defaultHostname());
+    });
+    ....
+
+You can also specify your own logger for the specific :api:`VirtualHost`.
+In this case, the mapper or logger you set for a specific :api:`VirtualHost` will override the access logger set via ``ServerBuilder.accessLogger()``.
+
+.. code-block:: java
+
+    // Using the specific logger name.
+    sb.withVirtualHost("*.example.com")
+      .accessLogger("com.example.my.access.logs")
+      .and()
+    ....
+
+    // Using your own logger.
+    Logger logger = LoggerFactory.getLogger("com.example2.my.access.logs");
+    sb.withVirtualHost("*.example2.com")
+      .accessLogger(Logger)
+      .and()
+    ....
+
+    // Using the mapper which sets an access logger with the given VirtualHost instance.
+    sb.withVirtualHost("*.example3.com")
+      .accessLogger(virtualHost -> {
+        // Return the logger.
+        // Do not return null. Otherwise, it will raise an IllegalStateException.
+        return LoggerFactory.getLogger("com.example.my.access.logs." + virtualHost.defaultHostname());
+      })
+    ....

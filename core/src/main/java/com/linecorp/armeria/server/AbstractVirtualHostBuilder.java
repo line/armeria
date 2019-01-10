@@ -129,6 +129,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private SslContext sslContext;
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+    @Nullable
+    private Function<VirtualHost, Logger> accessLoggerMapper;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -522,8 +524,35 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,
-                                new MediaTypeSet(producibleTypes));
+                                new MediaTypeSet(producibleTypes), accessLoggerMapper);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
+    }
+
+    /**
+     * Sets the access logger mapper of this {@link VirtualHost}.
+     * When {@link #build()} is called, this {@link VirtualHost} gets {@link Logger}
+     * via the {@code mapper} for writing access logs.
+     */
+    public B accessLogger(Function<VirtualHost, Logger> mapper) {
+        accessLoggerMapper = requireNonNull(mapper, "mapper");
+        return self();
+    }
+
+    /**
+     * Sets the {@link Logger} of this {@link VirtualHost}, which is used for writing access logs.
+     */
+    public B accessLogger(Logger logger) {
+        requireNonNull(logger, "logger");
+        return accessLogger(host -> logger);
+    }
+
+    /**
+     * Sets the {@link Logger} named {@code loggerName} of this {@link VirtualHost},
+     * which is used for writing access logs.
+     */
+    public B accessLogger(String loggerName) {
+        requireNonNull(loggerName, "loggerName");
+        return accessLogger(host -> LoggerFactory.getLogger(loggerName));
     }
 
     @Override
