@@ -172,7 +172,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
         if (origin != null) {
             final CorsPolicy policy = config.getPolicy(origin);
             if (policy == null) {
-                logger.debug("Request origin [{}]] was not among the configured origins", origin);
+                logger.debug("There is no CORS policy configured for the request origin [{}]]", origin);
                 return null;
             }
             if (NULL_ORIGIN.equals(origin)) {

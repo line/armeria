@@ -119,7 +119,7 @@ public final class CorsConfig {
      */
     @Nullable
     CorsPolicy getPolicy(String origin) {
-        if (isAnyOriginSupported() && CorsService.ANY_ORIGIN.equals(origin)) {
+        if (isAnyOriginSupported()) {
             return policies.iterator().next();
         }
         final String lowerCaseOrigin = Ascii.toLowerCase(origin);
