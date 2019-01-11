@@ -24,6 +24,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -37,14 +38,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -58,11 +63,15 @@ import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
+import com.linecorp.armeria.server.annotation.HttpResult;
+import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 /**
  * A {@link Service} which is defined by a {@link Path} or HTTP method annotations.
@@ -77,17 +86,24 @@ public class AnnotatedHttpService implements HttpService {
             ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                AnnotatedHttpService.class.getClassLoader());
 
+    /**
+     * A default {@link ResponseConverterFunction}s.
+     */
+    private static final List<ResponseConverterFunction> defaultResponseConverters =
+            ImmutableList.of(new JacksonResponseConverterFunction(),
+                             new StringResponseConverterFunction(),
+                             new ByteArrayResponseConverterFunction());
+
     private final Object object;
     private final Method method;
     private final List<AnnotatedValueResolver> resolvers;
 
     private final AggregationStrategy aggregationStrategy;
-    private final List<ExceptionHandlerFunction> exceptionHandlers;
-    private final List<ResponseConverterFunction> responseConverters;
+    private final ExceptionHandlerFunction exceptionHandler;
+    private final ResponseConverterFunction responseConverter;
 
-    @Nullable
-    private final ResponseConverterFunction providedResponseConverter;
     private final PathMapping pathMapping;
+    private final HttpHeaders defaultHttpHeaders;
 
     private final ResponseType responseType;
 
@@ -95,23 +111,24 @@ public class AnnotatedHttpService implements HttpService {
                          List<AnnotatedValueResolver> resolvers,
                          List<ExceptionHandlerFunction> exceptionHandlers,
                          List<ResponseConverterFunction> responseConverters,
-                         PathMapping pathMapping) {
+                         PathMapping pathMapping,
+                         Optional<HttpStatus> defaultResponseStatus) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
-        this.exceptionHandlers = ImmutableList.copyOf(
-                requireNonNull(exceptionHandlers, "exceptionHandlers"));
-        this.responseConverters = ImmutableList.copyOf(
-                requireNonNull(responseConverters, "responseConverters"));
-
+        exceptionHandler =
+                new CompositeExceptionHandlerFunction(object.getClass().getSimpleName(), method.getName(),
+                                                      requireNonNull(exceptionHandlers, "exceptionHandlers"));
+        responseConverter = responseConverter(
+                method, requireNonNull(responseConverters, "responseConverters"), exceptionHandler);
         aggregationStrategy = AggregationStrategy.from(resolvers);
-        providedResponseConverter = fromProvider(method);
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
 
+        defaultHttpHeaders = HttpHeaders.of(defaultResponseStatus(
+                requireNonNull(defaultResponseStatus, "defaultResponseStatus"), method)).asImmutable();
+
         final Class<?> returnType = method.getReturnType();
-        if (providedResponseConverter != null) {
-            responseType = ResponseType.HANDLED_BY_SPI;
-        } else if (HttpResponse.class.isAssignableFrom(returnType)) {
+        if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
         } else if (CompletionStage.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.COMPLETION_STAGE;
@@ -122,41 +139,66 @@ public class AnnotatedHttpService implements HttpService {
         this.method.setAccessible(true);
     }
 
-    @Nullable
-    private ResponseConverterFunction fromProvider(Method method) {
-        final Type returnType = method.getGenericReturnType();
-
-        if (returnType instanceof ParameterizedType) {
-            final ParameterizedType p = (ParameterizedType) returnType;
-            if (Publisher.class.isAssignableFrom(toClass(p.getRawType())) &&
-                Publisher.class.isAssignableFrom(toClass(p.getActualTypeArguments()[0]))) {
-                throw new IllegalStateException(
-                        "Invalid return type of method '" + method.getName() + "'. " +
-                        "Cannot support '" + p.getActualTypeArguments()[0].getTypeName() +
-                        "' as a generic type of " + Publisher.class.getSimpleName());
-            }
+    private ResponseConverterFunction responseConverter(Method method,
+                                                        List<ResponseConverterFunction> responseConverters,
+                                                        ExceptionHandlerFunction exceptionHandler) {
+        final Type actualType;
+        if (HttpResult.class.isAssignableFrom(method.getReturnType())) {
+            final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
+            warnIfHttpResponseArgumentExists(type, type);
+            actualType = type.getActualTypeArguments()[0];
+        } else {
+            actualType = method.getGenericReturnType();
         }
 
-        for (ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
+        final List<ResponseConverterFunction> backingConverters =
+                new Builder<ResponseConverterFunction>().addAll(responseConverters)
+                                                        .addAll(defaultResponseConverters)
+                                                        .build();
+        final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
+                new Builder<ResponseConverterFunction>()
+                        .addAll(responseConverters)
+                        // Just in case a user specifies a response converter for 'Publisher' type,
+                        // we add the default implementation behind user-specified converters.
+                        .add(new PublisherResponseConverterFunction(
+                                new CompositeResponseConverterFunction(backingConverters), exceptionHandler))
+                        .addAll(defaultResponseConverters)
+                        .build());
+
+        for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
             final ResponseConverterFunction func =
-                    provider.createResponseConverterFunction(returnType,
-                                                             this::convertResponse,
-                                                             this::convertException);
+                    provider.createResponseConverterFunction(actualType, responseConverter, exceptionHandler);
             if (func != null) {
                 return func;
             }
         }
-        return null;
+
+        return responseConverter;
     }
 
-    private static Class<?> toClass(Type type) {
-        if (type instanceof Class) {
-            return (Class<?>) type;
+    private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
+        for (final Type arg : type.getActualTypeArguments()) {
+            if (arg instanceof ParameterizedType) {
+                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg);
+            } else if (arg instanceof Class) {
+                final Class<?> clazz = (Class<?>) arg;
+                if (HttpResponse.class.isAssignableFrom(clazz) ||
+                    AggregatedHttpMessage.class.isAssignableFrom(clazz)) {
+                    logger.warn("{} in the return type '{}' may take precedence over {}.",
+                                clazz.getSimpleName(), returnType, HttpResult.class.getSimpleName());
+                }
+            }
         }
-        if (type instanceof ParameterizedType) {
-            return (Class<?>) ((ParameterizedType) type).getRawType();
-        }
-        return Void.class;
+    }
+
+    private static HttpStatus defaultResponseStatus(Optional<HttpStatus> defaultResponseStatus,
+                                                    Method method) {
+        return defaultResponseStatus.orElseGet(() -> {
+            // Set a default HTTP status code for a response depending on the return type of the method.
+            final Class<?> returnType = method.getReturnType();
+            return returnType == Void.class ||
+                   returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        });
     }
 
     Object object() {
@@ -190,30 +232,19 @@ public class AnnotatedHttpService implements HttpService {
                 aggregationRequired(aggregationStrategy, req) ? req.aggregate()
                                                               : CompletableFuture.completedFuture(null);
         switch (responseType) {
-            case HANDLED_BY_SPI:
-                return f.thenApply(msg -> {
-                    try {
-                        final Object obj = invoke(ctx, req, msg);
-                        if (obj instanceof HttpResponse) {
-                            return (HttpResponse) obj;
-                        }
-                        assert providedResponseConverter != null;
-                        return new ExceptionFilteredHttpResponse(
-                                ctx, req, providedResponseConverter.convertResponse(ctx, obj));
-                    } catch (Throwable cause) {
-                        return convertException(ctx, req, cause);
-                    }
-                });
             case HTTP_RESPONSE:
                 return f.thenApply(
-                        msg -> new ExceptionFilteredHttpResponse(ctx, req,
-                                                                 (HttpResponse) invoke(ctx, req, msg)));
+                        msg -> new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) invoke(ctx, req, msg),
+                                                                 exceptionHandler));
             case COMPLETION_STAGE:
                 return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
-                        .handle((result, cause) -> cause == null ? convertResponse(ctx, req, result)
-                                                                 : convertException(ctx, req, cause));
+                        .handle((result, cause) -> cause == null ? convertResponse(ctx, req, null, result,
+                                                                                   HttpHeaders.EMPTY_HEADERS)
+                                                                 : exceptionHandler.handleException(ctx, req,
+                                                                                                    cause));
             default:
-                return f.thenApplyAsync(msg -> convertResponse(ctx, req, invoke(ctx, req, msg)),
+                return f.thenApplyAsync(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
+                                                               HttpHeaders.EMPTY_HEADERS),
                                         ctx.blockingTaskExecutor());
         }
     }
@@ -227,86 +258,71 @@ public class AnnotatedHttpService implements HttpService {
             final Object[] arguments = toArguments(resolvers, resolverContext);
             return method.invoke(object, arguments);
         } catch (Throwable cause) {
-            return convertException(ctx, req, cause);
+            return exceptionHandler.handleException(ctx, req, cause);
         }
     }
 
     /**
-     * Converts the specified {@code result} to {@link HttpResponse}.
+     * Converts the specified {@code result} to an {@link HttpResponse}.
      */
     private HttpResponse convertResponse(ServiceRequestContext ctx, HttpRequest req,
-                                         @Nullable Object result) {
+                                         @Nullable HttpHeaders headers, @Nullable Object result,
+                                         HttpHeaders trailingHeaders) {
+        final HttpHeaders newHeaders;
+        final HttpHeaders newTrailingHeaders;
+        if (result instanceof HttpResult) {
+            final HttpResult<?> httpResult = (HttpResult<?>) result;
+            newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
+            result = httpResult.content().orElse(null);
+            newTrailingHeaders = httpResult.trailingHeaders();
+        } else {
+            newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, defaultHttpHeaders) : headers;
+            newTrailingHeaders = trailingHeaders;
+        }
+
         if (result instanceof HttpResponse) {
-            return (HttpResponse) result;
+            return new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) result, exceptionHandler);
         }
         if (result instanceof AggregatedHttpMessage) {
             return HttpResponse.of((AggregatedHttpMessage) result);
         }
-        if (result instanceof Publisher) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            final Publisher<?> publisher = (Publisher<?>) result;
-            publisher.subscribe(new PublisherToHttpResponseConverter(ctx, req, future,
-                                                                     this::convertResponse,
-                                                                     this::convertException));
-            return HttpResponse.from(future);
+        if (result instanceof CompletionStage) {
+            return HttpResponse.from(
+                    ((CompletionStage<?>) result)
+                            .thenApply(object -> convertResponse(ctx, req, newHeaders, object,
+                                                                 newTrailingHeaders))
+                            .exceptionally(cause -> exceptionHandler.handleException(ctx, req, cause)));
         }
 
-        return convertResponse(ctx, result);
+        try {
+            return responseConverter.convertResponse(ctx, newHeaders, result, newTrailingHeaders);
+        } catch (Exception cause) {
+            return exceptionHandler.handleException(ctx, req, cause);
+        }
     }
 
-    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
-        try (SafeCloseable ignored = ctx.push(false)) {
-            for (final ResponseConverterFunction func : responseConverters) {
-                try {
-                    return func.convertResponse(ctx, result);
-                } catch (FallthroughException ignore) {
-                    // Do nothing.
-                } catch (Exception e) {
-                    throw new IllegalStateException(
-                            "Response converter " + func.getClass().getName() +
-                            " cannot convert a result to HttpResponse: " + result, e);
-                }
-            }
+    private HttpHeaders addNegotiatedResponseMediaType(ServiceRequestContext ctx,
+                                                       HttpHeaders headers) {
+        final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
+        if (negotiatedResponseMediaType == null || headers.contentType() != null) {
+            // Do not overwrite 'content-type'.
+            return headers;
         }
-        // There is no response converter which is able to convert 'null' result to a response.
-        // In this case, we deal the result as '204 No Content' instead of '500 Internal Server Error'.
-        if (result == null) {
-            return HttpResponse.of(HttpStatus.NO_CONTENT);
-        }
-        throw new IllegalStateException(
-                "No response converter exists for a result: " + result.getClass().getSimpleName());
+
+        return headers.isImmutable() ? HttpHeaders.copyOf(headers).contentType(negotiatedResponseMediaType)
+                                     : headers.contentType(negotiatedResponseMediaType);
     }
 
-    /**
-     * Returns an {@link HttpResponse} which is created by {@link ExceptionHandlerFunction}.
-     */
-    private HttpResponse convertException(RequestContext ctx, HttpRequest req, Throwable cause) {
-        final Throwable peeledCause = Exceptions.peel(cause);
-
-        if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
-            logger.isWarnEnabled()) {
-            logger.warn("{} Exception raised by method '{}' in '{}':",
-                        ctx, method.getName(), object.getClass().getSimpleName(), peeledCause);
+    private HttpHeaders setHttpStatus(HttpHeaders headers) {
+        if (headers.status() != null) {
+            // Do not overwrite HTTP status.
+            return headers;
         }
 
-        for (final ExceptionHandlerFunction func : exceptionHandlers) {
-            try {
-                final HttpResponse response = func.handleException(ctx, req, peeledCause);
-                // Check the return value just in case, then pass this exception to the default handler
-                // if it is null.
-                if (response == null) {
-                    break;
-                }
-                return response;
-            } catch (FallthroughException ignore) {
-                // Do nothing.
-            } catch (Exception e) {
-                logger.warn("{} Unexpected exception from an exception handler {}:",
-                            ctx, func.getClass().getName(), e);
-            }
-        }
-
-        return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+        final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
+        assert defaultHttpStatus != null;
+        return headers.isImmutable() ? HttpHeaders.copyOf(headers).status(defaultHttpStatus)
+                                     : headers.status(defaultHttpStatus);
     }
 
     /**
@@ -349,9 +365,9 @@ public class AnnotatedHttpService implements HttpService {
                 if (response instanceof ExceptionFilteredHttpResponse) {
                     return response;
                 }
-                return new ExceptionFilteredHttpResponse(ctx, req, response);
+                return new ExceptionFilteredHttpResponse(ctx, req, response, exceptionHandler);
             } catch (Exception cause) {
-                return convertException(ctx, req, cause);
+                return exceptionHandler.handleException(ctx, req, cause);
             }
         }
     }
@@ -360,16 +376,20 @@ public class AnnotatedHttpService implements HttpService {
      * Intercepts a {@link Throwable} raised from {@link HttpResponse} and then rewrites it as an
      * {@link HttpResponseException} by {@link ExceptionHandlerFunction}.
      */
-    private class ExceptionFilteredHttpResponse extends FilteredHttpResponse {
+    private static class ExceptionFilteredHttpResponse extends FilteredHttpResponse {
 
         private final ServiceRequestContext ctx;
         private final HttpRequest req;
+        private final ExceptionHandlerFunction exceptionHandler;
 
+        // TODO(hyangtack) Remove this class if we could provide a better way to handle an exception
+        //                 without this class. See https://github.com/line/armeria/issues/1514.
         ExceptionFilteredHttpResponse(ServiceRequestContext ctx, HttpRequest req,
-                                      HttpResponse delegate) {
+                                      HttpResponse delegate, ExceptionHandlerFunction exceptionHandler) {
             super(delegate);
             this.ctx = ctx;
             this.req = req;
+            this.exceptionHandler = exceptionHandler;
         }
 
         @Override
@@ -383,7 +403,128 @@ public class AnnotatedHttpService implements HttpService {
                 // Do not convert again if it has been already converted.
                 return cause;
             }
-            return HttpResponseException.of(convertException(ctx, req, cause));
+            return HttpResponseException.of(exceptionHandler.handleException(ctx, req, cause));
+        }
+    }
+
+    /**
+     * A {@link ResponseConverterFunction} which wraps a list of {@link ResponseConverterFunction}s.
+     */
+    private static final class CompositeResponseConverterFunction implements ResponseConverterFunction {
+
+        private final List<ResponseConverterFunction> functions;
+
+        CompositeResponseConverterFunction(List<ResponseConverterFunction> functions) {
+            this.functions = ImmutableList.copyOf(functions);
+        }
+
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
+            try (SafeCloseable ignored = ctx.push(false)) {
+                for (final ResponseConverterFunction func : functions) {
+                    try {
+                        return func.convertResponse(ctx, headers, result, trailingHeaders);
+                    } catch (FallthroughException ignore) {
+                        // Do nothing.
+                    } catch (Exception e) {
+                        throw new IllegalStateException(
+                                "Response converter " + func.getClass().getName() +
+                                " cannot convert a result to HttpResponse: " + result, e);
+                    }
+                }
+            }
+            // There is no response converter which is able to convert 'null' result to a response.
+            // In this case, a response with the specified HTTP headers would be sent.
+            // If you want to force to send '204 No Content' for this case, add
+            // 'NullToNoContentResponseConverterFunction' to the list of response converters.
+            if (result == null) {
+                return HttpResponse.of(headers, HttpData.EMPTY_DATA, trailingHeaders);
+            }
+            throw new IllegalStateException(
+                    "No response converter exists for a result: " + result.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * An {@link ExceptionHandlerFunction} which wraps a list of {@link ExceptionHandlerFunction}s.
+     */
+    private static final class CompositeExceptionHandlerFunction implements ExceptionHandlerFunction {
+
+        private final String className;
+        private final String methodName;
+        private final List<ExceptionHandlerFunction> functions;
+
+        CompositeExceptionHandlerFunction(String className, String methodName,
+                                          List<ExceptionHandlerFunction> functions) {
+            this.className = className;
+            this.methodName = methodName;
+            this.functions = ImmutableList.copyOf(functions);
+        }
+
+        @Override
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+            final Throwable peeledCause = Exceptions.peel(cause);
+
+            if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
+                logger.isWarnEnabled()) {
+                logger.warn("{} Exception raised by method '{}' in '{}':",
+                            ctx, methodName, className, peeledCause);
+            }
+
+            for (final ExceptionHandlerFunction func : functions) {
+                try {
+                    final HttpResponse response = func.handleException(ctx, req, peeledCause);
+                    // Check the return value just in case, then pass this exception to the default handler
+                    // if it is null.
+                    if (response == null) {
+                        break;
+                    }
+                    return response;
+                } catch (FallthroughException ignore) {
+                    // Do nothing.
+                } catch (Exception e) {
+                    logger.warn("{} Unexpected exception from an exception handler {}:",
+                                ctx, func.getClass().getName(), e);
+                }
+            }
+
+            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * A response converter implementation which creates an {@link HttpResponse} with
+     * the objects produced by a {@link Publisher}.
+     */
+    private static final class PublisherResponseConverterFunction implements ResponseConverterFunction {
+
+        private final ResponseConverterFunction responseConverter;
+        private final ExceptionHandlerFunction exceptionHandler;
+
+        PublisherResponseConverterFunction(ResponseConverterFunction responseConverter,
+                                           ExceptionHandlerFunction exceptionHandler) {
+            this.responseConverter = responseConverter;
+            this.exceptionHandler = exceptionHandler;
+        }
+
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            HttpHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailingHeaders) throws Exception {
+            if (result instanceof Publisher) {
+                final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+                final Publisher<?> publisher = (Publisher<?>) result;
+                publisher.subscribe(
+                        new PublisherToHttpResponseConverter(ctx, ctx.request(), headers, trailingHeaders,
+                                                             future, responseConverter, exceptionHandler));
+                return HttpResponse.from(future);
+            }
+
+            return ResponseConverterFunction.fallthrough();
         }
     }
 
@@ -391,6 +532,6 @@ public class AnnotatedHttpService implements HttpService {
      * Response type classification of the annotated {@link Method}.
      */
     private enum ResponseType {
-        HANDLED_BY_SPI, HTTP_RESPONSE, COMPLETION_STAGE, OTHER_OBJECTS
+        HTTP_RESPONSE, COMPLETION_STAGE, OTHER_OBJECTS
     }
 }

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.annotation;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -36,7 +37,10 @@ public interface ResponseConverterFunction {
      * Calls {@link ResponseConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
      * this converter cannot convert the {@code result} to the {@link HttpResponse}.
      */
-    HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) throws Exception;
+    HttpResponse convertResponse(ServiceRequestContext ctx,
+                                 HttpHeaders headers,
+                                 @Nullable Object result,
+                                 HttpHeaders trailingHeaders) throws Exception;
 
     /**
      * Throws a {@link FallthroughException} in order to try to convert {@code result} to

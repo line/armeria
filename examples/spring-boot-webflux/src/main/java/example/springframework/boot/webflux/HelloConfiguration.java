@@ -27,7 +27,7 @@ public class HelloConfiguration {
      * A user can configure a {@link Server} by providing an {@link ArmeriaServerConfigurator} bean.
      */
     @Bean
-    public ArmeriaServerConfigurator armeriaServerConfigurator(HelloAnnotatedService service) {
+    public ArmeriaServerConfigurator armeriaServerConfigurator() {
         // Customize the server using the given ServerBuilder. For example:
         return builder -> {
             // Add DocService that enables you to send Thrift and gRPC requests from web browser.
@@ -39,11 +39,9 @@ public class HelloConfiguration {
             // Write access log after completing a request.
             builder.accessLogWriter(AccessLogWriter.combined(), false);
 
-            // Add an Armeria annotated HTTP service, if you want.
-            builder.annotatedService("/armeria", service);
-
-            // You can also bind asynchronous RPC services such as Thrift and gRPC:
-            // builder.service(THttpService.of(...));
+            // You can also bind annotated HTTP services and asynchronous RPC services such as Thrift and gRPC:
+            // builder.annotatedService("/rest", service);
+            // builder.service("/thrift", THttpService.of(...));
             // builder.service(new GrpcServiceBuilder()...build());
         };
     }

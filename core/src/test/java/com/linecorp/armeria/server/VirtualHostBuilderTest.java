@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 public class VirtualHostBuilderTest {
 
@@ -55,6 +56,17 @@ public class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com").build();
         assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
+    }
+
+    @Test
+    public void accessLoggerCustomization() {
+        final VirtualHost h2 = new VirtualHostBuilder("bar.foo.com", "*.foo.com")
+                .accessLogger(host -> LoggerFactory.getLogger("customize.test")).build();
+        assertThat(h2.accessLogger().getName()).isEqualTo("customize.test");
+
+        final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com")
+                .accessLogger(LoggerFactory.getLogger("com.foo.test")).build();
+        assertThat(h.accessLogger().getName()).isEqualTo("com.foo.test");
     }
 
     @Test(expected = IllegalArgumentException.class)

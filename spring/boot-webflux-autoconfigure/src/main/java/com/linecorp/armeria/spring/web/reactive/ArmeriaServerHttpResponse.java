@@ -46,7 +46,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
-import io.netty.util.AsciiString;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -115,14 +114,14 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
         if (httpStatus != null) {
             headers.status(httpStatus.value());
         } else {
-            // If there is no status code specified, set 200 Ok by default.
+            // If there is no status code specified, set 200 OK by default.
             headers.status(com.linecorp.armeria.common.HttpStatus.OK);
         }
     }
 
     @Override
     protected void applyHeaders() {
-        getHeaders().forEach((name, values) -> headers.add(AsciiString.of(name), values));
+        getHeaders().forEach((name, values) -> headers.add(HttpHeaderNames.of(name), values));
     }
 
     @Override

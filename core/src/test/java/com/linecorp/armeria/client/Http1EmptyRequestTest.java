@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -39,7 +38,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.testing.common.EventLoopRule;
 
 /**
  * Makes sure an empty HTTP/1 request is sent with or without the {@code content-length} header
@@ -60,9 +58,6 @@ public class Http1EmptyRequestTest {
                                 new Object[] { HttpMethod.TRACE, false },
                                 new Object[] { HttpMethod.CONNECT, false });
     }
-
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));

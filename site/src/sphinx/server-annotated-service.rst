@@ -104,6 +104,29 @@ a path and use the HTTP method annotations without a path to map multiple HTTP m
         public HttpResponse hello() { ... }
     }
 
+Every service method assumes that it returns an HTTP response with ``200 OK`` or ``204 No Content`` status
+according to its return type. If the return type is ``void`` or ``Void``, ``204 No Content`` would be applied.
+``200 OK`` would be applied for the other types. If you want to return an alternative status code for a method,
+you can use :api:`@StatusCode` annotation as follows.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        @StatusCode(201)
+        @Post("/users/{name}")
+        public User createUser(@Param("name") String name) { ... }
+
+        // @StatusCode(200) would be applied by default.
+        @Get("/users/{name}")
+        public User getUser(@Param("name") String name) { ... }
+
+        // @StatusCode(204) would be applied by default.
+        @Delete("/users/{name}")
+        public void deleteUser(@Param("name") String name) { ... }
+    }
+
+
 .. _parameter-injection:
 
 Parameter injection
@@ -589,7 +612,10 @@ convert the result to an :api:`HttpResponse`.
 
     public class MyResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) {
+        HttpResponse convertResponse(ServiceRequestContext ctx,
+                                     HttpHeaders headers,
+                                     @Nullable Object result,
+                                     HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof MyObject) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.PLAIN_TEXT_UTF_8,
@@ -631,7 +657,10 @@ as follows.
 
     public class MyResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result)  {
+        HttpResponse convertResponse(ServiceRequestContext ctx,
+                                     HttpHeaders headers,
+                                     @Nullable Object result,
+                                     HttpHeaders trailingHeaders) throws Exception {
             MediaType mediaType = ctx.negotiatedResponseMediaType();
             if (mediaType != null) {
                 // Do something based on the media type.
@@ -719,7 +748,10 @@ in a single class and add it to your :api:`ServerBuilder` at once, e.g.
                                      Class<?> expectedResultType) { ... }
 
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx, Object result) { ... }
+        HttpResponse convertResponse(ServiceRequestContext ctx,
+                                     HttpHeaders headers,
+                                     @Nullable Object result,
+                                     HttpHeaders trailingHeaders) throws Exception { ... }
 
         @Override
         public HttpResponse handleException(RequestContext ctx, HttpRequest req,
@@ -761,6 +793,24 @@ more response types which can be used in the annotated service.
   - It will be sent to the client without any modification. If an exception is raised while the response is
     being sent, exception handlers will handle it. If no message has been sent to the client yet,
     the exception handler can send an :api:`HttpResponse` instead.
+
+- :api:`HttpResult`
+
+  - It contains the :api:`HttpHeaders` and the object which can be converted into HTTP response body by
+    response converters. A user can customize the HTTP status and headers including the trailing headers,
+    with this type.
+
+  .. code-block:: java
+
+      public class MyAnnotatedService {
+          @Get("/users")
+          public HttpResult<User> getUsers(@Param int start) {
+              List<User> users = ...;
+              HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+              headers.add(HttpHeaderNames.LINK,
+                          String.format("<https://example.com/users?start=%s>; rel=\"next\"", start + 10));
+              return HttpResult.of(headers, users);
+          }
 
 - Reactive Streams Publisher_
 

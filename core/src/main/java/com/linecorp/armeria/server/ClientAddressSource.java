@@ -38,7 +38,7 @@ import io.netty.util.AsciiString;
 public final class ClientAddressSource {
 
     private static final ClientAddressSource PROXY_PROTOCOL =
-            new ClientAddressSource(AsciiString.of("PROXY_PROTOCOL"));
+            new ClientAddressSource(HttpHeaderNames.of("PROXY_PROTOCOL"));
 
     /**
      * A default list of {@link ClientAddressSource}s.
@@ -54,7 +54,7 @@ public final class ClientAddressSource {
      */
     public static ClientAddressSource ofHeader(CharSequence header) {
         checkArgument(header != null && header.length() > 0, "empty header");
-        return new ClientAddressSource(AsciiString.of(header));
+        return new ClientAddressSource(HttpHeaderNames.of(header));
     }
 
     /**

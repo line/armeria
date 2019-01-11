@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
-import io.netty.util.AsciiString;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -70,7 +69,7 @@ public class ArmeriaClientHttpResponseTest {
     @Test
     public void getCookies() {
         final HttpHeaders httpHeaders = HttpHeaders.of(HttpStatus.OK)
-                                                   .add(AsciiString.of("blahblah"), "armeria")
+                                                   .add(HttpHeaderNames.of("blahblah"), "armeria")
                                                    .add(HttpHeaderNames.SET_COOKIE, "a=1; b=2");
         final HttpResponse httpResponse = HttpResponse.of(httpHeaders);
         final ArmeriaClientHttpResponse response =

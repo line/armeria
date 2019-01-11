@@ -245,7 +245,7 @@ supported variable:
 | ``host``                      | the host name of the request                                       |
 +-------------------------------+--------------------------------------------------------------------+
 | ``status``                    | the status code and its reason phrase of the response.             |
-|                               | e.g. ``200 Ok``                                                    |
+|                               | e.g. ``200 OK``                                                    |
 +-------------------------------+--------------------------------------------------------------------+
 | ``statusCode``                | the status code of the response. e.g. ``200``                      |
 +-------------------------------+--------------------------------------------------------------------+
@@ -311,59 +311,58 @@ You can specify your own log writer which implements a ``Consumer`` of :api:`Req
 Customizing an access logger
 ----------------------------
 
-Armeria uses an access logger depending on the reversed hostname pattern of an each :api:`VirtualHost` by default.
+Armeria uses an SLF4J logger whose name is based on a reversed domain name of each virtual host by
+default, e.g.
 
-For example,
-    ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
-    ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
+- ``com.linecorp.armeria.logging.access.com.example`` for ``*.example.com``
+- ``com.linecorp.armeria.logging.access.com.linecorp`` for ``*.linecorp.com``
 
-However, You can specify your own mapper or your own logger for a :api:`VirtualHost`.
-
-This is an example of setting your own mapper for a :api:`VirtualHost` below.
+Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost`, e.g.
 
 .. code-block:: java
 
     ServerBuilder sb = new ServerBuilder();
 
     // Using the specific logger name.
-    sb.accessLogger("Write your access logger name you want.");
+    sb.accessLogger("com.example.my.access.logs");
+    ....
 
     // Using your own logger.
-    Logger logger = ...;
+    Logger logger = LoggerFactory.getLogger("com.example2.my.access.logs");
     sb.accessLogger(Logger);
+    ....
 
     // Using the mapper which sets an access logger with the given VirtualHost instance.
     sb.accessLogger(virtualHost -> {
-        ....
         // Return the logger.
-        // Do not return null. Otherwise, it will raise IllegalStateException
-        return ....
+        // Do not return null. Otherwise, it will raise an IllegalStateException.
+        return LoggerFactory.getLogger("com.example.my.access.logs." + virtualHost.defaultHostname());
     });
+    ....
 
 You can also specify your own logger for the specific :api:`VirtualHost`.
-
-In this case, the :api:`VirtualHost` doesn't follow the mapper you set via ``ServerBuilder.accessLogger()``.
+In this case, the mapper or logger you set for a specific :api:`VirtualHost` will override the access logger set via ``ServerBuilder.accessLogger()``.
 
 .. code-block:: java
 
     // Using the specific logger name.
     sb.withVirtualHost("*.example.com")
-    .accessLogger("Write your access logger name you want.")
-    .and()
+      .accessLogger("com.example.my.access.logs")
+      .and()
     ....
 
     // Using your own logger.
-    Logger logger = ...;
+    Logger logger = LoggerFactory.getLogger("com.example2.my.access.logs");
     sb.withVirtualHost("*.example2.com")
-    .accessLogger(Logger)
-    .and()
+      .accessLogger(Logger)
+      .and()
     ....
 
     // Using the mapper which sets an access logger with the given VirtualHost instance.
     sb.withVirtualHost("*.example3.com")
-    .accessLogger(virtualHost -> {
-        ....
+      .accessLogger(virtualHost -> {
         // Return the logger.
-        // Do not return null. Otherwise, it will raise IllegalStateException
-        return ....
-    }).and()
+        // Do not return null. Otherwise, it will raise an IllegalStateException.
+        return LoggerFactory.getLogger("com.example.my.access.logs." + virtualHost.defaultHostname());
+      })
+    ....

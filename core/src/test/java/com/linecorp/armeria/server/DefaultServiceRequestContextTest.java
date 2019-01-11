@@ -24,6 +24,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -33,7 +34,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 import io.netty.channel.Channel;
-import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 
@@ -69,19 +69,19 @@ public class DefaultServiceRequestContextTest {
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
         assertThat(derivedCtx.maxRequestLength()).isEqualTo(originalCtx.maxRequestLength());
         assertThat(derivedCtx.requestTimeoutMillis()).isEqualTo(originalCtx.requestTimeoutMillis());
-        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#1"))).isNull();
-        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#2")))
+        assertThat(derivedCtx.additionalResponseHeaders().get(HttpHeaderNames.of("my-header#1"))).isNull();
+        assertThat(derivedCtx.additionalResponseHeaders().get(HttpHeaderNames.of("my-header#2")))
                 .isEqualTo("value#2");
-        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#3")))
+        assertThat(derivedCtx.additionalResponseHeaders().get(HttpHeaderNames.of("my-header#3")))
                 .isEqualTo("value#3");
-        assertThat(derivedCtx.additionalResponseHeaders().get(AsciiString.of("my-header#4")))
+        assertThat(derivedCtx.additionalResponseHeaders().get(HttpHeaderNames.of("my-header#4")))
                 .isEqualTo("value#4");
-        assertThat(derivedCtx.additionalResponseTrailers().get(AsciiString.of("my-trailer#1"))).isNull();
-        assertThat(derivedCtx.additionalResponseTrailers().get(AsciiString.of("my-trailer#2")))
+        assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#1"))).isNull();
+        assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#2")))
                 .isEqualTo("value#2");
-        assertThat(derivedCtx.additionalResponseTrailers().get(AsciiString.of("my-trailer#3")))
+        assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#3")))
                 .isEqualTo("value#3");
-        assertThat(derivedCtx.additionalResponseTrailers().get(AsciiString.of("my-trailer#4")))
+        assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#4")))
                 .isEqualTo("value#4");
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
@@ -106,29 +106,29 @@ public class DefaultServiceRequestContextTest {
 
     private static void setAdditionalHeaders(ServiceRequestContext originalCtx) {
         final DefaultHttpHeaders headers1 = new DefaultHttpHeaders();
-        headers1.set(AsciiString.of("my-header#1"), "value#1");
+        headers1.set(HttpHeaderNames.of("my-header#1"), "value#1");
         originalCtx.setAdditionalResponseHeaders(headers1);
-        originalCtx.setAdditionalResponseHeader(AsciiString.of("my-header#2"), "value#2");
+        originalCtx.setAdditionalResponseHeader(HttpHeaderNames.of("my-header#2"), "value#2");
 
         final DefaultHttpHeaders headers2 = new DefaultHttpHeaders();
-        headers2.set(AsciiString.of("my-header#3"), "value#3");
+        headers2.set(HttpHeaderNames.of("my-header#3"), "value#3");
         originalCtx.addAdditionalResponseHeaders(headers2);
-        originalCtx.addAdditionalResponseHeader(AsciiString.of("my-header#4"), "value#4");
+        originalCtx.addAdditionalResponseHeader(HttpHeaderNames.of("my-header#4"), "value#4");
         // Remove the first one.
-        originalCtx.removeAdditionalResponseHeader(AsciiString.of("my-header#1"));
+        originalCtx.removeAdditionalResponseHeader(HttpHeaderNames.of("my-header#1"));
     }
 
     private static void setAdditionalTrailers(ServiceRequestContext originalCtx) {
         final DefaultHttpHeaders trailers1 = new DefaultHttpHeaders();
-        trailers1.set(AsciiString.of("my-trailer#1"), "value#1");
+        trailers1.set(HttpHeaderNames.of("my-trailer#1"), "value#1");
         originalCtx.setAdditionalResponseTrailers(trailers1);
-        originalCtx.setAdditionalResponseTrailer(AsciiString.of("my-trailer#2"), "value#2");
+        originalCtx.setAdditionalResponseTrailer(HttpHeaderNames.of("my-trailer#2"), "value#2");
 
         final DefaultHttpHeaders trailers2 = new DefaultHttpHeaders();
-        trailers2.set(AsciiString.of("my-trailer#3"), "value#3");
+        trailers2.set(HttpHeaderNames.of("my-trailer#3"), "value#3");
         originalCtx.addAdditionalResponseTrailers(trailers2);
-        originalCtx.addAdditionalResponseTrailer(AsciiString.of("my-trailer#4"), "value#4");
+        originalCtx.addAdditionalResponseTrailer(HttpHeaderNames.of("my-trailer#4"), "value#4");
         // Remove the first one.
-        originalCtx.removeAdditionalResponseTrailer(AsciiString.of("my-trailer#1"));
+        originalCtx.removeAdditionalResponseTrailer(HttpHeaderNames.of("my-trailer#1"));
     }
 }

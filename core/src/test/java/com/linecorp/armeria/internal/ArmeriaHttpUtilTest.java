@@ -36,7 +36,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.util.AsciiString;
 
 public class ArmeriaHttpUtilTest {
     @Test
@@ -258,6 +257,6 @@ public class ArmeriaHttpUtilTest {
         final HttpHeaders out = new DefaultHttpHeaders();
         toArmeria(in, out);
         assertThat(out).hasSize(1);
-        assertThat(out.get(AsciiString.of("hello"))).isEqualTo("world");
+        assertThat(out.get(HttpHeaderNames.of("hello"))).isEqualTo("world");
     }
 }
