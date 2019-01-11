@@ -201,6 +201,10 @@ that file I/O does not occur on each retrieval, you can use the ``aggregate()`` 
     // The content of the file can now be retrieved from memory.
     HttpData content = aggregated.content();
 
+Note that an aggregated :api:`HttpFile` is not linked in any way from the :api:`HttpFile` it was aggregated
+from, which means the content and attributes of the aggregated :api:`HttpFile` does not change when the original
+:api:`HttpFile` changes. Use ``HttpFile.ofCached()`` instead if such behavior is necessary.
+
 Building ``AggregatedHttpFile`` from ``HttpData``
 -------------------------------------------------
 
