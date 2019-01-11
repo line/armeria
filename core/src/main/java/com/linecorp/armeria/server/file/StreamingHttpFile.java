@@ -84,10 +84,18 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
             return null;
         }
 
-        final HttpResponseWriter res = HttpResponse.streaming();
-        res.write(headers);
-        fileReadExecutor.execute(() -> doRead(res, in, 0, length, fileReadExecutor, alloc));
-        return res;
+        boolean submitted = false;
+        try {
+            final HttpResponseWriter res = HttpResponse.streaming();
+            res.write(headers);
+            fileReadExecutor.execute(() -> doRead(res, in, 0, length, fileReadExecutor, alloc));
+            submitted = true;
+            return res;
+        } finally {
+            if (!submitted) {
+                close(in);
+            }
+        }
     }
 
     private void doRead(HttpResponseWriter res, T in, long offset, long end,
@@ -181,66 +189,74 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
             return CompletableFuture.completedFuture(HttpFile.nonExistent());
         }
 
-        final CompletableFuture<AggregatedHttpFile> future = new CompletableFuture<>();
-        fileReadExecutor.execute(() -> {
-            final int length = (int) attrs.length();
-            final byte[] array;
-            final ByteBuf buf;
-            if (alloc != null) {
-                array = null;
-                buf = alloc.buffer(length);
-            } else {
-                array = new byte[length];
-                buf = Unpooled.wrappedBuffer(array).clear();
-            }
-
-            boolean success = false;
-            try {
-                for (int offset = 0;;) {
-                    final int readBytes = read(in, buf);
-                    if (readBytes < 0) {
-                        // Should not reach here because we only read up to the end of the stream.
-                        // If reached, it may mean the stream has been truncated.
-                        throw new EOFException();
-                    }
-
-                    offset += readBytes;
-                    if (offset == length) {
-                        break;
-                    }
-                }
-
-                final HttpFileBuilder builder =
-                        HttpFileBuilder.of(array != null ? HttpData.of(array)
-                                                         : new ByteBufHttpData(buf, true),
-                                           attrs.lastModifiedMillis())
-                                       .date(isDateEnabled())
-                                       .lastModified(isLastModifiedEnabled());
-
-                if (contentType() != null) {
-                    builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType());
-                }
-
-                final String etag = generateEntityTag(attrs);
-                if (etag != null) {
-                    builder.entityTag((unused1, unused2) -> etag);
+        boolean submitted = false;
+        try {
+            final CompletableFuture<AggregatedHttpFile> future = new CompletableFuture<>();
+            fileReadExecutor.execute(() -> {
+                final int length = (int) attrs.length();
+                final byte[] array;
+                final ByteBuf buf;
+                if (alloc != null) {
+                    array = null;
+                    buf = alloc.buffer(length);
                 } else {
-                    builder.entityTag(false);
+                    array = new byte[length];
+                    buf = Unpooled.wrappedBuffer(array).clear();
                 }
 
-                builder.setHeaders(headers());
-                success = future.complete((AggregatedHttpFile) builder.build());
-            } catch (Exception e) {
-                future.completeExceptionally(e);
-            } finally {
+                boolean success = false;
+                try {
+                    for (int offset = 0;;) {
+                        final int readBytes = read(in, buf);
+                        if (readBytes < 0) {
+                            // Should not reach here because we only read up to the end of the stream.
+                            // If reached, it may mean the stream has been truncated.
+                            throw new EOFException();
+                        }
+
+                        offset += readBytes;
+                        if (offset == length) {
+                            break;
+                        }
+                    }
+
+                    final HttpFileBuilder builder =
+                            HttpFileBuilder.of(array != null ? HttpData.of(array)
+                                                             : new ByteBufHttpData(buf, true),
+                                               attrs.lastModifiedMillis())
+                                           .date(isDateEnabled())
+                                           .lastModified(isLastModifiedEnabled());
+
+                    if (contentType() != null) {
+                        builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType());
+                    }
+
+                    final String etag = generateEntityTag(attrs);
+                    if (etag != null) {
+                        builder.entityTag((unused1, unused2) -> etag);
+                    } else {
+                        builder.entityTag(false);
+                    }
+
+                    builder.setHeaders(headers());
+                    success = future.complete((AggregatedHttpFile) builder.build());
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                } finally {
+                    close(in);
+                    if (!success) {
+                        buf.release();
+                    }
+                }
+            });
+
+            submitted = true;
+            return future;
+        } finally {
+            if (!submitted) {
                 close(in);
-                if (!success) {
-                    buf.release();
-                }
             }
-        });
-
-        return future;
+        }
     }
 
     /**
