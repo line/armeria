@@ -41,8 +41,7 @@ import com.linecorp.armeria.server.cors.CorsConfig.InstantValueSupplier;
 import io.netty.util.AsciiString;
 
 public final class CorsPolicy {
-    private static final String ANY_ORIGIN = "*";
-    private static final String NULL_ORIGIN = "null";
+
     private static final String DELIMITER = ",";
     private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
     private final Set<String> origins;
@@ -55,28 +54,29 @@ public final class CorsPolicy {
     private final Set<AsciiString> allowedRequestHeaders;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(final CorsPolicyBuilder builder) {
-        origins = builder.origins;
-        credentialsAllowed = builder.credentialsAllowed;
-        shortCircuit = builder.shortCircuit;
-        maxAge = builder.maxAge;
-        nullOriginAllowed = builder.nullOriginAllowed;
-        exposedHeaders = ImmutableSet.copyOf(builder.exposedHeaders);
-        allowedRequestMethods = EnumSet.copyOf(builder.allowedRequestMethods);
-        allowedRequestHeaders = ImmutableSet.copyOf(builder.allowedRequestHeaders);
+    CorsPolicy(final Set<String> origins, boolean credentialsAllowed, boolean shortCircuit, long maxAge,
+               boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
+               Set<AsciiString> allowedRequestHeaders, Set<HttpMethod> allowedRequestMethods,
+               boolean preflightResponseHeadersDisabled,
+               Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
+        this.origins = origins;
+        this.credentialsAllowed = credentialsAllowed;
+        this.shortCircuit = shortCircuit;
+        this.maxAge = maxAge;
+        this.nullOriginAllowed = nullOriginAllowed;
+        this.exposedHeaders = ImmutableSet.copyOf(exposedHeaders);
+        this.allowedRequestMethods = EnumSet.copyOf(allowedRequestMethods);
+        this.allowedRequestHeaders = ImmutableSet.copyOf(allowedRequestHeaders);
 
-        final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
-        if (builder.preflightResponseHeadersDisabled) {
-            preflightResponseHeaders = Collections.emptyMap();
-        } else if (builder.preflightResponseHeaders.isEmpty()) {
-            preflightResponseHeaders = ImmutableMap.of(
+        if (preflightResponseHeadersDisabled) {
+            this.preflightResponseHeaders = Collections.emptyMap();
+        } else if (preflightResponseHeaders.isEmpty()) {
+            this.preflightResponseHeaders = ImmutableMap.of(
                     HttpHeaderNames.DATE, InstantValueSupplier.INSTANCE,
                     HttpHeaderNames.CONTENT_LENGTH, ConstantValueSupplier.ZERO);
         } else {
-            preflightResponseHeaders = ImmutableMap.copyOf(builder.preflightResponseHeaders);
+            this.preflightResponseHeaders = ImmutableMap.copyOf(preflightResponseHeaders);
         }
-
-        this.preflightResponseHeaders = preflightResponseHeaders;
     }
 
     /**
@@ -193,22 +193,10 @@ public final class CorsPolicy {
     }
 
     /**
-     * TODO: add javadoc.
+     * Determines if the policy allows a null origin.
      */
     public boolean isNullOriginAllowed() {
         return nullOriginAllowed;
-    }
-
-    /**
-     * This is a non CORS specification feature which enables the setting of preflight
-     * response headers that might be required by intermediaries.
-     *
-     * @param headers the {@link HttpHeaders} to which the preflight headers should be added.
-     */
-    void setPreflightHeaders(final HttpHeaders headers) {
-        for (Map.Entry<AsciiString, String> entry : preflightResponseHeaders()) {
-            headers.add(entry.getKey(), entry.getValue());
-        }
     }
 
     /**
@@ -235,17 +223,21 @@ public final class CorsPolicy {
         return preflightHeaders;
     }
 
-    private static <T> T getValue(final Supplier<T> callable) {
-        try {
-            return callable.get();
-        } catch (final Exception e) {
-            throw new IllegalStateException("could not generate value for supplier: " + callable, e);
+    /**
+     * This is a non CORS specification feature which enables the setting of preflight
+     * response headers that might be required by intermediaries.
+     *
+     * @param headers the {@link HttpHeaders} to which the preflight headers should be added.
+     */
+    void setPreflightHeaders(final HttpHeaders headers) {
+        for (Map.Entry<AsciiString, String> entry : preflightResponseHeaders()) {
+            headers.add(entry.getKey(), entry.getValue());
         }
     }
 
     void setCorsAllowCredentials(final HttpHeaders headers) {
         if (credentialsAllowed &&
-            !headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN).equals(ANY_ORIGIN)) {
+            !headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN).equals(CorsService.ANY_ORIGIN)) {
             headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         }
     }
@@ -298,5 +290,13 @@ public final class CorsPolicy {
                           .add("allowedRequestMethods", allowedRequestMethods)
                           .add("allowedRequestHeaders", allowedRequestHeaders)
                           .add("preflightResponseHeaders", preflightResponseHeaders).toString();
+    }
+
+    private static <T> T getValue(final Supplier<T> callable) {
+        try {
+            return callable.get();
+        } catch (final Exception e) {
+            throw new IllegalStateException("could not generate value for supplier: " + callable, e);
+        }
     }
 }

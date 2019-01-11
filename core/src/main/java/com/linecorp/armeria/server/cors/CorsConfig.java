@@ -20,11 +20,13 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
@@ -40,9 +42,6 @@ public final class CorsConfig {
      */
     public static final CorsConfig DISABLED = new CorsConfig();
 
-    private static final String NULL_ORIGIN = "null";
-    private static final String ANY_ORIGIN = "*";
-
     private final boolean enabled;
     private final boolean anyOriginSupported;
     private final Set<CorsPolicy> policies;
@@ -56,7 +55,12 @@ public final class CorsConfig {
     CorsConfig(final CorsServiceBuilder builder) {
         enabled = true;
         anyOriginSupported = builder.anyOriginSupported;
-        policies = builder.policies();
+        policies = new ImmutableSet.Builder<CorsPolicy>()
+                                   .add(builder.defaultPolicyBuilder.build())
+                                   .addAll(builder.policies)
+                                   .addAll(builder.policyBuilders.stream().map(AbstractCorsPolicyBuilder::build)
+                                                                 .collect(Collectors.toSet()))
+                                   .build();
     }
 
     /**
@@ -67,18 +71,6 @@ public final class CorsConfig {
     public boolean isEnabled() {
         return enabled;
     }
-
-    /**
-     * Returns the set of allowed origins.
-     *
-     * @throws IllegalStateException if CORS support is not enabled
-     */
-    /*
-    public Set<String> origins() {
-        ensureEnabled();
-        return origins;
-    }
-    */
 
     /**
      * Determines whether a wildcard origin, '*', is supported.
@@ -93,8 +85,9 @@ public final class CorsConfig {
     }
 
     /**
-     * TODO: AddJavadocs.
-     * @return
+     * Returns the policies.
+     *
+     * @throws IllegalStateException if CORS support is not enabled.
      */
     public Set<CorsPolicy> policies() {
         ensureEnabled();
@@ -102,15 +95,18 @@ public final class CorsConfig {
     }
 
     /**
-     * TODO: Add Javadocs.
+     * Returns the policy for the specific {@code origin}.
+     *
+     * @return {@link CorsPolicy} which allows the {@code origin},
+     *         {@code null} if the {@code origin} is not allowed in any policy.
      */
     @Nullable
     CorsPolicy getPolicy(String origin) {
-        if (isAnyOriginSupported() && ANY_ORIGIN.equals(origin)) {
+        if (isAnyOriginSupported() && CorsService.ANY_ORIGIN.equals(origin)) {
             return policies.iterator().next();
         }
-        final boolean isNullOrigin = NULL_ORIGIN.equals(origin);
         final String lowerCaseOrigin = Ascii.toLowerCase(origin);
+        final boolean isNullOrigin = CorsService.NULL_ORIGIN.equals(lowerCaseOrigin);
         for (CorsPolicy policy : policies) {
             if (isNullOrigin && policy.isNullOriginAllowed()) {
                 return policy;
@@ -140,11 +136,8 @@ public final class CorsConfig {
         return toString(this, enabled, anyOriginSupported, policies);
     }
 
-    /**
-     * TODO: add javadocs.
-     */
-    public static String toString(Object obj, boolean enabled, boolean anyOriginSupported,
-                                  Set<CorsPolicy> policies) {
+    static String toString(Object obj, boolean enabled, boolean anyOriginSupported,
+                           Set<CorsPolicy> policies) {
         if (enabled) {
             return MoreObjects.toStringHelper(obj)
                               .add("policies", policies)

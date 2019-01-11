@@ -47,8 +47,8 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
 
     private static final Logger logger = LoggerFactory.getLogger(CorsService.class);
 
-    private static final String ANY_ORIGIN = "*";
-    private static final String NULL_ORIGIN = "null";
+    static final String ANY_ORIGIN = "*";
+    static final String NULL_ORIGIN = "null";
 
     private final CorsConfig config;
 

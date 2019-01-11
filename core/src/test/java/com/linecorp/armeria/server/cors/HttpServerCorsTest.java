@@ -71,11 +71,43 @@ public class HttpServerCorsTest {
                                          .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                                          .andForOrigins("http://example2.com")
                                          .allowRequestMethods(HttpMethod.GET)
-                                         .allowRequestHeaders(HttpHeaderNames.of("allow_request_header"))
+                                         .allowRequestHeaders(HttpHeaderNames.of("allow_request_header2"))
+                                         .exposeHeaders(HttpHeaderNames.of("expose_header_3"),
+                                                        HttpHeaderNames.of("expose_header_4"))
                                          .and()
                                          .newDecorator()));
         }
     };
+
+    @Test
+    public void testCorsDifferentPolicy() throws Exception {
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.POST, "/cors")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+        ).aggregate().get();
+        final AggregatedHttpMessage response2 = client.execute(
+                HttpHeaders.of(HttpMethod.POST, "/cors")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://example2.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+        ).aggregate().get();
+        assertEquals(HttpStatus.OK, response.status());
+        assertEquals(HttpStatus.OK, response2.status());
+        assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+        assertEquals("http://example2.com",
+                     response2.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+        assertEquals("allow_request_header",
+                     response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
+        assertEquals("allow_request_header2",
+                     response2.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
+        assertEquals("expose_header_1,expose_header_2",
+                     response.headers().get(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS));
+        assertEquals("expose_header_3,expose_header_4",
+                     response2.headers().get(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS));
+    }
 
     @Test
     public void testCorsPreflight() throws Exception {
@@ -86,7 +118,6 @@ public class HttpServerCorsTest {
                            .set(HttpHeaderNames.ORIGIN, "http://example.com")
                            .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")
         ).aggregate().get();
-
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
         assertEquals("Hello CORS", response.headers().get(HttpHeaderNames.of("x-preflight-cors")));
