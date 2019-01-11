@@ -105,8 +105,8 @@ based on ``If-None-Match`` and ``If-Modified-Since`` header values.
     // Serve the favicon.ico file by converting an HttpFile into a service.
     sb.service("/favicon.ico", favicon.asService());
 
-For an instance, it is possible to to serve the same file (e.g. ``index.html``) for all requests
-under a certain path, which is useful when serving a frontend application with client-side routing.
+For instance, it is possible to to serve the same file (e.g. ``index.html``) for all requests under a certain
+path, which is useful when serving a frontend application with client-side routing.
 
 .. code-block:: java
 
