@@ -101,7 +101,7 @@ public interface HttpFile {
 
     /**
      * Creates a new {@link HttpFile} which caches the content and attributes of the specified {@link HttpFile}.
-     * If the cache is automatically invalidated when the {@link HttpFile} is updated.
+     * The cache is automatically invalidated when the {@link HttpFile} is updated.
      *
      * @param file the {@link HttpFile} to cache
      * @param maxCachingLength the maximum allowed length of the {@link HttpFile} to cache. if the length of
