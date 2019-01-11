@@ -25,8 +25,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.google.common.base.Ascii;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -101,31 +99,10 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Determines if a {@link CorsPolicy} for {@code origin} is already added.
-     */
-    boolean isDuplicateOrigin(String origin) {
-        requireNonNull(origin, "origin");
-        final String lowerCaseOrigin = Ascii.toLowerCase(origin);
-        if (defaultPolicyBuilder.origins().contains(lowerCaseOrigin)) {
-            return true;
-        }
-        for (CorsPolicy policy : policies) {
-            if (policy.origins().contains(lowerCaseOrigin)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Add a {@link CorsPolicy} instance in the service.
      */
     public CorsServiceBuilder addPolicy(CorsPolicy policy) {
         ensureForNewPolicy();
-        for (String origin : policy.origins()) {
-            checkState(isDuplicateOrigin(origin), "The policy for the origin (%s) has already been added.",
-                       origin);
-        }
         policies.add(policy);
         return this;
     }
@@ -402,7 +379,6 @@ public final class CorsServiceBuilder {
      */
     public ChainedCorsPolicyBuilder andForOrigins(final String... origins) {
         ensureForNewPolicy();
-        // Preventing a user from calling methods which change the default policy after this method is called.
         final ChainedCorsPolicyBuilder builder = new ChainedCorsPolicyBuilder(this, origins);
         policyBuilders.add(builder);
         return builder;

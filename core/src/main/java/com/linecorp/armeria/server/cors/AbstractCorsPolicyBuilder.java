@@ -36,6 +36,12 @@ import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
 import io.netty.util.AsciiString;
 
+/**
+ * Contains information for the build of the CORS policy.
+ *
+ * @see ChainedCorsPolicyBuilder
+ * @see CorsPolicyBuilder
+ */
 @SuppressWarnings("rawtypes")
 abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     private final Set<String> origins;
@@ -69,6 +75,13 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
 
     public Set<String> origins() {
         return origins;
+    }
+
+    /**
+     * Determines if the policy allows a null origin.
+     */
+    boolean isNullOriginAllowed() {
+        return nullOriginAllowed;
     }
 
     /**
