@@ -139,11 +139,11 @@ Configuring ``HttpFile``
 ------------------------
 
 An :api:`HttpFile` can be configured to send different headers than the auto-filled ones using
-:api:`HttpFileBuilder`, such as:
+:api:`HttpFileBuilder`. For example, you can:
 
-- Disabling auto-generation of ``Date``, ``Last-Modified``, ``Content-Type`` and ``ETag`` header.
-- Customizing how ``ETag`` is calculated from metadata.
-- Adding or setting additional custom HTTP headers.
+- Disable auto-generation of ``Date``, ``Last-Modified``, ``Content-Type`` and ``ETag`` header.
+- Customize how ``ETag`` is calculated from metadata.
+- Add or set additional custom HTTP headers.
 
 .. code-block:: java
 
