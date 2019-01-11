@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,7 +22,6 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
     private final CorsServiceBuilder serviceBuilder;
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder) {
-        super();
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }

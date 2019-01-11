@@ -77,7 +77,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
             }
             final String origin = req.headers().get(HttpHeaderNames.ORIGIN);
             final CorsPolicy policy = config.getPolicy(origin);
-            if (policy != null && policy.isShortCircuit()) {
+            if (policy == null && config.isShortCircuit()) {
                 return forbidden();
             }
         }

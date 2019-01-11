@@ -68,10 +68,11 @@ public final class CorsServiceBuilder {
     }
 
     final boolean anyOriginSupported;
-
     final ChainedCorsPolicyBuilder defaultPolicyBuilder;
     final Set<CorsPolicy> policies;
     final Set<ChainedCorsPolicyBuilder> policyBuilders;
+
+    boolean shortCircuit;
 
     /**
      * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing {@code origins}.
@@ -173,7 +174,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder shortCircuit() {
-        defaultPolicyBuilder.shortCircuit();
+        shortCircuit = true;
         return this;
     }
 
@@ -409,6 +410,6 @@ public final class CorsServiceBuilder {
 
     @Override
     public String toString() {
-        return CorsConfig.toString(this, true, anyOriginSupported, policies);
+        return CorsConfig.toString(this, true, anyOriginSupported, shortCircuit, policies);
     }
 }

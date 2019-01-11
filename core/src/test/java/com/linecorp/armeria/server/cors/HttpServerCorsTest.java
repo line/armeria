@@ -76,8 +76,69 @@ public class HttpServerCorsTest {
                                                         HttpHeaderNames.of("expose_header_4"))
                                          .and()
                                          .newDecorator()));
+            // Support short circuit.
+            sb.service("/cors2", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+
+                @Override
+                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+
+                @Override
+                protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+
+                @Override
+                protected HttpResponse doOptions(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            }.decorate(CorsServiceBuilder.forOrigin("http://example.com")
+                                         .shortCircuit()
+                                         .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                                         .allowRequestHeaders(HttpHeaderNames.of("allow_request_header"))
+                                         .exposeHeaders(HttpHeaderNames.of("expose_header_1"),
+                                                        HttpHeaderNames.of("expose_header_2"))
+                                         .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                                         .andForOrigins("http://example2.com")
+                                         .allowRequestMethods(HttpMethod.GET)
+                                         .allowRequestHeaders(HttpHeaderNames.of("allow_request_header2"))
+                                         .exposeHeaders(HttpHeaderNames.of("expose_header_3"),
+                                                        HttpHeaderNames.of("expose_header_4"))
+                                         .and()
+                                         .newDecorator()));
         }
     };
+
+    @Test
+    public void testCorsShortCircuit() throws Exception {
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.POST, "/cors2")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+        ).aggregate().get();
+        final AggregatedHttpMessage response2 = client.execute(
+                HttpHeaders.of(HttpMethod.POST, "/cors2")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://example2.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+        ).aggregate().get();
+        final AggregatedHttpMessage response3 = client.execute(
+                HttpHeaders.of(HttpMethod.POST, "/cors2")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://notallowed.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+        ).aggregate().get();
+        assertEquals(HttpStatus.OK, response.status());
+        assertEquals(HttpStatus.OK, response2.status());
+        assertEquals(HttpStatus.FORBIDDEN, response3.status());
+    }
 
     @Test
     public void testCorsDifferentPolicy() throws Exception {

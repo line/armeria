@@ -44,10 +44,12 @@ public final class CorsConfig {
 
     private final boolean enabled;
     private final boolean anyOriginSupported;
+    private final boolean shortCircuit;
     private final Set<CorsPolicy> policies;
 
     CorsConfig() {
         enabled = false;
+        shortCircuit = false;
         anyOriginSupported = false;
         policies = Collections.emptySet();
     }
@@ -55,6 +57,7 @@ public final class CorsConfig {
     CorsConfig(final CorsServiceBuilder builder) {
         enabled = true;
         anyOriginSupported = builder.anyOriginSupported;
+        shortCircuit = builder.shortCircuit;
         policies = new ImmutableSet.Builder<CorsPolicy>()
                                    .add(builder.defaultPolicyBuilder.build())
                                    .addAll(builder.policies)
@@ -82,6 +85,20 @@ public final class CorsConfig {
     public boolean isAnyOriginSupported() {
         ensureEnabled();
         return anyOriginSupported;
+    }
+
+    /**
+     * Determines whether a CORS request should be rejected if it's invalid before being
+     * further processing.
+     *
+     * <p>CORS headers are set after a request is processed. This may not always be desired
+     * and this setting will check that the Origin is valid and if it is not valid no
+     * further processing will take place, and a error will be returned to the calling client.
+     *
+     * @return {@code true} if a CORS request should short-circuit upon receiving an invalid Origin header.
+     */
+    public boolean isShortCircuit() {
+        return shortCircuit;
     }
 
     /**
@@ -133,14 +150,15 @@ public final class CorsConfig {
 
     @Override
     public String toString() {
-        return toString(this, enabled, anyOriginSupported, policies);
+        return toString(this, enabled, anyOriginSupported, shortCircuit, policies);
     }
 
-    static String toString(Object obj, boolean enabled, boolean anyOriginSupported,
+    static String toString(Object obj, boolean enabled, boolean anyOriginSupported, boolean shortCircuit,
                            Set<CorsPolicy> policies) {
         if (enabled) {
             return MoreObjects.toStringHelper(obj)
                               .add("policies", policies)
+                              .add("shortCircuit", shortCircuit)
                               .add("anyOriginSupported", anyOriginSupported).toString();
         } else {
             return obj.getClass().getSimpleName() + "{disabled}";

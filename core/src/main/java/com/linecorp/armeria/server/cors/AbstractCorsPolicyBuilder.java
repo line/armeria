@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -41,7 +41,6 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     private final Set<String> origins;
     private boolean credentialsAllowed;
     private boolean nullOriginAllowed;
-    private boolean shortCircuit;
     private long maxAge;
     private final Set<AsciiString> exposedHeaders = new HashSet<>();
     private final Set<HttpMethod> allowedRequestMethods = new HashSet<>();
@@ -102,21 +101,6 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B allowCredentials() {
         credentialsAllowed = true;
-        return self();
-    }
-
-    /**
-     * Specifies that a CORS request should be rejected if it's invalid before being
-     * further processing.
-     *
-     * <p>CORS headers are set after a request is processed. This may not always be desired
-     * and this setting will check that the Origin is valid and if it is not valid no
-     * further processing will take place, and a error will be returned to the calling client.
-     *
-     * @return {@link B} to support method chaining.
-     */
-    public B shortCircuit() {
-        shortCircuit = true;
         return self();
     }
 
@@ -372,14 +356,14 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
     public CorsPolicy build() {
-        return new CorsPolicy(origins, credentialsAllowed, shortCircuit, maxAge, nullOriginAllowed,
+        return new CorsPolicy(origins, credentialsAllowed, maxAge, nullOriginAllowed,
                               exposedHeaders, allowedRequestHeaders, allowedRequestMethods,
                               preflightResponseHeadersDisabled, preflightResponseHeaders);
     }
 
     @Override
     public String toString() {
-        return CorsPolicy.toString(this, origins, nullOriginAllowed, credentialsAllowed, shortCircuit, maxAge,
+        return CorsPolicy.toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
                                    exposedHeaders, allowedRequestMethods, allowedRequestHeaders,
                                    preflightResponseHeaders);
     }

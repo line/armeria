@@ -47,21 +47,19 @@ public final class CorsPolicy {
     private final Set<String> origins;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
-    private final boolean shortCircuit;
     private final long maxAge;
     private final Set<AsciiString> exposedHeaders;
     private final Set<HttpMethod> allowedRequestMethods;
     private final Set<AsciiString> allowedRequestHeaders;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(final Set<String> origins, boolean credentialsAllowed, boolean shortCircuit, long maxAge,
+    CorsPolicy(final Set<String> origins, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
                Set<AsciiString> allowedRequestHeaders, Set<HttpMethod> allowedRequestMethods,
                boolean preflightResponseHeadersDisabled,
                Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         this.origins = origins;
         this.credentialsAllowed = credentialsAllowed;
-        this.shortCircuit = shortCircuit;
         this.maxAge = maxAge;
         this.nullOriginAllowed = nullOriginAllowed;
         this.exposedHeaders = ImmutableSet.copyOf(exposedHeaders);
@@ -115,20 +113,6 @@ public final class CorsPolicy {
      */
     public boolean isCredentialsAllowed() {
         return credentialsAllowed;
-    }
-
-    /**
-     * Determines whether a CORS request should be rejected if it's invalid before being
-     * further processing.
-     *
-     * <p>CORS headers are set after a request is processed. This may not always be desired
-     * and this setting will check that the Origin is valid and if it is not valid no
-     * further processing will take place, and a error will be returned to the calling client.
-     *
-     * @return {@code true} if a CORS request should short-circuit upon receiving an invalid Origin header.
-     */
-    public boolean isShortCircuit() {
-        return shortCircuit;
     }
 
     /**
@@ -270,13 +254,13 @@ public final class CorsPolicy {
 
     @Override
     public String toString() {
-        return toString(this, origins, nullOriginAllowed, credentialsAllowed, shortCircuit, maxAge,
+        return toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
                         exposedHeaders, allowedRequestMethods, allowedRequestHeaders, preflightResponseHeaders);
     }
 
     static String toString(Object obj, @Nullable Set<String> origins,
                            boolean nullOriginAllowed, boolean credentialsAllowed,
-                           boolean shortCircuit, long maxAge, @Nullable Set<AsciiString> exposedHeaders,
+                           long maxAge, @Nullable Set<AsciiString> exposedHeaders,
                            @Nullable Set<HttpMethod> allowedRequestMethods,
                            @Nullable Set<AsciiString> allowedRequestHeaders,
                            @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
@@ -284,7 +268,6 @@ public final class CorsPolicy {
                           .add("origins", origins)
                           .add("nullOriginAllowed", nullOriginAllowed)
                           .add("credentialsAllowed", credentialsAllowed)
-                          .add("shortCircuit", shortCircuit)
                           .add("maxAge", maxAge)
                           .add("exposedHeaders", exposedHeaders)
                           .add("allowedRequestMethods", allowedRequestMethods)
