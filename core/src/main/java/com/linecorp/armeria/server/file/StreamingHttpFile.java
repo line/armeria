@@ -233,6 +233,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
             } catch (Exception e) {
                 future.completeExceptionally(e);
             } finally {
+                close(in);
                 if (!success) {
                     buf.release();
                 }
