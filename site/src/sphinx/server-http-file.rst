@@ -65,7 +65,7 @@ Serving pre-compressed files
 
     <compressed content>
 
-If ``/index.html.gz`` does not exist but ``/index.html`` does, it would fall back to serving the uncompressed
+If ``/index.html.gz`` does not exist but ``/index.html`` does, it would fall back on serving the uncompressed
 content:
 
 .. code-block:: http
@@ -122,7 +122,6 @@ path, which is useful when serving a frontend application with client-side routi
 You can also achieve the same behavior using :ref:`server-annotated-service`:
 
 .. code-block:: java
-
 
     // Register the fallback file service.
     sb.annotatedService(new Object() {
