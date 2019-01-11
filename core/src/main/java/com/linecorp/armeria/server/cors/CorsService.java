@@ -75,9 +75,8 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
             if (isCorsPreflightRequest(req)) {
                 return handleCorsPreflight(req);
             }
-            final String origin = req.headers().get(HttpHeaderNames.ORIGIN);
-            final CorsPolicy policy = config.getPolicy(origin);
-            if (policy == null && config.isShortCircuit()) {
+            if (config.isShortCircuit() &&
+                config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN)) == null) {
                 return forbidden();
             }
         }
