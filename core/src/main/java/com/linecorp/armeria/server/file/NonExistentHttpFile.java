@@ -58,7 +58,7 @@ final class NonExistentHttpFile implements AggregatedHttpFile {
     @Override
     public HttpService asService() {
         return (ctx, req) -> {
-            switch (ctx.method()) {
+            switch (req.method()) {
                 case HEAD:
                 case GET:
                     return HttpResponse.of(HttpStatus.NOT_FOUND);

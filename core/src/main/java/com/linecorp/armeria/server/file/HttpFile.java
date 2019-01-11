@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -94,6 +97,24 @@ public interface HttpFile {
      */
     static HttpFile ofResource(ClassLoader classLoader, String path) {
         return HttpFileBuilder.ofResource(classLoader, path).build();
+    }
+
+    /**
+     * Creates a new {@link HttpFile} which caches the content and attributes of the specified {@link HttpFile}.
+     * If the cache is automatically invalidated when the {@link HttpFile} is updated.
+     *
+     * @param file the {@link HttpFile} to cache
+     * @param maxCachingLength the maximum allowed length of the {@link HttpFile} to cache. if the length of
+     *                         the {@link HttpFile} exceeds this value, no caching will be performed.
+     */
+    static HttpFile ofCached(HttpFile file, int maxCachingLength) {
+        requireNonNull(file, "file");
+        checkArgument(maxCachingLength >= 0, "maxCachingLength: %s (expected: >= 0)", maxCachingLength);
+        if (maxCachingLength == 0) {
+            return file;
+        } else {
+            return new CachingHttpFile(file, maxCachingLength);
+        }
     }
 
     /**

@@ -164,6 +164,20 @@ An :api:`HttpFile` can be configured to send different headers than the auto-fil
     fb.setHeader("x-powered-by", "Armeria");
     HttpFile f = fb.build();
 
+Caching ``HttpFile``
+--------------------
+
+Unlike :api:`HttpFileService`, :api:`HttpFile` does not cache the file content. Use ``HttpFile.ofCached()``
+to enable content caching for an existing :api:`HttpFile`:
+
+.. code-block:: java
+
+    HttpFile uncachedFile = HttpFile.of(new File("/var/lib/www/index.html"));
+    HttpFile cachedFile = HttpFile.ofCached(uncachedFile, 65536);
+
+Note that you need to specify the maximum allowed length of the cached content. In the above example, the file
+will not be cached if the length of the file exceeds 65,536 bytes.
+
 Aggregating ``HttpFile``
 ------------------------
 
