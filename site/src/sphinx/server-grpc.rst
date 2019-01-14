@@ -179,7 +179,7 @@ Blocking service implementation
 Unlike upstream gRPC-java, Armeria does not run service logic in a separate thread pool by default. If your
 service implementation requires blocking, either run the individual blocking logic in a thread pool, wrap the
 entire service implementation in ``RequestContext.current().blockingTaskExecutor().submit``, or set
-``GrpcServiceBuilder.useBlockingExecutor()`` so the above happens automatically for all service methods
+``GrpcServiceBuilder.useBlockingTaskExecutor()`` so the above happens automatically for all service methods
 and lifecycle callbacks.
 
 .. code-block:: java
@@ -224,7 +224,7 @@ and lifecycle callbacks.
     sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
                                        // All service methods will be run within
                                        // the blocking executor.
-                                       .useBlockingExecutor(true)
+                                       .useBlockingTaskExecutor(true)
                                        .build());
 
 Exception propagation

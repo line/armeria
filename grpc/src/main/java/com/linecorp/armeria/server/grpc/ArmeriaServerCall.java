@@ -113,7 +113,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final ServiceRequestContext ctx;
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
-    private final boolean useBlockingExecutor;
+    private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final String advertisedEncodingsHeader;
 
@@ -150,13 +150,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       SerializationFormat serializationFormat,
                       MessageMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
-                      boolean useBlockingExecutor,
+                      boolean useBlockingTaskExecutor,
                       String advertisedEncodingsHeader) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
-        this.useBlockingExecutor = useBlockingExecutor;
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
                 new ArmeriaMessageDeframer(
@@ -259,7 +259,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
             res.onDemand(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    if (useBlockingExecutor) {
+                    if (useBlockingTaskExecutor) {
                         ctx.blockingTaskExecutor().execute(this::invokeOnReady);
                     } else {
                         invokeOnReady();
@@ -394,7 +394,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             GrpcUnsafeBufferUtil.storeBuffer(message.buf(), request, ctx);
         }
 
-        if (useBlockingExecutor) {
+        if (useBlockingTaskExecutor) {
             ctx.blockingTaskExecutor().execute(() -> invokeOnMessage(request));
         } else {
             invokeOnMessage(request);
@@ -417,7 +417,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
             }
 
-            if (useBlockingExecutor) {
+            if (useBlockingTaskExecutor) {
                 ctx.blockingTaskExecutor().execute(this::invokeHalfClose);
             } else {
                 invokeHalfClose();
@@ -452,14 +452,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             messageFramer.close();
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             if (newStatus.isOk()) {
-                if (useBlockingExecutor) {
+                if (useBlockingTaskExecutor) {
                     ctx.blockingTaskExecutor().execute(this::invokeOnComplete);
                 } else {
                     invokeOnComplete();
                 }
             } else {
                 cancelled = true;
-                if (useBlockingExecutor) {
+                if (useBlockingTaskExecutor) {
                     ctx.blockingTaskExecutor().execute(this::invokeOnCancel);
                 } else {
                     invokeOnCancel();

@@ -70,7 +70,7 @@ public final class GrpcServiceBuilder {
 
     private boolean enableUnframedRequests;
 
-    private boolean useBlockingExecutor;
+    private boolean useBlockingTaskExecutor;
 
     private boolean unsafeWrapRequestBuffers;
 
@@ -186,8 +186,8 @@ public final class GrpcServiceBuilder {
      * service uses blocking logic, you should either execute such logic in a separate thread using something
      * like {@link Executors#newCachedThreadPool()} or enable this setting.
      */
-    public GrpcServiceBuilder useBlockingExecutor(boolean useBlockingExecutor) {
-        this.useBlockingExecutor = useBlockingExecutor;
+    public GrpcServiceBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         return this;
     }
 
@@ -234,7 +234,7 @@ public final class GrpcServiceBuilder {
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
                 maxOutboundMessageSizeBytes,
-                useBlockingExecutor,
+                useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
