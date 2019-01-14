@@ -122,21 +122,20 @@ public class CircuitBreakerHttpClientTest {
     }
 
     @Test
-    public void strategyWithoutContent() throws Exception {
+    public void strategyWithoutContent() {
         final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
         circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
     }
 
     @Test
-    public void strategyWithContent() throws Exception {
+    public void strategyWithContent() {
         final CircuitBreakerStrategyWithContent<HttpResponse> strategy =
                 (ctx, response) -> response.aggregate().handle(
                         (msg, unused1) -> msg.status().codeClass() != HttpStatusClass.SERVER_ERROR);
         circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
     }
 
-    private static void circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClientBuilder builder)
-            throws Exception {
+    private static void circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClientBuilder builder) {
         final FakeTicker ticker = new FakeTicker();
         final int minimumRequestThreshold = 2;
         final Duration circuitOpenWindow = Duration.ofSeconds(60);
@@ -149,27 +148,28 @@ public class CircuitBreakerHttpClientTest {
                 .counterSlidingWindow(counterSlidingWindow)
                 .counterUpdateInterval(counterUpdateInterval)
                 .ticker(ticker)
+                .listener(new CircuitBreakerListenerAdapter() {
+                    @Override
+                    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount)
+                            throws Exception {
+                        ticker.advance(Duration.ofMillis(1).toNanos());
+                    }
+                })
                 .build();
-
-        @SuppressWarnings("unchecked")
-        final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
-        when(delegate.execute(any(), any())).thenReturn(HttpResponse.of(503))
-                                            .thenReturn(HttpResponse.of(503))
-                                            .thenReturn(HttpResponse.of(503))
-                                            .thenReturn(HttpResponse.of(503));
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .decorator(builder.circuitBreakerMapping(mapping).newDecorator())
                 .build();
 
+        ticker.advance(Duration.ofMillis(1).toNanos());
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             // Need to call execute() one more to change the state of the circuit breaker.
-
+            final long currentTime = ticker.read();
             assertThat(client.get("/unavailable").aggregate().join().headers().status())
                     .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
-            ticker.advance(Duration.ofMillis(1).toNanos());
+            await().until(() -> currentTime != ticker.read());
         }
 
         await().untilAsserted(() -> assertThat(circuitBreaker.canRequest()).isFalse());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,22 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.client.circuitbreaker;
 
 /**
- * A skeletal {@link ServerListener} implementation in order for a user to implement only the methods
+ * A skeletal {@link CircuitBreakerListener} implementation in order for a user to implement only the methods
  * what he or she really needs.
  */
-public class ServerListenerAdapter implements ServerListener {
-    @Override
-    public void serverStarting(Server server) throws Exception {}
+public class CircuitBreakerListenerAdapter implements CircuitBreakerListener {
 
     @Override
-    public void serverStarted(Server server) throws Exception {}
+    public void onStateChanged(String circuitBreakerName, CircuitState state) throws Exception {}
 
     @Override
-    public void serverStopping(Server server) throws Exception {}
+    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) throws Exception {}
 
     @Override
-    public void serverStopped(Server server) throws Exception {}
+    public void onRequestRejected(String circuitBreakerName) throws Exception {}
 }

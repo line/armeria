@@ -36,7 +36,7 @@ public class MetricCollectingCircuitBreakerListenerTest {
         final CircuitBreaker cb = new CircuitBreakerBuilder("bar").build();
 
         // Trigger the first event so that the metric group is registered.
-        l.onEventCountUpdated(cb, new EventCount(1, 2));
+        l.onEventCountUpdated(cb.name(), new EventCount(1, 2));
 
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("foo.requests#value{name=bar,result=success}", 1.0)
@@ -47,22 +47,22 @@ public class MetricCollectingCircuitBreakerListenerTest {
                 .containsEntry("foo.rejectedRequests#count{name=bar}", 0.0);
 
         // Transit to CLOSED.
-        l.onStateChanged(cb, CircuitState.CLOSED);
+        l.onStateChanged(cb.name(), CircuitState.CLOSED);
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("foo.transitions#count{name=bar,state=CLOSED}", 1.0);
 
         // Transit to OPEN.
-        l.onStateChanged(cb, CircuitState.OPEN);
+        l.onStateChanged(cb.name(), CircuitState.OPEN);
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("foo.transitions#count{name=bar,state=OPEN}", 1.0);
 
         // Transit to HALF_OPEN.
-        l.onStateChanged(cb, CircuitState.HALF_OPEN);
+        l.onStateChanged(cb.name(), CircuitState.HALF_OPEN);
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("foo.transitions#count{name=bar,state=HALF_OPEN}", 1.0);
 
         // Reject a request.
-        l.onRequestRejected(cb);
+        l.onRequestRejected(cb.name());
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("foo.rejectedRequests#count{name=bar}", 1.0);
     }

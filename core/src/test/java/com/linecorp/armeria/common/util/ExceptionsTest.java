@@ -18,11 +18,22 @@ package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
+import javax.net.ssl.SSLException;
+
 import org.junit.Test;
+
+import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Flags;
+
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http2.Http2Error;
+import io.netty.handler.codec.http2.Http2Exception;
 
 public class ExceptionsTest {
 
@@ -65,5 +76,32 @@ public class ExceptionsTest {
         final String trace = Exceptions.traceText(new Exception("foo"));
         assertThat(trace).startsWith(Exception.class.getName() + ": foo\n" +
                                      "\tat " + ExceptionsTest.class.getName());
+    }
+
+    @Test
+    public void testIsExpected() {
+        final boolean expected = !Flags.verboseExceptions();
+
+        assertThat(Exceptions.isExpected(new Exception())).isFalse();
+        assertThat(Exceptions.isExpected(new Exception("broken pipe"))).isFalse();
+        assertThat(Exceptions.isExpected(new Exception("connection reset by peer"))).isFalse();
+        assertThat(Exceptions.isExpected(new Exception("stream closed"))).isFalse();
+        assertThat(Exceptions.isExpected(new Exception("SSLEngine closed already"))).isFalse();
+
+        assertThat(Exceptions.isExpected(new ClosedChannelException())).isEqualTo(expected);
+        assertThat(Exceptions.isExpected(ClosedSessionException.get())).isEqualTo(expected);
+
+        assertThat(Exceptions.isExpected(new IOException("connection reset by peer"))).isEqualTo(expected);
+        assertThat(Exceptions.isExpected(new IOException("invalid argument"))).isEqualTo(false);
+
+        assertThat(Exceptions.isExpected(new ChannelException("broken pipe"))).isEqualTo(expected);
+        assertThat(Exceptions.isExpected(new ChannelException("invalid argument"))).isEqualTo(false);
+
+        assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.INTERNAL_ERROR, "stream closed")))
+                .isEqualTo(expected);
+        assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.INTERNAL_ERROR))).isEqualTo(false);
+
+        assertThat(Exceptions.isExpected(new SSLException("SSLEngine closed already"))).isEqualTo(expected);
+        assertThat(Exceptions.isExpected(new SSLException("Handshake failed"))).isEqualTo(false);
     }
 }

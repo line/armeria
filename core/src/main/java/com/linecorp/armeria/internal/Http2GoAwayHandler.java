@@ -20,7 +20,11 @@ import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
@@ -31,6 +35,13 @@ import io.netty.handler.codec.http2.Http2Stream;
 public final class Http2GoAwayHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2GoAwayHandler.class);
+
+    private static final ByteBuf ERROR_FLUSHING = Unpooled.copiedBuffer("Error flushing",
+                                                                        StandardCharsets.UTF_8);
+    private static final int ERROR_FLUSHING_LEN = ERROR_FLUSHING.readableBytes();
+
+    private static final long CODE_NO_ERROR = Http2Error.NO_ERROR.code();
+    private static final long CODE_INTERNAL_ERROR = Http2Error.INTERNAL_ERROR.code();
 
     private boolean goAwaySent;
     private long goAwayReceived; // -1 if not received, errorCode if received.
@@ -78,18 +89,33 @@ public final class Http2GoAwayHandler {
 
     private static void onGoAway(Channel channel, String sentOrReceived,
                                  int lastStreamId, long errorCode, ByteBuf debugData) {
-        if (errorCode != Http2Error.NO_ERROR.code()) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("{} {} a GOAWAY frame: lastStreamId={}, errorCode={}, debugData=\"{}\"",
-                            channel, sentOrReceived, lastStreamId, errorStr(errorCode),
-                            debugData.toString(StandardCharsets.UTF_8));
-            }
-        } else {
+        if (errorCode == CODE_NO_ERROR) {
             if (logger.isDebugEnabled()) {
                 logger.debug("{} {} a GOAWAY frame: lastStreamId={}, errorCode=NO_ERROR(0)",
                              channel, sentOrReceived, lastStreamId);
             }
+            return;
         }
+
+        if (logger.isDebugEnabled()) {
+            final String logFormat = "{} {} a GOAWAY frame: lastStreamId={}, errorCode={}, debugData=\"{}\"";
+            // Log the expected errors at DEBUG level.
+            if (isExpected(errorCode, debugData)) {
+                logger.debug(logFormat, channel, sentOrReceived, lastStreamId,
+                             errorStr(errorCode), debugData.toString(StandardCharsets.UTF_8));
+            } else if (logger.isWarnEnabled()) {
+                logger.warn(logFormat, channel, sentOrReceived, lastStreamId,
+                            errorStr(errorCode), debugData.toString(StandardCharsets.UTF_8));
+            }
+        }
+    }
+
+    @VisibleForTesting
+    static boolean isExpected(long errorCode, ByteBuf debugData) {
+        // 'Error flushing' happens when a client closes the connection early.
+        return errorCode == CODE_INTERNAL_ERROR &&
+               ByteBufUtil.equals(debugData, debugData.readerIndex(),
+                                  ERROR_FLUSHING, 0, ERROR_FLUSHING_LEN);
     }
 
     private static String errorStr(long errorCode) {
