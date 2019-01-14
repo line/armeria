@@ -77,22 +77,22 @@ public final class MetricCollectingCircuitBreakerListener implements CircuitBrea
     }
 
     @Override
-    public void onStateChanged(CircuitBreaker circuitBreaker, CircuitState state) {
-        metricsOf(circuitBreaker).onStateChanged(state);
+    public void onStateChanged(String circuitBreakerName, CircuitState state) {
+        metricsOf(circuitBreakerName).onStateChanged(state);
     }
 
     @Override
-    public void onEventCountUpdated(CircuitBreaker circuitBreaker, EventCount eventCount) {
-        metricsOf(circuitBreaker).onCountUpdated(eventCount);
+    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) {
+        metricsOf(circuitBreakerName).onCountUpdated(eventCount);
     }
 
     @Override
-    public void onRequestRejected(CircuitBreaker circuitBreaker) {
-        metricsOf(circuitBreaker).onRequestRejected();
+    public void onRequestRejected(String circuitBreakerName) {
+        metricsOf(circuitBreakerName).onRequestRejected();
     }
 
-    private CircuitBreakerMetrics metricsOf(CircuitBreaker circuitBreaker) {
-        final MeterIdPrefix idPrefix = new MeterIdPrefix(name, "name", circuitBreaker.name());
+    private CircuitBreakerMetrics metricsOf(String circuitBreakerName) {
+        final MeterIdPrefix idPrefix = new MeterIdPrefix(name, "name", circuitBreakerName);
         return MicrometerUtil.register(registry, idPrefix,
                                        CircuitBreakerMetrics.class,
                                        CircuitBreakerMetrics::new);

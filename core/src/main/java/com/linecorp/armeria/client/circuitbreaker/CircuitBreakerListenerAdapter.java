@@ -23,11 +23,11 @@ package com.linecorp.armeria.client.circuitbreaker;
 public class CircuitBreakerListenerAdapter implements CircuitBreakerListener {
 
     @Override
-    public void onStateChanged(CircuitBreaker circuitBreaker, CircuitState state) throws Exception {}
+    public void onStateChanged(String circuitBreakerName, CircuitState state) throws Exception {}
 
     @Override
-    public void onEventCountUpdated(CircuitBreaker circuitBreaker, EventCount eventCount) throws Exception {}
+    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) throws Exception {}
 
     @Override
-    public void onRequestRejected(CircuitBreaker circuitBreaker) throws Exception {}
+    public void onRequestRejected(String circuitBreakerName) throws Exception {}
 }

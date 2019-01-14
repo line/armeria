@@ -24,15 +24,45 @@ public interface CircuitBreakerListener {
     /**
      * Invoked when the circuit state is changed.
      */
-    void onStateChanged(CircuitBreaker circuitBreaker, CircuitState state) throws Exception;
+    void onStateChanged(String circuitBreakerName, CircuitState state) throws Exception;
+
+    /**
+     * Invoked when the circuit state is changed.
+     *
+     * @deprecated Use {@link #onStateChanged(String, CircuitState)}.
+     */
+    @Deprecated
+    default void onStateChanged(CircuitBreaker circuitBreaker, CircuitState state) throws Exception {
+        onStateChanged(circuitBreaker.name(), state);
+    }
 
     /**
      * Invoked when the circuit breaker's internal {@link EventCount} is updated.
      */
-    void onEventCountUpdated(CircuitBreaker circuitBreaker, EventCount eventCount) throws Exception;
+    void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) throws Exception;
+
+    /**
+     * Invoked when the circuit breaker's internal {@link EventCount} is updated.
+     *
+     * @deprecated Use {@link #onEventCountUpdated(String, EventCount)}.
+     */
+    @Deprecated
+    default void onEventCountUpdated(CircuitBreaker circuitBreaker, EventCount eventCount) throws Exception {
+        onEventCountUpdated(circuitBreaker.name(), eventCount);
+    }
 
     /**
      * Invoked when the circuit breaker rejects a request.
      */
-    void onRequestRejected(CircuitBreaker circuitBreaker) throws Exception;
+    void onRequestRejected(String circuitBreakerName) throws Exception;
+
+    /**
+     * Invoked when the circuit breaker rejects a request.
+     *
+     * @deprecated Use {@link #onRequestRejected(String)}.
+     */
+    @Deprecated
+    default void onRequestRejected(CircuitBreaker circuitBreaker) throws Exception {
+        onRequestRejected(circuitBreaker.name());
+    }
 }

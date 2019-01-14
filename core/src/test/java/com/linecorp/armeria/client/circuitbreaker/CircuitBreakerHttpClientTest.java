@@ -150,7 +150,7 @@ public class CircuitBreakerHttpClientTest {
                 .ticker(ticker)
                 .listener(new CircuitBreakerListenerAdapter() {
                     @Override
-                    public void onEventCountUpdated(CircuitBreaker circuitBreaker, EventCount eventCount)
+                    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount)
                             throws Exception {
                         ticker.advance(Duration.ofMillis(1).toNanos());
                     }
