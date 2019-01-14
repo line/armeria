@@ -81,13 +81,6 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     /**
-     * Determines if the policy allows a null origin.
-     */
-    boolean isNullOriginAllowed() {
-        return nullOriginAllowed;
-    }
-
-    /**
      * Enables a successful CORS response with a {@code "null"} value for the CORS response header
      * {@code 'Access-Control-Allow-Origin'}. Web browsers may set the {@code 'Origin'} request header to
      * {@code "null"} if a resource is loaded from the local file system.
@@ -172,7 +165,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     /**
-     * Specifies the allowed set of HTTP Request Methods that should be returned in the
+     * Specifies the allowed set of HTTP request methods that should be returned in the
      * CORS {@code 'Access-Control-Request-Method'} response header.
      *
      * @param methods the {@link HttpMethod}s that should be allowed.
@@ -190,7 +183,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     /**
-     * Specifies the if headers that should be returned in the CORS {@code 'Access-Control-Allow-Headers'}
+     * Specifies the if the headers that should be returned in the CORS {@code 'Access-Control-Allow-Headers'}
      * response header.
      *
      * <p>If a client specifies headers on the request, for example by calling:
