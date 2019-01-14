@@ -18,10 +18,8 @@ package com.linecorp.armeria.server.file;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.text.ParseException;
 import java.util.EnumSet;
 import java.util.Objects;
 
@@ -30,18 +28,19 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.base.Splitter;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -50,9 +49,9 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
-import com.linecorp.armeria.server.file.HttpVfs.Entry;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.buffer.ByteBufHolder;
 
 /**
  * An {@link HttpService} that serves static files from a file system.
@@ -103,19 +102,30 @@ public final class HttpFileService extends AbstractHttpService {
     private final HttpFileServiceConfig config;
 
     @Nullable
-    private final LoadingCache<PathAndEncoding, CachedEntry> cache;
+    private final Cache<PathAndEncoding, AggregatedHttpFile> cache;
 
     HttpFileService(HttpFileServiceConfig config) {
         this.config = requireNonNull(config, "config");
-
         if (config.maxCacheEntries() != 0) {
-            cache = Caffeine.newBuilder()
-                            .maximumSize(config.maxCacheEntries())
-                            .recordStats()
-                            .build(this::getEntryWithoutCache);
+            cache = newCache(config);
         } else {
             cache = null;
         }
+    }
+
+    private static Cache<PathAndEncoding, AggregatedHttpFile> newCache(HttpFileServiceConfig config) {
+        final Caffeine<Object, Object> b = Caffeine.newBuilder();
+        b.maximumSize(config.maxCacheEntries())
+         .recordStats()
+         .removalListener((RemovalListener<PathAndEncoding, AggregatedHttpFile>) (key, value, cause) -> {
+             if (value != null) {
+                 final HttpData content = value.content();
+                 if (content instanceof ByteBufHolder) {
+                     ((ByteBufHolder) content).release();
+                 }
+             }
+         });
+        return b.build();
     }
 
     @Override
@@ -146,68 +156,16 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     @Override
-    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-        final Entry entry = getEntry(ctx, req);
-        final long lastModifiedMillis = entry.lastModifiedMillis();
-
-        if (lastModifiedMillis == 0) {
+    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final HttpFile file = findFile(ctx, req);
+        if (file == null) {
             return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
-
-        long ifModifiedSinceMillis = Long.MIN_VALUE;
-        try {
-            ifModifiedSinceMillis =
-                    req.headers().getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE, Long.MIN_VALUE);
-        } catch (Exception e) {
-            // Ignore the ParseException, which is raised on malformed date.
-            //noinspection ConstantConditions
-            if (!(e instanceof ParseException)) {
-                throw e;
-            }
-        }
-
-        // HTTP-date does not have subsecond-precision; add 999ms to it.
-        if (ifModifiedSinceMillis > Long.MAX_VALUE - 999) {
-            ifModifiedSinceMillis = Long.MAX_VALUE;
-        } else {
-            ifModifiedSinceMillis += 999;
-        }
-
-        if (lastModifiedMillis < ifModifiedSinceMillis) {
-            return HttpResponse.of(
-                    HttpHeaders.of(HttpStatus.NOT_MODIFIED)
-                               .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
-                               .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis));
-        }
-
-        final HttpData data;
-        try {
-            data = entry.readContent();
-        } catch (FileNotFoundException ignored) {
-            return HttpResponse.of(HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            logger.warn("{} Unexpected exception reading a file:", ctx, e);
-            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        final HttpHeaders headers =
-                HttpHeaders.of(HttpStatus.OK)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
-                           .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
-                           .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis);
-        final MediaType mediaType = entry.mediaType();
-        if (mediaType != null) {
-            headers.contentType(mediaType);
-        }
-        final String contentEncoding = entry.contentEncoding();
-        if (contentEncoding != null) {
-            headers.set(HttpHeaderNames.CONTENT_ENCODING, contentEncoding);
-        }
-
-        return HttpResponse.of(headers, data);
+        return file.asService().serve(ctx, req);
     }
 
-    private Entry getEntry(ServiceRequestContext ctx, HttpRequest req) {
+    @Nullable
+    private HttpFile findFile(ServiceRequestContext ctx, HttpRequest req) throws IOException {
         final String decodedMappedPath = ctx.decodedMappedPath();
 
         final EnumSet<FileServiceContentEncoding> supportedEncodings =
@@ -228,117 +186,88 @@ public final class HttpFileService extends AbstractHttpService {
             }
         }
 
-        final Entry entry = getEntryWithSupportedEncodings(decodedMappedPath, supportedEncodings);
+        final HttpFile file = findFile(ctx, decodedMappedPath, supportedEncodings);
+        if (file != null) {
+            return file;
+        }
 
-        if (entry.lastModifiedMillis() == 0) {
-            if (decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/') {
-                // Try index.html if it was a directory access.
-                final Entry indexEntry = getEntryWithSupportedEncodings(
-                        decodedMappedPath + "index.html", supportedEncodings);
-                if (indexEntry.lastModifiedMillis() != 0) {
-                    return indexEntry;
-                }
+        if (decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/') {
+            // Try index.html if it was a directory access.
+            return findFile(ctx, decodedMappedPath + "index.html", supportedEncodings);
+        }
+
+        return null;
+    }
+
+    @Nullable
+    private HttpFile findFile(ServiceRequestContext ctx, String path,
+                              EnumSet<FileServiceContentEncoding> supportedEncodings) throws IOException {
+        for (FileServiceContentEncoding encoding : supportedEncodings) {
+            final String contentEncoding = encoding.headerValue;
+            final HttpFile file = findFile(ctx, path + encoding.extension, contentEncoding);
+            if (file != null) {
+                return file;
             }
         }
 
-        return entry;
+        return findFile(ctx, path, (String) null);
     }
 
-    private Entry getEntry(String path, @Nullable String contentEncoding) {
+    @Nullable
+    private HttpFile findFile(ServiceRequestContext ctx, String path,
+                              @Nullable String contentEncoding) throws IOException {
+        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentEncoding);
+        final HttpFileAttributes uncachedAttrs = uncachedFile.readAttributes();
         if (cache == null) {
-            return config.vfs().get(path, contentEncoding);
+            return uncachedAttrs != null ? uncachedFile : null;
         }
 
         final PathAndEncoding pathAndEncoding = new PathAndEncoding(path, contentEncoding);
-        final CachedEntry entry = cache.getIfPresent(pathAndEncoding);
-        if (entry == null) {
-            return cache.get(pathAndEncoding);
-        }
-
-        if (config.vfs().get(path, contentEncoding).lastModifiedMillis() != entry.lastModifiedMillis()) {
+        if (uncachedAttrs == null) {
+            // Non-existent file. Invalidate the cache just in case it existed before.
             cache.invalidate(pathAndEncoding);
-            return cache.get(pathAndEncoding);
+            return null;
         }
 
-        return entry;
+        if (uncachedAttrs.length() > config.maxCacheEntrySizeBytes()) {
+            // Invalidate the cache just in case the file was small previously.
+            cache.invalidate(pathAndEncoding);
+            return uncachedFile;
+        }
+
+        final AggregatedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
+        if (cachedFile == null) {
+            // Cache miss. Add a new entry to the cache.
+            return cache(ctx, pathAndEncoding, uncachedFile);
+        }
+
+        final HttpFileAttributes cachedAttrs = cachedFile.readAttributes();
+        assert cachedAttrs != null;
+        if (cachedAttrs.equals(uncachedAttrs)) {
+            // Cache hit, and the cached file is up-to-date.
+            return cachedFile;
+        }
+
+        // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
+        cache.invalidate(pathAndEncoding);
+        return cache(ctx, pathAndEncoding, uncachedFile);
     }
 
-    private CachedEntry getEntryWithoutCache(PathAndEncoding pathAndEncoding) {
-        return new CachedEntry(config.vfs().get(pathAndEncoding.path, pathAndEncoding.contentEncoding),
-                               config.maxCacheEntrySizeBytes());
-    }
+    private HttpFile cache(ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile file) {
+        assert cache != null;
 
-    private Entry getEntryWithSupportedEncodings(String path,
-                                                 EnumSet<FileServiceContentEncoding> supportedEncodings) {
-        for (FileServiceContentEncoding encoding : supportedEncodings) {
-            final Entry entry = getEntry(path + encoding.extension, encoding.headerValue);
-            if (entry.lastModifiedMillis() != 0) {
-                return entry;
+        // TODO(trustin): We assume here that the file being read is small enough that it will not block
+        //                an event loop for a long time. Revisit if the assumption turns out to be false.
+        final AggregatedHttpFile cachedFile = cache.get(pathAndEncoding, key -> {
+            try {
+                return file.aggregateWithPooledObjects(MoreExecutors.directExecutor(), ctx.alloc()).get();
+            } catch (Exception e) {
+                logger.warn("{} Failed to cache a file: {}", ctx, file, Exceptions.peel(e));
+                return null;
             }
-        }
-        return getEntry(path, null);
-    }
+        });
 
-    private static final class CachedEntry implements Entry {
-
-        private final Entry entry;
-        private final int maxCacheEntrySizeBytes;
-        @Nullable
-        private HttpData cachedContent;
-        private volatile long cachedLastModifiedMillis;
-
-        CachedEntry(Entry entry, int maxCacheEntrySizeBytes) {
-            this.entry = entry;
-            this.maxCacheEntrySizeBytes = maxCacheEntrySizeBytes;
-            cachedLastModifiedMillis = entry.lastModifiedMillis();
-        }
-
-        @Override
-        public MediaType mediaType() {
-            return entry.mediaType();
-        }
-
-        @Nullable
-        @Override
-        public String contentEncoding() {
-            return entry.contentEncoding();
-        }
-
-        @Override
-        public long lastModifiedMillis() {
-            final long newLastModifiedMillis = entry.lastModifiedMillis();
-            if (newLastModifiedMillis != cachedLastModifiedMillis) {
-                cachedLastModifiedMillis = newLastModifiedMillis;
-                destroyContent();
-            }
-
-            return newLastModifiedMillis;
-        }
-
-        @Override
-        public synchronized HttpData readContent() throws IOException {
-            if (cachedContent == null) {
-                final HttpData newContent = entry.readContent();
-                if (newContent.length() > maxCacheEntrySizeBytes) {
-                    // Do not cache if the content is too large.
-                    return newContent;
-                }
-                cachedContent = newContent;
-            }
-
-            return cachedContent;
-        }
-
-        synchronized void destroyContent() {
-            if (cachedContent != null) {
-                cachedContent = null;
-            }
-        }
-
-        @Override
-        public String toString() {
-            return entry.toString();
-        }
+        return cachedFile != null ? cachedFile : file;
     }
 
     /**
@@ -370,8 +299,7 @@ public final class HttpFileService extends AbstractHttpService {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            final Entry firstEntry = first.getEntry(ctx, req);
-            if (firstEntry.lastModifiedMillis() != 0) {
+            if (first.findFile(ctx, req) != null) {
                 return first.serve(ctx, req);
             } else {
                 return second.serve(ctx, req);

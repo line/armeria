@@ -57,14 +57,14 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiFuncti
     }
 
     /**
-     * Handled by {@link #accept(Void, Throwable)} instead,
+     * Handled by {@link #apply(Void, Throwable)} instead,
      * because this method is not invoked on cancellation and timeout.
      */
     @Override
     public final void onError(Throwable throwable) {}
 
     /**
-     * Handled by {@link #accept(Void, Throwable)} instead,
+     * Handled by {@link #apply(Void, Throwable)} instead,
      * because this method is not invoked on cancellation and timeout.
      */
     @Override

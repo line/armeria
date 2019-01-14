@@ -1,5 +1,6 @@
-.. _server-annotated-service:
 .. _Publisher: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html
+
+.. _server-annotated-service:
 
 Annotated HTTP Service
 ======================

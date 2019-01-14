@@ -23,6 +23,7 @@ import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofCa
 import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofExact;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -42,6 +43,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -56,6 +59,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.file.AbstractHttpVfs;
+import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.file.HttpFileBuilder;
 import com.linecorp.armeria.server.file.HttpFileService;
 
 /**
@@ -316,11 +321,12 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
     static final class DocServiceVfs extends AbstractHttpVfs {
 
-        private volatile Entry entry = Entry.NONE;
+        private volatile HttpFile file = HttpFile.nonExistent();
 
         @Override
-        public Entry get(String path, @Nullable String contentEncoding) {
-            return entry;
+        public HttpFile get(String path, Clock clock,
+                            @Nullable String contentEncoding) {
+            return file;
         }
 
         @Override
@@ -333,8 +339,10 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         }
 
         void setContent(byte[] content, MediaType mediaType) {
-            assert entry == Entry.NONE;
-            entry = new ByteArrayEntry("/", mediaType, content);
+            assert file == HttpFile.nonExistent();
+            file = HttpFileBuilder.of(HttpData.of(content))
+                                  .setHeader(HttpHeaderNames.CONTENT_TYPE, mediaType)
+                                  .build();
         }
     }
 }

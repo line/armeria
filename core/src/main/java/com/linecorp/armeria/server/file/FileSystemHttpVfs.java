@@ -19,15 +19,15 @@ package com.linecorp.armeria.server.file;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Clock;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.MediaType;
 
 final class FileSystemHttpVfs extends AbstractHttpVfs {
 
@@ -43,49 +43,38 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
     }
 
     @Override
-    public Entry get(String path, @Nullable String contentEncoding) {
+    public HttpFile get(String path, Clock clock,
+                        @Nullable String contentEncoding) {
         // Replace '/' with the platform dependent file separator if necessary.
         if (FILE_SEPARATOR_IS_NOT_SLASH) {
             path = path.replace(File.separatorChar, '/');
         }
 
-        final File f = new File(rootDir + path);
-        if (!f.isFile() || !f.canRead()) {
-            return Entry.NONE;
+        final HttpFileBuilder builder = HttpFileBuilder.of(Paths.get(rootDir + path));
+        return build(builder, clock, path, contentEncoding);
+    }
+
+    static HttpFile build(HttpFileBuilder builder,
+                          Clock clock,
+                          String pathOrUri,
+                          @Nullable String contentEncoding) {
+
+        builder.autoDetectedContentType(false);
+        builder.clock(clock);
+
+        final MediaType contentType = MimeTypeUtil.guessFromPath(pathOrUri, contentEncoding);
+        if (contentType != null) {
+            builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+        }
+        if (contentEncoding != null) {
+            builder.setHeader(HttpHeaderNames.CONTENT_ENCODING, contentEncoding);
         }
 
-        return new FileSystemEntry(f, path, contentEncoding);
+        return builder.build();
     }
 
     @Override
     public String meterTag() {
         return "file:" + rootDir;
-    }
-
-    static final class FileSystemEntry extends AbstractEntry {
-
-        private final File file;
-
-        FileSystemEntry(File file, String path, @Nullable String contentEncoding) {
-            super(path, contentEncoding);
-            this.file = file;
-        }
-
-        @Override
-        public long lastModifiedMillis() {
-            return file.lastModified();
-        }
-
-        @Override
-        public HttpData readContent() throws IOException {
-            final long fileLength = file.length();
-            if (fileLength > Integer.MAX_VALUE) {
-                throw new IOException("file too large: " + file + " (" + fileLength + " bytes)");
-            }
-
-            try (InputStream in = new FileInputStream(file)) {
-                return readContent(in, (int) fileLength);
-            }
-        }
     }
 }

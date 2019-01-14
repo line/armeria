@@ -202,8 +202,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
             convert(streamId, headers, outHeaders, false);
 
-            if (informational) {
-                // 1xx responses does not have the 'content-length' header.
+            if (ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
                 outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
             } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 // NB: Set the 'content-length' only when not set rather than always setting to 0.

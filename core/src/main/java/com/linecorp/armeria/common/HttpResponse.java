@@ -380,7 +380,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the response are received fully. {@link AggregatedHttpMessage#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link HttpResponse#aggregate()}.
+     * use {@link #aggregate()}.
      */
     default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
@@ -395,7 +395,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link HttpResponse#aggregate()}.
+     * use {@link #aggregate()}.
      */
     default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
