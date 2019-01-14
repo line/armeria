@@ -218,12 +218,14 @@ and lifecycle callbacks.
             responseObserver.onNext(reply);
             responseObserver.onCompleted();
         }
-
-        public static void configureService(GrpcServiceBuilder builder) {
-            // All service methods will be run within the blocking executor.
-            builder.useBlockingExecutor(true);
-        }
     }
+
+    ServerBuilder sb = new ServerBuilder();
+    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+                                       // All service methods will be run within
+                                       // the blocking executor.
+                                       .useBlockingExecutor(true)
+                                       .build());
 
 Exception propagation
 =====================
