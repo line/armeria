@@ -32,6 +32,23 @@ import com.linecorp.armeria.server.Service;
 
 /**
  * Builds a new {@link CorsService} or its decorator function.
+ * <h2>Example</h2>
+ * <pre>{@code
+ * CorsServiceBuilder cb =
+ *          CorsServiceBuilder.forOrigins("http://example.com", "http://example2.com")
+ *                            .shortCircuit()
+ *                            .allowNullOrigin()
+ *                            .allowCredentials()
+ *                            .allowRequestMethods(HttpMethod.GET, HttpMethod.POST)
+ *                            .allowRequestHeaders("allow_request_header1", "allow_request_header2")
+ *                            .andForOrigins("http://example3.com")
+ *                            .allowCredentials()
+ *                            .allowRequestMethods(HttpMethod.GET)
+ *                            .and();
+ * new ServerBuilder().service("/cors", new AbstractHttpService() {
+ *     ...
+ * }).decorator(cb.newDecorator())
+ * }</pre>
  */
 public final class CorsServiceBuilder {
 
@@ -105,7 +122,7 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Enables a successful CORS response with a {@code null} value for the CORS response header
+     * Enables a successful CORS response with a {@code "null"} value for the CORS response header
      * {@code 'Access-Control-Allow-Origin'}. Web browsers may set the {@code 'Origin'} request header to
      * {@code "null"} if a resource is loaded from the local file system.
      *
@@ -208,7 +225,7 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Specifies the if the headers that should be returned in the CORS {@code 'Access-Control-Allow-Headers'}
+     * Specifies the headers that should be returned in the CORS {@code 'Access-Control-Allow-Headers'}
      * response header.
      *
      * <p>If a client specifies headers on the request, for example by calling:

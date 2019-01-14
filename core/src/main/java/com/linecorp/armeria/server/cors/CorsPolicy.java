@@ -16,15 +16,19 @@
 
 package com.linecorp.armeria.server.cors;
 
+import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
+
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -43,6 +47,8 @@ import io.netty.util.AsciiString;
  */
 public final class CorsPolicy {
 
+    private static final String DELIMITER = ",";
+    private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
     private final Set<String> origins;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
@@ -50,6 +56,9 @@ public final class CorsPolicy {
     private final Set<AsciiString> exposedHeaders;
     private final Set<HttpMethod> allowedRequestMethods;
     private final Set<AsciiString> allowedRequestHeaders;
+    private final String joinedExposedHeaders;
+    private final String joinedAllowedRequestHeaders;
+    private final String joinedAllowedRequestMethods;
     private final HttpHeaders preflightResponseHeaders;
 
     CorsPolicy(final Set<String> origins, boolean credentialsAllowed, long maxAge,
@@ -64,7 +73,10 @@ public final class CorsPolicy {
         this.exposedHeaders = ImmutableSet.copyOf(exposedHeaders);
         this.allowedRequestMethods = EnumSet.copyOf(allowedRequestMethods);
         this.allowedRequestHeaders = ImmutableSet.copyOf(allowedRequestHeaders);
-
+        joinedExposedHeaders = HEADER_JOINER.join(this.exposedHeaders);
+        joinedAllowedRequestMethods = this.allowedRequestMethods
+                .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
+        joinedAllowedRequestHeaders = HEADER_JOINER.join(this.allowedRequestHeaders);
         final Map<AsciiString, Supplier<?>> preflightResponseHeadersMap;
         if (preflightResponseHeadersDisabled) {
             preflightResponseHeadersMap = Collections.emptyMap();
@@ -203,11 +215,50 @@ public final class CorsPolicy {
      * Returns HTTP response headers that should be added to a CORS preflight response.
      *
      * @return {@link HttpHeaders} the HTTP response headers to be added.
-     *
-     * @throws IllegalStateException if CORS support is not enabled
      */
     public HttpHeaders preflightResponseHeaders() {
         return preflightResponseHeaders;
+    }
+
+    /**
+     * This is a non CORS specification feature which enables the setting of preflight
+     * response headers that might be required by intermediaries.
+     *
+     * @param headers the {@link HttpHeaders} to which the preflight headers should be added.
+     */
+    void setPreflightHeaders(final HttpHeaders headers) {
+        headers.add(preflightResponseHeaders);
+    }
+
+    void setCorsAllowCredentials(final HttpHeaders headers) {
+        if (credentialsAllowed &&
+            !ANY_ORIGIN.equals(headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))) {
+            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        }
+    }
+
+    void setCorsExposeHeaders(final HttpHeaders headers) {
+        if (exposedHeaders.isEmpty()) {
+            return;
+        }
+
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, joinedExposedHeaders);
+    }
+
+    void setCorsAllowMethods(final HttpHeaders headers) {
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, joinedAllowedRequestMethods);
+    }
+
+    void setCorsAllowHeaders(final HttpHeaders headers) {
+        if (allowedRequestHeaders.isEmpty()) {
+            return;
+        }
+
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinedAllowedRequestHeaders);
+    }
+
+    void setCorsMaxAge(final HttpHeaders headers) {
+        headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
     }
 
     @Override

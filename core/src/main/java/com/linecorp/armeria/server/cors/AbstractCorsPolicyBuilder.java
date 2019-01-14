@@ -183,7 +183,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     /**
-     * Specifies the if the headers that should be returned in the CORS {@code 'Access-Control-Allow-Headers'}
+     * Specifies the headers that should be returned in the CORS {@code 'Access-Control-Allow-Headers'}
      * response header.
      *
      * <p>If a client specifies headers on the request, for example by calling:
