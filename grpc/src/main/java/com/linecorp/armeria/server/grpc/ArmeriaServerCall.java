@@ -113,6 +113,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final ServiceRequestContext ctx;
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
+    private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final String advertisedEncodingsHeader;
 
@@ -149,11 +150,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       SerializationFormat serializationFormat,
                       MessageMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
+                      boolean useBlockingTaskExecutor,
                       String advertisedEncodingsHeader) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
                 new ArmeriaMessageDeframer(
@@ -256,10 +259,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
             res.onDemand(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    try {
-                        listener.onReady();
-                    } catch (Throwable t) {
-                        close(Status.fromThrowable(t), EMPTY_METADATA);
+                    if (useBlockingTaskExecutor) {
+                        ctx.blockingTaskExecutor().execute(this::invokeOnReady);
+                    } else {
+                        invokeOnReady();
                     }
                 }
             });
@@ -269,6 +272,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         } catch (Throwable t) {
             close(Status.fromThrowable(t), EMPTY_METADATA);
             throw new RuntimeException(t);
+        }
+    }
+
+    private void invokeOnReady() {
+        try {
+            listener.onReady();
+        } catch (Throwable t) {
+            close(Status.fromThrowable(t), EMPTY_METADATA);
         }
     }
 
@@ -383,6 +394,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             GrpcUnsafeBufferUtil.storeBuffer(message.buf(), request, ctx);
         }
 
+        if (useBlockingTaskExecutor) {
+            ctx.blockingTaskExecutor().execute(() -> invokeOnMessage(request));
+        } else {
+            invokeOnMessage(request);
+        }
+    }
+
+    private void invokeOnMessage(I request) {
         try (SafeCloseable ignored = ctx.push()) {
             listener.onMessage(request);
         } catch (Throwable t) {
@@ -398,11 +417,19 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
             }
 
-            try (SafeCloseable ignored = ctx.push()) {
-                listener.onHalfClose();
-            } catch (Throwable t) {
-                close(Status.fromThrowable(t), EMPTY_METADATA);
+            if (useBlockingTaskExecutor) {
+                ctx.blockingTaskExecutor().execute(this::invokeHalfClose);
+            } else {
+                invokeHalfClose();
             }
+        }
+    }
+
+    private void invokeHalfClose() {
+        try (SafeCloseable ignored = ctx.push()) {
+            listener.onHalfClose();
+        } catch (Throwable t) {
+            close(Status.fromThrowable(t), EMPTY_METADATA);
         }
     }
 
@@ -425,24 +452,17 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             messageFramer.close();
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             if (newStatus.isOk()) {
-                try (SafeCloseable ignored = ctx.push()) {
-                    listener.onComplete();
-                } catch (Throwable t) {
-                    // This should not be possible with normal generated stubs which do not implement
-                    // onComplete, but is conceivable for a completely manually constructed stub.
-                    logger.warn("Error in gRPC onComplete handler.", t);
+                if (useBlockingTaskExecutor) {
+                    ctx.blockingTaskExecutor().execute(this::invokeOnComplete);
+                } else {
+                    invokeOnComplete();
                 }
             } else {
                 cancelled = true;
-                try (SafeCloseable ignored = ctx.push()) {
-                    listener.onCancel();
-                } catch (Throwable t) {
-                    if (!closeCalled) {
-                        // A custom error when dealing with client cancel or transport issues should be
-                        // returned. We have already closed the listener, so it will not receive any more
-                        // callbacks as designed.
-                        close(Status.fromThrowable(t), EMPTY_METADATA);
-                    }
+                if (useBlockingTaskExecutor) {
+                    ctx.blockingTaskExecutor().execute(this::invokeOnCancel);
+                } else {
+                    invokeOnCancel();
                 }
                 // Transport error, not business logic error, so reset the stream.
                 if (!closeCalled) {
@@ -454,6 +474,29 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                         res.abort();
                     }
                 }
+            }
+        }
+    }
+
+    private void invokeOnComplete() {
+        try (SafeCloseable ignored = ctx.push()) {
+            listener.onComplete();
+        } catch (Throwable t) {
+            // This should not be possible with normal generated stubs which do not implement
+            // onComplete, but is conceivable for a completely manually constructed stub.
+            logger.warn("Error in gRPC onComplete handler.", t);
+        }
+    }
+
+    private void invokeOnCancel() {
+        try (SafeCloseable ignored = ctx.push()) {
+            listener.onCancel();
+        } catch (Throwable t) {
+            if (!closeCalled) {
+                // A custom error when dealing with client cancel or transport issues should be
+                // returned. We have already closed the listener, so it will not receive any more
+                // callbacks as designed.
+                close(Status.fromThrowable(t), EMPTY_METADATA);
             }
         }
     }

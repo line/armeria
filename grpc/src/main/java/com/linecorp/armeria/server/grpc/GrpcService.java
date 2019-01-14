@@ -88,6 +88,7 @@ public final class GrpcService extends AbstractHttpService
     private final Set<SerializationFormat> supportedSerializationFormats;
     private final MessageMarshaller jsonMarshaller;
     private final int maxOutboundMessageSizeBytes;
+    private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final String advertisedEncodingsHeader;
 
@@ -99,6 +100,7 @@ public final class GrpcService extends AbstractHttpService
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
                 int maxOutboundMessageSizeBytes,
+                boolean useBlockingTaskExecutor,
                 boolean unsafeWrapRequestBuffers,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
@@ -108,6 +110,7 @@ public final class GrpcService extends AbstractHttpService
         this.supportedSerializationFormats = supportedSerializationFormats;
         jsonMarshaller = jsonMarshaller(registry);
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
 
@@ -186,6 +189,7 @@ public final class GrpcService extends AbstractHttpService
                 serializationFormat,
                 jsonMarshaller,
                 unsafeWrapRequestBuffers,
+                useBlockingTaskExecutor,
                 advertisedEncodingsHeader);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {
