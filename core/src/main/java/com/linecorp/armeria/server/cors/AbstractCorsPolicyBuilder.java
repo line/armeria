@@ -20,12 +20,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -249,8 +247,14 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public <T> B preflightResponseHeader(final CharSequence name, final Iterable<T> values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
-        final List<T> list = new ArrayList<>();
-        values.forEach(list::add);
+
+        int i = 0;
+        for (T value : values) {
+            if (value == null) {
+                throw new NullPointerException("value[" + i + ']');
+            }
+            i++;
+        }
         preflightResponseHeaders.put(HttpHeaderNames.of(name), new ConstantValueSupplier(values));
         return self();
     }
