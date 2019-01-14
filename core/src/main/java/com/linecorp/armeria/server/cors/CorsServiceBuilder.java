@@ -135,8 +135,8 @@ public final class CorsServiceBuilder {
 
     /**
      * Enables cookies to be added to CORS requests.
-     * Calling this method will set the CORS {@code 'Access-Control-Allow-Credentials'} response header to true.
-     * By default cookies are not included in CORS requests
+     * Calling this method will set the CORS {@code 'Access-Control-Allow-Credentials'} response header
+     * to {@code true}. By default, cookies are not included in CORS requests.
      *
      * <p>Please note, that cookie support needs to be enabled on the client side as well.
      * The client needs to opt-in to send cookies by calling:
@@ -144,8 +144,8 @@ public final class CorsServiceBuilder {
      * xhr.withCredentials = true;
      * }</pre>
      *
-     * <p>The default value for {@code 'withCredentials'} is false in which case no cookies are sent.
-     * Setting this to true will included cookies in cross origin requests.
+     * <p>The default value for {@code 'withCredentials'} is {@code false} in which case no cookies are sent.
+     * Setting this to {@code true} will include cookies in cross origin requests.
      *
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
@@ -230,12 +230,12 @@ public final class CorsServiceBuilder {
      *
      * <p>If a client specifies headers on the request, for example by calling:
      * <pre>{@code
-     * xhr.setRequestHeader('My-Custom-Header', "SomeValue");
+     * xhr.setRequestHeader('My-Custom-Header', 'SomeValue');
      * }</pre>
      * the server will receive the above header name in the 'Access-Control-Request-Headers' of the
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server
-     * if it allow a request).
+     * if it allows a request).
      *
      * @param headers the headers to be added to the preflight 'Access-Control-Allow-Headers' response header.
      * @return {@link CorsServiceBuilder} to support method chaining.

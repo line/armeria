@@ -20,10 +20,12 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -94,8 +96,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
 
     /**
      * Enables cookies to be added to CORS requests.
-     * Calling this method will set the CORS {@code 'Access-Control-Allow-Credentials'} response header to true.
-     * By default cookies are not included in CORS requests
+     * Calling this method will set the CORS {@code 'Access-Control-Allow-Credentials'} response header
+     * to {@code true}. By default, cookies are not included in CORS requests.
      *
      * <p>Please note, that cookie support needs to be enabled on the client side as well.
      * The client needs to opt-in to send cookies by calling:
@@ -103,8 +105,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * xhr.withCredentials = true;
      * }</pre>
      *
-     * <p>The default value for {@code 'withCredentials'} is false in which case no cookies are sent.
-     * Setting this to true will included cookies in cross origin requests.
+     * <p>The default value for {@code 'withCredentials'} is {@code false} in which case no cookies are sent.
+     * Setting this to {@code true} will include cookies in cross origin requests.
      *
      * @return {@code this} to support method chaining.
      */
@@ -188,12 +190,12 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      *
      * <p>If a client specifies headers on the request, for example by calling:
      * <pre>{@code
-     * xhr.setRequestHeader('My-Custom-Header', "SomeValue");
+     * xhr.setRequestHeader('My-Custom-Header', 'SomeValue');
      * }</pre>
      * the server will receive the above header name in the 'Access-Control-Request-Headers' of the
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server
-     * if it allow a request).
+     * if it allows a request).
      *
      * @param headers the headers to be added to
      *                the preflight {@code 'Access-Control-Allow-Headers'} response header.
@@ -247,6 +249,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public <T> B preflightResponseHeader(final CharSequence name, final Iterable<T> values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
+        final List<T> list = new ArrayList<>();
+        values.forEach(list::add);
         preflightResponseHeaders.put(HttpHeaderNames.of(name), new ConstantValueSupplier(values));
         return self();
     }
@@ -300,6 +304,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
                            @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders,
                            boolean preflightResponseHeadersDisabled) {
         return MoreObjects.toStringHelper(obj)
+                          .omitNullValues()
                           .add("origins", origins)
                           .add("nullOriginAllowed", nullOriginAllowed)
                           .add("credentialsAllowed", credentialsAllowed)
@@ -314,7 +319,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     @Override
     public String toString() {
         return toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
-                                   exposedHeaders, allowedRequestMethods, allowedRequestHeaders,
-                                   preflightResponseHeaders, preflightResponseHeadersDisabled);
+                        exposedHeaders, allowedRequestMethods, allowedRequestHeaders,
+                        preflightResponseHeaders, preflightResponseHeadersDisabled);
     }
 }

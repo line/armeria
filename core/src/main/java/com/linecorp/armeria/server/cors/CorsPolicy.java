@@ -21,7 +21,6 @@ import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -92,14 +91,8 @@ public final class CorsPolicy {
             preflightHeaders = HttpHeaders.EMPTY_HEADERS;
         } else {
             preflightHeaders = new DefaultHttpHeaders(false);
-            for (Entry<AsciiString, Supplier<?>> entry : preflightResponseHeadersMap.entrySet()) {
-                final Object value = getValue(entry.getValue());
-                if (value instanceof Iterable) {
-                    preflightHeaders.addObject(entry.getKey(), (Iterable<?>) value);
-                } else {
-                    preflightHeaders.addObject(entry.getKey(), value);
-                }
-            }
+            preflightResponseHeadersMap.entrySet().stream().forEach(
+                    entry -> preflightHeaders.addObject(entry.getKey(), entry.getValue()));
         }
         this.preflightResponseHeaders = preflightHeaders.asImmutable();
     }
@@ -108,7 +101,7 @@ public final class CorsPolicy {
      * Returns the allowed origin. This can either be a wildcard or an origin value.
      * This method returns the first specified origin if this policy has more than one origin.
      *
-     * @return the value that will be used for the CORS response header 'Access-Control-Allow-Origin'
+     * @return the value that will be used for the CORS response header {@code 'Access-Control-Allow-Origin'}
      */
     public String origin() {
         return origins.isEmpty() ? "*" : origins.iterator().next();
@@ -124,9 +117,9 @@ public final class CorsPolicy {
     /**
      * Determines if cookies are supported for CORS requests.
      *
-     * <p>By default cookies are not included in CORS requests but if isCredentialsAllowed returns
+     * <p>By default cookies are not included in CORS requests but if {@code isCredentialsAllowed}  returns
      * true cookies will be added to CORS requests. Setting this value to true will set the
-     * CORS 'Access-Control-Allow-Credentials' response header to true.
+     * CORS 'Access-Control-Allow-Credentials' response header to {@code true}.
      *
      * <p>Please note that cookie support needs to be enabled on the client side as well.
      * The client needs to opt-in to send cookies by calling:
@@ -147,7 +140,7 @@ public final class CorsPolicy {
      * Gets the maxAge setting.
      *
      * <p>When making a preflight request the client has to perform two request with can be inefficient.
-     * This setting will set the CORS 'Access-Control-Max-Age' response header and enables the
+     * This setting will set the CORS {@code 'Access-Control-Max-Age'} response header and enables the
      * caching of the preflight response for the specified time. During this time no preflight
      * request will be made.
      *
@@ -231,6 +224,8 @@ public final class CorsPolicy {
     }
 
     void setCorsAllowCredentials(final HttpHeaders headers) {
+        // The string "*" cannot be used for a resource that supports credentials.
+        // https://www.w3.org/TR/cors/#resource-requests
         if (credentialsAllowed &&
             !ANY_ORIGIN.equals(headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))) {
             headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
@@ -274,6 +269,7 @@ public final class CorsPolicy {
                            @Nullable Set<AsciiString> allowedRequestHeaders,
                            @Nullable HttpHeaders preflightResponseHeaders) {
         return MoreObjects.toStringHelper(obj)
+                          .omitNullValues()
                           .add("origins", origins)
                           .add("nullOriginAllowed", nullOriginAllowed)
                           .add("credentialsAllowed", credentialsAllowed)
