@@ -65,9 +65,8 @@ public class HttpServerCorsTest {
                 }
             }.decorate(CorsServiceBuilder.forOrigin("http://example.com")
                                          .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                                         .allowRequestHeaders(HttpHeaderNames.of("allow_request_header"))
-                                         .exposeHeaders(HttpHeaderNames.of("expose_header_1"),
-                                                        HttpHeaderNames.of("expose_header_2"))
+                                         .allowRequestHeaders("allow_request_header")
+                                         .exposeHeaders("expose_header_1", "expose_header_2")
                                          .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                                          .andForOrigins("http://example2.com")
                                          .allowRequestMethods(HttpMethod.GET)

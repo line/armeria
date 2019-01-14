@@ -22,11 +22,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -41,12 +39,10 @@ import com.linecorp.armeria.server.cors.CorsConfig.InstantValueSupplier;
 import io.netty.util.AsciiString;
 
 /**
- * Contains information of the CORS policy with specified origins.
+ * Contains information of the CORS policy with the specified origins.
  */
 public final class CorsPolicy {
 
-    private static final String DELIMITER = ",";
-    private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
     private final Set<String> origins;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
@@ -54,7 +50,7 @@ public final class CorsPolicy {
     private final Set<AsciiString> exposedHeaders;
     private final Set<HttpMethod> allowedRequestMethods;
     private final Set<AsciiString> allowedRequestHeaders;
-    private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
+    private final HttpHeaders preflightResponseHeaders;
 
     CorsPolicy(final Set<String> origins, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
@@ -69,15 +65,31 @@ public final class CorsPolicy {
         this.allowedRequestMethods = EnumSet.copyOf(allowedRequestMethods);
         this.allowedRequestHeaders = ImmutableSet.copyOf(allowedRequestHeaders);
 
+        final Map<AsciiString, Supplier<?>> preflightResponseHeadersMap;
         if (preflightResponseHeadersDisabled) {
-            this.preflightResponseHeaders = Collections.emptyMap();
+            preflightResponseHeadersMap = Collections.emptyMap();
         } else if (preflightResponseHeaders.isEmpty()) {
-            this.preflightResponseHeaders = ImmutableMap.of(
+            preflightResponseHeadersMap = ImmutableMap.of(
                     HttpHeaderNames.DATE, InstantValueSupplier.INSTANCE,
                     HttpHeaderNames.CONTENT_LENGTH, ConstantValueSupplier.ZERO);
         } else {
-            this.preflightResponseHeaders = ImmutableMap.copyOf(preflightResponseHeaders);
+            preflightResponseHeadersMap = preflightResponseHeaders;
         }
+        final HttpHeaders preflightHeaders;
+        if (preflightResponseHeadersMap.isEmpty()) {
+            preflightHeaders = HttpHeaders.EMPTY_HEADERS;
+        } else {
+            preflightHeaders = new DefaultHttpHeaders(false);
+            for (Entry<AsciiString, Supplier<?>> entry : preflightResponseHeadersMap.entrySet()) {
+                final Object value = getValue(entry.getValue());
+                if (value instanceof Iterable) {
+                    preflightHeaders.addObject(entry.getKey(), (Iterable<?>) value);
+                } else {
+                    preflightHeaders.addObject(entry.getKey(), value);
+                }
+            }
+        }
+        this.preflightResponseHeaders = preflightHeaders.asImmutable();
     }
 
     /**
@@ -161,10 +173,10 @@ public final class CorsPolicy {
     }
 
     /**
-     * Returns the allowed set of Request Methods. The Http methods that should be returned in the
+     * Returns the allowed set of request methods. The Http methods that should be returned in the
      * CORS {@code 'Access-Control-Request-Method'} response header.
      *
-     * @return the {@link HttpMethod}s that represent the allowed Request Methods.
+     * @return the {@link HttpMethod}s that represent the allowed request methods.
      */
     public Set<HttpMethod> allowedRequestMethods() {
         return allowedRequestMethods;
@@ -195,65 +207,7 @@ public final class CorsPolicy {
      * @throws IllegalStateException if CORS support is not enabled
      */
     public HttpHeaders preflightResponseHeaders() {
-        if (preflightResponseHeaders.isEmpty()) {
-            return HttpHeaders.EMPTY_HEADERS;
-        }
-
-        final HttpHeaders preflightHeaders = new DefaultHttpHeaders(false);
-        for (Entry<AsciiString, Supplier<?>> entry : preflightResponseHeaders.entrySet()) {
-            final Object value = getValue(entry.getValue());
-            if (value instanceof Iterable) {
-                preflightHeaders.addObject(entry.getKey(), (Iterable<?>) value);
-            } else {
-                preflightHeaders.addObject(entry.getKey(), value);
-            }
-        }
-        return preflightHeaders;
-    }
-
-    /**
-     * This is a non CORS specification feature which enables the setting of preflight
-     * response headers that might be required by intermediaries.
-     *
-     * @param headers the {@link HttpHeaders} to which the preflight headers should be added.
-     */
-    void setPreflightHeaders(final HttpHeaders headers) {
-        for (Map.Entry<AsciiString, String> entry : preflightResponseHeaders()) {
-            headers.add(entry.getKey(), entry.getValue());
-        }
-    }
-
-    void setCorsAllowCredentials(final HttpHeaders headers) {
-        if (credentialsAllowed &&
-            !headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN).equals(CorsService.ANY_ORIGIN)) {
-            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
-        }
-    }
-
-    void setCorsExposeHeaders(final HttpHeaders headers) {
-        if (exposedHeaders.isEmpty()) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, HEADER_JOINER.join(exposedHeaders));
-    }
-
-    void setCorsAllowMethods(final HttpHeaders headers) {
-        final String methods = allowedRequestMethods
-                .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, methods);
-    }
-
-    void setCorsAllowHeaders(final HttpHeaders headers) {
-        if (allowedRequestHeaders.isEmpty()) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, HEADER_JOINER.join(allowedRequestHeaders));
-    }
-
-    void setCorsMaxAge(final HttpHeaders headers) {
-        headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
+        return preflightResponseHeaders;
     }
 
     @Override
@@ -267,7 +221,7 @@ public final class CorsPolicy {
                            long maxAge, @Nullable Set<AsciiString> exposedHeaders,
                            @Nullable Set<HttpMethod> allowedRequestMethods,
                            @Nullable Set<AsciiString> allowedRequestHeaders,
-                           @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
+                           @Nullable HttpHeaders preflightResponseHeaders) {
         return MoreObjects.toStringHelper(obj)
                           .add("origins", origins)
                           .add("nullOriginAllowed", nullOriginAllowed)

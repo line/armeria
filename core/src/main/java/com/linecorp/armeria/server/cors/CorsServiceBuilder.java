@@ -63,7 +63,7 @@ public final class CorsServiceBuilder {
     }
 
     final boolean anyOriginSupported;
-    final ChainedCorsPolicyBuilder defaultPolicyBuilder;
+    final ChainedCorsPolicyBuilder firstPolicyBuilder;
     final Set<CorsPolicy> policies;
     final Set<ChainedCorsPolicyBuilder> policyBuilders;
 
@@ -76,7 +76,7 @@ public final class CorsServiceBuilder {
     CorsServiceBuilder(final String... origins) {
         anyOriginSupported = false;
         policies = new HashSet<>();
-        defaultPolicyBuilder = new ChainedCorsPolicyBuilder(this, origins);
+        firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, origins);
         policyBuilders = new HashSet<>();
     }
 
@@ -86,7 +86,7 @@ public final class CorsServiceBuilder {
     CorsServiceBuilder() {
         anyOriginSupported = true;
         policies = Collections.emptySet();
-        defaultPolicyBuilder = new ChainedCorsPolicyBuilder(this);
+        firstPolicyBuilder = new ChainedCorsPolicyBuilder(this);
         policyBuilders = Collections.emptySet();
     }
 
@@ -112,7 +112,7 @@ public final class CorsServiceBuilder {
      * @return {@code this} to support method chaining.
      */
     public CorsServiceBuilder allowNullOrigin() {
-        defaultPolicyBuilder.allowNullOrigin();
+        firstPolicyBuilder.allowNullOrigin();
         return this;
     }
 
@@ -133,7 +133,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder allowCredentials() {
-        defaultPolicyBuilder.allowCredentials();
+        firstPolicyBuilder.allowCredentials();
         return this;
     }
 
@@ -161,7 +161,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder maxAge(final long maxAge) {
-        defaultPolicyBuilder.maxAge(maxAge);
+        firstPolicyBuilder.maxAge(maxAge);
         return this;
     }
 
@@ -191,7 +191,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder exposeHeaders(final CharSequence... headers) {
-        defaultPolicyBuilder.exposeHeaders(headers);
+        firstPolicyBuilder.exposeHeaders(headers);
         return this;
     }
 
@@ -203,7 +203,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder allowRequestMethods(final HttpMethod... methods) {
-        defaultPolicyBuilder.allowRequestMethods(methods);
+        firstPolicyBuilder.allowRequestMethods(methods);
         return this;
     }
 
@@ -224,7 +224,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder allowRequestHeaders(final CharSequence... headers) {
-        defaultPolicyBuilder.allowRequestHeaders(headers);
+        firstPolicyBuilder.allowRequestHeaders(headers);
         return this;
     }
 
@@ -239,7 +239,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder preflightResponseHeader(final CharSequence name, final Object... values) {
-        defaultPolicyBuilder.preflightResponseHeader(name, values);
+        firstPolicyBuilder.preflightResponseHeader(name, values);
         return this;
     }
 
@@ -255,7 +255,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public <T> CorsServiceBuilder preflightResponseHeader(final CharSequence name, final Iterable<T> values) {
-        defaultPolicyBuilder.preflightResponseHeader(name, values);
+        firstPolicyBuilder.preflightResponseHeader(name, values);
         return this;
     }
 
@@ -275,7 +275,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public <T> CorsServiceBuilder preflightResponseHeader(CharSequence name, Supplier<T> valueSupplier) {
-        defaultPolicyBuilder.preflightResponseHeader(name, valueSupplier);
+        firstPolicyBuilder.preflightResponseHeader(name, valueSupplier);
         return this;
     }
 
@@ -285,7 +285,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder disablePreflightResponseHeaders() {
-        defaultPolicyBuilder.disablePreflightResponseHeaders();
+        firstPolicyBuilder.disablePreflightResponseHeaders();
         return this;
     }
 

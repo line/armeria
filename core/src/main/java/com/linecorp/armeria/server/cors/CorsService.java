@@ -18,10 +18,15 @@ package com.linecorp.armeria.server.cors;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Joiner;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -36,6 +41,8 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 
+import io.netty.util.AsciiString;
+
 /**
  * Decorates an HTTP {@link Service} to add the
  * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
@@ -45,6 +52,8 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  */
 public final class CorsService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
+    private static final String DELIMITER = ",";
+    private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
     private static final Logger logger = LoggerFactory.getLogger(CorsService.class);
 
     static final String ANY_ORIGIN = "*";
@@ -101,6 +110,58 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
     }
 
     /**
+     * This is a non CORS specification feature which enables the setting of preflight
+     * response headers that might be required by intermediaries.
+     *
+     * @param headers the {@link HttpHeaders} to which the preflight headers should be added.
+     */
+    void setPreflightHeaders(final CorsPolicy policy, final HttpHeaders headers) {
+        requireNonNull(policy, "policy");
+        for (Map.Entry<AsciiString, String> entry : policy.preflightResponseHeaders()) {
+            headers.add(entry.getKey(), entry.getValue());
+        }
+    }
+
+    void setCorsAllowCredentials(final CorsPolicy policy, final HttpHeaders headers) {
+        requireNonNull(policy, "policy");
+        if (policy.isCredentialsAllowed() &&
+            !headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN).equals(CorsService.ANY_ORIGIN)) {
+            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        }
+    }
+
+    void setCorsExposeHeaders(final CorsPolicy policy, final HttpHeaders headers) {
+        requireNonNull(policy, "policy");
+        if (policy.exposedHeaders().isEmpty()) {
+            return;
+        }
+
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, HEADER_JOINER.join(policy.exposedHeaders()));
+    }
+
+    void setCorsAllowMethods(final CorsPolicy policy, final HttpHeaders headers) {
+        requireNonNull(policy, "policy");
+        final String methods = policy.allowedRequestMethods()
+                                     .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, methods);
+    }
+
+    void setCorsAllowHeaders(final CorsPolicy policy, final HttpHeaders headers) {
+        requireNonNull(policy, "policy");
+        if (policy.allowedRequestHeaders().isEmpty()) {
+            return;
+        }
+
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS,
+                    HEADER_JOINER.join(policy.allowedRequestHeaders()));
+    }
+
+    void setCorsMaxAge(final CorsPolicy policy, final HttpHeaders headers) {
+        requireNonNull(policy, "policy");
+        headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, policy.maxAge());
+    }
+
+    /**
      * Check for a CORS preflight request.
      *
      * @param request the HTTP request with CORS info
@@ -122,11 +183,11 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
         final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
         final CorsPolicy policy = setCorsOrigin(req, headers);
         if (policy != null) {
-            policy.setCorsAllowMethods(headers);
-            policy.setCorsAllowHeaders(headers);
-            policy.setCorsAllowCredentials(headers);
-            policy.setCorsMaxAge(headers);
-            policy.setPreflightHeaders(headers);
+            setCorsAllowMethods(policy, headers);
+            setCorsAllowHeaders(policy, headers);
+            setCorsAllowCredentials(policy, headers);
+            setCorsMaxAge(policy, headers);
+            setPreflightHeaders(policy, headers);
         }
 
         return HttpResponse.of(headers);
@@ -141,9 +202,9 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
     private void setCorsResponseHeaders(final HttpRequest req, HttpHeaders headers) {
         final CorsPolicy policy = setCorsOrigin(req, headers);
         if (policy != null) {
-            policy.setCorsAllowCredentials(headers);
-            policy.setCorsAllowHeaders(headers);
-            policy.setCorsExposeHeaders(headers);
+            setCorsAllowCredentials(policy, headers);
+            setCorsAllowHeaders(policy, headers);
+            setCorsExposeHeaders(policy, headers);
         }
     }
 

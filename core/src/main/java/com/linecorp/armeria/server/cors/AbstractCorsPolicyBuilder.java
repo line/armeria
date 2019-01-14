@@ -28,7 +28,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Ascii;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -296,10 +299,29 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
                               preflightResponseHeadersDisabled, preflightResponseHeaders);
     }
 
+    static String toString(Object obj, @Nullable Set<String> origins,
+                           boolean nullOriginAllowed, boolean credentialsAllowed,
+                           long maxAge, @Nullable Set<AsciiString> exposedHeaders,
+                           @Nullable Set<HttpMethod> allowedRequestMethods,
+                           @Nullable Set<AsciiString> allowedRequestHeaders,
+                           @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders,
+                           boolean preflightResponseHeadersDisabled) {
+        return MoreObjects.toStringHelper(obj)
+                          .add("origins", origins)
+                          .add("nullOriginAllowed", nullOriginAllowed)
+                          .add("credentialsAllowed", credentialsAllowed)
+                          .add("maxAge", maxAge)
+                          .add("exposedHeaders", exposedHeaders)
+                          .add("allowedRequestMethods", allowedRequestMethods)
+                          .add("allowedRequestHeaders", allowedRequestHeaders)
+                          .add("preflightResponseHeaders", preflightResponseHeaders)
+                          .add("preflightResponseHeadersDisabled", preflightResponseHeadersDisabled).toString();
+    }
+
     @Override
     public String toString() {
-        return CorsPolicy.toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
+        return toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
                                    exposedHeaders, allowedRequestMethods, allowedRequestHeaders,
-                                   preflightResponseHeaders);
+                                   preflightResponseHeaders, preflightResponseHeadersDisabled);
     }
 }

@@ -61,7 +61,7 @@ public final class CorsConfig {
         anyOriginSupported = builder.anyOriginSupported;
         shortCircuit = builder.shortCircuit;
         policies = new ImmutableSet.Builder<CorsPolicy>()
-                                   .add(builder.defaultPolicyBuilder.build())
+                                   .add(builder.firstPolicyBuilder.build())
                                    .addAll(builder.policies)
                                    .addAll(builder.policyBuilders.stream().map(AbstractCorsPolicyBuilder::build)
                                                                  .collect(Collectors.toSet()))
@@ -120,7 +120,7 @@ public final class CorsConfig {
      *         {@code null} if the {@code origin} is not allowed in any policy.
      */
     @Nullable
-    CorsPolicy getPolicy(String origin) {
+    public CorsPolicy getPolicy(String origin) {
         requireNonNull(origin, "origin");
         if (isAnyOriginSupported()) {
             return policies.iterator().next();

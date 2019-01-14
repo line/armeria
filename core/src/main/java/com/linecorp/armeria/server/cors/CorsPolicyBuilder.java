@@ -15,6 +15,19 @@
  */
 package com.linecorp.armeria.server.cors;
 
+/**
+ * Builds a new {@link CorsPolicy}.
+ * <h2>Example</h2>
+ * <pre>{@code
+ * CorsPolicyBuilder cb = new CorsPolicyBuilder("http://example.com");
+ * cb.allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+ *   .allowRequestHeaders("allow_request_header")
+ *   .exposeHeaders("expose_header_1","expose_header_2")
+ *   .preflightResponseHeader("x-preflight-cors", "Hello CORS");
+ * CorsPolicy policy = cb.build();
+ * }</pre>
+ *
+ */
 public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder<CorsPolicyBuilder> {
     /**
      * Creates a new instance with the specified {@code origins}.
