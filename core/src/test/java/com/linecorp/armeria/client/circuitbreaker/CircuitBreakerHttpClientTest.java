@@ -148,7 +148,7 @@ public class CircuitBreakerHttpClientTest {
                 .counterSlidingWindow(counterSlidingWindow)
                 .counterUpdateInterval(counterUpdateInterval)
                 .ticker(ticker)
-                .listener(new NoopCircuitBreakerListener() {
+                .listener(new CircuitBreakerListenerAdapter() {
                     @Override
                     public void onEventCountUpdated(CircuitBreaker circuitBreaker, EventCount eventCount)
                             throws Exception {
@@ -205,18 +205,5 @@ public class CircuitBreakerHttpClientTest {
      */
     private static CircuitBreakerStrategy strategy() {
         return (ctx, cause) -> CompletableFuture.completedFuture(cause == null);
-    }
-
-    private static class NoopCircuitBreakerListener implements CircuitBreakerListener {
-
-        @Override
-        public void onStateChanged(CircuitBreaker circuitBreaker, CircuitState state) throws Exception {}
-
-        @Override
-        public void onEventCountUpdated(CircuitBreaker circuitBreaker,
-                                        EventCount eventCount) throws Exception {}
-
-        @Override
-        public void onRequestRejected(CircuitBreaker circuitBreaker) throws Exception {}
     }
 }
