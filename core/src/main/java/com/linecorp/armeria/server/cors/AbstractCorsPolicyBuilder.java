@@ -20,12 +20,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -87,7 +85,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     /**
-     * Enables a successful CORS response with a {@code null} value for the CORS response header
+     * Enables a successful CORS response with a {@code "null"} value for the CORS response header
      * {@code 'Access-Control-Allow-Origin'}. Web browsers may set the {@code 'Origin'} request header to
      * {@code "null"} if a resource is loaded from the local file system.
      *
@@ -207,14 +205,12 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B allowRequestHeaders(final CharSequence... headers) {
         requireNonNull(headers, "headers");
-        final List<AsciiString> asciiHeaders = new ArrayList<>();
         for (int i = 0; i < headers.length; i++) {
             if (headers[i] == null) {
                 throw new NullPointerException("headers[" + i + ']');
             }
-            asciiHeaders.add(AsciiString.of(headers[i]));
         }
-        allowedRequestHeaders.addAll(asciiHeaders);
+        Arrays.stream(headers).map(HttpHeaderNames::of).forEach(allowedRequestHeaders::add);
         return self();
     }
 
@@ -236,7 +232,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
                 throw new NullPointerException("values[" + i + ']');
             }
         }
-        preflightResponseHeaders.put(AsciiString.of(name), new ConstantValueSupplier(Arrays.asList(values)));
+        preflightResponseHeaders.put(HttpHeaderNames.of(name),
+                                     new ConstantValueSupplier(Arrays.asList(values)));
         return self();
     }
 
@@ -254,7 +251,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public <T> B preflightResponseHeader(final CharSequence name, final Iterable<T> values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
-        preflightResponseHeaders.put(AsciiString.of(name), new ConstantValueSupplier(values));
+        preflightResponseHeaders.put(HttpHeaderNames.of(name), new ConstantValueSupplier(values));
         return self();
     }
 
@@ -276,7 +273,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public <T> B preflightResponseHeader(CharSequence name, Supplier<T> valueSupplier) {
         requireNonNull(name, "name");
         requireNonNull(valueSupplier, "valueSupplier");
-        preflightResponseHeaders.put(AsciiString.of(name), valueSupplier);
+        preflightResponseHeaders.put(HttpHeaderNames.of(name), valueSupplier);
         return self();
     }
 
