@@ -91,8 +91,7 @@ public final class CorsPolicy {
             preflightHeaders = HttpHeaders.EMPTY_HEADERS;
         } else {
             preflightHeaders = new DefaultHttpHeaders(false);
-            preflightResponseHeadersMap.entrySet().stream().forEach(
-                    entry -> preflightHeaders.addObject(entry.getKey(), entry.getValue()));
+            preflightResponseHeadersMap.forEach(preflightHeaders::addObject);
         }
         this.preflightResponseHeaders = preflightHeaders.asImmutable();
     }
