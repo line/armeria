@@ -31,6 +31,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 
@@ -54,6 +55,9 @@ public final class Exceptions {
 
     private static final Pattern IGNORABLE_HTTP2_ERROR_MESSAGE = Pattern.compile(
             "(?:stream closed)", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern IGNORABLE_TLS_ERROR_MESSAGE = Pattern.compile(
+            "(?:closed already)", Pattern.CASE_INSENSITIVE);
 
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
@@ -131,11 +135,12 @@ public final class Exceptions {
      *   <li>{@link IOException} - 'Connection reset/closed/aborted by peer'</li>
      *   <li>'Broken pipe'</li>
      *   <li>{@link Http2Exception} - 'Stream closed'</li>
+     *   <li>{@link SSLException} - 'SSLEngine closed already'</li>
      * </ul>
      */
     public static boolean isExpected(Throwable cause) {
         if (Flags.verboseExceptions()) {
-            return true;
+            return false;
         }
 
         // We do not need to log every exception because some exceptions are expected to occur.
@@ -154,6 +159,11 @@ public final class Exceptions {
             }
 
             if (cause instanceof Http2Exception && IGNORABLE_HTTP2_ERROR_MESSAGE.matcher(msg).find()) {
+                // Can happen when disconnected prematurely.
+                return true;
+            }
+
+            if (cause instanceof SSLException && IGNORABLE_TLS_ERROR_MESSAGE.matcher(msg).find()) {
                 // Can happen when disconnected prematurely.
                 return true;
             }
