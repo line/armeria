@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
@@ -46,6 +49,7 @@ import io.netty.util.AsciiString;
  */
 public final class CorsPolicy {
 
+    private static final Logger logger = LoggerFactory.getLogger(CorsPolicy.class);
     private static final String DELIMITER = ",";
     private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
     private final Set<String> origins;
@@ -91,7 +95,14 @@ public final class CorsPolicy {
             preflightHeaders = HttpHeaders.EMPTY_HEADERS;
         } else {
             preflightHeaders = new DefaultHttpHeaders(false);
-            preflightResponseHeadersMap.forEach(preflightHeaders::addObject);
+            preflightResponseHeadersMap.forEach((key, value) -> {
+                final Object val = getValue(value);
+                if (val instanceof Iterable) {
+                    preflightHeaders.addObject(key, (Iterable<?>)val);
+                } else {
+                    preflightHeaders.addObject(key, val);
+                }
+            });
         }
         this.preflightResponseHeaders = preflightHeaders.asImmutable();
     }
