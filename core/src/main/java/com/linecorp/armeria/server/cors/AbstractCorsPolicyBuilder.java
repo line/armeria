@@ -37,7 +37,7 @@ import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 import io.netty.util.AsciiString;
 
 /**
- * Contains information for the build of the CORS policy.
+ * Contains information for the build of the {@link CorsPolicy}.
  *
  * @see ChainedCorsPolicyBuilder
  * @see CorsPolicyBuilder
@@ -142,12 +142,12 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      *
      * <p>The headers that are available by default are:
      * <ul>
-     *    <li>Cache-Control</li>
-     *    <li>Content-Language</li>
-     *    <li>Content-Type</li>
-     *    <li>Expires</li>
-     *    <li>Last-Modified</li>
-     *    <li>Pragma</li>
+     *   <li>{@code Cahce-Control}</li>
+     *   <li>{@code Content-Language}</li>
+     *   <li>{@code Content-Type}</li>
+     *   <li>{@code Expires}</li>
+     *   <li>{@code Last-Modified}</li>
+     *   <li>{@code Pragma}</li>
      * </ul>
      *
      * <p>To expose other headers they need to be specified which is what this method enables by
@@ -290,7 +290,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     /**
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
-    public CorsPolicy build() {
+    CorsPolicy build() {
         return new CorsPolicy(origins, credentialsAllowed, maxAge, nullOriginAllowed,
                               exposedHeaders, allowedRequestHeaders, allowedRequestMethods,
                               preflightResponseHeadersDisabled, preflightResponseHeaders);

@@ -46,4 +46,12 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
     public ChainedCorsPolicyBuilder andForOrigins(final String... origins) {
         return and().andForOrigins(origins);
     }
+
+    /**
+     * Create a new instance of {@link ChainedCorsPolicyBuilder} added to the parent {@link CorsServiceBuilder}.
+     * @return the created instance.
+     */
+    public ChainedCorsPolicyBuilder andForOrigin(final String origin) {
+        return and().andForOrigin(origin);
+    }
 }

@@ -22,4 +22,12 @@ public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder<CorsPolic
     public CorsPolicyBuilder(final String... origins) {
         super(origins);
     }
+
+    /**
+     * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
+     */
+    @Override
+    public CorsPolicy build() {
+        return super.build();
+    }
 }

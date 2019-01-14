@@ -176,12 +176,12 @@ public final class CorsServiceBuilder {
      *
      * <p>The headers that are available by default are:
      * <ul>
-     *    <li>Cache-Control</li>
-     *    <li>Content-Language</li>
-     *    <li>Content-Type</li>
-     *    <li>Expires</li>
-     *    <li>Last-Modified</li>
-     *    <li>Pragma</li>
+     *   <li>{@code Cahce-Control}</li>
+     *   <li>{@code Content-Language}</li>
+     *   <li>{@code Content-Type}</li>
+     *   <li>{@code Expires}</li>
+     *   <li>{@code Last-Modified}</li>
+     *   <li>{@code Pragma}</li>
      * </ul>
      *
      * <p>To expose other headers they need to be specified which is what this method enables by
@@ -313,6 +313,14 @@ public final class CorsServiceBuilder {
         final ChainedCorsPolicyBuilder builder = new ChainedCorsPolicyBuilder(this, origins);
         policyBuilders.add(builder);
         return builder;
+    }
+
+    /**
+     * Creates a new builder instance for a new {@link CorsPolicy}.
+     * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
+     */
+    public ChainedCorsPolicyBuilder andForOrigin(final String origin) {
+        return andForOrigins(origin);
     }
 
     @Override

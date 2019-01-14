@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.cors;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
@@ -112,13 +114,14 @@ public final class CorsConfig {
     }
 
     /**
-     * Returns the policy for the specific {@code origin}.
+     * Returns the policy for the specified {@code origin}.
      *
      * @return {@link CorsPolicy} which allows the {@code origin},
      *         {@code null} if the {@code origin} is not allowed in any policy.
      */
     @Nullable
     CorsPolicy getPolicy(String origin) {
+        requireNonNull(origin, "origin");
         if (isAnyOriginSupported()) {
             return policies.iterator().next();
         }

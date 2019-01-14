@@ -40,6 +40,9 @@ import com.linecorp.armeria.server.cors.CorsConfig.InstantValueSupplier;
 
 import io.netty.util.AsciiString;
 
+/**
+ * Contains information of the CORS policy with specified origins.
+ */
 public final class CorsPolicy {
 
     private static final String DELIMITER = ",";
@@ -79,6 +82,7 @@ public final class CorsPolicy {
 
     /**
      * Returns the allowed origin. This can either be a wildcard or an origin value.
+     * This method returns the first specified origin if this policy has more than one origin.
      *
      * @return the value that will be used for the CORS response header 'Access-Control-Allow-Origin'
      */
@@ -139,16 +143,16 @@ public final class CorsPolicy {
      * }</pre>
      * The headers that are available by default are:
      * <ul>
-     * <li>Cache-Control</li>
-     * <li>Content-Language</li>
-     * <li>Content-Type</li>
-     * <li>Expires</li>
-     * <li>Last-Modified</li>
-     * <li>Pragma</li>
+     *   <li>{@code Cahce-Control}</li>
+     *   <li>{@code Content-Language}</li>
+     *   <li>{@code Content-Type}</li>
+     *   <li>{@code Expires}</li>
+     *   <li>{@code Last-Modified}</li>
+     *   <li>{@code Pragma}</li>
      * </ul>
      *
      * <p>To expose other headers they need to be specified, which is what this method enables by
-     * adding the headers names to the CORS 'Access-Control-Expose-Headers' response header.
+     * adding the headers names to the CORS {@code 'Access-Control-Expose-Headers'} response header.
      *
      * @return the list of the headers to expose.
      */
@@ -158,7 +162,7 @@ public final class CorsPolicy {
 
     /**
      * Returns the allowed set of Request Methods. The Http methods that should be returned in the
-     * CORS 'Access-Control-Request-Method' response header.
+     * CORS {@code 'Access-Control-Request-Method'} response header.
      *
      * @return the {@link HttpMethod}s that represent the allowed Request Methods.
      */
@@ -170,7 +174,7 @@ public final class CorsPolicy {
      * Returns the allowed set of Request Headers.
      *
      * <p>The header names returned from this method will be used to set the CORS
-     * 'Access-Control-Allow-Headers' response header.
+     * {@code 'Access-Control-Allow-Headers'} response header.
      */
     public Set<AsciiString> allowedRequestHeaders() {
         return allowedRequestHeaders;
