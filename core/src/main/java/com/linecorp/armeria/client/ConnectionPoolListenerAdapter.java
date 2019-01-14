@@ -22,8 +22,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import io.netty.util.AttributeMap;
 
 /**
- * A skeletal {@link ConnectionPoolListener} implementation to minimize the effort to implement this interface.
- * Extend this class to implement only a few of the provided handler methods.
+ * A skeletal {@link ConnectionPoolListener} implementation in order for a user to implement only the methods
+ * what he or she really needs.
  */
 public class ConnectionPoolListenerAdapter implements ConnectionPoolListener {
 
