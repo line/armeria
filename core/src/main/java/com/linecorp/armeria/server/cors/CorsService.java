@@ -126,7 +126,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
             policy.setCorsAllowHeaders(headers);
             policy.setCorsAllowCredentials(headers);
             policy.setCorsMaxAge(headers);
-            policy.setPreflightHeaders(headers);
+            policy.setCorsPreflightResponseHeaders(headers);
         }
 
         return HttpResponse.of(headers);

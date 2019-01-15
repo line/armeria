@@ -16,22 +16,21 @@
 
 package com.linecorp.armeria.server.cors;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Ascii;
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -52,7 +51,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     private boolean nullOriginAllowed;
     private long maxAge;
     private final Set<AsciiString> exposedHeaders = new HashSet<>();
-    private final Set<HttpMethod> allowedRequestMethods = new HashSet<>();
+    private final EnumSet<HttpMethod> allowedRequestMethods = EnumSet.noneOf(HttpMethod.class);
     private final Set<AsciiString> allowedRequestHeaders = new HashSet<>();
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders = new HashMap<>();
     private boolean preflightResponseHeadersDisabled;
@@ -63,6 +62,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
 
     AbstractCorsPolicyBuilder(String... origins) {
         requireNonNull(origins, "origins");
+        checkArgument(origins.length > 0, "origins is empty.");
         for (int i = 0; i < origins.length; i++) {
             if (origins[i] == null) {
                 throw new NullPointerException("origins[" + i + ']');
@@ -241,15 +241,14 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      *
      * @param name the name of the HTTP header.
      * @param values the values for the HTTP header.
-     * @param <T> the type of values that the Iterable contains.
      * @return {@code this} to support method chaining.
      */
-    public <T> B preflightResponseHeader(final CharSequence name, final Iterable<T> values) {
+    public B preflightResponseHeader(final CharSequence name, final Iterable<?> values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
 
         int i = 0;
-        for (T value : values) {
+        for (Object value : values) {
             if (value == null) {
                 throw new NullPointerException("value[" + i + ']');
             }
@@ -271,10 +270,9 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      *
      * @param name the name of the HTTP header.
      * @param valueSupplier a {@link Supplier} which will be invoked at HTTP response creation.
-     * @param <T> the type of the value that the {@link Supplier} can return.
      * @return {@code this} to support method chaining.
      */
-    public <T> B preflightResponseHeader(CharSequence name, Supplier<T> valueSupplier) {
+    public B preflightResponseHeader(CharSequence name, Supplier<?> valueSupplier) {
         requireNonNull(name, "name");
         requireNonNull(valueSupplier, "valueSupplier");
         preflightResponseHeaders.put(HttpHeaderNames.of(name), valueSupplier);
@@ -300,30 +298,10 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
                               preflightResponseHeadersDisabled, preflightResponseHeaders);
     }
 
-    static String toString(Object obj, @Nullable Set<String> origins,
-                           boolean nullOriginAllowed, boolean credentialsAllowed,
-                           long maxAge, @Nullable Set<AsciiString> exposedHeaders,
-                           @Nullable Set<HttpMethod> allowedRequestMethods,
-                           @Nullable Set<AsciiString> allowedRequestHeaders,
-                           @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders,
-                           boolean preflightResponseHeadersDisabled) {
-        return MoreObjects.toStringHelper(obj)
-                          .omitNullValues()
-                          .add("origins", origins)
-                          .add("nullOriginAllowed", nullOriginAllowed)
-                          .add("credentialsAllowed", credentialsAllowed)
-                          .add("maxAge", maxAge)
-                          .add("exposedHeaders", exposedHeaders)
-                          .add("allowedRequestMethods", allowedRequestMethods)
-                          .add("allowedRequestHeaders", allowedRequestHeaders)
-                          .add("preflightResponseHeaders", preflightResponseHeaders)
-                          .add("preflightResponseHeadersDisabled", preflightResponseHeadersDisabled).toString();
-    }
-
     @Override
     public String toString() {
-        return toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
+        return CorsPolicy.toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
                         exposedHeaders, allowedRequestMethods, allowedRequestHeaders,
-                        preflightResponseHeaders, preflightResponseHeadersDisabled);
+                        preflightResponseHeaders);
     }
 }

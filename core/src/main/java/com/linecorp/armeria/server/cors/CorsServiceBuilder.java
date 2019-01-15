@@ -269,10 +269,9 @@ public final class CorsServiceBuilder {
      *
      * @param name the name of the HTTP header.
      * @param values the values for the HTTP header.
-     * @param <T> the type of values that the Iterable contains.
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
-    public <T> CorsServiceBuilder preflightResponseHeader(final CharSequence name, final Iterable<T> values) {
+    public CorsServiceBuilder preflightResponseHeader(final CharSequence name, final Iterable<?> values) {
         firstPolicyBuilder.preflightResponseHeader(name, values);
         return this;
     }
@@ -289,10 +288,9 @@ public final class CorsServiceBuilder {
      *
      * @param name the name of the HTTP header.
      * @param valueSupplier a {@link Supplier} which will be invoked at HTTP response creation.
-     * @param <T> the type of the value that the {@link Supplier} can return.
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
-    public <T> CorsServiceBuilder preflightResponseHeader(CharSequence name, Supplier<T> valueSupplier) {
+    public CorsServiceBuilder preflightResponseHeader(CharSequence name, Supplier<?> valueSupplier) {
         firstPolicyBuilder.preflightResponseHeader(name, valueSupplier);
         return this;
     }
