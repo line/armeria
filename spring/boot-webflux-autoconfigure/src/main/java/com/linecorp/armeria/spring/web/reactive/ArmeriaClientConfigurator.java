@@ -15,15 +15,36 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
+import org.springframework.core.annotation.Order;
+
 import com.linecorp.armeria.client.HttpClientBuilder;
 
 /**
- * A customizer to customize an {@link HttpClientBuilder} for an {@link ArmeriaClientHttpConnector}.
+ * A configurator to configure an {@link HttpClientBuilder} for an {@link ArmeriaClientHttpConnector}.
  */
 @FunctionalInterface
-public interface ArmeriaClientConfigurator {
+public interface ArmeriaClientConfigurator extends Ordered {
     /**
      * Configures the client using the specified {@link HttpClientBuilder}.
      */
-    void customize(HttpClientBuilder builder);
+    void configure(HttpClientBuilder builder);
+
+    /**
+     * Returns the evaluation order of this configurator. A user can specify the order with an {@link Order}
+     * annotation when defining a bean with a {@link Bean} annotation.
+     *
+     * <p>Note that the default value of the {@link Order} annotation is {@link Ordered#LOWEST_PRECEDENCE}
+     * which equals to {@link Integer#MAX_VALUE}, but it is overridden to {@code 0} by this default method.
+     *
+     * @see Ordered#LOWEST_PRECEDENCE
+     * @see Ordered#HIGHEST_PRECEDENCE
+     * @see AnnotationAwareOrderComparator
+     */
+    @Override
+    default int getOrder() {
+        return 0;
+    }
 }
