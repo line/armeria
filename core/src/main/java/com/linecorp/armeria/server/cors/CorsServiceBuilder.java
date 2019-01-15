@@ -123,7 +123,7 @@ public final class CorsServiceBuilder {
 
     /**
      * Enables a successful CORS response with a {@code "null"} value for the CORS response header
-     * {@code 'Access-Control-Allow-Origin'}. Web browsers may set the {@code 'Origin'} request header to
+     * {@code "Access-Control-Allow-Origin"}. Web browsers may set the {@code "Origin"} request header to
      * {@code "null"} if a resource is loaded from the local file system.
      *
      * @return {@code this} to support method chaining.
@@ -135,7 +135,7 @@ public final class CorsServiceBuilder {
 
     /**
      * Enables cookies to be added to CORS requests.
-     * Calling this method will set the CORS {@code 'Access-Control-Allow-Credentials'} response header
+     * Calling this method will set the CORS {@code "Access-Control-Allow-Credentials"} response header
      * to {@code true}. By default, cookies are not included in CORS requests.
      *
      * <p>Please note, that cookie support needs to be enabled on the client side as well.
@@ -170,7 +170,7 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Sets the CORS {@code 'Access-Control-Max-Age'} response header and enables the
+     * Sets the CORS {@code "Access-Control-Max-Age"} response header and enables the
      * caching of the preflight response for the specified time. During this time no preflight
      * request will be made.
      *
@@ -202,9 +202,9 @@ public final class CorsServiceBuilder {
      * </ul>
      *
      * <p>To expose other headers they need to be specified which is what this method enables by
-     * adding the headers to the CORS {@code 'Access-Control-Expose-Headers'} response header.
+     * adding the headers to the CORS {@code "Access-Control-Expose-Headers"} response header.
      *
-     * @param headers the values to be added to the 'Access-Control-Expose-Headers' response header
+     * @param headers the values to be added to the {@code "Access-Control-Expose-Headers"} response header
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder exposeHeaders(final CharSequence... headers) {
@@ -214,7 +214,7 @@ public final class CorsServiceBuilder {
 
     /**
      * Specifies the allowed set of HTTP request methods that should be returned in the
-     * CORS {@code 'Access-Control-Request-Method'} response header.
+     * CORS {@code "Access-Control-Request-Method"} response header.
      *
      * @param methods the {@link HttpMethod}s that should be allowed.
      * @return {@link CorsServiceBuilder} to support method chaining.
@@ -225,19 +225,20 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Specifies the headers that should be returned in the CORS {@code 'Access-Control-Allow-Headers'}
+     * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.
      *
      * <p>If a client specifies headers on the request, for example by calling:
      * <pre>{@code
      * xhr.setRequestHeader('My-Custom-Header', 'SomeValue');
      * }</pre>
-     * the server will receive the above header name in the 'Access-Control-Request-Headers' of the
+     * the server will receive the above header name in the {@code "Access-Control-Request-Headers"} of the
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server
      * if it allows a request).
      *
-     * @param headers the headers to be added to the preflight 'Access-Control-Allow-Headers' response header.
+     * @param headers the headers to be added to the preflight
+     *                {@code "Access-Control-Allow-Headers"} response header.
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder allowRequestHeaders(final CharSequence... headers) {

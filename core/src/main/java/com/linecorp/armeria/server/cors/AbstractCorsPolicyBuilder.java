@@ -82,7 +82,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
 
     /**
      * Enables a successful CORS response with a {@code "null"} value for the CORS response header
-     * {@code 'Access-Control-Allow-Origin'}. Web browsers may set the {@code 'Origin'} request header to
+     * {@code "Access-Control-Allow-Origin"}. Web browsers may set the {@code "Origin"} request header to
      * {@code "null"} if a resource is loaded from the local file system.
      *
      * @return {@code this} to support method chaining.
@@ -94,7 +94,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
 
     /**
      * Enables cookies to be added to CORS requests.
-     * Calling this method will set the CORS {@code 'Access-Control-Allow-Credentials'} response header
+     * Calling this method will set the CORS {@code "Access-Control-Allow-Credentials"} response header
      * to {@code true}. By default, cookies are not included in CORS requests.
      *
      * <p>Please note, that cookie support needs to be enabled on the client side as well.
@@ -114,7 +114,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     /**
-     * Sets the CORS {@code 'Access-Control-Max-Age'} response header and enables the
+     * Sets the CORS {@code "Access-Control-Max-Age"} response header and enables the
      * caching of the preflight response for the specified time. During this time no preflight
      * request will be made.
      *
@@ -147,9 +147,9 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * </ul>
      *
      * <p>To expose other headers they need to be specified which is what this method enables by
-     * adding the headers to the CORS {@code 'Access-Control-Expose-Headers'} response header.
+     * adding the headers to the CORS {@code "Access-Control-Expose-Headers"} response header.
      *
-     * @param headers the values to be added to the {@code 'Access-Control-Expose-Headers'} response header
+     * @param headers the values to be added to the {@code "Access-Control-Expose-Headers"} response header
      * @return {@code this} to support method chaining.
      */
     public B exposeHeaders(final CharSequence... headers) {
@@ -166,7 +166,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
 
     /**
      * Specifies the allowed set of HTTP request methods that should be returned in the
-     * CORS {@code 'Access-Control-Request-Method'} response header.
+     * CORS {@code "Access-Control-Request-Method"} response header.
      *
      * @param methods the {@link HttpMethod}s that should be allowed.
      * @return {@code this} to support method chaining.
@@ -183,7 +183,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     /**
-     * Specifies the headers that should be returned in the CORS {@code 'Access-Control-Allow-Headers'}
+     * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.
      *
      * <p>If a client specifies headers on the request, for example by calling:
@@ -196,7 +196,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * if it allows a request).
      *
      * @param headers the headers to be added to
-     *                the preflight {@code 'Access-Control-Allow-Headers'} response header.
+     *                the preflight {@code "Access-Control-Allow-Headers"} response header.
      * @return {@code this} to support method chaining.
      */
     public B allowRequestHeaders(final CharSequence... headers) {

@@ -150,7 +150,7 @@ public final class CorsPolicy {
      * Gets the maxAge setting.
      *
      * <p>When making a preflight request the client has to perform two request with can be inefficient.
-     * This setting will set the CORS {@code 'Access-Control-Max-Age'} response header and enables the
+     * This setting will set the CORS {@code "Access-Control-Max-Age"} response header and enables the
      * caching of the preflight response for the specified time. During this time no preflight
      * request will be made.
      *
@@ -179,7 +179,7 @@ public final class CorsPolicy {
      * </ul>
      *
      * <p>To expose other headers they need to be specified, which is what this method enables by
-     * adding the headers names to the CORS {@code 'Access-Control-Expose-Headers'} response header.
+     * adding the headers names to the CORS {@code "Access-Control-Expose-Headers"} response header.
      *
      * @return the list of the headers to expose.
      */
@@ -189,7 +189,7 @@ public final class CorsPolicy {
 
     /**
      * Returns the allowed set of request methods. The Http methods that should be returned in the
-     * CORS {@code 'Access-Control-Request-Method'} response header.
+     * CORS {@code "Access-Control-Request-Method"} response header.
      *
      * @return the {@link HttpMethod}s that represent the allowed request methods.
      */
@@ -201,7 +201,7 @@ public final class CorsPolicy {
      * Returns the allowed set of Request Headers.
      *
      * <p>The header names returned from this method will be used to set the CORS
-     * {@code 'Access-Control-Allow-Headers'} response header.
+     * {@code "Access-Control-Allow-Headers"} response header.
      */
     public Set<AsciiString> allowedRequestHeaders() {
         return allowedRequestHeaders;
