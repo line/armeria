@@ -28,11 +28,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClosedClientFactoryException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -47,6 +49,9 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
+
+    private static final IllegalStateException CLOSED_CHANNEL_FACTORY_EXCEPTION = Exceptions.clearTrace(
+            new IllegalStateException(ClientFactory.class.getSimpleName() + " has been closed."));
 
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(RetryingClient.class, "STATE");
@@ -154,12 +159,20 @@ public abstract class RetryingClient<I extends Request, O extends Response>
                 scheduledFuture.addListener(future -> {
                     if (future.isCancelled()) {
                         // future is cancelled when the client factory is closed.
-                        actionOnException.accept(ClosedClientFactoryException.get());
+                        actionOnException.accept(closedChannelFactoryException());
                     }
                 });
             }
         } catch (Throwable t) {
             actionOnException.accept(t);
+        }
+    }
+
+    private static IllegalStateException closedChannelFactoryException() {
+        if (Flags.verboseExceptions()) {
+            return new IllegalStateException(CLOSED_CHANNEL_FACTORY_EXCEPTION.getMessage());
+        } else {
+            return CLOSED_CHANNEL_FACTORY_EXCEPTION;
         }
     }
 
