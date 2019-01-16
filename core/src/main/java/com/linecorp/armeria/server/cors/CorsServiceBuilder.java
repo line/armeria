@@ -160,7 +160,7 @@ public final class CorsServiceBuilder {
         if (anyOriginSupported) {
             logger.warn(
                     "allowCredentials has been enabled for any origin (*). It will work properly" +
-                    " but it would be better disabled or be with specified origins for security." +
+                    " but it would be better disabled or enabled with specified origins for security." +
                     " Visit https://www.w3.org/TR/cors/#supports-credentials for more information.");
         }
         firstPolicyBuilder.allowCredentials();
