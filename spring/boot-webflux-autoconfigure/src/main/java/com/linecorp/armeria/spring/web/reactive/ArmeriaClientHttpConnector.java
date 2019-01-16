@@ -67,10 +67,10 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
     /**
      * Creates an {@link ArmeriaClientHttpConnector}.
      *
-     * @param configurators the {@link ArmeriaClientConfigurator} to be used to build an {@link HttpClient}
+     * @param configurators the {@link ArmeriaClientConfigurator}s to be used to build an {@link HttpClient}
      * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
      */
-    public ArmeriaClientHttpConnector(List<ArmeriaClientConfigurator> configurators,
+    public ArmeriaClientHttpConnector(Iterable<ArmeriaClientConfigurator> configurators,
                                       DataBufferFactoryWrapper<?> factoryWrapper) {
         this.configurators = ImmutableList.copyOf(requireNonNull(configurators, "configurators"));
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");

@@ -29,8 +29,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 public class ArmeriaClientConfiguratorTest {
@@ -67,18 +65,6 @@ public class ArmeriaClientConfiguratorTest {
             @Override
             public String toString() {
                 return name;
-            }
-        }
-
-        private static class ArmeriaConfigurator implements ArmeriaClientConfigurator, ArmeriaServerConfigurator {
-            @Override
-            public void configure(ServerBuilder builder) {
-
-            }
-
-            @Override
-            public void configure(HttpClientBuilder builder) {
-
             }
         }
     }
