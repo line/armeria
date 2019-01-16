@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -36,9 +35,8 @@ import org.junit.Test;
 import com.google.common.testing.FakeTicker;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
@@ -47,20 +45,17 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
-
-import io.netty.channel.DefaultEventLoop;
 
 public class CircuitBreakerHttpClientTest {
 
     private static final String remoteServiceName = "testService";
 
-    private static final ClientRequestContext ctx = new DefaultClientRequestContext(
-            new DefaultEventLoop(), NoopMeterRegistry.get(), H2C,
-            Endpoint.of("dummyhost", 8080),
-            HttpMethod.GET, "/", null, null, ClientOptions.DEFAULT, mock(HttpRequest.class));
+    private static final ClientRequestContext ctx =
+            ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
+                                       .endpoint(Endpoint.of("dummyhost", 8080))
+                                       .build();
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {

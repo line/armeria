@@ -59,12 +59,6 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
-        ctx.logBuilder().requestHeaders(headers());
-
-        // For the server, request headers are processed well before ServiceRequestContext is created. It means
-        // there is some delay between the actual channel read and this logging, but it's the best we can do for
-        // now.
-        ctx.logBuilder().requestFirstBytesTransferred();
     }
 
     int id() {

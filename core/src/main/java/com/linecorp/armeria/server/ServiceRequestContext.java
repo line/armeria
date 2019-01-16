@@ -48,6 +48,18 @@ import io.netty.util.AsciiString;
 public interface ServiceRequestContext extends RequestContext {
 
     /**
+     * Returns a new {@link ServiceRequestContext} created from the specified {@link HttpRequest}.
+     * Note that it is not usually required to create a new context by yourself, because Armeria
+     * will always provide a context object for you. However, it may be useful in some cases such as
+     * unit testing.
+     *
+     * @see ServiceRequestContextBuilder
+     */
+    static ServiceRequestContext of(HttpRequest request) {
+        return ServiceRequestContextBuilder.of(request).build();
+    }
+
+    /**
      * Returns the remote address of this request.
      */
     @Nonnull

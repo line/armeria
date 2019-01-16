@@ -42,6 +42,7 @@ public class DefaultServiceRequestContextTest {
     @Test
     public void deriveContext() {
         final VirtualHost virtualHost = virtualHost();
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
         final DefaultPathMappingContext mappingCtx = new DefaultPathMappingContext(
                 virtualHost, "example.com", HttpMethod.GET, "/hello", null, MediaType.JSON_UTF_8,
                 ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8));
@@ -50,7 +51,7 @@ public class DefaultServiceRequestContextTest {
                 virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),
                 SessionProtocol.H2,
                 mappingCtx, PathMappingResult.of("/foo"),
-                mock(Request.class), null, null, NetUtil.LOCALHOST4);
+                request, null, null, NetUtil.LOCALHOST4);
 
         setAdditionalHeaders(originalCtx);
         setAdditionalTrailers(originalCtx);
@@ -58,7 +59,7 @@ public class DefaultServiceRequestContextTest {
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
 
-        final Request newRequest = mock(Request.class);
+        final HttpRequest newRequest = HttpRequest.of(HttpMethod.GET, "/derived/hello");
         final ServiceRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest);
         assertThat(derivedCtx.server()).isSameAs(originalCtx.server());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());

@@ -18,21 +18,19 @@ package com.linecorp.armeria.spring.web.reactive;
 import static com.linecorp.armeria.spring.web.reactive.TestUtil.ensureHttpDataOfString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -44,12 +42,7 @@ import reactor.test.StepVerifier;
 
 public class ArmeriaServerHttpResponseTest {
 
-    static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-
-    @BeforeClass
-    public static void setup() {
-        when(ctx.eventLoop()).thenReturn(CommonPools.workerGroup().next());
-    }
+    static final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
     private static ArmeriaServerHttpResponse response(
             ServiceRequestContext ctx, CompletableFuture<HttpResponse> future) {

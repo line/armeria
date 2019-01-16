@@ -18,14 +18,8 @@ package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
@@ -36,39 +30,24 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
 public class GrpcServiceTest {
 
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock
-    private ServiceRequestContext ctx;
-
-    private GrpcService grpcService;
-
-    @Before
-    public void setUp() {
-        grpcService = (GrpcService) new GrpcServiceBuilder()
-                .addService(mock(TestServiceImplBase.class))
-                .build();
-        final Server server = new ServerBuilder().service(grpcService).build();
-        when(ctx.server()).thenReturn(server);
-        when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
-    }
+    private final GrpcService grpcService = (GrpcService) new GrpcServiceBuilder()
+            .addService(mock(TestServiceImplBase.class))
+            .build();
 
     @Test
     public void missingContentType() throws Exception {
-        final HttpResponse response = grpcService.doPost(
-                ctx,
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")));
+        final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall");
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                            .contentType(MediaType.PLAIN_TEXT_UTF_8),
@@ -77,10 +56,11 @@ public class GrpcServiceTest {
 
     @Test
     public void badContentType() throws Exception {
-        final HttpResponse response = grpcService.doPost(
-                ctx,
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")
-                                          .contentType(MediaType.JSON_UTF_8)));
+        final HttpRequest req = HttpRequest.of(
+                HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")
+                           .contentType(MediaType.JSON_UTF_8));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                            .contentType(MediaType.PLAIN_TEXT_UTF_8),
@@ -89,11 +69,14 @@ public class GrpcServiceTest {
 
     @Test
     public void pathMissingSlash() throws Exception {
-        when(ctx.mappedPath()).thenReturn("grpc.testing.TestService.UnaryCall");
-        final HttpResponse response = grpcService.doPost(
-                ctx,
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "grpc.testing.TestService.UnaryCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")));
+        final HttpRequest req = HttpRequest.of(
+                HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")
+                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
+        final PathMappingResult pathMappingResult = PathMappingResult.of("grpc.testing.TestService.UnaryCall");
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
+                                                                      .pathMappingResult(pathMappingResult)
+                                                                      .build();
+        final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.BAD_REQUEST)
                            .contentType(MediaType.PLAIN_TEXT_UTF_8),
@@ -102,11 +85,14 @@ public class GrpcServiceTest {
 
     @Test
     public void missingMethod() throws Exception {
-        when(ctx.mappedPath()).thenReturn("/grpc.testing.TestService/FooCall");
-        final HttpResponse response = grpcService.doPost(
-                ctx,
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")));
+        final HttpRequest req = HttpRequest.of(
+                HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")
+                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
+        final PathMappingResult pathMappingResult = PathMappingResult.of("/grpc.testing.TestService/FooCall");
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
+                                                                      .pathMappingResult(pathMappingResult)
+                                                                      .build();
+        final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.OK)
                            .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")

@@ -19,7 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -41,16 +41,17 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.testing.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -60,9 +61,7 @@ import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.util.Attribute;
 
 // TODO(anuraag): Currently only grpc-protobuf has been published so we only test proto here.
 // Once grpc-thrift is published, add tests for thrift stubs which will not go through the
@@ -86,11 +85,10 @@ public class ArmeriaServerCallTest {
     @Mock
     private Subscription subscription;
 
-    @Mock
     private ServiceRequestContext ctx;
 
     @Mock
-    private Attribute<IdentityHashMap<Object, ByteBuf>> buffersAttr;
+    private IdentityHashMap<Object, ByteBuf> buffersAttr;
 
     private ArmeriaServerCall<SimpleRequest, SimpleResponse> call;
 
@@ -100,11 +98,11 @@ public class ArmeriaServerCallTest {
     public void setUp() {
         completionFuture = new CompletableFuture<>();
         when(res.completionFuture()).thenReturn(completionFuture);
-        when(ctx.eventLoop()).thenReturn(eventLoop.get());
-        when(ctx.contextAwareEventLoop()).thenReturn(eventLoop.get());
-        when(ctx.server()).thenReturn(new ServerBuilder().service("/", (ctx, req) -> null).build());
 
-        when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
+        ctx = ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.POST, "/"))
+                                          .eventLoop(eventLoop.get())
+                                          .build();
+
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
                 TestServiceGrpc.getUnaryCallMethod(),
@@ -121,11 +119,8 @@ public class ArmeriaServerCallTest {
                 "gzip");
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
-        final DefaultRequestLog log = new DefaultRequestLog(ctx);
-        when(ctx.log()).thenReturn(log);
-        when(ctx.logBuilder()).thenReturn(log);
-        when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
-        when(ctx.attr(GrpcUnsafeBufferUtil.BUFFERS)).thenReturn(buffersAttr);
+
+        ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).set(buffersAttr);
     }
 
     @After
@@ -179,7 +174,7 @@ public class ArmeriaServerCallTest {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.messageRead(new ByteBufOrStream(buf));
 
-        verify(buffersAttr).set(argThat(map -> map.containsValue(buf)));
+        verify(buffersAttr).put(any(), same(buf));
     }
 
     @Test

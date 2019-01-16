@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -59,14 +58,10 @@ public class HttpHealthCheckServiceTest {
     @Mock
     private HealthChecker health3;
 
-    @Mock
-    private ServiceRequestContext context;
-
     private HttpHealthCheckService service;
 
     @Before
     public void setUp() {
-        when(context.logBuilder()).thenReturn(new DefaultRequestLog(context));
         service = new HttpHealthCheckService(health1, health2, health3);
         service.serverHealth.setHealthy(true);
     }
@@ -78,6 +73,7 @@ public class HttpHealthCheckServiceTest {
         when(health3.isHealthy()).thenReturn(true);
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext context = ServiceRequestContext.of(req);
         final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
 
         assertEquals(HttpStatus.OK, res.status());
@@ -105,6 +101,7 @@ public class HttpHealthCheckServiceTest {
 
     private void assertNotOk() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext context = ServiceRequestContext.of(req);
         final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, res.status());

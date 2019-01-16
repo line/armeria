@@ -16,18 +16,15 @@
 
 package com.linecorp.armeria.server.tracing;
 
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import org.junit.After;
 import org.junit.Test;
@@ -41,16 +38,16 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import brave.Tracing;
 import brave.sampler.Sampler;
-import io.netty.channel.Channel;
 import zipkin2.Span;
 import zipkin2.Span.Kind;
 
@@ -131,41 +128,30 @@ public class HttpTracingServiceTest {
 
         final HttpTracingService stub = new HttpTracingService(delegate, tracing);
 
-        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/hello/trustin")
                                                           .authority("foo.com"));
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
+                                                                      .service(stub)
+                                                                      .build();
+
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, trustin!");
-        final DefaultRequestLog log = new DefaultRequestLog(ctx);
-        log.startRequest(mock(Channel.class), H2C);
-        log.requestHeaders(req.headers());
-        log.requestFirstBytesTransferred();
-        log.requestContent(rpcReq, req);
-        log.endRequest();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.requestContent(rpcReq, req);
+        logBuilder.endRequest();
 
-        when(ctx.method()).thenReturn(HttpMethod.POST);
-        when(ctx.log()).thenReturn(log);
-        when(ctx.logBuilder()).thenReturn(log);
-        when(ctx.path()).thenReturn("/hello/trustin");
-        checkCtxOnEnterAndExitParameter(ctx);
         when(delegate.serve(ctx, req)).thenReturn(res);
 
         // do invoke
         stub.serve(ctx, req);
 
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
-        log.responseHeaders(HttpHeaders.of(HttpStatus.OK));
-        log.responseFirstBytesTransferred();
-        log.responseContent(rpcRes, res);
-        log.endResponse();
+        logBuilder.responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        logBuilder.responseFirstBytesTransferred();
+        logBuilder.responseContent(rpcRes, res);
+        logBuilder.endResponse();
 
         return reporter;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void checkCtxOnEnterAndExitParameter(ServiceRequestContext ctx) {
-        ctx.onEnter(isA(Consumer.class));
-        ctx.onExit(isA(Consumer.class));
     }
 }

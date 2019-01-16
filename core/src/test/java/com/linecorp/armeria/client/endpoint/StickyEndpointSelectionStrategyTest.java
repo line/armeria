@@ -18,8 +18,6 @@ package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.function.ToLongFunction;
 
@@ -99,9 +97,7 @@ public class StickyEndpointSelectionStrategyTest {
     }
 
     private static ClientRequestContext contextWithHeader(String k, String v) {
-        final ClientRequestContext ctx = mock(ClientRequestContext.class);
-        when(ctx.request()).thenReturn(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
+        return ClientRequestContext.of(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
                                                                  .set(HttpHeaderNames.of(k), v)));
-        return ctx;
     }
 }

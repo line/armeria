@@ -24,9 +24,8 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -38,17 +37,17 @@ import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
 
 public class RequestMetricSupportTest {
 
     @Test
     public void httpSuccess() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), registry, SessionProtocol.H2C,
-                Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/foo"));
+        final ClientRequestContext ctx =
+                ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.POST, "/foo"))
+                                           .meterRegistry(registry)
+                                           .endpoint(Endpoint.of("example.com", 8080))
+                                           .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
@@ -85,10 +84,11 @@ public class RequestMetricSupportTest {
     @Test
     public void httpFailure() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), registry, SessionProtocol.H2C,
-                Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/foo"));
+        final ClientRequestContext ctx =
+                ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.POST, "/foo"))
+                                           .meterRegistry(registry)
+                                           .endpoint(Endpoint.of("example.com", 8080))
+                                           .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
@@ -117,10 +117,11 @@ public class RequestMetricSupportTest {
     @Test
     public void rpc() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), registry, SessionProtocol.H2C,
-                Endpoint.of("example.com", 8080), HttpMethod.POST, "/bar", null, null,
-                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/bar"));
+        final ClientRequestContext ctx =
+                ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.POST, "/bar"))
+                                           .meterRegistry(registry)
+                                           .endpoint(Endpoint.of("example.com", 8080))
+                                           .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
 

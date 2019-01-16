@@ -35,9 +35,6 @@ import static java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME;
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -48,11 +45,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.function.Function;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -61,34 +54,27 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.CommonComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponent;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
+import io.netty.util.NetUtil;
 
 public class AccessLogFormatsTest {
 
+    private static final Duration duration = Duration.ofMillis(1000000000L);
+
     // The timestamp of first commit in Armeria project.
     private static final long requestStartTimeMillis = 1447656026L * 1000;
-
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock
-    private Channel channel;
+    private static final long requestStartTimeMicros = requestStartTimeMillis * 1000;
+    private static final long requestStartTimeNanos = 42424242424242L; // Some random number.
+    private static final long requestEndTimeNanos = requestStartTimeNanos + duration.toNanos();
 
     @Test
     public void parseSuccess() {
@@ -192,26 +178,31 @@ public class AccessLogFormatsTest {
 
     @Test
     public void formatMessage() {
-        final DummyRequestContext ctx = new DummyRequestContext();
-        final DefaultRequestLog log = spy(new DefaultRequestLog(ctx));
-
+        final HttpRequest req = HttpRequest.of(
+                HttpHeaders.of(HttpMethod.GET, "/armeria/log")
+                           .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
+                           .add(HttpHeaderNames.REFERER, "http://log.example.com")
+                           .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
+        final ServiceRequestContext ctx =
+                ServiceRequestContextBuilder.of(req)
+                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                            .build();
         ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
 
-        log.startRequest(channel, SessionProtocol.H2);
-        log.requestHeaders(HttpHeaders.of(HttpMethod.GET, "/armeria/log")
-                                      .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
-                                      .add(HttpHeaderNames.REFERER, "http://log.example.com")
-                                      .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
-        log.endRequest();
-        log.responseHeaders(HttpHeaders.of(HttpStatus.OK)
-                                       .add(HttpHeaderNames.CONTENT_TYPE,
-                                            MediaType.PLAIN_TEXT_UTF_8.toString()));
-        log.responseLength(1024);
-        log.endResponse();
+        final RequestLog log = ctx.log();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
 
-        // To generate the same datetime string always.
-        when(log.requestStartTimeMillis()).thenReturn(requestStartTimeMillis);
+        logBuilder.endRequest();
+        assertThat(ctx.log().isAvailable(RequestLogAvailability.REQUEST_END)).isTrue();
+        assertThat(log.isAvailable(RequestLogAvailability.REQUEST_END)).isTrue();
 
+        logBuilder.responseHeaders(HttpHeaders.of(HttpStatus.OK)
+                                              .addObject(HttpHeaderNames.CONTENT_TYPE,
+                                                         MediaType.PLAIN_TEXT_UTF_8));
+        logBuilder.responseLength(1024);
+        logBuilder.endResponse();
+
+        final String localhostAddress = NetUtil.LOCALHOST.getHostAddress();
         final String timestamp = defaultDateTimeFormatter.format(ZonedDateTime.ofInstant(
                 Instant.ofEpochMilli(requestStartTimeMillis), defaultZoneId));
 
@@ -220,11 +211,11 @@ public class AccessLogFormatsTest {
 
         message = AccessLogger.format(AccessLogFormats.COMMON, log);
         assertThat(message).isEqualTo(
-                "- - - " + timestamp + " \"GET /armeria/log h2\" 200 1024");
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log h2c\" 200 1024");
 
         message = AccessLogger.format(AccessLogFormats.COMBINED, log);
         assertThat(message).isEqualTo(
-                "- - - " + timestamp + " \"GET /armeria/log h2\" 200 1024" +
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log h2c\" 200 1024" +
                 " \"http://log.example.com\" \"armeria/x.y.z\" \"a=1;b=2\"");
 
         // Check conditions with custom formats.
@@ -234,7 +225,7 @@ public class AccessLogFormatsTest {
 
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo(
-                "- - - " + timestamp + " \"GET /armeria/log h2\" 200 1024" +
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log h2c\" 200 1024" +
                 " \"http://log.example.com\" \"-\" some-text -");
 
         format = AccessLogFormats.parseCustom(
@@ -242,7 +233,7 @@ public class AccessLogFormatsTest {
                 " some-text %{Non-Existing-Header}i");
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo(
-                "- - - " + timestamp + " \"GET /armeria/log h2\" 200 1024" +
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log h2c\" 200 1024" +
                 " \"-\" \"armeria/x.y.z\" some-text -");
 
         format = AccessLogFormats.parseCustom(
@@ -262,72 +253,69 @@ public class AccessLogFormatsTest {
 
     @Test
     public void logClientAddress() throws Exception {
-        final RequestLog log = mock(RequestLog.class);
-        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        when(log.context()).thenReturn(ctx);
-        when(ctx.clientAddress()).thenReturn(InetAddress.getByName("10.0.0.1"));
-
         final InetSocketAddress remote = new InetSocketAddress(InetAddress.getByName("10.1.0.1"), 5000);
-        when(ctx.remoteAddress()).thenReturn(remote);
+        final ServiceRequestContext ctx =
+                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
+                                            .remoteAddress(remote)
+                                            .clientAddress(InetAddress.getByName("10.0.0.1"))
+                                            .build();
 
         List<AccessLogComponent> format;
 
         // Client IP address
         format = AccessLogFormats.parseCustom("%a");
-        assertThat(AccessLogger.format(format, log)).isEqualTo("10.0.0.1");
+        assertThat(AccessLogger.format(format, ctx.log())).isEqualTo("10.0.0.1");
 
         // Remote IP address of a channel
         format = AccessLogFormats.parseCustom("%{c}a");
-        assertThat(AccessLogger.format(format, log)).isEqualTo("10.1.0.1");
+        assertThat(AccessLogger.format(format, ctx.log())).isEqualTo("10.1.0.1");
     }
 
     @Test
     public void requestLogAvailabilityException() {
         final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2\" 200 1024";
 
-        final DummyRequestContext ctx = new DummyRequestContext();
-        final DefaultRequestLog log = spy(new DefaultRequestLog(ctx));
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(
+                HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/armeria/log")
+                                          .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
+                                          .add(HttpHeaderNames.REFERER, "http://log.example.com")
+                                          .add(HttpHeaderNames.COOKIE, "a=1;b=2"))).build();
+        final RequestLog log = ctx.log();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
 
         // AccessLogger#format will be called after response is finished.
         log.addListener(l -> assertThat(AccessLogger.format(AccessLogFormats.COMMON, l))
                 .endsWith(expectedLogMessage), RequestLogAvailability.COMPLETE);
 
-        log.startRequest(channel, SessionProtocol.H2);
-        log.requestHeaders(HttpHeaders.of(HttpMethod.GET, "/armeria/log")
-                                      .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
-                                      .add(HttpHeaderNames.REFERER, "http://log.example.com")
-                                      .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
-
         // RequestLogAvailabilityException will be raised inside AccessLogger#format before injecting each
         // component to RequestLog. So we cannot get the expected log message here.
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
-        log.requestContent(new DefaultRpcRequest(Object.class, "rpcMethod"), null);
+        logBuilder.requestContent(new DefaultRpcRequest(Object.class, "rpcMethod"), null);
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
-        log.endRequest();
+        logBuilder.endRequest();
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
-        log.responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        logBuilder.responseHeaders(HttpHeaders.of(HttpStatus.OK));
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
-        log.responseLength(1024);
+        logBuilder.responseLength(1024);
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
-        log.endResponse();
+        logBuilder.endResponse();
     }
 
     @Test
     public void requestLogComponent() {
-        final DummyRequestContext ctx = new DummyRequestContext();
-        final DefaultRequestLog log = spy(new DefaultRequestLog(ctx));
+        final ServiceRequestContext ctx =
+                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/armeria/log"))
+                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                            .build();
+
+        final RequestLog log = ctx.log();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
 
         List<AccessLogComponent> format;
 
-        log.startRequest(channel, SessionProtocol.H2);
-        log.requestHeaders(HttpHeaders.of(HttpMethod.GET, "/armeria/log"));
-
         final Instant requestStartTime = Instant.ofEpochMilli(requestStartTimeMillis);
-        final Duration duration = Duration.ofMillis(1000000000L);
 
-        log.endRequest();
-        when(log.requestStartTimeMillis()).thenReturn(requestStartTime.toEpochMilli());
-        when(log.requestDurationNanos()).thenReturn(duration.toNanos());
+        logBuilder.endRequest(new IllegalArgumentException("detail_message"), requestEndTimeNanos);
 
         format = AccessLogFormats.parseCustom("%{requestStartTimeMillis}L " +
                                               "%{requestEndTimeMillis}L " +
@@ -339,8 +327,7 @@ public class AccessLogFormatsTest {
                             String.valueOf(duration.toMillis())));
 
         format = AccessLogFormats.parseCustom("\"%{requestCause}L\"");
-        assertThat(AccessLogger.format(format, log)).isEqualTo("\"-\"");
-        when(log.requestCause()).thenReturn(new IllegalArgumentException("detail_message"));
+        //assertThat(AccessLogger.format(format, log)).isEqualTo("\"-\"");
         assertThat(AccessLogger.format(format, log))
                 .isEqualTo('"' + IllegalArgumentException.class.getSimpleName() + ": detail_message\"");
 
@@ -350,13 +337,13 @@ public class AccessLogFormatsTest {
         // No values.
         assertThat(AccessLogger.format(format, log)).isEqualTo("- - -");
 
-        log.startResponse();
-        log.endResponse();
+        final Duration latency = Duration.ofSeconds(3);
+        final Instant responseStartTime = requestStartTime.plus(latency);
+        final long responseStartTimeNanos = requestStartTimeNanos + latency.toNanos();
 
-        final Instant responseStartTime = requestStartTime.plus(Duration.ofSeconds(3));
-
-        when(log.responseStartTimeMillis()).thenReturn(responseStartTime.toEpochMilli());
-        when(log.responseDurationNanos()).thenReturn(duration.toNanos());
+        logBuilder.startResponse(responseStartTimeNanos, responseStartTime.toEpochMilli() * 1000);
+        logBuilder.endResponse(new IllegalArgumentException(),
+                               responseStartTimeNanos + duration.toNanos());
 
         assertThat(AccessLogger.format(format, log)).isEqualTo(
                 String.join(" ",
@@ -365,21 +352,34 @@ public class AccessLogFormatsTest {
                             String.valueOf(duration.toMillis())));
 
         format = AccessLogFormats.parseCustom("\"%{responseCause}L\"");
-        assertThat(AccessLogger.format(format, log)).isEqualTo("\"-\"");
-        when(log.responseCause()).thenReturn(new IllegalArgumentException());
+        //assertThat(AccessLogger.format(format, log)).isEqualTo("\"-\"");
         assertThat(AccessLogger.format(format, log))
                 .isEqualTo('"' + IllegalArgumentException.class.getSimpleName() + '"');
     }
 
     @Test
+    public void requestLogWithEmptyCause() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        final RequestLog log = ctx.log();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+
+        final List<AccessLogComponent> format =
+                AccessLogFormats.parseCustom("%{requestCause}L %{responseCause}L");
+
+        logBuilder.endRequest();
+        logBuilder.endResponse();
+
+        assertThat(AccessLogger.format(format, log)).isEqualTo("- -");
+    }
+
+    @Test
     public void timestamp() {
-        final DummyRequestContext ctx = new DummyRequestContext();
-        final DefaultRequestLog log = spy(new DefaultRequestLog(ctx));
-
-        log.startRequest(channel, SessionProtocol.H2);
-
-        // To generate the same datetime string always.
-        when(log.requestStartTimeMillis()).thenReturn(requestStartTimeMillis);
+        final ServiceRequestContext ctx =
+                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
+                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                            .build();
+        final RequestLog log = ctx.log();
 
         assertThat(AccessLogger.format(AccessLogFormats.parseCustom("%t"), log))
                 .isEqualTo(formatString(defaultDateTimeFormatter, requestStartTimeMillis));
@@ -419,43 +419,6 @@ public class AccessLogFormatsTest {
 
     private static String formatString(DateTimeFormatter formatter, long millis) {
         return formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), defaultZoneId));
-    }
-
-    private class DummyRequestContext extends NonWrappingRequestContext {
-        DummyRequestContext() {
-            super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.of(HttpMethod.GET, "/"));
-        }
-
-        @Override
-        public RequestContext newDerivedContext() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public RequestContext newDerivedContext(Request request) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public EventLoop eventLoop() {
-            return channel.eventLoop();
-        }
-
-        @Override
-        protected Channel channel() {
-            return channel;
-        }
-
-        @Override
-        public RequestLog log() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public RequestLogBuilder logBuilder() {
-            throw new UnsupportedOperationException();
-        }
     }
 
     public static class Attr {

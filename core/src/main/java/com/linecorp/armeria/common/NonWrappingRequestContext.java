@@ -26,14 +26,12 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
-import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -105,18 +103,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     public <A extends SocketAddress> A localAddress() {
         final Channel ch = channel();
         return ch != null ? (A) ch.localAddress() : null;
-    }
-
-    @Nullable
-    @Override
-    public SSLSession sslSession() {
-        final Channel ch = channel();
-        if (ch == null) {
-            return null;
-        }
-
-        final SslHandler sslHandler = ch.pipeline().get(SslHandler.class);
-        return sslHandler != null ? sslHandler.engine().getSession() : null;
     }
 
     @Override

@@ -37,7 +37,10 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.testing.common.EventLoopRule;
 
 public class AuthorizerTest {
@@ -50,8 +53,9 @@ public class AuthorizerTest {
 
     @BeforeClass
     public static void setServiceContext() {
-        serviceCtx = mock(ServiceRequestContext.class);
-        when(serviceCtx.contextAwareEventLoop()).thenReturn(eventLoop.get());
+        serviceCtx = ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
+                                                 .eventLoop(eventLoop.get())
+                                                 .build();
     }
 
     @AfterClass

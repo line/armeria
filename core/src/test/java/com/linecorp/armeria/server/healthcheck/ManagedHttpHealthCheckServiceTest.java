@@ -17,14 +17,8 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
@@ -34,16 +28,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 public class ManagedHttpHealthCheckServiceTest {
-
-    @Rule
-    public MockitoRule rule = MockitoJUnit.rule();
-
-    @Mock
-    private ServiceRequestContext context;
 
     private final ManagedHttpHealthCheckService service = new ManagedHttpHealthCheckService();
 
@@ -54,23 +42,20 @@ public class ManagedHttpHealthCheckServiceTest {
     private final HttpRequest hcTurnOnReq =
             HttpRequest.of(HttpMethod.PUT, "/", MediaType.PLAIN_TEXT_UTF_8, "on");
 
-    @Before
-    public void setUp() {
-        when(context.logBuilder()).thenReturn(new DefaultRequestLog(context));
-    }
-
     @Test
     public void turnOff() throws Exception {
         service.serverHealth.setHealthy(true);
 
-        AggregatedHttpMessage res = service.serve(context, hcTurnOffReq).aggregate().get();
+        ServiceRequestContext ctx = ServiceRequestContext.of(hcTurnOffReq);
+        AggregatedHttpMessage res = service.serve(ctx, hcTurnOffReq).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE))
                   .isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
         assertThat(res.content().toStringUtf8()).isEqualTo("Set unhealthy.");
 
-        res = service.serve(context, hcReq).aggregate().get();
+        ctx = ServiceRequestContextBuilder.of(hcReq).service(service).build();
+        res = service.serve(ctx, hcReq).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
@@ -79,14 +64,16 @@ public class ManagedHttpHealthCheckServiceTest {
 
     @Test
     public void turnOn() throws Exception {
-        AggregatedHttpMessage res = service.serve(context, hcTurnOnReq).aggregate().get();
+        ServiceRequestContext ctx = ServiceRequestContext.of(hcTurnOnReq);
+        AggregatedHttpMessage res = service.serve(ctx, hcTurnOnReq).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
                 MediaType.PLAIN_TEXT_UTF_8.toString());
         assertThat(res.content().toStringUtf8()).isEqualTo("Set healthy.");
 
-        res = service.serve(context, hcReq).aggregate().get();
+        ctx = ServiceRequestContextBuilder.of(hcReq).service(service).build();
+        res = service.serve(ctx, hcReq).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
@@ -99,7 +86,8 @@ public class ManagedHttpHealthCheckServiceTest {
         noopRequest.write(() -> HttpData.ofAscii("noop"));
         noopRequest.close();
 
-        AggregatedHttpMessage res = service.serve(context, noopRequest).aggregate().get();
+        ServiceRequestContext ctx = ServiceRequestContext.of(noopRequest);
+        AggregatedHttpMessage res = service.serve(ctx, noopRequest).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
@@ -112,7 +100,8 @@ public class ManagedHttpHealthCheckServiceTest {
         noopRequest.write(() -> HttpData.ofAscii("noop"));
         noopRequest.close();
 
-        res = service.serve(context, noopRequest).aggregate().get();
+        ctx = ServiceRequestContextBuilder.of(noopRequest).service(service).build();
+        res = service.serve(ctx, noopRequest).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
