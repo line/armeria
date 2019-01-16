@@ -1,2 +1,0 @@
-.. _server-cors-service:
-
