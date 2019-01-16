@@ -24,8 +24,7 @@ import static java.util.Objects.requireNonNull;
  * <p>This class can only be created through the {@link CorsServiceBuilder#andForOrigins(String...)} or
  * {@link CorsServiceBuilder#andForOrigin(String)} method of the {@link CorsServiceBuilder}.
  *
- * <p>Call {@link #and()} method can also return to {@link CorsServiceBuilder}.
- *
+ * <p>Calling {@link #and()} method will return the control to {@link CorsServiceBuilder}.
  */
 public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedCorsPolicyBuilder> {
     private final CorsServiceBuilder serviceBuilder;
@@ -49,7 +48,8 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
     }
 
     /**
-     * Create a new instance of {@link ChainedCorsPolicyBuilder} added to the parent {@link CorsServiceBuilder}.
+     * Creates a new instance of {@link ChainedCorsPolicyBuilder}
+     * added to the parent {@link CorsServiceBuilder}.
      * @return the created instance.
      */
     public ChainedCorsPolicyBuilder andForOrigins(final String... origins) {
@@ -57,7 +57,8 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
     }
 
     /**
-     * Create a new instance of {@link ChainedCorsPolicyBuilder} added to the parent {@link CorsServiceBuilder}.
+     * Creates a new instance of {@link ChainedCorsPolicyBuilder}
+     * added to the parent {@link CorsServiceBuilder}.
      * @return the created instance.
      */
     public ChainedCorsPolicyBuilder andForOrigin(final String origin) {
