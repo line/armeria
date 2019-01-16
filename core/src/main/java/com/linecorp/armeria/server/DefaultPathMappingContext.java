@@ -57,13 +57,15 @@ final class DefaultPathMappingContext implements PathMappingContext {
     private final MediaType consumeType;
     @Nullable
     private final List<MediaType> produceTypes;
+    private final boolean isPreflight;
     private final List<Object> summary;
     @Nullable
     private Throwable delayedCause;
 
     DefaultPathMappingContext(VirtualHost virtualHost, String hostname,
                               HttpMethod method, String path, @Nullable String query,
-                              @Nullable MediaType consumeType, @Nullable List<MediaType> produceTypes) {
+                              @Nullable MediaType consumeType, @Nullable List<MediaType> produceTypes,
+                              boolean isPreflight) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
         this.method = requireNonNull(method, "method");
@@ -71,6 +73,7 @@ final class DefaultPathMappingContext implements PathMappingContext {
         this.query = query;
         this.consumeType = consumeType;
         this.produceTypes = produceTypes;
+        this.isPreflight = isPreflight;
         summary = generateSummary(this);
     }
 
@@ -113,6 +116,11 @@ final class DefaultPathMappingContext implements PathMappingContext {
     }
 
     @Override
+    public boolean isPreflight() {
+        return isPreflight;
+    }
+
+    @Override
     public List<Object> summary() {
         return summary;
     }
@@ -149,11 +157,12 @@ final class DefaultPathMappingContext implements PathMappingContext {
      */
     static PathMappingContext of(VirtualHost virtualHost, String hostname,
                                  String path, @Nullable String query,
-                                 HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes) {
+                                 HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes,
+                                 boolean isPreflight) {
         final MediaType consumeType = resolveConsumeType(headers);
         final List<MediaType> produceTypes = resolveProduceTypes(headers, producibleMediaTypes);
         return new DefaultPathMappingContext(virtualHost, hostname, headers.method(), path, query,
-                                             consumeType, produceTypes);
+                                             consumeType, produceTypes, isPreflight);
     }
 
     @Nullable

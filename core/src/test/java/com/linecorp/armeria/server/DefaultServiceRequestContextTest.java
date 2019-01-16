@@ -44,7 +44,7 @@ public class DefaultServiceRequestContextTest {
         final VirtualHost virtualHost = virtualHost();
         final DefaultPathMappingContext mappingCtx = new DefaultPathMappingContext(
                 virtualHost, "example.com", HttpMethod.GET, "/hello", null, MediaType.JSON_UTF_8,
-                ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8));
+                ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8), false);
 
         final ServiceRequestContext originalCtx = new DefaultServiceRequestContext(
                 virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),

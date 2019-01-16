@@ -24,7 +24,9 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.cors.CorsService;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -102,4 +104,11 @@ public interface PathMappingContext {
             }
         };
     }
+
+    /**
+     * Returns {@code true} if this context is for a preflight request.
+     *
+     * @see CorsService#isCorsPreflightRequest(HttpRequest)
+     */
+    boolean isPreflight();
 }

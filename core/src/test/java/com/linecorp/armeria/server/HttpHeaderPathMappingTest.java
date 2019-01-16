@@ -142,20 +142,21 @@ public class HttpHeaderPathMappingTest {
 
     private static PathMappingContext method(HttpMethod method) {
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
-                                            PATH, null, HttpHeaders.of(method, PATH), null);
+                                            PATH, null, HttpHeaders.of(method, PATH), null,
+                                            false);
     }
 
     private static PathMappingContext consumeType(HttpMethod method, MediaType contentType) {
         final HttpHeaders headers = HttpHeaders.of(method, PATH);
         headers.contentType(contentType);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
-                                            PATH, null, headers, null);
+                                            PATH, null, headers, null, false);
     }
 
     private static PathMappingContext produceType(HttpMethod method, String acceptHeader) {
         final HttpHeaders headers = HttpHeaders.of(method, PATH);
         headers.add(HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
-                                            PATH, null, headers, PRODUCIBLE_MEDIA_TYPES);
+                                            PATH, null, headers, PRODUCIBLE_MEDIA_TYPES, false);
     }
 }

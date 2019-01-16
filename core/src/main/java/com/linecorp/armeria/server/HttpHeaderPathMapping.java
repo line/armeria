@@ -80,11 +80,13 @@ final class HttpHeaderPathMapping implements PathMapping {
     public PathMappingResult apply(PathMappingContext mappingCtx) {
         final PathMappingResult result = pathStringMapping.apply(mappingCtx);
         if (!result.isPresent()) {
+            if (mappingCtx.isPreflight() && !mappingCtx.delayedThrowable().isPresent()) {
+                mappingCtx.delayThrowable(HttpStatusException.of(HttpStatus.FORBIDDEN));
+            }
             return PathMappingResult.empty();
         }
 
-        // We need to check the method at the last in order to return '405 Method Not Allowed'.
-        if (!supportedMethods.contains(mappingCtx.method())) {
+        if (!mappingCtx.isPreflight() && !supportedMethods.contains(mappingCtx.method())) {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (!mappingCtx.delayedThrowable().isPresent()) {

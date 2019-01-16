@@ -70,6 +70,7 @@ import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -351,7 +352,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final PathMappingContext mappingCtx = DefaultPathMappingContext.of(
                 host, hostname, pathAndQuery.path(), pathAndQuery.query(), headers,
-                host.producibleMediaTypes());
+                host.producibleMediaTypes(), CorsService.isCorsPreflightRequest(req));
         // Find the service that matches the path.
         final PathMapped<ServiceConfig> mapped;
         try {

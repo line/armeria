@@ -50,6 +50,19 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
     static final String ANY_ORIGIN = "*";
     static final String NULL_ORIGIN = "null";
 
+    /**
+     * Check for a CORS preflight request.
+     *
+     * @param request the HTTP request with CORS info
+     *
+     * @return {@code true} if HTTP request is a CORS preflight request
+     */
+    public static boolean isCorsPreflightRequest(final HttpRequest request) {
+        return request.method() == HttpMethod.OPTIONS &&
+               request.headers().contains(HttpHeaderNames.ORIGIN) &&
+               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    }
+
     private final CorsConfig config;
 
     /**
@@ -98,19 +111,6 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
                 return headers;
             }
         };
-    }
-
-    /**
-     * Check for a CORS preflight request.
-     *
-     * @param request the HTTP request with CORS info
-     *
-     * @return {@code true} if HTTP request is a CORS preflight request
-     */
-    private static boolean isCorsPreflightRequest(HttpRequest request) {
-        return request.method() == HttpMethod.OPTIONS &&
-               request.headers().contains(HttpHeaderNames.ORIGIN) &&
-               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }
 
     /**
