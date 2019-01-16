@@ -25,6 +25,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -50,6 +53,8 @@ import com.linecorp.armeria.server.Service;
  * }</pre>
  */
 public final class CorsServiceBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(CorsServiceBuilder.class);
 
     /**
      * Creates a new builder with its origin set to '*'.
@@ -126,8 +131,11 @@ public final class CorsServiceBuilder {
      * {@code "null"} if a resource is loaded from the local file system.
      *
      * @return {@code this} to support method chaining.
+     * @throws IllegalStateException if {@link #anyOriginSupported} is {@code true}.
      */
     public CorsServiceBuilder allowNullOrigin() {
+        checkState(!anyOriginSupported,
+                   "allowNullOrigin cannot be enabled with any origin supported CorsService.");
         firstPolicyBuilder.allowNullOrigin();
         return this;
     }
@@ -149,6 +157,10 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder allowCredentials() {
+        if (anyOriginSupported) {
+            logger.warn(
+                    "allowCredentials has been enabled with any origin supported CorsService. it will work properly but it would be better disabled or be with specified origins for security. For more information about it, visit https://www.w3.org/TR/cors/#supports-credentials.");
+        }
         firstPolicyBuilder.allowCredentials();
         return this;
     }
@@ -162,8 +174,11 @@ public final class CorsServiceBuilder {
      * further processing will take place, and a error will be returned to the calling client.
      *
      * @return {@link CorsServiceBuilder} to support method chaining.
+     * @throws IllegalStateException if {@link #anyOriginSupported} is {@code true}.
      */
     public CorsServiceBuilder shortCircuit() {
+        checkState(!anyOriginSupported,
+                   "shortCircuit cannot be enabled with any origin supported CorsService.");
         shortCircuit = true;
         return this;
     }

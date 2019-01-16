@@ -98,7 +98,7 @@ public final class CorsPolicy {
      * @return the value that will be used for the CORS response header {@code 'Access-Control-Allow-Origin'}
      */
     public String origin() {
-        return origins.isEmpty() ? "*" : origins.iterator().next();
+        return origins.isEmpty() ? ANY_ORIGIN : origins.iterator().next();
     }
 
     /**

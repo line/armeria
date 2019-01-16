@@ -130,7 +130,7 @@ public final class CorsConfig {
         for (CorsPolicy policy : policies) {
             if (isNullOrigin && policy.isNullOriginAllowed()) {
                 return policy;
-            } else if (policy.origins().contains(lowerCaseOrigin)) {
+            } else if (!isNullOrigin && policy.origins().contains(lowerCaseOrigin)) {
                 return policy;
             }
         }
@@ -140,14 +140,6 @@ public final class CorsConfig {
     private void ensureEnabled() {
         if (!isEnabled()) {
             throw new IllegalStateException("CORS support not enabled");
-        }
-    }
-
-    private static <T> T getValue(final Supplier<T> callable) {
-        try {
-            return callable.get();
-        } catch (final Exception e) {
-            throw new IllegalStateException("could not generate value for supplier: " + callable, e);
         }
     }
 
