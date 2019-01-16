@@ -111,9 +111,9 @@ public final class CorsPolicy {
     /**
      * Determines if cookies are supported for CORS requests.
      *
-     * <p>By default cookies are not included in CORS requests but if {@code isCredentialsAllowed}  returns
-     * true cookies will be added to CORS requests. Setting this value to true will set the
-     * CORS 'Access-Control-Allow-Credentials' response header to {@code true}.
+     * <p>By default cookies are not included in CORS requests but if {@code isCredentialsAllowed} returns
+     * {@code true} cookies will be added to CORS requests. Setting this value to true will set the
+     * CORS {@code "Access-Control-Allow-Credentials"} response header to {@code true}.
      *
      * <p>Please note that cookie support needs to be enabled on the client side as well.
      * The client needs to opt-in to send cookies by calling:
@@ -121,8 +121,8 @@ public final class CorsPolicy {
      * xhr.withCredentials = true;
      * }</pre>
      *
-     * <p>The default value for 'withCredentials' is false in which case no cookies are sent.
-     * Setting this to true will included cookies in cross origin requests.
+     * <p>The default value for 'withCredentials' is {@code false} in which case no cookies are sent.
+     * Setting {@code this} to true will included cookies in cross origin requests.
      *
      * @return {@code true} if cookies are supported.
      */
@@ -182,7 +182,7 @@ public final class CorsPolicy {
     }
 
     /**
-     * Returns the allowed set of Request Headers.
+     * Returns the allowed set of request headers.
      *
      * <p>The header names returned from this method will be used to set the CORS
      * {@code "Access-Control-Allow-Headers"} response header.
@@ -192,7 +192,7 @@ public final class CorsPolicy {
     }
 
     /**
-     * Determines if the policy allows a null origin.
+     * Determines if the policy allows a {@code "null"} origin.
      */
     public boolean isNullOriginAllowed() {
         return nullOriginAllowed;

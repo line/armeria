@@ -338,6 +338,7 @@ public final class CorsServiceBuilder {
 
     /**
      * Creates a new builder instance for a new {@link CorsPolicy}.
+     *
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
     public ChainedCorsPolicyBuilder andForOrigins(final String... origins) {
@@ -349,6 +350,7 @@ public final class CorsServiceBuilder {
 
     /**
      * Creates a new builder instance for a new {@link CorsPolicy}.
+     *
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
     public ChainedCorsPolicyBuilder andForOrigin(final String origin) {

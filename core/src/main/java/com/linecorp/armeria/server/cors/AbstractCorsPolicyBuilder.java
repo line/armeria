@@ -97,7 +97,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * Calling this method will set the CORS {@code "Access-Control-Allow-Credentials"} response header
      * to {@code true}. By default, cookies are not included in CORS requests.
      *
-     * <p>Please note, that cookie support needs to be enabled on the client side as well.
+     * <p>Please note that cookie support needs to be enabled on the client side as well.
      * The client needs to opt-in to send cookies by calling:
      * <pre>{@code
      * xhr.withCredentials = true;
@@ -190,7 +190,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * <pre>{@code
      * xhr.setRequestHeader('My-Custom-Header', 'SomeValue');
      * }</pre>
-     * the server will receive the above header name in the 'Access-Control-Request-Headers' of the
+     * The server will receive the above header name in the {@code "Access-Control-Request-Headers"} of the
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server
      * if it allows a request).
@@ -265,8 +265,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * have certain headers set. This enables such headers to be added.
      *
      * <p>Some values must be dynamically created when the HTTP response is created, for
-     * example the 'Date' response header. This can be accomplished by using a {@link Supplier}
-     * which will have its 'call' method invoked when the HTTP response is created.
+     * example the {@code "Date"} response header. This can be accomplished by using a {@link Supplier}
+     * which will have its {@link Supplier#get()} method invoked when the HTTP response is created.
      *
      * @param name the name of the HTTP header.
      * @param valueSupplier a {@link Supplier} which will be invoked at HTTP response creation.

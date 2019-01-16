@@ -187,7 +187,7 @@ public final class CorsConfig {
     }
 
     /**
-     * This {@link Supplier} is used for the DATE preflight HTTP response HTTP header.
+     * This {@link Supplier} is used for the {@code "Date"} preflight HTTP response HTTP header.
      * It's value must be generated when the response is generated, hence will be
      * different for every call.
      */

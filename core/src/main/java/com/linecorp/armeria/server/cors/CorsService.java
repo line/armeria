@@ -161,7 +161,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
      * @param request the HTTP request
      * @param headers the HTTP headers to modify
      *
-     * @return {@code policy} if CORS configuration matches, otherwise null
+     * @return {@code policy} if CORS configuration matches, otherwise {@code null}
      */
     @Nullable
     private CorsPolicy setCorsOrigin(final ServiceRequestContext ctx, final HttpRequest request,
