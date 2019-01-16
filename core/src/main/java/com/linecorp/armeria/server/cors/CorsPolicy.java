@@ -199,21 +199,21 @@ public final class CorsPolicy {
     }
 
     /**
-     * Returns HTTP response headers that should be added to a CORS preflight response.
+     * Generates immutable HTTP response headers that should be added to a CORS preflight response.
      *
      * @return {@link HttpHeaders} the HTTP response headers to be added.
      */
     public HttpHeaders generatePreflightResponseHeaders() {
         final HttpHeaders headers = new DefaultHttpHeaders();
-        preflightResponseHeaders.forEach((key,value) -> {
+        preflightResponseHeaders.forEach((key, value) -> {
             final Object val = getValue(value);
             if (val instanceof Iterable) {
-                headers.addObject(key, (Iterable<?>)val);
+                headers.addObject(key, (Iterable<?>) val);
             } else {
                 headers.addObject(key, val);
             }
         });
-        return headers;
+        return headers.asImmutable();
     }
 
     /**

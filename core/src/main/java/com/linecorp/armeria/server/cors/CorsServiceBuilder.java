@@ -34,7 +34,8 @@ import com.linecorp.armeria.server.Service;
  * Builds a new {@link CorsService} or its decorator function.
  * <h2>Example</h2>
  * <pre>{@code
- * CorsServiceBuilder cb =
+ * ServerBuilder sb = new ServerBuilder();
+ * sb.service("/cors", myService.decorate(
  *          CorsServiceBuilder.forOrigins("http://example.com", "http://example2.com")
  *                            .shortCircuit()
  *                            .allowNullOrigin()
@@ -44,10 +45,8 @@ import com.linecorp.armeria.server.Service;
  *                            .andForOrigins("http://example3.com")
  *                            .allowCredentials()
  *                            .allowRequestMethods(HttpMethod.GET)
- *                            .and();
- * new ServerBuilder().service("/cors", new AbstractHttpService() {
- *     ...
- * }).decorator(cb.newDecorator())
+ *                            .and()
+ *                            .newDecorator()));
  * }</pre>
  */
 public final class CorsServiceBuilder {
