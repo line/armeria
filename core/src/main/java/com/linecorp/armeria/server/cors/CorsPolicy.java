@@ -27,9 +27,6 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
@@ -49,7 +46,6 @@ import io.netty.util.AsciiString;
  */
 public final class CorsPolicy {
 
-    private static final Logger logger = LoggerFactory.getLogger(CorsPolicy.class);
     private static final String DELIMITER = ",";
     private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
     private final Set<String> origins;
@@ -95,7 +91,7 @@ public final class CorsPolicy {
      * Returns the allowed origin. This can either be a wildcard or an origin value.
      * This method returns the first specified origin if this policy has more than one origin.
      *
-     * @return the value that will be used for the CORS response header {@code 'Access-Control-Allow-Origin'}
+     * @return the value that will be used for the CORS response header {@code "Access-Control-Allow-Origin"}
      */
     public String origin() {
         return origins.isEmpty() ? ANY_ORIGIN : origins.iterator().next();
@@ -121,7 +117,7 @@ public final class CorsPolicy {
      * xhr.withCredentials = true;
      * }</pre>
      *
-     * <p>The default value for 'withCredentials' is {@code false} in which case no cookies are sent.
+     * <p>The default value for {@code 'withCredentials'} is {@code false} in which case no cookies are sent.
      * Setting {@code this} to true will included cookies in cross origin requests.
      *
      * @return {@code true} if cookies are supported.

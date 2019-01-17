@@ -76,10 +76,6 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
         return (B) this;
     }
 
-    public Set<String> origins() {
-        return origins;
-    }
-
     /**
      * Enables a successful CORS response with a {@code "null"} value for the CORS response header
      * {@code "Access-Control-Allow-Origin"}. Web browsers may set the {@code "Origin"} request header to
@@ -122,7 +118,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * @return {@code this} to support method chaining.
      */
     public B maxAge(final long maxAge) {
-        checkState(maxAge <= 0, "maxAge: %d (expected: > 0)", maxAge);
+        checkState(maxAge > 0, "maxAge: %d (expected: > 0)", maxAge);
         this.maxAge = maxAge;
         return self();
     }
@@ -300,8 +296,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
 
     @Override
     public String toString() {
-        return CorsPolicy.toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
-                        exposedHeaders, allowedRequestMethods, allowedRequestHeaders,
-                        preflightResponseHeaders);
+        return CorsPolicy.toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge, exposedHeaders,
+                                   allowedRequestMethods, allowedRequestHeaders, preflightResponseHeaders);
     }
 }

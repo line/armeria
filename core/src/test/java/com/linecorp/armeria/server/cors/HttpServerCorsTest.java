@@ -77,6 +77,7 @@ public class HttpServerCorsTest {
                                       .allowRequestHeaders(HttpHeaderNames.of("allow_request_header2"))
                                       .exposeHeaders(HttpHeaderNames.of("expose_header_3"),
                                                      HttpHeaderNames.of("expose_header_4"))
+                                      .maxAge(3600)
                                       .and()
                                       .newDecorator()));
             // Support short circuit.
@@ -88,12 +89,14 @@ public class HttpServerCorsTest {
                                       .exposeHeaders(HttpHeaderNames.of("expose_header_1"),
                                                      HttpHeaderNames.of("expose_header_2"))
                                       .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                                      .maxAge(3600)
                                       .andForOrigins("http://example2.com")
                                       .allowNullOrigin()
                                       .allowRequestMethods(HttpMethod.GET)
                                       .allowRequestHeaders(HttpHeaderNames.of("allow_request_header2"))
                                       .exposeHeaders(HttpHeaderNames.of("expose_header_3"),
                                                      HttpHeaderNames.of("expose_header_4"))
+                                      .maxAge(1800)
                                       .and()
                                       .newDecorator()));
             sb.service("/cors3", myService.decorate(
@@ -102,14 +105,16 @@ public class HttpServerCorsTest {
                                       .allowRequestHeaders("allow_request_header")
                                       .exposeHeaders("expose_header_1", "expose_header_2")
                                       .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                                      .maxAge(3600)
                                       .newDecorator()));
         }
     };
 
-    // Makes sure if it throws an IllegalStateException when one of the methods
-    // which is no use with any origin is called with any origin supported CorsServiceBuilder.
+    // Makes sure if it throws an IllegalStateException when an improper setting is set.
     @Test
-    public void testCorsAnyOriginFailEnabled() throws Exception {
+    public void testCorsBuilderException() {
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().maxAge(-1)).isInstanceOf(
+                IllegalStateException.class);
         assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowNullOrigin()).isInstanceOf(
                 IllegalStateException.class);
         assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().shortCircuit()).isInstanceOf(
