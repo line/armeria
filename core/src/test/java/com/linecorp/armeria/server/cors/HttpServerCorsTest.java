@@ -112,7 +112,7 @@ public class HttpServerCorsTest {
         }
     };
 
-    // Makes sure if it throws an IllegalStateException when an improper setting is set.
+    // Makes sure if it throws an Exception when an improper setting is set.
     @Test
     public void testCorsBuilderException() {
         assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().maxAge(-1)).isInstanceOf(
