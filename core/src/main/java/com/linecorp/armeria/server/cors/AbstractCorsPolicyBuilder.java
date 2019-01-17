@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -248,7 +249,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public B preflightResponseHeader(CharSequence name, Iterable<?> values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
-        checkArgument(values.iterator().hasNext(), "values should not be empty.");
+        checkArgument(Iterables.isEmpty(values), "values should not be empty.");
         final ImmutableList.Builder builder = new Builder();
         int i = 0;
         for (Object value : values) {
