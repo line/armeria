@@ -31,6 +31,8 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -150,6 +152,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B exposeHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
+        checkArgument(headers.length > 0, "headers should not be empty.");
         for (int i = 0; i < headers.length; i++) {
             if (headers[i] == null) {
                 throw new NullPointerException("headers[" + i + ']');
@@ -169,6 +172,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B allowRequestMethods(HttpMethod... methods) {
         requireNonNull(methods, "methods");
+        checkArgument(methods.length > 0, "methods should not be empty.");
         for (int i = 0; i < methods.length; i++) {
             if (methods[i] == null) {
                 throw new NullPointerException("methods[" + i + ']');
@@ -197,6 +201,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B allowRequestHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
+        checkArgument(headers.length > 0,"headers should not be empty.");
         for (int i = 0; i < headers.length; i++) {
             if (headers[i] == null) {
                 throw new NullPointerException("headers[" + i + ']');
@@ -207,7 +212,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     /**
-     * Returns HTTP response headers that should be added to a CORS preflight response.
+     * Specifies HTTP response headers that should be added to a CORS preflight response.
      *
      * <p>An intermediary like a load balancer might require that a CORS preflight request
      * have certain headers set. This enables such headers to be added.
@@ -219,18 +224,19 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public B preflightResponseHeader(CharSequence name, Object... values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
+        checkArgument(values.length > 0,"values should not be empty.");
         for (int i = 0; i < values.length; i++) {
             if (values[i] == null) {
                 throw new NullPointerException("values[" + i + ']');
             }
         }
         preflightResponseHeaders.put(HttpHeaderNames.of(name),
-                                     new ConstantValueSupplier(Arrays.asList(values)));
+                                     new ConstantValueSupplier(ImmutableList.copyOf(values)));
         return self();
     }
 
     /**
-     * Returns HTTP response headers that should be added to a CORS preflight response.
+     * Specifies HTTP response headers that should be added to a CORS preflight response.
      *
      * <p>An intermediary like a load balancer might require that a CORS preflight request
      * have certain headers set. This enables such headers to be added.
@@ -242,20 +248,22 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public B preflightResponseHeader(CharSequence name, Iterable<?> values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
-
+        checkArgument(values.iterator().hasNext(), "values should not be empty.");
+        final ImmutableList.Builder builder = new Builder();
         int i = 0;
         for (Object value : values) {
             if (value == null) {
                 throw new NullPointerException("value[" + i + ']');
             }
+            builder.add(value);
             i++;
         }
-        preflightResponseHeaders.put(HttpHeaderNames.of(name), new ConstantValueSupplier(values));
+        preflightResponseHeaders.put(HttpHeaderNames.of(name), new ConstantValueSupplier(builder.build()));
         return self();
     }
 
     /**
-     * Returns HTTP response headers that should be added to a CORS preflight response.
+     * Specifies HTTP response headers that should be added to a CORS preflight response.
      *
      * <p>An intermediary like a load balancer might require that a CORS preflight request
      * have certain headers set. This enables such headers to be added.

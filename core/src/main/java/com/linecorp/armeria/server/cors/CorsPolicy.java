@@ -31,6 +31,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -94,7 +95,7 @@ public final class CorsPolicy {
      * @return the value that will be used for the CORS response header {@code "Access-Control-Allow-Origin"}
      */
     public String origin() {
-        return origins.isEmpty() ? ANY_ORIGIN : origins.iterator().next();
+        return Iterables.getFirst(origins, ANY_ORIGIN);
     }
 
     /**
@@ -108,7 +109,7 @@ public final class CorsPolicy {
      * Determines if cookies are supported for CORS requests.
      *
      * <p>By default cookies are not included in CORS requests but if {@code isCredentialsAllowed} returns
-     * {@code true} cookies will be added to CORS requests. Setting this value to true will set the
+     * {@code true} cookies will be added to CORS requests. Setting this value to {@code true} will set the
      * CORS {@code "Access-Control-Allow-Credentials"} response header to {@code true}.
      *
      * <p>Please note that cookie support needs to be enabled on the client side as well.
@@ -118,7 +119,7 @@ public final class CorsPolicy {
      * }</pre>
      *
      * <p>The default value for {@code 'withCredentials'} is {@code false} in which case no cookies are sent.
-     * Setting {@code this} to true will included cookies in cross origin requests.
+     * Setting {@code this} to {@code true} will include cookies in cross origin requests.
      *
      * @return {@code true} if cookies are supported.
      */
@@ -127,10 +128,10 @@ public final class CorsPolicy {
     }
 
     /**
-     * Gets the maxAge setting.
+     * Gets the {@code maxAge} setting.
      *
-     * <p>When making a preflight request the client has to perform two request with can be inefficient.
-     * This setting will set the CORS {@code "Access-Control-Max-Age"} response header and enables the
+     * <p>When making a preflight request the client has to perform two requests which can be inefficient.
+     * This setting will set the CORS {@code "Access-Control-Max-Age"} response header and enable the
      * caching of the preflight response for the specified time. During this time no preflight
      * request will be made.
      *

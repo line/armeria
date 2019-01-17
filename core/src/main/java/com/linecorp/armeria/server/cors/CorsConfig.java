@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 /**
  * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
@@ -123,7 +124,7 @@ public final class CorsConfig {
     public CorsPolicy getPolicy(String origin) {
         requireNonNull(origin, "origin");
         if (isAnyOriginSupported()) {
-            return policies.iterator().next();
+            return Iterables.getFirst(policies, null);
         }
         final String lowerCaseOrigin = Ascii.toLowerCase(origin);
         final boolean isNullOrigin = CorsService.NULL_ORIGIN.equals(lowerCaseOrigin);
@@ -187,7 +188,7 @@ public final class CorsConfig {
     }
 
     /**
-     * This {@link Supplier} is used for the {@code "Date"} preflight HTTP response HTTP header.
+     * This {@link Supplier} is used for the {@code "Date"} preflight HTTP response header.
      * It's value must be generated when the response is generated, hence will be
      * different for every call.
      */
