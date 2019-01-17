@@ -24,6 +24,8 @@ import java.util.Arrays;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -130,6 +132,16 @@ public class HttpServerCorsTest {
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("header", Arrays
                 .asList("11", null))).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("123")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("123",
+                                                                                           ImmutableList.of()));
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().exposeHeaders()).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowRequestMethods()).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowRequestHeaders()).isInstanceOf(
+                IllegalArgumentException.class);
     }
 
     // Makes sure if null origin supported CorsService works properly and it finds the CORS policy
