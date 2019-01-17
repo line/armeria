@@ -66,7 +66,7 @@ public final class CorsServiceBuilder {
     /**
      * Creates a new builder with the specified origin.
      */
-    public static CorsServiceBuilder forOrigin(final String origin) {
+    public static CorsServiceBuilder forOrigin(String origin) {
         requireNonNull(origin, "origin");
 
         if ("*".equals(origin)) {
@@ -78,7 +78,7 @@ public final class CorsServiceBuilder {
     /**
      * Creates a new builder with the specified origins.
      */
-    public static CorsServiceBuilder forOrigins(final String... origins) {
+    public static CorsServiceBuilder forOrigins(String... origins) {
         requireNonNull(origins, "origins");
         return new CorsServiceBuilder(origins);
     }
@@ -94,7 +94,7 @@ public final class CorsServiceBuilder {
      * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing {@code origins}.
      *
      */
-    CorsServiceBuilder(final String... origins) {
+    CorsServiceBuilder(String... origins) {
         anyOriginSupported = false;
         policies = new HashSet<>();
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, origins);
@@ -193,7 +193,7 @@ public final class CorsServiceBuilder {
      * @param maxAge the maximum time, in seconds, that the preflight response may be cached.
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
-    public CorsServiceBuilder maxAge(final long maxAge) {
+    public CorsServiceBuilder maxAge(long maxAge) {
         firstPolicyBuilder.maxAge(maxAge);
         return this;
     }
@@ -223,7 +223,7 @@ public final class CorsServiceBuilder {
      * @param headers the values to be added to the {@code "Access-Control-Expose-Headers"} response header
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
-    public CorsServiceBuilder exposeHeaders(final CharSequence... headers) {
+    public CorsServiceBuilder exposeHeaders(CharSequence... headers) {
         firstPolicyBuilder.exposeHeaders(headers);
         return this;
     }
@@ -235,7 +235,7 @@ public final class CorsServiceBuilder {
      * @param methods the {@link HttpMethod}s that should be allowed.
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
-    public CorsServiceBuilder allowRequestMethods(final HttpMethod... methods) {
+    public CorsServiceBuilder allowRequestMethods(HttpMethod... methods) {
         firstPolicyBuilder.allowRequestMethods(methods);
         return this;
     }
@@ -257,7 +257,7 @@ public final class CorsServiceBuilder {
      *                {@code "Access-Control-Allow-Headers"} response header.
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
-    public CorsServiceBuilder allowRequestHeaders(final CharSequence... headers) {
+    public CorsServiceBuilder allowRequestHeaders(CharSequence... headers) {
         firstPolicyBuilder.allowRequestHeaders(headers);
         return this;
     }
@@ -272,7 +272,7 @@ public final class CorsServiceBuilder {
      * @param values the values for the HTTP header.
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
-    public CorsServiceBuilder preflightResponseHeader(final CharSequence name, final Object... values) {
+    public CorsServiceBuilder preflightResponseHeader(CharSequence name, Object... values) {
         firstPolicyBuilder.preflightResponseHeader(name, values);
         return this;
     }
@@ -287,7 +287,7 @@ public final class CorsServiceBuilder {
      * @param values the values for the HTTP header.
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
-    public CorsServiceBuilder preflightResponseHeader(final CharSequence name, final Iterable<?> values) {
+    public CorsServiceBuilder preflightResponseHeader(CharSequence name, Iterable<?> values) {
         firstPolicyBuilder.preflightResponseHeader(name, values);
         return this;
     }
@@ -341,7 +341,7 @@ public final class CorsServiceBuilder {
      *
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
-    public ChainedCorsPolicyBuilder andForOrigins(final String... origins) {
+    public ChainedCorsPolicyBuilder andForOrigins(String... origins) {
         ensureForNewPolicy();
         final ChainedCorsPolicyBuilder builder = new ChainedCorsPolicyBuilder(this, origins);
         policyBuilders.add(builder);
@@ -353,7 +353,7 @@ public final class CorsServiceBuilder {
      *
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
-    public ChainedCorsPolicyBuilder andForOrigin(final String origin) {
+    public ChainedCorsPolicyBuilder andForOrigin(String origin) {
         return andForOrigins(origin);
     }
 

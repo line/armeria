@@ -117,7 +117,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * @param maxAge the maximum time, in seconds, that the preflight response may be cached.
      * @return {@code this} to support method chaining.
      */
-    public B maxAge(final long maxAge) {
+    public B maxAge(long maxAge) {
         checkState(maxAge > 0, "maxAge: %d (expected: > 0)", maxAge);
         this.maxAge = maxAge;
         return self();
@@ -148,7 +148,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * @param headers the values to be added to the {@code "Access-Control-Expose-Headers"} response header
      * @return {@code this} to support method chaining.
      */
-    public B exposeHeaders(final CharSequence... headers) {
+    public B exposeHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
         for (int i = 0; i < headers.length; i++) {
             if (headers[i] == null) {
@@ -167,7 +167,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * @param methods the {@link HttpMethod}s that should be allowed.
      * @return {@code this} to support method chaining.
      */
-    public B allowRequestMethods(final HttpMethod... methods) {
+    public B allowRequestMethods(HttpMethod... methods) {
         requireNonNull(methods, "methods");
         for (int i = 0; i < methods.length; i++) {
             if (methods[i] == null) {
@@ -195,7 +195,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      *                the preflight {@code "Access-Control-Allow-Headers"} response header.
      * @return {@code this} to support method chaining.
      */
-    public B allowRequestHeaders(final CharSequence... headers) {
+    public B allowRequestHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
         for (int i = 0; i < headers.length; i++) {
             if (headers[i] == null) {
@@ -216,7 +216,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * @param values the values for the HTTP header.
      * @return {@code this} to support method chaining.
      */
-    public B preflightResponseHeader(final CharSequence name, final Object... values) {
+    public B preflightResponseHeader(CharSequence name, Object... values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
         for (int i = 0; i < values.length; i++) {
@@ -239,7 +239,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * @param values the values for the HTTP header.
      * @return {@code this} to support method chaining.
      */
-    public B preflightResponseHeader(final CharSequence name, final Iterable<?> values) {
+    public B preflightResponseHeader(CharSequence name, Iterable<?> values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
 

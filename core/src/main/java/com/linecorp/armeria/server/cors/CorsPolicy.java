@@ -60,7 +60,7 @@ public final class CorsPolicy {
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(final Set<String> origins, boolean credentialsAllowed, long maxAge,
+    CorsPolicy(Set<String> origins, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
                Set<AsciiString> allowedRequestHeaders, EnumSet<HttpMethod> allowedRequestMethods,
                boolean preflightResponseHeadersDisabled,
@@ -218,11 +218,11 @@ public final class CorsPolicy {
      *
      * @param headers the {@link HttpHeaders} to which the preflight headers should be added.
      */
-    void setCorsPreflightResponseHeaders(final HttpHeaders headers) {
+    void setCorsPreflightResponseHeaders(HttpHeaders headers) {
         headers.add(generatePreflightResponseHeaders());
     }
 
-    void setCorsAllowCredentials(final HttpHeaders headers) {
+    void setCorsAllowCredentials(HttpHeaders headers) {
         // The string "*" cannot be used for a resource that supports credentials.
         // https://www.w3.org/TR/cors/#resource-requests
         if (credentialsAllowed &&
@@ -231,7 +231,7 @@ public final class CorsPolicy {
         }
     }
 
-    void setCorsExposeHeaders(final HttpHeaders headers) {
+    void setCorsExposeHeaders(HttpHeaders headers) {
         if (exposedHeaders.isEmpty()) {
             return;
         }
@@ -239,11 +239,11 @@ public final class CorsPolicy {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, joinedExposedHeaders);
     }
 
-    void setCorsAllowMethods(final HttpHeaders headers) {
+    void setCorsAllowMethods(HttpHeaders headers) {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, joinedAllowedRequestMethods);
     }
 
-    void setCorsAllowHeaders(final HttpHeaders headers) {
+    void setCorsAllowHeaders(HttpHeaders headers) {
         if (allowedRequestHeaders.isEmpty()) {
             return;
         }
@@ -251,7 +251,7 @@ public final class CorsPolicy {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinedAllowedRequestHeaders);
     }
 
-    void setCorsMaxAge(final HttpHeaders headers) {
+    void setCorsMaxAge(HttpHeaders headers) {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
     }
 
@@ -279,7 +279,7 @@ public final class CorsPolicy {
                           .add("preflightResponseHeaders", preflightResponseHeaders).toString();
     }
 
-    private static <T> T getValue(final Supplier<T> callable) {
+    private static <T> T getValue(Supplier<T> callable) {
         try {
             return callable.get();
         } catch (final Exception e) {

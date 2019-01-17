@@ -34,7 +34,7 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
         serviceBuilder = builder;
     }
 
-    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, final String... origins) {
+    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, String... origins) {
         super(origins);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
@@ -53,7 +53,7 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
      *
      * @return the created instance.
      */
-    public ChainedCorsPolicyBuilder andForOrigins(final String... origins) {
+    public ChainedCorsPolicyBuilder andForOrigins(String... origins) {
         return and().andForOrigins(origins);
     }
 
@@ -63,7 +63,7 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
      *
      * @return the created instance.
      */
-    public ChainedCorsPolicyBuilder andForOrigin(final String origin) {
+    public ChainedCorsPolicyBuilder andForOrigin(String origin) {
         return and().andForOrigin(origin);
     }
 }

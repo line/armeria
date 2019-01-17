@@ -32,7 +32,7 @@ public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder<CorsPolic
     /**
      * Creates a new instance with the specified {@code origins}.
      */
-    public CorsPolicyBuilder(final String... origins) {
+    public CorsPolicyBuilder(String... origins) {
         super(origins);
     }
 

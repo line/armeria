@@ -107,7 +107,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
      *
      * @return {@code true} if HTTP request is a CORS preflight request
      */
-    private static boolean isCorsPreflightRequest(final HttpRequest request) {
+    private static boolean isCorsPreflightRequest(HttpRequest request) {
         return request.method() == HttpMethod.OPTIONS &&
                request.headers().contains(HttpHeaderNames.ORIGIN) &&
                request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
@@ -118,7 +118,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
      *
      * @param req the decoded HTTP request
      */
-    private HttpResponse handleCorsPreflight(final ServiceRequestContext ctx, final HttpRequest req) {
+    private HttpResponse handleCorsPreflight(ServiceRequestContext ctx, HttpRequest req) {
         final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
@@ -138,7 +138,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
      * @param req the HTTP request with the CORS info
      * @param headers the headers to modify
      */
-    private void setCorsResponseHeaders(final ServiceRequestContext ctx, final HttpRequest req,
+    private void setCorsResponseHeaders(ServiceRequestContext ctx, HttpRequest req,
                                         HttpHeaders headers) {
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
@@ -164,8 +164,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
      * @return {@code policy} if CORS configuration matches, otherwise {@code null}
      */
     @Nullable
-    private CorsPolicy setCorsOrigin(final ServiceRequestContext ctx, final HttpRequest request,
-                                     final HttpHeaders headers) {
+    private CorsPolicy setCorsOrigin(ServiceRequestContext ctx, HttpRequest request, HttpHeaders headers) {
         if (!config.isEnabled()) {
             return null;
         }
@@ -198,23 +197,23 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
         return null;
     }
 
-    private static void setCorsOrigin(final HttpHeaders headers, final String origin) {
+    private static void setCorsOrigin(HttpHeaders headers, String origin) {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
     }
 
-    private static void echoCorsRequestOrigin(final HttpRequest request, final HttpHeaders headers) {
+    private static void echoCorsRequestOrigin(HttpRequest request, HttpHeaders headers) {
         setCorsOrigin(headers, request.headers().get(HttpHeaderNames.ORIGIN));
     }
 
-    private static void setCorsVaryHeader(final HttpHeaders headers) {
+    private static void setCorsVaryHeader(HttpHeaders headers) {
         headers.set(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN.toString());
     }
 
-    private static void setCorsAnyOrigin(final HttpHeaders headers) {
+    private static void setCorsAnyOrigin(HttpHeaders headers) {
         setCorsOrigin(headers, ANY_ORIGIN);
     }
 
-    private static void setCorsNullOrigin(final HttpHeaders headers) {
+    private static void setCorsNullOrigin(HttpHeaders headers) {
         setCorsOrigin(headers, NULL_ORIGIN);
     }
 }

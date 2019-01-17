@@ -56,7 +56,7 @@ public final class CorsConfig {
         policies = Collections.emptySet();
     }
 
-    CorsConfig(final CorsServiceBuilder builder) {
+    CorsConfig(CorsServiceBuilder builder) {
         enabled = true;
         anyOriginSupported = builder.anyOriginSupported;
         shortCircuit = builder.shortCircuit;
@@ -171,7 +171,7 @@ public final class CorsConfig {
 
         private final Object value;
 
-        ConstantValueSupplier(final Object value) {
+        ConstantValueSupplier(Object value) {
             this.value = value;
         }
 
