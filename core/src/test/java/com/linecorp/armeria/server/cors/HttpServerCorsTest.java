@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.util.Arrays;
+
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -119,6 +121,15 @@ public class HttpServerCorsTest {
                 IllegalStateException.class);
         assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().shortCircuit()).isInstanceOf(
                 IllegalStateException.class);
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowRequestHeaders("", null, ""))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowRequestMethods(HttpMethod.GET, null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(
+                () -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("header", null, null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("header", Arrays
+                .asList("11", null))).isInstanceOf(NullPointerException.class);
     }
 
     // Makes sure if null origin supported CorsService works properly and it finds the CORS policy
