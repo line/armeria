@@ -80,8 +80,8 @@ class PathMappingContextWrapper implements PathMappingContext {
     }
 
     @Override
-    public boolean isPreflight() {
-        return delegate().isPreflight();
+    public boolean isCorsPreflight() {
+        return delegate().isCorsPreflight();
     }
 
     @Override

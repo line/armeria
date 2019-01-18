@@ -39,6 +39,9 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class HttpServerCorsTest {
@@ -111,6 +114,27 @@ public class HttpServerCorsTest {
                                       .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                                       .maxAge(3600)
                                       .newDecorator()));
+
+            final Object myAnnotatedService = new Object() {
+                // We don't need to specify '@Options` annotation here to support a CORS preflight request.
+                @Post("/post")
+                @StatusCode(200)
+                public void post() {
+                    return;
+                }
+
+                @Options("/options")
+                @StatusCode(200)
+                public void options() {
+                    return;
+                }
+            };
+            sb.annotatedService("/cors4", myAnnotatedService,
+                                CorsServiceBuilder.forOrigin("http://example.com")
+                                                  .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                                                  .newDecorator());
+            // No CORS decorator.
+            sb.annotatedService("/cors5", myAnnotatedService);
         }
     };
 
@@ -319,5 +343,46 @@ public class HttpServerCorsTest {
                            .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
 
         assertNull(response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
+    @Test
+    public void testWorkingWithAnnotatedService() throws Exception {
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+
+        for (final String path : new String[]{"post", "options"}) {
+            final AggregatedHttpMessage response = client.execute(
+                    HttpHeaders.of(HttpMethod.OPTIONS, "/cors4/" + path)
+                               .set(HttpHeaderNames.ACCEPT, "utf-8")
+                               .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                               .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
+
+            assertEquals(HttpStatus.OK, response.status());
+            assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+            assertEquals("GET,POST", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS));
+        }
+    }
+
+    @Test
+    public void testNoCorsDecoratorForAnnotatedService() throws Exception {
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.OPTIONS, "/cors5/post")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
+
+        assertEquals(HttpStatus.FORBIDDEN, response.status());
+    }
+
+    @Test
+    public void testAnnotatedServiceHandlesOptions() throws Exception {
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.OPTIONS, "/cors5/options")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ORIGIN, "http://example.com")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")).aggregate().get();
+
+        assertEquals(HttpStatus.OK, response.status());
     }
 }

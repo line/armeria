@@ -95,18 +95,15 @@ public class PathMappingContextTest {
         ctx1 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", null,
                                              MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
-                                             false);
+                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8));
         ctx2 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", null,
                                              MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
-                                             false);
+                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8));
         ctx3 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", null,
                                              MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.XML_UTF_8, MediaType.JSON_UTF_8),
-                                             false);
+                                             ImmutableList.of(MediaType.XML_UTF_8, MediaType.JSON_UTF_8));
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
@@ -114,10 +111,10 @@ public class PathMappingContextTest {
 
         ctx1 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", "a=1&b=1",
-                                             null, null, false);
+                                             null, null);
         ctx2 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", "a=1",
-                                             null, null, false);
+                                             null, null);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
@@ -131,7 +128,7 @@ public class PathMappingContextTest {
         final DefaultHttpHeaders headers = new DefaultHttpHeaders();
         headers.method(HttpMethod.GET);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
-                                            path, query, headers, null, false);
+                                            path, query, headers, null);
     }
 
     static VirtualHost virtualHost() {

@@ -638,7 +638,7 @@ public class RequestContextExportingAppenderTest {
         }
 
         @Override
-        public boolean isPreflight() {
+        public boolean isCorsPreflight() {
             return false;
         }
 

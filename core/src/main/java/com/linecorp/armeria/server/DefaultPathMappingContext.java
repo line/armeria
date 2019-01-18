@@ -57,15 +57,21 @@ final class DefaultPathMappingContext implements PathMappingContext {
     private final MediaType consumeType;
     @Nullable
     private final List<MediaType> produceTypes;
-    private final boolean isPreflight;
+    private final boolean isCorsPreflight;
     private final List<Object> summary;
     @Nullable
     private Throwable delayedCause;
 
     DefaultPathMappingContext(VirtualHost virtualHost, String hostname,
                               HttpMethod method, String path, @Nullable String query,
+                              @Nullable MediaType consumeType, @Nullable List<MediaType> produceTypes) {
+        this(virtualHost, hostname, method, path, query, consumeType, produceTypes, false);
+    }
+
+    DefaultPathMappingContext(VirtualHost virtualHost, String hostname,
+                              HttpMethod method, String path, @Nullable String query,
                               @Nullable MediaType consumeType, @Nullable List<MediaType> produceTypes,
-                              boolean isPreflight) {
+                              boolean isCorsPreflight) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
         this.method = requireNonNull(method, "method");
@@ -73,7 +79,7 @@ final class DefaultPathMappingContext implements PathMappingContext {
         this.query = query;
         this.consumeType = consumeType;
         this.produceTypes = produceTypes;
-        this.isPreflight = isPreflight;
+        this.isCorsPreflight = isCorsPreflight;
         summary = generateSummary(this);
     }
 
@@ -116,8 +122,8 @@ final class DefaultPathMappingContext implements PathMappingContext {
     }
 
     @Override
-    public boolean isPreflight() {
-        return isPreflight;
+    public boolean isCorsPreflight() {
+        return isCorsPreflight;
     }
 
     @Override
@@ -157,12 +163,21 @@ final class DefaultPathMappingContext implements PathMappingContext {
      */
     static PathMappingContext of(VirtualHost virtualHost, String hostname,
                                  String path, @Nullable String query,
+                                 HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes) {
+        return of(virtualHost, hostname, path, query, headers, producibleMediaTypes, false);
+    }
+
+    /**
+     * Returns a new {@link PathMappingContext} instance.
+     */
+    static PathMappingContext of(VirtualHost virtualHost, String hostname,
+                                 String path, @Nullable String query,
                                  HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes,
-                                 boolean isPreflight) {
+                                 boolean isCorsPreflight) {
         final MediaType consumeType = resolveConsumeType(headers);
         final List<MediaType> produceTypes = resolveProduceTypes(headers, producibleMediaTypes);
         return new DefaultPathMappingContext(virtualHost, hostname, headers.method(), path, query,
-                                             consumeType, produceTypes, isPreflight);
+                                             consumeType, produceTypes, isCorsPreflight);
     }
 
     @Nullable
