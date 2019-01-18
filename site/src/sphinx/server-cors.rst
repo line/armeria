@@ -1,7 +1,7 @@
 .. _CORSWiki: https://en.wikipedia.org/wiki/Cross-origin_resource_sharing
 .. _server-cors-service:
 
-Configure CORS service
+Configure CORS
 ========================
 
 Armeria provides a way to configure Cross-origin resource sharing(CORS) policy for specified origins or
