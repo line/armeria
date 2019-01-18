@@ -33,16 +33,6 @@ public interface ArmeriaClientConfigurator extends Ordered {
     void configure(HttpClientBuilder builder);
 
     /**
-     * Configures the client using the specified {@link HttpClientBuilder}.
-     *
-     * @deprecated Use {@link #configure(HttpClientBuilder)}.
-     */
-    @Deprecated
-    default void customize(HttpClientBuilder builder) {
-        configure(builder);
-    }
-
-    /**
      * Returns the evaluation order of this configurator. A user can specify the order with an {@link Order}
      * annotation when defining a bean with a {@link Bean} annotation.
      *
