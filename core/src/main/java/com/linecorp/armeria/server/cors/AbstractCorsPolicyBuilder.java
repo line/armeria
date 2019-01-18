@@ -249,7 +249,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public B preflightResponseHeader(CharSequence name, Iterable<?> values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
-        checkArgument(Iterables.isEmpty(values), "values should not be empty.");
+        checkArgument(!Iterables.isEmpty(values), "values should not be empty.");
         final ImmutableList.Builder builder = new Builder();
         int i = 0;
         for (Object value : values) {
