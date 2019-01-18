@@ -1,11 +1,11 @@
-.. _CORSWiki: https://en.wikipedia.org/wiki/Cross-origin_resource_sharing
 .. _server-cors-service:
 
 Configure CORS
 ========================
 
-Armeria provides a way to configure Cross-origin resource sharing(CORS) policy for specified origins or
-any origin via :api:`CorsServiceBuilder`. For more information about CORS, visit CORSWiki_.
+Armeria provides a way to configure Cross-origin resource sharing (CORS) policy for specified origins or
+any origin via :api:`CorsServiceBuilder`. For more information about CORS,
+Visit the Wikipedia's CORS <https://en.wikipedia.org/wiki/Cross-origin_resource_sharing>.
 
 
 Allowing any origin
@@ -14,7 +14,7 @@ To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forA
 
 .. code-block:: java
 
-    HttpService myService = new AbstractHttpService() {
+    HttpService myService = (ctx, req) -> {
                 ...
     }
     ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
@@ -30,14 +30,14 @@ To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forA
 
 
 
-Allowing the specified origins
+Allowing specified origins
 ------------------------------
-To configure CORS Service allowing the specified origins, use ``CorsServiceBuilder.forOrigins`` or
-``CorsServiceBuilder.forOrigin``, e.g.
+To configure CORS Service allowing specified origins, use ``CorsServiceBuilder.forOrigins()`` or
+``CorsServiceBuilder.forOrigin()``, e.g.
 
 .. code-block:: java
 
-    HttpService myService = new AbstractHttpService() {
+    HttpService myService = (ctx, req) -> {
                 ...
     }
     ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
@@ -52,15 +52,15 @@ To configure CORS Service allowing the specified origins, use ``CorsServiceBuild
                               .newDecorator()));
 
 
-Applying a different policy for different origins
+Applying different policies for different origins
 -------------------------------------------------
-To configure multiple policies for different groups of origins, use ``andForOrigins`` or ``andForOrigin`` method
-which creates a new instance of :api:`ChainedCorsPolicyBuilder` with the specified origins and
-you have to call ``and()`` to return to :api:`CorsServiceBuilder` before calling ``newDecorator()``, e.g.
+To configure different policies for different groups of origins, use ``andForOrigins()`` or ``andForOrigin()``
+method which creates a new :api:`ChainedCorsPolicyBuilder` with the specified origins.
+Call ``and()`` to return to :api:`CorsServiceBuilder` once you are done with building a policy, e.g.
 
 .. code-block:: java
 
-    HttpService myService = new AbstractHttpService() {
+    HttpService myService = (ctx, req) -> {
                 ...
     }
     ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
@@ -84,7 +84,7 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
 
 .. code-block:: java
 
-    HttpService myService = new AbstractHttpService() {
+    HttpService myService = (ctx, req) -> {
                 ...
     }
     ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
