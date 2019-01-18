@@ -114,7 +114,7 @@ public class HttpClientIdleTimeoutHandlerTest {
         }
 
         @Override
-        public boolean isActive() {
+        public boolean canSendRequest() {
             return true;
         }
 

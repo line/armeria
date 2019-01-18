@@ -31,6 +31,9 @@ package com.linecorp.armeria.internal.logging;
 
 import java.util.BitSet;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.math.IntMath;
 
 /**
  * This sampler is appropriate for low-traffic instrumentation (ex servers that each receive <100K
@@ -47,10 +50,12 @@ import java.util.Random;
  */
 final class CountingSampler extends Sampler {
     private final BitSet sampleDecisions;
-    private int counter; // guarded by this
+    private final AtomicInteger counter;
 
     /** Fills a bitset with decisions according to the supplied rate. */
     CountingSampler(float rate) {
+        counter = new AtomicInteger();
+
         final int outOf100 = (int) (rate * 100.0f);
         sampleDecisions = randomBitSet(100, outOf100, new Random());
     }
@@ -83,11 +88,7 @@ final class CountingSampler extends Sampler {
      * Loops over the pre-canned decisions, resetting to zero when it gets to the end.
      */
     @Override
-    public synchronized boolean isSampled() {
-        final boolean result = sampleDecisions.get(counter++);
-        if (counter == 100) {
-            counter = 0;
-        }
-        return result;
+    public boolean isSampled() {
+        return sampleDecisions.get(IntMath.mod(counter.getAndIncrement(), 100));
     }
 }

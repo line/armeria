@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,25 +25,27 @@ public class MimeTypeUtilTest {
 
     @Test
     public void knownExtensions() {
-        assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("image.png", false))).isTrue();
-        assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("/static/image.png", false))).isTrue();
-        assertThat(MediaType.PDF.is(MimeTypeUtil.guessFromPath("document.pdf", false))).isTrue();
+        assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("image.png"))).isTrue();
+        assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("/static/image.png"))).isTrue();
+        assertThat(MediaType.PDF.is(MimeTypeUtil.guessFromPath("document.pdf"))).isTrue();
+        assertThat(MediaType.OCTET_STREAM.is(MimeTypeUtil.guessFromPath("image.png.gz"))).isTrue();
     }
 
     @Test
     public void preCompressed() {
-        assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("image.png.gz", true))).isTrue();
-        assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("/static/image.png.br", true))).isTrue();
-        assertThat(MediaType.OCTET_STREAM.is(MimeTypeUtil.guessFromPath("image.png.gz", false))).isTrue();
+        assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("image.png.gz", "gzip"))).isTrue();
+        assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("/static/image.png.br", "brotli"))).isTrue();
+        assertThat(MediaType.OCTET_STREAM.is(MimeTypeUtil.guessFromPath("image.png.gz", "identity"))).isTrue();
+        assertThat(MediaType.OCTET_STREAM.is(MimeTypeUtil.guessFromPath("image.png.gz", null))).isTrue();
     }
 
     @Test
-    public void guessed() {
-        assertThat(MediaType.ZIP.is(MimeTypeUtil.guessFromPath("bundle.zip", false))).isTrue();
+    public void guessedByJdk() {
+        assertThat(MediaType.ZIP.is(MimeTypeUtil.guessFromPath("bundle.zip"))).isTrue();
     }
 
     @Test
-    public void unknown() {
-        assertThat(MimeTypeUtil.guessFromPath("unknown.extension", false)).isNull();
+    public void unknownExtension() {
+        assertThat(MimeTypeUtil.guessFromPath("unknown.extension")).isNull();
     }
 }

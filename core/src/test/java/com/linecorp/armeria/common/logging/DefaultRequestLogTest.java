@@ -27,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -37,7 +38,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.channel.Channel;
-import io.netty.util.AsciiString;
 
 public class DefaultRequestLogTest {
 
@@ -134,7 +134,7 @@ public class DefaultRequestLogTest {
         assertThat(log.requestFirstBytesTransferredTimeNanos())
                 .isEqualTo(child.requestFirstBytesTransferredTimeNanos());
 
-        final HttpHeaders foo = HttpHeaders.of(AsciiString.of("foo"), "foo");
+        final HttpHeaders foo = HttpHeaders.of(HttpHeaderNames.of("foo"), "foo");
         child.requestHeaders(foo);
         assertThat(log.requestHeaders()).isSameAs(foo);
 
@@ -157,7 +157,7 @@ public class DefaultRequestLogTest {
         assertThatThrownBy(() -> log.responseFirstBytesTransferredTimeNanos())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
-        final HttpHeaders bar = HttpHeaders.of(AsciiString.of("bar"), "bar");
+        final HttpHeaders bar = HttpHeaders.of(HttpHeaderNames.of("bar"), "bar");
         child.responseHeaders(bar);
         assertThatThrownBy(() -> log.responseHeaders())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);

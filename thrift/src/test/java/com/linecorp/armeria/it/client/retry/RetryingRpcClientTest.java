@@ -40,7 +40,6 @@ import org.junit.Test;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.ClosedClientFactoryException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -168,7 +167,9 @@ public class RetryingRpcClientTest {
         // The next retry will be after 8 seconds so closing the factory after 3 seconds should work.
         Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 3, TimeUnit.SECONDS);
         assertThatThrownBy(() -> client.hello("hello"))
-                .isInstanceOf(ClosedClientFactoryException.class);
+                .isInstanceOf(IllegalStateException.class)
+                .satisfies(cause -> assertThat(cause.getMessage()).matches(
+                        "(?i).*(factory has been closed|not accepting a task).*"));
     }
 
     @Test

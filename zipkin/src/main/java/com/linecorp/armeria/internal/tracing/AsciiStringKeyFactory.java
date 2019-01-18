@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.tracing;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 
 import brave.propagation.Propagation;
@@ -30,6 +31,6 @@ public enum AsciiStringKeyFactory implements Propagation.KeyFactory<AsciiString>
 
     @Override
     public AsciiString create(String name) {
-        return AsciiString.of(name);
+        return HttpHeaderNames.of(name);
     }
 }

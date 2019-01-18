@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
@@ -27,6 +28,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
 
 import com.google.common.base.Ascii;
 
@@ -71,6 +74,13 @@ public final class VirtualHost {
     private final Router<ServiceConfig> router;
     private final MediaTypeSet producibleMediaTypes;
 
+    /**
+     * If {@code accessLogger} is {@code null}, it is initialized later
+     * by {@link ServerBuilder} via {@link #accessLogger(Logger)}.
+     */
+    @Nullable
+    private Logger accessLogger;
+
     @Nullable
     private String strVal;
 
@@ -83,12 +93,27 @@ public final class VirtualHost {
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {});
+             (virtualHost, mapping, existingMapping) -> {}, null);
+    }
+
+    VirtualHost(String defaultHostname, String hostnamePattern,
+                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
+                MediaTypeSet producibleMediaTypes, Function<VirtualHost, Logger> accessLoggerMapper) {
+        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
+             (virtualHost, mapping, existingMapping) -> {}, accessLoggerMapper);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
+        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
+             rejectionHandler, null);
+    }
+
+    VirtualHost(String defaultHostname, String hostnamePattern,
+                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
+                MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler,
+                Function<VirtualHost, Logger> accessLoggerMapper) {
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
@@ -110,6 +135,11 @@ public final class VirtualHost {
 
         services = Collections.unmodifiableList(servicesCopy);
         router = Routers.ofVirtualHost(this, services, rejectionHandler);
+        if (accessLoggerMapper != null) {
+            accessLogger = accessLoggerMapper.apply(this);
+            checkState(accessLogger != null,
+                       "accessLoggerMapper.apply() has returned null for virtual host: %s.", hostnamePattern);
+        }
     }
 
     /**
@@ -206,6 +236,26 @@ public final class VirtualHost {
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.router.virtualHostCache",
                                                          "hostnamePattern", hostnamePattern);
         router.registerMetrics(registry, idPrefix);
+    }
+
+    /**
+     * Sets the {@link Logger} which is used for writing access logs of this virtual host.
+     */
+    void accessLogger(Logger logger) {
+        accessLogger = requireNonNull(logger, "logger");
+    }
+
+    /**
+     * Returns the {@link Logger} which is used for writing access logs of this virtual host.
+     */
+    public Logger accessLogger() {
+        checkState(accessLogger != null, "accessLogger not initialized yet.");
+        return accessLogger;
+    }
+
+    @Nullable
+    Logger accessLoggerOrNull() {
+        return accessLogger;
     }
 
     /**

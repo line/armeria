@@ -88,7 +88,6 @@ import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty.util.AsciiString;
 
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
@@ -457,7 +456,7 @@ final class AnnotatedValueResolver {
                 .supportContainer(true)
                 .description(description)
                 .resolver(resolver(
-                        ctx -> ctx.request().headers().getAll(AsciiString.of(name)),
+                        ctx -> ctx.request().headers().getAll(HttpHeaderNames.of(name)),
                         () -> "Cannot resolve a value from HTTP header: " + name))
                 .build();
     }

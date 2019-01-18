@@ -1,4 +1,4 @@
-package example.springframework.boot.webflux;
+package example.springframework.boot.minimal;
 
 import javax.validation.constraints.Size;
 
@@ -10,7 +10,7 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
 
 /**
- * Note that this is not a Spring WebFlux-based component but an annotated HTTP service that leverages
+ * Note that this is not a Spring-based component but an annotated HTTP service that leverages
  * Armeria's built-in annotations.
  *
  * @see <a href="https://line.github.io/armeria/server-annotated-service.html">Annotated HTTP Service</a>

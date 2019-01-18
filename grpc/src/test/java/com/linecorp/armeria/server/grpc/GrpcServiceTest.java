@@ -43,8 +43,6 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.netty.util.AsciiString;
-
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
 public class GrpcServiceTest {
 
@@ -112,8 +110,8 @@ public class GrpcServiceTest {
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.OK)
                            .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
-                           .set(AsciiString.of("grpc-status"), "12")
-                           .set(AsciiString.of("grpc-message"),
+                           .set(HttpHeaderNames.of("grpc-status"), "12")
+                           .set(HttpHeaderNames.of("grpc-message"),
                                 "Method not found: grpc.testing.TestService/FooCall")
                            .set(HttpHeaderNames.CONTENT_LENGTH, "0"),
                 HttpData.EMPTY_DATA));

@@ -17,8 +17,8 @@
 package com.linecorp.armeria.server;
 
 /**
- * A skeletal {@link ServerListener} implementation to minimize the effort to implement this interface.
- * Extend this class to implement only few of the provided listener methods.
+ * A skeletal {@link ServerListener} implementation in order for a user to implement only the methods
+ * what he or she really needs.
  */
 public class ServerListenerAdapter implements ServerListener {
     @Override

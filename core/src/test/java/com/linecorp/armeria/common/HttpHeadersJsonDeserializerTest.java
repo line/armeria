@@ -30,7 +30,7 @@ import io.netty.util.AsciiString;
 
 public class HttpHeadersJsonDeserializerTest {
 
-    private static final AsciiString NAME = AsciiString.of("a");
+    private static final AsciiString NAME = HttpHeaderNames.of("a");
 
     private static final ObjectMapper mapper = new ObjectMapper();
 

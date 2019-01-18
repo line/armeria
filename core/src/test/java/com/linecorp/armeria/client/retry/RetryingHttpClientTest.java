@@ -44,7 +44,6 @@ import com.google.common.base.Stopwatch;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClosedClientFactoryException;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -410,7 +409,9 @@ public class RetryingHttpClientTest {
         // The next retry will be after 8 seconds so closing the factory after 3 seconds should work.
         Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 3, TimeUnit.SECONDS);
         assertThatThrownBy(() -> client.get("/service-unavailable").aggregate().join())
-                .hasCauseInstanceOf(ClosedClientFactoryException.class);
+                .hasCauseInstanceOf(IllegalStateException.class)
+                .satisfies(cause -> assertThat(cause.getCause().getMessage()).matches(
+                        "(?i).*(factory has been closed|not accepting a task).*"));
     }
 
     @Test

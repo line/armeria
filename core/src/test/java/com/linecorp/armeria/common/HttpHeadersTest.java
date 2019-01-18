@@ -17,11 +17,11 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
+import static com.linecorp.armeria.common.HttpHeaderNames.of;
 import static com.linecorp.armeria.common.MediaType.ANY_APPLICATION_TYPE;
 import static com.linecorp.armeria.common.MediaType.ANY_AUDIO_TYPE;
 import static com.linecorp.armeria.common.MediaType.ANY_TEXT_TYPE;
 import static com.linecorp.armeria.common.MediaType.ANY_TYPE;
-import static io.netty.util.AsciiString.of;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

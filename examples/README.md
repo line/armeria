@@ -6,6 +6,9 @@
 - `saml-service-provider`
   - Learn how to use Armeria SAML module.
 
+- `spring-boot-minimal`
+  - Learn how to use Armeria with the minimal Spring Boot dependencies.
+
 - `spring-boot-tomcat`
   - Learn how to make Armeria serve your Spring Boot web application.
 

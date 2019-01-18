@@ -13,20 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.file;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.time.Clock;
 
 import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.HttpData;
 
 final class ClassPathHttpVfs extends AbstractHttpVfs {
 
@@ -52,56 +45,15 @@ final class ClassPathHttpVfs extends AbstractHttpVfs {
     }
 
     @Override
-    public Entry get(String path, @Nullable String contentEncoding) {
+    public HttpFile get(String path, Clock clock,
+                        @Nullable String contentEncoding) {
         final String resourcePath = rootDir.isEmpty() ? path.substring(1) : rootDir + path;
-        final URL url = classLoader.getResource(resourcePath);
-        if (url == null || url.getPath().endsWith("/")) {
-            return Entry.NONE;
-        }
-
-        final Entry entry;
-        // Convert to a real file if possible.
-        if ("file".equals(url.getProtocol())) {
-            File f;
-            try {
-                f = new File(url.toURI());
-            } catch (URISyntaxException ignored) {
-                f = new File(url.getPath());
-            }
-
-            entry = new FileSystemHttpVfs.FileSystemEntry(f, path, contentEncoding);
-        } else {
-            entry = new ClassPathEntry(url, path, contentEncoding);
-        }
-
-        return entry;
+        final HttpFileBuilder builder = HttpFileBuilder.ofResource(classLoader, resourcePath);
+        return FileSystemHttpVfs.build(builder, clock, path, contentEncoding);
     }
 
     @Override
     public String meterTag() {
         return "classpath:" + rootDir;
-    }
-
-    static final class ClassPathEntry extends AbstractEntry {
-
-        private final URL url;
-        private final long lastModifiedMillis = System.currentTimeMillis();
-
-        ClassPathEntry(URL url, String path, @Nullable String contentEncoding) {
-            super(path, contentEncoding);
-            this.url = url;
-        }
-
-        @Override
-        public long lastModifiedMillis() {
-            return lastModifiedMillis;
-        }
-
-        @Override
-        public HttpData readContent() throws IOException {
-            try (InputStream in = url.openStream()) {
-                return readContent(in);
-            }
-        }
     }
 }

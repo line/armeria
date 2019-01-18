@@ -36,7 +36,7 @@ interface HttpSession {
         }
 
         @Override
-        public boolean isActive() {
+        public boolean canSendRequest() {
             return false;
         }
 
@@ -76,7 +76,7 @@ interface HttpSession {
     @Nullable
     SessionProtocol protocol();
 
-    boolean isActive();
+    boolean canSendRequest();
 
     InboundTrafficController inboundTrafficController();
 

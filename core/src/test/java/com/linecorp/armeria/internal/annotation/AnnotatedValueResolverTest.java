@@ -73,8 +73,8 @@ public class AnnotatedValueResolverTest {
                                                                       "sensitive");
 
     // 'headerValues' will be returned.
-    static final Set<AsciiString> existingHttpHeaders = ImmutableSet.of(AsciiString.of("header1"),
-                                                                        AsciiString.of("header2"));
+    static final Set<AsciiString> existingHttpHeaders = ImmutableSet.of(HttpHeaderNames.of("header1"),
+                                                                        HttpHeaderNames.of("header2"));
     static final List<String> headerValues = ImmutableList.of("value1",
                                                               "value3",
                                                               "value2");
@@ -118,7 +118,7 @@ public class AnnotatedValueResolverTest {
 
     static boolean shouldHttpHeaderExist(AnnotatedValueResolver element) {
         return element.shouldExist() ||
-               existingHttpHeaders.contains(AsciiString.of(element.httpElementName()));
+               existingHttpHeaders.contains(HttpHeaderNames.of(element.httpElementName()));
     }
 
     static boolean shouldHttpParameterExist(AnnotatedValueResolver element) {

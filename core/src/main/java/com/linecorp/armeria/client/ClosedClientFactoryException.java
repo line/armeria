@@ -22,8 +22,11 @@ import com.linecorp.armeria.common.util.Exceptions;
 /**
  * A {@link RuntimeException} raised when a {@link Client} is executing and the {@link ClientFactory} which the
  * {@link Client} is using is closed.
+ *
+ * @deprecated {@link IllegalStateException} with a message will be raised.
  */
-public final class ClosedClientFactoryException extends RuntimeException {
+@Deprecated
+public final class ClosedClientFactoryException extends IllegalStateException {
 
     private static final long serialVersionUID = 6865054624299408503L;
 

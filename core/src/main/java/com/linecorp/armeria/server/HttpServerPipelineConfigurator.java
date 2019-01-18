@@ -90,8 +90,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private static final int SSL_RECORD_HEADER_LENGTH = 5;
 
-    private static final AsciiString SCHEME_HTTP = AsciiString.of("http");
-    private static final AsciiString SCHEME_HTTPS = AsciiString.of("https");
+    private static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
+    private static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
 
     private static final int UPGRADE_REQUEST_MAX_LENGTH = 16384;
 

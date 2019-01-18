@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
-import io.netty.util.AsciiString;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -79,7 +78,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     @Override
     protected void applyHeaders() {
         // Copy the HTTP headers which were specified by a user to the Armeria request.
-        getHeaders().forEach((name, values) -> headers.set(AsciiString.of(name), values));
+        getHeaders().forEach((name, values) -> headers.set(HttpHeaderNames.of(name), values));
         setDefaultRequestHeaders(headers);
     }
 

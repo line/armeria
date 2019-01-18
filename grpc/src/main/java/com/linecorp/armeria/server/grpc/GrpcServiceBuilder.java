@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 
@@ -68,6 +69,8 @@ public final class GrpcServiceBuilder {
     private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
     private boolean enableUnframedRequests;
+
+    private boolean useBlockingTaskExecutor;
 
     private boolean unsafeWrapRequestBuffers;
 
@@ -178,6 +181,17 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether the service executes service methods using the blocking executor. By default, service
+     * methods are executed directly on the event loop for implementing fully asynchronous services. If your
+     * service uses blocking logic, you should either execute such logic in a separate thread using something
+     * like {@link Executors#newCachedThreadPool()} or enable this setting.
+     */
+    public GrpcServiceBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        return this;
+    }
+
+    /**
      * Enables unsafe retention of request buffers. Can improve performance when working with very large
      * (i.e., several megabytes) payloads.
      *
@@ -220,6 +234,7 @@ public final class GrpcServiceBuilder {
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
                 maxOutboundMessageSizeBytes,
+                useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
