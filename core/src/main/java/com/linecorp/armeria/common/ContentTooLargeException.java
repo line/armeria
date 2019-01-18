@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -26,7 +28,7 @@ public final class ContentTooLargeException extends RuntimeException {
     private static final long serialVersionUID = 4901614315474105954L;
 
     private static final ContentTooLargeException INSTANCE =
-            Exceptions.clearTrace(new ContentTooLargeException());
+            Exceptions.clearTrace(new ContentTooLargeException(null));
 
     /**
      * Returns a {@link ContentTooLargeException} which may be a singleton or a new instance, depending on
@@ -37,4 +39,8 @@ public final class ContentTooLargeException extends RuntimeException {
     }
 
     private ContentTooLargeException() {}
+
+    private ContentTooLargeException(@Nullable Throwable cause) {
+        super(cause);
+    }
 }

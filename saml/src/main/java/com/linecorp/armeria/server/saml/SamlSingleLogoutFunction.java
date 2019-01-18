@@ -127,7 +127,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
         }
     }
 
-    private HttpResponse fail(ServiceRequestContext ctx, Throwable cause) {
+    private static HttpResponse fail(ServiceRequestContext ctx, Throwable cause) {
         logger.warn("{} Cannot handle a logout request", ctx, cause);
         return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
     }
@@ -149,8 +149,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
         }
     }
 
-    private HttpResponse respond(LogoutResponse logoutResponse,
-                                 SamlEndpoint sloResEndpoint) throws SamlException {
+    private HttpResponse respond(LogoutResponse logoutResponse, SamlEndpoint sloResEndpoint) {
         if (sloResEndpoint.bindingProtocol() == SamlBindingProtocol.HTTP_REDIRECT) {
             return responseWithLocation(toRedirectionUrl(
                     logoutResponse, sloResEndpoint.toUriString(), SAML_RESPONSE,
@@ -165,7 +164,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
     }
 
     private SamlIdentityProviderConfig validateAndGetIdPConfig(LogoutRequest logoutRequest,
-                                                               String endpointUri) throws SamlException {
+                                                               String endpointUri) {
         final String issuer = logoutRequest.getIssuer().getValue();
         if (issuer == null) {
             throw new SamlException("no issuer found from the logout request: " + logoutRequest.getID());

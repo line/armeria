@@ -16,8 +16,15 @@
 
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
 /**
  * A {@link RuntimeException} that is raised when a requested invocation did not complete before its deadline.
+ *
+ * <p>Note that this exception does not provide a stack trace even if
+ * {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled
+ * because timeouts often occur massively when the system is under high load and
+ * capturing the stack trace is an expensive operation that only makes the situation worse.</p>
  */
 public class TimeoutException extends RuntimeException {
     private static final long serialVersionUID = 2887898788270995289L;
@@ -30,21 +37,21 @@ public class TimeoutException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public TimeoutException(String message) {
+    public TimeoutException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public TimeoutException(String message, Throwable cause) {
+    public TimeoutException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public TimeoutException(Throwable cause) {
+    public TimeoutException(@Nullable Throwable cause) {
         super(cause);
     }
 
@@ -52,13 +59,13 @@ public class TimeoutException extends RuntimeException {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    protected TimeoutException(String message, Throwable cause, boolean enableSuppression,
-                               boolean writableStackTrace) {
+    protected TimeoutException(@Nullable String message, @Nullable Throwable cause,
+                               boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 
     @Override
-    public Throwable fillInStackTrace() {
+    public final Throwable fillInStackTrace() {
         return this;
     }
 }

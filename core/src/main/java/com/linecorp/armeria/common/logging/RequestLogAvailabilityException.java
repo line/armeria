@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import javax.annotation.Nullable;
+
 /**
  * A {@link RuntimeException} raised when accessing a {@link RequestLog} property that's not available yet.
  */
@@ -31,21 +33,21 @@ public class RequestLogAvailabilityException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public RequestLogAvailabilityException(String message) {
+    public RequestLogAvailabilityException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public RequestLogAvailabilityException(String message, Throwable cause) {
+    public RequestLogAvailabilityException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public RequestLogAvailabilityException(Throwable cause) {
+    public RequestLogAvailabilityException(@Nullable Throwable cause) {
         super(cause);
     }
 
@@ -53,8 +55,8 @@ public class RequestLogAvailabilityException extends RuntimeException {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    protected RequestLogAvailabilityException(
-            String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    protected RequestLogAvailabilityException(@Nullable String message, @Nullable Throwable cause,
+                                              boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

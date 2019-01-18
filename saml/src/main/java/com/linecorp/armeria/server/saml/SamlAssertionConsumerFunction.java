@@ -56,7 +56,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 final class SamlAssertionConsumerFunction implements SamlServiceFunction {
 
-    private static long MILLIS_IN_MINUTE = TimeUnit.MINUTES.toMillis(1);
+    private static final long MILLIS_IN_MINUTE = TimeUnit.MINUTES.toMillis(1);
 
     private final SamlAssertionConsumerConfig cfg;
     private final String entityId;
@@ -112,7 +112,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
         }
     }
 
-    private SamlIdentityProviderConfig resolveIdpConfig(Issuer issuer) throws SamlException {
+    private SamlIdentityProviderConfig resolveIdpConfig(Issuer issuer) {
         final String value = issuer.getValue();
         if (value != null) {
             final SamlIdentityProviderConfig config = idpConfigs.get(value);
@@ -124,7 +124,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                                 issuer.getValue());
     }
 
-    private Assertion getValidatedAssertion(Response response, String endpointUri) throws SamlException {
+    private Assertion getValidatedAssertion(Response response, String endpointUri) {
         final Status status = response.getStatus();
         final String statusCode = status.getStatusCode().getValue();
         if (!StatusCode.SUCCESS.equals(statusCode)) {
@@ -260,7 +260,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
     }
 
     private static Assertion decryptAssertion(EncryptedAssertion encryptedAssertion,
-                                              Credential decryptionCredential) throws SamlException {
+                                              Credential decryptionCredential) {
         final StaticKeyInfoCredentialResolver keyInfoCredentialResolver =
                 new StaticKeyInfoCredentialResolver(decryptionCredential);
         final Decrypter decrypter =

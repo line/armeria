@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client;
 
+import javax.annotation.Nullable;
+
 /**
  * A {@link RuntimeException} raised when the client received a response with an unexpected status code.
  */
@@ -29,21 +31,21 @@ public class InvalidResponseException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public InvalidResponseException(String message, Throwable cause) {
+    public InvalidResponseException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public InvalidResponseException(String message) {
+    public InvalidResponseException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public InvalidResponseException(Throwable cause) {
+    public InvalidResponseException(@Nullable Throwable cause) {
         super(cause);
     }
 
@@ -51,8 +53,8 @@ public class InvalidResponseException extends RuntimeException {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    protected InvalidResponseException(String message, Throwable cause, boolean enableSuppression,
-                                       boolean writableStackTrace) {
+    protected InvalidResponseException(@Nullable String message, @Nullable Throwable cause,
+                                       boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

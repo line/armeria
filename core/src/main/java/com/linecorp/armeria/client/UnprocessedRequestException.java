@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -31,7 +33,7 @@ public final class UnprocessedRequestException extends RuntimeException {
     private static final long serialVersionUID = 4679512839715213302L;
 
     private static final UnprocessedRequestException INSTANCE =
-            Exceptions.clearTrace(new UnprocessedRequestException());
+            Exceptions.clearTrace(new UnprocessedRequestException(null));
 
     /**
      * Returns a {@link UnprocessedRequestException} which may be a singleton or a new instance, depending on
@@ -41,8 +43,9 @@ public final class UnprocessedRequestException extends RuntimeException {
         return Flags.verboseExceptions() ? new UnprocessedRequestException() : INSTANCE;
     }
 
-    /**
-     * Creates a new instance.
-     */
     private UnprocessedRequestException() {}
+
+    private UnprocessedRequestException(@Nullable Throwable cause) {
+        super(cause);
+    }
 }
