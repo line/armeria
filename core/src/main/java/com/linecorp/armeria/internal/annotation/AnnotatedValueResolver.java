@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.uniqueResolverSet;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.warnRedundantUse;
 import static com.linecorp.armeria.internal.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
@@ -45,6 +47,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -248,7 +251,6 @@ final class AnnotatedValueResolver {
 
             resolver = Optional.empty();
         }
-
         //
         // If there is no annotation on the constructor or method, try to check whether it has
         // annotated parameters. e.g.
@@ -292,6 +294,18 @@ final class AnnotatedValueResolver {
                                                         constructorOrMethod.toGenericString());
             }
         }
+        //
+        // If there are annotations used more than once on the constructor or method, warn it.
+        //
+        // class RequestBean {
+        //     RequestBean(@Param("serialNo") Long serialNo, @Param("serialNo") Long serialNo2) { ... }
+        // }
+        //
+        // or
+        //
+        // void setter(@Param("serialNo") Long serialNo, @Param("serialNo") Long serialNo2) { ... }
+        //
+        warnOnRedundantUse(constructorOrMethod, list);
         return list;
     }
 
@@ -408,6 +422,16 @@ final class AnnotatedValueResolver {
         return element.isAnnotationPresent(Param.class) ||
                element.isAnnotationPresent(Header.class) ||
                element.isAnnotationPresent(RequestObject.class);
+    }
+
+    private static void warnOnRedundantUse(Executable constructorOrMethod,
+                                           List<AnnotatedValueResolver> list) {
+        final TreeSet<AnnotatedValueResolver> uniques = uniqueResolverSet();
+        list.forEach(element -> {
+            if (!uniques.add(element)) {
+                warnRedundantUse(element, constructorOrMethod.toGenericString());
+            }
+        });
     }
 
     private static AnnotatedValueResolver ofPathVariable(String name,

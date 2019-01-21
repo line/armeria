@@ -160,6 +160,13 @@ public class AnnotatedHttpServiceRequestConverterTest {
             return mapper.writeValueAsString(bean3);
         }
 
+        @Get("/default/bean4")
+        public String defaultBean4(RequestBean4 bean4)
+                throws JsonProcessingException {
+            assertThat(bean4).isNotNull();
+            return mapper.writeValueAsString(bean4);
+        }
+
         @Post("/default/json")
         public String defaultJson(RequestJsonObj1 obj1,
                                   RequestJsonObj2 obj2) {
@@ -474,8 +481,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
     }
 
     static class RequestBean2 extends AbstractRequestBean {
-        // test case: field with annotation
-        @Param("serialNo")
+
         private final Long serialNo;
 
         private final String uid;
@@ -497,6 +503,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
     }
 
     static class RequestBean3 extends AbstractRequestBean {
+
         private int departmentNo = Integer.MIN_VALUE;
 
         // test case: constructor with annotations
@@ -510,6 +517,49 @@ public class AnnotatedHttpServiceRequestConverterTest {
             super.validate();
 
             assertThat(departmentNo).isNotEqualTo(Integer.MIN_VALUE);
+        }
+    }
+
+    static class RequestBean4 {
+        private int foo;
+
+        // This field is not set because the foo param is already used in the constructor.
+        @Param("foo")
+        private int foo1;
+
+        private int foo2;
+
+        private int foo3;
+
+        RequestBean4(@Param("foo") int foo) {
+            this.foo = foo;
+        }
+
+        // @Param("foo") is used redundantly,
+        // but the foo2 will be injected because otherwise we cannot inject the foo3.
+        public void setFoo(@Param("foo") int foo2, @Header("foo") int foo3) {
+            this.foo2 = foo2;
+            this.foo3 = foo3;
+        }
+
+        @JsonProperty
+        public int getFoo() {
+            return foo;
+        }
+
+        @JsonProperty
+        public int getFoo1() {
+            return foo1;
+        }
+
+        @JsonProperty
+        public int getFoo2() {
+            return foo2;
+        }
+
+        @JsonProperty
+        public int getFoo3() {
+            return foo3;
         }
     }
 
@@ -855,5 +905,22 @@ public class AnnotatedHttpServiceRequestConverterTest {
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         // Response is encoded as UTF-8.
         assertThat(response.content().array()).isEqualTo(utf8);
+    }
+
+    @Test
+    public void testRedundantlyUsedParameters() throws Exception {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final ObjectMapper mapper = new ObjectMapper();
+        final RequestBean4 expectedRequestBean = new RequestBean4(100);
+        expectedRequestBean.foo2 = 100;
+        expectedRequestBean.foo3 = 200;
+        final String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
+
+        final HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.GET, "/2/default/bean4?foo=100")
+                                                  .setObject(HttpHeaderNames.of("foo"), 200);
+
+        final AggregatedHttpMessage response = client.execute(reqHeaders).aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
     }
 }
