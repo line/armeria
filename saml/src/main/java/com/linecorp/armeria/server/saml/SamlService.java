@@ -178,7 +178,7 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
          *
          * @throws SamlException if a parameter with the specified {@code name} does not exist
          */
-        String getFirstValue(String name) throws SamlException {
+        String getFirstValue(String name) {
             final String value = getFirstValueOrNull(name);
             if (value == null) {
                 throw new SamlException("failed to get the value of a parameter: " + name);

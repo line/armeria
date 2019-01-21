@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.Flags;
@@ -30,7 +32,7 @@ public final class AbortedStreamException extends RuntimeException {
     private static final long serialVersionUID = -5271590540551141199L;
 
     private static final AbortedStreamException INSTANCE =
-            Exceptions.clearTrace(new AbortedStreamException());
+            Exceptions.clearTrace(new AbortedStreamException(null));
 
     /**
      * Returns a {@link AbortedStreamException} which may be a singleton or a new instance, depending on
@@ -41,4 +43,8 @@ public final class AbortedStreamException extends RuntimeException {
     }
 
     private AbortedStreamException() {}
+
+    private AbortedStreamException(@Nullable Throwable cause) {
+        super(cause);
+    }
 }

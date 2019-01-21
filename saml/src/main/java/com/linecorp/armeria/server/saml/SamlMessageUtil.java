@@ -86,7 +86,7 @@ final class SamlMessageUtil {
         return (T) builder(key).buildObject();
     }
 
-    static Element serialize(XMLObject message) throws SamlException {
+    static Element serialize(XMLObject message) {
         requireNonNull(message, "message");
 
         if (message.getDOM() != null) {
@@ -109,7 +109,7 @@ final class SamlMessageUtil {
         }
     }
 
-    static XMLObject deserialize(byte[] bytes) throws SamlException {
+    static XMLObject deserialize(byte[] bytes) {
         requireNonNull(bytes, "bytes");
         final ParserPool parserPool = XMLObjectProviderRegistrySupport.getParserPool();
         assert parserPool != null;
@@ -126,8 +126,7 @@ final class SamlMessageUtil {
      * Signs the specified {@link SignableSAMLObject} with the specified {@link Credential} and
      * {@code signatureAlgorithm}.
      */
-    static void sign(SignableSAMLObject signableObj,
-                     Credential signingCredential, String signatureAlgorithm) throws SamlException {
+    static void sign(SignableSAMLObject signableObj, Credential signingCredential, String signatureAlgorithm) {
         requireNonNull(signableObj, "signableObj");
         requireNonNull(signingCredential, "signingCredential");
         requireNonNull(signatureAlgorithm, "signatureAlgorithm");
@@ -152,8 +151,7 @@ final class SamlMessageUtil {
         }
     }
 
-    static void validateSignature(Credential validationCredential,
-                                  SignableSAMLObject signableObj) throws SamlException {
+    static void validateSignature(Credential validationCredential, SignableSAMLObject signableObj) {
         requireNonNull(validationCredential, "validationCredential");
         requireNonNull(signableObj, "signableObj");
 

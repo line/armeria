@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link TimeoutException} raised when a request has not been received from a client within timeout.
@@ -27,19 +25,16 @@ public final class RequestTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2556616197251937869L;
 
-    private static final RequestTimeoutException INSTANCE =
-            Exceptions.clearTrace(new RequestTimeoutException());
+    private static final RequestTimeoutException INSTANCE = new RequestTimeoutException();
 
     /**
-     * Returns a {@link RequestTimeoutException} which may be a singleton or a new instance, depending on
-     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * Returns a singleton {@link RequestTimeoutException}.
      */
     public static RequestTimeoutException get() {
-        return Flags.verboseExceptions() ? new RequestTimeoutException() : INSTANCE;
+        return INSTANCE;
     }
 
-    /**
-     * Creates a new instance.
-     */
-    private RequestTimeoutException() {}
+    private RequestTimeoutException() {
+        super((Throwable) null);
+    }
 }
