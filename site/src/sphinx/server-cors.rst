@@ -19,15 +19,15 @@ To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forA
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
-        HttpService myService = (ctx, req) -> ...;
-        ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
-                CorsServiceBuilder.forAnyOrigin()
-                                  .allowCredentials()
-                                  .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                                  .allowRequestHeaders("allow_request_header")
-                                  .exposeHeaders("expose_header_1", "expose_header_2")
-                                  .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                                  .newDecorator()));
+    HttpService myService = (ctx, req) -> ...;
+    ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
+            CorsServiceBuilder.forAnyOrigin()
+                              .allowCredentials()
+                              .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                              .allowRequestHeaders("allow_request_header")
+                              .exposeHeaders("expose_header_1", "expose_header_2")
+                              .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                              .newDecorator()));
 
 
 
