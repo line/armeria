@@ -39,6 +39,11 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Cors;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.KeyValue;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class HttpServerCorsTest {
@@ -111,8 +116,55 @@ public class HttpServerCorsTest {
                                       .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                                       .maxAge(3600)
                                       .newDecorator()));
+            sb.annotatedService("/annotate-cors1", new Object() {
+
+                @Get("/any/get")
+                @Cors(origins = "*", exposedHeaders = { "expose_header_1", "expose_header_2" },
+                        allowedRequestHeaders = { "allow_request_1", "allow_request_2" },
+                        allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
+                        preflightRequestHeaders = {
+                                @KeyValue(key = "x-preflight-cors", value = "Hello CORS")
+                        })
+                public HttpResponse anyoneGet() {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+
+                @Post("/one/post")
+                @Cors(origins = "http://example.com", exposedHeaders = { "expose_header_1", "expose_header_2" },
+                        shortCircuit = true, allowedRequestMethods = HttpMethod.POST, credentialAllowed = true,
+                        allowedRequestHeaders = { "allow_request_1", "allow_request_2" }, maxAge = 1800,
+                        preflightRequestHeaders = { @KeyValue(key = "x-preflight-cors", value = "Hello CORS") })
+                public HttpResponse onePolicyPost() {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+
+                @Get("/multi/get")
+                @CorsDecorator(value = {
+                        @Cors(origins = "http://example.com", exposedHeaders = { "expose_header_1" },
+                                allowedRequestMethods = HttpMethod.GET, credentialAllowed = true),
+                        @Cors(origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
+                                allowedRequestMethods = HttpMethod.GET, credentialAllowed = true)
+                }, shortCircuit = true)
+                public HttpResponse multiGet() {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            });
         }
     };
+
+    @Test
+    public void testCorsDecoratorAnnotation() {
+        final HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
+        final AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.OPTIONS, "/annotate-cors1/any/get")
+                           .set(HttpHeaderNames.ACCEPT, "utf-8")
+                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET")
+        ).aggregate().join();
+        assertEquals(HttpStatus.OK, response.status());
+        assertEquals("allow_request_1,allow_request_2",
+                     response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
+        assertEquals("*", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
 
     // Makes sure if it throws an Exception when an improper setting is set.
     @Test

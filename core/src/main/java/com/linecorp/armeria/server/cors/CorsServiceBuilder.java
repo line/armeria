@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.cors;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -68,12 +69,7 @@ public final class CorsServiceBuilder {
      * Creates a new builder with the specified origin.
      */
     public static CorsServiceBuilder forOrigin(String origin) {
-        requireNonNull(origin, "origin");
-
-        if ("*".equals(origin)) {
-            return forAnyOrigin();
-        }
-        return new CorsServiceBuilder(origin);
+        return forOrigins(origin);
     }
 
     /**
@@ -81,6 +77,12 @@ public final class CorsServiceBuilder {
      */
     public static CorsServiceBuilder forOrigins(String... origins) {
         requireNonNull(origins, "origins");
+        if (Arrays.asList(origins).contains("*")) {
+            if (origins.length > 1) {
+                logger.warn("Any origin (*) has been already included. Other origins will be ignored.");
+            }
+            return forAnyOrigin();
+        }
         return new CorsServiceBuilder(origins);
     }
 
@@ -110,6 +112,11 @@ public final class CorsServiceBuilder {
         policies = Collections.emptySet();
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this);
         policyBuilders = Collections.emptySet();
+    }
+
+    CorsServiceBuilder setConfig(Cors cors) {
+        firstPolicyBuilder.setConfig(cors);
+        return this;
     }
 
     private void ensureForNewPolicy() {
@@ -347,17 +354,6 @@ public final class CorsServiceBuilder {
         final ChainedCorsPolicyBuilder builder = new ChainedCorsPolicyBuilder(this, origins);
         policyBuilders.add(builder);
         return builder;
-    }
-
-    /**
-     * .
-     *
-     * @param cors {@link Cors} annotation for configuration
-     * @return {@code this} to support method chaining.
-     */
-    CorsServiceBuilder setConfig(Cors cors) {
-        firstPolicyBuilder.setConfig(cors);
-        return this;
     }
 
     /**

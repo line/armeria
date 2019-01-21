@@ -40,10 +40,5 @@ public @interface CorsDecorator {
     /**
      * .
      */
-    boolean anyOrigin() default false;
-
-    /**
-     * .
-     */
     boolean shortCircuit() default false;
 }

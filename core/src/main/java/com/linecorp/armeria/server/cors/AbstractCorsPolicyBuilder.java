@@ -81,6 +81,34 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
         return (B) this;
     }
 
+    B setConfig(Cors cors) {
+        if (cors.credentialAllowed()) {
+            allowCredentials();
+        }
+        if (cors.nullOriginAllowed()) {
+            allowNullOrigin();
+        }
+        if (cors.preflightRequestDisabled()) {
+            disablePreflightResponseHeaders();
+        }
+        if (cors.exposedHeaders().length > 0) {
+            exposeHeaders(cors.exposedHeaders());
+        }
+        if (cors.allowedRequestHeaders().length > 0) {
+            allowRequestHeaders(cors.allowedRequestHeaders());
+        }
+        if (cors.allowedRequestMethods().length > 0) {
+            allowRequestMethods(cors.allowedRequestMethods());
+        }
+        for (KeyValue keyValue : cors.preflightRequestHeaders()) {
+            preflightResponseHeader(keyValue.key(), keyValue.value());
+        }
+        if (cors.maxAge() > 0) {
+            maxAge(cors.maxAge());
+        }
+        return self();
+    }
+
     /**
      * Enables a successful CORS response with a {@code "null"} value for the CORS response header
      * {@code "Access-Control-Allow-Origin"}. Web browsers may set the {@code "Origin"} request header to
@@ -293,37 +321,6 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B disablePreflightResponseHeaders() {
         preflightResponseHeadersDisabled = true;
-        return self();
-    }
-
-    /**
-     * Sets.
-     *
-     * @param cors {@link Cors} annotation for configuration information.
-     */
-    B setConfig(Cors cors) {
-        if (cors.credentialAllowed()) {
-            allowCredentials();
-        }
-        if (cors.nullOriginAllowed()) {
-            allowNullOrigin();
-        }
-        if (cors.preflightRequestDisabled()) {
-            disablePreflightResponseHeaders();
-        }
-        if (cors.exposedHeaders().length > 0) {
-            exposeHeaders(cors.exposedHeaders());
-        }
-        if (cors.allowedRequestHeaders().length > 0) {
-            allowRequestHeaders(cors.allowedRequestHeaders());
-        }
-        if (cors.allowedRequestMethods().length > 0) {
-            allowRequestMethods(cors.allowedRequestMethods());
-        }
-        for (KeyValue keyValue : cors.preflightRequestHeaders()) {
-            preflightResponseHeader(keyValue.key(), keyValue.value());
-        }
-        maxAge(cors.maxAge());
         return self();
     }
 

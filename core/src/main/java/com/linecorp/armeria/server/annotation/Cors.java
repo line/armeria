@@ -33,7 +33,7 @@ public @interface Cors {
     /**
      * .
      */
-    String[] origins() default {};
+    String[] origins();
 
     /**
      * .

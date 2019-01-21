@@ -28,13 +28,7 @@ public final class CorsFactoryFunction implements DecoratorFactoryFunction<Cors>
     @Override
     public Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
     newDecorator(Cors parameter) {
-        final boolean anyOrigin = parameter.origins().length > 0 && "*".equals(parameter.origins()[0]);
-        final CorsServiceBuilder cb;
-        if (anyOrigin) {
-            cb = CorsServiceBuilder.forAnyOrigin();
-        } else {
-            cb = CorsServiceBuilder.forOrigins(parameter.origins());
-        }
+        final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(parameter.origins());
         if (parameter.shortCircuit()) {
             cb.shortCircuit();
         }
