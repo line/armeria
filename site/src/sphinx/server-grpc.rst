@@ -144,8 +144,7 @@ you build a :api:`GrpcService`:
     Server server = sb.build();
     server.start();
 
-Please refer to `Cross-Origin Resource Sharing (CORS) <https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS>`_
-by MDN for more information.
+Please refer to `Configuring CORS page <server-cors.html>`_ for more information.
 
 Unframed requests
 -----------------

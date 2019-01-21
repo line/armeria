@@ -1,7 +1,7 @@
 .. _server-cors:
 
 Configuring CORS
-========================
+================
 
 Armeria provides a way to configure Cross-origin resource sharing (CORS) policy for specific origins or
 any origin via :api:`CorsServiceBuilder`. For more information about CORS,
@@ -10,7 +10,7 @@ visit `Wikipedia's CORS page <https://en.wikipedia.org/wiki/Cross-origin_resourc
 
 Allowing any origin
 -------------------
-To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forAnyOrigin()``
+To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forAnyOrigin()``, e.g.
 
 .. code-block:: java
 
@@ -30,7 +30,7 @@ To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forA
                               .newDecorator()));
 
 Allowing specific origins
-------------------------------
+-------------------------
 To configure CORS Service allowing specific origins, use ``CorsServiceBuilder.forOrigins()`` or
 ``CorsServiceBuilder.forOrigin()``, e.g.
 
@@ -40,7 +40,7 @@ To configure CORS Service allowing specific origins, use ``CorsServiceBuilder.fo
     ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
             CorsServiceBuilder.forOrigins("http://example.com")
                               .allowCredentials()
-                              .allowNullOrigin() // this property will allow "null" origin
+                              .allowNullOrigin() // 'Origin: null' will be accepted.
                               .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
                               .allowRequestHeaders("allow_request_header")
                               .exposeHeaders("expose_header_1", "expose_header_2")
@@ -60,7 +60,7 @@ Call ``and()`` to return to :api:`CorsServiceBuilder` once you are done with bui
     ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
             CorsServiceBuilder.forOrigins("http://example.com")
                               .allowCredentials()
-                              .allowNullOrigin() // this property will allow "null" origin
+                              .allowNullOrigin() // 'Origin: null' will be accepted.
                               .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
                               .allowRequestHeaders("allow_request_header")
                               .exposeHeaders("expose_header_1", "expose_header_2")
@@ -88,7 +88,7 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
     ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
             CorsServiceBuilder.forOrigins("http://example.com")
                               .allowCredentials()
-                              .allowNullOrigin() // this property will allow "null" origin
+                              .allowNullOrigin() // 'Origin: null' will be accepted.
                               .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
                               .allowRequestHeaders("allow_request_header")
                               .exposeHeaders("expose_header_1", "expose_header_2")
