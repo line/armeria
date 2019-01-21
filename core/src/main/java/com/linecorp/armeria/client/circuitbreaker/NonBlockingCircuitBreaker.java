@@ -176,7 +176,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     private void notifyStateChanged(CircuitState circuitState) {
         config.listeners().forEach(listener -> {
             try {
-                listener.onStateChanged(this, circuitState);
+                listener.onStateChanged(name(), circuitState);
             } catch (Throwable t) {
                 logger.warn("An error occurred when notifying a StateChanged event", t);
             }
@@ -190,7 +190,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
 
     private void notifyCountUpdated(CircuitBreakerListener listener, EventCount count) {
         try {
-            listener.onEventCountUpdated(this, count);
+            listener.onEventCountUpdated(name(), count);
         } catch (Throwable t) {
             logger.warn("An error occurred when notifying an EventCountUpdated event", t);
         }
@@ -199,7 +199,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     private void notifyRequestRejected() {
         config.listeners().forEach(listener -> {
             try {
-                listener.onRequestRejected(this);
+                listener.onRequestRejected(name());
             } catch (Throwable t) {
                 logger.warn("An error occurred when notifying a RequestRejected event", t);
             }
