@@ -15,4 +15,4 @@ Writing a server
     server-http-file
     server-servlet
     server-access-log
-    server-cors-service
+    server-cors
