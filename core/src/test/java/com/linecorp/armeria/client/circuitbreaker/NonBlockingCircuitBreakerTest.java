@@ -190,10 +190,11 @@ public class NonBlockingCircuitBreakerTest {
         reset(listener);
 
         final NonBlockingCircuitBreaker cb = create(4, 0.5);
+        final String name = cb.name();
 
         // Notify initial state
-        verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
-        verify(listener, times(1)).onStateChanged(cb, CircuitState.CLOSED);
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(name, CircuitState.CLOSED);
         reset(listener);
 
         cb.onFailure();
@@ -201,7 +202,7 @@ public class NonBlockingCircuitBreakerTest {
         cb.onFailure();
 
         // Notify updated event count
-        verify(listener, times(1)).onEventCountUpdated(cb, new EventCount(0, 1));
+        verify(listener, times(1)).onEventCountUpdated(name, new EventCount(0, 1));
         reset(listener);
 
         // Notify circuit tripped
@@ -211,14 +212,14 @@ public class NonBlockingCircuitBreakerTest {
         ticker.advance(counterUpdateInterval.toNanos());
         cb.onFailure();
 
-        verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
-        verify(listener, times(1)).onStateChanged(cb, CircuitState.OPEN);
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(name, CircuitState.OPEN);
         reset(listener);
 
         // Notify request rejected
 
         cb.canRequest();
-        verify(listener, times(1)).onRequestRejected(cb);
+        verify(listener, times(1)).onRequestRejected(name);
 
         ticker.advance(circuitOpenWindow.toNanos());
 
@@ -226,15 +227,15 @@ public class NonBlockingCircuitBreakerTest {
 
         cb.canRequest();
 
-        verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
-        verify(listener, times(1)).onStateChanged(cb, CircuitState.HALF_OPEN);
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(name, CircuitState.HALF_OPEN);
         reset(listener);
 
         // Notify circuit closed
 
         cb.onSuccess();
 
-        verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
-        verify(listener, times(1)).onStateChanged(cb, CircuitState.CLOSED);
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(name, CircuitState.CLOSED);
     }
 }
