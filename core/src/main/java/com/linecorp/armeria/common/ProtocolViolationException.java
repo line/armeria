@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
 /**
  * A {@link RuntimeException} raised when a remote peer violated the current {@link SessionProtocol}.
  */
@@ -30,21 +32,21 @@ public class ProtocolViolationException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public ProtocolViolationException(String message) {
+    public ProtocolViolationException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public ProtocolViolationException(String message, Throwable cause) {
+    public ProtocolViolationException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public ProtocolViolationException(Throwable cause) {
+    public ProtocolViolationException(@Nullable Throwable cause) {
         super(cause);
     }
 
@@ -52,8 +54,8 @@ public class ProtocolViolationException extends RuntimeException {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    protected ProtocolViolationException(String message, Throwable cause, boolean enableSuppression,
-                                         boolean writableStackTrace) {
+    protected ProtocolViolationException(@Nullable String message, @Nullable Throwable cause,
+                                         boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 

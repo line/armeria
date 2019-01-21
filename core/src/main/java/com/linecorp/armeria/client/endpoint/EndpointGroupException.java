@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import javax.annotation.Nullable;
+
 /**
  * A {@link RuntimeException} raised when the resolution of an {@link EndpointGroup} fails.
  */
@@ -31,21 +33,21 @@ public class EndpointGroupException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public EndpointGroupException(String message, Throwable cause) {
+    public EndpointGroupException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public EndpointGroupException(String message) {
+    public EndpointGroupException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public EndpointGroupException(Throwable cause) {
+    public EndpointGroupException(@Nullable Throwable cause) {
         super(cause);
     }
 
@@ -53,8 +55,8 @@ public class EndpointGroupException extends RuntimeException {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    protected EndpointGroupException(String message, Throwable cause, boolean enableSuppression,
-                                     boolean writableStackTrace) {
+    protected EndpointGroupException(@Nullable String message, @Nullable Throwable cause,
+                                     boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

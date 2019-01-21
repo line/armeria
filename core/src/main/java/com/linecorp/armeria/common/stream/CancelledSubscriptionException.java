@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -31,7 +33,7 @@ public final class CancelledSubscriptionException extends RuntimeException {
     private static final long serialVersionUID = -7815958463104921571L;
 
     private static final CancelledSubscriptionException INSTANCE =
-            Exceptions.clearTrace(new CancelledSubscriptionException());
+            Exceptions.clearTrace(new CancelledSubscriptionException(null));
 
     /**
      * Returns a {@link CancelledSubscriptionException} which may be a singleton or a new instance, depending
@@ -42,4 +44,8 @@ public final class CancelledSubscriptionException extends RuntimeException {
     }
 
     private CancelledSubscriptionException() {}
+
+    private CancelledSubscriptionException(@Nullable Throwable cause) {
+        super(cause);
+    }
 }

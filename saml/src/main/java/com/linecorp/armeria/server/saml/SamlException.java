@@ -15,10 +15,15 @@
  */
 package com.linecorp.armeria.server.saml;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.Flags;
+
 /**
  * A checked {@link Exception} which is raised from SAML services.
  */
-public class SamlException extends Exception {
+public class SamlException extends RuntimeException {
+
     private static final long serialVersionUID = -6694912876733624005L;
 
     /**
@@ -29,21 +34,21 @@ public class SamlException extends Exception {
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public SamlException(String message) {
+    public SamlException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public SamlException(String message, Throwable cause) {
+    public SamlException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public SamlException(Throwable cause) {
+    public SamlException(@Nullable Throwable cause) {
         super(cause);
     }
 
@@ -51,13 +56,16 @@ public class SamlException extends Exception {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    protected SamlException(String message, Throwable cause,
+    protected SamlException(@Nullable String message, @Nullable Throwable cause,
                             boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 
     @Override
     public Throwable fillInStackTrace() {
+        if (Flags.verboseExceptions()) {
+            return super.fillInStackTrace();
+        }
         return this;
     }
 }

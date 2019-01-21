@@ -51,7 +51,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
 
     private static final IllegalStateException CLOSED_CHANNEL_FACTORY_EXCEPTION = Exceptions.clearTrace(
-            new IllegalStateException(ClientFactory.class.getSimpleName() + " has been closed."));
+            new IllegalStateException(ClientFactory.class.getSimpleName() + " has been closed.", null));
 
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(RetryingClient.class, "STATE");

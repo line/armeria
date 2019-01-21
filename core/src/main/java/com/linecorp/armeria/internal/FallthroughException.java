@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal;
 
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -28,8 +27,7 @@ public final class FallthroughException extends RuntimeException {
 
     private static final long serialVersionUID = 3856883467407862925L;
 
-    private static final FallthroughException
-            INSTANCE = Exceptions.clearTrace(new FallthroughException());
+    private static final FallthroughException INSTANCE = new FallthroughException();
 
     /**
      * Returns a singleton {@link FallthroughException}.
@@ -38,8 +36,12 @@ public final class FallthroughException extends RuntimeException {
         return INSTANCE;
     }
 
-    /**
-     * Creates a new instance.
-     */
-    private FallthroughException() {}
+    private FallthroughException() {
+        super((Throwable) null);
+    }
+
+    @Override
+    public Throwable fillInStackTrace() {
+        return this;
+    }
 }

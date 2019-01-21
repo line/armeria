@@ -95,7 +95,7 @@ final class HttpRedirectBindingUtil {
                                    String messageParamName,
                                    Credential signingCredential,
                                    String signatureAlgorithm,
-                                   @Nullable String relayState) throws SamlException {
+                                   @Nullable String relayState) {
         requireNonNull(msg, "msg");
         requireNonNull(endpointUrl, "endpointUrl");
         requireNonNull(messageParamName, "messageParamName");
@@ -131,7 +131,7 @@ final class HttpRedirectBindingUtil {
      */
     private static void validateSignature(Credential validationCredential,
                                           SamlParameters parameters,
-                                          String messageParamName) throws SamlException {
+                                          String messageParamName) {
         requireNonNull(validationCredential, "validationCredential");
         requireNonNull(parameters, "parameters");
         requireNonNull(messageParamName, "messageParamName");
@@ -169,8 +169,7 @@ final class HttpRedirectBindingUtil {
      * Generates a signature of the specified {@code input}.
      */
     @VisibleForTesting
-    static String generateSignature(Credential signingCredential,
-                                    String algorithmURI, String input) throws SamlException {
+    static String generateSignature(Credential signingCredential, String algorithmURI, String input) {
         try {
             final byte[] signature =
                     XMLSigningUtil.signWithURI(signingCredential, algorithmURI,
@@ -184,7 +183,7 @@ final class HttpRedirectBindingUtil {
     /**
      * Encodes the specified {@code message} into a deflated base64 string.
      */
-    static String toDeflatedBase64(SAMLObject message) throws SamlException {
+    static String toDeflatedBase64(SAMLObject message) {
         requireNonNull(message, "message");
 
         final String messageStr;
@@ -208,7 +207,7 @@ final class HttpRedirectBindingUtil {
     /**
      * Decodes, inflates and deserializes the specified base64-encoded message to an {@link XMLObject}.
      */
-    static XMLObject fromDeflatedBase64(String base64Encoded) throws SamlException {
+    static XMLObject fromDeflatedBase64(String base64Encoded) {
         requireNonNull(base64Encoded, "base64Encoded");
 
         final byte[] base64decoded;
@@ -237,7 +236,7 @@ final class HttpRedirectBindingUtil {
     static <T extends SAMLObject> MessageContext<T> toSamlObject(
             AggregatedHttpMessage msg, String name,
             Map<String, SamlIdentityProviderConfig> idpConfigs,
-            @Nullable SamlIdentityProviderConfig defaultIdpConfig) throws SamlException {
+            @Nullable SamlIdentityProviderConfig defaultIdpConfig) {
         requireNonNull(msg, "msg");
         requireNonNull(name, "name");
         requireNonNull(idpConfigs, "idpConfigs");

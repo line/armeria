@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.testing.internal;
 
+import javax.annotation.Nullable;
+
 /**
  * A {@link RuntimeException} which is expected to be raised during a test.
  */
@@ -31,29 +33,29 @@ public class AnticipatedException extends RuntimeException {
     /**
      * Creates a new instance.
      */
-    public AnticipatedException(String message) {
+    public AnticipatedException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance.
      */
-    public AnticipatedException(String message, Throwable cause) {
+    public AnticipatedException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance.
      */
-    public AnticipatedException(Throwable cause) {
+    public AnticipatedException(@Nullable Throwable cause) {
         super(cause);
     }
 
     /**
      * Creates a new instance.
      */
-    protected AnticipatedException(String message, Throwable cause, boolean enableSuppression,
-                                   boolean writableStackTrace) {
+    protected AnticipatedException(@Nullable String message, @Nullable Throwable cause,
+                                   boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

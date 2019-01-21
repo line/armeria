@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -31,7 +33,7 @@ public final class ClosedClientFactoryException extends IllegalStateException {
     private static final long serialVersionUID = 6865054624299408503L;
 
     private static final ClosedClientFactoryException INSTANCE =
-            Exceptions.clearTrace(new ClosedClientFactoryException());
+            Exceptions.clearTrace(new ClosedClientFactoryException(null));
 
     /**
      * Returns a {@link ClosedClientFactoryException} which may be a singleton or a new instance, depending on
@@ -41,8 +43,9 @@ public final class ClosedClientFactoryException extends IllegalStateException {
         return Flags.verboseExceptions() ? new ClosedClientFactoryException() : INSTANCE;
     }
 
-    /**
-     * Creates a new instance.
-     */
     private ClosedClientFactoryException() {}
+
+    private ClosedClientFactoryException(@Nullable Throwable cause) {
+        super(cause);
+    }
 }

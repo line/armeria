@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -51,7 +53,7 @@ public final class HttpStatusException extends RuntimeException {
         } else {
             final int statusCode = httpStatus.code();
             return EXCEPTIONS.computeIfAbsent(statusCode, code ->
-                    Exceptions.clearTrace(new HttpStatusException(HttpStatus.valueOf(code))));
+                    Exceptions.clearTrace(new HttpStatusException(HttpStatus.valueOf(code), null)));
         }
     }
 
@@ -64,6 +66,14 @@ public final class HttpStatusException extends RuntimeException {
      */
     private HttpStatusException(HttpStatus httpStatus) {
         super(requireNonNull(httpStatus, "httpStatus").toString());
+        this.httpStatus = httpStatus;
+    }
+
+    /**
+     * Creates a new instance with the specified {@link HttpStatus} and {@code cause}.
+     */
+    private HttpStatusException(HttpStatus httpStatus, @Nullable Throwable cause) {
+        super(requireNonNull(httpStatus, "httpStatus").toString(), cause);
         this.httpStatus = httpStatus;
     }
 

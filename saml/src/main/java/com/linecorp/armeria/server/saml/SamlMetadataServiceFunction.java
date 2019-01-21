@@ -119,7 +119,7 @@ final class SamlMetadataServiceFunction implements SamlServiceFunction {
     }
 
     private EntityDescriptor buildMetadataEntityDescriptorElement(
-            String defaultHostname, SamlPortConfig portConfig) throws SamlException {
+            String defaultHostname, SamlPortConfig portConfig) {
         final EntityDescriptor entityDescriptor = build(EntityDescriptor.DEFAULT_ELEMENT_NAME);
         entityDescriptor.setEntityID(entityId);
 

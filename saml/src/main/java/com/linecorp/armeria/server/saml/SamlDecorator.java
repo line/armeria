@@ -173,7 +173,7 @@ final class SamlDecorator extends SimpleDecoratingService<HttpRequest, HttpRespo
     /**
      * Returns an {@link HttpResponse} for SAML authentication failure.
      */
-    private HttpResponse fail(ServiceRequestContext ctx, Throwable cause) {
+    private static HttpResponse fail(ServiceRequestContext ctx, Throwable cause) {
         logger.trace("{} Cannot initiate SAML authentication", ctx, cause);
         return HttpResponse.of(HttpStatus.UNAUTHORIZED);
     }
