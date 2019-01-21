@@ -207,8 +207,7 @@ public final class ResponseConversionUtil {
             subscription = s;
             writer.closeFuture().handle((unused, cause) -> {
                 if (cause != null) {
-                    assert subscription != null;
-                    subscription.cancel();
+                    s.cancel();
                 }
                 return null;
             });
@@ -216,8 +215,7 @@ public final class ResponseConversionUtil {
                 writer.onDemand(new Runnable() {
                     @Override
                     public void run() {
-                        assert subscription != null;
-                        subscription.request(1);
+                        s.request(1);
                         writer.onDemand(this);
                     }
                 });

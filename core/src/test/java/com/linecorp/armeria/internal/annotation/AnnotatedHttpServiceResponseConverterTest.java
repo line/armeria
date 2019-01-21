@@ -587,7 +587,13 @@ public class AnnotatedHttpServiceResponseConverterTest {
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "bar"))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "baz"))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "qux"))
-                    .expectNext(HttpData.EMPTY_DATA)
+                    .assertNext(o -> {
+                        // On the server side, HttpResponseSubscriber emits a DATA frame with end of stream
+                        // flag when the HttpResponseWriter is closed.
+                        final HttpData lastContent = (HttpData) o;
+                        assertThat(lastContent.isEmpty()).isTrue();
+                        assertThat(lastContent.isEndOfStream()).isTrue();
+                    })
                     .expectComplete()
                     .verify();
     }

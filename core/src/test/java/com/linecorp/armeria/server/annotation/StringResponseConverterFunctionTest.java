@@ -87,7 +87,7 @@ public class StringResponseConverterFunctionTest {
                                                .contentType(MediaType.parse("text/plain; charset=euc-kr"));
         StepVerifier.create(function.convertResponse(ctx, headers, "한글", DEFAULT_TRAILING_HEADERS))
                     .expectNext(headers)
-                    .expectNext(HttpData.of("한글".getBytes(Charset.forName("euc-kr"))))
+                    .expectNext(HttpData.of(Charset.forName("euc-kr"), "한글"))
                     .expectComplete()
                     .verify();
     }
