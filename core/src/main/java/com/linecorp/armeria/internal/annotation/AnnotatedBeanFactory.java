@@ -253,6 +253,8 @@ final class AnnotatedBeanFactory {
                     }
                     if (redundant && resolvers.size() == 1) {
                         // Prevent redundant injection only when the size of parameter is 1.
+                        // If the method contains more than 2 parameters and if one of them is used redundantly,
+                        // we'd better to inject the method rather than ignore it.
                         continue;
                     }
                     methodsBuilder.put(method, resolvers);

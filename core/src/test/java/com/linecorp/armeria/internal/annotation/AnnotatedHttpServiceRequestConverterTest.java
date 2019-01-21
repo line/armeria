@@ -529,16 +529,17 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         private int foo2;
 
-        @Header("foo")
         private int foo3;
 
         RequestBean4(@Param("foo") int foo) {
             this.foo = foo;
         }
 
-        // This setter is not called because the foo param is already used in the constructor.
-        public void setFoo(@Param("foo") int foo2) {
+        // @Param("foo") is used redundantly,
+        // but the foo2 will be injected because otherwise we cannot inject the foo3.
+        public void setFoo(@Param("foo") int foo2, @Header("foo") int foo3) {
             this.foo2 = foo2;
+            this.foo3 = foo3;
         }
 
         @JsonProperty
@@ -911,6 +912,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         final HttpClient client = HttpClient.of(rule.uri("/"));
         final ObjectMapper mapper = new ObjectMapper();
         final RequestBean4 expectedRequestBean = new RequestBean4(100);
+        expectedRequestBean.foo2 = 100;
         expectedRequestBean.foo3 = 200;
         final String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
 
