@@ -10,13 +10,13 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.4.1'
+    version: '3.5.0'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.4.1/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.5.0/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.7'
+    version: &JACKSON_VERSION '2.9.8'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
@@ -41,7 +41,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '4.0.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.35.1' }
+  gax-grpc: { version: '1.37.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -75,13 +75,13 @@ com.google.guava:
 
 com.google.protobuf:
   protoc: { version: '3.5.1-1' }
-  protobuf-gradle-plugin: { version: '0.8.7' }
+  protobuf-gradle-plugin: { version: '0.8.8' }
 
 com.moowork.gradle:
   gradle-node-plugin: { version: '1.2.0' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.15' }
+  checkstyle: { version: '8.16' }
 
 com.spotify:
   completable-futures:
@@ -102,14 +102,14 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard.metrics:
   metrics-core:
-    version: &DROPWIZARD_VERSION '4.0.3'
+    version: &DROPWIZARD_VERSION '4.0.5'
     javadocs:
     - https://metrics.dropwizard.io/4.0.0/apidocs/
   metrics-json: { version: *DROPWIZARD_VERSION }
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.17.1'
+    version: &GRPC_VERSION '1.18.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -134,17 +134,17 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.1.1'
+    version: &MICROMETER_VERSION '1.1.2'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.2/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.2/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.2/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -170,7 +170,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.3.RELEASE'
+    version: &REACTOR_VERSION '3.2.5.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -183,7 +183,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.4'
+    version: '2.2.5'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -222,10 +222,10 @@ log4j:
   log4j: { version: '1.2.17' }
 
 me.champeau.gradle:
-  jmh-gradle-plugin: { version: '0.4.7' }
+  jmh-gradle-plugin: { version: '0.4.8' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.2.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.3.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -236,9 +236,9 @@ net.shibboleth.utilities:
 
 org.apache.curator:
   curator-recipes:
-    version: '4.0.1'
+    version: '4.1.0'
     javadocs:
-    - https://static.javadoc.io/org.apache.curator/curator-recipes/4.0.1/
+    - https://static.javadoc.io/org.apache.curator/curator-recipes/4.1.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
 
@@ -331,7 +331,7 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.13.Final' }
+  hibernate-validator: { version: '6.0.14.Final' }
 
 org.jctools:
   jctools-core:
@@ -387,7 +387,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.1.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.2.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
