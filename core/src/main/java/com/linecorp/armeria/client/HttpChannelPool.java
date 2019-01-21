@@ -454,6 +454,7 @@ final class HttpChannelPool implements AutoCloseable {
      * Adds a {@link Channel} to this pool.
      */
     private void addToPool(SessionProtocol actualProtocol, PoolKey key, PooledChannel pooledChannel) {
+        assert eventLoop.inEventLoop() : Thread.currentThread().getName();
         getOrCreatePool(actualProtocol, key).addLast(pooledChannel);
     }
 
@@ -590,6 +591,14 @@ final class HttpChannelPool implements AutoCloseable {
 
         @Override
         public void release() {
+            if (!eventLoop.inEventLoop()) {
+                eventLoop.execute(this::doRelease);
+            } else {
+                doRelease();
+            }
+        }
+
+        private void doRelease() {
             if (isHealthy(this)) {
                 // Channel turns out to be healthy. Add it back to the pool.
                 addToPool(protocol(), key, this);

@@ -320,7 +320,7 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
-     * HTTP/1 connections. This does not affect HTTP/2 connections. This option is enabled by default.
+     * HTTP/1 connections. This does not affect HTTP/2 connections. This option is disabled by default.
      */
     public ClientFactoryBuilder useHttp1Pipelining(boolean useHttp1Pipelining) {
         this.useHttp1Pipelining = useHttp1Pipelining;
