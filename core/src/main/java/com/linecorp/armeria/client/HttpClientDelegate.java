@@ -215,10 +215,10 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                     // If pipelining is disabled, return after the response is fully received.
                     final CompletableFuture<Void> completionFuture =
                             factory.useHttp1Pipelining() ? req.completionFuture() : res.completionFuture();
-                    completionFuture.handle((ret, cause) -> {
+                    completionFuture.handleAsync((ret, cause) -> {
                         pooledChannel.release();
                         return null;
-                    });
+                    }, ctx.eventLoop());
                 } else {
                     // HTTP/2 connections do not need to get returned.
                 }

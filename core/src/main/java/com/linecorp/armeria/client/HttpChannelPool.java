@@ -454,6 +454,7 @@ final class HttpChannelPool implements AutoCloseable {
      * Adds a {@link Channel} to this pool.
      */
     private void addToPool(SessionProtocol actualProtocol, PoolKey key, PooledChannel pooledChannel) {
+        assert eventLoop.inEventLoop() : Thread.currentThread().getName();
         getOrCreatePool(actualProtocol, key).addLast(pooledChannel);
     }
 
