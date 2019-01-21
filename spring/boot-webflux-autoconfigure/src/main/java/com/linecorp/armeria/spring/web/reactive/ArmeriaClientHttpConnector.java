@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.List;
 import java.util.function.Function;
 
 import org.springframework.core.io.buffer.DataBuffer;
@@ -28,6 +29,7 @@ import org.springframework.http.client.reactive.ClientHttpRequest;
 import org.springframework.http.client.reactive.ClientHttpResponse;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
@@ -40,52 +42,37 @@ import reactor.core.publisher.Mono;
  */
 public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
 
-    /**
-     * A default {@link ArmeriaClientConfigurator} which does nothing.
-     */
-    private static final ArmeriaClientConfigurator IDENTITY = b -> { /* noop */ };
-
-    private final ArmeriaClientConfigurator customizer;
+    private final List<ArmeriaClientConfigurator> configurators;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
 
     /**
-     * Creates an {@link ArmeriaClientHttpConnector} with the default
-     * {@link ArmeriaClientConfigurator} and {@link DataBufferFactoryWrapper}.
+     * Creates an {@link ArmeriaClientHttpConnector} with the default {@link ArmeriaClientConfigurator} and
+     * {@link DataBufferFactoryWrapper}.
      */
     public ArmeriaClientHttpConnector() {
-        this(IDENTITY, DataBufferFactoryWrapper.DEFAULT);
+        this(ImmutableList.of(), DataBufferFactoryWrapper.DEFAULT);
     }
 
     /**
      * Creates an {@link ArmeriaClientHttpConnector} with the specified
      * {@link ArmeriaClientConfigurator} and the default {@link DataBufferFactoryWrapper}.
      *
-     * @param customizer the customizer to be used to build an {@link HttpClient}
+     * @param configurator the configurator to be used to build an {@link HttpClient}
      */
-    public ArmeriaClientHttpConnector(ArmeriaClientConfigurator customizer) {
-        this(customizer, DataBufferFactoryWrapper.DEFAULT);
-    }
-
-    /**
-     * Creates an {@link ArmeriaClientHttpConnector} with the specified {@link DataBufferFactoryWrapper}
-     * and the default {@link ArmeriaClientConfigurator}.
-     *
-     * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
-     */
-    public ArmeriaClientHttpConnector(DataBufferFactoryWrapper<?> factoryWrapper) {
-        this(IDENTITY, factoryWrapper);
+    public ArmeriaClientHttpConnector(ArmeriaClientConfigurator configurator) {
+        this(ImmutableList.of(requireNonNull(configurator, "configurator")),
+             DataBufferFactoryWrapper.DEFAULT);
     }
 
     /**
      * Creates an {@link ArmeriaClientHttpConnector}.
      *
-     * @param customizer the {@link ArmeriaClientConfigurator} to be used to build an
-     *                   {@link HttpClient}
+     * @param configurators the {@link ArmeriaClientConfigurator}s to be used to build an {@link HttpClient}
      * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
      */
-    public ArmeriaClientHttpConnector(ArmeriaClientConfigurator customizer,
+    public ArmeriaClientHttpConnector(Iterable<ArmeriaClientConfigurator> configurators,
                                       DataBufferFactoryWrapper<?> factoryWrapper) {
-        this.customizer = requireNonNull(customizer, "customizer");
+        this.configurators = ImmutableList.copyOf(requireNonNull(configurators, "configurators"));
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
     }
 
@@ -119,7 +106,7 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
 
         final URI baseUri = URI.create(Strings.isNullOrEmpty(scheme) ? authority : scheme + "://" + authority);
         final HttpClientBuilder builder = new HttpClientBuilder(baseUri);
-        customizer.customize(builder);
+        configurators.forEach(c -> c.configure(builder));
 
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;
 
