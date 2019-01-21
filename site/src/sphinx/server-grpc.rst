@@ -144,7 +144,7 @@ you build a :api:`GrpcService`:
     Server server = sb.build();
     server.start();
 
-Please refer to `Configuring CORS page <server-cors.html>`_ for more information.
+Please refer to :ref:`server-cors` for more information.
 
 Unframed requests
 -----------------
