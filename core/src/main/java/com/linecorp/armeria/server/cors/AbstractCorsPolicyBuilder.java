@@ -37,6 +37,8 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.server.annotation.Cors;
+import com.linecorp.armeria.server.annotation.KeyValue;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
 import io.netty.util.AsciiString;
@@ -291,6 +293,37 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B disablePreflightResponseHeaders() {
         preflightResponseHeadersDisabled = true;
+        return self();
+    }
+
+    /**
+     * Sets.
+     *
+     * @param cors {@link Cors} annotation for configuration information.
+     */
+    B setConfig(Cors cors) {
+        if (cors.credentialAllowed()) {
+            allowCredentials();
+        }
+        if (cors.nullOriginAllowed()) {
+            allowNullOrigin();
+        }
+        if (cors.preflightRequestDisabled()) {
+            disablePreflightResponseHeaders();
+        }
+        if (cors.exposedHeaders().length > 0) {
+            exposeHeaders(cors.exposedHeaders());
+        }
+        if (cors.allowedRequestHeaders().length > 0) {
+            allowRequestHeaders(cors.allowedRequestHeaders());
+        }
+        if (cors.allowedRequestMethods().length > 0) {
+            allowRequestMethods(cors.allowedRequestMethods());
+        }
+        for (KeyValue keyValue : cors.preflightRequestHeaders()) {
+            preflightResponseHeader(keyValue.key(), keyValue.value());
+        }
+        maxAge(cors.maxAge());
         return self();
     }
 
