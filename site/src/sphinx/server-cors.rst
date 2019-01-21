@@ -1,11 +1,11 @@
 .. _server-cors:
 
-Configure CORS
+Configuring CORS
 ========================
 
 Armeria provides a way to configure Cross-origin resource sharing (CORS) policy for specific origins or
 any origin via :api:`CorsServiceBuilder`. For more information about CORS,
-Visit `Wikipedia's CORS <https://en.wikipedia.org/wiki/Cross-origin_resource_sharing>`_.
+visit `Wikipedia's CORS page <https://en.wikipedia.org/wiki/Cross-origin_resource_sharing>`_.
 
 
 Allowing any origin
@@ -28,8 +28,6 @@ To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forA
                               .exposeHeaders("expose_header_1", "expose_header_2")
                               .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                               .newDecorator()));
-
-
 
 Allowing specified origins
 ------------------------------
