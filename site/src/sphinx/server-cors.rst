@@ -29,7 +29,7 @@ To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forA
                               .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                               .newDecorator()));
 
-Allowing specified origins
+Allowing specific origins
 ------------------------------
 To configure CORS Service allowing specific origins, use ``CorsServiceBuilder.forOrigins()`` or
 ``CorsServiceBuilder.forOrigin()``, e.g.
