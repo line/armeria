@@ -20,7 +20,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
 import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.uniqueResolverSet;
-import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.warnUsedRedundantly;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.warnRedundantUse;
 import static com.linecorp.armeria.internal.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
@@ -305,7 +305,7 @@ final class AnnotatedValueResolver {
         //
         // void setter(@Param("serialNo") Long serialNo, @Param("serialNo") Long serialNo2) { ... }
         //
-        warnIfUsedRedundantly(constructorOrMethod, list);
+        warnOnRedundantUse(constructorOrMethod, list);
         return list;
     }
 
@@ -424,12 +424,12 @@ final class AnnotatedValueResolver {
                element.isAnnotationPresent(RequestObject.class);
     }
 
-    private static void warnIfUsedRedundantly(Executable constructorOrMethod,
-                                              List<AnnotatedValueResolver> list) {
+    private static void warnOnRedundantUse(Executable constructorOrMethod,
+                                           List<AnnotatedValueResolver> list) {
         final TreeSet<AnnotatedValueResolver> uniques = uniqueResolverSet();
         list.forEach(element -> {
             if (!uniques.add(element)) {
-                warnUsedRedundantly(element, constructorOrMethod.toGenericString());
+                warnRedundantUse(element, constructorOrMethod.toGenericString());
             }
         });
     }

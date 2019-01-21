@@ -105,8 +105,8 @@ final class AnnotatedBeanFactory {
         });
     }
 
-    static void warnUsedRedundantly(AnnotatedValueResolver resolver, String genericString) {
-        logger.warn("Found redundantly used parameter in {}." +
+    static void warnRedundantUse(AnnotatedValueResolver resolver, String genericString) {
+        logger.warn("Found a redundant use of annotation in {}." +
                     " httpElementName: {}, annotation: {}", genericString,
                     resolver.httpElementName(), resolver.annotationType().getSimpleName());
     }
@@ -143,9 +143,14 @@ final class AnnotatedBeanFactory {
         }
 
         final List<AnnotatedValueResolver> constructorAnnotatedResolvers = constructor.getValue();
+
+        // Find the methods whose parameters are not annotated with the same annotations in the constructor.
+        // If there're parameters used redundantly, it would warn it.
         final Map<Method, List<AnnotatedValueResolver>> methods =
                 findMethods(constructorAnnotatedResolvers, beanFactoryId, resolvers);
 
+        // Find the fields which are not annotated with the same annotations in the constructor and methods.
+        // If there're parameters used redundantly, it would warn it.
         final Map<Field, AnnotatedValueResolver> fields = findFields(constructorAnnotatedResolvers, methods,
                                                                      beanFactoryId, resolvers);
 
@@ -243,7 +248,7 @@ final class AnnotatedBeanFactory {
                     for (AnnotatedValueResolver resolver : resolvers) {
                         if (!uniques.add(resolver)) {
                             redundant = true;
-                            warnUsedRedundantly(resolver, method.toGenericString());
+                            warnRedundantUse(resolver, method.toGenericString());
                         }
                     }
                     if (redundant && resolvers.size() == 1) {
@@ -275,7 +280,7 @@ final class AnnotatedBeanFactory {
                                                addToFirstIfExists(objectResolvers, converters))
                                   .ifPresent(resolver -> {
                                       if (!uniques.add(resolver)) {
-                                          warnUsedRedundantly(resolver, field.toGenericString());
+                                          warnRedundantUse(resolver, field.toGenericString());
                                           return;
                                       }
                                       builder.put(field, resolver);
