@@ -291,7 +291,7 @@ public final class AnnotatedHttpServiceFactory {
                     return HttpStatus.valueOf(statusCode);
                 });
 
-        // A CORS preflight request can be received because we handle it exceptionally. The following
+        // A CORS preflight request can be received because we handle it specially. The following
         // decorator will prevent the service from an unexpected request which has OPTIONS method.
         final Function<Service<HttpRequest, HttpResponse>,
                 ? extends Service<HttpRequest, HttpResponse>> initialDecorator;
@@ -302,9 +302,7 @@ public final class AnnotatedHttpServiceFactory {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     if (req.method() == HttpMethod.OPTIONS) {
-                        // This is always a CORS preflight request.
-                        logger.warn("{} Received a CORS preflight request but no service is bound for it: {}",
-                                    ctx, req);
+                        // This must be a CORS preflight request.
                         throw HttpStatusException.of(HttpStatus.FORBIDDEN);
                     }
                     return delegate().serve(ctx, req);
