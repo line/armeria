@@ -80,11 +80,18 @@ final class HttpHeaderPathMapping implements PathMapping {
     public PathMappingResult apply(PathMappingContext mappingCtx) {
         final PathMappingResult result = pathStringMapping.apply(mappingCtx);
         if (!result.isPresent()) {
+            if (mappingCtx.isCorsPreflight() && !mappingCtx.delayedThrowable().isPresent()) {
+                // '403 Forbidden' is better for a CORS preflight request than '404 Not Found'.
+                mappingCtx.delayThrowable(HttpStatusException.of(HttpStatus.FORBIDDEN));
+            }
             return PathMappingResult.empty();
         }
 
-        // We need to check the method at the last in order to return '405 Method Not Allowed'.
-        if (!supportedMethods.contains(mappingCtx.method())) {
+        // We need to check the method after checking the path, in order to return '405 Method Not Allowed'.
+        // If the request is a CORS preflight, we don't care whether the path mapping supports OPTIONS method.
+        // The request may be always passed into the designated service, but most of cases, it will be handled
+        // by a CorsService decorator before it reaches the final service.
+        if (!mappingCtx.isCorsPreflight() && !supportedMethods.contains(mappingCtx.method())) {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (!mappingCtx.delayedThrowable().isPresent()) {

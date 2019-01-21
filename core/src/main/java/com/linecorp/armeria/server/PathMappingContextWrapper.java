@@ -80,6 +80,11 @@ class PathMappingContextWrapper implements PathMappingContext {
     }
 
     @Override
+    public boolean isCorsPreflight() {
+        return delegate().isCorsPreflight();
+    }
+
+    @Override
     public List<Object> summary() {
         if (summary == null) {
             summary = generateSummary(this);

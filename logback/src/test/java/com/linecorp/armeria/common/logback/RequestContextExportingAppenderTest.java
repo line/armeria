@@ -638,6 +638,11 @@ public class RequestContextExportingAppenderTest {
         }
 
         @Override
+        public boolean isCorsPreflight() {
+            return false;
+        }
+
+        @Override
         public List<Object> summary() {
             return summary;
         }

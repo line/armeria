@@ -76,10 +76,13 @@ import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.server.AbstractPathMapping;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Consumes;
@@ -288,11 +291,29 @@ public final class AnnotatedHttpServiceFactory {
                     return HttpStatus.valueOf(statusCode);
                 });
 
+        // A CORS preflight request can be received because we handle it specially. The following
+        // decorator will prevent the service from an unexpected request which has OPTIONS method.
+        final Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> initialDecorator;
+        if (methods.contains(HttpMethod.OPTIONS)) {
+            initialDecorator = Function.identity();
+        } else {
+            initialDecorator = delegate -> new SimpleDecoratingService<HttpRequest, HttpResponse>(delegate) {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    if (req.method() == HttpMethod.OPTIONS) {
+                        // This must be a CORS preflight request.
+                        throw HttpStatusException.of(HttpStatus.FORBIDDEN);
+                    }
+                    return delegate().serve(ctx, req);
+                }
+            };
+        }
         return new AnnotatedHttpServiceElement(pathMapping,
                                                new AnnotatedHttpService(object, method, resolvers, eh,
                                                                         res, pathMapping,
                                                                         defaultResponseStatus),
-                                               decorator(method, clazz));
+                                               decorator(method, clazz, initialDecorator));
     }
 
     /**
@@ -517,12 +538,15 @@ public final class AnnotatedHttpServiceFactory {
      * decorator annotations.
      */
     private static Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> decorator(Method method, Class<?> clazz) {
+            ? extends Service<HttpRequest, HttpResponse>> decorator(
+            Method method, Class<?> clazz,
+            Function<Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>> initialDecorator) {
 
         final List<DecoratorAndOrder> decorators = collectDecorators(clazz, method);
 
         Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
+                ? extends Service<HttpRequest, HttpResponse>> decorator = initialDecorator;
         for (int i = decorators.size() - 1; i >= 0; i--) {
             final DecoratorAndOrder d = decorators.get(i);
             decorator = decorator.andThen(d.decorator());

@@ -38,6 +38,8 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
@@ -124,7 +126,12 @@ public class ArmeriaConfigurationUtilTest {
      * A simple annotated HTTP service.
      */
     static class SimpleService {
-        @Get("/")
+        // We need to specify '@Options' annotation in order to avoid adding a decorator which denies
+        // a CORS preflight request. If any decorator is added, the service will be automatically decorated
+        // with AnnotatedHttpService#ExceptionFilteredHttpResponseDecorator.
+        @Get
+        @Options
+        @Path("/")
         public String root() {
             return "Hello, world!";
         }
