@@ -78,10 +78,6 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.HttpMethod;
-    import com.linecorp.armeria.server.HttpService;
-    import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.cors.CorsServiceBuilder;
     import com.linecorp.armeria.server.cors.CorsPolicyBuilder;
 
     HttpService myService = (ctx, req) -> ...;
