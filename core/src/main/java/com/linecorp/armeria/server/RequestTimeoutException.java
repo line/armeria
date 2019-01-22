@@ -35,6 +35,6 @@ public final class RequestTimeoutException extends TimeoutException {
     }
 
     private RequestTimeoutException() {
-        super((Throwable) null);
+        super(null, null, false, false);
     }
 }

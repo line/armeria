@@ -15,10 +15,6 @@
  */
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.util.Exceptions;
-
 /**
  * A {@link RuntimeException} raised when the connection to the remote peer has been closed unexpectedly.
  */
@@ -26,8 +22,7 @@ public final class ClosedSessionException extends RuntimeException {
 
     private static final long serialVersionUID = -78487475521731580L;
 
-    private static final ClosedSessionException INSTANCE =
-            Exceptions.clearTrace(new ClosedSessionException(null));
+    private static final ClosedSessionException INSTANCE = new ClosedSessionException(false);
 
     /**
      * Returns a {@link ClosedSessionException} which may be a singleton or a new instance, depending on
@@ -39,7 +34,7 @@ public final class ClosedSessionException extends RuntimeException {
 
     private ClosedSessionException() {}
 
-    private ClosedSessionException(@Nullable Throwable cause) {
-        super(cause);
+    private ClosedSessionException(@SuppressWarnings("unused") boolean dummy) {
+        super(null, null, false, false);
     }
 }

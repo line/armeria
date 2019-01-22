@@ -35,6 +35,6 @@ public final class ResponseTimeoutException extends TimeoutException {
     }
 
     private ResponseTimeoutException() {
-        super((Throwable) null);
+        super(null, null, false, false);
     }
 }

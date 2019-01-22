@@ -16,11 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.util.Exceptions;
-
 /**
  * A {@link RuntimeException} raised when a {@link Client} is executing and the {@link ClientFactory} which the
  * {@link Client} is using is closed.
@@ -32,20 +27,12 @@ public final class ClosedClientFactoryException extends IllegalStateException {
 
     private static final long serialVersionUID = 6865054624299408503L;
 
-    private static final ClosedClientFactoryException INSTANCE =
-            Exceptions.clearTrace(new ClosedClientFactoryException(null));
-
     /**
-     * Returns a {@link ClosedClientFactoryException} which may be a singleton or a new instance, depending on
-     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * Returns a new {@link ClosedClientFactoryException}.
      */
     public static ClosedClientFactoryException get() {
-        return Flags.verboseExceptions() ? new ClosedClientFactoryException() : INSTANCE;
+        return new ClosedClientFactoryException();
     }
 
     private ClosedClientFactoryException() {}
-
-    private ClosedClientFactoryException(@Nullable Throwable cause) {
-        super(cause);
-    }
 }

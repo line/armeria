@@ -16,10 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link RuntimeException} that is raised when a {@link StreamWriter} attempts to write an object to a
@@ -29,8 +26,7 @@ public final class ClosedPublisherException extends RuntimeException {
 
     private static final long serialVersionUID = -7665826869012452735L;
 
-    private static final ClosedPublisherException INSTANCE =
-            Exceptions.clearTrace(new ClosedPublisherException(null));
+    private static final ClosedPublisherException INSTANCE = new ClosedPublisherException(false);
 
     /**
      * Returns a {@link ClosedPublisherException} which may be a singleton or a new instance, depending on
@@ -42,7 +38,7 @@ public final class ClosedPublisherException extends RuntimeException {
 
     private ClosedPublisherException() {}
 
-    private ClosedPublisherException(@Nullable Throwable cause) {
-        super(cause);
+    private ClosedPublisherException(@SuppressWarnings("unused") boolean dummy) {
+        super(null, null, false, false);
     }
 }

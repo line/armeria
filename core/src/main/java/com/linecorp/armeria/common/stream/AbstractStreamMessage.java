@@ -29,9 +29,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.PooledObjects;
 
 import io.netty.util.ReferenceCountUtil;
@@ -40,22 +38,8 @@ import io.netty.util.concurrent.EventExecutor;
 abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
-    static final CloseEvent CANCELLED_CLOSE = new CloseEvent(
-            Exceptions.clearTrace(CancelledSubscriptionException.get()));
-    static final CloseEvent ABORTED_CLOSE = new CloseEvent(
-            Exceptions.clearTrace(AbortedStreamException.get()));
-
-    static {
-        // Prevent setting a cause for singleton exceptions.
-        if (Flags.verboseExceptions()) {
-            assert CANCELLED_CLOSE.cause != null;
-            CANCELLED_CLOSE.cause.initCause(null);
-            assert ABORTED_CLOSE.cause != null;
-            ABORTED_CLOSE.cause.initCause(null);
-        } else {
-            // The singleton exceptions already has its cause assigned to null if verboseExceptions is false.
-        }
-    }
+    static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
+    static final CloseEvent ABORTED_CLOSE = new CloseEvent(AbortedStreamException.INSTANCE);
 
     private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
