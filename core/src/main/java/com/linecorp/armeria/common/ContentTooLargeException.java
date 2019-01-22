@@ -16,10 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.util.Exceptions;
-
 /**
  * A {@link RuntimeException} raised when the length of request or response content exceeds its limit.
  */
@@ -27,8 +23,7 @@ public final class ContentTooLargeException extends RuntimeException {
 
     private static final long serialVersionUID = 4901614315474105954L;
 
-    private static final ContentTooLargeException INSTANCE =
-            Exceptions.clearTrace(new ContentTooLargeException(null));
+    private static final ContentTooLargeException INSTANCE = new ContentTooLargeException(false);
 
     /**
      * Returns a {@link ContentTooLargeException} which may be a singleton or a new instance, depending on
@@ -40,7 +35,7 @@ public final class ContentTooLargeException extends RuntimeException {
 
     private ContentTooLargeException() {}
 
-    private ContentTooLargeException(@Nullable Throwable cause) {
-        super(cause);
+    private ContentTooLargeException(@SuppressWarnings("unused") boolean dummy) {
+        super(null, null, false, false);
     }
 }

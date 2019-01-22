@@ -16,10 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link RuntimeException} raised when it is certain that a request has not been handled by a server and
@@ -32,8 +29,7 @@ public final class UnprocessedRequestException extends RuntimeException {
 
     private static final long serialVersionUID = 4679512839715213302L;
 
-    private static final UnprocessedRequestException INSTANCE =
-            Exceptions.clearTrace(new UnprocessedRequestException(null));
+    private static final UnprocessedRequestException INSTANCE = new UnprocessedRequestException(false);
 
     /**
      * Returns a {@link UnprocessedRequestException} which may be a singleton or a new instance, depending on
@@ -45,7 +41,7 @@ public final class UnprocessedRequestException extends RuntimeException {
 
     private UnprocessedRequestException() {}
 
-    private UnprocessedRequestException(@Nullable Throwable cause) {
-        super(cause);
+    private UnprocessedRequestException(@SuppressWarnings("unused") boolean dummy) {
+        super(null, null, false, false);
     }
 }

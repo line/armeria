@@ -26,14 +26,10 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.util.Exceptions;
-
 /**
  * Default {@link RpcResponse} implementation.
  */
 public class DefaultRpcResponse extends CompletableFuture<Object> implements RpcResponse {
-
-    private static final CancellationException CANCELLED = Exceptions.clearTrace(new CancellationException());
 
     private static final AtomicReferenceFieldUpdater<DefaultRpcResponse, Throwable> causeUpdater =
             AtomicReferenceFieldUpdater.newUpdater(DefaultRpcResponse.class, Throwable.class, "cause");
@@ -85,7 +81,8 @@ public class DefaultRpcResponse extends CompletableFuture<Object> implements Rpc
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        return completeExceptionally(CANCELLED) || isCancelled();
+        final boolean updated = !isDone() && completeExceptionally(new CancellationException());
+        return updated || isCancelled();
     }
 
     @Override

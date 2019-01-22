@@ -35,6 +35,6 @@ public final class WriteTimeoutException extends TimeoutException {
     }
 
     private WriteTimeoutException() {
-        super((Throwable) null);
+        super(null, null, false, false);
     }
 }

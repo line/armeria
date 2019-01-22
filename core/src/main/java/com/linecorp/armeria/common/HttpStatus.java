@@ -18,15 +18,12 @@ package com.linecorp.armeria.common;
 
 import javax.annotation.Nullable;
 
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
-
 /**
  * HTTP response code and its description.
  */
 public final class HttpStatus implements Comparable<HttpStatus> {
 
-    private static final IntObjectMap<HttpStatus> map = new IntObjectHashMap<>(1000);
+    private static final HttpStatus[] map = new HttpStatus[1000];
 
     /**
      * 100 Continue.
@@ -327,24 +324,27 @@ public final class HttpStatus implements Comparable<HttpStatus> {
 
     static {
         for (int i = 0; i < 1000; i++) {
-            if (!map.containsKey(i)) {
-                map.put(i, new HttpStatus(i));
+            if (map[i] == null) {
+                map[i] = new HttpStatus(i);
             }
         }
     }
 
     private static HttpStatus newConstant(int statusCode, String reasonPhrase) {
         final HttpStatus status = new HttpStatus(statusCode, reasonPhrase);
-        map.put(statusCode, status);
+        map[statusCode] = status;
         return status;
     }
 
     /**
-     * Returns the {@link HttpStatus} represented by the specified code.
+     * Returns the {@link HttpStatus} represented by the specified status code.
      */
-    public static HttpStatus valueOf(int code) {
-        final HttpStatus status = map.get(code);
-        return status != null ? status : new HttpStatus(code);
+    public static HttpStatus valueOf(int statusCode) {
+        if (statusCode < 0 || statusCode >= 1000) {
+            return new HttpStatus(statusCode);
+        } else {
+            return map[statusCode];
+        }
     }
 
     private final int code;
@@ -355,19 +355,19 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     private final String strVal;
 
     /**
-     * Creates a new instance with the specified {@code code} and the auto-generated default reason phrase.
+     * Creates a new instance with the specified status code and the auto-generated default reason phrase.
      */
-    private HttpStatus(int code) {
-        this(code, HttpStatusClass.valueOf(code).defaultReasonPhrase() + " (" + code + ')');
+    private HttpStatus(int statusCode) {
+        this(statusCode, HttpStatusClass.valueOf(statusCode).defaultReasonPhrase() + " (" + statusCode + ')');
     }
 
     /**
-     * Creates a new instance with the specified {@code code} and its {@code reasonPhrase}.
+     * Creates a new instance with the specified status code and its reason phrase.
      */
-    public HttpStatus(int code, @Nullable String reasonPhrase) {
-        if (code < 0) {
+    public HttpStatus(int statusCode, @Nullable String reasonPhrase) {
+        if (statusCode < 0) {
             throw new IllegalArgumentException(
-                    "code: " + code + " (expected: 0+)");
+                    "statusCode: " + statusCode + " (expected: 0+)");
         }
 
         if (reasonPhrase == null) {
@@ -385,12 +385,12 @@ public final class HttpStatus implements Comparable<HttpStatus> {
             }
         }
 
-        this.code = code;
-        codeAsText = Integer.toString(code);
-        codeClass = HttpStatusClass.valueOf(code);
+        this.code = statusCode;
+        codeAsText = Integer.toString(statusCode);
+        codeClass = HttpStatusClass.valueOf(statusCode);
         this.reasonPhrase = reasonPhrase;
 
-        strVal = new StringBuilder(reasonPhrase.length() + 5).append(code)
+        strVal = new StringBuilder(reasonPhrase.length() + 5).append(statusCode)
                                                              .append(' ')
                                                              .append(reasonPhrase)
                                                              .toString();

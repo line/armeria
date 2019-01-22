@@ -26,7 +26,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.ChannelFutureListener;
@@ -40,9 +39,6 @@ import io.netty.util.concurrent.Promise;
  * A skeletal {@link RequestContext} implementation.
  */
 public abstract class AbstractRequestContext implements RequestContext {
-
-    private static final CancellationException CANCELLATION_EXCEPTION =
-            Exceptions.clearTrace(new CancellationException());
 
     private boolean timedOut;
 
