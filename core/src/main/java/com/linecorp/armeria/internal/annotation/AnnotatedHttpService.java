@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.internal.annotation;
 
+import static com.linecorp.armeria.internal.ObjectCollectingUtil.collectFrom;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.AggregationStrategy.aggregationRequired;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toArguments;
-import static com.linecorp.armeria.internal.annotation.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;

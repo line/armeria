@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.annotation;
+package com.linecorp.armeria.internal;
 
-import static com.linecorp.armeria.internal.annotation.ObjectCollectingUtil.collectFrom;
+import static com.linecorp.armeria.internal.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
@@ -34,20 +34,11 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * A utility class which helps a {@link ResponseConverterFunction} to send a streaming {@link HttpResponse}.
+ * A utility class which helps to send a streaming {@link HttpResponse}.
  */
 public final class ResponseConversionUtil {
-
-    /**
-     * Returns a mutable {@link HttpHeaders} which contains the same headers as the specified {@code headers}.
-     */
-    public static HttpHeaders toMutableHeaders(HttpHeaders headers) {
-        requireNonNull(headers, "headers");
-        return headers.isImmutable() ? HttpHeaders.copyOf(headers) : headers;
-    }
 
     /**
      * Returns a new {@link HttpResponseWriter} which has a content converted from the collected objects.

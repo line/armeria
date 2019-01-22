@@ -263,6 +263,10 @@ public final class HttpHeaderNames {
     @Deprecated
     public static final AsciiString KEEP_ALIVE = AsciiString.cached("keep-alive");
     /**
+     * {@code "last-event-id"}.
+     */
+    public static final AsciiString LAST_EVENT_ID = AsciiString.cached("last-event-id");
+    /**
      * {@code "last-modified"}.
      */
     public static final AsciiString LAST_MODIFIED = AsciiString.cached("last-modified");

@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -59,11 +60,13 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.NullToNoContentResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.annotation.ProducesEventStream;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -319,6 +322,28 @@ public class AnnotatedHttpServiceResponseConverterTest {
                     return Flux.just("foo", "bar", "baz", "qux");
                 }
             });
+
+            sb.annotatedService("/event-stream", new Object() {
+                @Get("/stream")
+                @ProducesEventStream
+                @ResponseConverter(ServerSentEventResponseConverterFunction.class)
+                public Stream<ServerSentEvent<?>> stream() {
+                    return Stream.of(ServerSentEvent.ofData("foo"),
+                                     ServerSentEvent.ofData("bar"),
+                                     ServerSentEvent.ofData("baz"),
+                                     ServerSentEvent.ofData("qux"));
+                }
+
+                @Get("/publisher")
+                @ProducesEventStream
+                @ResponseConverter(ServerSentEventResponseConverterFunction.class)
+                public Publisher<ServerSentEvent<?>> publisher() {
+                    return Flux.just(ServerSentEvent.ofData("foo"),
+                                     ServerSentEvent.ofData("bar"),
+                                     ServerSentEvent.ofData("baz"),
+                                     ServerSentEvent.ofData("qux"));
+                }
+            });
         }
 
         private Publisher<String> exceptionRaisingPublisher() {
@@ -554,12 +579,12 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Test
     public void jsonTextSequences_stream() {
-        testJsonTextSequences("/json-seq/stream");
+        testJsonTextSequences("/stream");
     }
 
     @Test
     public void jsonTextSequences_publisher() {
-        testJsonTextSequences("/json-seq/publisher");
+        testJsonTextSequences("/publisher");
     }
 
     private void testJsonTextSequences(String path) {
@@ -575,25 +600,44 @@ public class AnnotatedHttpServiceResponseConverterTest {
             }
         };
 
-        StepVerifier.create(HttpClient.of(rule.uri("/")).get(path))
-                    .assertNext(o -> {
-                        assertThat(o).isInstanceOf(HttpHeaders.class);
-                        final HttpHeaders headers = (HttpHeaders) o;
-                        assertThat(headers.status()).isEqualTo(HttpStatus.OK);
-                        assertThat(headers.contentType()).isEqualTo(MediaType.JSON_SEQ);
-                    })
+        StepVerifier.create(HttpClient.of(rule.uri("/json-seq")).get(path))
+                    .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.JSON_SEQ))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "foo"))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "bar"))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "baz"))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "qux"))
-                    .assertNext(o -> {
-                        // On the server side, HttpResponseSubscriber emits a DATA frame with end of stream
-                        // flag when the HttpResponseWriter is closed.
-                        final HttpData lastContent = (HttpData) o;
-                        assertThat(lastContent.isEmpty()).isTrue();
-                        assertThat(lastContent.isEndOfStream()).isTrue();
-                    })
+                    .assertNext(this::assertThatLastContent)
                     .expectComplete()
                     .verify();
+    }
+
+    @Test
+    public void eventStream_stream() {
+        testEventStream("/stream");
+    }
+
+    @Test
+    public void eventStream_publisher() {
+        testEventStream("/publisher");
+    }
+
+    private void testEventStream(String path) {
+        StepVerifier.create(HttpClient.of(rule.uri("/event-stream")).get(path))
+                    .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.EVENT_STREAM))
+                    .expectNext(HttpData.ofUtf8("data:foo\n"))
+                    .expectNext(HttpData.ofUtf8("data:bar\n"))
+                    .expectNext(HttpData.ofUtf8("data:baz\n"))
+                    .expectNext(HttpData.ofUtf8("data:qux\n"))
+                    .assertNext(this::assertThatLastContent)
+                    .expectComplete()
+                    .verify();
+    }
+
+    private void assertThatLastContent(HttpObject o) {
+        // On the server side, HttpResponseSubscriber emits a DATA frame with end of stream
+        // flag when the HttpResponseWriter is closed.
+        final HttpData lastContent = (HttpData) o;
+        assertThat(lastContent.isEmpty()).isTrue();
+        assertThat(lastContent.isEndOfStream()).isTrue();
     }
 }

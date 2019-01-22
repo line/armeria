@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.annotation;
+package com.linecorp.armeria.internal;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -36,7 +36,7 @@ import com.google.common.collect.ImmutableList.Builder;
  * A utility class which provides functions for collecting objects published from a {@link Publisher} or
  * {@link Stream}.
  */
-final class ObjectCollectingUtil {
+public final class ObjectCollectingUtil {
 
     /**
      * The {@link Class} instance of {@code reactor.core.publisher.Mono} of
@@ -63,7 +63,7 @@ final class ObjectCollectingUtil {
      * @param executor executes the collecting job
      * @return a {@link CompletableFuture} which will complete when all published objects are collected
      */
-    static <T> CompletableFuture<List<T>> collectFrom(Stream<T> stream, Executor executor) {
+    public static <T> CompletableFuture<List<T>> collectFrom(Stream<T> stream, Executor executor) {
         requireNonNull(stream, "stream");
         requireNonNull(executor, "executor");
         final CompletableFuture<List<T>> future = new CompletableFuture<>();
@@ -83,7 +83,7 @@ final class ObjectCollectingUtil {
      * @param publisher publishes objects
      * @return a {@link CompletableFuture} which will complete when all published objects are collected
      */
-    static CompletableFuture<Object> collectFrom(Publisher<?> publisher) {
+    public static CompletableFuture<Object> collectFrom(Publisher<?> publisher) {
         requireNonNull(publisher, "publisher");
         final CompletableFuture<Object> future = new CompletableFuture<>();
         if (MONO_CLASS != null && MONO_CLASS.isAssignableFrom(publisher.getClass())) {
