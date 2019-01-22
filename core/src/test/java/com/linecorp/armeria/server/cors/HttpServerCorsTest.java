@@ -53,8 +53,7 @@ public class HttpServerCorsTest {
     private static final ClientFactory clientFactory = ClientFactory.DEFAULT;
 
     @CorsDecorators(value = {
-            @CorsDecorator(origins = "http://example.com",
-                    exposedHeaders = "expose_header_1")
+            @CorsDecorator(origins = "http://example.com", exposedHeaders = "expose_header_1")
     }, shortCircuit = true)
     private static class MyAnnotatedService {
 
@@ -162,7 +161,7 @@ public class HttpServerCorsTest {
                 @Post("/one/post")
                 @CorsDecorator(origins = "http://example.com",
                         exposedHeaders = { "expose_header_1", "expose_header_2" },
-                        shortCircuit = true, allowedRequestMethods = HttpMethod.POST, credentialAllowed = true,
+                        allowedRequestMethods = HttpMethod.POST, credentialAllowed = true,
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" }, maxAge = 1800,
                         preflightRequestHeaders = { @KeyValue(key = "x-preflight-cors", value = "Hello CORS") })
                 public HttpResponse onePolicyPost() {
@@ -170,12 +169,10 @@ public class HttpServerCorsTest {
                 }
 
                 @Get("/multi/get")
-                @CorsDecorators(value = {
-                        @CorsDecorator(origins = "http://example.com", exposedHeaders = { "expose_header_1" },
-                                allowedRequestMethods = HttpMethod.GET, credentialAllowed = true),
-                        @CorsDecorator(origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
-                                allowedRequestMethods = HttpMethod.GET, credentialAllowed = true)
-                }, shortCircuit = true)
+                @CorsDecorator(origins = "http://example.com", exposedHeaders = { "expose_header_1" },
+                        allowedRequestMethods = HttpMethod.GET, credentialAllowed = true)
+                @CorsDecorator(origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
+                        allowedRequestMethods = HttpMethod.GET, credentialAllowed = true)
                 public HttpResponse multiGet() {
                     return HttpResponse.of(HttpStatus.OK);
                 }
@@ -215,10 +212,6 @@ public class HttpServerCorsTest {
         assertEquals("*", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
         assertEquals("3600", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE));
         assertEquals("Hello CORS", response.headers().get(HttpHeaderNames.of("x-preflight-cors")));
-
-        final AggregatedHttpMessage response2 = request(client, HttpMethod.POST, "/cors6/one/post",
-                                                        "http://ex.com", "POST");
-        assertEquals(HttpStatus.FORBIDDEN, response2.status());
 
         final AggregatedHttpMessage response3 = request(client, HttpMethod.GET, "/cors6/multi/get",
                                                         "http://example.com", "GET");

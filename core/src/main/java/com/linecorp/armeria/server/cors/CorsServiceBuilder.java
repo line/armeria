@@ -335,7 +335,7 @@ public final class CorsServiceBuilder {
      * based on the properties of this builder.
      */
     public Function<Service<HttpRequest, HttpResponse>, CorsService> newDecorator() {
-        return s -> new CorsService(s, new CorsConfig(this));
+        return this::build;
     }
 
     /**

@@ -119,17 +119,4 @@ public @interface CorsDecorator {
      * If unset, will be {@code false}
      */
     boolean preflightRequestDisabled() default false;
-
-    /**
-     * Specifies that a CORS request should be rejected if it's invalid before being
-     * further processing.
-     *
-     * <p>CORS headers are set after a request is processed. This may not always be desired
-     * and this setting will check that the Origin is valid and if it is not valid no
-     * further processing will take place, and a error will be returned to the calling client.
-     *
-     * <p>This field will be ignored if {@link CorsDecorators} is used.
-     * Sets {@link CorsDecorators#shortCircuit()} to be true instead.
-     */
-    boolean shortCircuit() default false;
 }

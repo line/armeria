@@ -41,7 +41,7 @@ public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunc
     public Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> newDecorator(CorsDecorators parameter) {
         ensureValidConfig(parameter);
-
+        logger.debug("{} cors decorators created", parameter);
         final CorsDecorator[] policies = parameter.value();
         final CorsDecorator corsDecorator = policies[0];
         final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(corsDecorator.origins());
@@ -67,9 +67,5 @@ public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunc
                    " You cannot have an additional policy or origin.");
         checkState(Arrays.stream(policies).noneMatch(c -> c.origins().length == 0),
                    "origins should not be empty.");
-        if (Arrays.stream(policies).anyMatch(CorsDecorator::shortCircuit)) {
-            logger.warn("CorsDecorator.shortCircuit will be ignored with CorsDecorators." +
-                        " Sets CorsDecorators.shortCircuit to be true instead if you want to use it.");
-        }
     }
 }

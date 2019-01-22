@@ -29,9 +29,6 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
     public Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
     newDecorator(CorsDecorator parameter) {
         final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(parameter.origins());
-        if (parameter.shortCircuit()) {
-            cb.shortCircuit();
-        }
         cb.firstPolicyBuilder.setConfig(parameter);
         return cb.newDecorator();
     }
