@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 
 /**
  * Builds a new {@link CorsService} or its decorator function.
@@ -112,11 +111,6 @@ public final class CorsServiceBuilder {
         policies = Collections.emptySet();
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this);
         policyBuilders = Collections.emptySet();
-    }
-
-    CorsServiceBuilder setConfig(CorsDecorator corsDecorator) {
-        firstPolicyBuilder.setConfig(corsDecorator);
-        return this;
     }
 
     private void ensureForNewPolicy() {

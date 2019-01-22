@@ -32,7 +32,7 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
         if (parameter.shortCircuit()) {
             cb.shortCircuit();
         }
-        cb.setConfig(parameter);
+        cb.firstPolicyBuilder.setConfig(parameter);
         return cb.newDecorator();
     }
 }

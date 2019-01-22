@@ -48,7 +48,7 @@ public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunc
         if (parameter.shortCircuit()) {
             cb.shortCircuit();
         }
-        cb.setConfig(corsDecorator);
+        cb.firstPolicyBuilder.setConfig(corsDecorator);
         for (int i = 1; i < policies.length; i++) {
             final CorsPolicyBuilder builder = new CorsPolicyBuilder(policies[i].origins());
             builder.setConfig(policies[i]);
