@@ -17,20 +17,37 @@ package com.linecorp.armeria.server.rxjava;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
+
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
+import com.linecorp.armeria.server.annotation.ProducesText;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
+import io.reactivex.Completable;
+import io.reactivex.Maybe;
 import io.reactivex.Observable;
+import io.reactivex.Single;
+import io.reactivex.subscribers.DefaultSubscriber;
 
 public class ObservableResponseConverterFunctionTest {
 
@@ -38,23 +55,101 @@ public class ObservableResponseConverterFunctionTest {
     public static final ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/success", new Object() {
-                @Get("/1")
-                public Observable<String> one() {
+            sb.annotatedService("/maybe", new Object() {
+                @Get("/string")
+                public Maybe<String> string() {
+                    return Maybe.just("a");
+                }
+
+                @Get("/json")
+                @ProducesJson
+                public Maybe<String> json() {
+                    return Maybe.just("a");
+                }
+
+                @Get("/empty")
+                public Maybe<String> empty() {
+                    return Maybe.empty();
+                }
+
+                @Get("/error")
+                public Maybe<String> error() {
+                    return Maybe.error(new AnticipatedException());
+                }
+            });
+
+            sb.annotatedService("/single", new Object() {
+                @Get("/string")
+                public Single<String> string() {
+                    return Single.just("a");
+                }
+
+                @Get("/json")
+                @ProducesJson
+                public Single<String> json() {
+                    return Single.just("a");
+                }
+
+                @Get("/error")
+                public Single<String> error() {
+                    return Single.error(new AnticipatedException());
+                }
+            });
+
+            sb.annotatedService("/completable", new Object() {
+                @Get("/done")
+                public Completable done() {
+                    return Completable.complete();
+                }
+
+                @Get("/error")
+                public Completable error() {
+                    return Completable.error(new AnticipatedException());
+                }
+            });
+
+            sb.annotatedService("/observable", new Object() {
+                @Get("/string")
+                @ProducesText
+                public Observable<String> string() {
                     return Observable.just("a");
                 }
 
-                @Get("/3")
+                @Get("/json/1")
                 @ProducesJson
-                public Observable<String> three() {
+                public Observable<String> json1() {
+                    return Observable.just("a");
+                }
+
+                @Get("/json/3")
+                @ProducesJson
+                public Observable<String> json3() {
+                    return Observable.just("a", "b", "c");
+                }
+
+                @Get("/error")
+                public Observable<String> error() {
+                    return Observable.error(new AnticipatedException());
+                }
+            });
+
+            sb.annotatedService("/streaming", new Object() {
+                @Get("/json")
+                @ProducesJsonSequences
+                public Observable<String> json() {
                     return Observable.just("a", "b", "c");
                 }
             });
 
             sb.annotatedService("/failure", new Object() {
-                @Get("/immediate")
-                public Observable<String> immediate() {
+                @Get("/immediate1")
+                public Observable<String> immediate1() {
                     throw new IllegalArgumentException("Bad request!");
+                }
+
+                @Get("/immediate2")
+                public Observable<String> immediate2() {
+                    return Observable.error(new IllegalArgumentException("Bad request!"));
                 }
 
                 @Get("/defer1")
@@ -74,20 +169,118 @@ public class ObservableResponseConverterFunctionTest {
     };
 
     @Test
-    public void success() {
-        final HttpClient client = HttpClient.of(rule.uri("/success"));
+    public void maybe() {
+        final HttpClient client = HttpClient.of(rule.uri("/maybe"));
 
         AggregatedHttpMessage msg;
 
-        msg = client.get("/1").aggregate().join();
+        msg = client.get("/string").aggregate().join();
         assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(msg.content().toStringUtf8()).isEqualTo("a");
 
-        msg = client.get("/3").aggregate().join();
+        msg = client.get("/json").aggregate().join();
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.content().toStringUtf8()).isStringEqualTo("a");
+
+        msg = client.get("/empty").aggregate().join();
+        assertThat(msg.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.content().isEmpty()).isTrue();
+
+        msg = client.get("/error").aggregate().join();
+        assertThat(msg.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    public void single() {
+        final HttpClient client = HttpClient.of(rule.uri("/single"));
+
+        AggregatedHttpMessage msg;
+
+        msg = client.get("/string").aggregate().join();
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.content().toStringUtf8()).isEqualTo("a");
+
+        msg = client.get("/json").aggregate().join();
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.content().toStringUtf8()).isStringEqualTo("a");
+
+        msg = client.get("/error").aggregate().join();
+        assertThat(msg.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    public void completable() {
+        final HttpClient client = HttpClient.of(rule.uri("/completable"));
+
+        AggregatedHttpMessage msg;
+
+        msg = client.get("/done").aggregate().join();
+        assertThat(msg.headers().status()).isEqualTo(HttpStatus.OK);
+
+        msg = client.get("/error").aggregate().join();
+        assertThat(msg.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    public void observable() {
+        final HttpClient client = HttpClient.of(rule.uri("/observable"));
+
+        AggregatedHttpMessage msg;
+
+        msg = client.get("/string").aggregate().join();
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.content().toStringUtf8()).isEqualTo("a");
+
+        msg = client.get("/json/1").aggregate().join();
         assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(msg.content().toStringUtf8())
-                .isArray().ofLength(3)
-                .thatContains("a").thatContains("b").thatContains("c");
+                .isArray().ofLength(1).thatContains("a");
+
+        msg = client.get("/json/3").aggregate().join();
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.content().toStringUtf8())
+                .isArray().ofLength(3).thatContains("a").thatContains("b").thatContains("c");
+
+        msg = client.get("/error").aggregate().join();
+        assertThat(msg.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    public void streaming() {
+        final HttpClient client = HttpClient.of(rule.uri("/streaming"));
+        final AtomicBoolean isFinished = new AtomicBoolean();
+        client.get("/json").subscribe(new DefaultSubscriber<HttpObject>() {
+            final ImmutableList.Builder<HttpObject> received = new Builder<>();
+
+            @Override
+            public void onNext(HttpObject httpObject) {
+                received.add(httpObject);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                throw new Error("Should not reach here.");
+            }
+
+            @Override
+            public void onComplete() {
+                final Iterator<HttpObject> it = received.build().iterator();
+                final HttpHeaders headers = (HttpHeaders) it.next();
+                assertThat(headers.status()).isEqualTo(HttpStatus.OK);
+                assertThat(headers.contentType()).isEqualTo(MediaType.JSON_SEQ);
+                // JSON Text Sequences: *(Record Separator[0x1E] JSON-text Line Feed[0x0A])
+                assertThat(((HttpData) it.next()).array())
+                        .isEqualTo(new byte[] { 0x1E, '\"', 'a', '\"', 0x0A });
+                assertThat(((HttpData) it.next()).array())
+                        .isEqualTo(new byte[] { 0x1E, '\"', 'b', '\"', 0x0A });
+                assertThat(((HttpData) it.next()).array())
+                        .isEqualTo(new byte[] { 0x1E, '\"', 'c', '\"', 0x0A });
+                assertThat(((HttpData) it.next()).isEmpty()).isTrue();
+                assertThat(it.hasNext()).isFalse();
+                isFinished.set(true);
+            }
+        });
+        await().until(isFinished::get);
     }
 
     @Test
@@ -96,7 +289,10 @@ public class ObservableResponseConverterFunctionTest {
 
         AggregatedHttpMessage msg;
 
-        msg = client.get("/immediate").aggregate().join();
+        msg = client.get("/immediate1").aggregate().join();
+        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        msg = client.get("/immediate2").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         msg = client.get("/defer1").aggregate().join();

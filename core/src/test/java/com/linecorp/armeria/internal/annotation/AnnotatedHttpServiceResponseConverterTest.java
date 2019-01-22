@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -46,6 +48,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -57,12 +60,17 @@ import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.NullToNoContentResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
+import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.util.AsciiString;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 public class AnnotatedHttpServiceResponseConverterTest {
 
@@ -96,23 +104,27 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
             sb.annotatedService("/publish/single", new Object() {
                 @Get("/string")
+                @ProducesText   // Can omit this annotation, but it's not recommended.
                 public Publisher<String> string() {
-                    return new ObjectPublisher<>("¥");
+                    return Mono.just("¥");
                 }
 
                 @Get("/byteArray")
+                @ProducesOctetStream
                 public Publisher<byte[]> byteArray() {
                     return new ObjectPublisher<>("¥".getBytes());
                 }
 
                 @Get("/httpData")
+                @ProducesOctetStream
                 public Publisher<HttpData> httpData() {
                     return new ObjectPublisher<>(HttpData.of("¥".getBytes()));
                 }
 
                 @Get("/jsonNode")
+                @ProducesJson   // Can omit this annotation, but it's not recommended.
                 public Publisher<JsonNode> jsonNode() throws IOException {
-                    return new ObjectPublisher<>(mapper.readTree("{\"a\":\"¥\"}"));
+                    return Mono.just(mapper.readTree("{\"a\":\"¥\"}"));
                 }
             });
 
@@ -139,13 +151,20 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 }
 
                 @Get("/defer")
+                @ProducesText
                 public Publisher<String> defer() {
                     return exceptionRaisingPublisher();
                 }
             });
 
             sb.annotatedService("/publish/http-result", new Object() {
+                @Get("/mono/jsonNode")
+                public HttpResult<Publisher<JsonNode>> monoJsonNode() throws IOException {
+                    return HttpResult.of(Mono.just(mapper.readTree("{\"a\":\"¥\"}")));
+                }
+
                 @Get("/jsonNode")
+                @ProducesJson
                 public HttpResult<Publisher<JsonNode>> jsonNode() throws IOException {
                     return HttpResult.of(new ObjectPublisher<>(mapper.readTree("{\"a\":\"¥\"}")));
                 }
@@ -284,6 +303,20 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @SuppressWarnings("unchecked")
                 public <T> HttpResult<T> generic() {
                     return (HttpResult<T>) HttpResult.of(ImmutableList.of("a", "b"));
+                }
+            });
+
+            sb.annotatedService("/json-seq", new Object() {
+                @Get("/stream")
+                @ProducesJsonSequences
+                public Stream<String> stream() {
+                    return Stream.of("foo", "bar", "baz", "qux");
+                }
+
+                @Get("/publisher")
+                @ProducesJsonSequences
+                public Publisher<String> publisher() {
+                    return Flux.just("foo", "bar", "baz", "qux");
                 }
             });
         }
@@ -484,10 +517,16 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         AggregatedHttpMessage msg;
 
-        msg = aggregated(client.get("/jsonNode"));
+        msg = aggregated(client.get("/mono/jsonNode"));
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(msg.content().toStringUtf8()).isEqualTo(ImmutableMap.of("a", "¥"));
+
+        msg = aggregated(client.get("/jsonNode"));
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.content().toStringUtf8())
+                .isEqualTo(ImmutableList.of(ImmutableMap.of("a", "¥")));
 
         msg = aggregated(client.get("/defer"));
         assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -512,5 +551,50 @@ public class AnnotatedHttpServiceResponseConverterTest {
     @Test
     public void defaultNullHandling() throws JsonProcessingException {
         assertThat(new ObjectMapper().writeValueAsString(null)).isEqualTo("null");
+    }
+
+    @Test
+    public void jsonTextSequences_stream() {
+        testJsonTextSequences("/json-seq/stream");
+    }
+
+    @Test
+    public void jsonTextSequences_publisher() {
+        testJsonTextSequences("/json-seq/publisher");
+    }
+
+    private void testJsonTextSequences(String path) {
+        final BiConsumer<HttpObject, String> ensureExpectedHttpData = (o, expectedString) -> {
+            assertThat(o).isInstanceOf(HttpData.class);
+            final HttpData data = (HttpData) o;
+            try {
+                assertThat(mapper.readValue(data.array(), 1, data.length() - 2, String.class))
+                        .isEqualTo(expectedString);
+            } catch (IOException e) {
+                // Always false.
+                assertThat(e).isNull();
+            }
+        };
+
+        StepVerifier.create(HttpClient.of(rule.uri("/")).get(path))
+                    .assertNext(o -> {
+                        assertThat(o).isInstanceOf(HttpHeaders.class);
+                        final HttpHeaders headers = (HttpHeaders) o;
+                        assertThat(headers.status()).isEqualTo(HttpStatus.OK);
+                        assertThat(headers.contentType()).isEqualTo(MediaType.JSON_SEQ);
+                    })
+                    .assertNext(o -> ensureExpectedHttpData.accept(o, "foo"))
+                    .assertNext(o -> ensureExpectedHttpData.accept(o, "bar"))
+                    .assertNext(o -> ensureExpectedHttpData.accept(o, "baz"))
+                    .assertNext(o -> ensureExpectedHttpData.accept(o, "qux"))
+                    .assertNext(o -> {
+                        // On the server side, HttpResponseSubscriber emits a DATA frame with end of stream
+                        // flag when the HttpResponseWriter is closed.
+                        final HttpData lastContent = (HttpData) o;
+                        assertThat(lastContent.isEmpty()).isTrue();
+                        assertThat(lastContent.isEndOfStream()).isTrue();
+                    })
+                    .expectComplete()
+                    .verify();
     }
 }

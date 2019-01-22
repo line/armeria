@@ -405,6 +405,12 @@ public final class MediaType {
     public static final MediaType JSON = createConstant(APPLICATION_TYPE, "json");
 
     /**
+     * As described in <a href="https://tools.ietf.org/html/rfc7464">RFC 7464</a>, this constant
+     * ({@code application/json-seq}) is used for expressing JSON text sequences.
+     */
+    public static final MediaType JSON_SEQ = createConstant(APPLICATION_TYPE, "json-seq");
+
+    /**
      * As described in <a href="https://www.ietf.org/rfc/rfc6902.txt">RFC 6902</a>, this constant
      * ({@code application/json-patch+json}) is used for expressing a sequence of operations to apply
      * to a JavaScript Object Notation(JSON) document.

@@ -160,7 +160,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                             " (service: " + service() + ')');
                 }
 
-                HttpHeaders headers = (HttpHeaders) o;
+                final HttpHeaders headers = (HttpHeaders) o;
                 final HttpStatus status = headers.status();
                 if (status == null) {
                     throw newIllegalStateException("published an HttpHeaders without status: " + o +
