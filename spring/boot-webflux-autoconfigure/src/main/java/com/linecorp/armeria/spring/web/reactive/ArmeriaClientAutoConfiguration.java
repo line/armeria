@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
-import java.util.Optional;
+import java.util.List;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -38,15 +38,14 @@ import org.springframework.web.reactive.function.client.WebClient.Builder;
 public class ArmeriaClientAutoConfiguration {
 
     /**
-     * Returns a {@link ClientHttpConnector} which is customized by an
-     * {@link ArmeriaClientConfigurator}.
+     * Returns a {@link ClientHttpConnector} which is configured by a list of
+     * {@link ArmeriaClientConfigurator}s.
      */
     @Bean
     public ClientHttpConnector clientHttpConnector(
-            Optional<ArmeriaClientConfigurator> customizer,
+            List<ArmeriaClientConfigurator> customizer,
             DataBufferFactoryWrapper<?> factoryWrapper) {
-        return customizer.map(c -> new ArmeriaClientHttpConnector(c, factoryWrapper))
-                         .orElseGet(() -> new ArmeriaClientHttpConnector(factoryWrapper));
+        return new ArmeriaClientHttpConnector(customizer, factoryWrapper);
     }
 
     /**

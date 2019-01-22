@@ -15,7 +15,7 @@ dependencies {
     compile 'io.micrometer:micrometer-registry-prometheus'
     compile 'io.dropwizard.metrics:metrics-json'
     compile 'javax.inject:javax.inject'
-    compile 'javax.validation:validation-api'
+    compileOnly 'javax.validation:validation-api'
     compile 'org.springframework.boot:spring-boot-starter-actuator'
     compile 'org.springframework.boot:spring-boot-starter-webflux'
 
@@ -23,7 +23,6 @@ dependencies {
 
     testCompile "io.projectreactor:reactor-test"
     testCompile 'org.springframework.boot:spring-boot-starter-test'
-    testCompile 'org.hibernate.validator:hibernate-validator'
 }
 
 // Copy common files from boot-autoconfigure module to gen-src directory in order to use them as a source set.

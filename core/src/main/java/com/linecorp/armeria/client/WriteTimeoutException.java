@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link TimeoutException} raised when a client failed to send a request to the wire within timeout.
@@ -27,18 +25,16 @@ public final class WriteTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2556616197251937869L;
 
-    private static final WriteTimeoutException INSTANCE = Exceptions.clearTrace(new WriteTimeoutException());
+    private static final WriteTimeoutException INSTANCE = new WriteTimeoutException();
 
     /**
-     * Returns a {@link WriteTimeoutException} which may be a singleton or a new instance, depending on
-     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * Returns a singleton {@link WriteTimeoutException}.
      */
     public static WriteTimeoutException get() {
-        return Flags.verboseExceptions() ? new WriteTimeoutException() : INSTANCE;
+        return INSTANCE;
     }
 
-    /**
-     * Creates a new instance.
-     */
-    private WriteTimeoutException() {}
+    private WriteTimeoutException() {
+        super((Throwable) null);
+    }
 }

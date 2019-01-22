@@ -22,6 +22,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static com.linecorp.armeria.server.HttpHeaderUtil.determineClientAddress;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
@@ -351,7 +352,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final PathMappingContext mappingCtx = DefaultPathMappingContext.of(
                 host, hostname, pathAndQuery.path(), pathAndQuery.query(), headers,
-                host.producibleMediaTypes());
+                host.producibleMediaTypes(), isCorsPreflightRequest(req));
         // Find the service that matches the path.
         final PathMapped<ServiceConfig> mapped;
         try {

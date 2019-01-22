@@ -34,11 +34,14 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.common.EventLoopRule;
 import com.linecorp.armeria.testing.server.ServerRule;
+
+import io.netty.channel.EventLoopGroup;
 
 public class HttpClientPipeliningTest {
 
@@ -89,6 +92,8 @@ public class HttpClientPipeliningTest {
     private static ClientFactory factoryWithPipelining;
     private static ClientFactory factoryWithoutPipelining;
 
+    private final EventLoopGroup aggregateExecutors = EventLoopGroups.newEventLoopGroup(2);
+
     @BeforeClass
     public static void initClientFactory() {
         // Ensure only a single event loop is used so that there's only one connection pool.
@@ -134,8 +139,8 @@ public class HttpClientPipeliningTest {
         semaphore.release(2);
 
         // Two requests should go through two different connections.
-        final String remoteAddress1 = res1.aggregate().get().content().toStringUtf8();
-        final String remoteAddress2 = res2.aggregate().get().content().toStringUtf8();
+        final String remoteAddress1 = res1.aggregate(aggregateExecutors.next()).get().content().toStringUtf8();
+        final String remoteAddress2 = res2.aggregate(aggregateExecutors.next()).get().content().toStringUtf8();
         assertThat(remoteAddress1).isNotEqualTo(remoteAddress2);
     }
 
@@ -168,8 +173,8 @@ public class HttpClientPipeliningTest {
         semaphore.release(2);
 
         // Two requests should go through one same connection.
-        final String remoteAddress1 = res1.aggregate().get().content().toStringUtf8();
-        final String remoteAddress2 = res2.aggregate().get().content().toStringUtf8();
+        final String remoteAddress1 = res1.aggregate(aggregateExecutors.next()).get().content().toStringUtf8();
+        final String remoteAddress2 = res2.aggregate(aggregateExecutors.next()).get().content().toStringUtf8();
         assertThat(remoteAddress1).isEqualTo(remoteAddress2);
     }
 }

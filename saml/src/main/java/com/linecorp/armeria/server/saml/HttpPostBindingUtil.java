@@ -93,7 +93,7 @@ final class HttpPostBindingUtil {
      */
     static String toSignedBase64(SignableSAMLObject signableObj,
                                  Credential signingCredential,
-                                 String signatureAlgorithm) throws SamlException {
+                                 String signatureAlgorithm) {
         sign(signableObj, signingCredential, signatureAlgorithm);
         final String messageStr = nodeToString(serialize(signableObj));
         return Base64.getEncoder().encodeToString(messageStr.getBytes(StandardCharsets.UTF_8));
@@ -103,8 +103,7 @@ final class HttpPostBindingUtil {
      * Converts an {@link AggregatedHttpMessage} which is received from the remote entity to
      * a {@link SAMLObject}.
      */
-    static <T extends SAMLObject> MessageContext<T> toSamlObject(AggregatedHttpMessage msg,
-                                                                 String name) throws SamlException {
+    static <T extends SAMLObject> MessageContext<T> toSamlObject(AggregatedHttpMessage msg, String name) {
         final SamlParameters parameters = new SamlParameters(msg);
         final byte[] decoded;
         try {

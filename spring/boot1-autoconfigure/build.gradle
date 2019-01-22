@@ -8,12 +8,11 @@ dependencies {
     compile 'io.micrometer:micrometer-registry-prometheus'
     compile 'io.dropwizard.metrics:metrics-json'
     compile 'javax.inject:javax.inject'
-    compile 'javax.validation:validation-api'
-    compile 'org.springframework.boot:spring-boot-starter:1.5.18.RELEASE'
-    compileOnly 'org.springframework.boot:spring-boot-configuration-processor:1.5.18.RELEASE'
+    compileOnly 'javax.validation:validation-api'
+    compile 'org.springframework.boot:spring-boot-starter:1.5.19.RELEASE'
+    compileOnly 'org.springframework.boot:spring-boot-configuration-processor:1.5.19.RELEASE'
 
-    testCompile 'org.springframework.boot:spring-boot-starter-test:1.5.18.RELEASE'
-    testCompile 'org.hibernate.validator:hibernate-validator'
+    testCompile 'org.springframework.boot:spring-boot-starter-test:1.5.19.RELEASE'
 }
 
 // Use the sources from ':spring:boot-autoconfigure'.

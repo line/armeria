@@ -27,12 +27,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
@@ -43,6 +44,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.MapMaker;
 
@@ -89,6 +92,25 @@ final class AnnotatedBeanFactory {
                                                                     : Optional.empty();
     }
 
+    static TreeSet<AnnotatedValueResolver> uniqueResolverSet() {
+        return new TreeSet<>((o1, o2) -> {
+            final String o1Name = o1.httpElementName();
+            final String o2Name = o2.httpElementName();
+            if (o1Name != null && o2Name != null && o1Name.equals(o2Name) &&
+                o1.annotationType() == o2.annotationType()) {
+                return 0;
+            }
+            // We are not ordering, but just finding duplicate elements.
+            return -1;
+        });
+    }
+
+    static void warnRedundantUse(AnnotatedValueResolver resolver, String genericString) {
+        logger.warn("Found a redundant use of annotation in {}." +
+                    " httpElementName: {}, annotation: {}", genericString,
+                    resolver.httpElementName(), resolver.annotationType().getSimpleName());
+    }
+
     @Nullable
     private static <T> Function<ResolverContext, T> createFactory(BeanFactoryId beanFactoryId,
                                                                   List<RequestObjectResolver> objectResolvers) {
@@ -120,19 +142,27 @@ final class AnnotatedBeanFactory {
             return null;
         }
 
-        final List<Entry<Field, AnnotatedValueResolver>> fields = findFields(beanFactoryId, resolvers);
-        final List<Entry<Method, List<AnnotatedValueResolver>>> methods = findMethods(beanFactoryId,
-                                                                                      resolvers);
+        final List<AnnotatedValueResolver> constructorAnnotatedResolvers = constructor.getValue();
 
-        if (constructor.getValue().isEmpty() && fields.isEmpty() && methods.isEmpty()) {
+        // Find the methods whose parameters are not annotated with the same annotations in the constructor.
+        // If there're parameters used redundantly, it would warn it.
+        final Map<Method, List<AnnotatedValueResolver>> methods =
+                findMethods(constructorAnnotatedResolvers, beanFactoryId, resolvers);
+
+        // Find the fields which are not annotated with the same annotations in the constructor and methods.
+        // If there're parameters used redundantly, it would warn it.
+        final Map<Field, AnnotatedValueResolver> fields = findFields(constructorAnnotatedResolvers, methods,
+                                                                     beanFactoryId, resolvers);
+
+        if (constructor.getValue().isEmpty() && methods.isEmpty() && fields.isEmpty()) {
             // A default constructor exists but there is no annotated field or method.
             return null;
         }
 
         // Suppress Java language access checking.
         constructor.getKey().setAccessible(true);
-        fields.forEach(field -> field.getKey().setAccessible(true));
-        methods.forEach(method -> method.getKey().setAccessible(true));
+        methods.keySet().forEach(method -> method.setAccessible(true));
+        fields.keySet().forEach(field -> field.setAccessible(true));
 
         logger.debug("Registered a bean factory: {}", beanFactoryId);
         return resolverContext -> {
@@ -141,15 +171,15 @@ final class AnnotatedBeanFactory {
                         constructor.getValue(), resolverContext);
                 final T instance = constructor.getKey().newInstance(constructorArgs);
 
-                for (final Entry<Field, AnnotatedValueResolver> field : fields) {
-                    final Object fieldArg = field.getValue().resolve(resolverContext);
-                    field.getKey().set(instance, fieldArg);
-                }
-
-                for (final Entry<Method, List<AnnotatedValueResolver>> method : methods) {
+                for (final Entry<Method, List<AnnotatedValueResolver>> method : methods.entrySet()) {
                     final Object[] methodArgs = AnnotatedValueResolver.toArguments(
                             method.getValue(), resolverContext);
                     method.getKey().invoke(instance, methodArgs);
+                }
+
+                for (final Entry<Field, AnnotatedValueResolver> field : fields.entrySet()) {
+                    final Object fieldArg = field.getValue().resolve(resolverContext);
+                    field.getKey().set(instance, fieldArg);
                 }
 
                 return instance;
@@ -198,22 +228,13 @@ final class AnnotatedBeanFactory {
         return candidate;
     }
 
-    private static List<Entry<Field, AnnotatedValueResolver>> findFields(
+    private static Map<Method, List<AnnotatedValueResolver>> findMethods(
+            List<AnnotatedValueResolver> constructorAnnotatedResolvers,
             BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
-        final List<Entry<Field, AnnotatedValueResolver>> ret = new ArrayList<>();
-        final Set<Field> fields = getAllFields(beanFactoryId.type);
-        for (final Field field : fields) {
-            final RequestConverter[] converters = field.getAnnotationsByType(RequestConverter.class);
-            AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
-                                               addToFirstIfExists(objectResolvers, converters))
-                                  .ifPresent(resolver -> ret.add(new SimpleImmutableEntry<>(field, resolver)));
-        }
-        return ret;
-    }
+        final TreeSet<AnnotatedValueResolver> uniques = uniqueResolverSet();
+        uniques.addAll(constructorAnnotatedResolvers);
 
-    private static List<Entry<Method, List<AnnotatedValueResolver>>> findMethods(
-            BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
-        final List<Entry<Method, List<AnnotatedValueResolver>>> ret = new ArrayList<>();
+        final Builder<Method, List<AnnotatedValueResolver>> methodsBuilder = ImmutableMap.builder();
         final Set<Method> methods = getAllMethods(beanFactoryId.type);
         for (final Method method : methods) {
             final RequestConverter[] converters = method.getAnnotationsByType(RequestConverter.class);
@@ -223,13 +244,51 @@ final class AnnotatedBeanFactory {
                                 method, beanFactoryId.pathParams,
                                 addToFirstIfExists(objectResolvers, converters));
                 if (!resolvers.isEmpty()) {
-                    ret.add(new SimpleImmutableEntry<>(method, resolvers));
+                    boolean redundant = false;
+                    for (AnnotatedValueResolver resolver : resolvers) {
+                        if (!uniques.add(resolver)) {
+                            redundant = true;
+                            warnRedundantUse(resolver, method.toGenericString());
+                        }
+                    }
+                    if (redundant && resolvers.size() == 1) {
+                        // Prevent redundant injection only when the size of parameter is 1.
+                        // If the method contains more than 2 parameters and if one of them is used redundantly,
+                        // we'd better to inject the method rather than ignore it.
+                        continue;
+                    }
+                    methodsBuilder.put(method, resolvers);
                 }
             } catch (NoAnnotatedParameterException ignored) {
                 // There's no annotated parameters in the method.
             }
         }
-        return ret;
+        return methodsBuilder.build();
+    }
+
+    private static Map<Field, AnnotatedValueResolver> findFields(
+            List<AnnotatedValueResolver> constructorAnnotatedResolvers,
+            Map<Method, List<AnnotatedValueResolver>> methods,
+            BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
+        final TreeSet<AnnotatedValueResolver> uniques = uniqueResolverSet();
+        uniques.addAll(constructorAnnotatedResolvers);
+        methods.values().forEach(uniques::addAll);
+
+        final Builder<Field, AnnotatedValueResolver> builder = ImmutableMap.builder();
+        final Set<Field> fields = getAllFields(beanFactoryId.type);
+        for (final Field field : fields) {
+            final RequestConverter[] converters = field.getAnnotationsByType(RequestConverter.class);
+            AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
+                                               addToFirstIfExists(objectResolvers, converters))
+                                  .ifPresent(resolver -> {
+                                      if (!uniques.add(resolver)) {
+                                          warnRedundantUse(resolver, field.toGenericString());
+                                          return;
+                                      }
+                                      builder.put(field, resolver);
+                                  });
+        }
+        return builder.build();
     }
 
     private AnnotatedBeanFactory() {}

@@ -40,6 +40,7 @@ import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.length;
+import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -280,11 +281,22 @@ public final class ArmeriaHttpUtil {
         }
 
         switch (status.code()) {
-            case 204: case 205: case 304:
+            case 204:
+            case 205:
+            case 304:
                 return true;
         }
-
         return false;
+    }
+
+    /**
+     * Returns {@code true} if the specified {@code request} is a CORS preflight request.
+     */
+    public static boolean isCorsPreflightRequest(com.linecorp.armeria.common.HttpRequest request) {
+        requireNonNull(request, "request");
+        return request.method() == HttpMethod.OPTIONS &&
+               request.headers().contains(HttpHeaderNames.ORIGIN) &&
+               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }
 
     /**

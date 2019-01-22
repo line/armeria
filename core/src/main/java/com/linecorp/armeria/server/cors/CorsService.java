@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.cors;
 
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
@@ -26,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -98,19 +98,6 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
                 return headers;
             }
         };
-    }
-
-    /**
-     * Check for a CORS preflight request.
-     *
-     * @param request the HTTP request with CORS info
-     *
-     * @return {@code true} if HTTP request is a CORS preflight request
-     */
-    private static boolean isCorsPreflightRequest(HttpRequest request) {
-        return request.method() == HttpMethod.OPTIONS &&
-               request.headers().contains(HttpHeaderNames.ORIGIN) &&
-               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }
 
     /**

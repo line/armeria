@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.tomcat;
 
+import javax.annotation.Nullable;
+
 /**
  * A {@link RuntimeException} that is raised when configuring or starting an embedded Tomcat fails.
  */
@@ -31,21 +33,21 @@ public class TomcatServiceException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public TomcatServiceException(String message) {
+    public TomcatServiceException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public TomcatServiceException(String message, Throwable cause) {
+    public TomcatServiceException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public TomcatServiceException(Throwable cause) {
+    public TomcatServiceException(@Nullable Throwable cause) {
         super(cause);
     }
 
@@ -53,8 +55,8 @@ public class TomcatServiceException extends RuntimeException {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    protected TomcatServiceException(String message, Throwable cause, boolean enableSuppression,
-                                     boolean writableStackTrace) {
+    protected TomcatServiceException(@Nullable String message, @Nullable Throwable cause,
+                                     boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

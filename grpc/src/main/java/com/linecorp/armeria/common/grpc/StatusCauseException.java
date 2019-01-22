@@ -27,6 +27,8 @@ import com.google.common.base.Strings;
  */
 public final class StatusCauseException extends RuntimeException {
 
+    private static final long serialVersionUID = -1792808536714102039L;
+
     private final String originalClassName;
     private final String originalMessage;
 
