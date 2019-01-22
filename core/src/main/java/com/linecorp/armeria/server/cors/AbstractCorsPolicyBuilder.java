@@ -37,8 +37,8 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.server.annotation.Cors;
 import com.linecorp.armeria.server.annotation.KeyValue;
+import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
 import io.netty.util.AsciiString;
@@ -81,30 +81,30 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
         return (B) this;
     }
 
-    B setConfig(Cors cors) {
-        if (cors.credentialAllowed()) {
+    B setConfig(CorsDecorator corsDecorator) {
+        if (corsDecorator.credentialAllowed()) {
             allowCredentials();
         }
-        if (cors.nullOriginAllowed()) {
+        if (corsDecorator.nullOriginAllowed()) {
             allowNullOrigin();
         }
-        if (cors.preflightRequestDisabled()) {
+        if (corsDecorator.preflightRequestDisabled()) {
             disablePreflightResponseHeaders();
         }
-        if (cors.exposedHeaders().length > 0) {
-            exposeHeaders(cors.exposedHeaders());
+        if (corsDecorator.exposedHeaders().length > 0) {
+            exposeHeaders(corsDecorator.exposedHeaders());
         }
-        if (cors.allowedRequestHeaders().length > 0) {
-            allowRequestHeaders(cors.allowedRequestHeaders());
+        if (corsDecorator.allowedRequestHeaders().length > 0) {
+            allowRequestHeaders(corsDecorator.allowedRequestHeaders());
         }
-        if (cors.allowedRequestMethods().length > 0) {
-            allowRequestMethods(cors.allowedRequestMethods());
+        if (corsDecorator.allowedRequestMethods().length > 0) {
+            allowRequestMethods(corsDecorator.allowedRequestMethods());
         }
-        for (KeyValue keyValue : cors.preflightRequestHeaders()) {
+        for (KeyValue keyValue : corsDecorator.preflightRequestHeaders()) {
             preflightResponseHeader(keyValue.key(), keyValue.value());
         }
-        if (cors.maxAge() > 0) {
-            maxAge(cors.maxAge());
+        if (corsDecorator.maxAge() > 0) {
+            maxAge(corsDecorator.maxAge());
         }
         return self();
     }

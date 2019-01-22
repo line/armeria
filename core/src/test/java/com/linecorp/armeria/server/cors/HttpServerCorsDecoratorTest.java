@@ -39,14 +39,14 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.Cors;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.KeyValue;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
+import com.linecorp.armeria.server.annotation.decorator.CorsDecorators;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-public class HttpServerCorsTest {
+public class HttpServerCorsDecoratorTest {
 
     private static final ClientFactory clientFactory = ClientFactory.DEFAULT;
 
@@ -119,7 +119,7 @@ public class HttpServerCorsTest {
             sb.annotatedService("/annotate-cors1", new Object() {
 
                 @Get("/any/get")
-                @Cors(origins = "*", exposedHeaders = { "expose_header_1", "expose_header_2" },
+                @CorsDecorator(origins = "*", exposedHeaders = { "expose_header_1", "expose_header_2" },
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" },
                         allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
                         preflightRequestHeaders = {
@@ -130,7 +130,7 @@ public class HttpServerCorsTest {
                 }
 
                 @Post("/one/post")
-                @Cors(origins = "http://example.com", exposedHeaders = { "expose_header_1", "expose_header_2" },
+                @CorsDecorator(origins = "http://example.com", exposedHeaders = { "expose_header_1", "expose_header_2" },
                         shortCircuit = true, allowedRequestMethods = HttpMethod.POST, credentialAllowed = true,
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" }, maxAge = 1800,
                         preflightRequestHeaders = { @KeyValue(key = "x-preflight-cors", value = "Hello CORS") })
@@ -139,10 +139,10 @@ public class HttpServerCorsTest {
                 }
 
                 @Get("/multi/get")
-                @CorsDecorator(value = {
-                        @Cors(origins = "http://example.com", exposedHeaders = { "expose_header_1" },
+                @CorsDecorators(value = {
+                        @CorsDecorator(origins = "http://example.com", exposedHeaders = { "expose_header_1" },
                                 allowedRequestMethods = HttpMethod.GET, credentialAllowed = true),
-                        @Cors(origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
+                        @CorsDecorator(origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
                                 allowedRequestMethods = HttpMethod.GET, credentialAllowed = true)
                 }, shortCircuit = true)
                 public HttpResponse multiGet() {

@@ -15,61 +15,24 @@
  */
 package com.linecorp.armeria.server.cors;
 
-import static com.google.common.base.Preconditions.checkState;
-
-import java.util.Arrays;
 import java.util.function.Function;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.annotation.Cors;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 
 public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunction<CorsDecorator> {
 
-    private static final Logger logger = LoggerFactory.getLogger(CorsDecoratorFactoryFunction.class);
-
-    /**
-     * Creates a new decorator with the specified {@code parameter}.
-     */
     @Override
-    public Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> newDecorator(CorsDecorator parameter) {
-        ensureValidConfig(parameter);
-
-        final Cors[] policies = parameter.value();
-        final Cors cors = policies[0];
-        final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(cors.origins());
+    public Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
+    newDecorator(CorsDecorator parameter) {
+        final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(parameter.origins());
         if (parameter.shortCircuit()) {
             cb.shortCircuit();
         }
-        cb.setConfig(cors);
-        for (int i = 1; i < policies.length; i++) {
-            final CorsPolicyBuilder builder = new CorsPolicyBuilder(policies[i].origins());
-            builder.setConfig(policies[i]);
-            cb.addPolicy(builder.build());
-        }
+        cb.setConfig(parameter);
         return cb.newDecorator();
-    }
-
-    private static void ensureValidConfig(CorsDecorator conf) {
-        checkState(conf.value().length > 0, "value() should not be empty.");
-        final boolean anyOrigin = Arrays.stream(conf.value()).anyMatch(
-                c -> Arrays.asList(c.origins()).contains("*"));
-        final Cors[] policies = conf.value();
-        checkState(!anyOrigin || (policies.length == 1 && policies[0].origins().length == 1),
-                   "the policy that support any origin (*) has been already included." +
-                   " You cannot have an additional policy or origin.");
-        checkState(Arrays.stream(policies).noneMatch(c -> c.origins().length == 0),
-                   "origins should not be empty.");
-        if (Arrays.stream(policies).anyMatch(Cors::shortCircuit)) {
-            logger.warn("Cors.shortCircuit will be ignored with CorsDecorator." +
-                        " Sets CorsDecorator.shortCircuit to be true instead if you want to use it.");
-        }
     }
 }
