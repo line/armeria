@@ -36,12 +36,11 @@ public @interface CorsDecorators {
     CorsDecorator[] value();
 
     /**
-     * Specifies that a CORS request should be rejected if it's invalid before being
-     * further processing.
+     * Specifies that a CORS request should be rejected if it's invalid before being processed further.
      *
      * <p>CORS headers are set after a request is processed. This may not always be desired
-     * and this setting will check that the Origin is valid and if it is not valid no
-     * further processing will take place, and a error will be returned to the calling client.
+     * and this setting will check that the origin is valid and if it is not valid no
+     * further processing will take place, and an error will be returned to the calling client.
      */
     boolean shortCircuit() default false;
 }

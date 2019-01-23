@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -335,9 +334,10 @@ public final class CorsServiceBuilder {
      * Returns a newly-created decorator that decorates a {@link Service} with a new {@link CorsService}
      * based on the properties of this builder.
      */
-    public Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> newDecorator() {
+    public Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> newDecorator() {
         return s -> {
-            if (s.as(CorsService.class).equals(Optional.empty())) {
+            if (!s.as(CorsService.class).isPresent()) {
                 return build(s);
             }
             return s;

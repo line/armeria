@@ -37,7 +37,7 @@ import com.linecorp.armeria.server.cors.CorsService;
 @Target({ ElementType.TYPE, ElementType.METHOD })
 public @interface CorsDecorator {
     /**
-     * An array of allowed origins.
+     * Allowed origins.
      * Sets this property to be {@code "*"} to allow any origin.
      */
     String[] origins();
@@ -79,7 +79,7 @@ public @interface CorsDecorator {
      * Settings this to be {@code true} will set the CORS {@code "Access-Control-Allow-Credentials"}
      * response header to {@code "true"}.
      *
-     * <p>If unset, will be {@code false}
+     * <p>If unset, will be {@code false}.
      *
      * @see CorsPolicyBuilder#allowCredentials()
      */
@@ -88,7 +88,7 @@ public @interface CorsDecorator {
     /**
      * Determines if a {@code "null"} origin is allowed.
      *
-     * <p>If unset, will be {@code false}
+     * <p>If unset, will be {@code false}.
      *
      * @see CorsPolicyBuilder#allowNullOrigin()
      */
@@ -102,8 +102,9 @@ public @interface CorsDecorator {
     AdditionalHeader[] preflightRequestHeaders() default {};
 
     /**
-     * Determines if no preflight response headers should be added to a preflight response.
-     * If unset, will be {@code false}
+     * Determines if no preflight response headers should be added to a CORS preflight response.
+     *
+     * <p>If unset, will be {@code false}.
      *
      * @see CorsPolicyBuilder#disablePreflightResponseHeaders()
      */

@@ -16,17 +16,17 @@
 package com.linecorp.armeria.server.annotation;
 
 /**
- * Annotation for an additional HTTP response header.
+ * Annotation for an additional HTTP header.
  */
 public @interface AdditionalHeader {
 
     /**
-     * The name of the HTTP response header to set to.
+     * The name of the HTTP header to set to.
      */
     String name();
 
     /**
-     * The value of the HTTP response header to set to.
+     * The value of the HTTP header to set to.
      */
     String value();
 }

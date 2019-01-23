@@ -23,6 +23,9 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 
+/**
+ * A factory which creates a {@link CorsService} decorator when only one {@link CorsDecorator} is added.
+ */
 public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunction<CorsDecorator> {
 
     @Override
