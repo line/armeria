@@ -88,14 +88,14 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
                     return obj;
                 }
 
-                final HttpHeaders headers = ((HttpHeaders) obj).asMutable();
+                final HttpHeaders headers = (HttpHeaders) obj;
                 final HttpStatus status = headers.status();
                 if (status == null || status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                     return headers;
                 }
 
-                setCorsResponseHeaders(ctx, req, headers);
-                return obj;
+                setCorsResponseHeaders(ctx, req, headers.asMutable());
+                return headers;
             }
         };
     }
