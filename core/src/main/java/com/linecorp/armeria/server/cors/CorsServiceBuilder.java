@@ -337,10 +337,10 @@ public final class CorsServiceBuilder {
     public Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> newDecorator() {
         return s -> {
-            if (!s.as(CorsService.class).isPresent()) {
-                return build(s);
+            if (s.as(CorsService.class).isPresent()) {
+                return s;
             }
-            return s;
+            return build(s);
         };
     }
 

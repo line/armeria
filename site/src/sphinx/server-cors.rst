@@ -102,3 +102,66 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
                                             .build())
                               .newDecorator()));
 
+Configuring CORS via annotation
+-------------------------------
+
+Armeria provides a way to configure CORS via :api:`@CorsDecorator`, e.g.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.common.HttpMethod;
+    import com.linecorp.armeria.common.HttpResponse;
+    import com.linecorp.armeria.common.HttpStatus;
+    import com.linecorp.armeria.server.HttpService;
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.annotation.AdditionalHeader;
+    import com.linecorp.armeria.server.annotation.Get;
+    import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
+
+    Server s = new ServerBuilder().annotatedService("/example", new Object() {
+        @Get("/get")
+        @CorsDecorator(origins = "http://example.com", credentialAllowed = true,
+                        nullOriginAllowed = true, exposedHeaders = "expose_header",
+                        allowedRequestMethods = HttpMethod.GET, allowedRequestHeaders = "allow_header",
+                        preflightResponseHeaders = {
+                            @AdditionalHeader(name = "preflight_header", value = "preflight_value")
+                        })
+        // In case you want to configure different CORS Policies for different origins.
+        @CorsDecorator(origins = "http://example2.com", credentialAllowed = true)
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/post")
+        // In case you want to configure CORS Service which allows any origin (*).
+        // You can not add a policy after adding the decorator.
+        @CorsDecorator(origins = "*", exposedHeaders = "expose_header")
+        public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK)
+        }
+    }).build();
+    ...
+
+You can also use :api:`@CorsDecorator` above class to apply the decorator to every service in the class.
+Alternatively, Armeria ignores :api:`@CorsDecorator` set above class for the service which already has an :api:`@CorsDecorator`.
+
+.. code-block:: java
+
+    // this decorator will be ignored for the path "/post"
+    @CorsDecorator(origins = "http://example.com", credentialAllowed = true)
+    class MyAnnotatedService {
+        @Get("/get")
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/post")
+        @CorsDecorator(origins = "http://example2.com", credentialAllowed = true)
+        public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+    ...
+
+    Server s = new ServerBuilder().annotatedService(new MyAnnotatedService()).build();
+    ...
