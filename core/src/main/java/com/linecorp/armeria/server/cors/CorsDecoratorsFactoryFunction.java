@@ -20,9 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Arrays;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
@@ -32,8 +29,6 @@ import com.linecorp.armeria.server.annotation.decorator.CorsDecorators;
 
 public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunction<CorsDecorators> {
 
-    private static final Logger logger = LoggerFactory.getLogger(CorsDecoratorsFactoryFunction.class);
-
     /**
      * Creates a new decorator with the specified {@code parameter}.
      */
@@ -41,7 +36,6 @@ public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunc
     public Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> newDecorator(CorsDecorators parameter) {
         ensureValidConfig(parameter);
-        logger.debug("{} cors decorators created", parameter);
         final CorsDecorator[] policies = parameter.value();
         final CorsDecorator corsDecorator = policies[0];
         final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(corsDecorator.origins());

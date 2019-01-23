@@ -37,13 +37,13 @@ import com.linecorp.armeria.server.cors.CorsService;
 @Target({ ElementType.TYPE, ElementType.METHOD })
 public @interface CorsDecorator {
     /**
-     * Allowed origins.
+     * An array of allowed origins.
      * Sets this property to be {@code "*"} to allow any origin.
      */
     String[] origins();
 
     /**
-     * Specifies the allowed set of HTTP request methods that should be returned in the
+     * An array of the allowed HTTP request methods that should be returned in the
      * CORS {@code "Access-Control-Request-Method"} response header.
      *
      * @see CorsPolicyBuilder#allowRequestMethods(HttpMethod...)
@@ -51,7 +51,7 @@ public @interface CorsDecorator {
     HttpMethod[] allowedRequestMethods() default {};
 
     /**
-     * Sets the CORS {@code "Access-Control-Max-Age"} response header and enables the
+     * The value of the CORS {@code "Access-Control-Max-Age"} response header which enables the
      * caching of the preflight response for the specified time. During this time no preflight
      * request will be made.
      *
@@ -60,62 +60,33 @@ public @interface CorsDecorator {
     long maxAge() default 0;
 
     /**
-     * Specifies the headers to be exposed to calling clients.
-     *
-     * <p>During a simple CORS request, only certain response headers are made available by the
-     * browser, for example using:
-     * <pre>{@code
-     * xhr.getResponseHeader("Content-Type");
-     * }</pre>
-     *
-     * <p>The headers that are available by default are:
-     * <ul>
-     *   <li>{@code Cahce-Control}</li>
-     *   <li>{@code Content-Language}</li>
-     *   <li>{@code Content-Type}</li>
-     *   <li>{@code Expires}</li>
-     *   <li>{@code Last-Modified}</li>
-     *   <li>{@code Pragma}</li>
-     * </ul>
-     *
-     * <p>To expose other headers they need to be specified which is what this method enables by
-     * adding the headers to the CORS {@code "Access-Control-Expose-Headers"} response header.
+     * An array of the headers to be exposed to calling clients.
      *
      * @see CorsPolicyBuilder#exposeHeaders(CharSequence...)
      */
     String[] exposedHeaders() default {};
 
     /**
-     * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
+     * An array of the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.
-     *
-     * <p>If a client specifies headers on the request, for example by calling:
-     * <pre>{@code
-     * xhr.setRequestHeader('My-Custom-Header', 'SomeValue');
-     * }</pre>
-     * The server will receive the above header name in the {@code "Access-Control-Request-Headers"} of the
-     * preflight request. The server will then decide if it allows this header to be sent for the
-     * real request (remember that a preflight is not the real request but a request asking the server
-     * if it allows a request).
      *
      * @see CorsPolicyBuilder#allowRequestHeaders(CharSequence...)
      */
     String[] allowedRequestHeaders() default {};
 
     /**
-     * Enables cookies to be added to CORS requests.
-     * Calling this method will set the CORS {@code "Access-Control-Allow-Credentials"} response header
-     * to {@code true}. By default, cookies are not included in CORS requests.
-     * If unset, will be {@code false}
+     * Determines if cookies are allowed to be added to CORS requests.
+     * Settings this to be {@code true} will set the CORS {@code "Access-Control-Allow-Credentials"}
+     * response header to {@code "true"}.
+     *
+     * <p>If unset, will be {@code false}
      *
      * @see CorsPolicyBuilder#allowCredentials()
      */
     boolean credentialAllowed() default false;
 
     /**
-     * Enables a successful CORS response with a {@code "null"} value for the CORS response header
-     * {@code "Access-Control-Allow-Origin"}. Web browsers may set the {@code "Origin"} request header to
-     * {@code "null"} if a resource is loaded from the local file system.
+     * Determines if a {@code "null"} origin is allowed.
      *
      * <p>If unset, will be {@code false}
      *
@@ -124,17 +95,14 @@ public @interface CorsDecorator {
     boolean nullOriginAllowed() default false;
 
     /**
-     * Specifies HTTP response headers that should be added to a CORS preflight response.
-     *
-     * <p>An intermediary like a load balancer might require that a CORS preflight request
-     * have certain headers set. This enables such headers to be added.
+     * An array of the HTTP response headers that should be added to a CORS preflight response.
      *
      * @see CorsPolicyBuilder#preflightResponseHeader(CharSequence, Object...)
      */
     AdditionalHeader[] preflightRequestHeaders() default {};
 
     /**
-     * Specifies that no preflight response headers should be added to a preflight response.
+     * Determines if no preflight response headers should be added to a preflight response.
      * If unset, will be {@code false}
      *
      * @see CorsPolicyBuilder#disablePreflightResponseHeaders()
