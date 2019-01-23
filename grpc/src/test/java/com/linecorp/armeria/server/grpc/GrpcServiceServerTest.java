@@ -286,6 +286,42 @@ public class GrpcServiceServerTest {
         }
     };
 
+    @ClassRule
+    public static ServerRule serverWithNoMaxMessageSize = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.defaultMaxRequestLength(0);
+
+            sb.serviceUnder("/", new GrpcServiceBuilder()
+                    .addService(new UnitTestServiceImpl())
+                    .build()
+                    .decorate(LoggingService.newDecorator())
+                    .decorate((delegate, ctx, req) -> {
+                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
+                        return delegate.serve(ctx, req);
+                    }));
+        }
+    };
+
+    @ClassRule
+    public static ServerRule serverWithLongMaxRequestLimit = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.defaultMaxRequestLength(Long.MAX_VALUE);
+
+            sb.serviceUnder("/", new GrpcServiceBuilder()
+                    .addService(new UnitTestServiceImpl())
+                    .build()
+                    .decorate(LoggingService.newDecorator())
+                    .decorate((delegate, ctx, req) -> {
+                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
+                        return delegate.serve(ctx, req);
+                    }));
+        }
+    };
+
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
@@ -769,6 +805,26 @@ public class GrpcServiceServerTest {
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
+    }
+
+    @Test
+    public void noMaxMessageSize() {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1",
+                                                                  serverWithNoMaxMessageSize.httpPort())
+                                                      .usePlaintext()
+                                                      .build();
+        UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
+        assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+    }
+
+    @Test
+    public void longMaxRequestLength() {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1",
+                                                                  serverWithLongMaxRequestLimit.httpPort())
+                                                      .usePlaintext()
+                                                      .build();
+        UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
+        assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
     }
 
     private static void checkRequestLog(RequestLogChecker checker) throws Exception {
