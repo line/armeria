@@ -818,7 +818,7 @@ public class GrpcServiceServerTest {
     }
 
     @Test
-    public void longMaxRequestLength() {
+    public void longMaxRequestLimit() {
         ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1",
                                                                   serverWithLongMaxRequestLimit.httpPort())
                                                       .usePlaintext()
