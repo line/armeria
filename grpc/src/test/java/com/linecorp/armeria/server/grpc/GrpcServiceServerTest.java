@@ -813,8 +813,13 @@ public class GrpcServiceServerTest {
                                                                   serverWithNoMaxMessageSize.httpPort())
                                                       .usePlaintext()
                                                       .build();
-        UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
-        assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+
+        try {
+            UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
+            assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+        } finally {
+            channel.shutdownNow();
+        }
     }
 
     @Test
@@ -823,8 +828,12 @@ public class GrpcServiceServerTest {
                                                                   serverWithLongMaxRequestLimit.httpPort())
                                                       .usePlaintext()
                                                       .build();
-        UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
-        assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+        try {
+            UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
+            assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+        } finally {
+            channel.shutdownNow();
+        }
     }
 
     private static void checkRequestLog(RequestLogChecker checker) throws Exception {
