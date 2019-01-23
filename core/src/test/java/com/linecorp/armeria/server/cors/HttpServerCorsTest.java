@@ -60,6 +60,11 @@ public class HttpServerCorsTest {
         @Get("/index")
         @StatusCode(200)
         public void index() {}
+
+        @Get("/dup_test")
+        @StatusCode(200)
+        @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2")
+        public void duptest() {}
     }
 
     @ClassRule
@@ -228,9 +233,12 @@ public class HttpServerCorsTest {
         assertEquals(HttpStatus.OK, response5.status());
 
         final AggregatedHttpMessage response6 = request(client, HttpMethod.GET, "/cors7/index",
-                                                        "http://example2.com",
-                                                        "GET");
+                                                        "http://example2.com", "GET");
         assertEquals(HttpStatus.FORBIDDEN, response6.status());
+        final AggregatedHttpMessage response7 = request(client, HttpMethod.GET, "/cors7/dup_test",
+                                                        "http://example2.com", "GET");
+        assertEquals(HttpStatus.OK, response7.status());
+        assertEquals("expose_header_2", response7.headers().get(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS));
     }
 
     // Makes sure if it throws an Exception when an improper setting is set.
