@@ -22,10 +22,15 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
-import com.linecorp.armeria.server.annotation.KeyValue;
 import com.linecorp.armeria.server.cors.CorsDecoratorFactoryFunction;
+import com.linecorp.armeria.server.cors.CorsPolicyBuilder;
+import com.linecorp.armeria.server.cors.CorsService;
 
+/**
+ * A {@link CorsService} decorator for annotated HTTP services.
+ */
 @Repeatable(CorsDecorators.class)
 @DecoratorFactory(CorsDecoratorFactoryFunction.class)
 @Retention(RetentionPolicy.RUNTIME)
@@ -40,6 +45,8 @@ public @interface CorsDecorator {
     /**
      * Specifies the allowed set of HTTP request methods that should be returned in the
      * CORS {@code "Access-Control-Request-Method"} response header.
+     *
+     * @see CorsPolicyBuilder#allowRequestMethods(HttpMethod...)
      */
     HttpMethod[] allowedRequestMethods() default {};
 
@@ -47,6 +54,8 @@ public @interface CorsDecorator {
      * Sets the CORS {@code "Access-Control-Max-Age"} response header and enables the
      * caching of the preflight response for the specified time. During this time no preflight
      * request will be made.
+     *
+     * @see CorsPolicyBuilder#maxAge(long)
      */
     long maxAge() default 0;
 
@@ -71,6 +80,8 @@ public @interface CorsDecorator {
      *
      * <p>To expose other headers they need to be specified which is what this method enables by
      * adding the headers to the CORS {@code "Access-Control-Expose-Headers"} response header.
+     *
+     * @see CorsPolicyBuilder#exposeHeaders(CharSequence...)
      */
     String[] exposedHeaders() default {};
 
@@ -86,6 +97,8 @@ public @interface CorsDecorator {
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server
      * if it allows a request).
+     *
+     * @see CorsPolicyBuilder#allowRequestHeaders(CharSequence...)
      */
     String[] allowedRequestHeaders() default {};
 
@@ -94,6 +107,8 @@ public @interface CorsDecorator {
      * Calling this method will set the CORS {@code "Access-Control-Allow-Credentials"} response header
      * to {@code true}. By default, cookies are not included in CORS requests.
      * If unset, will be {@code false}
+     *
+     * @see CorsPolicyBuilder#allowCredentials()
      */
     boolean credentialAllowed() default false;
 
@@ -103,6 +118,8 @@ public @interface CorsDecorator {
      * {@code "null"} if a resource is loaded from the local file system.
      *
      * <p>If unset, will be {@code false}
+     *
+     * @see CorsPolicyBuilder#allowNullOrigin()
      */
     boolean nullOriginAllowed() default false;
 
@@ -111,12 +128,16 @@ public @interface CorsDecorator {
      *
      * <p>An intermediary like a load balancer might require that a CORS preflight request
      * have certain headers set. This enables such headers to be added.
+     *
+     * @see CorsPolicyBuilder#preflightResponseHeader(CharSequence, Object...)
      */
-    KeyValue[] preflightRequestHeaders() default {};
+    AdditionalHeader[] preflightRequestHeaders() default {};
 
     /**
      * Specifies that no preflight response headers should be added to a preflight response.
      * If unset, will be {@code false}
+     *
+     * @see CorsPolicyBuilder#disablePreflightResponseHeaders()
      */
     boolean preflightRequestDisabled() default false;
 }

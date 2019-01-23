@@ -39,8 +39,8 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.KeyValue;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.StatusCode;
@@ -152,7 +152,7 @@ public class HttpServerCorsTest {
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" },
                         allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
                         preflightRequestHeaders = {
-                                @KeyValue(key = "x-preflight-cors", value = "Hello CORS")
+                                @AdditionalHeader(name = "x-preflight-cors", value = "Hello CORS")
                         })
                 public HttpResponse anyoneGet() {
                     return HttpResponse.of(HttpStatus.OK);
@@ -163,7 +163,9 @@ public class HttpServerCorsTest {
                         exposedHeaders = { "expose_header_1", "expose_header_2" },
                         allowedRequestMethods = HttpMethod.POST, credentialAllowed = true,
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" }, maxAge = 1800,
-                        preflightRequestHeaders = { @KeyValue(key = "x-preflight-cors", value = "Hello CORS") })
+                        preflightRequestHeaders = {
+                                @AdditionalHeader(name = "x-preflight-cors", value = "Hello CORS")
+                        })
                 public HttpResponse onePolicyPost() {
                     return HttpResponse.of(HttpStatus.OK);
                 }
@@ -225,8 +227,9 @@ public class HttpServerCorsTest {
                                                                  "GET");
         assertEquals(HttpStatus.OK, response5.status());
 
-        final AggregatedHttpMessage response6 = request(client, HttpMethod.GET, "/cors7/index", "http://example2.com",
-                                                                 "GET");
+        final AggregatedHttpMessage response6 = request(client, HttpMethod.GET, "/cors7/index",
+                                                        "http://example2.com",
+                                                        "GET");
         assertEquals(HttpStatus.FORBIDDEN, response6.status());
     }
 

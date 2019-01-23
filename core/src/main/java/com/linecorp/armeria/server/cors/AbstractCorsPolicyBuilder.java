@@ -37,7 +37,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.server.annotation.KeyValue;
+import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
@@ -100,8 +100,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
         if (corsDecorator.allowedRequestMethods().length > 0) {
             allowRequestMethods(corsDecorator.allowedRequestMethods());
         }
-        for (KeyValue keyValue : corsDecorator.preflightRequestHeaders()) {
-            preflightResponseHeader(keyValue.key(), keyValue.value());
+        for (AdditionalHeader additionalHeader : corsDecorator.preflightRequestHeaders()) {
+            preflightResponseHeader(additionalHeader.name(), additionalHeader.value());
         }
         if (corsDecorator.maxAge() > 0) {
             maxAge(corsDecorator.maxAge());

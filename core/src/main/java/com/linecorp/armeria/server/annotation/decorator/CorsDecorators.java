@@ -22,10 +22,9 @@ import java.lang.annotation.Target;
 
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.cors.CorsDecoratorsFactoryFunction;
-import com.linecorp.armeria.server.cors.CorsService;
 
 /**
- * A {@link CorsService} decorator for annotated HTTP services.
+ * The containing annotation type for {@link CorsDecorator}.
  */
 @DecoratorFactory(CorsDecoratorsFactoryFunction.class)
 @Retention(RetentionPolicy.RUNTIME)

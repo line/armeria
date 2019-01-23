@@ -15,16 +15,18 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-public @interface KeyValue {
-    /**
-     * .
-     * @return
-     */
-    String key();
+/**
+ * Annotation for an additional HTTP response header.
+ */
+public @interface AdditionalHeader {
 
     /**
-     * .
-     * @return
+     * The name of the HTTP response header to set to.
+     */
+    String name();
+
+    /**
+     * The value of the HTTP response header to set to.
      */
     String value();
 }
