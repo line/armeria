@@ -365,7 +365,6 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Retention(RetentionPolicy.RUNTIME)
     @Target({ ElementType.TYPE, ElementType.METHOD })
-    @Produces("application/binary")
     @Produces("application/octet-stream")
     @interface UserProduceBinary {}
 
