@@ -126,16 +126,16 @@ You can also configure CORS for :ref:`server-annotated-service` using the :api:`
                        preflightResponseHeaders = {
                            @AdditionalHeader(name = "preflight_header", value = "preflight_value")
                        })
-        // In case you want to configure different CORS Policies for different origins.
+        // In case you want to configure different CORS policies for different origins.
         @CorsDecorator(origins = "http://example2.com", credentialsAllowed = true)
         public HttpResponse get() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Post("/post")
-        // In case you want to configure CORS Service which allows any origin (*).
-        // You can not add a policy after adding the decorator.
+        // In case you want to allow any origin (*):
         @CorsDecorator(origins = "*", exposedHeaders = "expose_header")
+        // You can not add a policy after adding the decorator allowing any origin (*).
         public HttpResponse post() {
             return HttpResponse.of(HttpStatus.OK)
         }
@@ -146,7 +146,7 @@ Note that the :api:`@CorsDecorator` annotation specified at the method level tak
 
 .. code-block:: java
 
-    // this decorator will be ignored for the path "/post"
+    // This decorator will be ignored for the path "/post".
     @CorsDecorator(origins = "http://example.com", credentialsAllowed = true)
     class MyAnnotatedService {
         @Get("/get")
