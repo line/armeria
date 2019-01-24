@@ -34,6 +34,13 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void endResponseWithLastChild() {}
 
     @Override
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol) {}
+
+    @Override
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol,
+                             long requestStartTimeNanos, long requestStartTimeMicros) {}
+
+    @Override
     public void startRequest(Channel ch, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession) {}
 
     @Override
@@ -51,6 +58,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void requestFirstBytesTransferred() {}
+
+    @Override
+    public void requestFirstBytesTransferred(long requestFirstBytesTransferredNanos) {}
 
     @Override
     public void requestHeaders(HttpHeaders requestHeaders) {}
@@ -92,6 +102,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void responseFirstBytesTransferred() {}
+
+    @Override
+    public void responseFirstBytesTransferred(long responseFirstBytesTransferredNanos) {}
 
     @Override
     public void responseHeaders(HttpHeaders responseHeaders) {}

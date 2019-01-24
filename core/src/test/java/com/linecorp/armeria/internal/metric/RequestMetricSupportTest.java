@@ -63,7 +63,6 @@ public class RequestMetricSupportTest {
         assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0);
 
         ctx.logBuilder().responseHeaders(HttpHeaders.of(200));
-        ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseLength(456);
 
         ctx.logBuilder().endRequest();

@@ -82,12 +82,10 @@ public class PrometheusMetricsIntegrationTest {
             });
 
             sb.service("/foo", helloService.decorate(
-                    MetricCollectingService.newDecorator(
-                            (registry, log) -> meterIdPrefix(registry, log, "server", "Foo"))));
+                    MetricCollectingService.newDecorator(new MeterIdPrefixFunctionImpl("server", "Foo"))));
 
             sb.service("/bar", helloService.decorate(
-                    MetricCollectingService.newDecorator(
-                            (registry, log) -> meterIdPrefix(registry, log, "server", "Bar"))));
+                    MetricCollectingService.newDecorator(new MeterIdPrefixFunctionImpl("server", "Bar"))));
 
             sb.service("/internal/prometheus/metrics",
                        new PrometheusExpositionService(prometheusRegistry));
@@ -297,7 +295,7 @@ public class PrometheusMetricsIntegrationTest {
         final Iface client = new ClientBuilder(server.uri(BINARY, path))
                 .factory(clientFactory)
                 .rpcDecorator(MetricCollectingClient.newDecorator(
-                        (registry, log) -> meterIdPrefix(registry, log, "client", serviceName)))
+                        new MeterIdPrefixFunctionImpl("client", serviceName)))
                 .build(Iface.class);
         client.hello(name);
     }
@@ -310,13 +308,6 @@ public class PrometheusMetricsIntegrationTest {
                      .aggregate().get();
     }
 
-    private static MeterIdPrefix meterIdPrefix(MeterRegistry registry, RequestLog log,
-                                               String name, String serviceName) {
-        return MeterIdPrefixFunction.ofDefault(name)
-                                    .withTags("handler", serviceName)
-                                    .apply(registry, log);
-    }
-
     private static Pattern multilinePattern(String... lines) {
         final StringBuilder buf = new StringBuilder();
 
@@ -327,5 +318,30 @@ public class PrometheusMetricsIntegrationTest {
         buf.append('$');
 
         return Pattern.compile(buf.toString(), Pattern.MULTILINE);
+    }
+
+    private static final class MeterIdPrefixFunctionImpl implements MeterIdPrefixFunction {
+
+        private final String name;
+        private final String serviceName;
+
+        MeterIdPrefixFunctionImpl(String name, String serviceName) {
+            this.name = name;
+            this.serviceName = serviceName;
+        }
+
+        @Override
+        public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+            return MeterIdPrefixFunction.ofDefault(name)
+                                        .withTags("handler", serviceName)
+                                        .apply(registry, log);
+        }
+
+        @Override
+        public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+            return MeterIdPrefixFunction.ofDefault(name)
+                                        .withTags("handler", serviceName)
+                                        .activeRequestPrefix(registry, log);
+        }
     }
 }
