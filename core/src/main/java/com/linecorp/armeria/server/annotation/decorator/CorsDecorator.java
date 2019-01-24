@@ -43,7 +43,7 @@ public @interface CorsDecorator {
     String[] origins();
 
     /**
-     * An array of the allowed HTTP request methods that should be returned in the
+     * The allowed HTTP request methods that should be returned in the
      * CORS {@code "Access-Control-Request-Method"} response header.
      *
      * @see CorsPolicyBuilder#allowRequestMethods(HttpMethod...)
@@ -60,14 +60,14 @@ public @interface CorsDecorator {
     long maxAge() default 0;
 
     /**
-     * An array of the headers to be exposed to calling clients.
+     * The headers to be exposed to calling clients.
      *
      * @see CorsPolicyBuilder#exposeHeaders(CharSequence...)
      */
     String[] exposedHeaders() default {};
 
     /**
-     * An array of the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
+     * The headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.
      *
      * @see CorsPolicyBuilder#allowRequestHeaders(CharSequence...)
@@ -95,7 +95,7 @@ public @interface CorsDecorator {
     boolean nullOriginAllowed() default false;
 
     /**
-     * An array of the HTTP response headers that should be added to a CORS preflight response.
+     * The HTTP response headers that should be added to a CORS preflight response.
      *
      * @see CorsPolicyBuilder#preflightResponseHeader(CharSequence, Object...)
      */

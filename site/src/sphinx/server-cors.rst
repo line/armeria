@@ -105,7 +105,7 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
 Configuring CORS via annotation
 -------------------------------
 
-Armeria provides a way to configure CORS via :api:`@CorsDecorator`, e.g.
+You can also configure CORS for :ref:`server-annotated-service` using the :api:`@CorsDecorator` annotation, e.g.
 
 .. code-block:: java
 
@@ -140,10 +140,9 @@ Armeria provides a way to configure CORS via :api:`@CorsDecorator`, e.g.
             return HttpResponse.of(HttpStatus.OK)
         }
     }).build();
-    ...
 
-You can also use :api:`@CorsDecorator` above class to apply the decorator to every service in the class.
-Alternatively, Armeria ignores :api:`@CorsDecorator` set above class for the service which already has an :api:`@CorsDecorator`.
+You can also use :api:`@CorsDecorator` at class level to apply the decorator to all service methods in the class.
+Note that the :api:`@CorsDecorator` annotation specified at the method level takes precedence over what's specified at the class level:
 
 .. code-block:: java
 
@@ -161,7 +160,3 @@ Alternatively, Armeria ignores :api:`@CorsDecorator` set above class for the ser
             return HttpResponse.of(HttpStatus.OK);
         }
     }
-    ...
-
-    Server s = new ServerBuilder().annotatedService(new MyAnnotatedService()).build();
-    ...

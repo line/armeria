@@ -32,9 +32,6 @@ import com.linecorp.armeria.server.annotation.decorator.CorsDecorators;
  */
 public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunction<CorsDecorators> {
 
-    /**
-     * Creates a new decorator with the specified {@code parameter}.
-     */
     @Override
     public Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> newDecorator(CorsDecorators parameter) {
