@@ -121,11 +121,11 @@ You can also configure CORS for :ref:`server-annotated-service` using the :api:`
     Server s = new ServerBuilder().annotatedService("/example", new Object() {
         @Get("/get")
         @CorsDecorator(origins = "http://example.com", credentialsAllowed = true,
-                        nullOriginAllowed = true, exposedHeaders = "expose_header",
-                        allowedRequestMethods = HttpMethod.GET, allowedRequestHeaders = "allow_header",
-                        preflightResponseHeaders = {
-                            @AdditionalHeader(name = "preflight_header", value = "preflight_value")
-                        })
+                       nullOriginAllowed = true, exposedHeaders = "expose_header",
+                       allowedRequestMethods = HttpMethod.GET, allowedRequestHeaders = "allow_header",
+                       preflightResponseHeaders = {
+                           @AdditionalHeader(name = "preflight_header", value = "preflight_value")
+                       })
         // In case you want to configure different CORS Policies for different origins.
         @CorsDecorator(origins = "http://example2.com", credentialsAllowed = true)
         public HttpResponse get() {

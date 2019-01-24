@@ -232,7 +232,7 @@ public final class CorsServiceBuilder {
 
     /**
      * Specifies the allowed set of HTTP request methods that should be returned in the
-     * CORS {@code "Access-Control-Request-Method"} response header.
+     * CORS {@code "Access-Control-Allow-Methods"} response header.
      *
      * @param methods the {@link HttpMethod}s that should be allowed.
      * @return {@link CorsServiceBuilder} to support method chaining.

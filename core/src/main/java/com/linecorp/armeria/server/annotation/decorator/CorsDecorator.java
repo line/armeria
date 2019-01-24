@@ -44,7 +44,7 @@ public @interface CorsDecorator {
 
     /**
      * The allowed HTTP request methods that should be returned in the
-     * CORS {@code "Access-Control-Request-Method"} response header.
+     * CORS {@code "Access-Control-Allow-Methods"} response header.
      *
      * @see CorsPolicyBuilder#allowRequestMethods(HttpMethod...)
      */
