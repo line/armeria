@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.find;
-import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.register;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.find;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.register;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -31,12 +31,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.BeanFactoryId;
+import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 
-public class AnnotatedBeanFactoryTest {
+public class AnnotatedBeanFactoryRegistryTest {
 
     private static final Set<String> vars = ImmutableSet.of();
     private static final List<RequestObjectResolver> resolvers = ImmutableList.of();

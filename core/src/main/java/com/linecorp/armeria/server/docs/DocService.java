@@ -223,6 +223,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                              field.location(),
                              field.requirement(),
                              field.typeSignature(),
+                             field.childFieldInfos(),
                              docString(service.name() + '/' + method.name() + '/' + field.name(),
                                        field.docString(), docStrings));
     }
@@ -263,6 +264,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                              field.location(),
                              field.requirement(),
                              field.typeSignature(),
+                             field.childFieldInfos(),
                              docString(parent.name() + '/' + field.name(), field.docString(), docStrings));
     }
 

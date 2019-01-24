@@ -51,6 +51,7 @@ import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
@@ -176,44 +177,37 @@ public class ThriftDocServicePluginTest {
         final TypeSignature foo = TypeSignature.ofNamed(FooStruct.class);
         final MethodInfo bar3 = methods.get("bar3");
         assertThat(bar3.parameters()).containsExactly(
-                new FieldInfo("intVal", FieldRequirement.DEFAULT, TypeSignature.ofBase("i32")),
-                new FieldInfo("foo", FieldRequirement.DEFAULT, foo));
+                new FieldInfoBuilder("intVal", TypeSignature.ofBase("i32")).build(),
+                new FieldInfoBuilder("foo", foo).build());
         assertThat(bar3.returnTypeSignature()).isEqualTo(foo);
         assertThat(bar3.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar3.exampleRequests()).isEmpty();
 
         final MethodInfo bar4 = methods.get("bar4");
         assertThat(bar4.parameters()).containsExactly(
-                new FieldInfo("foos", FieldRequirement.DEFAULT, TypeSignature.ofList(foo)));
+                new FieldInfoBuilder("foos", TypeSignature.ofList(foo)).build());
         assertThat(bar4.returnTypeSignature()).isEqualTo(TypeSignature.ofList(foo));
         assertThat(bar4.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar4.exampleRequests()).isEmpty();
 
         final MethodInfo bar5 = methods.get("bar5");
         assertThat(bar5.parameters()).containsExactly(
-                new FieldInfo("foos", FieldRequirement.DEFAULT, TypeSignature.ofMap(string, foo)));
+                new FieldInfoBuilder("foos", TypeSignature.ofMap(string, foo)).build());
         assertThat(bar5.returnTypeSignature()).isEqualTo(TypeSignature.ofMap(string, foo));
         assertThat(bar5.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar5.exampleRequests()).isEmpty();
 
         final MethodInfo bar6 = methods.get("bar6");
         assertThat(bar6.parameters()).containsExactly(
-                new FieldInfo("foo1", FieldRequirement.DEFAULT, string),
-                new FieldInfo("foo2", FieldRequirement.DEFAULT,
-                              TypeSignature.ofUnresolved("TypedefedStruct")),
-                new FieldInfo("foo3", FieldRequirement.DEFAULT,
-                              TypeSignature.ofUnresolved("TypedefedEnum")),
-                new FieldInfo("foo4", FieldRequirement.DEFAULT,
-                              TypeSignature.ofUnresolved("TypedefedMap")),
-                new FieldInfo("foo5", FieldRequirement.DEFAULT,
-                              TypeSignature.ofUnresolved("TypedefedList")),
-                new FieldInfo("foo6", FieldRequirement.DEFAULT,
-                              TypeSignature.ofUnresolved("TypedefedSet")),
-                new FieldInfo("foo7", FieldRequirement.DEFAULT,
-                              TypeSignature.ofUnresolved("NestedTypedefedStructs")),
-                new FieldInfo("foo8", FieldRequirement.DEFAULT,
-                              TypeSignature.ofList(TypeSignature.ofList(
-                                      TypeSignature.ofUnresolved("TypedefedStruct")))));
+                new FieldInfoBuilder("foo1", string).build(),
+                new FieldInfoBuilder("foo2", TypeSignature.ofUnresolved("TypedefedStruct")).build(),
+                new FieldInfoBuilder("foo3", TypeSignature.ofUnresolved("TypedefedEnum")).build(),
+                new FieldInfoBuilder("foo4", TypeSignature.ofUnresolved("TypedefedMap")).build(),
+                new FieldInfoBuilder("foo5", TypeSignature.ofUnresolved("TypedefedList")).build(),
+                new FieldInfoBuilder("foo6", TypeSignature.ofUnresolved("TypedefedSet")).build(),
+                new FieldInfoBuilder("foo7", TypeSignature.ofUnresolved("NestedTypedefedStructs")).build(),
+                new FieldInfoBuilder("foo8", TypeSignature.ofList(TypeSignature.ofList(
+                        TypeSignature.ofUnresolved("TypedefedStruct")))).build());
 
         assertThat(bar6.returnTypeSignature()).isEqualTo(TypeSignature.ofBase("void"));
         assertThat(bar6.exceptionTypeSignatures()).isEmpty();
@@ -227,21 +221,22 @@ public class ThriftDocServicePluginTest {
     public void testNewStructInfoTest() throws Exception {
         final TypeSignature string = TypeSignature.ofBase("string");
         final List<FieldInfo> fields = new ArrayList<>();
-        fields.add(new FieldInfo("boolVal", FieldRequirement.DEFAULT, TypeSignature.ofBase("bool")));
-        fields.add(new FieldInfo("byteVal", FieldRequirement.DEFAULT, TypeSignature.ofBase("i8")));
-        fields.add(new FieldInfo("i16Val", FieldRequirement.DEFAULT, TypeSignature.ofBase("i16")));
-        fields.add(new FieldInfo("i32Val", FieldRequirement.DEFAULT, TypeSignature.ofBase("i32")));
-        fields.add(new FieldInfo("i64Val", FieldRequirement.DEFAULT, TypeSignature.ofBase("i64")));
-        fields.add(new FieldInfo("doubleVal", FieldRequirement.DEFAULT, TypeSignature.ofBase("double")));
-        fields.add(new FieldInfo("stringVal", FieldRequirement.DEFAULT, string));
-        fields.add(new FieldInfo("binaryVal", FieldRequirement.DEFAULT, TypeSignature.ofBase("binary")));
-        fields.add(new FieldInfo("enumVal", FieldRequirement.DEFAULT, TypeSignature.ofNamed(FooEnum.class)));
-        fields.add(new FieldInfo("unionVal", FieldRequirement.DEFAULT, TypeSignature.ofNamed(FooUnion.class)));
-        fields.add(new FieldInfo("mapVal", FieldRequirement.DEFAULT,
-                                 TypeSignature.ofMap(string, TypeSignature.ofNamed(FooEnum.class))));
-        fields.add(new FieldInfo("setVal", FieldRequirement.DEFAULT, TypeSignature.ofSet(FooUnion.class)));
-        fields.add(new FieldInfo("listVal", FieldRequirement.DEFAULT, TypeSignature.ofList(string)));
-        fields.add(new FieldInfo("selfRef", FieldRequirement.OPTIONAL, TypeSignature.ofNamed(FooStruct.class)));
+        fields.add(new FieldInfoBuilder("boolVal", TypeSignature.ofBase("bool")).build());
+        fields.add(new FieldInfoBuilder("byteVal", TypeSignature.ofBase("i8")).build());
+        fields.add(new FieldInfoBuilder("i16Val", TypeSignature.ofBase("i16")).build());
+        fields.add(new FieldInfoBuilder("i32Val", TypeSignature.ofBase("i32")).build());
+        fields.add(new FieldInfoBuilder("i64Val", TypeSignature.ofBase("i64")).build());
+        fields.add(new FieldInfoBuilder("doubleVal", TypeSignature.ofBase("double")).build());
+        fields.add(new FieldInfoBuilder("stringVal", string).build());
+        fields.add(new FieldInfoBuilder("binaryVal", TypeSignature.ofBase("binary")).build());
+        fields.add(new FieldInfoBuilder("enumVal", TypeSignature.ofNamed(FooEnum.class)).build());
+        fields.add(new FieldInfoBuilder("unionVal", TypeSignature.ofNamed(FooUnion.class)).build());
+        fields.add(new FieldInfoBuilder("mapVal", TypeSignature.ofMap(
+                string, TypeSignature.ofNamed(FooEnum.class))).build());
+        fields.add(new FieldInfoBuilder("setVal", TypeSignature.ofSet(FooUnion.class)).build());
+        fields.add(new FieldInfoBuilder("listVal", TypeSignature.ofList(string)).build());
+        fields.add(new FieldInfoBuilder("selfRef", TypeSignature.ofNamed(FooStruct.class))
+                           .requirement(FieldRequirement.OPTIONAL).build());
 
         final StructInfo fooStruct = newStructInfo(FooStruct.class);
         assertThat(fooStruct).isEqualTo(new StructInfo(FooStruct.class.getName(), fields));

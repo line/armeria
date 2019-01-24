@@ -17,13 +17,19 @@
 package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.BEAN;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT32;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT64;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.STRING;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.VOID;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.endpointInfo;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
+import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
+import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
+import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,14 +37,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.junit.Test;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePluginTest.RequestBean2.InsideBean;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -47,10 +57,11 @@ import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldRequirement;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
@@ -215,9 +226,12 @@ public class AnnotatedHttpDocServicePluginTest {
 
         assertThat(services).containsOnlyKeys(FooClass.class.getName(), BarClass.class.getName());
 
-        final ServiceInfo fooServiceInfo = services.get(FooClass.class.getName());
-        assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
+        checkFooService(services.get(FooClass.class.getName()));
+        checkBarService(services.get(BarClass.class.getName()));
+    }
 
+    private static void checkFooService(ServiceInfo fooServiceInfo) {
+        assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
         final Map<String, MethodInfo> methods =
                 fooServiceInfo.methods().stream()
                               .collect(toImmutableMap(MethodInfo::name, Function.identity()));
@@ -229,14 +243,39 @@ public class AnnotatedHttpDocServicePluginTest {
 
         assertThat(fooMethod.parameters()).hasSize(2);
         assertThat(fooMethod.parameters()).containsExactlyInAnyOrder(
-                new FieldInfo("foo", FieldRequirement.REQUIRED, STRING),
-                new FieldInfo("foo1", FieldRequirement.REQUIRED, INT64));
+                new FieldInfoBuilder("foo", STRING).requirement(REQUIRED)
+                                                   .location(QUERY)
+                                                   .build(),
+                new FieldInfoBuilder("foo1", INT64).requirement(REQUIRED)
+                                                   .location(HEADER)
+                                                   .build());
 
         assertThat(fooMethod.returnTypeSignature()).isEqualTo(VOID);
 
         assertThat(fooMethod.endpoints()).containsExactly(
                 new EndpointInfoBuilder("*", "exact:/foo").defaultMimeType(MediaType.JSON).build());
-        final ServiceInfo barServiceInfo = services.get(BarClass.class.getName());
+    }
+
+    private static void checkBarService(ServiceInfo barServiceInfo) {
+        assertThat(barServiceInfo.exampleHttpHeaders()).isEmpty();
+        final Map<String, MethodInfo> methods =
+                barServiceInfo.methods().stream()
+                              .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        assertThat(methods).containsKeys("barMethod");
+
+        final MethodInfo barMethod = methods.get("barMethod");
+        assertThat(barMethod.exampleHttpHeaders()).isEmpty();
+        assertThat(barMethod.exampleRequests()).isEmpty();
+        assertThat(barMethod.returnTypeSignature()).isEqualTo(VOID);
+
+        assertThat(barMethod.endpoints()).containsExactly(
+                new EndpointInfoBuilder("*", "exact:/bar").defaultMimeType(MediaType.JSON).build());
+
+        final FieldInfo bar = new FieldInfoBuilder("bar", STRING).requirement(REQUIRED)
+                                                                 .location(QUERY)
+                                                                 .build();
+        final List<FieldInfo> fieldInfos = barMethod.parameters();
+        assertFieldInfos(fieldInfos, ImmutableList.of(bar, compositeBean()));
     }
 
     private static List<ServiceConfig> serviceConfigs() {
@@ -251,6 +290,41 @@ public class AnnotatedHttpDocServicePluginTest {
         barElements.forEach(element -> builder.add(
                 new ServiceConfig(virtualHost, element.pathMapping(), element.service(), null)));
         return builder.build();
+    }
+
+    static FieldInfo compositeBean() {
+        return new FieldInfoBuilder(CompositeBean.class.getSimpleName(), BEAN,
+                                    createBean1(), createBean2()).build();
+    }
+
+    private static FieldInfo createBean1() {
+        final FieldInfo uid = new FieldInfoBuilder("uid", STRING).location(HEADER).requirement(REQUIRED)
+                                                                 .build();
+        final FieldInfo seqNum = new FieldInfoBuilder("seqNum", INT64).location(QUERY).requirement(REQUIRED)
+                                                                      .build();
+        return new FieldInfoBuilder(RequestBean1.class.getSimpleName(), BEAN, uid, seqNum).build();
+    }
+
+    private static FieldInfo createBean2() {
+        final FieldInfo inside1 = new FieldInfoBuilder("inside1", INT64).location(QUERY).requirement(REQUIRED)
+                                                                        .build();
+        final FieldInfo inside2 = new FieldInfoBuilder("inside2", INT32).location(QUERY).requirement(REQUIRED)
+                                                                        .build();
+        final FieldInfo insideBean = new FieldInfoBuilder(InsideBean.class.getSimpleName(), BEAN,
+                                                          inside1, inside2).build();
+        return new FieldInfoBuilder(RequestBean2.class.getSimpleName(), BEAN, insideBean).build();
+    }
+
+    private static void assertFieldInfos(List<FieldInfo> fieldInfos, List<FieldInfo> expected) {
+        final Comparator<List<FieldInfo>> comparator = (o1, o2) -> {
+            assertFieldInfos(o1, o2);
+            // If assertFieldInfos does not throw an exception, it contains same elements.
+            return 0;
+        };
+        assertThat(fieldInfos).usingComparatorForElementFieldsWithNames(
+                comparator,
+                "childFieldInfos").usingFieldByFieldElementComparator().containsExactlyInAnyOrderElementsOf(
+                expected);
     }
 
     private static class FieldContainer<T> {
@@ -277,6 +351,52 @@ public class AnnotatedHttpDocServicePluginTest {
 
     private static class BarClass {
         @Get("/bar")
-        public void barMethod(@Param String bar) {}
+        public void barMethod(@Param String bar, CompositeBean compositeBean) {}
+    }
+
+    static class CompositeBean {
+        @RequestObject
+        private RequestBean1 bean1;
+
+        @RequestObject
+        private RequestBean2 bean2;
+    }
+
+    static class RequestBean1 {
+        @Nullable
+        @JsonProperty
+        @Param
+        private Long seqNum;
+
+        @JsonProperty
+        private String uid;
+
+        @Nullable
+        private String notPopulatedStr;
+
+        RequestBean1(@Header String uid) {
+            this.uid = uid;
+        }
+    }
+
+    static class RequestBean2 {
+
+        @JsonProperty
+        private InsideBean insideBean;
+
+        public void setInsideBean(@RequestObject InsideBean insideBean) {
+            this.insideBean = insideBean;
+        }
+
+        static class InsideBean {
+
+            @JsonProperty
+            @Param
+            private Long inside1;
+
+            @JsonProperty
+            @Param
+            private int inside2;
+        }
     }
 }

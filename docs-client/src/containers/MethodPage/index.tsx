@@ -146,6 +146,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
         </Typography>
         <Section>
           <VariableList
+            key={method.name}
             title="Parameters"
             variables={method.parameters}
             hasLocation={isAnnotatedHttpService}

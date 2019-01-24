@@ -20,6 +20,8 @@ import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePl
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT64;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.STRING;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
+import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
+import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -72,6 +74,8 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
+import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -88,6 +92,7 @@ public class AnnotatedHttpDocServiceTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            //sb.http(8080);
             sb.annotatedService("/service", new MyService());
             sb.serviceUnder("/docs", new DocServiceBuilder()
                     .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
@@ -102,6 +107,11 @@ public class AnnotatedHttpDocServiceTest {
 
     @Test
     public void jsonSpecification() {
+        /*try {
+            Thread.sleep(Long.MAX_VALUE);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         addFooMethodInfo(methodInfos);
         addAllMethodsMethodInfos(methodInfos);
@@ -126,8 +136,12 @@ public class AnnotatedHttpDocServiceTest {
         final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/foo")
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfo("header", "header", REQUIRED, INT32, "header parameter"),
-                new FieldInfo("query", "query", REQUIRED, INT64, "query parameter"));
+                new FieldInfoBuilder("header", INT32).requirement(REQUIRED)
+                                                     .location(FieldLocation.HEADER)
+                                                     .docString("header parameter").build(),
+                new FieldInfoBuilder("query", INT64).requirement(REQUIRED)
+                                                    .location(QUERY)
+                                                    .docString("query parameter").build());
         final MethodInfo methodInfo = new MethodInfo(
                 "foo", TypeSignature.ofBase("T"), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, "foo method");
@@ -154,7 +168,8 @@ public class AnnotatedHttpDocServiceTest {
         final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/ints")
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfo("ints", "query", REQUIRED, TypeSignature.ofList(INT32)));
+                new FieldInfoBuilder("ints", TypeSignature.ofList(INT32)).requirement(REQUIRED)
+                                                                         .location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "ints", TypeSignature.ofList(INT32),
                 fieldInfos, ImmutableList.of(),
@@ -166,19 +181,20 @@ public class AnnotatedHttpDocServiceTest {
         final EndpointInfo endpoint = new EndpointInfoBuilder("*", "/service/hello1/{hello2}/hello3/{hello4}")
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfo("hello2", "path", REQUIRED, STRING),
-                new FieldInfo("hello4", "path", REQUIRED, STRING));
+                new FieldInfoBuilder("hello2", STRING).requirement(REQUIRED).location(PATH).build(),
+                new FieldInfoBuilder("hello4", STRING).requirement(REQUIRED).location(PATH).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "pathParams", STRING, fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
-    private void addRegexMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+    private static void addRegexMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = new EndpointInfoBuilder("*", "regex:/(bar|baz)")
                 .regexPathPrefix("prefix:/service/").availableMimeTypes(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfo("myEnum", "query", REQUIRED, toTypeSignature(MyEnum.class)));
+                new FieldInfoBuilder("myEnum", toTypeSignature(MyEnum.class))
+                        .requirement(REQUIRED).location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "regex", TypeSignature.ofList(TypeSignature.ofList(STRING)), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
@@ -299,6 +315,12 @@ public class AnnotatedHttpDocServiceTest {
                 }
             };
         }
+
+        /*@Get("/bean")
+        public HttpResponse bean(CompositeBean compositeBean) throws JsonProcessingException {
+            final ObjectMapper mapper = new ObjectMapper();
+            return HttpResponse.of(mapper.writeValueAsString(compositeBean));
+        }*/
     }
 
     private enum MyEnum {
