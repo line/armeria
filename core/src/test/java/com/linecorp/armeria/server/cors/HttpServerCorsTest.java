@@ -153,7 +153,8 @@ public class HttpServerCorsTest {
             sb.annotatedService("/cors6", new Object() {
 
                 @Get("/any/get")
-                @CorsDecorator(origins = "*", exposedHeaders = { "expose_header_1", "expose_header_2" },
+                @CorsDecorator(
+                        origins = "*", exposedHeaders = { "expose_header_1", "expose_header_2" },
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" },
                         allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
                         preflightRequestHeaders = {
@@ -164,7 +165,8 @@ public class HttpServerCorsTest {
                 }
 
                 @Post("/one/post")
-                @CorsDecorator(origins = "http://example.com",
+                @CorsDecorator(
+                        origins = "http://example.com",
                         exposedHeaders = { "expose_header_1", "expose_header_2" },
                         allowedRequestMethods = HttpMethod.POST, credentialsAllowed = true,
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" }, maxAge = 1800,
@@ -176,9 +178,11 @@ public class HttpServerCorsTest {
                 }
 
                 @Get("/multi/get")
-                @CorsDecorator(origins = "http://example.com", exposedHeaders = { "expose_header_1" },
+                @CorsDecorator(
+                        origins = "http://example.com", exposedHeaders = { "expose_header_1" },
                         allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
-                @CorsDecorator(origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
+                @CorsDecorator(
+                        origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
                         allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 public HttpResponse multiGet() {
                     return HttpResponse.of(HttpStatus.OK);

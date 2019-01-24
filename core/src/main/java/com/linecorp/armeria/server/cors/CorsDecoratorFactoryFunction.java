@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.cors;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -31,6 +33,7 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
     @Override
     public Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
     newDecorator(CorsDecorator parameter) {
+        requireNonNull(parameter, "parameter");
         final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(parameter.origins());
         cb.firstPolicyBuilder.setConfig(parameter);
         return cb.newDecorator();

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.cors;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.function.Function;
@@ -28,7 +29,7 @@ import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorators;
 
 /**
- * A factory which creates a {@link CorsService} decorator when more than two {@link CorsDecorator}s are added.
+ * A factory which creates a {@link CorsService} decorator when two or more {@link CorsDecorator}s are added.
  */
 public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunction<CorsDecorators> {
 
@@ -52,10 +53,11 @@ public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunc
     }
 
     private static void ensureValidConfig(CorsDecorators conf) {
-        checkState(conf.value().length > 0, "value() should not be empty.");
-        final boolean anyOrigin = Arrays.stream(conf.value()).anyMatch(
-                c -> Arrays.asList(c.origins()).contains("*"));
+        requireNonNull(conf, "conf");
         final CorsDecorator[] policies = conf.value();
+        checkState(policies.length > 0, "value() should not be empty.");
+        final boolean anyOrigin = Arrays.stream(policies).anyMatch(
+                c -> Arrays.asList(c.origins()).contains("*"));
         checkState(!anyOrigin || (policies.length == 1 && policies[0].origins().length == 1),
                    "the policy that support any origin (*) has been already included." +
                    " You cannot have an additional policy or origin.");

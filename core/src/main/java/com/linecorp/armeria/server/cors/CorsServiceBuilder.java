@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.cors;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -25,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +70,7 @@ public final class CorsServiceBuilder {
      * Creates a new builder with the specified origin.
      */
     public static CorsServiceBuilder forOrigin(String origin) {
+        requireNonNull(origin, "origin");
         return forOrigins(origin);
     }
 
@@ -76,9 +79,11 @@ public final class CorsServiceBuilder {
      */
     public static CorsServiceBuilder forOrigins(String... origins) {
         requireNonNull(origins, "origins");
-        if (Arrays.asList(origins).contains("*")) {
+        if (Arrays.asList(origins).contains(ANY_ORIGIN)) {
             if (origins.length > 1) {
-                logger.warn("Any origin (*) has been already included. Other origins will be ignored.");
+                logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
+                            Arrays.stream(origins).filter(c -> !ANY_ORIGIN.equals(c))
+                                  .collect(Collectors.joining(",")));
             }
             return forAnyOrigin();
         }

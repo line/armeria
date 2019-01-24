@@ -109,11 +109,6 @@ You can also configure CORS for :ref:`server-annotated-service` using the :api:`
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.HttpMethod;
-    import com.linecorp.armeria.common.HttpResponse;
-    import com.linecorp.armeria.common.HttpStatus;
-    import com.linecorp.armeria.server.HttpService;
-    import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.annotation.AdditionalHeader;
     import com.linecorp.armeria.server.annotation.Get;
     import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;

@@ -15,9 +15,13 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
+
 /**
  * Annotation for an additional HTTP header.
  */
+@Target(ElementType.ANNOTATION_TYPE)
 public @interface AdditionalHeader {
 
     /**
