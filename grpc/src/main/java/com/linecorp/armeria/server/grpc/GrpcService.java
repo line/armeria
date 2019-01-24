@@ -213,9 +213,10 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Override
-    public void serviceAdded(ServiceConfig cfg) throws Exception {
+    public void serviceAdded(ServiceConfig cfg) {
         if (maxInboundMessageSizeBytes == NO_MAX_INBOUND_MESSAGE_SIZE) {
-            maxInboundMessageSizeBytes = (int) cfg.server().config().defaultMaxRequestLength();
+            maxInboundMessageSizeBytes = (int) Math.min(cfg.server().config().defaultMaxRequestLength(),
+                                                        Integer.MAX_VALUE);
         }
     }
 

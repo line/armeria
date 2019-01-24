@@ -191,7 +191,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                                   int maxMessageSizeBytes,
                                   ByteBufAllocator alloc) {
         this.listener = requireNonNull(listener, "listener");
-        this.maxMessageSizeBytes = maxMessageSizeBytes;
+        this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
         this.alloc = requireNonNull(alloc, "alloc");
 
         unprocessed = new ArrayDeque<>();
