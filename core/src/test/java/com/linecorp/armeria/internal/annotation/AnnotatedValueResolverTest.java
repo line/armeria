@@ -91,8 +91,7 @@ public class AnnotatedValueResolverTest {
 
         final HttpHeaders headers = HttpHeaders.of(HttpMethod.GET, path + '?' + query);
         headers.set(HttpHeaderNames.COOKIE, "a=1;b=2", "c=3", "a=4");
-        headers.set(HttpHeaderNames.of("header1"), headerValues);
-        headers.set(HttpHeaderNames.of("header2"), headerValues);
+        existingHttpHeaders.forEach(name -> headers.set(name, headerValues));
 
         request = HttpRequest.of(headers);
         originalHeaders = HttpHeaders.copyOf(request.headers()).asImmutable();

@@ -9,8 +9,8 @@ A unit test of a :api:`Client` or a :api:`Service` will require you to prepare t
 - :api:`HttpRequest` or :api:`RpcRequest`
 
 :api:`ClientRequestContext` or :api:`ServiceRequestContext` is a more complex object with many properties than
-:api:`HttpRequest` or :api:`RpcRequest`, and thus Armeria provides the API dedicated to building a fake
-context object easily:
+:api:`HttpRequest` or :api:`RpcRequest`, and thus Armeria provides the API dedicated to build a fake context
+object easily:
 
 .. code-block:: java
 
@@ -19,6 +19,7 @@ context object easily:
 
    import com.linecorp.armeria.common.HttpRequest;
    import com.linecorp.armeria.common.HttpResponse;
+   import com.linecorp.armeria.common.AggregatedHttpMessage;
    import com.linecorp.armeria.client.ClientRequestContext;
    import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -35,20 +36,32 @@ context object easily:
 
        @Test
        public void testClient() throws Exception {
+           // Given
            HttpRequest req = HttpRequest.of(HttpMethod.GET, "/greet?name=foo");
            ClientRequestContext cctx = ClientRequestContext.of(req);
+
+           // When
            HttpResponse res = client.execute(cctx, req);
-           // TODO: Add assertions here.
+
+           // Then
+           AggregatedHttpMessage aggregatedRes = res.aggregate().get();
+           assertEquals(200, aggregatedRes.status().code());
        }
 
        @Test
        public void testService() throws Exception {
+           // Given
            HttpRequest req = HttpRequest.of(HttpMethod.POST, "/greet",
                                             MediaType.JSON_UTF_8,
                                             "{ \"name\": \"foo\" }");
            ServiceRequestContext sctx = ServiceRequestContext.of(req);
+
+           // When
            HttpResponse res = service.serve(sctx, req);
-           // TODO: Add assertions here.
+
+           // Then
+           AggregatedHttpMessage aggregatedRes = res.aggregate().get();
+           assertEquals(200, aggregatedRes.status().code());
        }
    }
 
@@ -105,7 +118,7 @@ The following example shows how to emit a fake request every minute:
    import java.util.concurrent.ScheduledExecutorService;
    import java.util.concurrent.TimeUnit;
 
-   import com.linecorp.armeria.common.AggregatedHttpMessage;
+   import com.linecorp.armeria.server.HttpService;
 
    ScheduledExecutorService executor = ...;
    HttpService sessionManagementService = (ctx, req) -> ...;
