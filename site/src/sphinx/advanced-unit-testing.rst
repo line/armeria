@@ -9,7 +9,7 @@ A unit test of a :api:`Client` or a :api:`Service` will require you to prepare t
 - :api:`HttpRequest` or :api:`RpcRequest`
 
 :api:`ClientRequestContext` or :api:`ServiceRequestContext` is a more complex object with many properties than
-:api:`HttpRequest` or :api:`RpcRequest`, and thus Armeria provides the API dedicated to build a fake context
+:api:`HttpRequest` or :api:`RpcRequest`, and thus Armeria provides the API dedicated to building a fake context
 object easily:
 
 .. code-block:: java
