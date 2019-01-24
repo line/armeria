@@ -232,8 +232,8 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     }
 
     /**
-     * Returns the mutable copy of this headers.
-     * If it is already mutable headers, it returns {@code this}.
+     * Returns a mutable copy of this headers.
+     * If it is already mutable, it returns {@code this}.
      */
     default HttpHeaders toMutable() {
         return this;

@@ -21,12 +21,12 @@ package com.linecorp.armeria.server.annotation;
 public @interface AdditionalHeader {
 
     /**
-     * The name of the HTTP header to set to.
+     * The name of the HTTP header to set.
      */
     String name();
 
     /**
-     * The value of the HTTP header to set to.
+     * The value of the HTTP header to set.
      */
     String value();
 }
