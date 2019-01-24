@@ -37,6 +37,8 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.server.annotation.AdditionalHeader;
+import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
 import io.netty.util.AsciiString;
@@ -77,6 +79,34 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     @SuppressWarnings("unchecked")
     B self() {
         return (B) this;
+    }
+
+    B setConfig(CorsDecorator corsDecorator) {
+        if (corsDecorator.credentialsAllowed()) {
+            allowCredentials();
+        }
+        if (corsDecorator.nullOriginAllowed()) {
+            allowNullOrigin();
+        }
+        if (corsDecorator.preflightRequestDisabled()) {
+            disablePreflightResponseHeaders();
+        }
+        if (corsDecorator.exposedHeaders().length > 0) {
+            exposeHeaders(corsDecorator.exposedHeaders());
+        }
+        if (corsDecorator.allowedRequestHeaders().length > 0) {
+            allowRequestHeaders(corsDecorator.allowedRequestHeaders());
+        }
+        if (corsDecorator.allowedRequestMethods().length > 0) {
+            allowRequestMethods(corsDecorator.allowedRequestMethods());
+        }
+        for (AdditionalHeader additionalHeader : corsDecorator.preflightRequestHeaders()) {
+            preflightResponseHeader(additionalHeader.name(), additionalHeader.value());
+        }
+        if (corsDecorator.maxAge() > 0) {
+            maxAge(corsDecorator.maxAge());
+        }
+        return self();
     }
 
     /**
@@ -166,7 +196,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
 
     /**
      * Specifies the allowed set of HTTP request methods that should be returned in the
-     * CORS {@code "Access-Control-Request-Method"} response header.
+     * CORS {@code "Access-Control-Allow-Methods"} response header.
      *
      * @param methods the {@link HttpMethod}s that should be allowed.
      * @return {@code this} to support method chaining.

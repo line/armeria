@@ -94,8 +94,9 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
                     return headers;
                 }
 
-                setCorsResponseHeaders(ctx, req, headers);
-                return headers;
+                final HttpHeaders mutableHeaders = headers.toMutable();
+                setCorsResponseHeaders(ctx, req, mutableHeaders);
+                return mutableHeaders;
             }
         };
     }

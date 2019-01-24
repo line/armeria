@@ -98,3 +98,56 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
                                             .build())
                               .newDecorator()));
 
+Configuring CORS via annotation
+-------------------------------
+
+You can also configure CORS for :ref:`server-annotated-service` using the :api:`@CorsDecorator` annotation, e.g.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.annotation.AdditionalHeader;
+    import com.linecorp.armeria.server.annotation.Get;
+    import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
+
+    Server s = new ServerBuilder().annotatedService("/example", new Object() {
+        @Get("/get")
+        @CorsDecorator(origins = "http://example.com", credentialsAllowed = true,
+                       nullOriginAllowed = true, exposedHeaders = "expose_header",
+                       allowedRequestMethods = HttpMethod.GET, allowedRequestHeaders = "allow_header",
+                       preflightResponseHeaders = {
+                           @AdditionalHeader(name = "preflight_header", value = "preflight_value")
+                       })
+        // In case you want to configure different CORS policies for different origins.
+        @CorsDecorator(origins = "http://example2.com", credentialsAllowed = true)
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/post")
+        // In case you want to allow any origin (*):
+        @CorsDecorator(origins = "*", exposedHeaders = "expose_header")
+        // You can not add a policy after adding the decorator allowing any origin (*).
+        public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK)
+        }
+    }).build();
+
+You can also use :api:`@CorsDecorator` at the class level to apply the decorator to all service methods in the class.
+Note that the :api:`@CorsDecorator` annotation specified at the method level takes precedence over what's specified at the class level:
+
+.. code-block:: java
+
+    // This decorator will be ignored for the path "/post".
+    @CorsDecorator(origins = "http://example.com", credentialsAllowed = true)
+    class MyAnnotatedService {
+        @Get("/get")
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/post")
+        @CorsDecorator(origins = "http://example2.com", credentialsAllowed = true)
+        public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }

@@ -586,6 +586,11 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
+    public HttpHeaders toMutable() {
+        return HttpHeaders.copyOf(delegate);
+    }
+
+    @Override
     public int hashCode() {
         return delegate.hashCode();
     }

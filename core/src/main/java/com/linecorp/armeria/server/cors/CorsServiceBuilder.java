@@ -17,13 +17,16 @@
 package com.linecorp.armeria.server.cors;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,11 +71,7 @@ public final class CorsServiceBuilder {
      */
     public static CorsServiceBuilder forOrigin(String origin) {
         requireNonNull(origin, "origin");
-
-        if ("*".equals(origin)) {
-            return forAnyOrigin();
-        }
-        return new CorsServiceBuilder(origin);
+        return forOrigins(origin);
     }
 
     /**
@@ -80,6 +79,14 @@ public final class CorsServiceBuilder {
      */
     public static CorsServiceBuilder forOrigins(String... origins) {
         requireNonNull(origins, "origins");
+        if (Arrays.asList(origins).contains(ANY_ORIGIN)) {
+            if (origins.length > 1) {
+                logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
+                            Arrays.stream(origins).filter(c -> !ANY_ORIGIN.equals(c))
+                                  .collect(Collectors.joining(",")));
+            }
+            return forAnyOrigin();
+        }
         return new CorsServiceBuilder(origins);
     }
 
@@ -230,7 +237,7 @@ public final class CorsServiceBuilder {
 
     /**
      * Specifies the allowed set of HTTP request methods that should be returned in the
-     * CORS {@code "Access-Control-Request-Method"} response header.
+     * CORS {@code "Access-Control-Allow-Methods"} response header.
      *
      * @param methods the {@link HttpMethod}s that should be allowed.
      * @return {@link CorsServiceBuilder} to support method chaining.
@@ -332,8 +339,14 @@ public final class CorsServiceBuilder {
      * Returns a newly-created decorator that decorates a {@link Service} with a new {@link CorsService}
      * based on the properties of this builder.
      */
-    public Function<Service<HttpRequest, HttpResponse>, CorsService> newDecorator() {
-        return s -> new CorsService(s, new CorsConfig(this));
+    public Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> newDecorator() {
+        return s -> {
+            if (s.as(CorsService.class).isPresent()) {
+                return s;
+            }
+            return build(s);
+        };
     }
 
     /**

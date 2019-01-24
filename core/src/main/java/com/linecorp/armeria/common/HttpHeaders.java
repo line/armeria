@@ -230,4 +230,12 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     default boolean isImmutable() {
         return this instanceof ImmutableHttpHeaders;
     }
+
+    /**
+     * Returns a mutable copy of this headers.
+     * If it is already mutable, it returns {@code this}.
+     */
+    default HttpHeaders toMutable() {
+        return this;
+    }
 }
