@@ -58,8 +58,8 @@ public interface RequestLogBuilder {
     /**
      * Starts the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
@@ -68,7 +68,7 @@ public interface RequestLogBuilder {
      * </ul>
      *
      * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} protocol of the connection.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
      */
     default void startRequest(Channel channel, SessionProtocol sessionProtocol) {
         requireNonNull(channel, "channel");
@@ -79,8 +79,8 @@ public interface RequestLogBuilder {
     /**
      * Starts the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
@@ -89,7 +89,7 @@ public interface RequestLogBuilder {
      * </ul>
      *
      * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} protocol of the connection.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
      * @param sslSession the {@link SSLSession} of the connection, or {@code null}.
      */
     void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession);
@@ -97,8 +97,8 @@ public interface RequestLogBuilder {
     /**
      * Starts the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
@@ -107,7 +107,7 @@ public interface RequestLogBuilder {
      * </ul>
      *
      * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} protocol of the connection.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
@@ -123,8 +123,8 @@ public interface RequestLogBuilder {
     /**
      * Starts the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
@@ -133,7 +133,7 @@ public interface RequestLogBuilder {
      * </ul>
      *
      * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} protocol of the connection.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
      * @param sslSession the {@link SSLSession} of the connection, or {@code null}.
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
@@ -238,8 +238,8 @@ public interface RequestLogBuilder {
     /**
      * Starts the collection of {@link Response} information. This method sets the following properties:
      * <ul>
-     *   <li>{@link RequestLog#responseStartTimeMicros()}</li>
      *   <li>{@link RequestLog#responseStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#responseStartTimeMicros()}</li>
      *   <li>{@link RequestLog#responseStartTimeNanos()}</li>
      * </ul>
      */
@@ -248,8 +248,8 @@ public interface RequestLogBuilder {
     /**
      * Starts the collection of {@link Response} information. This method sets the following properties:
      * <ul>
-     *   <li>{@link RequestLog#responseStartTimeMicros()}</li>
      *   <li>{@link RequestLog#responseStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#responseStartTimeMicros()}</li>
      *   <li>{@link RequestLog#responseStartTimeNanos()}</li>
      * </ul>
      *

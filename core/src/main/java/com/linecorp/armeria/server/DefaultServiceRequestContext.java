@@ -108,7 +108,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param pathMappingContext the parameters which is used when finding a matched {@link PathMapping}
+     * @param pathMappingContext the parameters which are used when finding a matched {@link PathMapping}
      * @param pathMappingResult the result of finding a matched {@link PathMapping}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
@@ -131,7 +131,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param pathMappingContext the parameters which is used when finding a matched {@link PathMapping}
+     * @param pathMappingContext the parameters which are used when finding a matched {@link PathMapping}
      * @param pathMappingResult the result of finding a matched {@link PathMapping}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS

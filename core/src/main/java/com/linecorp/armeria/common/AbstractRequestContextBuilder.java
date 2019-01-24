@@ -333,7 +333,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
         this.sslSession = requireNonNull(sslSession, "sslSession");
         switch (sessionProtocol) {
             case HTTP:
-                sessionProtocol(SessionProtocol.HTTP);
+                sessionProtocol(SessionProtocol.HTTPS);
                 break;
             case H1C:
                 sessionProtocol(SessionProtocol.H1);
@@ -395,7 +395,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
     }
 
     /**
-     * Set the {@link HttpMethod} of the request.
+     * Sets the {@link HttpMethod} of the request.
      *
      * @throws IllegalArgumentException if the specified {@link HttpMethod} is not same with the
      *                                  {@link HttpMethod} of the {@link HttpRequest} you specified when

@@ -108,7 +108,7 @@ public final class EventLoopGroups {
 
     /**
      * Returns a special {@link EventLoop} which executes submitted tasks in the caller thread.
-     * Note that this {@link EventLoop} will raise a {@link UnsupportedOperationException} for any operations
+     * Note that this {@link EventLoop} will raise an {@link UnsupportedOperationException} for any operations
      * related with {@link EventLoop} shutdown or {@link Channel} registration.
      */
     public static EventLoop directEventLoop() {

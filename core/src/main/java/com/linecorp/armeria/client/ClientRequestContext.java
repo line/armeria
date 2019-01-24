@@ -55,7 +55,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Returns a new {@link ClientRequestContext} created from the specified {@link RpcRequest} and URI.
      * Note that it is not usually required to create a new context by yourself, because Armeria
-     * will always provide a context object for you.  However, it may be useful in some cases such as
+     * will always provide a context object for you. However, it may be useful in some cases such as
      * unit testing.
      *
      * @see ClientRequestContextBuilder
