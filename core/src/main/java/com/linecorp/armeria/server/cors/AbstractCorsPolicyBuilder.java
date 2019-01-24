@@ -82,7 +82,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     B setConfig(CorsDecorator corsDecorator) {
-        if (corsDecorator.credentialAllowed()) {
+        if (corsDecorator.credentialsAllowed()) {
             allowCredentials();
         }
         if (corsDecorator.nullOriginAllowed()) {

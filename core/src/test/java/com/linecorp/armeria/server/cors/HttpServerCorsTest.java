@@ -166,7 +166,7 @@ public class HttpServerCorsTest {
                 @Post("/one/post")
                 @CorsDecorator(origins = "http://example.com",
                         exposedHeaders = { "expose_header_1", "expose_header_2" },
-                        allowedRequestMethods = HttpMethod.POST, credentialAllowed = true,
+                        allowedRequestMethods = HttpMethod.POST, credentialsAllowed = true,
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" }, maxAge = 1800,
                         preflightRequestHeaders = {
                                 @AdditionalHeader(name = "x-preflight-cors", value = "Hello CORS")
@@ -177,9 +177,9 @@ public class HttpServerCorsTest {
 
                 @Get("/multi/get")
                 @CorsDecorator(origins = "http://example.com", exposedHeaders = { "expose_header_1" },
-                        allowedRequestMethods = HttpMethod.GET, credentialAllowed = true)
+                        allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 @CorsDecorator(origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
-                        allowedRequestMethods = HttpMethod.GET, credentialAllowed = true)
+                        allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 public HttpResponse multiGet() {
                     return HttpResponse.of(HttpStatus.OK);
                 }

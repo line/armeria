@@ -83,7 +83,7 @@ public @interface CorsDecorator {
      *
      * @see CorsPolicyBuilder#allowCredentials()
      */
-    boolean credentialAllowed() default false;
+    boolean credentialsAllowed() default false;
 
     /**
      * Determines if a {@code "null"} origin is allowed.
