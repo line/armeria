@@ -75,7 +75,7 @@ public class ArmeriaServerHttpRequestTest {
     @Test
     public void getCookies() {
         final HttpRequest httpRequest = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/")
-                                                         .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
+                                                                  .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
         final ArmeriaServerHttpRequest req = request(ctx);
 

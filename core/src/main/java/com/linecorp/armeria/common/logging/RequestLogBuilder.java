@@ -301,7 +301,7 @@ public interface RequestLogBuilder {
     /**
      * Finishes the collection of the {@link Response} information. If a {@link Throwable} cause has been set
      * with {@link #responseContent(Object, Object)}, it will be treated as the {@code responseCause} for this
-     * log. This method set the following properties:
+     * log. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#responseEndTimeNanos()}</li>
      *   <li>{@link RequestLog#responseDurationNanos()}</li>
@@ -311,7 +311,7 @@ public interface RequestLogBuilder {
     void endResponse();
 
     /**
-     * Finishes the collection of the {@link Response} information. This method set the following properties:
+     * Finishes the collection of the {@link Response} information. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#responseEndTimeNanos()}</li>
      *   <li>{@link RequestLog#responseDurationNanos()}</li>
@@ -325,7 +325,7 @@ public interface RequestLogBuilder {
     /**
      * Finishes the collection of the {@link Response} information. If a {@link Throwable} cause has been set
      * with {@link #responseContent(Object, Object)}, it will be treated as the {@code responseCause} for this
-     * log. This method set the following properties:
+     * log. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#responseEndTimeNanos()}</li>
      *   <li>{@link RequestLog#responseDurationNanos()}</li>
@@ -337,7 +337,7 @@ public interface RequestLogBuilder {
     void endResponse(long responseEndTimeNanos);
 
     /**
-     * Finishes the collection of the {@link Response} information. This method set the following properties:
+     * Finishes the collection of the {@link Response} information. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#responseEndTimeNanos()}</li>
      *   <li>{@link RequestLog#responseDurationNanos()}</li>
