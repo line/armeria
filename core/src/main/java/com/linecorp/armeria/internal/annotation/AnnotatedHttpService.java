@@ -25,7 +25,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -114,7 +113,7 @@ public class AnnotatedHttpService implements HttpService {
                          List<ExceptionHandlerFunction> exceptionHandlers,
                          List<ResponseConverterFunction> responseConverters,
                          PathMapping pathMapping,
-                         Optional<HttpStatus> defaultResponseStatus) {
+                         HttpHeaders defaultHttpHeaders) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -126,9 +125,7 @@ public class AnnotatedHttpService implements HttpService {
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
 
-        defaultHttpHeaders = HttpHeaders.of(defaultResponseStatus(
-                requireNonNull(defaultResponseStatus, "defaultResponseStatus"), method)).asImmutable();
-
+        this.defaultHttpHeaders = defaultHttpHeaders.asImmutable();
         final Class<?> returnType = method.getReturnType();
         if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
@@ -190,16 +187,6 @@ public class AnnotatedHttpService implements HttpService {
                 }
             }
         }
-    }
-
-    private static HttpStatus defaultResponseStatus(Optional<HttpStatus> defaultResponseStatus,
-                                                    Method method) {
-        return defaultResponseStatus.orElseGet(() -> {
-            // Set a default HTTP status code for a response depending on the return type of the method.
-            final Class<?> returnType = method.getReturnType();
-            return returnType == Void.class ||
-                   returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
-        });
     }
 
     Object object() {
@@ -273,11 +260,12 @@ public class AnnotatedHttpService implements HttpService {
         final HttpHeaders newTrailingHeaders;
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
-            newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
+            newHeaders = combineWithDefault(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
             result = httpResult.content().orElse(null);
             newTrailingHeaders = httpResult.trailingHeaders();
         } else {
-            newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, defaultHttpHeaders) : headers;
+            newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, defaultHttpHeaders)
+                                         : combineWithDefault(headers);
             newTrailingHeaders = trailingHeaders;
         }
 
@@ -321,16 +309,10 @@ public class AnnotatedHttpService implements HttpService {
                                      : headers.contentType(negotiatedResponseMediaType);
     }
 
-    private HttpHeaders setHttpStatus(HttpHeaders headers) {
-        if (headers.status() != null) {
-            // Do not overwrite HTTP status.
-            return headers;
-        }
-
+    private HttpHeaders combineWithDefault(HttpHeaders headers) {
         final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
         assert defaultHttpStatus != null;
-        return headers.isImmutable() ? HttpHeaders.copyOf(headers).status(defaultHttpStatus)
-                                     : headers.status(defaultHttpStatus);
+        return headers.toMutable().setAllIfAbsent(defaultHttpHeaders);
     }
 
     /**

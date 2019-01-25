@@ -37,6 +37,7 @@ import static org.reflections.ReflectionUtils.withName;
 import static org.reflections.ReflectionUtils.withParametersCount;
 
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -51,6 +52,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -67,6 +69,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -83,6 +87,7 @@ import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Consumes;
@@ -215,6 +220,51 @@ public final class AnnotatedHttpServiceFactory {
                       .collect(toImmutableList());
     }
 
+    private static HttpStatus defaultResponseStatus(Optional<HttpStatus> defaultResponseStatus,
+                                                    Method method) {
+        return defaultResponseStatus.orElseGet(() -> {
+            // Set a default HTTP status code for a response depending on the return type of the method.
+            final Class<?> returnType = method.getReturnType();
+            return returnType == Void.class ||
+                   returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        });
+    }
+
+    private static <T extends Annotation> Optional<Class<? extends Annotation>> getRepeatable(Class<T> cls) {
+        final Optional<Repeatable> repeatable = findAnnotation(cls, Repeatable.class);
+        if (!repeatable.isPresent()) {
+            return Optional.empty();
+        }
+        return Optional.of(repeatable.get().value());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T extends Annotation> List<T> findRepeatableAnnotations(AnnotatedElement element,
+                                                                            Class<T> annotationType) {
+        final ImmutableList.Builder<T> listBuilder = new ImmutableList.Builder<T>();
+        final Class<? extends Annotation> repeatable = getRepeatable(annotationType).orElseThrow(
+                () -> new IllegalArgumentException("annotationType is not an repeatable annotation."));
+        getAllAnnotations(element).stream()
+                                  .filter(a -> a.annotationType() == annotationType ||
+                                               a.annotationType() == repeatable)
+                                  .forEach(annotation -> {
+                                      if (annotation.annotationType() == repeatable) {
+                                          try {
+                                              listBuilder.addAll(
+                                                      Arrays.asList((T[]) annotation.annotationType()
+                                                                                    .getMethod("value")
+                                                                                    .invoke(annotation)));
+                                          } catch (Exception ex) {
+                                              logger.error("value() method invocation throws an exception.",
+                                                           ex);
+                                          }
+                                      } else {
+                                          listBuilder.add((T) annotation);
+                                      }
+                                  });
+        return listBuilder.build();
+    }
+
     /**
      * Returns an {@link AnnotatedHttpService} instance defined to {@code method} of {@code object} using
      * {@link Path} annotation.
@@ -290,6 +340,14 @@ public final class AnnotatedHttpServiceFactory {
                                   "invalid HTTP status code: %s (expected: >= 0)", statusCode);
                     return HttpStatus.valueOf(statusCode);
                 });
+        final HttpHeaders defaultHeaders = HttpHeaders.of(defaultResponseStatus(defaultResponseStatus, method));
+
+        final Consumer<AdditionalHeader> consumer = header -> {
+            defaultHeaders.set(HttpHeaderNames.of(header.name()), header.value());
+        };
+
+        findRepeatableAnnotations(clazz, AdditionalHeader.class).forEach(consumer);
+        findRepeatableAnnotations(method, AdditionalHeader.class).forEach(consumer);
 
         // A CORS preflight request can be received because we handle it specially. The following
         // decorator will prevent the service from an unexpected request which has OPTIONS method.
@@ -311,8 +369,7 @@ public final class AnnotatedHttpServiceFactory {
         }
         return new AnnotatedHttpServiceElement(pathMapping,
                                                new AnnotatedHttpService(object, method, resolvers, eh,
-                                                                        res, pathMapping,
-                                                                        defaultResponseStatus),
+                                                                        res, pathMapping, defaultHeaders),
                                                decorator(method, clazz, initialDecorator));
     }
 
