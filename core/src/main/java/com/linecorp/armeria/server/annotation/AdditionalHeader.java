@@ -35,7 +35,7 @@ public @interface AdditionalHeader {
     String name();
 
     /**
-     * The value of the HTTP header to set.
+     * The values of the HTTP header to set.
      */
-    String value();
+    String[] value();
 }

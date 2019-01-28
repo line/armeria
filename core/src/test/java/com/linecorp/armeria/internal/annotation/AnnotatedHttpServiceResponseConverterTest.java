@@ -69,7 +69,6 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-import io.netty.util.AsciiString;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -257,23 +256,24 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
                 @ProducesJson
                 public HttpResult<Map<String, String>> expectCustomHeader() {
-                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
                                          ImmutableMap.of("a", "b"));
                 }
 
                 @Get("/expect-custom-trailing-header")
                 @ProducesJson
                 public HttpResult<List<String>> expectCustomTrailingHeader() {
-                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
                                          ImmutableList.of("a", "b"),
-                                         HttpHeaders.of(AsciiString.of("x-custom-trailing-header"), "value"));
+                                         HttpHeaders
+                                                 .of(HttpHeaderNames.of("x-custom-trailing-header"), "value"));
                 }
 
                 @Get("/async/expect-custom-header")
                 @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
                 @ProducesJson
                 public HttpResult<CompletionStage<Map<String, String>>> asyncExpectCustomHeader() {
-                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
                                          CompletableFuture.completedFuture(ImmutableMap.of("a", "b")));
                 }
 
@@ -284,9 +284,10 @@ public class AnnotatedHttpServiceResponseConverterTest {
                     final CompletableFuture<List<String>> future = new CompletableFuture<>();
                     ctx.eventLoop().schedule(() -> future.complete(ImmutableList.of("a", "b")),
                                              1, TimeUnit.SECONDS);
-                    return HttpResult.of(HttpHeaders.of(AsciiString.of("x-custom-header"), "value"),
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
                                          future,
-                                         HttpHeaders.of(AsciiString.of("x-custom-trailing-header"), "value"));
+                                         HttpHeaders
+                                                 .of(HttpHeaderNames.of("x-custom-trailing-header"), "value"));
                 }
 
                 @Get("/async/expect-bad-request")
@@ -312,6 +313,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @Get("/header")
                 @AdditionalHeader(name = "header_name_1", value = "header_value_1")
                 @AdditionalHeader(name = "header_name_2", value = "header_value_2")
+                @AdditionalHeader(name = "header_name_1", value = "header_value_3")
                 public void header() {}
 
                 @Get("/header-overwrite")
@@ -554,9 +556,9 @@ public class AnnotatedHttpServiceResponseConverterTest {
                          "/async/expect-custom-header").forEach(path -> {
             final AggregatedHttpMessage message = aggregated(client.get(path));
             assertThat(message.status()).isEqualTo(HttpStatus.OK);
-            assertThat(message.headers().get(AsciiString.of("x-custom-header"))).isEqualTo("value");
+            assertThat(message.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
             assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableMap.of("a", "b"));
-            assertThat(message.headers().get(AsciiString.of("x-custom-annotated-header"))).isEqualTo(
+            assertThat(message.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
                     "annotated-value");
         });
 
@@ -564,9 +566,9 @@ public class AnnotatedHttpServiceResponseConverterTest {
                          "/async/expect-custom-trailing-header").forEach(path -> {
             final AggregatedHttpMessage message = aggregated(client.get(path));
             assertThat(message.status()).isEqualTo(HttpStatus.OK);
-            assertThat(message.headers().get(AsciiString.of("x-custom-header"))).isEqualTo("value");
+            assertThat(message.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
             assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableList.of("a", "b"));
-            assertThat(message.trailingHeaders().get(AsciiString.of("x-custom-trailing-header")))
+            assertThat(message.trailingHeaders().get(HttpHeaderNames.of("x-custom-trailing-header")))
                     .isEqualTo("value");
         });
 
@@ -581,7 +583,8 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         msg = aggregated(client.get("/header"));
         assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(msg.headers().get(HttpHeaderNames.of("header_name_1"))).isEqualTo("header_value_1");
+        assertThat(msg.headers().getAll(HttpHeaderNames.of("header_name_1")).toString()).isEqualTo(
+                "[header_value_1]");
 
         msg = aggregated(client.get("/header-overwrite"));
         assertThat(msg.headers().get(HttpHeaderNames.of("header_name_1"))).isEqualTo("header_value_changed");

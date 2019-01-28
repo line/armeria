@@ -45,6 +45,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,7 +53,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -265,6 +265,20 @@ public final class AnnotatedHttpServiceFactory {
         return listBuilder.build();
     }
 
+    private static void setAdditionalHeader(HttpHeaders headers, AnnotatedElement element, String level) {
+        final Set<String> addedHeaderSets = new HashSet<>();
+        findRepeatableAnnotations(element, AdditionalHeader.class).forEach(header -> {
+            if (addedHeaderSets.contains(header.name())) {
+                logger.warn("The additional header named '{}' is already added at the same {} level." +
+                            " It will be ignored.",
+                            header.name(), level);
+                return;
+            }
+            headers.set(HttpHeaderNames.of(header.name()), header.value());
+            addedHeaderSets.add(header.name());
+        });
+    }
+
     /**
      * Returns an {@link AnnotatedHttpService} instance defined to {@code method} of {@code object} using
      * {@link Path} annotation.
@@ -342,12 +356,8 @@ public final class AnnotatedHttpServiceFactory {
                 });
         final HttpHeaders defaultHeaders = HttpHeaders.of(defaultResponseStatus(defaultResponseStatus, method));
 
-        final Consumer<AdditionalHeader> consumer = header -> {
-            defaultHeaders.set(HttpHeaderNames.of(header.name()), header.value());
-        };
-
-        findRepeatableAnnotations(clazz, AdditionalHeader.class).forEach(consumer);
-        findRepeatableAnnotations(method, AdditionalHeader.class).forEach(consumer);
+        setAdditionalHeader(defaultHeaders, clazz, "class");
+        setAdditionalHeader(defaultHeaders, method, "method");
 
         // A CORS preflight request can be received because we handle it specially. The following
         // decorator will prevent the service from an unexpected request which has OPTIONS method.
