@@ -24,16 +24,14 @@ import java.util.List;
 import java.util.Random;
 
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 
 public class WeightedRoundRobinStrategyTest {
     private static final EndpointGroup ENDPOINT_GROUP =
@@ -43,11 +41,7 @@ public class WeightedRoundRobinStrategyTest {
 
     private final WeightedRoundRobinStrategy strategy = new WeightedRoundRobinStrategy();
 
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock
-    private ClientRequestContext ctx;
+    private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
     @Before
     public void setup() {

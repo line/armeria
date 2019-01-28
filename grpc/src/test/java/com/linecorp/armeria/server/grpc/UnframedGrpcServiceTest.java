@@ -20,36 +20,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.util.concurrent.CompletableFuture;
 
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.testing.common.EventLoopRule;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import io.netty.buffer.ByteBufAllocator;
 
 public class UnframedGrpcServiceTest {
 
@@ -68,37 +58,16 @@ public class UnframedGrpcServiceTest {
     private static final TestService testService = new TestService();
     private static final int MAX_MESSAGE_BYTES = 1024;
 
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock
     private ServiceRequestContext ctx;
-
-    @Mock
     private HttpRequest request;
-
     private UnframedGrpcService unframedGrpcService;
 
     @Before
     public void setUp() {
-        when(ctx.server()).thenReturn(new ServerBuilder().service("/", (ctx, req) -> null).build());
-        when(ctx.mappedPath()).thenReturn("/armeria.grpc.testing.TestService/EmptyCall");
-        when(ctx.eventLoop()).thenReturn(eventLoop.get());
-        when(ctx.contextAwareEventLoop()).thenReturn(eventLoop.get());
-        when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
-        final DefaultRequestLog log = new DefaultRequestLog(ctx);
-        when(ctx.log()).thenReturn(log);
-        when(ctx.logBuilder()).thenReturn(log);
-
-        when(request.headers())
-                .thenReturn(HttpHeaders.of(HttpMethod.POST, "/armeria.grpc.testing.TestService/EmptyCall")
-                                       .contentType(MediaType.JSON_UTF_8));
-        when(request.aggregateWithPooledObjects(any(), any()))
-                .thenReturn(
-                        CompletableFuture.completedFuture(
-                                AggregatedHttpMessage.of(HttpMethod.POST,
-                                                         "/armeria.grpc.testing.TestService/EmptyCall",
-                                                         MediaType.JSON_UTF_8, "{}")));
+        request = HttpRequest.of(HttpMethod.POST,
+                                 "/armeria.grpc.testing.TestService/EmptyCall",
+                                 MediaType.JSON_UTF_8, "{}");
+        ctx = ServiceRequestContextBuilder.of(request).eventLoop(eventLoop.get()).build();
     }
 
     @Test
@@ -113,14 +82,14 @@ public class UnframedGrpcServiceTest {
                                                               .build();
 
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
-        AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
+        final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
         assertThat(aggregatedHttpMessage.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedHttpMessage.content().toStringUtf8()).isEqualTo("{}");
     }
 
     @Test
     public void statusCancelled() throws Exception {
-        TestService spyTestService = spy(testService);
+        final TestService spyTestService = spy(testService);
         doThrow(Status.CANCELLED.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)
                 .emptyCall(any(), any());
@@ -133,7 +102,7 @@ public class UnframedGrpcServiceTest {
                                                               .enableUnframedRequests(true)
                                                               .build();
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
-        AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
+        final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
         assertThat(aggregatedHttpMessage.headers().status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
         assertThat(aggregatedHttpMessage.content().toStringUtf8())
                 .isEqualTo("http-status: 499, Client Closed Request\n" +

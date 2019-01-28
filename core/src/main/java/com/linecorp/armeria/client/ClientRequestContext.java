@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import java.net.URI;
 import java.time.Duration;
 
 import javax.annotation.Nullable;
@@ -26,6 +29,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
@@ -35,6 +39,42 @@ import io.netty.util.AsciiString;
  * Every client request has its own {@link ClientRequestContext} instance.
  */
 public interface ClientRequestContext extends RequestContext {
+
+    /**
+     * Returns a new {@link ClientRequestContext} created from the specified {@link HttpRequest}.
+     * Note that it is not usually required to create a new context by yourself, because Armeria
+     * will always provide a context object for you. However, it may be useful in some cases such as
+     * unit testing.
+     *
+     * @see ClientRequestContextBuilder
+     */
+    static ClientRequestContext of(HttpRequest request) {
+        return ClientRequestContextBuilder.of(request).build();
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContext} created from the specified {@link RpcRequest} and URI.
+     * Note that it is not usually required to create a new context by yourself, because Armeria
+     * will always provide a context object for you. However, it may be useful in some cases such as
+     * unit testing.
+     *
+     * @see ClientRequestContextBuilder
+     */
+    static ClientRequestContext of(RpcRequest request, String uri) {
+        return ClientRequestContextBuilder.of(request, URI.create(requireNonNull(uri, "uri"))).build();
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContext} created from the specified {@link RpcRequest} and {@link URI}.
+     * Note that it is not usually required to create a new context by yourself, because Armeria
+     * will always provide a context object for you. However, it may be useful in some cases such as
+     * unit testing.
+     *
+     * @see ClientRequestContextBuilder
+     */
+    static ClientRequestContext of(RpcRequest request, URI uri) {
+        return ClientRequestContextBuilder.of(request, uri).build();
+    }
 
     @Override
     ClientRequestContext newDerivedContext();

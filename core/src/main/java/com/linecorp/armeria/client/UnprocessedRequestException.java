@@ -32,7 +32,7 @@ public final class UnprocessedRequestException extends RuntimeException {
     private static final UnprocessedRequestException INSTANCE = new UnprocessedRequestException(false);
 
     /**
-     * Returns a {@link UnprocessedRequestException} which may be a singleton or a new instance, depending on
+     * Returns an {@link UnprocessedRequestException} which may be a singleton or a new instance, depending on
      * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static UnprocessedRequestException get() {

@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -332,6 +333,15 @@ public interface RequestLog {
      */
     @Nullable
     Channel channel();
+
+    /**
+     * Returns the {@link SSLSession} of the connection which handled the {@link Request}.
+     *
+     * @return the {@link SSLSession}, or {@code null} if the {@link Request} has failed even before
+     *         a TLS connection is established.
+     */
+    @Nullable
+    SSLSession sslSession();
 
     /**
      * Returns the {@link SessionProtocol} of the {@link Request}.
