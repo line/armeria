@@ -79,9 +79,15 @@ public interface MeterIdPrefixFunction {
             @Override
             public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
                 final List<Tag> tags = buildTags(log);
+
+                // Add the 'httpStatus' tag.
+                final HttpStatus status;
                 if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-                    tags.add(Tag.of("httpStatus", log.status().codeAsText()));
+                    status = log.status();
+                } else {
+                    status = HttpStatus.UNKNOWN;
                 }
+                tags.add(Tag.of("httpStatus", status.codeAsText()));
 
                 return new MeterIdPrefix(name, tags);
             }

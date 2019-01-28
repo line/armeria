@@ -459,17 +459,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestLength = requestLength;
     }
 
-    private void requestFirstBytesTransferred(long timestamp) {
+    @Override
+    public void requestFirstBytesTransferred() {
         if (isAvailabilityAlreadyUpdated(REQUEST_FIRST_BYTES_TRANSFERRED)) {
             return;
         }
-        requestFirstBytesTransferredTimeNanos = timestamp;
-        updateAvailability(REQUEST_FIRST_BYTES_TRANSFERRED);
+        requestFirstBytesTransferred0(System.nanoTime());
     }
 
     @Override
-    public void requestFirstBytesTransferred() {
-        requestFirstBytesTransferred(System.nanoTime());
+    public void requestFirstBytesTransferred(long requestFirstBytesTransferredTimeNanos) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_FIRST_BYTES_TRANSFERRED)) {
+            return;
+        }
+        requestFirstBytesTransferred0(requestFirstBytesTransferredTimeNanos);
+    }
+
+    private void requestFirstBytesTransferred0(long requestFirstBytesTransferredTimeNanos) {
+        this.requestFirstBytesTransferredTimeNanos = requestFirstBytesTransferredTimeNanos;
+        updateAvailability(REQUEST_FIRST_BYTES_TRANSFERRED);
     }
 
     @Override
@@ -665,17 +673,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.responseLength = responseLength;
     }
 
-    private void responseFirstBytesTransferred(long timestamp) {
+    @Override
+    public void responseFirstBytesTransferred() {
         if (isAvailabilityAlreadyUpdated(RESPONSE_FIRST_BYTES_TRANSFERRED)) {
             return;
         }
-        responseFirstBytesTransferredTimeNanos = timestamp;
-        updateAvailability(RESPONSE_FIRST_BYTES_TRANSFERRED);
+        responseFirstBytesTransferred0(System.nanoTime());
     }
 
     @Override
-    public void responseFirstBytesTransferred() {
-        responseFirstBytesTransferred(System.nanoTime());
+    public void responseFirstBytesTransferred(long responseFirstBytesTransferredTimeNanos) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_FIRST_BYTES_TRANSFERRED)) {
+            return;
+        }
+        responseFirstBytesTransferred0(responseFirstBytesTransferredTimeNanos);
+    }
+
+    private void responseFirstBytesTransferred0(long responseFirstBytesTransferredTimeNanos) {
+        this.responseFirstBytesTransferredTimeNanos = responseFirstBytesTransferredTimeNanos;
+        updateAvailability(RESPONSE_FIRST_BYTES_TRANSFERRED);
     }
 
     @Override

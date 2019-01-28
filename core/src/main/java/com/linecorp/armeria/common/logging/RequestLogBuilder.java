@@ -163,6 +163,11 @@ public interface RequestLogBuilder {
     void requestFirstBytesTransferred();
 
     /**
+     * Sets {@link RequestLog#requestFirstBytesTransferredTimeNanos()} with the specified timestamp.
+     */
+    void requestFirstBytesTransferred(long requestFirstBytesTransferredNanos);
+
+    /**
      * Sets the {@link RequestLog#requestHeaders()}.
      */
     void requestHeaders(HttpHeaders requestHeaders);
@@ -273,6 +278,11 @@ public interface RequestLogBuilder {
      * Sets {@link RequestLog#responseFirstBytesTransferredTimeNanos()}.
      */
     void responseFirstBytesTransferred();
+
+    /**
+     * Sets {@link RequestLog#responseFirstBytesTransferredTimeNanos()} with the specified timestamp.
+     */
+    void responseFirstBytesTransferred(long responseFirstBytesTransferredNanos);
 
     /**
      * Sets the {@link RequestLog#responseHeaders()}.
