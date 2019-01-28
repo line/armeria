@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
+import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.NullToNoContentResponseConverterFunction;
@@ -261,6 +262,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 }
 
                 @Get("/expect-custom-trailing-header")
+                @AdditionalTrailer(name = "x-custom-annotated-trailing-header", value = "annotated-value")
                 @ProducesJson
                 public HttpResult<List<String>> expectCustomTrailingHeader() {
                     return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
@@ -278,6 +280,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 }
 
                 @Get("/async/expect-custom-trailing-header")
+                @AdditionalTrailer(name = "x-custom-annotated-trailing-header", value = "annotated-value")
                 @ProducesJson
                 public HttpResult<CompletionStage<List<String>>> asyncExpectCustomTrailingHeader(
                         ServiceRequestContext ctx) {
@@ -359,6 +362,8 @@ public class AnnotatedHttpServiceResponseConverterTest {
     @AdditionalHeader(name = "class_header_1", value = "class_value_1")
     @AdditionalHeader(name = "class_header_2", value = "class_value_2")
     @AdditionalHeader(name = "overwritten_1", value = "unchanged")
+    @AdditionalTrailer(name = "class_trailer_1", value = "class_value_1")
+    @AdditionalTrailer(name = "class_trailer_2", value = "class_value_2")
     private static class AnnotatedService {
 
         @Get("/expect-class")
@@ -366,16 +371,25 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         @Get("/expect-combined")
         @AdditionalHeader(name = "method_header_1", value = "method_value_1")
-        public void expectCombined() {}
+        @AdditionalTrailer(name = "method_trailer_1", value = "method_value_1")
+        public String expectCombined() {
+            return "combined";
+        }
 
         @Get("/expect-combined2")
         @AdditionalHeader(name = "method_header_1", value = "method_value_1")
         @AdditionalHeader(name = "method_header_2", value = "method_value_2")
-        public void expectCombined2() {}
+        @AdditionalTrailer(name = "method_trailer_1", value = "method_value_1")
+        @AdditionalTrailer(name = "method_trailer_2", value = "method_value_2")
+        public String expectCombined2() {
+            return "combined2";
+        }
 
         @Get("/expect-overwritten")
         @AdditionalHeader(name = "overwritten_1", value = "overwritten_value_1")
-        public void expectOverwritten() {}
+        public String expectOverwritten() {
+            return "overwritten";
+        }
     }
 
     private static class ObjectPublisher<T> implements Publisher<T> {
@@ -412,19 +426,29 @@ public class AnnotatedHttpServiceResponseConverterTest {
         AggregatedHttpMessage msg;
 
         msg = aggregated(client.get("/expect-class"));
+
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
 
         msg = aggregated(client.get("/expect-combined"));
+
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("class_trailer_1"))).isEqualTo("class_value_1");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("class_trailer_2"))).isEqualTo("class_value_2");
         assertThat(msg.headers().get(HttpHeaderNames.of("method_header_1"))).isEqualTo("method_value_1");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
+                "method_value_1");
 
         msg = aggregated(client.get("/expect-combined2"));
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
         assertThat(msg.headers().get(HttpHeaderNames.of("method_header_1"))).isEqualTo("method_value_1");
         assertThat(msg.headers().get(HttpHeaderNames.of("method_header_2"))).isEqualTo("method_value_2");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
+                "method_value_1");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("method_trailer_2"))).isEqualTo(
+                "method_value_2");
 
         msg = aggregated(client.get("/expect-overwritten"));
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
@@ -570,6 +594,8 @@ public class AnnotatedHttpServiceResponseConverterTest {
             assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableList.of("a", "b"));
             assertThat(message.trailingHeaders().get(HttpHeaderNames.of("x-custom-trailing-header")))
                     .isEqualTo("value");
+            assertThat(message.trailingHeaders().get(HttpHeaderNames.of("x-custom-annotated-trailing-header")))
+                    .isEqualTo("annotated-value");
         });
 
         msg = aggregated(client.get("/async/expect-bad-request"));

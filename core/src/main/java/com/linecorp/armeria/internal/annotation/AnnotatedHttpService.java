@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
@@ -105,6 +106,7 @@ public class AnnotatedHttpService implements HttpService {
 
     private final PathMapping pathMapping;
     private final HttpHeaders defaultHttpHeaders;
+    private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
 
@@ -113,7 +115,8 @@ public class AnnotatedHttpService implements HttpService {
                          List<ExceptionHandlerFunction> exceptionHandlers,
                          List<ResponseConverterFunction> responseConverters,
                          PathMapping pathMapping,
-                         HttpHeaders defaultHttpHeaders) {
+                         HttpHeaders defaultHttpHeaders,
+                         HttpHeaders defaultHttpTrailers) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -125,7 +128,8 @@ public class AnnotatedHttpService implements HttpService {
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
 
-        this.defaultHttpHeaders = defaultHttpHeaders.asImmutable();
+        this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders").asImmutable();
+        this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers").asImmutable();
         final Class<?> returnType = method.getReturnType();
         if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
@@ -260,13 +264,13 @@ public class AnnotatedHttpService implements HttpService {
         final HttpHeaders newTrailingHeaders;
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
-            newHeaders = combineWithDefault(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
+            newHeaders = combineWithDefaultHeaders(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
             result = httpResult.content().orElse(null);
-            newTrailingHeaders = httpResult.trailingHeaders();
+            newTrailingHeaders = combineWithDefaultTrailers(newHeaders.status(), httpResult.trailingHeaders());
         } else {
             newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, defaultHttpHeaders)
-                                         : combineWithDefault(headers);
-            newTrailingHeaders = trailingHeaders;
+                                         : combineWithDefaultHeaders(headers);
+            newTrailingHeaders = combineWithDefaultTrailers(newHeaders.status(), trailingHeaders);
         }
 
         if (result instanceof HttpResponse) {
@@ -309,10 +313,19 @@ public class AnnotatedHttpService implements HttpService {
                                      : headers.contentType(negotiatedResponseMediaType);
     }
 
-    private HttpHeaders combineWithDefault(HttpHeaders headers) {
+    private HttpHeaders combineWithDefaultHeaders(HttpHeaders headers) {
         final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
         assert defaultHttpStatus != null;
-        return headers.toMutable().setAllIfAbsent(defaultHttpHeaders);
+        return requireNonNull(headers, "headers").toMutable().setAllIfAbsent(defaultHttpHeaders);
+    }
+
+    private HttpHeaders combineWithDefaultTrailers(HttpStatus status, HttpHeaders trailers) {
+        // if it is supposed to be always empty ( e.g, 204 NO CONTENT ), do not combine.
+        if (ArmeriaHttpUtil.isContentAlwaysEmpty(requireNonNull(status, "status"))) {
+            return trailers;
+        }
+        return trailers == null ? defaultHttpTrailers
+                                : trailers.toMutable().setAllIfAbsent(defaultHttpTrailers);
     }
 
     /**

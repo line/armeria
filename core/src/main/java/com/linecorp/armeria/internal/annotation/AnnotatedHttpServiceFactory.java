@@ -76,6 +76,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.server.AbstractPathMapping;
@@ -88,6 +89,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
+import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Consumes;
@@ -241,6 +243,8 @@ public final class AnnotatedHttpServiceFactory {
     @SuppressWarnings("unchecked")
     private static <T extends Annotation> List<T> findRepeatableAnnotations(AnnotatedElement element,
                                                                             Class<T> annotationType) {
+        requireNonNull(element, "element");
+        requireNonNull(annotationType, "annotationType");
         final ImmutableList.Builder<T> listBuilder = new ImmutableList.Builder<T>();
         final Class<? extends Annotation> repeatable = getRepeatable(annotationType).orElseThrow(
                 () -> new IllegalArgumentException("annotationType is not an repeatable annotation."));
@@ -266,10 +270,32 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     private static void setAdditionalHeader(HttpHeaders headers, AnnotatedElement element, String level) {
+        requireNonNull(headers, "headers");
+        requireNonNull(element, "element");
+        requireNonNull(level, "level");
+
         final Set<String> addedHeaderSets = new HashSet<>();
         findRepeatableAnnotations(element, AdditionalHeader.class).forEach(header -> {
             if (addedHeaderSets.contains(header.name())) {
                 logger.warn("The additional header named '{}' is already added at the same {} level." +
+                            " It will be ignored.",
+                            header.name(), level);
+                return;
+            }
+            headers.set(HttpHeaderNames.of(header.name()), header.value());
+            addedHeaderSets.add(header.name());
+        });
+    }
+
+    private static void setAdditionalTrailer(HttpHeaders headers, AnnotatedElement element, String level) {
+        requireNonNull(headers, "headers");
+        requireNonNull(element, "element");
+        requireNonNull(level, "level");
+
+        final Set<String> addedHeaderSets = new HashSet<>();
+        findRepeatableAnnotations(element, AdditionalTrailer.class).forEach(header -> {
+            if (addedHeaderSets.contains(header.name())) {
+                logger.warn("The additional trailer named '{}' is already added at the same {} level." +
                             " It will be ignored.",
                             header.name(), level);
                 return;
@@ -356,8 +382,19 @@ public final class AnnotatedHttpServiceFactory {
                 });
         final HttpHeaders defaultHeaders = HttpHeaders.of(defaultResponseStatus(defaultResponseStatus, method));
 
+        final HttpHeaders defaultTrailingHeaders = HttpHeaders.of();
+
         setAdditionalHeader(defaultHeaders, clazz, "class");
         setAdditionalHeader(defaultHeaders, method, "method");
+        setAdditionalTrailer(defaultTrailingHeaders, clazz, "class");
+        setAdditionalTrailer(defaultTrailingHeaders, method, "method");
+
+        if (ArmeriaHttpUtil.isContentAlwaysEmpty(defaultHeaders.status()) && !defaultTrailingHeaders
+                .isEmpty()) {
+            logger.warn("The content for HTTP status ({}) should be always empty. " +
+                        "Trailing headers for the method '{}' might be ignored.",
+                        defaultHeaders.status().code(), method.getName());
+        }
 
         // A CORS preflight request can be received because we handle it specially. The following
         // decorator will prevent the service from an unexpected request which has OPTIONS method.
@@ -379,7 +416,8 @@ public final class AnnotatedHttpServiceFactory {
         }
         return new AnnotatedHttpServiceElement(pathMapping,
                                                new AnnotatedHttpService(object, method, resolvers, eh,
-                                                                        res, pathMapping, defaultHeaders),
+                                                                        res, pathMapping, defaultHeaders,
+                                                                        defaultTrailingHeaders),
                                                decorator(method, clazz, initialDecorator));
     }
 
