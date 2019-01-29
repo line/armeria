@@ -48,12 +48,10 @@ export default function({
   hasLocation,
   specification,
 }: Props) {
-  let hasBean = false;
-  for (const variable of variables) {
-    if (variable.childFieldInfos && variable.childFieldInfos.length > 0) {
-      hasBean = true;
-    }
-  }
+  const hasBean = variables.some(
+    (variable) =>
+      !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
+  );
   return (
     <>
       <Typography variant="title">{title}</Typography>
@@ -124,21 +122,16 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
 
     const fieldInfos = props.variables;
 
-    let isEmpty;
+    const isEmpty = fieldInfos.length === 0;
     let isBeans: boolean[] = [];
     let openBeans: boolean[] = [];
-    if (fieldInfos.length > 0) {
-      isEmpty = false;
-      isBeans = Array(fieldInfos.length).fill(false);
-      for (let i = 0; i < fieldInfos.length; i += 1) {
-        const childFieldInfos = fieldInfos[i].childFieldInfos;
-        if (childFieldInfos && childFieldInfos.length > 0) {
-          isBeans[i] = true;
-        }
-      }
+    if (!isEmpty) {
+      isBeans = fieldInfos.map(
+        ({ childFieldInfos }) =>
+          !!childFieldInfos && childFieldInfos.length > 0,
+      );
+
       openBeans = Array(fieldInfos.length).fill(false);
-    } else {
-      isEmpty = true;
     }
 
     let colSpanLength = 4;
@@ -167,9 +160,7 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
             <>
               <TableRow
                 key={FieldInfos.generateKey(variable.name)}
-                onClick={() =>
-                  this.handleCollapse(this.state.isBeans[index], index)
-                }
+                onClick={() => this.handleCollapse(index)}
               >
                 <TableCell>
                   <code>
@@ -233,11 +224,11 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
     );
   }
 
-  private handleCollapse = (isBean: boolean, index: number) => {
-    if (!isBean) {
+  private handleCollapse = (index: number) => {
+    const state = this.state;
+    if (!state.isBeans[index]) {
       return;
     }
-    const state = this.state;
     state.openBeans[index] = !state.openBeans[index];
     this.setState(state);
 
