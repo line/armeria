@@ -36,6 +36,19 @@ public interface ResponseConverterFunction {
      * Returns {@link HttpResponse} instance corresponds to the given {@code result}.
      * Calls {@link ResponseConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
      * this converter cannot convert the {@code result} to the {@link HttpResponse}.
+     *
+     * @param headers The HTTP headers of the {@link HttpResult} returned by the service method.
+     *                Even if the service method does not return any {@link HttpResult},
+     *                the headers will basically include {@code "status"} and {@code "content-type"}
+     *                HTTP Response Header.
+     *                Note that the additional headers will not be included in this headers,
+     *                call {@link ServiceRequestContext#additionalResponseHeaders()} to access them.
+     * @param result The result of the service method.
+     * @param trailingHeaders The HTTP trailers of {@link HttpResult} returned by the service method.
+     *                        If the service method does not return any {@link HttpResult},
+     *                        the trailers will be empty, not {@code null}.
+     *                        Note that the additional trailers will not be included in this trailers,
+     *                        call {@link ServiceRequestContext#additionalResponseTrailers()} to access them.
      */
     HttpResponse convertResponse(ServiceRequestContext ctx,
                                  HttpHeaders headers,

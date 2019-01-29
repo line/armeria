@@ -204,13 +204,12 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
      * });
      * }</pre>
      */
-    default HttpHeaders setAllIfAbsent(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    default <K extends AsciiString> HttpHeaders setAllIfAbsent(Headers<K, ? extends String, ?> headers) {
         requireNonNull(headers, "headers");
         if (!headers.isEmpty()) {
-            headers.forEach(entry -> {
-                final AsciiString name = entry.getKey();
+            headers.names().forEach(name -> {
                 if (!this.contains(name)) {
-                    this.set(name, entry.getValue());
+                    this.set(name, headers.getAll(name));
                 }
             });
         }

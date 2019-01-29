@@ -387,8 +387,8 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         @Get("/expect-overwritten")
         @AdditionalHeader(name = "overwritten_1", value = { "overwritten_value_1", "overwritten_value_2" })
-        public String expectOverwritten() {
-            return "overwritten";
+        public HttpResponse expectOverwritten() {
+            return HttpResponse.of("overwritten");
         }
     }
 

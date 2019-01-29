@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
@@ -223,6 +222,10 @@ public class AnnotatedHttpService implements HttpService {
         final CompletableFuture<AggregatedHttpMessage> f =
                 aggregationRequired(aggregationStrategy, req) ? req.aggregate()
                                                               : CompletableFuture.completedFuture(null);
+
+        ctx.setAdditionalResponseHeaders(defaultHttpHeaders);
+        ctx.setAdditionalResponseTrailers(defaultHttpTrailers);
+
         switch (responseType) {
             case HTTP_RESPONSE:
                 return f.thenApply(
@@ -264,13 +267,14 @@ public class AnnotatedHttpService implements HttpService {
         final HttpHeaders newTrailingHeaders;
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
-            newHeaders = combineWithDefaultHeaders(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
+            newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
             result = httpResult.content().orElse(null);
-            newTrailingHeaders = combineWithDefaultTrailers(newHeaders.status(), httpResult.trailingHeaders());
+            newTrailingHeaders = httpResult.trailingHeaders();
         } else {
-            newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, defaultHttpHeaders)
-                                         : combineWithDefaultHeaders(headers);
-            newTrailingHeaders = combineWithDefaultTrailers(newHeaders.status(), trailingHeaders);
+            newHeaders = setHttpStatus(
+                    headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.EMPTY_HEADERS)
+                                    : headers);
+            newTrailingHeaders = trailingHeaders;
         }
 
         if (result instanceof HttpResponse) {
@@ -313,19 +317,16 @@ public class AnnotatedHttpService implements HttpService {
                                      : headers.contentType(negotiatedResponseMediaType);
     }
 
-    private HttpHeaders combineWithDefaultHeaders(HttpHeaders headers) {
+    private HttpHeaders setHttpStatus(HttpHeaders headers) {
+        if (headers.status() != null) {
+            // Do not overwrite HTTP status.
+            return headers;
+        }
+
         final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
         assert defaultHttpStatus != null;
-        return requireNonNull(headers, "headers").toMutable().setAllIfAbsent(defaultHttpHeaders);
-    }
-
-    private HttpHeaders combineWithDefaultTrailers(HttpStatus status, HttpHeaders trailers) {
-        // if it is supposed to be always empty ( e.g, 204 NO CONTENT ), do not combine.
-        if (ArmeriaHttpUtil.isContentAlwaysEmpty(requireNonNull(status, "status"))) {
-            return trailers;
-        }
-        return trailers == null ? defaultHttpTrailers
-                                : trailers.toMutable().setAllIfAbsent(defaultHttpTrailers);
+        return headers.isImmutable() ? HttpHeaders.copyOf(headers).status(defaultHttpStatus)
+                                     : headers.status(defaultHttpStatus);
     }
 
     /**
