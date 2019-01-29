@@ -25,7 +25,8 @@ import com.linecorp.armeria.common.Response;
  * A decorating {@link Client} which implements its {@link #execute(ClientRequestContext, Request)} method
  * using a given function.
  *
- * @see ClientBuilder#decorator(Class, Class, DecoratingClientFunction)
+ * @see ClientBuilder#decorator(DecoratingClientFunction)
+ * @see ClientBuilder#rpcDecorator(DecoratingClientFunction)
  */
 final class FunctionalDecoratingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {

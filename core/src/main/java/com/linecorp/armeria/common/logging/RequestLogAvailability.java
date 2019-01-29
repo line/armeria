@@ -27,7 +27,7 @@ public enum RequestLogAvailability {
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#host()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
      * </ul>
      */
     REQUEST_START(1, 1),
