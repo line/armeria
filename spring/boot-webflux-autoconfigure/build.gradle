@@ -16,7 +16,6 @@ dependencies {
     compile 'io.dropwizard.metrics:metrics-json'
     compile 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
-    compile 'org.springframework.boot:spring-boot-starter-actuator'
     compile 'org.springframework.boot:spring-boot-starter-webflux'
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
