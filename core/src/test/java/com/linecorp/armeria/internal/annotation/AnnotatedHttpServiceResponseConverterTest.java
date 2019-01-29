@@ -361,7 +361,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @AdditionalHeader(name = "class_header_1", value = "class_value_1")
     @AdditionalHeader(name = "class_header_2", value = "class_value_2")
-    @AdditionalHeader(name = "overwritten_1", value = "unchanged")
+    @AdditionalHeader(name = "overwritten_1", value = {"unchanged_1", "unchanged_2"})
     @AdditionalTrailer(name = "class_trailer_1", value = "class_value_1")
     @AdditionalTrailer(name = "class_trailer_2", value = "class_value_2")
     private static class AnnotatedService {
@@ -386,7 +386,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
         }
 
         @Get("/expect-overwritten")
-        @AdditionalHeader(name = "overwritten_1", value = "overwritten_value_1")
+        @AdditionalHeader(name = "overwritten_1", value = { "overwritten_value_1", "overwritten_value_2" })
         public String expectOverwritten() {
             return "overwritten";
         }
@@ -430,6 +430,9 @@ public class AnnotatedHttpServiceResponseConverterTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
 
+        assertThat(msg.headers().getAll(HttpHeaderNames.of("overwritten_1"))).containsExactly(
+                "unchanged_1", "unchanged_2");
+
         msg = aggregated(client.get("/expect-combined"));
 
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
@@ -453,7 +456,8 @@ public class AnnotatedHttpServiceResponseConverterTest {
         msg = aggregated(client.get("/expect-overwritten"));
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
         assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
-        assertThat(msg.headers().get(HttpHeaderNames.of("overwritten_1"))).isEqualTo("overwritten_value_1");
+        assertThat(msg.headers().getAll(HttpHeaderNames.of("overwritten_1"))).containsExactly(
+                "overwritten_value_1", "overwritten_value_2");
     }
 
     @Retention(RetentionPolicy.RUNTIME)

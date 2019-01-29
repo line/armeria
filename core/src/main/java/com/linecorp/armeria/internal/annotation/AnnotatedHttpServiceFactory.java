@@ -55,6 +55,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -245,28 +246,25 @@ public final class AnnotatedHttpServiceFactory {
                                                                             Class<T> annotationType) {
         requireNonNull(element, "element");
         requireNonNull(annotationType, "annotationType");
-        final ImmutableList.Builder<T> listBuilder = new ImmutableList.Builder<T>();
         final Class<? extends Annotation> repeatable = getRepeatable(annotationType).orElseThrow(
                 () -> new IllegalArgumentException("annotationType is not an repeatable annotation."));
-        getAllAnnotations(element).stream()
-                                  .filter(a -> a.annotationType() == annotationType ||
-                                               a.annotationType() == repeatable)
-                                  .forEach(annotation -> {
-                                      if (annotation.annotationType() == repeatable) {
-                                          try {
-                                              listBuilder.addAll(
-                                                      Arrays.asList((T[]) annotation.annotationType()
-                                                                                    .getMethod("value")
-                                                                                    .invoke(annotation)));
-                                          } catch (Exception ex) {
-                                              logger.error("value() method invocation throws an exception.",
-                                                           ex);
-                                          }
-                                      } else {
-                                          listBuilder.add((T) annotation);
-                                      }
-                                  });
-        return listBuilder.build();
+        return getAllAnnotations(element).stream()
+                                         .filter(a -> a.annotationType() == annotationType ||
+                                                      a.annotationType() == repeatable)
+                                         .flatMap(annotation -> {
+                                             if (annotation.annotationType() == repeatable) {
+                                                 try {
+                                                     return Arrays.stream((T[]) annotation.annotationType()
+                                                                                          .getMethod("value")
+                                                                                          .invoke(annotation));
+                                                 } catch (Exception ex) {
+                                                     throw new IllegalStateException(
+                                                             "value() method invocation throws an exception.",
+                                                             ex);
+                                                 }
+                                             }
+                                             return Stream.of((T) annotation);
+                                         }).collect(toImmutableList());
     }
 
     private static void setAdditionalHeader(HttpHeaders headers, AnnotatedElement element, String level) {
