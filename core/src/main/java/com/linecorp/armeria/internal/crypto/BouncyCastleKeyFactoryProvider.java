@@ -81,6 +81,7 @@ public final class BouncyCastleKeyFactoryProvider extends Provider implements Co
         }
     }
 
+    @SuppressWarnings("deprecation") // Not deprecated in Java 8.
     private BouncyCastleKeyFactoryProvider() {
         super(PROVIDER_NAME, 1.0, "Armeria Bouncy Castle KeyFactory Collection");
         AccessController.doPrivileged((PrivilegedAction<?>) () -> {

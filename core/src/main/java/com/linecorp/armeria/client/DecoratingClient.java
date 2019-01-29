@@ -22,8 +22,9 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * Decorates a {@link Client}. Use {@link SimpleDecoratingClient} or
- * {@link ClientBuilder#decorator(Class, Class, DecoratingClientFunction)} if your {@link Client} has the same
+ * Decorates a {@link Client}. Use {@link SimpleDecoratingClient},
+ * {@link ClientBuilder#decorator(DecoratingClientFunction)} or
+ * {@link ClientBuilder#rpcDecorator(DecoratingClientFunction)} if your {@link Client} has the same
  * {@link Request} and {@link Response} type with the {@link Client} being decorated.
  *
  * @param <T_I> the {@link Request} type of the {@link Client} being decorated

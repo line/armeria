@@ -63,7 +63,7 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#host()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *
@@ -84,7 +84,7 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#host()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *
@@ -102,7 +102,7 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#host()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *
@@ -128,7 +128,7 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#host()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *

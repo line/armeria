@@ -269,7 +269,7 @@ public class ThriftOverHttpClientTest {
                 .build();
 
         final ClientDecorationBuilder decoBuilder = new ClientDecorationBuilder();
-        decoBuilder.add(RpcRequest.class, RpcResponse.class, (delegate, ctx, req) -> {
+        decoBuilder.addRpc((delegate, ctx, req) -> {
             if (recordMessageLogs) {
                 ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
             }
@@ -277,7 +277,7 @@ public class ThriftOverHttpClientTest {
         });
 
         if (ENABLE_LOGGING_DECORATORS) {
-            decoBuilder.add(RpcRequest.class, RpcResponse.class, LoggingClient.newDecorator());
+            decoBuilder.addRpc(LoggingClient.newDecorator());
         }
 
         clientOptions = ClientOptions.of(ClientOption.DECORATION.newValue(decoBuilder.build()));
