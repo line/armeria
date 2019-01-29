@@ -2,16 +2,11 @@ rootProject.name = 'armeria'
 
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
-// TODO(trustin): Remove this once ProGuard 6.1 is out.
-// Do not trim for Java 11+ because ProGuard does not support Java 11 yet.
-// See: https://sourceforge.net/p/proguard/feature-requests/188/
-def trimFlag = JavaVersion.current() <= JavaVersion.VERSION_1_10 ? 'trim' : 'notrim'
-
 // Published BOM projects
 includeWithFlags ':bom',                       'bom'
 
 // Published Java projects
-includeWithFlags ':core',                               'java', 'publish', 'shade', trimFlag
+includeWithFlags ':core',                               'java', 'publish', 'shade', 'trim'
 includeWithFlags ':rxjava',                             'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                               'java', 'publish', 'relocate'
 includeWithFlags ':jetty',                              'java', 'publish', 'relocate'
