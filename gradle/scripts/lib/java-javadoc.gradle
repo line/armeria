@@ -236,7 +236,15 @@ allprojects {
                 }
             }
 
-            addOfflineLink('java10', 'https://docs.oracle.com/javase/10/docs/api/')
+            if (JavaVersion.current() >= JavaVersion.VERSION_11) {
+                // Javadoc in Java 11+ has more strict checks related with module system,
+                // so we have to use Java 11+ API docs.
+                addOfflineLink('java11', 'https://docs.oracle.com/en/java/javase/11/docs/api/')
+            } else {
+                // Javadoc in pre-Java 11 generates a broken link for Java 11+ API docs,
+                // so we have to use Java 10 (or less) API docs.
+                addOfflineLink('java10', 'https://docs.oracle.com/javase/10/docs/api/')
+            }
 
             project.ext.javadocLinks.each {
                 addOfflineLink("${it['groupId']}/${it['artifactId']}/${it['version']}", it['url'])
