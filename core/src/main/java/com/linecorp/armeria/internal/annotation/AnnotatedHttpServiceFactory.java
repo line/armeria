@@ -252,7 +252,7 @@ public final class AnnotatedHttpServiceFactory {
             return annotation.getClass().getMethod(fieldName).invoke(annotation);
         } catch (Exception ex) {
             throw new IllegalStateException(
-                    String.format("'%s.%s()' method invocation raised an exception",
+                    String.format("'%s.%s()' method raised an exception.",
                                   annotation.getClass().getName(), fieldName), ex);
         }
     }
