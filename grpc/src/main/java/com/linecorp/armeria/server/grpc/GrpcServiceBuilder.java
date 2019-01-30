@@ -93,7 +93,7 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds a gRPC {@link BindableService}s to this {@link GrpcServiceBuilder}. Most gRPC service
+     * Adds gRPC {@link BindableService}s to this {@link GrpcServiceBuilder}. Most gRPC service
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addServices(BindableService... bindableServices) {
@@ -102,12 +102,12 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds a gRPC {@link BindableService}s to this {@link GrpcServiceBuilder}. Most gRPC service
+     * Adds gRPC {@link BindableService}s to this {@link GrpcServiceBuilder}. Most gRPC service
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addServices(Iterable<BindableService> bindableServices) {
         requireNonNull(bindableServices, "bindableServices");
-        bindableServices.forEach(s -> addService(s.bindService()));
+        bindableServices.forEach(this::addService);
         return this;
     }
 
