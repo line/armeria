@@ -216,10 +216,14 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
 
-        final HttpHeaders headers =
-                HttpHeaders.of(status)
-                           .contentType(mediaType)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+        final HttpHeaders headers = HttpHeaders.of(status).contentType(mediaType);
+        if (trailingHeaders.isEmpty()) {
+            // Some of the client implementation such as "curl" ignores trailing headers if
+            // the Content-length header is present. So set Content-length header only if trailingHeaders
+            // is empty.
+            headers.setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+        }
+
         return of(headers, content, trailingHeaders);
     }
 
@@ -255,20 +259,32 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             throw new IllegalStateException("not a response (missing :status)");
         }
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders) ||
+            (content.isEmpty() && trailingHeaders.isEmpty())) {
             ReferenceCountUtil.safeRelease(content);
-            return new OneElementFixedHttpResponse(headers);
-        } else if (!content.isEmpty()) {
-            if (trailingHeaders.isEmpty()) {
-                return new TwoElementFixedHttpResponse(headers, content);
-            } else {
-                return new RegularFixedHttpResponse(headers, content, trailingHeaders);
+
+            final HttpHeaders mutableHeaders = headers.toMutable();
+            if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                mutableHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             }
-        } else if (!trailingHeaders.isEmpty()) {
-            return new TwoElementFixedHttpResponse(headers, trailingHeaders);
-        } else {
-            return new OneElementFixedHttpResponse(headers);
+
+            return new OneElementFixedHttpResponse(mutableHeaders);
         }
+
+        if (!trailingHeaders.isEmpty()) {
+            // Some of the client implementations such as "curl" ignores trailing headers if
+            // the Content-length header is present. We should not set Content-length header when trailing
+            // headers exists so that those clien can receive the trailing headers.
+            final HttpHeaders mutableHeaders = headers.toMutable();
+            mutableHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+            if (!content.isEmpty()) {
+                return new RegularFixedHttpResponse(mutableHeaders, content, trailingHeaders);
+            } else {
+                return new TwoElementFixedHttpResponse(mutableHeaders, trailingHeaders);
+            }
+        }
+
+        return new TwoElementFixedHttpResponse(headers, content);
     }
 
     /**

@@ -280,10 +280,10 @@ public interface AggregatedHttpMessage {
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
 
-        final HttpHeaders headers =
-                HttpHeaders.of(status)
-                           .contentType(mediaType)
-                           .setInt(CONTENT_LENGTH, content.length());
+        final HttpHeaders headers = HttpHeaders.of(status).contentType(mediaType);
+        if (trailingHeaders.isEmpty()) {
+            headers.setInt(CONTENT_LENGTH, content.length());
+        }
 
         return of(headers, content, trailingHeaders);
     }
@@ -344,7 +344,7 @@ public interface AggregatedHttpMessage {
         final HttpStatus status = headers.status();
         if (status != null) { // Response
             if (!isContentAlwaysEmptyWithValidation(status, content, trailingHeaders) &&
-                !headers.contains(CONTENT_LENGTH)) {
+                !headers.contains(CONTENT_LENGTH) && trailingHeaders.isEmpty()) {
                 // But do not overwrite the 'content-length' header because a response to a HEAD request
                 // will have no content even if it has non-zero content-length header.
                 headers.setInt(CONTENT_LENGTH, content.length());

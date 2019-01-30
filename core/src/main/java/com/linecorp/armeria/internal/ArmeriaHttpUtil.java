@@ -120,6 +120,11 @@ public final class ArmeriaHttpUtil {
      */
     private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_BLACKLIST = new CharSequenceMap();
 
+    /**
+     * The set of headers that must not be directly copied when converting trailing headers.
+     */
+    private static final CharSequenceMap HTTP_TRAILER_BLACKLIST = new CharSequenceMap();
+
     static {
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
         @SuppressWarnings("deprecation")
@@ -135,16 +140,54 @@ public final class ArmeriaHttpUtil {
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
 
+        // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.AUTHORITY, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.METHOD, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.PATH, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.SCHEME, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.STATUS, EMPTY_STRING);
+
+        // https://tools.ietf.org/html/rfc7540#section-8.1
+        // The "chunked" transfer encoding defined in Section 4.1 of [RFC7230] MUST NOT be used in HTTP/2.
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.TRAILER, EMPTY_STRING);
+
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
+
+        // https://tools.ietf.org/html/rfc7230#section-4.1.2
+        // https://tools.ietf.org/html/rfc7540#section-8.1
+        // A sender MUST NOT generate a trailer that contains a field necessary for message framing:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_LENGTH, EMPTY_STRING);
+
+        // for request modifiers:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CACHE_CONTROL, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.EXPECT, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.HOST, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.MAX_FORWARDS, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PRAGMA, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.RANGE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TE, EMPTY_STRING);
+
+        // for authentication:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.WWW_AUTHENTICATE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.AUTHORIZATION, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PROXY_AUTHENTICATE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PROXY_AUTHORIZATION, EMPTY_STRING);
+
+        // for response control data:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.DATE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.LOCATION, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.RETRY_AFTER, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.VARY, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.WARNING, EMPTY_STRING);
+
+        // or for determining how to process the payload:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_ENCODING, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_TYPE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_RANGE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TRAILER, EMPTY_STRING);
     }
 
     /**
@@ -583,12 +626,24 @@ public final class ArmeriaHttpUtil {
     /**
      * Converts the specified Armeria HTTP/2 headers into Netty HTTP/2 headers.
      */
-    public static Http2Headers toNettyHttp2(HttpHeaders in) {
+    public static Http2Headers toNettyHttp2(HttpHeaders in, boolean server) {
         final Http2Headers out = new DefaultHttp2Headers(false, in.size());
-        out.set(in);
-        out.remove(HttpHeaderNames.CONNECTION);
-        out.remove(HttpHeaderNames.TRANSFER_ENCODING);
-        out.remove(HttpHeaderNames.TRAILER);
+
+        // Trailering headers if it does not have :status.
+        if (server && in.status() == null) {
+            for (Entry<AsciiString, String> entry : in) {
+                final AsciiString name = entry.getKey();
+                final String value = entry.getValue();
+                if (name.isEmpty() || HTTP_TRAILER_BLACKLIST.contains(name)) {
+                    continue;
+                }
+                out.add(name, value);
+            }
+        } else {
+            out.set(in);
+            out.remove(HttpHeaderNames.CONNECTION);
+            out.remove(HttpHeaderNames.TRANSFER_ENCODING);
+        }
 
         if (!out.contains(HttpHeaderNames.COOKIE)) {
             return out;
@@ -636,8 +691,11 @@ public final class ArmeriaHttpUtil {
                     continue;
                 }
 
-                // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
                 if (name.isEmpty() || HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
+                    continue;
+                }
+
+                if (isTrailer && HTTP_TRAILER_BLACKLIST.contains(name)) {
                     continue;
                 }
 

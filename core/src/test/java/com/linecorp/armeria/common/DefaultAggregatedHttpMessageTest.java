@@ -132,8 +132,7 @@ public class DefaultAggregatedHttpMessageTest {
 
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
-                           .contentType(PLAIN_TEXT_UTF_8)
-                           .setInt(CONTENT_LENGTH, 3),
+                           .contentType(PLAIN_TEXT_UTF_8),
                 HttpData.of(StandardCharsets.UTF_8, "bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
     }

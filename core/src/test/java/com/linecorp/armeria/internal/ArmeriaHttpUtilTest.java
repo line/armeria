@@ -36,6 +36,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 
 public class ArmeriaHttpUtilTest {
     @Test
@@ -99,7 +100,7 @@ public class ArmeriaHttpUtilTest {
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
-        final Http2Headers out = toNettyHttp2(in);
+        final Http2Headers out = toNettyHttp2(in, true);
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b", "c=d", "e=f", "g=h", "i=j", "k=l");
     }
@@ -258,5 +259,67 @@ public class ArmeriaHttpUtilTest {
         toArmeria(in, out);
         assertThat(out).hasSize(1);
         assertThat(out.get(HttpHeaderNames.of("hello"))).isEqualTo("world");
+    }
+
+    @Test
+    public void excludeBlacklistHeadersWhileHttp2ToHttp1() throws Http2Exception {
+        final HttpHeaders in = new DefaultHttpHeaders();
+
+        in.add(HttpHeaderNames.TRAILER, "foo");
+        in.add(HttpHeaderNames.AUTHORITY, "bar"); // Translated to host
+        in.add(HttpHeaderNames.PATH, "dummy");
+        in.add(HttpHeaderNames.METHOD, "dummy");
+        in.add(HttpHeaderNames.SCHEME, "dummy");
+        in.add(HttpHeaderNames.STATUS, "dummy");
+        in.add(HttpHeaderNames.TRANSFER_ENCODING, "dummy");
+        in.add(ExtensionHeaderNames.STREAM_ID.text(), "dummy");
+        in.add(ExtensionHeaderNames.SCHEME.text(), "dummy");
+        in.add(ExtensionHeaderNames.PATH.text(), "dummy");
+
+        final io.netty.handler.codec.http.HttpHeaders out =
+                new io.netty.handler.codec.http.DefaultHttpHeaders();
+
+        toNettyHttp1(0, in, out, HttpVersion.HTTP_1_1, false, false);
+        assertThat(out).isEqualTo(new io.netty.handler.codec.http.DefaultHttpHeaders()
+                                          .add(io.netty.handler.codec.http.HttpHeaderNames.TRAILER, "foo")
+                                          .add(io.netty.handler.codec.http.HttpHeaderNames.HOST, "bar"));
+    }
+
+    @Test
+    public void excludeBlacklistInTrailingHeaders() throws Http2Exception {
+        final HttpHeaders in = new DefaultHttpHeaders();
+
+        in.add(HttpHeaderNames.of("foo"), "bar");
+        in.add(HttpHeaderNames.TRANSFER_ENCODING, "dummy");
+        in.add(HttpHeaderNames.CONTENT_LENGTH, "dummy");
+        in.add(HttpHeaderNames.CACHE_CONTROL, "dummy");
+        in.add(HttpHeaderNames.EXPECT, "dummy");
+        in.add(HttpHeaderNames.HOST, "dummy");
+        in.add(HttpHeaderNames.MAX_FORWARDS, "dummy");
+        in.add(HttpHeaderNames.PRAGMA, "dummy");
+        in.add(HttpHeaderNames.RANGE, "dummy");
+        in.add(HttpHeaderNames.TE, "dummy");
+        in.add(HttpHeaderNames.WWW_AUTHENTICATE, "dummy");
+        in.add(HttpHeaderNames.AUTHORIZATION, "dummy");
+        in.add(HttpHeaderNames.PROXY_AUTHENTICATE, "dummy");
+        in.add(HttpHeaderNames.PROXY_AUTHORIZATION, "dummy");
+        in.add(HttpHeaderNames.DATE, "dummy");
+        in.add(HttpHeaderNames.LOCATION, "dummy");
+        in.add(HttpHeaderNames.RETRY_AFTER, "dummy");
+        in.add(HttpHeaderNames.VARY, "dummy");
+        in.add(HttpHeaderNames.WARNING, "dummy");
+        in.add(HttpHeaderNames.CONTENT_ENCODING, "dummy");
+        in.add(HttpHeaderNames.CONTENT_TYPE, "dummy");
+        in.add(HttpHeaderNames.CONTENT_RANGE, "dummy");
+        in.add(HttpHeaderNames.TRAILER, "dummy");
+
+        final io.netty.handler.codec.http.HttpHeaders outHttp1 =
+                new io.netty.handler.codec.http.DefaultHttpHeaders();
+
+        toNettyHttp1(0, in, outHttp1, HttpVersion.HTTP_1_1, true, false);
+        assertThat(outHttp1).isEqualTo(new io.netty.handler.codec.http.DefaultHttpHeaders().add("foo", "bar"));
+
+        final Http2Headers outHttp2 = toNettyHttp2(in, true);
+        assertThat(outHttp2).isEqualTo(new DefaultHttp2Headers().add("foo", "bar"));
     }
 }

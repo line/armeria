@@ -49,14 +49,15 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
 
     @Override
     protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream) {
+        final Http2Connection conn = encoder.connection();
+        final boolean server = conn.isServer();
         if (isStreamPresentAndWritable(streamId)) {
             // Writing to an existing stream.
-            return encoder.writeHeaders(
-                    ctx, streamId, ArmeriaHttpUtil.toNettyHttp2(headers), 0, endStream, ctx.newPromise());
+            return encoder.writeHeaders(ctx, streamId, ArmeriaHttpUtil.toNettyHttp2(headers, server),
+                                        0, endStream, ctx.newPromise());
         }
 
-        final Http2Connection conn = encoder.connection();
-        if (conn.isServer()) {
+        if (server) {
             // One of the following cases:
             // - Stream has been closed already.
             // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
@@ -70,7 +71,7 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
 
         // Client starts a new stream.
         return encoder.writeHeaders(
-                ctx, streamId, ArmeriaHttpUtil.toNettyHttp2(headers), 0, endStream, ctx.newPromise());
+                ctx, streamId, ArmeriaHttpUtil.toNettyHttp2(headers, server), 0, endStream, ctx.newPromise());
     }
 
     @Override
