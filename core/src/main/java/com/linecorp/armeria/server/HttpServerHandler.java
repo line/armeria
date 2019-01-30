@@ -575,14 +575,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, AggregatedHttpMessage res,
                          RequestContext reqCtx, @Nullable Throwable cause) {
         if (!handledLastRequest) {
-            addKeepAliveHeaders(req, res);
-            respond0(ctx, req, res, reqCtx, cause).addListener(CLOSE_ON_FAILURE);
+            respond0(req, res, reqCtx, true, cause).addListener(CLOSE_ON_FAILURE);
         } else {
-            // Note that it is perfectly fine not to set the 'content-length' header to the last response
-            // of an HTTP/1 connection. We set it anyway to work around overly strict HTTP clients that always
-            // require a 'content-length' header for non-chunked responses.
-            setContentLength(req, res);
-            respond0(ctx, req, res, reqCtx, cause).addListener(CLOSE);
+            respond0(req, res, reqCtx, false, cause).addListener(CLOSE);
         }
 
         if (!isReading) {
@@ -590,27 +585,36 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ChannelFuture respond0(ChannelHandlerContext ctx,
-                                   DecodedHttpRequest req, AggregatedHttpMessage res,
-                                   RequestContext reqCtx, @Nullable Throwable cause) {
+    private ChannelFuture respond0(DecodedHttpRequest req, AggregatedHttpMessage res, RequestContext reqCtx,
+                                   boolean addKeepAlive, @Nullable Throwable cause) {
 
         // No need to consume further since the response is ready.
         req.close();
 
         final boolean trailingHeadersEmpty = res.trailingHeaders().isEmpty();
-        final boolean contentAndTrailingHeadersEmpty = res.content().isEmpty() && trailingHeadersEmpty;
+        final HttpData content = res.content();
+        final boolean contentAndTrailingHeadersEmpty = content.isEmpty() && trailingHeadersEmpty;
 
         final RequestLogBuilder logBuilder = reqCtx.logBuilder();
 
         logBuilder.startResponse();
         assert responseEncoder != null;
+        final HttpHeaders mutableHeaders = res.headers().toMutable();
+        if (addKeepAlive) {
+            addKeepAliveHeaders(req, mutableHeaders);
+        }
+        // Note that it is perfectly fine not to set the 'content-length' header to the last response
+        // of an HTTP/1 connection. We set it anyway to work around overly strict HTTP clients that always
+        // require a 'content-length' header for non-chunked responses.
+        setContentLength(req, mutableHeaders, content.length());
+
         ChannelFuture future = responseEncoder.writeHeaders(
-                req.id(), req.streamId(), res.headers(), contentAndTrailingHeadersEmpty);
-        logBuilder.responseHeaders(res.headers());
+                req.id(), req.streamId(), mutableHeaders, contentAndTrailingHeadersEmpty);
+        logBuilder.responseHeaders(mutableHeaders);
         if (!contentAndTrailingHeadersEmpty) {
             future = responseEncoder.writeData(
-                    req.id(), req.streamId(), res.content(), trailingHeadersEmpty);
-            logBuilder.increaseResponseLength(res.content().length());
+                    req.id(), req.streamId(), content, trailingHeadersEmpty);
+            logBuilder.increaseResponseLength(content.length());
             if (!trailingHeadersEmpty) {
                 future = responseEncoder.writeHeaders(
                         req.id(), req.streamId(), res.trailingHeaders(), true);
@@ -633,28 +637,26 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      * Sets the keep alive header as per:
      * - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
      */
-    private void addKeepAliveHeaders(HttpRequest req, AggregatedHttpMessage res) {
+    private void addKeepAliveHeaders(HttpRequest req, HttpHeaders headers) {
         if (protocol == H1 || protocol == H1C) {
-            res.headers().set(HttpHeaderNames.CONNECTION, "keep-alive");
+            headers.set(HttpHeaderNames.CONNECTION, "keep-alive");
         } else {
             // Do not add the 'connection' header for HTTP/2 responses.
             // See https://tools.ietf.org/html/rfc7540#section-8.1.2.2
         }
-
-        setContentLength(req, res);
     }
 
     /**
      * Sets the 'content-length' header to the response.
      */
-    private static void setContentLength(HttpRequest req, AggregatedHttpMessage res) {
+    private static void setContentLength(HttpRequest req, HttpHeaders headers, int contentLength) {
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
         // prohibits to send message body for below cases.
         // and in those cases, content should be empty.
-        if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(res.status())) {
+        if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(headers.status())) {
             return;
         }
-        res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().length());
+        headers.setInt(HttpHeaderNames.CONTENT_LENGTH, contentLength);
     }
 
     @Nullable

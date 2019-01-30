@@ -213,9 +213,7 @@ public class DefaultAggregatedHttpMessageTest {
         assertThat(AggregatedHttpMessage.of(headers).headers().getInt(CONTENT_LENGTH)).isEqualTo(1000000);
 
         msg = AggregatedHttpMessage.of(headers, HttpData.ofUtf8("foo"));
-        // TODO(minwoox) The length is different from the content length because the user specified it with
-        //               the wrong value. Should we prevent this?
-        assertThat(msg.headers().getInt(CONTENT_LENGTH)).isEqualTo(1000000);
+        assertThat(msg.headers().getInt(CONTENT_LENGTH)).isEqualTo(3); // The length is reset to 3 from 1000000.
     }
 
     @Test

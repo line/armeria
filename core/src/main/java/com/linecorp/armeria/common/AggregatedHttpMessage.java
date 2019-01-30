@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLengthInResponseHeaders;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -340,7 +340,7 @@ public interface AggregatedHttpMessage {
         final HttpStatus status = headers.status();
         final HttpHeaders newHeaders;
         if (status != null) { // Response
-            newHeaders = setOrRemoveContentLengthInResponseHeaders(headers,content, trailingHeaders);
+            newHeaders = setOrRemoveContentLength(headers, content, trailingHeaders);
         } else { // Request
             newHeaders = headers.toMutable();
             if (content.isEmpty()) {

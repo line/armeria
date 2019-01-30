@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLengthInResponseHeaders;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -252,8 +252,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             throw new IllegalStateException("not a response (missing :status)");
         }
 
-        final HttpHeaders newHeaders = setOrRemoveContentLengthInResponseHeaders(headers, content,
-                                                                                 trailingHeaders);
+        final HttpHeaders newHeaders = setOrRemoveContentLength(headers, content, trailingHeaders);
         if (content.isEmpty() && trailingHeaders.isEmpty()) {
             ReferenceCountUtil.safeRelease(content);
             return new OneElementFixedHttpResponse(newHeaders);
