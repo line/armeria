@@ -72,7 +72,7 @@ final class AnnotationUtil {
     /**
      * Built-in meta annotations defined in {@code java.lang.annotation} package.
      */
-    private static final Set<Class<? extends Annotation>> BUILTIN_META_ANNOTATIONS =
+    private static final Set<Class<? extends Annotation>> BUILT_IN_META_ANNOTATIONS =
             ImmutableSet.of(Documented.class, Inherited.class, Native.class,
                             Retention.class, Repeatable.class, Target.class);
 
@@ -86,7 +86,7 @@ final class AnnotationUtil {
      * </ul>
      * Otherwise, {@link Optional#empty()} will be returned.
      *
-     * @param element the {@link AnnotatedElement} to find annotations
+     * @param element the {@link AnnotatedElement} to find the first annotation
      * @param annotationType the type of the annotation to find
      */
     static <T extends Annotation> Optional<T> findFirst(AnnotatedElement element, Class<T> annotationType) {
@@ -101,7 +101,7 @@ final class AnnotationUtil {
      * <p>Note that this method will <em>not</em> find annotations from both the super classes of
      * the {@code element} and the meta-annotations.
      *
-     * @param element the {@link AnnotatedElement} to find annotations
+     * @param element the {@link AnnotatedElement} to find the first annotation
      * @param annotationType the type of the annotation to find
      */
     static <T extends Annotation> Optional<T> findFirstDeclared(AnnotatedElement element,
@@ -128,7 +128,7 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns all annotations of the {@code annotationType} if which are found from the following.
+     * Returns all annotations of the {@code annotationType} which are found from the following.
      * <ul>
      *     <li>the specified {@code element}</li>
      *     <li>the super classes of the specified {@code element} if the {@code element} is a class</li>
@@ -252,7 +252,7 @@ final class AnnotationUtil {
         // A user may not be interested in the built-in meta annotations, so the default predicate filters out
         // the default Java meta-annotations.
         return getAnnotations(element, findOptions,
-                              annotation -> !BUILTIN_META_ANNOTATIONS.contains(annotation.annotationType()));
+                              annotation -> !BUILT_IN_META_ANNOTATIONS.contains(annotation.annotationType()));
     }
 
     /**
