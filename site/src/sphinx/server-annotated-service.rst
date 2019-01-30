@@ -1233,8 +1233,8 @@ Then, you can annotate your service method with your annotation as follows.
     }
 
 
-Annotation-based HTTP Response headers/trailers
------------------------------------------------
+Specifying additional HTTP Response headers/trailers
+----------------------------------------------------
 
 Armeria provides a way to configure additional headers/trailers via annotation,
 :api:`@AdditionalHeader` for HTTP headers and :api:`@AdditionalTrailer` for HTTP trailers.
@@ -1242,6 +1242,9 @@ Armeria provides a way to configure additional headers/trailers via annotation,
 You can annotate your service method with the annotations as follows.
 
 .. code-block:: java
+
+    import com.linecorp.armeria.server.annotation.AdditionalHeader;
+    import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 
     @AdditionalHeader(name = "custom-header", value = "custom-value")
     @AdditionalTrailer(name = "custom-trailer", value = "custom-value")
@@ -1268,7 +1271,8 @@ what's specified at the class level if it has the same name, e.g.
 
 In this case, the values of the HTTP header named ``custom-header`` and the HTTP trailer named ``custom-trailer`` will be ``custom-overwritten``, not ``custom-value``.
 
-Note that the trailers will not be injected with the following HTTP status code:
+Note that the trailers will not be injected into the responses with the following HTTP status code,
+because they always have an empty content.
 
 +--------------+----------------+
 | Status code  | Description    |

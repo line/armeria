@@ -252,7 +252,8 @@ public final class AnnotatedHttpServiceFactory {
             return annotation.getClass().getMethod(fieldName).invoke(annotation);
         } catch (Exception ex) {
             throw new IllegalStateException(
-                    String.format("%s() method invocation throws an exception", fieldName), ex);
+                    String.format("'%s.%s()' method invocation throws an exception",
+                                  annotation.getClass().getName(), fieldName), ex);
         }
     }
 
@@ -278,6 +279,7 @@ public final class AnnotatedHttpServiceFactory {
     private static <T extends Annotation> void setAdditionalHeader(HttpHeaders headers,
                                                                    AnnotatedElement element,
                                                                    String clsAlias,
+                                                                   String elementAlias,
                                                                    String level,
                                                                    Class<T> annotation) {
         requireNonNull(headers, "headers");
@@ -290,9 +292,9 @@ public final class AnnotatedHttpServiceFactory {
             final String[] value = getAnnotationField(header, "value", String[].class);
 
             if (addedHeaderSets.contains(name)) {
-                logger.warn("The additional {} named '{}' is already added at the same {} level." +
-                            " It will be ignored.",
-                            clsAlias, name, level);
+                logger.warn("The additional {} named '{}' at '{}' is set at the same {} level;" +
+                            "ignoring.",
+                            clsAlias, name, elementAlias, level);
                 return;
             }
             headers.set(HttpHeaderNames.of(name), value);
@@ -378,17 +380,20 @@ public final class AnnotatedHttpServiceFactory {
         final HttpHeaders defaultHeaders = HttpHeaders.of(defaultResponseStatus(defaultResponseStatus, method));
 
         final HttpHeaders defaultTrailingHeaders = HttpHeaders.of();
+        final String classAlias = clazz.getName();
+        final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
+        setAdditionalHeader(defaultHeaders, clazz, "header", classAlias, "class", AdditionalHeader.class);
+        setAdditionalHeader(defaultHeaders, method, "header", methodAlias, "method", AdditionalHeader.class);
+        setAdditionalHeader(defaultTrailingHeaders, clazz, "trailer", classAlias, "class",
+                            AdditionalTrailer.class);
+        setAdditionalHeader(defaultTrailingHeaders, method, "trailer", methodAlias, "method",
+                            AdditionalTrailer.class);
 
-        setAdditionalHeader(defaultHeaders, clazz, "header", "class", AdditionalHeader.class);
-        setAdditionalHeader(defaultHeaders, method, "header", "method", AdditionalHeader.class);
-        setAdditionalHeader(defaultTrailingHeaders, clazz, "trailer", "class", AdditionalTrailer.class);
-        setAdditionalHeader(defaultTrailingHeaders, method, "trailer", "method", AdditionalTrailer.class);
-
-        if (ArmeriaHttpUtil.isContentAlwaysEmpty(defaultHeaders.status()) && !defaultTrailingHeaders
-                .isEmpty()) {
-            logger.warn("The content for HTTP status ({}) should be always empty. " +
-                        "Trailing headers for the method '{}' might be ignored.",
-                        defaultHeaders.status().code(), method.getName());
+        if (ArmeriaHttpUtil.isContentAlwaysEmpty(defaultHeaders.status()) &&
+            !defaultTrailingHeaders.isEmpty()) {
+            logger.warn("A response with HTTP status code '{}' cannot have a content. " +
+                        "Trailing headers defined at '{}' might be ignored.",
+                        defaultHeaders.status().code(), methodAlias);
         }
 
         // A CORS preflight request can be received because we handle it specially. The following
