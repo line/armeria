@@ -252,7 +252,7 @@ public final class AnnotatedHttpServiceFactory {
             return annotation.getClass().getMethod(fieldName).invoke(annotation);
         } catch (Exception ex) {
             throw new IllegalStateException(
-                    String.format("'%s.%s()' method invocation throws an exception",
+                    String.format("'%s.%s()' method invocation raised an exception",
                                   annotation.getClass().getName(), fieldName), ex);
         }
     }
@@ -292,7 +292,7 @@ public final class AnnotatedHttpServiceFactory {
             final String[] value = getAnnotationField(header, "value", String[].class);
 
             if (addedHeaderSets.contains(name)) {
-                logger.warn("The additional {} named '{}' at '{}' is set at the same {} level;" +
+                logger.warn("The additional {} named '{}' at '{}' is set at the same {} level already;" +
                             "ignoring.",
                             clsAlias, name, elementAlias, level);
                 return;

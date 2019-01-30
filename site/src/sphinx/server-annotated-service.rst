@@ -1233,8 +1233,8 @@ Then, you can annotate your service method with your annotation as follows.
     }
 
 
-Specifying additional HTTP Response headers/trailers
-----------------------------------------------------
+Specifying additional response headers/trailers
+-----------------------------------------------
 
 Armeria provides a way to configure additional headers/trailers via annotation,
 :api:`@AdditionalHeader` for HTTP headers and :api:`@AdditionalTrailer` for HTTP trailers.
@@ -1255,7 +1255,7 @@ You can annotate your service method with the annotations as follows.
         public HttpResponse hello() { ... }
     }
 
-The :api:`@AdditionalHeader` or :api:`@AdditionalTrailer` specified at the method level takes precedence
+The :api:`@AdditionalHeader` or :api:`@AdditionalTrailer` specified at the method level takes precedence over
 what's specified at the class level if it has the same name, e.g.
 
 .. code-block:: java
