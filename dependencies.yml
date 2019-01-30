@@ -10,9 +10,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.5.0'
+    version: '3.6.0'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.5.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.6.0/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -73,15 +73,24 @@ com.google.guava:
     - from: com.google.common
       to: com.linecorp.armeria.internal.shaded.guava
 
+# We do not depend on j2objc-annotations. We just need this to stop Javadoc from
+# complaining about 'unknown enum constant Level.FULL'.
+com.google.j2objc:
+  j2objc-annotations: { version: '1.3' }
+
+# Ensure that we use the same Protobuf version as what gRPC depends on.
+# See: https://search.maven.org/search?q=g:io.grpc%20AND%20a:grpc-protobuf&core=gav
 com.google.protobuf:
   protoc: { version: '3.5.1-1' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.5.1' }
+  protobuf-java-util: { version: *PROTOBUF_VERSION }
   protobuf-gradle-plugin: { version: '0.8.8' }
 
 com.moowork.gradle:
   gradle-node-plugin: { version: '1.2.0' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.16' }
+  checkstyle: { version: '8.17' }
 
 com.spotify:
   completable-futures:
@@ -107,6 +116,7 @@ io.dropwizard.metrics:
     - https://metrics.dropwizard.io/4.0.0/apidocs/
   metrics-json: { version: *DROPWIZARD_VERSION }
 
+# Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
   grpc-core:
     version: &GRPC_VERSION '1.18.0'
@@ -115,6 +125,7 @@ io.grpc:
     - https://developers.google.com/protocol-buffers/docs/reference/java/
     exclusions:
     - com.google.errorprone:error_prone_annotations
+    - org.codehaus.mojo:animal-sniffer-annotations
   grpc-interop-testing:
     version: *GRPC_VERSION
     exclusions:
@@ -151,7 +162,7 @@ io.micrometer:
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.32.Final'
+    version: &NETTY_VERSION '4.1.33.Final'
     javadocs:
     - https://netty.io/4.1/api/
   netty-buffer: { version: *NETTY_VERSION }
@@ -183,15 +194,15 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.5'
+    version: '2.2.6'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: '5.6.0'
+    version: '5.6.1'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.6.0/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.6.1/
 
 it.unimi.dsi:
   fastutil:
@@ -229,7 +240,7 @@ net.javacrumbs.json-unit:
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
-  proguard-gradle: { version: '6.0.3' }
+  proguard-gradle: { version: '6.1.0beta2' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.3.0' }
@@ -253,7 +264,7 @@ org.apache.hbase:
 
 org.apache.httpcomponents:
   httpclient:
-    version: '4.5.6'
+    version: '4.5.7'
     exclusions:
     - commons-logging:commons-logging
 
@@ -305,7 +316,7 @@ org.checkerframework:
   checker-compat-qual: { version: '2.5.5' }
 
 org.curioswitch.curiostack:
-  protobuf-jackson: { version: '0.3.0' }
+  protobuf-jackson: { version: '0.3.1' }
 
 org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }

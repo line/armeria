@@ -1,4 +1,7 @@
 dependencies {
+    compile 'com.google.protobuf:protobuf-java'
+    compile 'com.google.protobuf:protobuf-java-util'
+
     // gRPC
     [ 'grpc-core', 'grpc-stub', 'grpc-protobuf' ].each {
         compile "io.grpc:$it"
