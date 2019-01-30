@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromPublisher;
+import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromServerSentEvent;
+import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromStream;
+
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -26,7 +30,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.streaming.ServerSentEvents;
 
 /**
  * A response converter implementation which creates an {@link HttpResponse} with
@@ -35,6 +38,13 @@ import com.linecorp.armeria.server.streaming.ServerSentEvents;
  * on an annotated service method.
  */
 public class ServerSentEventResponseConverterFunction implements ResponseConverterFunction {
+
+    /**
+     * An empty {@link ServerSentEvent} instance which suppose to be emitted when the published object
+     * is {@code null}.
+     */
+    private static final ServerSentEvent<?> EMPTY = ServerSentEvent.ofEmpty();
+
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         HttpHeaders headers,
@@ -43,19 +53,30 @@ public class ServerSentEventResponseConverterFunction implements ResponseConvert
         final MediaType contentType = headers.contentType();
         if (contentType != null && contentType.is(MediaType.EVENT_STREAM)) {
             if (result instanceof Publisher) {
-                return ServerSentEvents.fromPublisher(headers, (Publisher<?>) result, trailingHeaders);
+                return fromPublisher(headers, (Publisher<?>) result, trailingHeaders,
+                                     ServerSentEventResponseConverterFunction::toSse);
             }
             if (result instanceof Stream) {
-                return ServerSentEvents.fromStream(headers, (Stream<?>) result, trailingHeaders,
-                                                   ctx.blockingTaskExecutor());
+                return fromStream(headers, (Stream<?>) result, trailingHeaders, ctx.blockingTaskExecutor(),
+                                  ServerSentEventResponseConverterFunction::toSse);
             }
-            return ServerSentEvents.fromObject(headers, result, trailingHeaders);
+            return fromServerSentEvent(headers, toSse(result), trailingHeaders);
         }
 
         if (result instanceof ServerSentEvent) {
-            return ServerSentEvents.fromObject(headers, result, trailingHeaders);
+            return fromServerSentEvent(headers, (ServerSentEvent<?>) result, trailingHeaders);
         }
 
         return ResponseConverterFunction.fallthrough();
+    }
+
+    private static ServerSentEvent<?> toSse(@Nullable Object content) {
+        if (content == null) {
+            return EMPTY;
+        }
+        if (content instanceof ServerSentEvent) {
+            return (ServerSentEvent<?>) content;
+        }
+        return ServerSentEvent.ofData(String.valueOf(content));
     }
 }

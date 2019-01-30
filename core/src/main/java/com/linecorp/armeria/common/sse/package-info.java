@@ -15,7 +15,7 @@
  */
 
 /**
- * Server-sent Events support.
+ * <a href="https://www.w3.org/TR/eventsource/">Server-sent Events</a> support.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.sse;

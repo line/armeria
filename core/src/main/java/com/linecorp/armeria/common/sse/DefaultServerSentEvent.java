@@ -18,10 +18,12 @@ package com.linecorp.armeria.common.sse;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
+
+import com.google.common.base.MoreObjects;
 
 /**
  * A default implementation of the {@link ServerSentEvent} interface.
@@ -46,6 +48,8 @@ final class DefaultServerSentEvent<T> implements ServerSentEvent<T> {
     @Nullable
     private volatile String dataText;
 
+    private int hashCode;
+
     DefaultServerSentEvent(@Nullable String id,
                            @Nullable String event,
                            @Nullable Duration retry,
@@ -60,44 +64,94 @@ final class DefaultServerSentEvent<T> implements ServerSentEvent<T> {
         this.dataStringifier = requireNonNull(dataStringifier, "dataStringifier");
     }
 
+    @Nullable
     @Override
-    public Optional<String> id() {
-        return Optional.ofNullable(id);
+    public String id() {
+        return id;
     }
 
+    @Nullable
     @Override
-    public Optional<String> event() {
-        return Optional.ofNullable(event);
+    public String event() {
+        return event;
     }
 
+    @Nullable
     @Override
-    public Optional<Duration> retry() {
-        return Optional.ofNullable(retry);
+    public Duration retry() {
+        return retry;
     }
 
+    @Nullable
     @Override
-    public Optional<String> comment() {
-        return Optional.ofNullable(comment);
+    public String comment() {
+        return comment;
     }
 
+    @Nullable
     @Override
-    public Optional<T> data() {
-        return Optional.ofNullable(data);
+    public T data() {
+        return data;
     }
 
+    @Nullable
     @Override
-    public Optional<String> dataText() {
+    public String dataText() {
         if (data == null) {
-            return Optional.empty();
+            return null;
         }
 
         final String dataText = this.dataText;
         if (dataText != null) {
-            return Optional.of(dataText);
+            return dataText;
         }
 
         final String applied = dataStringifier.apply(data);
         this.dataText = applied;
-        return Optional.ofNullable(applied);
+        return applied;
+    }
+
+    @Override
+    public int hashCode() {
+        if (hashCode == 0) {
+            int hashCode = dataStringifier.hashCode();
+            hashCode = 31 * hashCode + (id != null ? id.hashCode() : 0);
+            hashCode = 31 * hashCode + (event != null ? event.hashCode() : 0);
+            hashCode = 31 * hashCode + (retry != null ? retry.hashCode() : 0);
+            hashCode = 31 * hashCode + (comment != null ? comment.hashCode() : 0);
+            hashCode = 31 * hashCode + (data != null ? data.hashCode() : 0);
+            this.hashCode = hashCode;
+        }
+        return hashCode;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof DefaultServerSentEvent)) {
+            return false;
+        }
+
+        final DefaultServerSentEvent<?> that = (DefaultServerSentEvent<?>) obj;
+        return Objects.equals(dataStringifier, that.dataStringifier) &&
+               Objects.equals(id, that.id) &&
+               Objects.equals(event, that.event) &&
+               Objects.equals(retry, that.retry) &&
+               Objects.equals(comment, that.comment) &&
+               Objects.equals(data, that.data);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("id", id)
+                          .add("event", event)
+                          .add("retry", retry)
+                          .add("comment", comment)
+                          .add("data", data)
+                          .toString();
     }
 }

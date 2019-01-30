@@ -16,9 +16,10 @@
 package com.linecorp.armeria.common.sse;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 
@@ -26,7 +27,7 @@ import com.linecorp.armeria.server.annotation.ProducesEventStream;
 import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 
 /**
- * An interface for the <a href="https://www.w3.org/TR/eventsource/">Server-sent Event</a> specification.
+ * An interface for the <a href="https://www.w3.org/TR/eventsource/">Server-sent Events</a> specification.
  * If a {@link Publisher} or {@link Stream} produces objects which implement this interface, it can be
  * converted into a text event stream by {@link ServerSentEventResponseConverterFunction}.
  *
@@ -36,6 +37,13 @@ import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFu
  * @see ServerSentEventResponseConverterFunction
  */
 public interface ServerSentEvent<T> {
+
+    /**
+     * Creates a new empty {@link ServerSentEvent}.
+     */
+    static <T> ServerSentEvent<T> ofEmpty() {
+        return new ServerSentEventBuilder<T>().build();
+    }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code id}.
@@ -75,39 +83,43 @@ public interface ServerSentEvent<T> {
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code data}.
      */
-    static ServerSentEvent<String> ofData(String data) {
-        return new ServerSentEventBuilder<String>().data(data).build();
+    static <T> ServerSentEvent<T> ofData(T data) {
+        return new ServerSentEventBuilder<T>().data(data).build();
     }
 
     /**
-     * Returns an ID of this event, if it exists. Otherwise, {@link Optional#empty()} will be returned.
+     * Returns an ID of this event, if it exists. Otherwise, {@code null} will be returned.
      */
-    Optional<String> id();
+    @Nullable
+    String id();
 
     /**
-     * Returns an event name of this event, if it exists. Otherwise, {@link Optional#empty()} will be returned.
+     * Returns an event name of this event, if it exists. Otherwise, {@code null} will be returned.
      */
-    Optional<String> event();
+    @Nullable
+    String event();
 
     /**
-     * Returns a reconnection time in milliseconds, if it exists. Otherwise, {@link Optional#empty()} will
-     * be returned.
+     * Returns a reconnection time in milliseconds, if it exists. Otherwise, {@code null} will be returned.
      */
-    Optional<Duration> retry();
+    @Nullable
+    Duration retry();
 
     /**
-     * Returns a comment of this event, if it exists. Otherwise, {@link Optional#empty()} will be returned.
+     * Returns a comment of this event, if it exists. Otherwise, {@code null} will be returned.
      */
-    Optional<String> comment();
+    @Nullable
+    String comment();
 
     /**
-     * Returns a data of this event, if it exists. Otherwise, {@link Optional#empty()} will be returned.
+     * Returns a data of this event, if it exists. Otherwise, {@code null} will be returned.
      */
-    Optional<T> data();
+    @Nullable
+    T data();
 
     /**
-     * Returns a data of this event as a UTF-8 string, if it exists. Otherwise, {@link Optional#empty()} will
-     * be returned.
+     * Returns a data of this event as a UTF-8 string, if it exists. Otherwise, {@code null} will be returned.
      */
-    Optional<String> dataText();
+    @Nullable
+    String dataText();
 }

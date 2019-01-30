@@ -16,6 +16,8 @@
 package com.linecorp.armeria.server.streaming;
 
 import static com.linecorp.armeria.internal.ResponseConversionUtil.streamingFrom;
+import static com.linecorp.armeria.server.streaming.SanitizationUtil.ensureContentType;
+import static com.linecorp.armeria.server.streaming.SanitizationUtil.ensureHttpStatus;
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
@@ -25,8 +27,6 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -35,18 +35,26 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A utility class which helps to create a JSON Text Sequences from a content {@link Publisher}
- * or {@link Stream}.
+ * A utility class which helps to create a <a href="https://tools.ietf.org/html/rfc7464">JavaScript Object
+ * Notation (JSON) Text Sequences</a> from a content {@link Publisher} or {@link Stream}.
  *
- * @see <a href="https://tools.ietf.org/html/rfc7464">JavaScript Object Notation (JSON) Text Sequences</a>
+ * <p>A user simply creates a streaming {@link HttpResponse} which emits JSON Text Sequences, e.g.
+ * <pre>{@code
+ * ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+ * Server server = new ServerBuilder()
+ *         // Emit JSON Text Sequences with a default ObjectMapper.
+ *         .service("/seq1",
+ *                  (ctx, req) -> JsonTextSequences.fromPublisher(Flux.just("foo", "bar")))
+ *         // Emit JSON Text Sequences with a ObjectMapper configured as using a default pretty printer.
+ *         .service("/seq2",
+ *                  (ctx, req) -> JsonTextSequences.fromPublisher(Flux.just("foo", "bar"), mapper))
+ *         .build();
+ * }</pre>
  */
 public final class JsonTextSequences {
-
-    private static final Logger logger = LoggerFactory.getLogger(JsonTextSequences.class);
 
     /**
      * A record separator which indicates the beginning of a JSON text.
@@ -81,6 +89,16 @@ public final class JsonTextSequences {
     /**
      * Creates a new JSON Text Sequences from the specified {@link Publisher}.
      *
+     * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
+     * @param mapper the mapper which converts the content object into JSON Text Sequences
+     */
+    public static <T> HttpResponse fromPublisher(Publisher<T> contentPublisher, ObjectMapper mapper) {
+        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.EMPTY_HEADERS, mapper);
+    }
+
+    /**
+     * Creates a new JSON Text Sequences from the specified {@link Publisher}.
+     *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
@@ -110,8 +128,9 @@ public final class JsonTextSequences {
      */
     public static <T> HttpResponse fromPublisher(HttpHeaders headers, Publisher<T> contentPublisher,
                                                  HttpHeaders trailingHeaders, ObjectMapper mapper) {
+        requireNonNull(mapper, "mapper");
         return streamingFrom(contentPublisher,
-                             ensureJsonSequencesContentType(headers), trailingHeaders,
+                             sanitizeHeaders(headers), trailingHeaders,
                              o -> toHttpData(mapper, o));
     }
 
@@ -122,8 +141,19 @@ public final class JsonTextSequences {
      * @param executor the executor which iterates the stream
      */
     public static <T> HttpResponse fromStream(Stream<T> contentStream, Executor executor) {
-        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS,
-                          executor, defaultMapper);
+        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS, executor,
+                          defaultMapper);
+    }
+
+    /**
+     * Creates a new JSON Text Sequences from the specified {@link Stream}.
+     *
+     * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
+     * @param executor the executor which iterates the stream
+     */
+    public static <T> HttpResponse fromStream(Stream<T> contentStream, Executor executor,
+                                              ObjectMapper mapper) {
+        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS, executor, mapper);
     }
 
     /**
@@ -163,8 +193,8 @@ public final class JsonTextSequences {
     public static <T> HttpResponse fromStream(HttpHeaders headers, Stream<T> contentStream,
                                               HttpHeaders trailingHeaders, Executor executor,
                                               ObjectMapper mapper) {
-        return streamingFrom(contentStream,
-                             ensureJsonSequencesContentType(headers), trailingHeaders,
+        requireNonNull(mapper, "mapper");
+        return streamingFrom(contentStream, sanitizeHeaders(headers), trailingHeaders,
                              o -> toHttpData(mapper, o), executor);
     }
 
@@ -212,26 +242,14 @@ public final class JsonTextSequences {
         requireNonNull(headers, "headers");
         requireNonNull(trailingHeaders, "trailingHeaders");
         requireNonNull(mapper, "mapper");
-        return HttpResponse.of(ensureJsonSequencesContentType(headers), toHttpData(mapper, content),
-                               trailingHeaders);
+        return HttpResponse.of(sanitizeHeaders(headers), toHttpData(mapper, content), trailingHeaders);
     }
 
-    private static HttpHeaders ensureJsonSequencesContentType(HttpHeaders headers) {
+    private static HttpHeaders sanitizeHeaders(HttpHeaders headers) {
         if (headers == defaultHttpHeaders) {
             return headers;
         }
-
-        final MediaType contentType = headers.contentType();
-        if (contentType == null) {
-            return headers.toMutable().contentType(MediaType.JSON_SEQ);
-        }
-        if (contentType.is(MediaType.JSON_SEQ)) {
-            return headers;
-        }
-
-        logger.warn("{} Overwrite content-type for JSON Text Sequences: {}",
-                    RequestContext.current(), contentType);
-        return headers.toMutable().contentType(MediaType.JSON_SEQ);
+        return ensureContentType(ensureHttpStatus(headers), MediaType.JSON_SEQ);
     }
 
     private static <T> HttpData toHttpData(ObjectMapper mapper, @Nullable T value) {
