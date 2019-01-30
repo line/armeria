@@ -77,11 +77,14 @@ final class AnnotationUtil {
                             Retention.class, Repeatable.class, Target.class);
 
     /**
-     * Returns an annotation of the {@code annotationType} or {@link Optional#empty()}, which is found
-     * from the specified {@code element}.
-     *
-     * <p>Note that this method will <em>not</em> find annotations from both the super classes of
-     * the {@code element} and the meta-annotations.
+     * Returns an annotation of the {@code annotationType} if it is found from one of the following:
+     * <ul>
+     *     <li>the specified {@code element}</li>
+     *     <li>the super classes of the specified {@code element} if the {@code element} is a class</li>
+     *     <li>the meta-annotations of the annotations specified on the {@code element}
+     *     or its super classes</li>
+     * </ul>
+     * Otherwise, {@link Optional#empty()} will be returned.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param annotationType the type of the annotation to find
@@ -108,11 +111,13 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations of the {@code annotationType}, which are found from the specified
-     * {@code element}.
-     *
-     * <p>Note that this method will find annotations from both the super classes of the {@code element}
-     * and the meta-annotations.
+     * Returns all annotations of the {@code annotationType} which are found from the following.
+     * <ul>
+     *     <li>the specified {@code element}</li>
+     *     <li>the super classes of the specified {@code element} if the {@code element} is a class</li>
+     *     <li>the meta-annotations of the annotations specified on the {@code element}
+     *     or its super classes</li>
+     * </ul>
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param annotationType the type of the annotation to find
@@ -123,11 +128,13 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations of the {@code annotationType}, which are found from the specified
-     * {@code element}.
+     * Returns all annotations of the {@code annotationType} if which are found from the following.
+     * <ul>
+     *     <li>the specified {@code element}</li>
+     *     <li>the super classes of the specified {@code element} if the {@code element} is a class</li>
+     * </ul>
      *
-     * <p>Note that this method will find annotations from the super classes of the {@code element}
-     * but will <em>not</em> find annotations from the meta-annotations.
+     * <p>Note that this method will <em>not</em> find annotations from the meta-annotations.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param annotationType the type of the annotation to find
@@ -138,7 +145,7 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations of the {@code annotationType}, which are found from the specified
+     * Returns all annotations of the {@code annotationType} which are found from the specified
      * {@code element}.
      *
      * <p>Note that this method will <em>not</em> find annotations from both the super classes
@@ -153,8 +160,8 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations of the {@code annotationType}, which are found from the specified
-     * {@code element}.
+     * Returns all annotations of the {@code annotationType} searching from the specified {@code element}.
+     * The search range depends on the specified {@link FindOption}s.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param annotationType the type of the annotation to find
@@ -167,8 +174,8 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations of the {@code annotationType}, which are found from the specified
-     * {@code element}.
+     * Returns all annotations of the {@code annotationType} searching from the specified {@code element}.
+     * The search range depends on the specified {@link FindOption}s.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param annotationType the type of the annotation to find
@@ -205,10 +212,13 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations found from the specified {@code element}.
-     *
-     * <p>Note that this method will return every annotation found from the super classes of the
-     * {@code element} including the annotation specified as a meta-annotation.
+     * Returns all annotations which are found from the following.
+     * <ul>
+     *     <li>the specified {@code element}</li>
+     *     <li>the super classes of the specified {@code element} if the {@code element} is a class</li>
+     *     <li>the meta-annotations of the annotations specified on the {@code element}
+     *     or its super classes</li>
+     * </ul>
      *
      * @param element the {@link AnnotatedElement} to find annotations
      */
@@ -218,7 +228,8 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations found from the specified {@code element}.
+     * Returns all annotations searching from the specified {@code element}. The search range depends on
+     * the specified {@link FindOption}s and the built-in Java meta-annotations will not be collected.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param findOptions the options to be applied when retrieving annotations
@@ -231,7 +242,8 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations found from the specified {@code element}.
+     * Returns all annotations searching from the specified {@code element}. The search range depends on
+     * the specified {@link FindOption}s and the built-in Java meta-annotations will not be collected.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param findOptions the options to be applied when retrieving annotations
@@ -244,10 +256,9 @@ final class AnnotationUtil {
     }
 
     /**
-     * Returns the annotations found from the specified {@code element}.
-     *
-     * <p>Note that this method will return every annotation found from the super classes of the
-     * {@code element} including the annotation specified as a meta-annotation.
+     * Returns all annotations searching from the specified {@code element}. The search range depends on
+     * the specified {@link FindOption}s and the specified {@code collectingFilter} decides whether
+     * an annotation is collected or not.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param findOptions the options to be applied when retrieving annotations
