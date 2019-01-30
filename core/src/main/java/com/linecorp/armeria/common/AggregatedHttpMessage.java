@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLengthInResponseHeaders;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -281,10 +281,6 @@ public interface AggregatedHttpMessage {
         requireNonNull(trailingHeaders, "trailingHeaders");
 
         final HttpHeaders headers = HttpHeaders.of(status).contentType(mediaType);
-        if (trailingHeaders.isEmpty()) {
-            headers.setInt(CONTENT_LENGTH, content.length());
-        }
-
         return of(headers, content, trailingHeaders);
     }
 
@@ -342,23 +338,20 @@ public interface AggregatedHttpMessage {
 
         // Set the 'content-length' header if possible.
         final HttpStatus status = headers.status();
+        final HttpHeaders newHeaders;
         if (status != null) { // Response
-            if (!isContentAlwaysEmptyWithValidation(status, content, trailingHeaders) &&
-                !headers.contains(CONTENT_LENGTH) && trailingHeaders.isEmpty()) {
-                // But do not overwrite the 'content-length' header because a response to a HEAD request
-                // will have no content even if it has non-zero content-length header.
-                headers.setInt(CONTENT_LENGTH, content.length());
-            }
+            newHeaders = setOrRemoveContentLengthInResponseHeaders(headers,content, trailingHeaders);
         } else { // Request
+            newHeaders = headers.toMutable();
             if (content.isEmpty()) {
-                headers.remove(CONTENT_LENGTH);
+                newHeaders.remove(CONTENT_LENGTH);
             } else {
-                headers.setInt(CONTENT_LENGTH, content.length());
+                newHeaders.setInt(CONTENT_LENGTH, content.length());
             }
         }
 
         return new DefaultAggregatedHttpMessage(ImmutableList.copyOf(informationals),
-                                                headers, content, trailingHeaders);
+                                                newHeaders, content, trailingHeaders);
     }
 
     /**
