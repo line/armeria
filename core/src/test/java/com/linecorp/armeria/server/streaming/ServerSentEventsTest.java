@@ -52,7 +52,7 @@ public class ServerSentEventsTest {
             sb.service("/converter/stream", (ctx, req) -> ServerSentEvents.fromStream(
                     Stream.of("foo", "bar"), MoreExecutors.directExecutor(), ServerSentEvent::ofComment));
 
-            sb.service("/single/sse", (ctx, req) -> ServerSentEvents.fromServerSentEvent(
+            sb.service("/single/sse", (ctx, req) -> ServerSentEvents.fromEvent(
                     ServerSentEvent.ofEvent("add")));
         }
     };

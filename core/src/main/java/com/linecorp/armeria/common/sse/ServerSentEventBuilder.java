@@ -81,6 +81,10 @@ public class ServerSentEventBuilder {
      * Creates a new {@link ServerSentEvent} instance.
      */
     public ServerSentEvent build() {
+        if (id == null && event == null &&
+            retry == null && comment == null && data == null) {
+            return DefaultServerSentEvent.EMPTY;
+        }
         return new DefaultServerSentEvent(id, event, retry, comment, data);
     }
 }

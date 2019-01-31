@@ -239,37 +239,35 @@ public final class ServerSentEvents {
     /**
      * Creates a new Server-sent Events stream of the specified {@code content}.
      *
-     * @param content the object supposed to send as contents
+     * @param sse the {@link ServerSentEvent} object supposed to send as contents
      */
-    public static <T extends ServerSentEvent> HttpResponse fromServerSentEvent(T content) {
-        return fromServerSentEvent(defaultHttpHeaders, content, HttpHeaders.EMPTY_HEADERS);
+    public static HttpResponse fromEvent(ServerSentEvent sse) {
+        return fromEvent(defaultHttpHeaders, sse, HttpHeaders.EMPTY_HEADERS);
     }
 
     /**
      * Creates a new Server-sent Events stream of the specified {@code content}.
      *
      * @param headers the HTTP headers supposed to send
-     * @param content the object supposed to send as contents
+     * @param sse the {@link ServerSentEvent} object supposed to send as contents
      */
-    public static <T extends ServerSentEvent> HttpResponse fromServerSentEvent(HttpHeaders headers,
-                                                                               T content) {
-        return fromServerSentEvent(headers, content, HttpHeaders.EMPTY_HEADERS);
+    public static HttpResponse fromEvent(HttpHeaders headers, ServerSentEvent sse) {
+        return fromEvent(headers, sse, HttpHeaders.EMPTY_HEADERS);
     }
 
     /**
      * Creates a new Server-sent Events stream of the specified {@code content}.
      *
      * @param headers the HTTP headers supposed to send
-     * @param content the object supposed to send as contents
+     * @param sse the {@link ServerSentEvent} object supposed to send as contents
      * @param trailingHeaders the trailing HTTP headers supposed to send
      */
-    public static <T extends ServerSentEvent> HttpResponse fromServerSentEvent(HttpHeaders headers,
-                                                                               T content,
-                                                                               HttpHeaders trailingHeaders) {
+    public static HttpResponse fromEvent(HttpHeaders headers, ServerSentEvent sse,
+                                         HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
-        requireNonNull(content, "content");
+        requireNonNull(sse, "sse");
         requireNonNull(trailingHeaders, "trailingHeaders");
-        return HttpResponse.of(sanitizeHeaders(headers), toHttpData(content), trailingHeaders);
+        return HttpResponse.of(sanitizeHeaders(headers), toHttpData(sse), trailingHeaders);
     }
 
     private static HttpHeaders sanitizeHeaders(HttpHeaders headers) {
@@ -279,7 +277,7 @@ public final class ServerSentEvents {
         return ensureContentType(ensureHttpStatus(headers), MediaType.EVENT_STREAM);
     }
 
-    private static <T extends ServerSentEvent> HttpData toHttpData(T sse) {
+    private static HttpData toHttpData(ServerSentEvent sse) {
         final StringBuilder sb = new StringBuilder();
 
         // Write a comment first because a user might want to explain his or her event at first line.

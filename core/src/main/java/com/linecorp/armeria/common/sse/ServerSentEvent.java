@@ -36,10 +36,10 @@ import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFu
 public interface ServerSentEvent {
 
     /**
-     * Creates a new empty {@link ServerSentEvent}.
+     * Returns a singleton empty {@link ServerSentEvent}.
      */
-    static ServerSentEvent ofEmpty() {
-        return new ServerSentEventBuilder().build();
+    static ServerSentEvent empty() {
+        return DefaultServerSentEvent.EMPTY;
     }
 
     /**

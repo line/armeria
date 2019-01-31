@@ -15,7 +15,7 @@
  */
 
 /**
- * Support streaming responses from {@link org.reactivestreams.Publisher} or {@link java.util.stream.Stream}.
+ * Supports streaming responses from {@link org.reactivestreams.Publisher} or {@link java.util.stream.Stream}.
  */
 @NonNullByDefault
 package com.linecorp.armeria.server.streaming;

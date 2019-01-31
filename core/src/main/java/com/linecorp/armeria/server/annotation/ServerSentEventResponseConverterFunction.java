@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromEvent;
 import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromPublisher;
-import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromServerSentEvent;
 import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromStream;
 
 import java.util.stream.Stream;
@@ -39,12 +39,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public class ServerSentEventResponseConverterFunction implements ResponseConverterFunction {
 
-    /**
-     * An empty {@link ServerSentEvent} instance which suppose to be emitted when the published object
-     * is {@code null}.
-     */
-    private static final ServerSentEvent EMPTY = ServerSentEvent.ofEmpty();
-
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         HttpHeaders headers,
@@ -60,11 +54,11 @@ public class ServerSentEventResponseConverterFunction implements ResponseConvert
                 return fromStream(headers, (Stream<?>) result, trailingHeaders, ctx.blockingTaskExecutor(),
                                   ServerSentEventResponseConverterFunction::toSse);
             }
-            return fromServerSentEvent(headers, toSse(result), trailingHeaders);
+            return fromEvent(headers, toSse(result), trailingHeaders);
         }
 
         if (result instanceof ServerSentEvent) {
-            return fromServerSentEvent(headers, (ServerSentEvent) result, trailingHeaders);
+            return fromEvent(headers, (ServerSentEvent) result, trailingHeaders);
         }
 
         return ResponseConverterFunction.fallthrough();
@@ -72,7 +66,7 @@ public class ServerSentEventResponseConverterFunction implements ResponseConvert
 
     private static ServerSentEvent toSse(@Nullable Object content) {
         if (content == null) {
-            return EMPTY;
+            return ServerSentEvent.empty();
         }
         if (content instanceof ServerSentEvent) {
             return (ServerSentEvent) content;

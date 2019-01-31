@@ -27,6 +27,11 @@ import com.google.common.base.MoreObjects;
  */
 final class DefaultServerSentEvent implements ServerSentEvent {
 
+    /**
+     * An empty {@link ServerSentEvent} instance.
+     */
+    static final ServerSentEvent EMPTY = new DefaultServerSentEvent(null, null, null, null, null);
+
     @Nullable
     private final String id;
     @Nullable
