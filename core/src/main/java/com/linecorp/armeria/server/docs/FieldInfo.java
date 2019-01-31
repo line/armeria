@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Metadata about a field of a struct or an exception.
@@ -40,6 +41,16 @@ public final class FieldInfo {
     private final List<FieldInfo> childFieldInfos;
     @Nullable
     private final String docString;
+
+    /**
+     * Creates a new {@link FieldInfo} with the specified {@code name} and {@link TypeSignature}.
+     * The {@link FieldLocation} and {@link FieldRequirement} of the {@link FieldInfo} will be
+     * {@code UNSPECIFIED}.
+     */
+    public static FieldInfo of(String name, TypeSignature typeSignature) {
+        return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
+                             ImmutableList.of(), null);
+    }
 
     /**
      * Creates a new instance.

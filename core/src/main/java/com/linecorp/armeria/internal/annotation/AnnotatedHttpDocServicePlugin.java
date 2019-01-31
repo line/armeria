@@ -90,11 +90,11 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     @VisibleForTesting
-    static final TypeSignature BOOL = TypeSignature.ofBase("boolean");
+    static final TypeSignature BOOLEAN = TypeSignature.ofBase("boolean");
     @VisibleForTesting
-    static final TypeSignature INT32 = TypeSignature.ofBase("int32");
+    static final TypeSignature INT = TypeSignature.ofBase("int");
     @VisibleForTesting
-    static final TypeSignature INT64 = TypeSignature.ofBase("int64");
+    static final TypeSignature LONG = TypeSignature.ofBase("long");
     @VisibleForTesting
     static final TypeSignature FLOAT = TypeSignature.ofBase("float");
     @VisibleForTesting
@@ -106,9 +106,9 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     // Not defined in the spec.
     @VisibleForTesting
-    static final TypeSignature INT8 = TypeSignature.ofBase("int8");
+    static final TypeSignature BYTE = TypeSignature.ofBase("byte");
     @VisibleForTesting
-    static final TypeSignature INT16 = TypeSignature.ofBase("int16");
+    static final TypeSignature SHORT = TypeSignature.ofBase("short");
     @VisibleForTesting
     static final TypeSignature BEAN = TypeSignature.ofBase("bean");
 
@@ -286,15 +286,15 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         if (type == Void.class || type == void.class) {
             return VOID;
         } else if (type == Boolean.class || type == boolean.class) {
-            return BOOL;
+            return BOOLEAN;
         } else if (type == Byte.class || type == byte.class) {
-            return INT8;
+            return BYTE;
         } else if (type == Short.class || type == short.class) {
-            return INT16;
+            return SHORT;
         } else if (type == Integer.class || type == int.class) {
-            return INT32;
+            return INT;
         } else if (type == Long.class || type == long.class) {
-            return INT64;
+            return LONG;
         } else if (type == Float.class || type == float.class) {
             return FLOAT;
         } else if (type == Double.class || type == double.class) {
@@ -401,8 +401,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final Field[] declaredFields = structClass.getDeclaredFields();
         final List<FieldInfo> fields =
                 Stream.of(declaredFields)
-                      .map(f -> new FieldInfoBuilder(f.getName(), toTypeSignature(f.getGenericType()))
-                              .build())
+                      .map(f -> FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType())))
                       .collect(Collectors.toList());
         return new StructInfo(name, fields);
     }

@@ -48,7 +48,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -427,7 +426,7 @@ final class AnnotatedValueResolver {
 
     private static void warnOnRedundantUse(Executable constructorOrMethod,
                                            List<AnnotatedValueResolver> list) {
-        final TreeSet<AnnotatedValueResolver> uniques = uniqueResolverSet();
+        final Set<AnnotatedValueResolver> uniques = uniqueResolverSet();
         list.forEach(element -> {
             if (!uniques.add(element)) {
                 warnRedundantUse(element, constructorOrMethod.toGenericString());

@@ -18,8 +18,8 @@ package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.BEAN;
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT32;
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT64;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.LONG;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.STRING;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.VOID;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.endpointInfo;
@@ -77,14 +77,14 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(toTypeSignature(void.class)).isEqualTo(TypeSignature.ofBase("void"));
         assertThat(toTypeSignature(Boolean.class)).isEqualTo(TypeSignature.ofBase("boolean"));
         assertThat(toTypeSignature(boolean.class)).isEqualTo(TypeSignature.ofBase("boolean"));
-        assertThat(toTypeSignature(Byte.class)).isEqualTo(TypeSignature.ofBase("int8"));
-        assertThat(toTypeSignature(byte.class)).isEqualTo(TypeSignature.ofBase("int8"));
-        assertThat(toTypeSignature(Short.class)).isEqualTo(TypeSignature.ofBase("int16"));
-        assertThat(toTypeSignature(short.class)).isEqualTo(TypeSignature.ofBase("int16"));
-        assertThat(toTypeSignature(Integer.class)).isEqualTo(TypeSignature.ofBase("int32"));
-        assertThat(toTypeSignature(int.class)).isEqualTo(TypeSignature.ofBase("int32"));
-        assertThat(toTypeSignature(Long.class)).isEqualTo(TypeSignature.ofBase("int64"));
-        assertThat(toTypeSignature(long.class)).isEqualTo(TypeSignature.ofBase("int64"));
+        assertThat(toTypeSignature(Byte.class)).isEqualTo(TypeSignature.ofBase("byte"));
+        assertThat(toTypeSignature(byte.class)).isEqualTo(TypeSignature.ofBase("byte"));
+        assertThat(toTypeSignature(Short.class)).isEqualTo(TypeSignature.ofBase("short"));
+        assertThat(toTypeSignature(short.class)).isEqualTo(TypeSignature.ofBase("short"));
+        assertThat(toTypeSignature(Integer.class)).isEqualTo(TypeSignature.ofBase("int"));
+        assertThat(toTypeSignature(int.class)).isEqualTo(TypeSignature.ofBase("int"));
+        assertThat(toTypeSignature(Long.class)).isEqualTo(TypeSignature.ofBase("long"));
+        assertThat(toTypeSignature(long.class)).isEqualTo(TypeSignature.ofBase("long"));
         assertThat(toTypeSignature(Float.class)).isEqualTo(TypeSignature.ofBase("float"));
         assertThat(toTypeSignature(float.class)).isEqualTo(TypeSignature.ofBase("float"));
         assertThat(toTypeSignature(Double.class)).isEqualTo(TypeSignature.ofBase("double"));
@@ -94,7 +94,7 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(toTypeSignature(Byte[].class)).isEqualTo(TypeSignature.ofBase("binary"));
         assertThat(toTypeSignature(byte[].class)).isEqualTo(TypeSignature.ofBase("binary"));
 
-        assertThat(toTypeSignature(int[].class)).isEqualTo(TypeSignature.ofList(TypeSignature.ofBase("int32")));
+        assertThat(toTypeSignature(int[].class)).isEqualTo(TypeSignature.ofList(TypeSignature.ofBase("int")));
 
         final TypeSignature typeVariable = toTypeSignature(FieldContainer.class.getDeclaredField("typeVariable")
                                                                                .getGenericType());
@@ -112,7 +112,7 @@ public class AnnotatedHttpDocServicePluginTest {
 
         final TypeSignature map = toTypeSignature(FieldContainer.class.getDeclaredField("map")
                                                                       .getGenericType());
-        assertThat(map).isEqualTo(TypeSignature.ofMap(TypeSignature.ofBase("int64"),
+        assertThat(map).isEqualTo(TypeSignature.ofMap(TypeSignature.ofBase("long"),
                                                       TypeSignature.ofUnresolved("")));
 
         final TypeSignature future = toTypeSignature(FieldContainer.class.getDeclaredField("future")
@@ -246,9 +246,9 @@ public class AnnotatedHttpDocServicePluginTest {
                 new FieldInfoBuilder("foo", STRING).requirement(REQUIRED)
                                                    .location(QUERY)
                                                    .build(),
-                new FieldInfoBuilder("foo1", INT64).requirement(REQUIRED)
-                                                   .location(HEADER)
-                                                   .build());
+                new FieldInfoBuilder("foo1", LONG).requirement(REQUIRED)
+                                                  .location(HEADER)
+                                                  .build());
 
         assertThat(fooMethod.returnTypeSignature()).isEqualTo(VOID);
 
@@ -300,16 +300,16 @@ public class AnnotatedHttpDocServicePluginTest {
     private static FieldInfo createBean1() {
         final FieldInfo uid = new FieldInfoBuilder("uid", STRING).location(HEADER).requirement(REQUIRED)
                                                                  .build();
-        final FieldInfo seqNum = new FieldInfoBuilder("seqNum", INT64).location(QUERY).requirement(REQUIRED)
-                                                                      .build();
+        final FieldInfo seqNum = new FieldInfoBuilder("seqNum", LONG).location(QUERY).requirement(REQUIRED)
+                                                                     .build();
         return new FieldInfoBuilder(RequestBean1.class.getSimpleName(), BEAN, uid, seqNum).build();
     }
 
     private static FieldInfo createBean2() {
-        final FieldInfo inside1 = new FieldInfoBuilder("inside1", INT64).location(QUERY).requirement(REQUIRED)
-                                                                        .build();
-        final FieldInfo inside2 = new FieldInfoBuilder("inside2", INT32).location(QUERY).requirement(REQUIRED)
-                                                                        .build();
+        final FieldInfo inside1 = new FieldInfoBuilder("inside1", LONG).location(QUERY).requirement(REQUIRED)
+                                                                       .build();
+        final FieldInfo inside2 = new FieldInfoBuilder("inside2", INT).location(QUERY).requirement(REQUIRED)
+                                                                      .build();
         final FieldInfo insideBean = new FieldInfoBuilder(InsideBean.class.getSimpleName(), BEAN,
                                                           inside1, inside2).build();
         return new FieldInfoBuilder(RequestBean2.class.getSimpleName(), BEAN, insideBean).build();

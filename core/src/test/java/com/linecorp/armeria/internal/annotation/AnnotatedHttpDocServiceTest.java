@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT32;
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT64;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.LONG;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.STRING;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePluginTest.compositeBean;
@@ -143,12 +143,12 @@ public class AnnotatedHttpDocServiceTest {
         final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/foo")
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfoBuilder("header", INT32).requirement(REQUIRED)
-                                                     .location(FieldLocation.HEADER)
-                                                     .docString("header parameter").build(),
-                new FieldInfoBuilder("query", INT64).requirement(REQUIRED)
-                                                    .location(QUERY)
-                                                    .docString("query parameter").build());
+                new FieldInfoBuilder("header", INT).requirement(REQUIRED)
+                                                   .location(FieldLocation.HEADER)
+                                                   .docString("header parameter").build(),
+                new FieldInfoBuilder("query", LONG).requirement(REQUIRED)
+                                                   .location(QUERY)
+                                                   .docString("query parameter").build());
         final MethodInfo methodInfo = new MethodInfo(
                 "foo", TypeSignature.ofBase("T"), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, "foo method");
@@ -175,10 +175,10 @@ public class AnnotatedHttpDocServiceTest {
         final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/ints")
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfoBuilder("ints", TypeSignature.ofList(INT32)).requirement(REQUIRED)
-                                                                         .location(QUERY).build());
+                new FieldInfoBuilder("ints", TypeSignature.ofList(INT)).requirement(REQUIRED)
+                                                                       .location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
-                "ints", TypeSignature.ofList(INT32),
+                "ints", TypeSignature.ofList(INT),
                 fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);

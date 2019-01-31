@@ -104,7 +104,7 @@ final class AnnotatedBeanFactoryRegistry {
                                                                     : Optional.empty();
     }
 
-    static TreeSet<AnnotatedValueResolver> uniqueResolverSet() {
+    static Set<AnnotatedValueResolver> uniqueResolverSet() {
         return new TreeSet<>((o1, o2) -> {
             final String o1Name = o1.httpElementName();
             final String o2Name = o2.httpElementName();
@@ -220,7 +220,7 @@ final class AnnotatedBeanFactoryRegistry {
     private static Map<Method, List<AnnotatedValueResolver>> findMethods(
             List<AnnotatedValueResolver> constructorAnnotatedResolvers,
             BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
-        final TreeSet<AnnotatedValueResolver> uniques = uniqueResolverSet();
+        final Set<AnnotatedValueResolver> uniques = uniqueResolverSet();
         uniques.addAll(constructorAnnotatedResolvers);
 
         final Builder<Method, List<AnnotatedValueResolver>> methodsBuilder = ImmutableMap.builder();
@@ -259,7 +259,7 @@ final class AnnotatedBeanFactoryRegistry {
             List<AnnotatedValueResolver> constructorAnnotatedResolvers,
             Map<Method, List<AnnotatedValueResolver>> methods,
             BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
-        final TreeSet<AnnotatedValueResolver> uniques = uniqueResolverSet();
+        final Set<AnnotatedValueResolver> uniques = uniqueResolverSet();
         uniques.addAll(constructorAnnotatedResolvers);
         methods.values().forEach(uniques::addAll);
 
