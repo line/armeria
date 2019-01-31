@@ -203,7 +203,7 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
      * });
      * }</pre>
      */
-    default HttpHeaders setAllIfAbsent(Headers<AsciiString, ? extends String, ?> headers) {
+    default HttpHeaders setAllIfAbsent(Headers<AsciiString, String, ?> headers) {
         requireNonNull(headers, "headers");
         if (!headers.isEmpty()) {
             headers.names().forEach(name -> {
