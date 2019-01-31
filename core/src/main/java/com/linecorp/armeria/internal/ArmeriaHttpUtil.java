@@ -724,7 +724,7 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Returns a {@link HttpHeaders} which {@link HttpHeaderNames#CONTENT_LENGTH} is added or removed
+     * Returns an {@link HttpHeaders} whose {@link HttpHeaderNames#CONTENT_LENGTH} is added or removed
      * according to the status of the specified {@code headers}, {@code content} and {@code trailingHeaders}.
      * The {@link HttpHeaderNames#CONTENT_LENGTH} is removed when:
      * <ul>
