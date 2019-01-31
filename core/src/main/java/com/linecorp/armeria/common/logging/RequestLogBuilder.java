@@ -16,13 +16,17 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.ChannelUtil;
 
 import io.netty.channel.Channel;
 
@@ -52,34 +56,91 @@ public interface RequestLogBuilder {
     // Methods related with a request:
 
     /**
-     * Starts the collection of information for the {@link Request}. This method sets the following
-     * properties:
+     * Starts the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
+     *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#host()}</li>
-     * </ul>
-     */
-    void startRequest(Channel channel, SessionProtocol sessionProtocol);
-
-    /**
-     * Starts the collection of information for the {@link Request}. This method sets the following
-     * properties:
-     * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
-     *   <li>{@link RequestLog#channel()}</li>
-     *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#host()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
+     *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *
-     * @deprecated Use {@link #startRequest(Channel, SessionProtocol)}.
+     * @param channel the {@link Channel} which handled the {@link Request}.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
      */
-    @Deprecated
-    default void startRequest(Channel channel, SessionProtocol sessionProtocol,
-                              @SuppressWarnings("unused") String host) {
-        startRequest(channel, sessionProtocol);
+    default void startRequest(Channel channel, SessionProtocol sessionProtocol) {
+        requireNonNull(channel, "channel");
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        startRequest(channel, sessionProtocol, ChannelUtil.findSslSession(channel, sessionProtocol));
     }
+
+    /**
+     * Starts the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
+     *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
+     *   <li>{@link RequestLog#channel()}</li>
+     *   <li>{@link RequestLog#sessionProtocol()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
+     *   <li>{@link RequestLog#sslSession()}</li>
+     * </ul>
+     *
+     * @param channel the {@link Channel} which handled the {@link Request}.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
+     * @param sslSession the {@link SSLSession} of the connection, or {@code null}.
+     */
+    void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession);
+
+    /**
+     * Starts the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
+     *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
+     *   <li>{@link RequestLog#channel()}</li>
+     *   <li>{@link RequestLog#sessionProtocol()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
+     *   <li>{@link RequestLog#sslSession()}</li>
+     * </ul>
+     *
+     * @param channel the {@link Channel} which handled the {@link Request}.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
+     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
+     * @param requestStartTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     */
+    default void startRequest(Channel channel, SessionProtocol sessionProtocol,
+                              long requestStartTimeNanos, long requestStartTimeMicros) {
+        requireNonNull(channel, "channel");
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        startRequest(channel, sessionProtocol, ChannelUtil.findSslSession(channel, sessionProtocol),
+                     requestStartTimeNanos, requestStartTimeMicros);
+    }
+
+    /**
+     * Starts the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
+     *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
+     *   <li>{@link RequestLog#channel()}</li>
+     *   <li>{@link RequestLog#sessionProtocol()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
+     *   <li>{@link RequestLog#sslSession()}</li>
+     * </ul>
+     *
+     * @param channel the {@link Channel} which handled the {@link Request}.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
+     * @param sslSession the {@link SSLSession} of the connection, or {@code null}.
+     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
+     * @param requestStartTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     */
+    void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
+                      long requestStartTimeNanos, long requestStartTimeMicros);
 
     /**
      * Sets the {@link SerializationFormat}.
@@ -100,6 +161,11 @@ public interface RequestLogBuilder {
      * Sets {@link RequestLog#requestFirstBytesTransferredTimeNanos()}.
      */
     void requestFirstBytesTransferred();
+
+    /**
+     * Sets {@link RequestLog#requestFirstBytesTransferredTimeNanos()} with the specified timestamp.
+     */
+    void requestFirstBytesTransferred(long requestFirstBytesTransferredNanos);
 
     /**
      * Sets the {@link RequestLog#requestHeaders()}.
@@ -126,22 +192,77 @@ public interface RequestLogBuilder {
     boolean isRequestContentDeferred();
 
     /**
-     * Sets {@link RequestLog#requestDurationNanos()} and finishes the collection of the information.
+     * Finishes the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestEndTimeNanos()}</li>
+     *   <li>{@link RequestLog#requestDurationNanos()}</li>
+     *   <li>{@link RequestLog#requestCause()}</li>
+     * </ul>
      */
     void endRequest();
 
     /**
-     * Sets {@link RequestLog#requestDurationNanos()} and finishes the collection of the information.
+     * Finishes the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestEndTimeNanos()}</li>
+     *   <li>{@link RequestLog#requestDurationNanos()}</li>
+     *   <li>{@link RequestLog#requestCause()}</li>
+     * </ul>
+     *
+     * @param requestCause the cause of the failure.
      */
     void endRequest(Throwable requestCause);
+
+    /**
+     * Finishes the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestEndTimeNanos()}</li>
+     *   <li>{@link RequestLog#requestDurationNanos()}</li>
+     *   <li>{@link RequestLog#requestCause()}</li>
+     * </ul>
+     *
+     * @param requestEndTimeNanos {@link System#nanoTime()} value when the request ended.
+     */
+    void endRequest(long requestEndTimeNanos);
+
+    /**
+     * Finishes the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestEndTimeNanos()}</li>
+     *   <li>{@link RequestLog#requestDurationNanos()}</li>
+     *   <li>{@link RequestLog#requestCause()}</li>
+     * </ul>
+     *
+     * @param requestCause the cause of the failure.
+     * @param requestEndTimeNanos {@link System#nanoTime()} value when the request ended.
+     */
+    void endRequest(Throwable requestCause, long requestEndTimeNanos);
 
     // Methods related with a response:
 
     /**
-     * Starts the collection of information for the {@link Response}. This method sets
-     * {@link RequestLog#responseStartTimeMillis()}.
+     * Starts the collection of {@link Response} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#responseStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#responseStartTimeMicros()}</li>
+     *   <li>{@link RequestLog#responseStartTimeNanos()}</li>
+     * </ul>
      */
     void startResponse();
+
+    /**
+     * Starts the collection of {@link Response} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#responseStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#responseStartTimeMicros()}</li>
+     *   <li>{@link RequestLog#responseStartTimeNanos()}</li>
+     * </ul>
+     *
+     * @param responseStartTimeNanos {@link System#nanoTime()} value when the response started.
+     * @param responseStartTimeMicros the number of microseconds since the epoch,
+     *                                e.g. {@code System.currentTimeMillis() * 1000}.
+     */
+    void startResponse(long responseStartTimeNanos, long responseStartTimeMicros);
 
     /**
      * Increases the {@link RequestLog#responseLength()} by {@code deltaBytes}.
@@ -157,6 +278,11 @@ public interface RequestLogBuilder {
      * Sets {@link RequestLog#responseFirstBytesTransferredTimeNanos()}.
      */
     void responseFirstBytesTransferred();
+
+    /**
+     * Sets {@link RequestLog#responseFirstBytesTransferredTimeNanos()} with the specified timestamp.
+     */
+    void responseFirstBytesTransferred(long responseFirstBytesTransferredNanos);
 
     /**
      * Sets the {@link RequestLog#responseHeaders()}.
@@ -183,14 +309,53 @@ public interface RequestLogBuilder {
     boolean isResponseContentDeferred();
 
     /**
-     * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information. If a
-     * {@link Throwable} cause has been set with {@link #responseContent(Object, Object)}, it will be treated
-     * as the {@code responseCause} for this log.
+     * Finishes the collection of the {@link Response} information. If a {@link Throwable} cause has been set
+     * with {@link #responseContent(Object, Object)}, it will be treated as the {@code responseCause} for this
+     * log. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#responseEndTimeNanos()}</li>
+     *   <li>{@link RequestLog#responseDurationNanos()}</li>
+     *   <li>{@link RequestLog#responseCause()}</li>
+     * </ul>
      */
     void endResponse();
 
     /**
-     * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information.
+     * Finishes the collection of the {@link Response} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#responseEndTimeNanos()}</li>
+     *   <li>{@link RequestLog#responseDurationNanos()}</li>
+     *   <li>{@link RequestLog#responseCause()}</li>
+     * </ul>
+     *
+     * @param responseCause the cause of the failure.
      */
     void endResponse(Throwable responseCause);
+
+    /**
+     * Finishes the collection of the {@link Response} information. If a {@link Throwable} cause has been set
+     * with {@link #responseContent(Object, Object)}, it will be treated as the {@code responseCause} for this
+     * log. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#responseEndTimeNanos()}</li>
+     *   <li>{@link RequestLog#responseDurationNanos()}</li>
+     *   <li>{@link RequestLog#responseCause()}</li>
+     * </ul>
+     *
+     * @param responseEndTimeNanos {@link System#nanoTime()} value when the response ended.
+     */
+    void endResponse(long responseEndTimeNanos);
+
+    /**
+     * Finishes the collection of the {@link Response} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#responseEndTimeNanos()}</li>
+     *   <li>{@link RequestLog#responseDurationNanos()}</li>
+     *   <li>{@link RequestLog#responseCause()}</li>
+     * </ul>
+     *
+     * @param responseCause the cause of the failure.
+     * @param responseEndTimeNanos {@link System#nanoTime()} value when the response ended.
+     */
+    void endResponse(Throwable responseCause, long responseEndTimeNanos);
 }

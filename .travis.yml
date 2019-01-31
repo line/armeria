@@ -1,6 +1,6 @@
 language: java
 jdk:
-- openjdk10
+- openjdk11
 sudo: false
 os:
 - linux
@@ -27,7 +27,7 @@ before_install:
 install:
 - true
 script:
-- "./gradlew --no-daemon --stacktrace -Pcoverage checkstyle check build"
+- "./gradlew --no-daemon --stacktrace --warning-mode=all -Pcoverage checkstyle check build"
 before_cache:
 - find $HOME/.gradle/caches -name '*.lock' -delete
 after_success:

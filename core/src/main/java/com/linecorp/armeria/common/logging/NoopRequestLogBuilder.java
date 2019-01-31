@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.logging;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -33,7 +34,18 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void endResponseWithLastChild() {}
 
     @Override
-    public void startRequest(Channel ch, SessionProtocol sessionProtocol) {}
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol) {}
+
+    @Override
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol,
+                             long requestStartTimeNanos, long requestStartTimeMicros) {}
+
+    @Override
+    public void startRequest(Channel ch, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession) {}
+
+    @Override
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
+                             long requestStartTimeNanos, long requestStartTimeMicros) {}
 
     @Override
     public void serializationFormat(SerializationFormat serializationFormat) {}
@@ -46,6 +58,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void requestFirstBytesTransferred() {}
+
+    @Override
+    public void requestFirstBytesTransferred(long requestFirstBytesTransferredNanos) {}
 
     @Override
     public void requestHeaders(HttpHeaders requestHeaders) {}
@@ -68,7 +83,16 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void endRequest(Throwable requestCause) {}
 
     @Override
+    public void endRequest(long requestEndTimeNanos) {}
+
+    @Override
+    public void endRequest(Throwable requestCause, long requestEndTimeNanos) {}
+
+    @Override
     public void startResponse() {}
+
+    @Override
+    public void startResponse(long responseStartTimeNanos, long responseStartTimeMicros) {}
 
     @Override
     public void increaseResponseLength(long deltaBytes) {}
@@ -78,6 +102,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void responseFirstBytesTransferred() {}
+
+    @Override
+    public void responseFirstBytesTransferred(long responseFirstBytesTransferredNanos) {}
 
     @Override
     public void responseHeaders(HttpHeaders responseHeaders) {}
@@ -98,4 +125,10 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void endResponse(Throwable responseCause) {}
+
+    @Override
+    public void endResponse(long responseEndTimeNanos) {}
+
+    @Override
+    public void endResponse(Throwable responseCause, long responseEndTimeNanos) {}
 }

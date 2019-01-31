@@ -32,7 +32,9 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -224,9 +226,9 @@ public class ConcurrencyLimitingHttpClientTest {
     }
 
     private static ClientRequestContext newContext() {
-        final ClientRequestContext ctx = mock(ClientRequestContext.class);
-        when(ctx.eventLoop()).thenReturn(eventLoop.get());
-        return ctx;
+        return ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
+                                          .eventLoop(eventLoop.get())
+                                          .build();
     }
 
     /**

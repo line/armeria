@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
@@ -25,19 +27,23 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.internal.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -47,8 +53,7 @@ import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.dns.DnsAddressResolverGroup;
-import io.netty.resolver.dns.DnsServerAddressStreamProviders;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -73,11 +78,6 @@ public final class ClientFactoryBuilder {
 
     private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
 
-    private static final Function<EventLoopGroup, DnsAddressResolverGroup>
-            DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY = eventLoopGroup -> new DnsAddressResolverGroup(
-            TransportType.datagramChannelType(eventLoopGroup),
-            DnsServerAddressStreamProviders.platformDefault());
-
     // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
     @SuppressWarnings("deprecation")
     private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
@@ -91,9 +91,11 @@ public final class ClientFactoryBuilder {
     private boolean shutdownWorkerGroupOnClose;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private Consumer<? super SslContextBuilder> sslContextCustomizer = DEFAULT_SSL_CONTEXT_CUSTOMIZER;
+    @Nullable
     private Function<? super EventLoopGroup,
-            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
-            DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY;
+            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory;
+    @Nullable
+    private List<Consumer<? super DnsNameResolverBuilder>> domainNameResolverCustomizers;
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private int http2MaxFrameSize = Flags.defaultHttp2MaxFrameSize();
@@ -187,12 +189,35 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
+     *
+     * @throws IllegalStateException if {@link #domainNameResolverCustomizer(Consumer)} was called already.
      */
     public ClientFactoryBuilder addressResolverGroupFactory(
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory) {
-        this.addressResolverGroupFactory = requireNonNull(addressResolverGroupFactory,
-                                                          "addressResolverGroupFactory");
+        requireNonNull(addressResolverGroupFactory, "addressResolverGroupFactory");
+        checkState(domainNameResolverCustomizers == null,
+                   "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
+        this.addressResolverGroupFactory = addressResolverGroupFactory;
+        return this;
+    }
+
+    /**
+     * Adds the specified {@link Consumer} which customizes the given {@link DnsNameResolverBuilder}.
+     * This method is useful when you want to change the behavior of the default domain name resolver, such as
+     * changing the DNS server list.
+     *
+     * @throws IllegalStateException if {@link #addressResolverGroupFactory(Function)} was called already.
+     */
+    public ClientFactoryBuilder domainNameResolverCustomizer(
+            Consumer<? super DnsNameResolverBuilder> domainNameResolverCustomizer) {
+        requireNonNull(domainNameResolverCustomizer, "domainNameResolverCustomizer");
+        checkState(addressResolverGroupFactory == null,
+                   "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
+        if (domainNameResolverCustomizers == null) {
+            domainNameResolverCustomizers = new ArrayList<>();
+        }
+        domainNameResolverCustomizers.add(domainNameResolverCustomizer);
         return this;
     }
 
@@ -348,6 +373,15 @@ public final class ClientFactoryBuilder {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
+        final Function<? super EventLoopGroup,
+                       ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory;
+        if (this.addressResolverGroupFactory != null) {
+            addressResolverGroupFactory = this.addressResolverGroupFactory;
+        } else {
+            addressResolverGroupFactory = new DefaultAddressResolverGroupFactory(
+                    firstNonNull(domainNameResolverCustomizers, ImmutableList.of()));
+        }
+
         return new DefaultClientFactory(new HttpClientFactory(
                 workerGroup, shutdownWorkerGroupOnClose, channelOptions, sslContextCustomizer,
                 addressResolverGroupFactory, http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
@@ -370,6 +404,7 @@ public final class ClientFactoryBuilder {
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnClose,
             Map<ChannelOption<?>, Object> socketOptions,
             Consumer<? super SslContextBuilder> sslContextCustomizer,
+            @Nullable
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize, int http2MaxFrameSize,
@@ -400,7 +435,7 @@ public final class ClientFactoryBuilder {
             helper.add("sslContextCustomizer", sslContextCustomizer);
         }
 
-        if (addressResolverGroupFactory != DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY) {
+        if (!(addressResolverGroupFactory instanceof DefaultAddressResolverGroupFactory)) {
             helper.add("addressResolverGroupFactory", addressResolverGroupFactory);
         }
 

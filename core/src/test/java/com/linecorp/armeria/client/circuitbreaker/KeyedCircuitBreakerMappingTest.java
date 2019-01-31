@@ -17,13 +17,14 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector.HOST;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 
 public class KeyedCircuitBreakerMappingTest {
     @Test
@@ -37,8 +38,8 @@ public class KeyedCircuitBreakerMappingTest {
     }
 
     private static ClientRequestContext context(Endpoint endpoint) {
-        final ClientRequestContext ctx = mock(ClientRequestContext.class);
-        when(ctx.endpoint()).thenReturn(endpoint);
-        return ctx;
+        return ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
+                                          .endpoint(endpoint)
+                                          .build();
     }
 }

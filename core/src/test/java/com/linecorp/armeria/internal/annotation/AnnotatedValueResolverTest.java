@@ -15,26 +15,25 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toArguments;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.reflections.ReflectionUtils.getAllConstructors;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.junit.BeforeClass;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,15 +42,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpParameters;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
+import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
@@ -79,41 +79,39 @@ public class AnnotatedValueResolverTest {
                                                               "value3",
                                                               "value2");
 
-    static final ResolverContext resolverContext = mock(ResolverContext.class);
-    static final ServiceRequestContext context = mock(ServiceRequestContext.class);
-    static final HttpRequest request = mock(HttpRequest.class);
-    static final AggregatedHttpMessage message = mock(AggregatedHttpMessage.class);
-    static final HttpHeaders headers = mock(HttpHeaders.class);
-    static final HttpParameters parameters = mock(HttpParameters.class);
+    static final ResolverContext resolverContext;
+    static final ServiceRequestContext context;
+    static final HttpRequest request;
+    static final HttpHeaders originalHeaders;
 
-    @BeforeClass
-    public static void setUp() throws Exception {
-        when(resolverContext.httpParameters()).thenReturn(parameters);
-        when(resolverContext.context()).thenReturn(context);
-        when(resolverContext.request()).thenReturn(request);
-        when(resolverContext.message()).thenReturn(message);
+    static {
+        final String path = "/";
+        final String query = existingHttpParameters.stream().map(p -> p + '=' + p)
+                                                   .collect(Collectors.joining("&"));
 
-        when(context.request()).thenReturn(request);
-        when(context.query())
-                .thenReturn(String.join("&",
-                                        existingHttpParameters.stream().map(p -> p + '=' + p)
-                                                              .collect(Collectors.toList())));
-        when(context.pathParam(anyString())).thenAnswer(arg -> arg.getArguments()[0]);
+        final HttpHeaders headers = HttpHeaders.of(HttpMethod.GET, path + '?' + query);
+        headers.set(HttpHeaderNames.COOKIE, "a=1;b=2", "c=3", "a=4");
+        existingHttpHeaders.forEach(name -> headers.set(name, headerValues));
 
-        when(parameters.getAll(anyString())).thenAnswer(arg -> {
-            final Object value = arg.getArguments()[0];
-            return existingHttpParameters.contains(value) ? ImmutableList.of(value) : null;
-        });
+        request = HttpRequest.of(headers);
+        originalHeaders = HttpHeaders.copyOf(request.headers()).asImmutable();
 
-        when(request.headers()).thenReturn(headers);
-        when(headers.getAll(any())).thenAnswer(arg -> {
-            final Object value = arg.getArguments()[0];
-            // Return values for 'Cookie' headers.
-            if (value.equals(HttpHeaderNames.COOKIE)) {
-                return ImmutableList.of("a=1;b=2", "c=3", "a=4");
-            }
-            return existingHttpHeaders.contains(value) ? headerValues : ImmutableList.of();
-        });
+        final PathMappingResult pathMappingResult = PathMappingResult.of(
+                path, query,
+                pathParams.stream()
+                          .map(v -> new SimpleImmutableEntry<>(v, v))
+                          .collect(toImmutableMap(Entry::getKey, Entry::getValue)));
+
+        context = ServiceRequestContextBuilder.of(request)
+                                              .pathMappingResult(pathMappingResult)
+                                              .build();
+
+        resolverContext = new ResolverContext(context, request, null);
+    }
+
+    @AfterClass
+    public static void ensureUnmodifiedHeaders() {
+        assertThat(request.headers()).isEqualTo(originalHeaders);
     }
 
     static boolean shouldHttpHeaderExist(AnnotatedValueResolver element) {
@@ -130,7 +128,6 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void ofMethods() {
         getAllMethods(Service.class).forEach(method -> {
             try {
@@ -144,7 +141,6 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void ofFieldBean() throws NoSuchFieldException {
         final FieldBean bean = new FieldBean();
 
@@ -167,8 +163,8 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void ofConstructorBean() {
+        @SuppressWarnings("rawtypes")
         final Set<Constructor> constructors = getAllConstructors(ConstructorBean.class);
         assertThat(constructors.size()).isOne();
         constructors.forEach(constructor -> {
@@ -190,7 +186,6 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void ofSetterBean() throws Exception {
         final SetterBean bean = SetterBean.class.getDeclaredConstructor().newInstance();
         getAllMethods(SetterBean.class).forEach(method -> testMethod(method, bean));
@@ -198,7 +193,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("rawtypes")
     public void ofMixedBean() throws Exception {
         final Set<Constructor> constructors = getAllConstructors(MixedBean.class);
         assertThat(constructors.size()).isOne();

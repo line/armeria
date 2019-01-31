@@ -148,7 +148,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       int maxOutboundMessageSizeBytes,
                       ServiceRequestContext ctx,
                       SerializationFormat serializationFormat,
-                      MessageMarshaller jsonMarshaller,
+                      @Nullable MessageMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
                       String advertisedEncodingsHeader) {

@@ -108,7 +108,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param pathMappingContext the parameters which is used when finding a matched {@link PathMapping}
+     * @param pathMappingContext the parameters which are used when finding a matched {@link PathMapping}
      * @param pathMappingResult the result of finding a matched {@link PathMapping}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
@@ -117,9 +117,45 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Request request,
+            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress) {
+        this(cfg, ch, meterRegistry, sessionProtocol, pathMappingContext, pathMappingResult, request,
+             sslSession, proxiedAddresses, clientAddress, false, 0, 0);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param cfg the {@link ServiceConfig}
+     * @param ch the {@link Channel} that handles the invocation
+     * @param meterRegistry the {@link MeterRegistry} that collects various stats
+     * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param pathMappingContext the parameters which are used when finding a matched {@link PathMapping}
+     * @param pathMappingResult the result of finding a matched {@link PathMapping}
+     * @param request the request associated with this context
+     * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
+     * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
+     * @param clientAddress the address of a client who initiated the request
+     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
+     * @param requestStartTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     */
+    public DefaultServiceRequestContext(
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, HttpRequest request,
+            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
+            InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
+        this(cfg, ch, meterRegistry, sessionProtocol, pathMappingContext, pathMappingResult, request,
+             sslSession, proxiedAddresses, clientAddress, true, requestStartTimeNanos, requestStartTimeMicros);
+    }
+
+    private DefaultServiceRequestContext(
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, HttpRequest request,
+            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
+            InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
+            long requestStartTimeMicros) {
 
         super(meterRegistry, sessionProtocol,
               requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
@@ -135,7 +171,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
         log = new DefaultRequestLog(this);
-        log.startRequest(ch, sessionProtocol);
+        if (requestStartTimeSet) {
+            log.startRequest(ch, sessionProtocol, sslSession, requestStartTimeNanos, requestStartTimeMicros);
+        } else {
+            log.startRequest(ch, sessionProtocol, sslSession);
+        }
+        log.requestHeaders(request.headers());
+
+        // For the server, request headers are processed well before ServiceRequestContext is created. It means
+        // there is some delay between the actual channel read and this logging, but it's the best we can do for
+        // now.
+        log.requestFirstBytesTransferred();
+
         logger = newLogger(cfg);
 
         final ServerConfig serverCfg = cfg.server().config();
@@ -187,7 +234,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public ServiceRequestContext newDerivedContext(Request request) {
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
-                pathMappingResult, request, sslSession(), proxiedAddresses(), clientAddress);
+                pathMappingResult, (HttpRequest) request, sslSession(), proxiedAddresses(), clientAddress);
 
         final HttpHeaders additionalHeaders = additionalResponseHeaders();
         if (!additionalHeaders.isEmpty()) {

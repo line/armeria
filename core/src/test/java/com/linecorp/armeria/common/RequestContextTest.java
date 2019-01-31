@@ -38,6 +38,9 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
+
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -53,6 +56,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.testing.common.EventLoopRule;
 
 import io.netty.channel.Channel;
@@ -438,6 +442,12 @@ public class RequestContextTest {
         @Override
         protected Channel channel() {
             return channel;
+        }
+
+        @Nullable
+        @Override
+        public SSLSession sslSession() {
+            return ChannelUtil.findSslSession(channel);
         }
 
         @Override

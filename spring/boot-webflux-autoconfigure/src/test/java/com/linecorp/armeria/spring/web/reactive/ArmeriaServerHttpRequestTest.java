@@ -18,18 +18,13 @@ package com.linecorp.armeria.spring.web.reactive;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.http.HttpCookie;
 import org.springframework.util.MultiValueMap;
-
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -37,23 +32,17 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 public class ArmeriaServerHttpRequestTest {
 
-    static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-
-    @BeforeClass
-    public static void setup() {
-        when(ctx.sslSession()).thenReturn(null);
-        when(ctx.contextAwareExecutor()).thenReturn(MoreExecutors.directExecutor());
-    }
-
-    private static ArmeriaServerHttpRequest request(HttpRequest httpRequest) {
-        return new ArmeriaServerHttpRequest(ctx, httpRequest, DataBufferFactoryWrapper.DEFAULT);
+    private static ArmeriaServerHttpRequest request(ServiceRequestContext ctx) {
+        return new ArmeriaServerHttpRequest(ctx, ctx.request(), DataBufferFactoryWrapper.DEFAULT);
     }
 
     @Test
@@ -63,7 +52,8 @@ public class ArmeriaServerHttpRequestTest {
                                Flux.just("a", "b", "c", "d", "e")
                                    .map(HttpData::ofUtf8));
 
-        final ArmeriaServerHttpRequest req = request(httpRequest);
+        final ServiceRequestContext ctx = newRequestContext(httpRequest);
+        final ArmeriaServerHttpRequest req = request(ctx);
         assertThat(req.getMethodValue()).isEqualTo(HttpMethod.POST.name());
         assertThat(req.<Object>getNativeRequest()).isInstanceOf(HttpRequest.class).isEqualTo(httpRequest);
 
@@ -84,9 +74,10 @@ public class ArmeriaServerHttpRequestTest {
 
     @Test
     public void getCookies() {
-        final ArmeriaServerHttpRequest req = request(
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/")
-                                          .add(HttpHeaderNames.COOKIE, "a=1;b=2")));
+        final HttpRequest httpRequest = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/")
+                                                                  .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
+        final ServiceRequestContext ctx = newRequestContext(httpRequest);
+        final ArmeriaServerHttpRequest req = request(ctx);
 
         // Check cached.
         final MultiValueMap<String, HttpCookie> cookie1 = req.getCookies();
@@ -104,7 +95,8 @@ public class ArmeriaServerHttpRequestTest {
                                Flux.just("a", "b", "c", "d", "e")
                                    .map(HttpData::ofUtf8));
 
-        final ArmeriaServerHttpRequest req = request(httpRequest);
+        final ServiceRequestContext ctx = newRequestContext(httpRequest);
+        final ArmeriaServerHttpRequest req = request(ctx);
 
         assertThat(httpRequest.completionFuture().isDone()).isFalse();
 
@@ -120,5 +112,11 @@ public class ArmeriaServerHttpRequestTest {
         assertThat(f.isCompletedExceptionally()).isTrue();
         assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)
                                   .hasCauseInstanceOf(CancelledSubscriptionException.class);
+    }
+
+    private static ServiceRequestContext newRequestContext(HttpRequest httpRequest) {
+        return ServiceRequestContextBuilder.of(httpRequest)
+                                           .eventLoop(EventLoopGroups.directEventLoop())
+                                           .build();
     }
 }

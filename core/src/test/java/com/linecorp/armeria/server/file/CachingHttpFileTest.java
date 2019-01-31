@@ -67,8 +67,9 @@ public class CachingHttpFileTest {
         assertThat(cached.read(executor, alloc)).isNull();
         assertThat(cached.aggregate(executor).join()).isSameAs(HttpFile.nonExistent());
         assertThat(cached.aggregateWithPooledObjects(executor, alloc).join()).isSameAs(HttpFile.nonExistent());
-        assertThat(cached.asService().serve(mock(ServiceRequestContext.class),
-                                            HttpRequest.of(HttpMethod.GET, "/")).aggregate().join().status())
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(cached.asService().serve(ctx, ctx.request()).aggregate().join().status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
     }
 

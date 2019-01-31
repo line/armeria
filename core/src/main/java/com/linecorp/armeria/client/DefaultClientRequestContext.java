@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -176,6 +177,16 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public EventLoop eventLoop() {
         return eventLoop;
+    }
+
+    @Nullable
+    @Override
+    public SSLSession sslSession() {
+        if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+            return log.sslSession();
+        } else {
+            return null;
+        }
     }
 
     @Override

@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 
@@ -89,6 +90,25 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
         return addService(bindableService.bindService());
+    }
+
+    /**
+     * Adds gRPC {@link BindableService}s to this {@link GrpcServiceBuilder}. Most gRPC service
+     * implementations are {@link BindableService}s.
+     */
+    public GrpcServiceBuilder addServices(BindableService... bindableServices) {
+        requireNonNull(bindableServices, "bindableServices");
+        return addServices(ImmutableList.copyOf(bindableServices));
+    }
+
+    /**
+     * Adds gRPC {@link BindableService}s to this {@link GrpcServiceBuilder}. Most gRPC service
+     * implementations are {@link BindableService}s.
+     */
+    public GrpcServiceBuilder addServices(Iterable<BindableService> bindableServices) {
+        requireNonNull(bindableServices, "bindableServices");
+        bindableServices.forEach(this::addService);
+        return this;
     }
 
     /**
@@ -225,11 +245,11 @@ public final class GrpcServiceBuilder {
         final GrpcService grpcService = new GrpcService(
                 handlerRegistry,
                 handlerRegistry
-                      .methods()
-                      .keySet()
-                      .stream()
-                      .map(path -> PathMapping.ofExact('/' + path))
-                      .collect(ImmutableSet.toImmutableSet()),
+                        .methods()
+                        .keySet()
+                        .stream()
+                        .map(path -> PathMapping.ofExact('/' + path))
+                        .collect(ImmutableSet.toImmutableSet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,

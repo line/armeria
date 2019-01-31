@@ -17,8 +17,6 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpClientDelegate.extractHost;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.junit.Test;
 
@@ -75,8 +73,8 @@ public class HttpClientDelegateTest {
     }
 
     private static ClientRequestContext context(HttpHeaders additionalHeaders) {
-        final ClientRequestContext ctx = mock(ClientRequestContext.class);
-        when(ctx.additionalRequestHeaders()).thenReturn(additionalHeaders.asImmutable());
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.setAdditionalRequestHeaders(additionalHeaders);
         return ctx;
     }
 }

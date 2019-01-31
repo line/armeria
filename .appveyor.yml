@@ -7,7 +7,7 @@ build:
   verbosity: detailed
 
 build_script:
-  - gradlew.bat --no-daemon --stacktrace checkstyle check build
+  - gradlew.bat --no-daemon --stacktrace --warning-mode=all checkstyle check build
 
 test: off
 
@@ -20,7 +20,7 @@ cache:
   - "%USERPROFILE%\\.gradle\\caches\\sphinx-binary"
 
 environment:
-  JAVA_HOME: C:\Program Files\Java\jdk10
+  JAVA_HOME: C:\Program Files\Java\jdk11
 
 matrix:
   fast_finish: true

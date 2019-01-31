@@ -20,20 +20,29 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.AbstractEventLoop;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.Future;
 
 /**
  * Provides methods that are useful for creating an {@link EventLoopGroup}.
  */
 public final class EventLoopGroups {
+
+    private static final EventLoop directEventLoop = new DirectEventLoop();
 
     /**
      * Returns a newly-created {@link EventLoopGroup}.
@@ -98,6 +107,15 @@ public final class EventLoopGroups {
     }
 
     /**
+     * Returns a special {@link EventLoop} which executes submitted tasks in the caller thread.
+     * Note that this {@link EventLoop} will raise an {@link UnsupportedOperationException} for any operations
+     * related with {@link EventLoop} shutdown or {@link Channel} registration.
+     */
+    public static EventLoop directEventLoop() {
+        return directEventLoop;
+    }
+
+    /**
      * Returns the {@link ServerChannel} class that is available for this {@code eventLoopGroup}, for use in
      * configuring a custom {@link Bootstrap}.
      */
@@ -133,4 +151,71 @@ public final class EventLoopGroups {
     }
 
     private EventLoopGroups() {}
+
+    private static final class DirectEventLoop extends AbstractEventLoop {
+        @Override
+        public ChannelFuture register(Channel channel) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture register(ChannelPromise promise) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture register(Channel channel, ChannelPromise promise) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void shutdown() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean inEventLoop(Thread thread) {
+            return true;
+        }
+
+        @Override
+        public boolean isShuttingDown() {
+            return false;
+        }
+
+        @Override
+        public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Future<?> terminationFuture() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return false;
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return false;
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return false;
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            command.run();
+        }
+
+        @Override
+        public String toString() {
+            return EventLoopGroups.class.getSimpleName() + ".directEventLoop()";
+        }
+    }
 }

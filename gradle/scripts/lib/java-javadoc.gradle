@@ -25,6 +25,7 @@ allprojects {
               var l = document.links[i];
               if (l.href && l.href.indexOf("?is-external=true") >= 0) {
                 l.target = "_blank";
+                l.rel = "noopener";
               }
             }
             </script>
@@ -197,24 +198,35 @@ allprojects {
                     elementListFile.delete()
                 }
 
-                def success = true
-                if (!packageListFile.exists()) {
-                    if (!downloadListFile(packageListFile, new URL("${javadocUrl}package-list"))) {
+                def success = packageListFile.exists() ||
+                              JavaVersion.current() >= JavaVersion.VERSION_1_10 && elementListFile.exists()
+                if (!success) {
+                    if (downloadListFile(packageListFile, new URL("${javadocUrl}package-list"))) {
+                        // Succeeded to download package-list.
+                        success = true
+                    } else {
                         // Failed to download package-list, try element-list.
-                        if (downloadListFile(elementListFile, new URL("${javadocUrl}element-list"))) {
-                            // package-list does not exist, but element-list exists.
-                            // No problem. We can generate package-list from element-list.
-                            def tmpPackageListFile = new File("${packageListFile}.tmp")
-                            tmpPackageListFile.withWriter('utf-8') { out ->
-                                // Find only the lines with a package name.
-                                elementListFile.filterLine(out, 'utf-8') { line ->
-                                    def packageNamePattern = /^\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*(?:\.\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)*$/
-                                    return line.matches(packageNamePattern)
-                                }
-                            }
-                            success = tmpPackageListFile.renameTo(packageListFile)
-                        } else {
+                        if (!downloadListFile(elementListFile, new URL("${javadocUrl}element-list"))) {
+                            // Failed to download both package-list and element-list.
                             success = false
+                        } else {
+                            // package-list does not exist, but element-list exists.
+                            if (JavaVersion.current() >= JavaVersion.VERSION_1_10) {
+                                // Java 10+ supports element-list. Use it as-is.
+                                success = true
+                            } else {
+                                // Java older than 10 does not support element-list.
+                                // No problem. We can generate package-list from element-list.
+                                def tmpPackageListFile = new File("${packageListFile}.tmp")
+                                tmpPackageListFile.withWriter('utf-8') { out ->
+                                    // Find only the lines with a package name.
+                                    elementListFile.filterLine(out, 'utf-8') { line ->
+                                        def packageNamePattern = /^\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*(?:\.\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)*$/
+                                        return line.matches(packageNamePattern)
+                                    }
+                                }
+                                success = tmpPackageListFile.renameTo(packageListFile)
+                            }
                         }
                     }
                 }
@@ -224,7 +236,15 @@ allprojects {
                 }
             }
 
-            addOfflineLink('java10', 'https://docs.oracle.com/javase/10/docs/api/')
+            if (JavaVersion.current() >= JavaVersion.VERSION_11) {
+                // Javadoc in Java 11+ has more strict checks related with module system,
+                // so we have to use Java 11+ API docs.
+                addOfflineLink('java11', 'https://docs.oracle.com/en/java/javase/11/docs/api/')
+            } else {
+                // Javadoc in pre-Java 11 generates a broken link for Java 11+ API docs,
+                // so we have to use Java 10 (or less) API docs.
+                addOfflineLink('java10', 'https://docs.oracle.com/javase/10/docs/api/')
+            }
 
             project.ext.javadocLinks.each {
                 addOfflineLink("${it['groupId']}/${it['artifactId']}/${it['version']}", it['url'])

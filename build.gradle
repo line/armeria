@@ -66,6 +66,9 @@ configure(projectsWithFlags('java')) {
         // Guava
         compile 'com.google.guava:guava'
 
+        // J2ObjC annotations
+        compileOnly 'com.google.j2objc:j2objc-annotations'
+
         // JSR305
         compile 'com.google.code.findbugs:jsr305'
 
@@ -123,9 +126,9 @@ allprojects {
     }
 }
 
-// Require to use JDK 10 when releasing.
+// Require to use JDK 11 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_1_10) {
-        throw new IllegalStateException("You must release using JDK 10.");
+    if (JavaVersion.current() != JavaVersion.VERSION_1_11) {
+        throw new IllegalStateException("You must release using JDK 11.");
     }
 }

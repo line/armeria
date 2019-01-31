@@ -67,6 +67,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
@@ -731,6 +732,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         @Override
         protected Channel channel() {
             return channel;
+        }
+
+        @Nullable
+        @Override
+        public SSLSession sslSession() {
+            return ChannelUtil.findSslSession(channel);
         }
 
         @Override

@@ -82,7 +82,7 @@ sensible defaults. By applying them, you can:
            mavenCentral()
        }
        dependencies {
-           classpath 'com.google.gradle:osdetector-gradle-plugin:1.6.0'
+           classpath 'com.google.gradle:osdetector-gradle-plugin:1.6.1'
            classpath 'io.spring.gradle:dependency-management-plugin:1.0.6.RELEASE'
        }
    }
@@ -169,7 +169,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.google.gradle:osdetector-gradle-plugin:1.6.0"
+        classpath "com.google.gradle:osdetector-gradle-plugin:1.6.1"
         classpath 'io.spring.gradle:dependency-management-plugin:1.0.6.RELEASE'
     }
 }
