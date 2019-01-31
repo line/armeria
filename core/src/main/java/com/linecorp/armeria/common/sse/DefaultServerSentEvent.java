@@ -15,11 +15,8 @@
  */
 package com.linecorp.armeria.common.sse;
 
-import static java.util.Objects.requireNonNull;
-
 import java.time.Duration;
 import java.util.Objects;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -27,10 +24,8 @@ import com.google.common.base.MoreObjects;
 
 /**
  * A default implementation of the {@link ServerSentEvent} interface.
- *
- * @param <T> the type of the data
  */
-final class DefaultServerSentEvent<T> implements ServerSentEvent<T> {
+final class DefaultServerSentEvent implements ServerSentEvent {
 
     @Nullable
     private final String id;
@@ -41,27 +36,18 @@ final class DefaultServerSentEvent<T> implements ServerSentEvent<T> {
     @Nullable
     private final String comment;
     @Nullable
-    private final T data;
-
-    private final Function<T, String> dataStringifier;
-
-    @Nullable
-    private volatile String dataText;
-
-    private int hashCode;
+    private final String data;
 
     DefaultServerSentEvent(@Nullable String id,
                            @Nullable String event,
                            @Nullable Duration retry,
                            @Nullable String comment,
-                           @Nullable T data,
-                           Function<T, String> dataStringifier) {
+                           @Nullable String data) {
         this.id = id;
         this.event = event;
         this.retry = retry;
         this.comment = comment;
         this.data = data;
-        this.dataStringifier = requireNonNull(dataStringifier, "dataStringifier");
     }
 
     @Nullable
@@ -90,39 +76,13 @@ final class DefaultServerSentEvent<T> implements ServerSentEvent<T> {
 
     @Nullable
     @Override
-    public T data() {
+    public String data() {
         return data;
-    }
-
-    @Nullable
-    @Override
-    public String dataText() {
-        if (data == null) {
-            return null;
-        }
-
-        final String dataText = this.dataText;
-        if (dataText != null) {
-            return dataText;
-        }
-
-        final String applied = dataStringifier.apply(data);
-        this.dataText = applied;
-        return applied;
     }
 
     @Override
     public int hashCode() {
-        if (hashCode == 0) {
-            int hashCode = dataStringifier.hashCode();
-            hashCode = 31 * hashCode + (id != null ? id.hashCode() : 0);
-            hashCode = 31 * hashCode + (event != null ? event.hashCode() : 0);
-            hashCode = 31 * hashCode + (retry != null ? retry.hashCode() : 0);
-            hashCode = 31 * hashCode + (comment != null ? comment.hashCode() : 0);
-            hashCode = 31 * hashCode + (data != null ? data.hashCode() : 0);
-            this.hashCode = hashCode;
-        }
-        return hashCode;
+        return Objects.hash(id, event, retry, comment, data);
     }
 
     @Override
@@ -135,9 +95,8 @@ final class DefaultServerSentEvent<T> implements ServerSentEvent<T> {
             return false;
         }
 
-        final DefaultServerSentEvent<?> that = (DefaultServerSentEvent<?>) obj;
-        return Objects.equals(dataStringifier, that.dataStringifier) &&
-               Objects.equals(id, that.id) &&
+        final DefaultServerSentEvent that = (DefaultServerSentEvent) obj;
+        return Objects.equals(id, that.id) &&
                Objects.equals(event, that.event) &&
                Objects.equals(retry, that.retry) &&
                Objects.equals(comment, that.comment) &&

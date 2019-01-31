@@ -43,7 +43,7 @@ public class ServerSentEventResponseConverterFunction implements ResponseConvert
      * An empty {@link ServerSentEvent} instance which suppose to be emitted when the published object
      * is {@code null}.
      */
-    private static final ServerSentEvent<?> EMPTY = ServerSentEvent.ofEmpty();
+    private static final ServerSentEvent EMPTY = ServerSentEvent.ofEmpty();
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
@@ -64,18 +64,18 @@ public class ServerSentEventResponseConverterFunction implements ResponseConvert
         }
 
         if (result instanceof ServerSentEvent) {
-            return fromServerSentEvent(headers, (ServerSentEvent<?>) result, trailingHeaders);
+            return fromServerSentEvent(headers, (ServerSentEvent) result, trailingHeaders);
         }
 
         return ResponseConverterFunction.fallthrough();
     }
 
-    private static ServerSentEvent<?> toSse(@Nullable Object content) {
+    private static ServerSentEvent toSse(@Nullable Object content) {
         if (content == null) {
             return EMPTY;
         }
         if (content instanceof ServerSentEvent) {
-            return (ServerSentEvent<?>) content;
+            return (ServerSentEvent) content;
         }
         return ServerSentEvent.ofData(String.valueOf(content));
     }

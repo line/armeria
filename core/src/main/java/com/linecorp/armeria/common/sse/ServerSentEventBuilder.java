@@ -18,14 +18,13 @@ package com.linecorp.armeria.common.sse;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 /**
  * A builder which creates a {@link ServerSentEvent} instance.
  */
-public class ServerSentEventBuilder<T> {
+public class ServerSentEventBuilder {
 
     @Nullable
     private String id;
@@ -36,13 +35,12 @@ public class ServerSentEventBuilder<T> {
     @Nullable
     private String comment;
     @Nullable
-    private T data;
-    private Function<T, String> dataStringifier = String::valueOf;
+    private String data;
 
     /**
      * Sets the specified {@code id}.
      */
-    public ServerSentEventBuilder<T> id(String id) {
+    public ServerSentEventBuilder id(String id) {
         this.id = requireNonNull(id, "id");
         return this;
     }
@@ -50,7 +48,7 @@ public class ServerSentEventBuilder<T> {
     /**
      * Sets the specified {@code event}.
      */
-    public ServerSentEventBuilder<T> event(String event) {
+    public ServerSentEventBuilder event(String event) {
         this.event = requireNonNull(event, "event");
         return this;
     }
@@ -58,7 +56,7 @@ public class ServerSentEventBuilder<T> {
     /**
      * Sets the specified {@code retry}.
      */
-    public ServerSentEventBuilder<T> retry(Duration retry) {
+    public ServerSentEventBuilder retry(Duration retry) {
         this.retry = requireNonNull(retry, "retry");
         return this;
     }
@@ -66,7 +64,7 @@ public class ServerSentEventBuilder<T> {
     /**
      * Sets the specified {@code comment}.
      */
-    public ServerSentEventBuilder<T> comment(String comment) {
+    public ServerSentEventBuilder comment(String comment) {
         this.comment = requireNonNull(comment, "comment");
         return this;
     }
@@ -74,24 +72,15 @@ public class ServerSentEventBuilder<T> {
     /**
      * Sets the specified {@code data}.
      */
-    public ServerSentEventBuilder<T> data(T data) {
+    public ServerSentEventBuilder data(String data) {
         this.data = requireNonNull(data, "data");
-        return this;
-    }
-
-    /**
-     * Sets the specified {@code dataStringifier} which can encode a data object as a {@link String}.
-     * If unspecified, {@link String#valueOf(Object)} will be used by default.
-     */
-    public ServerSentEventBuilder<T> dataStringifier(Function<T, String> dataStringifier) {
-        this.dataStringifier = requireNonNull(dataStringifier, "dataStringifier");
         return this;
     }
 
     /**
      * Creates a new {@link ServerSentEvent} instance.
      */
-    public ServerSentEvent<T> build() {
-        return new DefaultServerSentEvent<>(id, event, retry, comment, data, dataStringifier);
+    public ServerSentEvent build() {
+        return new DefaultServerSentEvent(id, event, retry, comment, data);
     }
 }

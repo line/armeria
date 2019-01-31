@@ -71,7 +71,7 @@ public final class ServerSentEvents {
      *
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromPublisher(Publisher<T> contentPublisher) {
+    public static HttpResponse fromPublisher(Publisher<? extends ServerSentEvent> contentPublisher) {
         return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -81,8 +81,8 @@ public final class ServerSentEvents {
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromPublisher(HttpHeaders headers,
-                                                                            Publisher<T> contentPublisher) {
+    public static HttpResponse fromPublisher(HttpHeaders headers,
+                                             Publisher<? extends ServerSentEvent> contentPublisher) {
         return fromPublisher(headers, contentPublisher, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -93,8 +93,9 @@ public final class ServerSentEvents {
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param trailingHeaders the trailing HTTP headers supposed to send
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromPublisher(
-            HttpHeaders headers, Publisher<T> contentPublisher, HttpHeaders trailingHeaders) {
+    public static HttpResponse fromPublisher(HttpHeaders headers,
+                                             Publisher<? extends ServerSentEvent> contentPublisher,
+                                             HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
         requireNonNull(contentPublisher, "contentPublisher");
         requireNonNull(trailingHeaders, "trailingHeaders");
@@ -108,8 +109,8 @@ public final class ServerSentEvents {
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
-    public static <T> HttpResponse fromPublisher(
-            Publisher<T> contentPublisher, Function<T, ServerSentEvent<?>> converter) {
+    public static <T> HttpResponse fromPublisher(Publisher<T> contentPublisher,
+                                                 Function<? super T, ? extends ServerSentEvent> converter) {
         return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.EMPTY_HEADERS, converter);
     }
 
@@ -120,8 +121,9 @@ public final class ServerSentEvents {
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
-    public static <T> HttpResponse fromPublisher(
-            HttpHeaders headers, Publisher<T> contentPublisher, Function<T, ServerSentEvent<?>> converter) {
+    public static <T> HttpResponse fromPublisher(HttpHeaders headers,
+                                                 Publisher<T> contentPublisher,
+                                                 Function<? super T, ? extends ServerSentEvent> converter) {
         return fromPublisher(headers, contentPublisher, HttpHeaders.EMPTY_HEADERS, converter);
     }
 
@@ -133,9 +135,10 @@ public final class ServerSentEvents {
      * @param trailingHeaders the trailing HTTP headers supposed to send
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
-    public static <T> HttpResponse fromPublisher(
-            HttpHeaders headers, Publisher<T> contentPublisher, HttpHeaders trailingHeaders,
-            Function<T, ServerSentEvent<?>> converter) {
+    public static <T> HttpResponse fromPublisher(HttpHeaders headers,
+                                                 Publisher<T> contentPublisher,
+                                                 HttpHeaders trailingHeaders,
+                                                 Function<? super T, ? extends ServerSentEvent> converter) {
         requireNonNull(headers, "headers");
         requireNonNull(contentPublisher, "contentPublisher");
         requireNonNull(trailingHeaders, "trailingHeaders");
@@ -150,8 +153,8 @@ public final class ServerSentEvents {
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
      * @param executor the executor which iterates the stream
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromStream(Stream<T> contentStream,
-                                                                         Executor executor) {
+    public static HttpResponse fromStream(Stream<? extends ServerSentEvent> contentStream,
+                                          Executor executor) {
         return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS, executor);
     }
 
@@ -162,8 +165,9 @@ public final class ServerSentEvents {
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
      * @param executor the executor which iterates the stream
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromStream(
-            HttpHeaders headers, Stream<T> contentStream, Executor executor) {
+    public static HttpResponse fromStream(HttpHeaders headers,
+                                          Stream<? extends ServerSentEvent> contentStream,
+                                          Executor executor) {
         return fromStream(headers, contentStream, HttpHeaders.EMPTY_HEADERS, executor);
     }
 
@@ -175,8 +179,9 @@ public final class ServerSentEvents {
      * @param trailingHeaders the trailing HTTP headers supposed to send
      * @param executor the executor which iterates the stream
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromStream(
-            HttpHeaders headers, Stream<T> contentStream, HttpHeaders trailingHeaders, Executor executor) {
+    public static HttpResponse fromStream(HttpHeaders headers,
+                                          Stream<? extends ServerSentEvent> contentStream,
+                                          HttpHeaders trailingHeaders, Executor executor) {
         requireNonNull(headers, "headers");
         requireNonNull(contentStream, "contentStream");
         requireNonNull(trailingHeaders, "trailingHeaders");
@@ -193,7 +198,7 @@ public final class ServerSentEvents {
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
     public static <T> HttpResponse fromStream(Stream<T> contentStream, Executor executor,
-                                              Function<T, ServerSentEvent<?>> converter) {
+                                              Function<? super T, ? extends ServerSentEvent> converter) {
         return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS, executor, converter);
     }
 
@@ -206,7 +211,7 @@ public final class ServerSentEvents {
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
     public static <T> HttpResponse fromStream(HttpHeaders headers, Stream<T> contentStream, Executor executor,
-                                              Function<T, ServerSentEvent<?>> converter) {
+                                              Function<? super T, ? extends ServerSentEvent> converter) {
         return fromStream(headers, contentStream, HttpHeaders.EMPTY_HEADERS, executor, converter);
     }
 
@@ -221,7 +226,7 @@ public final class ServerSentEvents {
      */
     public static <T> HttpResponse fromStream(HttpHeaders headers, Stream<T> contentStream,
                                               HttpHeaders trailingHeaders, Executor executor,
-                                              Function<T, ServerSentEvent<?>> converter) {
+                                              Function<? super T, ? extends ServerSentEvent> converter) {
         requireNonNull(headers, "headers");
         requireNonNull(contentStream, "contentStream");
         requireNonNull(trailingHeaders, "trailingHeaders");
@@ -236,7 +241,7 @@ public final class ServerSentEvents {
      *
      * @param content the object supposed to send as contents
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromServerSentEvent(T content) {
+    public static <T extends ServerSentEvent> HttpResponse fromServerSentEvent(T content) {
         return fromServerSentEvent(defaultHttpHeaders, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -246,8 +251,8 @@ public final class ServerSentEvents {
      * @param headers the HTTP headers supposed to send
      * @param content the object supposed to send as contents
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromServerSentEvent(HttpHeaders headers,
-                                                                                  T content) {
+    public static <T extends ServerSentEvent> HttpResponse fromServerSentEvent(HttpHeaders headers,
+                                                                               T content) {
         return fromServerSentEvent(headers, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -258,8 +263,9 @@ public final class ServerSentEvents {
      * @param content the object supposed to send as contents
      * @param trailingHeaders the trailing HTTP headers supposed to send
      */
-    public static <T extends ServerSentEvent<?>> HttpResponse fromServerSentEvent(
-            HttpHeaders headers, T content, HttpHeaders trailingHeaders) {
+    public static <T extends ServerSentEvent> HttpResponse fromServerSentEvent(HttpHeaders headers,
+                                                                               T content,
+                                                                               HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
@@ -273,7 +279,7 @@ public final class ServerSentEvents {
         return ensureContentType(ensureHttpStatus(headers), MediaType.EVENT_STREAM);
     }
 
-    private static <T extends ServerSentEvent<?>> HttpData toHttpData(T sse) {
+    private static <T extends ServerSentEvent> HttpData toHttpData(T sse) {
         final StringBuilder sb = new StringBuilder();
 
         // Write a comment first because a user might want to explain his or her event at first line.
@@ -292,9 +298,9 @@ public final class ServerSentEvents {
             appendField(sb, "event", event, true);
         }
 
-        final String dataText = sse.dataText();
-        if (dataText != null) {
-            appendField(sb, "data", dataText, true);
+        final String data = sse.data();
+        if (data != null) {
+            appendField(sb, "data", data, true);
         }
 
         final Duration retry = sse.retry();
@@ -307,8 +313,9 @@ public final class ServerSentEvents {
         return sseText.isEmpty() ? HttpData.EMPTY_DATA : HttpData.ofUtf8(sseText);
     }
 
-    private static <T> HttpData toHttpData(Function<T, ServerSentEvent<?>> converter, T content) {
-        final ServerSentEvent<?> sse = converter.apply(content);
+    private static <T> HttpData toHttpData(
+            Function<? super T, ? extends ServerSentEvent> converter, T content) {
+        final ServerSentEvent sse = converter.apply(content);
         return sse == null ? HttpData.EMPTY_DATA : toHttpData(sse);
     }
 

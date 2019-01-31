@@ -325,7 +325,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
             sb.annotatedService("/event-stream", new Object() {
                 @Get("/stream")
                 @ProducesEventStream
-                public Stream<ServerSentEvent<?>> stream() {
+                public Stream<ServerSentEvent> stream() {
                     return Stream.of(ServerSentEvent.ofData("foo"),
                                      ServerSentEvent.ofData("bar"),
                                      ServerSentEvent.ofData("baz"),
@@ -334,7 +334,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
                 @Get("/publisher")
                 @ProducesEventStream
-                public Publisher<ServerSentEvent<?>> publisher() {
+                public Publisher<ServerSentEvent> publisher() {
                     return Flux.just(ServerSentEvent.ofData("foo"),
                                      ServerSentEvent.ofData("bar"),
                                      ServerSentEvent.ofData("baz"),

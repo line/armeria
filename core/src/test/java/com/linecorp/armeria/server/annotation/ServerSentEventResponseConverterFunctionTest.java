@@ -72,8 +72,8 @@ public class ServerSentEventResponseConverterFunctionTest {
             }
         };
         final HttpResponse response = doConvert(
-                Flux.just(ServerSentEvent.ofData(ImmutableList.of("foo", "bar"), stringifier),
-                          ServerSentEvent.ofData(ImmutableMap.of("foo", "bar"), stringifier)));
+                Flux.just(ServerSentEvent.ofData(stringifier.apply(ImmutableList.of("foo", "bar"))),
+                          ServerSentEvent.ofData(stringifier.apply(ImmutableMap.of("foo", "bar")))));
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
                     .expectNext(HttpData.ofUtf8("data:[\"foo\",\"bar\"]\n"))
@@ -85,9 +85,9 @@ public class ServerSentEventResponseConverterFunctionTest {
     @Test
     public void escapeLineFeedFromMultilineString() throws Exception {
         final HttpResponse response = doConvert(
-                Mono.just(new ServerSentEventBuilder<>().id("1\n2").event("add\nadd")
-                                                        .comment("additional\ndescription")
-                                                        .data("foo\nbar").build()));
+                Mono.just(new ServerSentEventBuilder().id("1\n2").event("add\nadd")
+                                                      .comment("additional\ndescription")
+                                                      .data("foo\nbar").build()));
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
                     .expectNext(HttpData.ofUtf8(":additional\n:description\nid:1\nid:2\n" +

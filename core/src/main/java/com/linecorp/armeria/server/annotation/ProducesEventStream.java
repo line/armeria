@@ -21,7 +21,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * An alias for {@code @Produces("text/event-stream")}.
+ * An alias for {@code @Produces("text/event-stream")} and
+ * {@code @ResponseConverter(ServerSentEventResponseConverterFunction.class)}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })

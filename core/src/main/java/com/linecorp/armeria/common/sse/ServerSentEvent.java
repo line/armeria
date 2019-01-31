@@ -16,7 +16,6 @@
 package com.linecorp.armeria.common.sse;
 
 import java.time.Duration;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -31,60 +30,51 @@ import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFu
  * If a {@link Publisher} or {@link Stream} produces objects which implement this interface, it can be
  * converted into a text event stream by {@link ServerSentEventResponseConverterFunction}.
  *
- * @param <T> the type of the data
- *
  * @see ProducesEventStream
  * @see ServerSentEventResponseConverterFunction
  */
-public interface ServerSentEvent<T> {
+public interface ServerSentEvent {
 
     /**
      * Creates a new empty {@link ServerSentEvent}.
      */
-    static <T> ServerSentEvent<T> ofEmpty() {
-        return new ServerSentEventBuilder<T>().build();
+    static ServerSentEvent ofEmpty() {
+        return new ServerSentEventBuilder().build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code id}.
      */
-    static <T> ServerSentEvent<T> ofId(String id) {
-        return new ServerSentEventBuilder<T>().id(id).build();
+    static ServerSentEvent ofId(String id) {
+        return new ServerSentEventBuilder().id(id).build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code event}.
      */
-    static <T> ServerSentEvent<T> ofEvent(String event) {
-        return new ServerSentEventBuilder<T>().event(event).build();
+    static ServerSentEvent ofEvent(String event) {
+        return new ServerSentEventBuilder().event(event).build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code retry}.
      */
-    static <T> ServerSentEvent<T> ofRetry(Duration retry) {
-        return new ServerSentEventBuilder<T>().retry(retry).build();
+    static ServerSentEvent ofRetry(Duration retry) {
+        return new ServerSentEventBuilder().retry(retry).build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code comment}.
      */
-    static <T> ServerSentEvent<T> ofComment(String comment) {
-        return new ServerSentEventBuilder<T>().comment(comment).build();
-    }
-
-    /**
-     * Creates a new {@link ServerSentEvent} with the specified {@code data} and {@code stringifier}.
-     */
-    static <T> ServerSentEvent<T> ofData(T data, Function<T, String> stringifier) {
-        return new ServerSentEventBuilder<T>().data(data).dataStringifier(stringifier).build();
+    static ServerSentEvent ofComment(String comment) {
+        return new ServerSentEventBuilder().comment(comment).build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code data}.
      */
-    static <T> ServerSentEvent<T> ofData(T data) {
-        return new ServerSentEventBuilder<T>().data(data).build();
+    static ServerSentEvent ofData(String data) {
+        return new ServerSentEventBuilder().data(data).build();
     }
 
     /**
@@ -115,11 +105,5 @@ public interface ServerSentEvent<T> {
      * Returns a data of this event, if it exists. Otherwise, {@code null} will be returned.
      */
     @Nullable
-    T data();
-
-    /**
-     * Returns a data of this event as a UTF-8 string, if it exists. Otherwise, {@code null} will be returned.
-     */
-    @Nullable
-    String dataText();
+    String data();
 }
