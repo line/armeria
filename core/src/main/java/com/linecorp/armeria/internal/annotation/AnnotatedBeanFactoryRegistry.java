@@ -50,7 +50,6 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
-import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 
 /**
@@ -60,6 +59,7 @@ import com.linecorp.armeria.server.annotation.RequestConverter;
 final class AnnotatedBeanFactoryRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedBeanFactoryRegistry.class);
 
+    // FIXME(trustin): Fix class loader leak. Should use Class as a weak key.
     private static final ConcurrentMap<BeanFactoryId, AnnotatedBeanFactory<?>> factories =
             new MapMaker().makeMap();
     private static final AnnotatedBeanFactory<?> unsupportedBeanFactory;
@@ -322,67 +322,6 @@ final class AnnotatedBeanFactoryRegistry {
                               .add("type", type.getName())
                               .add("pathParams", pathParams)
                               .toString();
-        }
-    }
-
-    static final class AnnotatedBeanFactory<T> {
-
-        private final BeanFactoryId beanFactoryId;
-        private final Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor;
-        private final Map<Field, AnnotatedValueResolver> fields;
-        private final Map<Method, List<AnnotatedValueResolver>> methods;
-
-        private AnnotatedBeanFactory(BeanFactoryId beanFactoryId,
-                                     Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor,
-                                     Map<Method, List<AnnotatedValueResolver>> methods,
-                                     Map<Field, AnnotatedValueResolver> fields) {
-            this.beanFactoryId = requireNonNull(beanFactoryId, "beanFactoryId");
-            this.constructor = simpleImmutableEntry(requireNonNull(constructor, "constructor"));
-            this.fields = ImmutableMap.copyOf(requireNonNull(fields, "fields"));
-            this.methods = ImmutableMap.copyOf(requireNonNull(methods, "methods"));
-        }
-
-        T create(ResolverContext resolverContext) {
-            try {
-                final Object[] constructorArgs = AnnotatedValueResolver.toArguments(
-                        constructor.getValue(), resolverContext);
-                final T instance = constructor.getKey().newInstance(constructorArgs);
-
-                for (final Entry<Method, List<AnnotatedValueResolver>> method : methods.entrySet()) {
-                    final Object[] methodArgs = AnnotatedValueResolver.toArguments(
-                            method.getValue(), resolverContext);
-                    method.getKey().invoke(instance, methodArgs);
-                }
-
-                for (final Entry<Field, AnnotatedValueResolver> field : fields.entrySet()) {
-                    final Object fieldArg = field.getValue().resolve(resolverContext);
-                    field.getKey().set(instance, fieldArg);
-                }
-
-                return instance;
-            } catch (Throwable cause) {
-                throw new IllegalArgumentException(
-                        "cannot instantiate a new object: " + beanFactoryId, cause);
-            }
-        }
-
-        private static <K, V> SimpleImmutableEntry<K, V> simpleImmutableEntry(Entry<K, V> entry) {
-            if (entry instanceof SimpleImmutableEntry) {
-                return (SimpleImmutableEntry<K, V>) entry;
-            }
-            return new SimpleImmutableEntry<>(entry);
-        }
-
-        Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor() {
-            return constructor;
-        }
-
-        Map<Method, List<AnnotatedValueResolver>> methods() {
-            return methods;
-        }
-
-        Map<Field, AnnotatedValueResolver> fields() {
-            return fields;
         }
     }
 }

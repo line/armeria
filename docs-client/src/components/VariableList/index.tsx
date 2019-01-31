@@ -110,6 +110,15 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
     return `${'\xa0'.repeat(indent)}${s}`;
   }
 
+  private static printIfNotUnspecified(s: string): string {
+    const lowerCase = s.toLowerCase();
+    if ('unspecified' === lowerCase) {
+      return '-';
+    }
+
+    return lowerCase;
+  }
+
   constructor(props: FieldInfosProps) {
     super(props);
 
@@ -170,11 +179,19 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
                 {this.props.hasLocation &&
                   variable.location && (
                     <TableCell>
-                      <code>{variable.location.toLowerCase()}</code>
+                      <code>
+                        {FieldInfos.printIfNotUnspecified(
+                          variable.location.toLowerCase(),
+                        )}
+                      </code>
                     </TableCell>
                   )}
                 <TableCell>
-                  <code>{variable.requirement.toLowerCase()}</code>
+                  <code>
+                    {FieldInfos.printIfNotUnspecified(
+                      variable.requirement.toLowerCase(),
+                    )}
+                  </code>
                 </TableCell>
                 <TableCell>
                   <code>

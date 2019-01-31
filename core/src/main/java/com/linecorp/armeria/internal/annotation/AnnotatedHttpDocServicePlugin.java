@@ -24,10 +24,10 @@ import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
 import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
-import static com.linecorp.armeria.server.docs.FieldLocation.DEFAULT;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
+import static com.linecorp.armeria.server.docs.FieldLocation.UNSPECIFIED;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -58,7 +58,6 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.AnnotatedBeanFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
@@ -253,8 +252,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         if (resolver.hasContainer()) {
             final Class<?> containerType = resolver.containerType();
             assert containerType != null;
-            final TypeSignature parameterTypeSignature = toTypeSignature(resolver.elementType()
-            );
+            final TypeSignature parameterTypeSignature = toTypeSignature(resolver.elementType());
             if (List.class.isAssignableFrom(containerType)) {
                 signature = TypeSignature.ofList(parameterTypeSignature);
             } else if (Set.class.isAssignableFrom(containerType)) {
@@ -364,7 +362,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         if (resolver.annotationType() == Header.class) {
             return HEADER;
         }
-        return DEFAULT;
+        return UNSPECIFIED;
     }
 
     @VisibleForTesting

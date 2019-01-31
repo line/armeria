@@ -44,5 +44,5 @@ public enum FieldLocation {
     /**
      * The location of the field is unspecified.
      */
-    DEFAULT
+    UNSPECIFIED
 }

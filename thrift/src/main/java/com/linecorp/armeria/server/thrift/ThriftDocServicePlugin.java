@@ -383,7 +383,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
             case TFieldRequirementType.OPTIONAL:
                 return FieldRequirement.OPTIONAL;
             case TFieldRequirementType.DEFAULT:
-                return FieldRequirement.DEFAULT;
+                // Convert to unspecified for consistency with gRPC and AnnotatedHttpService.
+                return FieldRequirement.UNSPECIFIED;
             default:
                 throw new IllegalArgumentException("unknown requirement type: " + value);
         }

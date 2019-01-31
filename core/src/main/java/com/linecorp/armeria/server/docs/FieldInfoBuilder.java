@@ -35,8 +35,8 @@ public class FieldInfoBuilder {
     private final TypeSignature typeSignature;
     private final List<FieldInfo> childFieldInfos;
 
-    private FieldRequirement requirement = FieldRequirement.DEFAULT;
-    private FieldLocation location = FieldLocation.DEFAULT;
+    private FieldRequirement requirement = FieldRequirement.UNSPECIFIED;
+    private FieldLocation location = FieldLocation.UNSPECIFIED;
     @Nullable
     private String docString;
 

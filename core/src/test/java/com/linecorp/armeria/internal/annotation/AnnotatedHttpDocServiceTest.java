@@ -20,9 +20,11 @@ import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePl
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT64;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.STRING;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePluginTest.compositeBean;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
+import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,6 +41,7 @@ import java.util.stream.Stream;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -53,6 +56,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePluginTest.CompositeBean;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
@@ -88,11 +92,15 @@ public class AnnotatedHttpDocServiceTest {
     private static final HttpHeaders EXAMPLE_HEADERS_SERVICE = HttpHeaders.of(HttpHeaderNames.of("c"), "d");
     private static final HttpHeaders EXAMPLE_HEADERS_METHOD = HttpHeaders.of(HttpHeaderNames.of("e"), "f");
 
+    private static final boolean DEMO_MODE = false;
+
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            //sb.http(8080);
+            if (DEMO_MODE) {
+                sb.http(8080);
+            }
             sb.annotatedService("/service", new MyService());
             sb.serviceUnder("/docs", new DocServiceBuilder()
                     .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
@@ -106,12 +114,10 @@ public class AnnotatedHttpDocServiceTest {
     };
 
     @Test
-    public void jsonSpecification() {
-        /*try {
+    public void jsonSpecification() throws InterruptedException {
+        if (DEMO_MODE) {
             Thread.sleep(Long.MAX_VALUE);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/
+        }
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         addFooMethodInfo(methodInfos);
         addAllMethodsMethodInfos(methodInfos);
@@ -120,6 +126,7 @@ public class AnnotatedHttpDocServiceTest {
         addRegexMethodInfo(methodInfos);
         addPrefixMethodInfo(methodInfos);
         addConsumesMethodInfo(methodInfos);
+        addBeanMethodInfo(methodInfos);
         final Map<Class<?>, String> serviceDescription = ImmutableMap.of(MyService.class, "My service class");
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedHttpDocServicePlugin.generate(
@@ -129,7 +136,7 @@ public class AnnotatedHttpDocServiceTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
         final AggregatedHttpMessage msg = client.get("/docs/specification.json").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(msg.content().toStringUtf8()).isEqualTo(expectedJson);
+        assertThatJson(msg.content().toStringUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
@@ -217,6 +224,16 @@ public class AnnotatedHttpDocServiceTest {
                 "consumes", TypeSignature.ofContainer("BiFunction", TypeSignature.ofBase("JsonNode"),
                                                       TypeSignature.ofUnresolved(""), STRING),
                 ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET, null);
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
+    private static void addBeanMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/bean")
+                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of(compositeBean());
+        final MethodInfo methodInfo = new MethodInfo(
+                "bean", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -316,11 +333,11 @@ public class AnnotatedHttpDocServiceTest {
             };
         }
 
-        /*@Get("/bean")
+        @Get("/bean")
         public HttpResponse bean(CompositeBean compositeBean) throws JsonProcessingException {
             final ObjectMapper mapper = new ObjectMapper();
             return HttpResponse.of(mapper.writeValueAsString(compositeBean));
-        }*/
+        }
     }
 
     private enum MyEnum {

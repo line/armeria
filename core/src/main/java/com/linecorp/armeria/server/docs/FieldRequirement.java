@@ -33,5 +33,5 @@ public enum FieldRequirement {
     /**
      * The requirement level is unspecified and will be handled implicitly by the serialization layer.
      */
-    DEFAULT
+    UNSPECIFIED
 }

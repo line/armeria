@@ -28,6 +28,8 @@ import com.google.common.base.MoreObjects;
 
 /**
  * Metadata about a field of a struct or an exception.
+ *
+ * @see FieldInfoBuilder
  */
 public final class FieldInfo {
 
