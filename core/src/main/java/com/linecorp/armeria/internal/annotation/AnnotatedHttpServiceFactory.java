@@ -27,8 +27,12 @@ import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
 import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
+import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findAll;
+import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findFirst;
+import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findFirstDeclared;
+import static com.linecorp.armeria.internal.annotation.AnnotationUtil.getAllAnnotations;
+import static com.linecorp.armeria.internal.annotation.AnnotationUtil.getAnnotations;
 import static java.util.Objects.requireNonNull;
-import static org.reflections.ReflectionUtils.getAllAnnotations;
 import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.getConstructors;
 import static org.reflections.ReflectionUtils.getMethods;
@@ -42,8 +46,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -53,6 +57,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -74,6 +79,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
+import com.linecorp.armeria.internal.annotation.AnnotationUtil.FindOption;
 import com.linecorp.armeria.server.AbstractPathMapping;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -84,9 +90,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.annotation.ConsumeType;
-import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Consumes;
-import com.linecorp.armeria.server.annotation.ConsumesGroup;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
@@ -95,7 +99,6 @@ import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.ExceptionHandlers;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.Options;
@@ -104,17 +107,13 @@ import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
-import com.linecorp.armeria.server.annotation.ProduceTypes;
 import com.linecorp.armeria.server.annotation.Produces;
-import com.linecorp.armeria.server.annotation.ProducesGroup;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
-import com.linecorp.armeria.server.annotation.RequestConverters;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverters;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.Trace;
 
@@ -241,12 +240,14 @@ public final class AnnotatedHttpServiceFactory {
                                     producibleMediaTypes(method, clazz));
 
         final List<ExceptionHandlerFunction> eh =
-                exceptionHandlers(method, clazz).addAll(baseExceptionHandlers)
-                                                .add(defaultExceptionHandler).build();
+                getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
+                        .addAll(baseExceptionHandlers).add(defaultExceptionHandler).build();
         final List<RequestConverterFunction> req =
-                requestConverters(method, clazz).addAll(baseRequestConverters).build();
+                getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class)
+                        .addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
-                responseConverters(method, clazz).addAll(baseResponseConverters).build();
+                getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
+                        .addAll(baseResponseConverters).build();
 
         List<AnnotatedValueResolver> resolvers;
         try {
@@ -283,7 +284,7 @@ public final class AnnotatedHttpServiceFactory {
                         "They would not be automatically injected: " + missing);
         }
 
-        final Optional<HttpStatus> defaultResponseStatus = findAnnotation(method, StatusCode.class)
+        final Optional<HttpStatus> defaultResponseStatus = findFirst(method, StatusCode.class)
                 .map(code -> {
                     final int statusCode = code.value();
                     checkArgument(statusCode >= 0,
@@ -322,10 +323,12 @@ public final class AnnotatedHttpServiceFactory {
     private static List<Method> requestMappingMethods(Object object) {
         return getAllMethods(object.getClass(), withModifier(Modifier.PUBLIC))
                 .stream()
-                .filter(m -> getAllAnnotations(m).stream()
-                                                 .map(Annotation::annotationType)
-                                                 .anyMatch(a -> a == Path.class ||
-                                                                HTTP_METHOD_MAP.containsKey(a)))
+                // Lookup super classes just in case if the object is a proxy.
+                .filter(m -> getAnnotations(m, FindOption.LOOKUP_SUPER_CLASSES)
+                        .stream()
+                        .map(Annotation::annotationType)
+                        .anyMatch(a -> a == Path.class ||
+                                       HTTP_METHOD_MAP.containsKey(a)))
                 .sorted(Comparator.comparingInt(AnnotatedHttpServiceFactory::order))
                 .collect(toImmutableList());
     }
@@ -335,7 +338,7 @@ public final class AnnotatedHttpServiceFactory {
      * annotation. 0 would be returned if there is no specified {@link Order} annotation.
      */
     private static int order(Method method) {
-        final Order order = findAnnotation(method, Order.class).orElse(null);
+        final Order order = findFirst(method, Order.class).orElse(null);
         return order != null ? order.value() : 0;
     }
 
@@ -353,7 +356,7 @@ public final class AnnotatedHttpServiceFactory {
      * @see Trace
      */
     private static Set<Annotation> httpMethodAnnotations(Method method) {
-        return getAllAnnotations(method)
+        return getAnnotations(method, FindOption.LOOKUP_SUPER_CLASSES)
                 .stream()
                 .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
                 .collect(Collectors.toSet());
@@ -382,81 +385,57 @@ public final class AnnotatedHttpServiceFactory {
      * Returns the list of {@link MediaType}s specified by {@link Consumes} annotation.
      */
     private static List<MediaType> consumableMediaTypes(Method method, Class<?> clazz) {
-        final List<MediaType> mediaTypes = consumableMediaTypes(method);
-        return mediaTypes.isEmpty() ? consumableMediaTypes(clazz) : mediaTypes;
-    }
+        List<Consumes> consumes = findAll(method, Consumes.class);
+        List<ConsumeType> consumeTypes = findAll(method, ConsumeType.class);
 
-    private static List<MediaType> consumableMediaTypes(AnnotatedElement element) {
-        final List<MediaType> mediaTypes = new ArrayList<>();
-
-        for (final Annotation annotation : getAllAnnotations(element)) {
-            if (annotation instanceof ConsumesGroup) {
-                Arrays.stream(((ConsumesGroup) annotation).value())
-                      .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
-            } else if (annotation instanceof Consumes) {
-                addConsumableMediaType(mediaTypes, MediaType.parse(((Consumes) annotation).value()));
-            } else if (annotation instanceof ConsumeTypes) {
-                Arrays.stream(((ConsumeTypes) annotation).value())
-                      .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
-            } else if (annotation instanceof ConsumeType) {
-                addConsumableMediaType(mediaTypes, MediaType.parse(((ConsumeType) annotation).value()));
-            } else {
-                findAnnotations(annotation.annotationType(), Consumes.class)
-                        .forEach(e -> addConsumableMediaType(mediaTypes, MediaType.parse(e.value())));
-            }
+        if (consumes.isEmpty() && consumeTypes.isEmpty()) {
+            consumes = findAll(clazz, Consumes.class);
+            consumeTypes = findAll(clazz, ConsumeType.class);
         }
-        return mediaTypes;
-    }
 
-    private static void addConsumableMediaType(List<MediaType> mediaTypes, MediaType newMediaType) {
-        addMediaType(mediaTypes, newMediaType, Consumes.class, true);
+        final List<MediaType> types =
+                Stream.concat(consumes.stream().map(Consumes::value),
+                              consumeTypes.stream().map(ConsumeType::value))
+                      .map(MediaType::parse)
+                      .collect(toImmutableList());
+        return ensureUniqueTypes(types, Consumes.class);
     }
 
     /**
      * Returns the list of {@link MediaType}s specified by {@link Produces} annotation.
      */
     private static List<MediaType> producibleMediaTypes(Method method, Class<?> clazz) {
-        final List<MediaType> mediaTypes = producibleMediaTypes(method);
-        return mediaTypes.isEmpty() ? producibleMediaTypes(clazz) : mediaTypes;
+        List<Produces> produces = findAll(method, Produces.class);
+        List<ProduceType> produceTypes = findAll(method, ProduceType.class);
+
+        if (produces.isEmpty() && produceTypes.isEmpty()) {
+            produces = findAll(clazz, Produces.class);
+            produceTypes = findAll(clazz, ProduceType.class);
+        }
+
+        final List<MediaType> types =
+                Stream.concat(produces.stream().map(Produces::value),
+                              produceTypes.stream().map(ProduceType::value))
+                      .map(MediaType::parse)
+                      .peek(type -> {
+                          if (type.hasWildcard()) {
+                              throw new IllegalArgumentException(
+                                      "Producible media types must not have a wildcard: " + type);
+                          }
+                      })
+                      .collect(toImmutableList());
+        return ensureUniqueTypes(types, Produces.class);
     }
 
-    private static List<MediaType> producibleMediaTypes(AnnotatedElement element) {
-        final List<MediaType> mediaTypes = new ArrayList<>();
-
-        for (final Annotation annotation : getAllAnnotations(element)) {
-            if (annotation instanceof ProducesGroup) {
-                Arrays.stream(((ProducesGroup) annotation).value())
-                      .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
-            } else if (annotation instanceof Produces) {
-                addProducibleMediaType(mediaTypes, MediaType.parse(((Produces) annotation).value()));
-            } else if (annotation instanceof ProduceTypes) {
-                Arrays.stream(((ProduceTypes) annotation).value())
-                      .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
-            } else if (annotation instanceof ProduceType) {
-                addProducibleMediaType(mediaTypes, MediaType.parse(((ProduceType) annotation).value()));
-            } else {
-                findAnnotations(annotation.annotationType(), Produces.class)
-                        .forEach(e -> addProducibleMediaType(mediaTypes, MediaType.parse(e.value())));
+    private static List<MediaType> ensureUniqueTypes(List<MediaType> types, Class<?> annotationClass) {
+        final Set<MediaType> set = new HashSet<>();
+        for (final MediaType type : types) {
+            if (!set.add(type)) {
+                throw new IllegalArgumentException(
+                        "Duplicated media type for @" + annotationClass.getSimpleName() + ": " + type);
             }
         }
-        return mediaTypes;
-    }
-
-    private static void addProducibleMediaType(List<MediaType> mediaTypes, MediaType newMediaType) {
-        addMediaType(mediaTypes, newMediaType, Produces.class, false);
-    }
-
-    private static void addMediaType(List<MediaType> mediaTypes, MediaType newMediaType,
-                                     Class<?> clazz, boolean allowWildcard) {
-        if (!allowWildcard && newMediaType.hasWildcard()) {
-            throw new IllegalArgumentException('@' + clazz.getSimpleName() + " must not have a wildcard: " +
-                                               newMediaType);
-        }
-        if (mediaTypes.stream().anyMatch(e -> e.equals(newMediaType))) {
-            throw new IllegalArgumentException("Duplicated media type for @" + clazz.getSimpleName() + ": " +
-                                               newMediaType);
-        }
-        mediaTypes.add(newMediaType);
+        return types;
     }
 
     /**
@@ -515,8 +494,8 @@ public final class AnnotatedHttpServiceFactory {
      * HTTP method annotations such as {@link Get} and {@link Post}.
      */
     private static String findPattern(Method method, Set<Annotation> methodAnnotations) {
-        String pattern = findAnnotation(method, Path.class).map(Path::value)
-                                                           .orElse(null);
+        String pattern = findFirst(method, Path.class).map(Path::value)
+                                                      .orElse(null);
         for (Annotation a : methodAnnotations) {
             final String p = (String) invokeValueMethod(a);
             if (DefaultValues.isUnspecified(p)) {
@@ -563,8 +542,8 @@ public final class AnnotatedHttpServiceFactory {
         final List<DecoratorAndOrder> decorators = new ArrayList<>();
 
         // Class-level decorators are applied before method-level decorators.
-        collectDecorators(decorators, clazz.getAnnotations());
-        collectDecorators(decorators, method.getAnnotations());
+        collectDecorators(decorators, getAllAnnotations(clazz));
+        collectDecorators(decorators, getAllAnnotations(method));
 
         // Sort decorators by "order" attribute values.
         decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
@@ -576,8 +555,8 @@ public final class AnnotatedHttpServiceFactory {
      * Adds decorators to the specified {@code list}. Decorators which are annotated with {@link Decorator}
      * and user-defined decorators will be collected.
      */
-    private static void collectDecorators(List<DecoratorAndOrder> list, Annotation[] annotations) {
-        if (annotations.length == 0) {
+    private static void collectDecorators(List<DecoratorAndOrder> list, List<Annotation> annotations) {
+        if (annotations.isEmpty()) {
             return;
         }
 
@@ -635,7 +614,7 @@ public final class AnnotatedHttpServiceFactory {
     private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
         // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
         final DecoratorFactory d =
-                findAnnotation(annotation.annotationType(), DecoratorFactory.class).orElse(null);
+                findFirstDeclared(annotation.annotationType(), DecoratorFactory.class).orElse(null);
         if (d == null) {
             return null;
         }
@@ -673,76 +652,17 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns an exception handler list which is specified by {@link ExceptionHandler} annotations.
+     * Returns a {@link Builder} which has the instances specified by the annotations of the
+     * {@code annotationType}. The annotations of the specified {@code method} and {@code clazz} will be
+     * collected respectively.
      */
-    private static Builder<ExceptionHandlerFunction> exceptionHandlers(Method targetMethod,
-                                                                       Class<?> targetClass) {
-        return annotationValues(targetMethod, targetClass, ExceptionHandler.class, ExceptionHandlers.class,
-                                ExceptionHandlerFunction.class);
-    }
-
-    /**
-     * Returns a request converter list which is specified by {@link RequestConverter} annotations.
-     */
-    private static Builder<RequestConverterFunction> requestConverters(Method targetMethod,
-                                                                       Class<?> targetClass) {
-        return annotationValues(targetMethod, targetClass, RequestConverter.class, RequestConverters.class,
-                                RequestConverterFunction.class);
-    }
-
-    /**
-     * Returns a response converter list which is specified by {@link ResponseConverter} annotations.
-     */
-    private static Builder<ResponseConverterFunction> responseConverters(Method targetMethod,
-                                                                         Class<?> targetClass) {
-        return annotationValues(targetMethod, targetClass, ResponseConverter.class, ResponseConverters.class,
-                                ResponseConverterFunction.class);
-    }
-
-    /**
-     * Returns an immutable list builder of objects which are specified as the {@code value} of annotation
-     * {@code T}.
-     */
-    private static <T extends Annotation, R> Builder<R> annotationValues(
-            Method targetMethod, Class<?> targetClass, Class<T> annotationClass, Class<?> repeatableClass,
-            Class<R> expectedType) {
-
-        requireNonNull(annotationClass, "annotationClass");
-        requireNonNull(targetMethod, "targetMethod");
-        requireNonNull(targetClass, "targetClass");
-
+    private static <T extends Annotation, R> Builder<R> getAnnotatedInstances(
+            AnnotatedElement method, AnnotatedElement clazz, Class<T> annotationType, Class<R> resultType) {
         final Builder<R> builder = new Builder<>();
-        annotationValues0(builder, targetMethod, annotationClass, repeatableClass, expectedType);
-        getClasses(targetClass, new Builder<>()).forEach(
-                target -> annotationValues0(builder, target, annotationClass, repeatableClass, expectedType));
+        Stream.concat(findAll(method, annotationType).stream(),
+                      findAll(clazz, annotationType).stream())
+              .forEach(annotation -> builder.add(getInstance(annotation, resultType)));
         return builder;
-    }
-
-    private static <T extends Annotation, R> void annotationValues0(
-            Builder<R> builder, AnnotatedElement target, Class<T> annotationClass, Class<?> repeatableClass,
-            Class<R> expectedType) {
-        for (final Annotation annotation : target.getAnnotations()) {
-            final Class<? extends Annotation> type = annotation.annotationType();
-            if (type == annotationClass) {
-                builder.add(getInstance(annotation, expectedType));
-            } else if (type == repeatableClass) {
-                @SuppressWarnings("unchecked")
-                final T[] annotations = (T[]) invokeValueMethod(annotation);
-                Arrays.stream(annotations).forEach(a -> builder.add(getInstance(a, expectedType)));
-            }
-        }
-    }
-
-    private static List<Class<?>> getClasses(Class<?> clazz, Builder<Class<?>> builder) {
-        final Class<?> superClass = clazz.getSuperclass();
-        if (superClass == null || superClass == Object.class) {
-            builder.add(clazz);
-            return builder.build();
-        }
-
-        // Subclass first.
-        builder.add(clazz);
-        return getClasses(superClass, builder);
     }
 
     /**
@@ -755,12 +675,7 @@ public final class AnnotatedHttpServiceFactory {
             final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
             return expectedType.cast(instanceCache.computeIfAbsent(clazz, type -> {
                 try {
-
-                    final Constructor<? extends T> constructor =
-                            Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
-                    assert constructor != null : "No default constructor is found from " + clazz.getName();
-                    constructor.setAccessible(true);
-                    return constructor.newInstance();
+                    return getInstance0(clazz);
                 } catch (Exception e) {
                     throw new IllegalStateException(
                             "A class specified in @" + annotation.getClass().getSimpleName() +
@@ -777,20 +692,26 @@ public final class AnnotatedHttpServiceFactory {
     /**
      * Returns a cached instance of the specified {@link Class}.
      */
-    @SuppressWarnings("unchecked")
     static <T> T getInstance(Class<T> clazz) {
-        return (T) instanceCache.computeIfAbsent(clazz, type -> {
+        @SuppressWarnings("unchecked")
+        final T casted = (T) instanceCache.computeIfAbsent(clazz, type -> {
             try {
-                final Constructor<? extends T> constructor =
-                        Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
-                assert constructor != null : "No default constructor is found from " + clazz.getName();
-                constructor.setAccessible(true);
-                return constructor.newInstance();
+                return getInstance0(clazz);
             } catch (Exception e) {
                 throw new IllegalStateException("A class must have an accessible default constructor: " +
                                                 clazz.getName(), e);
             }
         });
+        return casted;
+    }
+
+    private static <T> T getInstance0(Class<? extends T> clazz) throws Exception {
+        @SuppressWarnings("unchecked")
+        final Constructor<? extends T> constructor =
+                Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
+        assert constructor != null : "No default constructor is found from " + clazz.getName();
+        constructor.setAccessible(true);
+        return constructor.newInstance();
     }
 
     /**
@@ -813,7 +734,7 @@ public final class AnnotatedHttpServiceFactory {
     @Nullable
     static String findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
-        final Optional<Description> description = findAnnotation(annotatedElement, Description.class);
+        final Optional<Description> description = findFirst(annotatedElement, Description.class);
         if (description.isPresent()) {
             final String value = description.get().value();
             if (DefaultValues.isSpecified(value)) {
@@ -822,28 +743,6 @@ public final class AnnotatedHttpServiceFactory {
             }
         }
         return null;
-    }
-
-    /**
-     * Returns an {@link Annotation} of the specified {@link Class}.
-     */
-    private static <T extends Annotation> Optional<T> findAnnotation(AnnotatedElement element,
-                                                                     Class<T> target) {
-        final List<T> list = findAnnotations(element, target);
-        return list.isEmpty() ? Optional.empty()
-                              : Optional.of(list.get(0));
-    }
-
-    /**
-     * Returns {@link Annotation}s of the specified {@link Class}.
-     */
-    private static <T extends Annotation> List<T> findAnnotations(AnnotatedElement element,
-                                                                  Class<T> target) {
-        return getAllAnnotations(element)
-                .stream()
-                .filter(annotation -> annotation.annotationType() == target)
-                .map(target::cast)
-                .collect(toImmutableList());
     }
 
     private AnnotatedHttpServiceFactory() {}

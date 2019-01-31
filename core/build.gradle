@@ -1,4 +1,7 @@
 dependencies {
+    // cglib
+    testCompile 'cglib:cglib'
+
     // Caffeine
     compile 'com.github.ben-manes.caffeine:caffeine'
 
