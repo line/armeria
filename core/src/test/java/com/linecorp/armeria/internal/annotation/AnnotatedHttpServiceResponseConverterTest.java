@@ -66,7 +66,6 @@ import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
-import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -326,7 +325,6 @@ public class AnnotatedHttpServiceResponseConverterTest {
             sb.annotatedService("/event-stream", new Object() {
                 @Get("/stream")
                 @ProducesEventStream
-                @ResponseConverter(ServerSentEventResponseConverterFunction.class)
                 public Stream<ServerSentEvent<?>> stream() {
                     return Stream.of(ServerSentEvent.ofData("foo"),
                                      ServerSentEvent.ofData("bar"),
@@ -336,7 +334,6 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
                 @Get("/publisher")
                 @ProducesEventStream
-                @ResponseConverter(ServerSentEventResponseConverterFunction.class)
                 public Publisher<ServerSentEvent<?>> publisher() {
                     return Flux.just(ServerSentEvent.ofData("foo"),
                                      ServerSentEvent.ofData("bar"),

@@ -26,5 +26,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Produces("text/event-stream")
+@ResponseConverter(ServerSentEventResponseConverterFunction.class)
 public @interface ProducesEventStream {
 }
