@@ -43,6 +43,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.annotation.AdditionalHeader;
+import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -84,6 +86,10 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @MyDecorator3
     @Order  // Just checking whether @Order annotation can be present as a meta-annotation.
     @StatusCode(201)
+    @AdditionalHeader(name = "x-foo", value = "foo")
+    @AdditionalHeader(name = "x-bar", value = "bar")
+    @AdditionalTrailer(name = "x-baz", value = "baz")
+    @AdditionalTrailer(name = "x-qux", value = "qux")
     @Retention(RetentionPolicy.RUNTIME)
     @interface MyPostServiceSpecifications {}
 
@@ -96,6 +102,8 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Decorator(MyDecorator1.class)
     @Decorator(MyDecorator2.class)
     @MyDecorator3
+    @AdditionalHeader(name = "x-foo", value = "foo")
+    @AdditionalTrailer(name = "x-bar", value = "bar")
     @Retention(RetentionPolicy.RUNTIME)
     @interface MyGetServiceSpecifications {}
 
@@ -233,8 +241,12 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
                           .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
         assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
+        assertThat(msg.headers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
         assertThat(msg.content().toStringUtf8())
                 .isEqualTo("Hello, Armeria (decorated-1) (decorated-2) (decorated-3)!");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
     }
 
     @Test
@@ -249,8 +261,12 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
                           .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
         assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
+        assertThat(msg.headers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
         assertThat(msg.content().toStringUtf8())
                 .isEqualTo("Hello, Armeria (decorated-1) (decorated-2) (decorated-3)!");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
     }
 
     @Test
@@ -258,8 +274,12 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         final AggregatedHttpMessage msg =
                 HttpClient.of(rule.uri("/")).get("/exception1").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
+        // the request is not succeeded.
+        assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
         assertThat(msg.content().toStringUtf8())
                 .isEqualTo("Cause:" + IllegalArgumentException.class.getSimpleName());
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
     }
 
     @Test
@@ -267,7 +287,11 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         final AggregatedHttpMessage msg =
                 HttpClient.of(rule.uri("/")).get("/exception2").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
+        // the request is not succeeded.
+        assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
         assertThat(msg.content().toStringUtf8())
                 .isEqualTo("Cause:" + IllegalStateException.class.getSimpleName());
+        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
     }
 }
