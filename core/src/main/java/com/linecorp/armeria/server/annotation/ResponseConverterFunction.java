@@ -41,7 +41,7 @@ public interface ResponseConverterFunction {
      * Calls {@link ResponseConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
      * this converter cannot convert the {@code result} to the {@link HttpResponse}.
      *
-     * @param headers The basic HTTP headers that you might want to use to create the {@link HttpResponse}.
+     * @param headers The HTTP headers that you might want to use to create the {@link HttpResponse}.
      *                The status of headers is {@link HttpStatus#OK} by default or
      *                {@link HttpStatus#NO_CONTENT} if the annotated method returns {@code void},
      *                unless you specify it with {@link StatusCode} on the method.
@@ -54,8 +54,7 @@ public interface ResponseConverterFunction {
      *                {@link ServiceRequestContext#addAdditionalResponseHeader(AsciiString, String)}
      *                and {@link AdditionalHeader} are not included in this headers.
      * @param result The result of the service method.
-     * @param trailingHeaders The basic HTTP trailers that you might want to use to create the
-     *                        {@link HttpResponse}.
+     * @param trailingHeaders The HTTP trailers that you might want to use to create the {@link HttpResponse}.
      *                        If the annotated method returns {@link HttpResult}, this trailers is the same
      *                        trailers from {@link HttpResult#trailingHeaders()}.
      *                        The trailers could be immutable, so please call {@link HttpHeaders#toMutable()}.

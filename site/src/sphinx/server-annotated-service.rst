@@ -1272,7 +1272,7 @@ what's specified at the class level if it has the same name, e.g.
 In this case, the values of the HTTP header named ``custom-header`` and the HTTP trailer named ``custom-trailer`` will be ``custom-overwritten``, not ``custom-value``.
 
 Note that the trailers will not be injected into the responses with the following HTTP status code,
-because they do always have an empty content.
+because they always have an empty content.
 
 +--------------+----------------+
 | Status code  | Description    |

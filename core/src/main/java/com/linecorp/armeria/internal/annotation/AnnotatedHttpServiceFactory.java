@@ -41,7 +41,6 @@ import static org.reflections.ReflectionUtils.withName;
 import static org.reflections.ReflectionUtils.withParametersCount;
 
 import java.lang.annotation.Annotation;
-import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -228,14 +227,6 @@ public final class AnnotatedHttpServiceFactory {
             return returnType == Void.class ||
                    returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
         });
-    }
-
-    private static <T extends Annotation> Optional<Class<? extends Annotation>> getRepeatable(Class<T> cls) {
-        final Optional<Repeatable> repeatable = findFirst(cls, Repeatable.class);
-        if (!repeatable.isPresent()) {
-            return Optional.empty();
-        }
-        return Optional.of(repeatable.get().value());
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeaders headers,
