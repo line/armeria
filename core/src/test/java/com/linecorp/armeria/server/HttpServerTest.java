@@ -778,7 +778,7 @@ public class HttpServerTest {
             assertThat(new String(ByteStreams.toByteArray(in)))
                     .isEqualTo(Strings.repeat("HTTP/1.1 100 Continue\r\n\r\n" +
                                               "HTTP/1.1 200 OK\r\n" +
-                                              "transfer-encoding: chunked\r\n\r\n0\r\n\r\n", 4));
+                                              "content-length: 0\r\n\r\n", 4));
         }
     }
 

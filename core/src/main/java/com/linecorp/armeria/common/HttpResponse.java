@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -216,10 +216,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
 
-        final HttpHeaders headers =
-                HttpHeaders.of(status)
-                           .contentType(mediaType)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+        final HttpHeaders headers = HttpHeaders.of(status).contentType(mediaType);
         return of(headers, content, trailingHeaders);
     }
 
@@ -255,20 +252,21 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             throw new IllegalStateException("not a response (missing :status)");
         }
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+        final HttpHeaders newHeaders = setOrRemoveContentLength(headers, content, trailingHeaders);
+        if (content.isEmpty() && trailingHeaders.isEmpty()) {
             ReferenceCountUtil.safeRelease(content);
-            return new OneElementFixedHttpResponse(headers);
-        } else if (!content.isEmpty()) {
-            if (trailingHeaders.isEmpty()) {
-                return new TwoElementFixedHttpResponse(headers, content);
-            } else {
-                return new RegularFixedHttpResponse(headers, content, trailingHeaders);
-            }
-        } else if (!trailingHeaders.isEmpty()) {
-            return new TwoElementFixedHttpResponse(headers, trailingHeaders);
-        } else {
-            return new OneElementFixedHttpResponse(headers);
+            return new OneElementFixedHttpResponse(newHeaders);
         }
+
+        if (!content.isEmpty()) {
+            if (trailingHeaders.isEmpty()) {
+                return new TwoElementFixedHttpResponse(newHeaders, content);
+            } else {
+                return new RegularFixedHttpResponse(newHeaders, content, trailingHeaders);
+            }
+        }
+
+        return new TwoElementFixedHttpResponse(newHeaders, trailingHeaders);
     }
 
     /**

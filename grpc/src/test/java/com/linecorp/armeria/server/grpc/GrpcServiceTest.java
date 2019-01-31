@@ -50,7 +50,8 @@ public class GrpcServiceTest {
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 39),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
 
@@ -63,7 +64,8 @@ public class GrpcServiceTest {
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 39),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
 
@@ -79,7 +81,8 @@ public class GrpcServiceTest {
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.BAD_REQUEST)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 13),
                 HttpData.ofUtf8("Invalid path.")));
     }
 
@@ -99,7 +102,7 @@ public class GrpcServiceTest {
                            .set(HttpHeaderNames.of("grpc-status"), "12")
                            .set(HttpHeaderNames.of("grpc-message"),
                                 "Method not found: grpc.testing.TestService/FooCall")
-                           .set(HttpHeaderNames.CONTENT_LENGTH, "0"),
+                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 0),
                 HttpData.EMPTY_DATA));
     }
 

@@ -200,7 +200,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                     Unpooled.EMPTY_BUFFER, false);
 
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
-            convert(streamId, headers, outHeaders, false);
+            convert(streamId, headers, outHeaders, false, false);
 
             if (ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
                 outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
@@ -215,7 +215,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         } else {
             res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
             // Perform conversion.
-            convert(streamId, headers, res.headers(), false);
+            convert(streamId, headers, res.headers(), false, false);
             setTransferEncoding(res);
         }
 
@@ -239,7 +239,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                 io.netty.handler.codec.http.HttpMethod.valueOf(method.name()),
                 path, false);
 
-        convert(streamId, headers, req.headers(), false);
+        convert(streamId, headers, req.headers(), false, true);
 
         if (endStream) {
             req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -274,12 +274,12 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         return req;
     }
 
-    private void convert(
-            int streamId, HttpHeaders inHeaders,
-            io.netty.handler.codec.http.HttpHeaders outHeaders, boolean trailer) throws Http2Exception {
+    private void convert(int streamId, HttpHeaders inHeaders,
+                         io.netty.handler.codec.http.HttpHeaders outHeaders, boolean trailer,
+                         boolean isRequest) throws Http2Exception {
 
         ArmeriaHttpUtil.toNettyHttp1(
-                streamId, inHeaders, outHeaders, HttpVersion.HTTP_1_1, trailer, false);
+                streamId, inHeaders, outHeaders, HttpVersion.HTTP_1_1, trailer, isRequest);
 
         outHeaders.remove(ExtensionHeaderNames.STREAM_ID.text());
         if (server) {
@@ -295,7 +295,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             lastContent = LastHttpContent.EMPTY_LAST_CONTENT;
         } else {
             lastContent = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, false);
-            convert(streamId, headers, lastContent.trailingHeaders(), true);
+            convert(streamId, headers, lastContent.trailingHeaders(), true, false);
         }
         return lastContent;
     }

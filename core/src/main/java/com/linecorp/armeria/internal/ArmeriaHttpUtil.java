@@ -120,6 +120,11 @@ public final class ArmeriaHttpUtil {
      */
     private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_BLACKLIST = new CharSequenceMap();
 
+    /**
+     * The set of headers that must not be directly copied when converting trailing headers.
+     */
+    private static final CharSequenceMap HTTP_TRAILER_BLACKLIST = new CharSequenceMap();
+
     static {
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
         @SuppressWarnings("deprecation")
@@ -135,16 +140,54 @@ public final class ArmeriaHttpUtil {
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
 
+        // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.AUTHORITY, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.METHOD, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.PATH, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.SCHEME, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.STATUS, EMPTY_STRING);
+
+        // https://tools.ietf.org/html/rfc7540#section-8.1
+        // The "chunked" transfer encoding defined in Section 4.1 of [RFC7230] MUST NOT be used in HTTP/2.
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.TRAILER, EMPTY_STRING);
+
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
+
+        // https://tools.ietf.org/html/rfc7230#section-4.1.2
+        // https://tools.ietf.org/html/rfc7540#section-8.1
+        // A sender MUST NOT generate a trailer that contains a field necessary for message framing:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_LENGTH, EMPTY_STRING);
+
+        // for request modifiers:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CACHE_CONTROL, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.EXPECT, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.HOST, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.MAX_FORWARDS, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PRAGMA, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.RANGE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TE, EMPTY_STRING);
+
+        // for authentication:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.WWW_AUTHENTICATE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.AUTHORIZATION, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PROXY_AUTHENTICATE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PROXY_AUTHORIZATION, EMPTY_STRING);
+
+        // for response control data:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.DATE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.LOCATION, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.RETRY_AFTER, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.VARY, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.WARNING, EMPTY_STRING);
+
+        // or for determining how to process the payload:
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_ENCODING, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_TYPE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_RANGE, EMPTY_STRING);
+        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TRAILER, EMPTY_STRING);
     }
 
     /**
@@ -583,12 +626,24 @@ public final class ArmeriaHttpUtil {
     /**
      * Converts the specified Armeria HTTP/2 headers into Netty HTTP/2 headers.
      */
-    public static Http2Headers toNettyHttp2(HttpHeaders in) {
+    public static Http2Headers toNettyHttp2(HttpHeaders in, boolean server) {
         final Http2Headers out = new DefaultHttp2Headers(false, in.size());
-        out.set(in);
-        out.remove(HttpHeaderNames.CONNECTION);
-        out.remove(HttpHeaderNames.TRANSFER_ENCODING);
-        out.remove(HttpHeaderNames.TRAILER);
+
+        // Trailing headers if it does not have :status.
+        if (server && in.status() == null) {
+            for (Entry<AsciiString, String> entry : in) {
+                final AsciiString name = entry.getKey();
+                final String value = entry.getValue();
+                if (name.isEmpty() || HTTP_TRAILER_BLACKLIST.contains(name)) {
+                    continue;
+                }
+                out.add(name, value);
+            }
+        } else {
+            out.set(in);
+            out.remove(HttpHeaderNames.CONNECTION);
+            out.remove(HttpHeaderNames.TRANSFER_ENCODING);
+        }
 
         if (!out.contains(HttpHeaderNames.COOKIE)) {
             return out;
@@ -636,8 +691,11 @@ public final class ArmeriaHttpUtil {
                     continue;
                 }
 
-                // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
                 if (name.isEmpty() || HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
+                    continue;
+                }
+
+                if (isTrailer && HTTP_TRAILER_BLACKLIST.contains(name)) {
                     continue;
                 }
 
@@ -663,6 +721,74 @@ public final class ArmeriaHttpUtil {
         if (!isTrailer) {
             HttpUtil.setKeepAlive(outputHeaders, httpVersion, true);
         }
+    }
+
+    /**
+     * Returns an {@link HttpHeaders} whose {@link HttpHeaderNames#CONTENT_LENGTH} is added or removed
+     * according to the status of the specified {@code headers}, {@code content} and {@code trailingHeaders}.
+     * The {@link HttpHeaderNames#CONTENT_LENGTH} is removed when:
+     * <ul>
+     *   <li>the status of the specified {@code headers} is one of informational headers,
+     *   {@link HttpStatus#NO_CONTENT} or {@link HttpStatus#RESET_CONTENT}</li>
+     *   <li>the trailing headers exists</li>
+     * </ul>
+     * The {@link HttpHeaderNames#CONTENT_LENGTH} is added when the state of the specified {@code headers}
+     * does not meet the conditions above and {@link HttpHeaderNames#CONTENT_LENGTH} is not present
+     * regardless of the fact that the content is empty or not.
+     *
+     * @throws IllegalArgumentException if the specified {@code content} or {@code trailingHeaders} are
+     *                                  non-empty when the content is always empty
+     */
+    public static HttpHeaders setOrRemoveContentLength(HttpHeaders headers, HttpData content,
+                                                       HttpHeaders trailingHeaders) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
+
+        final HttpStatus status = headers.status();
+        assert status != null;
+
+        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+            if (status != HttpStatus.NOT_MODIFIED) {
+                if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                    final HttpHeaders mutable = headers.toMutable();
+                    mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
+                    return mutable.asImmutable();
+                }
+            } else {
+                // 304 response can have the "content-length" header when it is a response to a conditional
+                // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
+            }
+
+            return headers.asImmutable();
+        }
+
+        if (!trailingHeaders.isEmpty()) {
+            // Some of the client implementations such as "curl" ignores trailing headers if
+            // the "content-length" header is present. We should not set "content-length" header when trailing
+            // headers exists so that those clients can receive the trailing headers.
+            // The response is sent using chunked transfer encoding in HTTP/1 or a DATA frame payload
+            // in HTTP/2, so it's no worry.
+            if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                final HttpHeaders mutable = headers.toMutable();
+                mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
+                return mutable.asImmutable();
+            }
+
+            return headers.asImmutable();
+        }
+
+        if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
+            final HttpHeaders mutable = headers.toMutable();
+            mutable.setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+            return mutable.asImmutable();
+        } else {
+            // The header contains "content-length" header and the content is empty.
+            // Do not overwrite the header because a response to a HEAD request
+            // will have no content even if it has non-zero content-length header.
+        }
+
+        return headers.asImmutable();
     }
 
     private static String convertHeaderValue(AsciiString name, CharSequence value) {

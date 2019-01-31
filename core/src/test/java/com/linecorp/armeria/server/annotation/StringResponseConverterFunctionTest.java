@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -45,7 +46,8 @@ public class StringResponseConverterFunctionTest {
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
 
     private static final HttpHeaders PLAIN_TEXT_HEADERS =
-            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8);
+            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8)
+                       .addInt(HttpHeaderNames.CONTENT_LENGTH, 6);
     private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.EMPTY_HEADERS;
 
     @BeforeClass
@@ -71,7 +73,8 @@ public class StringResponseConverterFunctionTest {
     public void withoutContentType() throws Exception {
         StepVerifier.create(function.convertResponse(ctx, HttpHeaders.of(HttpStatus.OK),
                                                      "foo", DEFAULT_TRAILING_HEADERS))
-                    .expectNext(PLAIN_TEXT_HEADERS)
+                    .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                           .addInt(HttpHeaderNames.CONTENT_LENGTH, 3))
                     .expectNext(HttpData.ofUtf8("foo"))
                     .expectComplete()
                     .verify();

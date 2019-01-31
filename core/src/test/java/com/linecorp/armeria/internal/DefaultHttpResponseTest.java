@@ -125,8 +125,7 @@ public class DefaultHttpResponseTest {
         // Non-informational header
         assertThat(aggregated.headers()).isEqualTo(
                 HttpHeaders.of(200)
-                           .add(HttpHeaderNames.of("c"), "d")
-                           .add(HttpHeaderNames.CONTENT_LENGTH, "3"));
+                           .add(HttpHeaderNames.of("c"), "d"));
         // Content
         assertThat(aggregated.content().toStringUtf8()).isEqualTo("foo");
         // Trailing headers
