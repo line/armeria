@@ -16,26 +16,18 @@
 package com.linecorp.armeria.server.annotation;
 
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for an additional HTTP header.
+ * The containing annotation type for {@link AdditionalHeader}.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Repeatable(AdditionalHeaders.class)
-@Target({ElementType.TYPE, ElementType.METHOD})
-public @interface AdditionalHeader {
-
+@Target({ ElementType.TYPE, ElementType.METHOD })
+public @interface AdditionalHeaders {
     /**
-     * The name of the HTTP header to set.
+     * An array of {@link AdditionalHeader}s.
      */
-    String name();
-
-    /**
-     * The values of the HTTP header to set.
-     */
-    String[] value();
+    AdditionalHeader[] value();
 }

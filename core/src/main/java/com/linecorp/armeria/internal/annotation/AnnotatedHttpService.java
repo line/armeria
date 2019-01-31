@@ -25,7 +25,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -106,6 +105,7 @@ public class AnnotatedHttpService implements HttpService {
 
     private final PathMapping pathMapping;
     private final HttpHeaders defaultHttpHeaders;
+    private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
 
@@ -114,7 +114,8 @@ public class AnnotatedHttpService implements HttpService {
                          List<ExceptionHandlerFunction> exceptionHandlers,
                          List<ResponseConverterFunction> responseConverters,
                          PathMapping pathMapping,
-                         Optional<HttpStatus> defaultResponseStatus) {
+                         HttpHeaders defaultHttpHeaders,
+                         HttpHeaders defaultHttpTrailers) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -126,9 +127,8 @@ public class AnnotatedHttpService implements HttpService {
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
 
-        defaultHttpHeaders = HttpHeaders.of(defaultResponseStatus(
-                requireNonNull(defaultResponseStatus, "defaultResponseStatus"), method)).asImmutable();
-
+        this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders").asImmutable();
+        this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers").asImmutable();
         final Class<?> returnType = method.getReturnType();
         if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
@@ -192,16 +192,6 @@ public class AnnotatedHttpService implements HttpService {
         }
     }
 
-    private static HttpStatus defaultResponseStatus(Optional<HttpStatus> defaultResponseStatus,
-                                                    Method method) {
-        return defaultResponseStatus.orElseGet(() -> {
-            // Set a default HTTP status code for a response depending on the return type of the method.
-            final Class<?> returnType = method.getReturnType();
-            return returnType == Void.class ||
-                   returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
-        });
-    }
-
     Object object() {
         return object;
     }
@@ -232,6 +222,10 @@ public class AnnotatedHttpService implements HttpService {
         final CompletableFuture<AggregatedHttpMessage> f =
                 aggregationRequired(aggregationStrategy, req) ? req.aggregate()
                                                               : CompletableFuture.completedFuture(null);
+
+        ctx.setAdditionalResponseHeaders(defaultHttpHeaders);
+        ctx.setAdditionalResponseTrailers(defaultHttpTrailers);
+
         switch (responseType) {
             case HTTP_RESPONSE:
                 return f.thenApply(
@@ -277,7 +271,9 @@ public class AnnotatedHttpService implements HttpService {
             result = httpResult.content().orElse(null);
             newTrailingHeaders = httpResult.trailingHeaders();
         } else {
-            newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, defaultHttpHeaders) : headers;
+            newHeaders = setHttpStatus(
+                    headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.EMPTY_HEADERS)
+                                    : headers);
             newTrailingHeaders = trailingHeaders;
         }
 

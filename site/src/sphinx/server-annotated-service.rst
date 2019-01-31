@@ -127,7 +127,6 @@ you can use :api:`@StatusCode` annotation as follows.
         public void deleteUser(@Param("name") String name) { ... }
     }
 
-
 .. _parameter-injection:
 
 Parameter injection
@@ -1232,3 +1231,58 @@ Then, you can annotate your service method with your annotation as follows.
         @MyProducibleType  // the same as @Produces("application/xml")
         public MyResponse hello(MyRequest myRequest) { ... }
     }
+
+
+Specifying additional response headers/trailers
+-----------------------------------------------
+
+Armeria provides a way to configure additional headers/trailers via annotation,
+:api:`@AdditionalHeader` for HTTP headers and :api:`@AdditionalTrailer` for HTTP trailers.
+
+You can annotate your service method with the annotations as follows.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.annotation.AdditionalHeader;
+    import com.linecorp.armeria.server.annotation.AdditionalTrailer;
+
+    @AdditionalHeader(name = "custom-header", value = "custom-value")
+    @AdditionalTrailer(name = "custom-trailer", value = "custom-value")
+    public class MyAnnotatedService {
+        @Get("/hello")
+        @AdditionalHeader(name = "custom-header-2", value = "custom-value")
+        @AdditionalTrailer(name = "custom-trailer-2", value = "custom-value")
+        public HttpResponse hello() { ... }
+    }
+
+The :api:`@AdditionalHeader` or :api:`@AdditionalTrailer` specified at the method level takes precedence over
+what's specified at the class level if it has the same name, e.g.
+
+.. code-block:: java
+
+    @AdditionalHeader(name = "custom-header", value = "custom-value")
+    @AdditionalTrailer(name = "custom-trailer", value = "custom-value")
+    public class MyAnnotatedService {
+        @Get("/hello")
+        @AdditionalHeader(name = "custom-header", value = "custom-overwritten")
+        @AdditionalTrailer(name = "custom-trailer", value = "custom-overwritten")
+        public HttpResponse hello() { ... }
+    }
+
+In this case, the values of the HTTP header named ``custom-header`` and the HTTP trailer named ``custom-trailer`` will be ``custom-overwritten``, not ``custom-value``.
+
+Note that the trailers will not be injected into the responses with the following HTTP status code,
+because they always have an empty content.
+
++--------------+----------------+
+| Status code  | Description    |
++==============+================+
+| 1xx          | Informational  |
++--------------+----------------+
+| 204          | No content     |
++--------------+----------------+
+| 205          | Reset content  |
++--------------+----------------+
+| 304          | Not modified   |
++--------------+----------------+
+

@@ -22,20 +22,20 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for an additional HTTP header.
+ * Annotation for an additional HTTP trailing header.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Repeatable(AdditionalHeaders.class)
-@Target({ElementType.TYPE, ElementType.METHOD})
-public @interface AdditionalHeader {
+@Repeatable(AdditionalTrailers.class)
+@Target({ ElementType.TYPE, ElementType.METHOD})
+public @interface AdditionalTrailer {
 
     /**
-     * The name of the HTTP header to set.
+     * The name of the HTTP trailing header to set.
      */
     String name();
 
     /**
-     * The values of the HTTP header to set.
+     * The values of the HTTP trailing header to set.
      */
     String[] value();
 }
