@@ -208,7 +208,7 @@ public class DefaultAggregatedHttpMessageTest {
         assertThat(msg.headers().getInt(CONTENT_LENGTH)).isEqualTo(0);
 
         final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK).addInt(CONTENT_LENGTH, 1000000);
-        // It can have 'Content-length' even though, it does not have content because it can be a response
+        // It can have 'Content-length' even though it does not have content, because it can be a response
         // to a HEAD request.
         assertThat(AggregatedHttpMessage.of(headers).headers().getInt(CONTENT_LENGTH)).isEqualTo(1000000);
 

@@ -629,7 +629,7 @@ public final class ArmeriaHttpUtil {
     public static Http2Headers toNettyHttp2(HttpHeaders in, boolean server) {
         final Http2Headers out = new DefaultHttp2Headers(false, in.size());
 
-        // Trailering headers if it does not have :status.
+        // Trailing headers if it does not have :status.
         if (server && in.status() == null) {
             for (Entry<AsciiString, String> entry : in) {
                 final AsciiString name = entry.getKey();
@@ -748,30 +748,47 @@ public final class ArmeriaHttpUtil {
         final HttpStatus status = headers.status();
         assert status != null;
 
-        final HttpHeaders mutable = headers.toMutable();
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
             if (status != HttpStatus.NOT_MODIFIED) {
-                mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
+                if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                    final HttpHeaders mutable = headers.toMutable();
+                    mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
+                    return mutable.asImmutable();
+                }
             } else {
                 // 304 response can have the "content-length" header when it is a response to a conditional
                 // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
             }
-        } else if (!trailingHeaders.isEmpty()) {
+
+            return headers.asImmutable();
+        }
+
+        if (!trailingHeaders.isEmpty()) {
             // Some of the client implementations such as "curl" ignores trailing headers if
             // the "content-length" header is present. We should not set "content-length" header when trailing
             // headers exists so that those clients can receive the trailing headers.
             // The response is sent using chunked transfer encoding in HTTP/1 or a DATA frame payload
             // in HTTP/2, so it's no worry.
-            mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
-        } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
+            if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                final HttpHeaders mutable = headers.toMutable();
+                mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
+                return mutable.asImmutable();
+            }
+
+            return headers.asImmutable();
+        }
+
+        if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
+            final HttpHeaders mutable = headers.toMutable();
             mutable.setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+            return mutable.asImmutable();
         } else {
             // The header contains "content-length" header and the content is empty.
             // Do not overwrite the header because a response to a HEAD request
             // will have no content even if it has non-zero content-length header.
         }
 
-        return mutable.asImmutable();
+        return headers.asImmutable();
     }
 
     private static String convertHeaderValue(AsciiString name, CharSequence value) {
