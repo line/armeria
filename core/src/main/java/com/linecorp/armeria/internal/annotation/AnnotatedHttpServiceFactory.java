@@ -231,46 +231,11 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     private static <T extends Annotation> Optional<Class<? extends Annotation>> getRepeatable(Class<T> cls) {
-        final Optional<Repeatable> repeatable = findAnnotation(cls, Repeatable.class);
+        final Optional<Repeatable> repeatable = findFirst(cls, Repeatable.class);
         if (!repeatable.isPresent()) {
             return Optional.empty();
         }
         return Optional.of(repeatable.get().value());
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T extends Annotation, E> E getAnnotationField(T annotation, String fieldName,
-                                                                  Class<E> cast) {
-        return (E) getAnnotationField(annotation, fieldName);
-    }
-
-    private static <T extends Annotation> Object getAnnotationField(T annotation, String fieldName) {
-        try {
-            return annotation.getClass().getMethod(fieldName).invoke(annotation);
-        } catch (Exception ex) {
-            throw new IllegalStateException(
-                    String.format("'%s.%s()' method raised an exception.",
-                                  annotation.getClass().getName(), fieldName), ex);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T extends Annotation> List<T> findRepeatableAnnotations(AnnotatedElement element,
-                                                                            Class<T> annotationType) {
-        requireNonNull(element, "element");
-        requireNonNull(annotationType, "annotationType");
-        final Class<? extends Annotation> repeatable = getRepeatable(annotationType).orElseThrow(
-                () -> new IllegalArgumentException("annotationType is not a repeatable annotation."));
-        return getAllAnnotations(element).stream()
-                                         .filter(a -> a.annotationType() == annotationType ||
-                                                      a.annotationType() == repeatable)
-                                         .flatMap(annotation -> {
-                                             if (annotation.annotationType() == repeatable) {
-                                                 return Arrays.stream(
-                                                         (T[]) getAnnotationField(annotation, "value"));
-                                             }
-                                             return Stream.of((T) annotation);
-                                         }).collect(toImmutableList());
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeaders headers,
@@ -278,15 +243,17 @@ public final class AnnotatedHttpServiceFactory {
                                                                    String clsAlias,
                                                                    String elementAlias,
                                                                    String level,
-                                                                   Class<T> annotation) {
+                                                                   Class<T> annotation,
+                                                                   Function<T, String> nameGetter,
+                                                                   Function<T, String[]> valueGetter) {
         requireNonNull(headers, "headers");
         requireNonNull(element, "element");
         requireNonNull(level, "level");
 
         final Set<String> addedHeaderSets = new HashSet<>();
-        findRepeatableAnnotations(element, annotation).forEach(header -> {
-            final String name = getAnnotationField(header, "name", String.class);
-            final String[] value = getAnnotationField(header, "value", String[].class);
+        findAll(element, annotation).forEach(header -> {
+            final String name = nameGetter.apply(header);
+            final String[] value = valueGetter.apply(header);
 
             if (addedHeaderSets.contains(name)) {
                 logger.warn("The additional {} named '{}' at '{}' is set at the same {} level already;" +
@@ -381,12 +348,14 @@ public final class AnnotatedHttpServiceFactory {
         final HttpHeaders defaultTrailingHeaders = HttpHeaders.of();
         final String classAlias = clazz.getName();
         final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
-        setAdditionalHeader(defaultHeaders, clazz, "header", classAlias, "class", AdditionalHeader.class);
-        setAdditionalHeader(defaultHeaders, method, "header", methodAlias, "method", AdditionalHeader.class);
+        setAdditionalHeader(defaultHeaders, clazz, "header", classAlias, "class", AdditionalHeader.class,
+                            AdditionalHeader::name, AdditionalHeader::value);
+        setAdditionalHeader(defaultHeaders, method, "header", methodAlias, "method", AdditionalHeader.class,
+                            AdditionalHeader::name, AdditionalHeader::value);
         setAdditionalHeader(defaultTrailingHeaders, clazz, "trailer", classAlias, "class",
-                            AdditionalTrailer.class);
+                            AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
         setAdditionalHeader(defaultTrailingHeaders, method, "trailer", methodAlias, "method",
-                            AdditionalTrailer.class);
+                            AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
 
         if (ArmeriaHttpUtil.isContentAlwaysEmpty(defaultHeaders.status()) &&
             !defaultTrailingHeaders.isEmpty()) {

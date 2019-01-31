@@ -103,7 +103,7 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
-    public HttpHeaders setAllIfAbsent(Headers<AsciiString, ? extends String, ?> headers) {
+    public HttpHeaders setAllIfAbsent(Headers<AsciiString, String, ?> headers) {
         return unsupported();
     }
 
