@@ -11,12 +11,15 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
+
+import reactor.test.StepVerifier;
 
 public class AnnotatedHttpServiceTest {
 
@@ -138,5 +141,20 @@ public class AnnotatedHttpServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         res = client.get("/exception/default/409").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    public void testServerSentEventsService() {
+        StepVerifier.create(client.get("/sse/3"))
+                    .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.EVENT_STREAM))
+                    .expectNext(HttpData.ofUtf8("data:foo\n"))
+                    .expectNext(HttpData.ofUtf8("data:bar\n"))
+                    .expectNext(HttpData.ofUtf8("data:baz\n"))
+                    .assertNext(lastContent -> {
+                        assertThat(lastContent.isEndOfStream()).isTrue();
+                        assertThat(((HttpData) lastContent).isEmpty()).isTrue();
+                    })
+                    .expectComplete()
+                    .verify();
     }
 }
