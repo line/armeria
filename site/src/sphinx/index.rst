@@ -107,6 +107,6 @@ Read more
     Release notes <https://github.com/line/armeria/releases>
     API documentation <apidocs/index.html#://>
     Source cross-reference <xref/index.html#://>
-    Questions and answers <https://github.com/line/armeria/issues?q=label%3Aquestion-answered>
+    Questions and answers <https://github.com/line/armeria/issues?q=label%3Aquestion>
     Fork me at GitHub <https://github.com/line/armeria>
     Contributing <https://github.com/line/armeria/blob/master/CONTRIBUTING.md>
