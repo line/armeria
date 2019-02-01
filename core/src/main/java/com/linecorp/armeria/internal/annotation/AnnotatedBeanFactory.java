@@ -39,9 +39,9 @@ final class AnnotatedBeanFactory<T> {
     private final Map<Method, List<AnnotatedValueResolver>> methods;
 
     AnnotatedBeanFactory(BeanFactoryId beanFactoryId,
-                                 Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor,
-                                 Map<Method, List<AnnotatedValueResolver>> methods,
-                                 Map<Field, AnnotatedValueResolver> fields) {
+                         Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor,
+                         Map<Method, List<AnnotatedValueResolver>> methods,
+                         Map<Field, AnnotatedValueResolver> fields) {
         this.beanFactoryId = requireNonNull(beanFactoryId, "beanFactoryId");
         this.constructor = immutableEntry(requireNonNull(constructor, "constructor"));
         this.fields = ImmutableMap.copyOf(requireNonNull(fields, "fields"));

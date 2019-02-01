@@ -27,6 +27,7 @@ import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFacto
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.validateElementType;
+import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findDeclared;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -216,9 +217,8 @@ final class AnnotatedValueResolver {
             resolver = of(constructorOrMethod,
                           parameters[0], parameters[0].getType(), pathParams, objectResolvers,
                           implicitRequestObjectAnnotation);
-        } else if (!isServiceMethod &&
-                   constructorOrMethod.getAnnotationsByType(RequestConverter.class).length > 0 &&
-                   parameters.length == 1) {
+        } else if (!isServiceMethod && parameters.length == 1 &&
+                   !findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
             // Filter out the cases like the following:
             //
@@ -372,7 +372,7 @@ final class AnnotatedValueResolver {
         final RequestObject requestObject = annotatedElement.getAnnotation(RequestObject.class);
         if (requestObject != null) {
             // Find more request converters from a field or parameter.
-            final RequestConverter[] converters = typeElement.getAnnotationsByType(RequestConverter.class);
+            final List<RequestConverter> converters = findDeclared(typeElement, RequestConverter.class);
             return Optional.of(ofRequestObject(annotatedElement, type, pathParams,
                                                addToFirstIfExists(objectResolvers, converters),
                                                description));
@@ -390,8 +390,8 @@ final class AnnotatedValueResolver {
             return Optional.of(resolver);
         }
 
-        final RequestConverter[] converters = typeElement.getAnnotationsByType(RequestConverter.class);
-        if (converters.length > 0) {
+        final List<RequestConverter> converters = findDeclared(typeElement, RequestConverter.class);
+        if (!converters.isEmpty()) {
             // Apply @RequestObject implicitly when a @RequestConverter is specified.
             return Optional.of(ofRequestObject(annotatedElement, type, pathParams,
                                                addToFirstIfExists(objectResolvers, converters), description));
@@ -406,14 +406,14 @@ final class AnnotatedValueResolver {
     }
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
-                                                          RequestConverter[] converters) {
-        if (converters.length == 0) {
+                                                          List<RequestConverter> converters) {
+        if (converters.isEmpty()) {
             return resolvers;
         }
 
         final ImmutableList.Builder<RequestObjectResolver> builder = new ImmutableList.Builder<>();
-        Arrays.stream(converters).forEach(c -> builder.add(
-                RequestObjectResolver.of(AnnotatedHttpServiceFactory.getInstance(c.value()))));
+        converters.forEach(c -> builder.add(RequestObjectResolver.of(
+                AnnotatedHttpServiceFactory.getInstance(c.value()))));
         builder.addAll(resolvers);
         return builder.build();
     }

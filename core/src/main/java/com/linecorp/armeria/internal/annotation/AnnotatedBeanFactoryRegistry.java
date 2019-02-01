@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.annotation;
 
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.addToFirstIfExists;
+import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findDeclared;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -146,7 +147,7 @@ final class AnnotatedBeanFactoryRegistry {
         //     ...
         // }
         final List<RequestObjectResolver> resolvers = addToFirstIfExists(
-                objectResolvers, beanFactoryId.type.getAnnotationsByType(RequestConverter.class));
+                objectResolvers, findDeclared(beanFactoryId.type, RequestConverter.class));
 
         final Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor =
                 findConstructor(beanFactoryId, resolvers);
@@ -195,7 +196,7 @@ final class AnnotatedBeanFactoryRegistry {
             }
 
             try {
-                final RequestConverter[] converters = constructor.getAnnotationsByType(RequestConverter.class);
+                final List<RequestConverter> converters = findDeclared(constructor, RequestConverter.class);
                 final List<AnnotatedValueResolver> resolvers =
                         AnnotatedValueResolver.ofBeanConstructorOrMethod(
                                 constructor, beanFactoryId.pathParams,
@@ -226,7 +227,7 @@ final class AnnotatedBeanFactoryRegistry {
         final Builder<Method, List<AnnotatedValueResolver>> methodsBuilder = ImmutableMap.builder();
         final Set<Method> methods = getAllMethods(beanFactoryId.type);
         for (final Method method : methods) {
-            final RequestConverter[] converters = method.getAnnotationsByType(RequestConverter.class);
+            final List<RequestConverter> converters = findDeclared(method, RequestConverter.class);
             try {
                 final List<AnnotatedValueResolver> resolvers =
                         AnnotatedValueResolver.ofBeanConstructorOrMethod(
@@ -266,7 +267,7 @@ final class AnnotatedBeanFactoryRegistry {
         final Builder<Field, AnnotatedValueResolver> builder = ImmutableMap.builder();
         final Set<Field> fields = getAllFields(beanFactoryId.type);
         for (final Field field : fields) {
-            final RequestConverter[] converters = field.getAnnotationsByType(RequestConverter.class);
+            final List<RequestConverter> converters = findDeclared(field, RequestConverter.class);
             AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
                                                addToFirstIfExists(objectResolvers, converters))
                                   .ifPresent(resolver -> {

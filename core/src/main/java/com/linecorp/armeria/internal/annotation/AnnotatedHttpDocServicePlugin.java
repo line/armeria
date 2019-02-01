@@ -237,7 +237,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 factory.fields().values().forEach(builder::add);
                 final List<AnnotatedValueResolver> resolvers = builder.build();
                 if (!resolvers.isEmpty()) {
-                    // TODO(minwoox) Should we support http element name for the bean type?
+                    // Just use the simple name of the bean class as the field name.
                     return new FieldInfoBuilder(beanFactoryId.type().getSimpleName(), BEAN,
                                                 fieldInfos(resolvers)).build();
                 }
