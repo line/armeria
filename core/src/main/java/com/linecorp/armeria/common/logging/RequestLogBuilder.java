@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -177,6 +178,10 @@ public interface RequestLogBuilder {
      */
     void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
 
+    void requestContentPreviewWriter(ContentPreviewWriter writer);
+
+    void writeRequestContentPreview(HttpData data);
+
     /**
      * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.
      * By default, if {@link #requestContent(Object, Object)} was not called yet, {@link #endRequest()} will
@@ -293,6 +298,10 @@ public interface RequestLogBuilder {
      * Sets the {@link RequestLog#responseContent()} and the {@link RequestLog#rawResponseContent()}.
      */
     void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent);
+
+    void responseContentPreviewWriter(ContentPreviewWriter writer);
+
+    void writeResponseContentPreview(HttpData data);
 
     /**
      * Allows the {@link #responseContent(Object, Object)} called after {@link #endResponse()}.

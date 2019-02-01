@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.logging.ContentPreviewWriter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.logging.Sampler;
@@ -83,6 +84,8 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     private final Function<Object, Object> requestContentSanitizer;
     private final Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer;
     private final Function<Object, Object> responseContentSanitizer;
+    private final Function<ClientRequestContext, ContentPreviewWriter> requestContentPreviewWriterMapper;
+    private final Function<ClientRequestContext, ContentPreviewWriter> responseContentPreviewWriterMapper;
     private final Sampler sampler;
 
     /**
@@ -111,7 +114,9 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
              Function.identity(),
              Function.identity(),
              Function.identity(),
-             Sampler.always());
+             Sampler.always(),
+             req -> ContentPreviewWriter.EMPTY,
+             req -> ContentPreviewWriter.EMPTY);
     }
 
     /**
@@ -126,7 +131,9 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
                   Function<Object, Object> requestContentSanitizer,
                   Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
                   Function<Object, Object> responseContentSanitizer,
-                  Sampler sampler) {
+                  Sampler sampler,
+                  Function<ClientRequestContext, ContentPreviewWriter> requestContentPreviewWriterMapper,
+                  Function<ClientRequestContext, ContentPreviewWriter> responseContentPreviewWriterMapper) {
         super(requireNonNull(delegate, "delegate"));
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         this.successfulResponseLogLevel = requireNonNull(successfulResponseLogLevel,
@@ -137,11 +144,14 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "resposneContentSanitizer");
         this.sampler = requireNonNull(sampler, "sampler");
+        this.requestContentPreviewWriterMapper = requestContentPreviewWriterMapper;
+        this.responseContentPreviewWriterMapper = responseContentPreviewWriterMapper;
     }
 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled()) {
+
             ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
                                                     requestHeadersSanitizer, requestContentSanitizer),
                                   RequestLogAvailability.REQUEST_END);
@@ -151,6 +161,8 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
                                                      failedResponseLogLevel, responseHeadersSanitizer,
                                                      responseContentSanitizer),
                                   RequestLogAvailability.COMPLETE);
+            ctx.logBuilder().requestContentPreviewWriter(requestContentPreviewWriterMapper.apply(ctx));
+            ctx.logBuilder().responseContentPreviewWriter(responseContentPreviewWriterMapper.apply(ctx));
         }
         return delegate().execute(ctx, req);
     }

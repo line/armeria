@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.logging;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -69,6 +70,12 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent) {}
 
     @Override
+    public void requestContentPreviewWriter(ContentPreviewWriter writer) {}
+
+    @Override
+    public void writeRequestContentPreview(HttpData data) {}
+
+    @Override
     public void deferRequestContent() {}
 
     @Override
@@ -111,6 +118,12 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent) {}
+
+    @Override
+    public void responseContentPreviewWriter(ContentPreviewWriter writer) {}
+
+    @Override
+    public void writeResponseContentPreview(HttpData data) {}
 
     @Override
     public void deferResponseContent() {}

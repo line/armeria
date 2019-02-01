@@ -444,6 +444,8 @@ public interface RequestLog {
     @Nullable
     Object requestContent();
 
+    String requestContentPreview();
+
     /**
      * Returns the low-level content object of the {@link Request}, which is specific
      * to the {@link SerializationFormat}.
@@ -482,6 +484,8 @@ public interface RequestLog {
      */
     @Nullable
     Object rawResponseContent();
+
+    String responseContentPreview();
 
     /**
      * Returns the string representation of the {@link Request}, with no sanitization of headers or content.
