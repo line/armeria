@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,7 +15,7 @@
  */
 
 /**
- * <a href="https://www.w3.org/TR/eventsource/">Server-sent Events</a> support.
+ * <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a> support.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.sse;

@@ -35,17 +35,17 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 
 /**
- * A utility class which helps to create a <a href="https://www.w3.org/TR/eventsource/">Server-sent Events</a>
+ * A utility class which helps to create a <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a>
  * stream from a content {@link Publisher} or {@link Stream}.
  *
- * <p>A user simply creates a streaming {@link HttpResponse} which emits Server-sent Events, e.g.
+ * <p>A user simply creates a streaming {@link HttpResponse} which emits Server-Sent Events, e.g.
  * <pre>{@code
  * Server server = new ServerBuilder()
- *         // Emit Server-sent Events with the SeverSentEvent instances published by a publisher.
+ *         // Emit Server-Sent Events with the SeverSentEvent instances published by a publisher.
  *         .service("/sse1",
  *                  (ctx, req) -> ServerSentEvents.fromPublisher(
  *                          Flux.just(ServerSentEvent.ofData("foo"), ServerSentEvent.ofData("bar"))))
- *         // Emit Server-sent Events with converting instances published by a publisher into
+ *         // Emit Server-Sent Events with converting instances published by a publisher into
  *         // ServerSentEvent instances.
  *         .service("/sse2",
  *                  (ctx, req) -> ServerSentEvents.fromPublisher(
@@ -69,18 +69,18 @@ public final class ServerSentEvents {
     private static boolean warnedContentType;
 
     /**
-     * A line feed character which marks the end of a field in Server-sent Events.
+     * A line feed character which marks the end of a field in Server-Sent Events.
      */
     private static final char LINE_FEED = '\n';
 
     /**
-     * A default {@link HttpHeaders} of Server-sent Events.
+     * A default {@link HttpHeaders} of Server-Sent Events.
      */
     private static final HttpHeaders defaultHttpHeaders =
             HttpHeaders.of(HttpStatus.OK).contentType(MediaType.EVENT_STREAM).asImmutable();
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Publisher}.
+     * Creates a new Server-Sent Events stream from the specified {@link Publisher}.
      *
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
@@ -89,7 +89,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Publisher}.
+     * Creates a new Server-Sent Events stream from the specified {@link Publisher}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -100,7 +100,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Publisher}.
+     * Creates a new Server-Sent Events stream from the specified {@link Publisher}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -117,7 +117,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Publisher} and {@code converter}.
+     * Creates a new Server-Sent Events stream from the specified {@link Publisher} and {@code converter}.
      *
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
@@ -128,7 +128,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Publisher} and {@code converter}.
+     * Creates a new Server-Sent Events stream from the specified {@link Publisher} and {@code converter}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -141,7 +141,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Publisher} and {@code converter}.
+     * Creates a new Server-Sent Events stream from the specified {@link Publisher} and {@code converter}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -161,7 +161,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Stream}.
+     * Creates a new Server-Sent Events stream from the specified {@link Stream}.
      *
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
      * @param executor the executor which iterates the stream
@@ -172,7 +172,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Stream}.
+     * Creates a new Server-Sent Events stream from the specified {@link Stream}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -185,7 +185,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Stream}.
+     * Creates a new Server-Sent Events stream from the specified {@link Stream}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -204,7 +204,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Stream} and {@code converter}.
+     * Creates a new Server-Sent Events stream from the specified {@link Stream} and {@code converter}.
      *
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
      * @param executor the executor which iterates the stream
@@ -216,7 +216,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Stream} and {@code converter}.
+     * Creates a new Server-Sent Events stream from the specified {@link Stream} and {@code converter}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -229,7 +229,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream from the specified {@link Stream} and {@code converter}.
+     * Creates a new Server-Sent Events stream from the specified {@link Stream} and {@code converter}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -250,7 +250,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream of the specified {@code content}.
+     * Creates a new Server-Sent Events stream of the specified {@code content}.
      *
      * @param sse the {@link ServerSentEvent} object supposed to send as contents
      */
@@ -259,7 +259,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream of the specified {@code content}.
+     * Creates a new Server-Sent Events stream of the specified {@code content}.
      *
      * @param headers the HTTP headers supposed to send
      * @param sse the {@link ServerSentEvent} object supposed to send as contents
@@ -269,7 +269,7 @@ public final class ServerSentEvents {
     }
 
     /**
-     * Creates a new Server-sent Events stream of the specified {@code content}.
+     * Creates a new Server-Sent Events stream of the specified {@code content}.
      *
      * @param headers the HTTP headers supposed to send
      * @param sse the {@link ServerSentEvent} object supposed to send as contents
@@ -302,7 +302,7 @@ public final class ServerSentEvents {
 
         if (!warnedStatusCode) {
             logger.warn(
-                    "Overwriting the HTTP status code from '{}' to '{}' for Server-sent Events. " +
+                    "Overwriting the HTTP status code from '{}' to '{}' for Server-Sent Events. " +
                     "Do not set an HTTP status code on the HttpHeaders when calling factory methods in '{}', " +
                     "or set '{}' if you want to specify its status code. " +
                     "Please refer to https://www.w3.org/TR/eventsource/ for more information.",
@@ -323,7 +323,7 @@ public final class ServerSentEvents {
         }
 
         if (!warnedContentType) {
-            logger.warn("Overwriting content-type from '{}' to '{}' for Server-sent Events. " +
+            logger.warn("Overwriting content-type from '{}' to '{}' for Server-Sent Events. " +
                         "Do not set a content-type on the HttpHeaders when calling factory methods in '{}', " +
                         "or set '{}' if you want to specify its content-type. " +
                         "Please refer to https://www.w3.org/TR/eventsource/ for more information.",

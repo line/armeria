@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  *         // Emit JSON Text Sequences with a default ObjectMapper.
  *         .service("/seq1",
  *                  (ctx, req) -> JsonTextSequences.fromPublisher(Flux.just("foo", "bar")))
- *         // Emit JSON Text Sequences with a ObjectMapper configured as using a default pretty printer.
+ *         // Emit JSON Text Sequences with the ObjectMapper configured as using a default pretty printer.
  *         .service("/seq2",
  *                  (ctx, req) -> JsonTextSequences.fromPublisher(Flux.just("foo", "bar"), mapper))
  *         .build();

@@ -26,7 +26,7 @@ import com.linecorp.armeria.server.annotation.ProducesEventStream;
 import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 
 /**
- * An interface for the <a href="https://www.w3.org/TR/eventsource/">Server-sent Events</a> specification.
+ * An interface for the <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a> specification.
  * If a {@link Publisher} or {@link Stream} produces objects which implement this interface, it can be
  * converted into a text event stream by {@link ServerSentEventResponseConverterFunction}.
  *

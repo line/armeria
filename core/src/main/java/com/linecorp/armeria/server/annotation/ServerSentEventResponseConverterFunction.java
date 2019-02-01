@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A response converter implementation which creates an {@link HttpResponse} with
  * {@code content-type: text/event-stream}. The objects published from a {@link Publisher} or {@link Stream}
- * would be converted into Server-sent Events if a {@link ProducesEventStream} annotation is specified
+ * would be converted into Server-Sent Events if a {@link ProducesEventStream} annotation is specified
  * on an annotated service method.
  */
 public class ServerSentEventResponseConverterFunction implements ResponseConverterFunction {

@@ -21,7 +21,7 @@ import reactor.core.publisher.Flux;
 /**
  * Examples how to send {@link ServerSentEvent}s.
  *
- * @see <a href="https://line.github.io/armeria/server-sse.html">Serving Server-sent Events</a>
+ * @see <a href="https://line.github.io/armeria/server-sse.html">Serving Server-Sent Events</a>
  */
 @LoggingDecorator(
         requestLogLevel = LogLevel.INFO,            // Log every request sent to this service at INFO level.
