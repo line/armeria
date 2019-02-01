@@ -54,7 +54,7 @@ import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
-import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
@@ -196,11 +196,11 @@ public class GrpcDocServicePluginTest {
         final MethodInfo emptyCall = functions.get("EmptyCall");
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
-                .containsExactly(
-                        new FieldInfo(
-                                "request",
-                                FieldRequirement.REQUIRED,
-                                TypeSignature.ofNamed("armeria.grpc.testing.Empty", Empty.getDescriptor())));
+                .containsExactly(new FieldInfoBuilder("request",
+                                                      TypeSignature.ofNamed("armeria.grpc.testing.Empty",
+                                                                            Empty.getDescriptor()))
+                                         .requirement(FieldRequirement.REQUIRED)
+                                         .build());
         assertThat(emptyCall.returnTypeSignature())
                 .isEqualTo(TypeSignature.ofNamed("armeria.grpc.testing.Empty", Empty.getDescriptor()));
 

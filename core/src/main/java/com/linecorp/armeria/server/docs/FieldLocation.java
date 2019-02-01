@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,21 +17,32 @@
 package com.linecorp.armeria.server.docs;
 
 /**
- * The requirement level of a field.
+ * The location of a field.
  */
-public enum FieldRequirement {
-    /**
-     * The field is required. The invocation will fail if the field is not specified.
-     */
-    REQUIRED,
+public enum FieldLocation {
 
     /**
-     * The field is optional. The invocation will work even if the field is not specified.
+     * The field is located in the path.
      */
-    OPTIONAL,
+    PATH,
 
     /**
-     * The requirement level is unspecified and will be handled implicitly by the serialization layer.
+     * The field is located in the header.
+     */
+    HEADER,
+
+    /**
+     * The field is located in the query.
+     */
+    QUERY,
+
+    /**
+     * The field is located in the request body.
+     */
+    BODY,
+
+    /**
+     * The location of the field is unspecified.
      */
     UNSPECIFIED
 }

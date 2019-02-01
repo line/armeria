@@ -16,16 +16,18 @@
 package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
-import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.uniqueResolverSet;
-import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.warnRedundantUse;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.uniqueResolverSet;
+import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.warnRedundantUse;
 import static com.linecorp.armeria.internal.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.validateElementType;
+import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findDeclared;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -47,12 +49,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -74,7 +74,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.FallthroughException;
-import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactory.BeanFactoryId;
+import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Cookies;
@@ -97,9 +97,10 @@ final class AnnotatedValueResolver {
 
     private static final List<RequestObjectResolver> defaultRequestConverters =
             ImmutableList.of((resolverContext, expectedResultType, beanFactoryId) ->
-                                     AnnotatedBeanFactory.find(beanFactoryId)
-                                                         .orElseThrow(RequestConverterFunction::fallthrough)
-                                                         .apply(resolverContext),
+                                     AnnotatedBeanFactoryRegistry.find(beanFactoryId)
+                                                                 .orElseThrow(
+                                                                         RequestConverterFunction::fallthrough)
+                                                                 .create(resolverContext),
                              RequestObjectResolver.of(new JacksonRequestConverterFunction()),
                              RequestObjectResolver.of(new StringRequestConverterFunction()),
                              RequestObjectResolver.of(new ByteArrayRequestConverterFunction()));
@@ -216,9 +217,8 @@ final class AnnotatedValueResolver {
             resolver = of(constructorOrMethod,
                           parameters[0], parameters[0].getType(), pathParams, objectResolvers,
                           implicitRequestObjectAnnotation);
-        } else if (!isServiceMethod &&
-                   constructorOrMethod.getAnnotationsByType(RequestConverter.class).length > 0 &&
-                   parameters.length == 1) {
+        } else if (!isServiceMethod && parameters.length == 1 &&
+                   !findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
             // Filter out the cases like the following:
             //
@@ -265,7 +265,7 @@ final class AnnotatedValueResolver {
                                                  implicitRequestObjectAnnotation))
                                     .filter(Optional::isPresent)
                                     .map(Optional::get)
-                                    .collect(Collectors.toList()));
+                                    .collect(toImmutableList()));
         if (list.isEmpty()) {
             throw new NoAnnotatedParameterException(constructorOrMethod.toGenericString());
         }
@@ -372,7 +372,7 @@ final class AnnotatedValueResolver {
         final RequestObject requestObject = annotatedElement.getAnnotation(RequestObject.class);
         if (requestObject != null) {
             // Find more request converters from a field or parameter.
-            final RequestConverter[] converters = typeElement.getAnnotationsByType(RequestConverter.class);
+            final List<RequestConverter> converters = findDeclared(typeElement, RequestConverter.class);
             return Optional.of(ofRequestObject(annotatedElement, type, pathParams,
                                                addToFirstIfExists(objectResolvers, converters),
                                                description));
@@ -390,8 +390,8 @@ final class AnnotatedValueResolver {
             return Optional.of(resolver);
         }
 
-        final RequestConverter[] converters = typeElement.getAnnotationsByType(RequestConverter.class);
-        if (converters.length > 0) {
+        final List<RequestConverter> converters = findDeclared(typeElement, RequestConverter.class);
+        if (!converters.isEmpty()) {
             // Apply @RequestObject implicitly when a @RequestConverter is specified.
             return Optional.of(ofRequestObject(annotatedElement, type, pathParams,
                                                addToFirstIfExists(objectResolvers, converters), description));
@@ -406,14 +406,14 @@ final class AnnotatedValueResolver {
     }
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
-                                                          RequestConverter[] converters) {
-        if (converters.length == 0) {
+                                                          List<RequestConverter> converters) {
+        if (converters.isEmpty()) {
             return resolvers;
         }
 
         final ImmutableList.Builder<RequestObjectResolver> builder = new ImmutableList.Builder<>();
-        Arrays.stream(converters).forEach(c -> builder.add(
-                RequestObjectResolver.of(AnnotatedHttpServiceFactory.getInstance(c.value()))));
+        converters.forEach(c -> builder.add(RequestObjectResolver.of(
+                AnnotatedHttpServiceFactory.getInstance(c.value()))));
         builder.addAll(resolvers);
         return builder.build();
     }
@@ -426,7 +426,7 @@ final class AnnotatedValueResolver {
 
     private static void warnOnRedundantUse(Executable constructorOrMethod,
                                            List<AnnotatedValueResolver> list) {
-        final TreeSet<AnnotatedValueResolver> uniques = uniqueResolverSet();
+        final Set<AnnotatedValueResolver> uniques = uniqueResolverSet();
         list.forEach(element -> {
             if (!uniques.add(element)) {
                 warnRedundantUse(element, constructorOrMethod.toGenericString());
@@ -490,13 +490,15 @@ final class AnnotatedValueResolver {
                                                           List<RequestObjectResolver> objectResolvers,
                                                           @Nullable String description) {
         // To do recursive resolution like a bean inside another bean, the original object resolvers should
-        // be passed into the AnnotatedBeanFactory#register.
-        final BeanFactoryId beanFactoryId = AnnotatedBeanFactory.register(type, pathParams, objectResolvers);
+        // be passed into the AnnotatedBeanFactoryRegistry#register.
+        final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(type, pathParams,
+                                                                                  objectResolvers);
         return builder(annotatedElement, type)
                 .annotationType(RequestObject.class)
                 .description(description)
                 .aggregation(AggregationStrategy.ALWAYS)
                 .resolver(resolver(objectResolvers, beanFactoryId))
+                .beanFactoryId(beanFactoryId)
                 .build();
     }
 
@@ -682,6 +684,9 @@ final class AnnotatedValueResolver {
     @Nullable
     private final EnumConverter<?> enumConverter;
 
+    @Nullable
+    private final BeanFactoryId beanFactoryId;
+
     private final AggregationStrategy aggregationStrategy;
 
     private static final ConcurrentMap<Class<?>, EnumConverter<?>> enumConverters = new MapMaker().makeMap();
@@ -694,6 +699,7 @@ final class AnnotatedValueResolver {
                                    @Nullable String defaultValue,
                                    @Nullable String description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
+                                   @Nullable BeanFactoryId beanFactoryId,
                                    AggregationStrategy aggregationStrategy) {
         this.annotationType = annotationType;
         this.httpElementName = httpElementName;
@@ -704,6 +710,7 @@ final class AnnotatedValueResolver {
         this.description = description;
         this.containerType = containerType;
         this.resolver = requireNonNull(resolver, "resolver");
+        this.beanFactoryId = beanFactoryId;
         this.aggregationStrategy = requireNonNull(aggregationStrategy, "aggregationStrategy");
         enumConverter = enumConverter(elementType);
 
@@ -765,6 +772,11 @@ final class AnnotatedValueResolver {
     @Nullable
     String description() {
         return description;
+    }
+
+    @Nullable
+    BeanFactoryId beanFactoryId() {
+        return beanFactoryId;
     }
 
     AggregationStrategy aggregationStrategy() {
@@ -846,6 +858,8 @@ final class AnnotatedValueResolver {
         private String description;
         @Nullable
         private BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
+        @Nullable
+        private BeanFactoryId beanFactoryId;
         private AggregationStrategy aggregation = AggregationStrategy.NONE;
 
         private Builder(AnnotatedElement annotatedElement, Type type) {
@@ -926,6 +940,11 @@ final class AnnotatedValueResolver {
          */
         private Builder resolver(BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver) {
             this.resolver = resolver;
+            return this;
+        }
+
+        private Builder beanFactoryId(BeanFactoryId beanFactoryId) {
+            this.beanFactoryId = beanFactoryId;
             return this;
         }
 
@@ -1058,7 +1077,8 @@ final class AnnotatedValueResolver {
 
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
                                               shouldWrapValueAsOptional, types.getKey(), types.getValue(),
-                                              defaultValue, description, resolver, aggregation);
+                                              defaultValue, description, resolver,
+                                              beanFactoryId, aggregation);
         }
     }
 

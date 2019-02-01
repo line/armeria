@@ -54,6 +54,7 @@ import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
@@ -240,11 +241,8 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),
                 // gRPC methods always take a single request parameter of message type.
-                ImmutableList.of(
-                        new FieldInfo(
-                                "request",
-                                FieldRequirement.REQUIRED,
-                                namedMessageSignature(method.getInputType()))),
+                ImmutableList.of(new FieldInfoBuilder("request", namedMessageSignature(method.getInputType()))
+                                         .requirement(FieldRequirement.REQUIRED).build()),
                 ImmutableList.of(),
                 methodEndpoints);
     }
@@ -259,10 +257,10 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     private static FieldInfo newFieldInfo(FieldDescriptor fieldDescriptor) {
-        return new FieldInfo(
-                fieldDescriptor.getName(),
-                fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL,
-                newFieldTypeInfo(fieldDescriptor));
+        return new FieldInfoBuilder(fieldDescriptor.getName(), newFieldTypeInfo(fieldDescriptor))
+                .requirement(fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
+                                                          : FieldRequirement.OPTIONAL)
+                .build();
     }
 
     @VisibleForTesting

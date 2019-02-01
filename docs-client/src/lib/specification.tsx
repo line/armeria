@@ -26,6 +26,7 @@ interface HasDocString {
 export interface Parameter {
   name: string;
   location?: string;
+  childFieldInfos: Parameter[];
   requirement: string;
   typeSignature: string;
   docString?: DocString;
