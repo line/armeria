@@ -16,8 +16,6 @@
 package com.linecorp.armeria.server.streaming;
 
 import static com.linecorp.armeria.internal.ResponseConversionUtil.streamingFrom;
-import static com.linecorp.armeria.server.streaming.SanitizationUtil.ensureContentType;
-import static com.linecorp.armeria.server.streaming.SanitizationUtil.ensureHttpStatus;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -26,6 +24,8 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -54,6 +54,19 @@ import com.linecorp.armeria.common.sse.ServerSentEvent;
  * }</pre>
  */
 public final class ServerSentEvents {
+
+    private static final Logger logger = LoggerFactory.getLogger(ServerSentEvents.class);
+
+    /**
+     * A flag whether a warn log has been written if the given status code is not the {@link HttpStatus#OK}.
+     */
+    private static boolean warnedStatusCode;
+
+    /**
+     * A flag whether a warn log has been written if the given content type is not the
+     * {@link MediaType#EVENT_STREAM}.
+     */
+    private static boolean warnedContentType;
 
     /**
      * A line feed character which marks the end of a field in Server-sent Events.
@@ -274,7 +287,51 @@ public final class ServerSentEvents {
         if (headers == defaultHttpHeaders) {
             return headers;
         }
-        return ensureContentType(ensureHttpStatus(headers), MediaType.EVENT_STREAM);
+        return ensureContentType(ensureHttpStatus(headers));
+    }
+
+    static HttpHeaders ensureHttpStatus(HttpHeaders headers) {
+        final HttpStatus status = headers.status();
+        if (status == null) {
+            return headers.toMutable().status(HttpStatus.OK);
+        }
+
+        if (status.equals(HttpStatus.OK)) {
+            return headers;
+        }
+
+        if (!warnedStatusCode) {
+            logger.warn(
+                    "Overwriting the HTTP status code from '{}' to '{}' for Server-sent Events. " +
+                    "Do not set an HTTP status code on the HttpHeaders when calling factory methods in '{}', " +
+                    "or set '{}' if you want to specify its status code. " +
+                    "Please refer to https://www.w3.org/TR/eventsource/ for more information.",
+                    status, HttpStatus.OK, ServerSentEvents.class.getSimpleName(), HttpStatus.OK);
+            warnedStatusCode = true;
+        }
+        return headers.toMutable().status(HttpStatus.OK);
+    }
+
+    static HttpHeaders ensureContentType(HttpHeaders headers) {
+        final MediaType contentType = headers.contentType();
+        if (contentType == null) {
+            return headers.toMutable().contentType(MediaType.EVENT_STREAM);
+        }
+
+        if (contentType.is(MediaType.EVENT_STREAM)) {
+            return headers;
+        }
+
+        if (!warnedContentType) {
+            logger.warn("Overwriting content-type from '{}' to '{}' for Server-sent Events. " +
+                        "Do not set a content-type on the HttpHeaders when calling factory methods in '{}', " +
+                        "or set '{}' if you want to specify its content-type. " +
+                        "Please refer to https://www.w3.org/TR/eventsource/ for more information.",
+                        contentType, MediaType.EVENT_STREAM,
+                        ServerSentEvents.class.getSimpleName(), MediaType.EVENT_STREAM);
+            warnedContentType = true;
+        }
+        return headers.toMutable().contentType(MediaType.EVENT_STREAM);
     }
 
     private static HttpData toHttpData(ServerSentEvent sse) {

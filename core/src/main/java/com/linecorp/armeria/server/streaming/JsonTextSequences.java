@@ -16,8 +16,6 @@
 package com.linecorp.armeria.server.streaming;
 
 import static com.linecorp.armeria.internal.ResponseConversionUtil.streamingFrom;
-import static com.linecorp.armeria.server.streaming.SanitizationUtil.ensureContentType;
-import static com.linecorp.armeria.server.streaming.SanitizationUtil.ensureHttpStatus;
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
@@ -27,6 +25,8 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -55,6 +55,19 @@ import com.linecorp.armeria.common.util.Exceptions;
  * }</pre>
  */
 public final class JsonTextSequences {
+
+    private static final Logger logger = LoggerFactory.getLogger(JsonTextSequences.class);
+
+    /**
+     * A flag whether a warn log has been written if the given status code is not the {@link HttpStatus#OK}.
+     */
+    private static boolean warnedStatusCode;
+
+    /**
+     * A flag whether a warn log has been written if the given content type is not the
+     * {@link MediaType#JSON_SEQ}.
+     */
+    private static boolean warnedContentType;
 
     /**
      * A record separator which indicates the beginning of a JSON text.
@@ -248,7 +261,51 @@ public final class JsonTextSequences {
         if (headers == defaultHttpHeaders) {
             return headers;
         }
-        return ensureContentType(ensureHttpStatus(headers), MediaType.JSON_SEQ);
+        return ensureContentType(ensureHttpStatus(headers));
+    }
+
+    static HttpHeaders ensureHttpStatus(HttpHeaders headers) {
+        final HttpStatus status = headers.status();
+        if (status == null) {
+            return headers.toMutable().status(HttpStatus.OK);
+        }
+
+        if (status.equals(HttpStatus.OK)) {
+            return headers;
+        }
+
+        if (!warnedStatusCode) {
+            logger.warn(
+                    "Overwriting the HTTP status code from '{}' to '{}' for JSON Text Sequences. " +
+                    "Do not set an HTTP status code on the HttpHeaders when calling factory methods in '{}', " +
+                    "or set '{}' if you want to specify its status code. " +
+                    "Please refer to https://tools.ietf.org/html/rfc7464 for more information.",
+                    status, HttpStatus.OK, JsonTextSequences.class.getSimpleName(), HttpStatus.OK);
+            warnedStatusCode = true;
+        }
+        return headers.toMutable().status(HttpStatus.OK);
+    }
+
+    static HttpHeaders ensureContentType(HttpHeaders headers) {
+        final MediaType contentType = headers.contentType();
+        if (contentType == null) {
+            return headers.toMutable().contentType(MediaType.JSON_SEQ);
+        }
+
+        if (contentType.is(MediaType.JSON_SEQ)) {
+            return headers;
+        }
+
+        if (!warnedContentType) {
+            logger.warn("Overwriting content-type from '{}' to '{}' for JSON Text Sequences. " +
+                        "Do not set a content-type on the HttpHeaders when calling factory methods in '{}', " +
+                        "or set '{}' if you want to specify its content-type. " +
+                        "Please refer to https://tools.ietf.org/html/rfc7464 for more information.",
+                        contentType, MediaType.JSON_SEQ,
+                        JsonTextSequences.class.getSimpleName(), MediaType.JSON_SEQ);
+            warnedContentType = true;
+        }
+        return headers.toMutable().contentType(MediaType.JSON_SEQ);
     }
 
     private static HttpData toHttpData(ObjectMapper mapper, @Nullable Object value) {
