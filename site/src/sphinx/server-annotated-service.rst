@@ -2,8 +2,12 @@
 
 .. _server-annotated-service:
 
-Annotated HTTP Service
-======================
+Annotated services
+==================
+
+.. note::
+
+    Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find a fully working example.
 
 Armeria provides a way to write an HTTP service using annotations. It helps a user make his or her code
 simple and easy to understand. A user is able to run an HTTP service by fewer lines of code using
@@ -1269,7 +1273,8 @@ what's specified at the class level if it has the same name, e.g.
         public HttpResponse hello() { ... }
     }
 
-In this case, the values of the HTTP header named ``custom-header`` and the HTTP trailer named ``custom-trailer`` will be ``custom-overwritten``, not ``custom-value``.
+In this case, the values of the HTTP header named ``custom-header`` and the HTTP trailer named
+``custom-trailer`` will be ``custom-overwritten``, not ``custom-value``.
 
 Note that the trailers will not be injected into the responses with the following HTTP status code,
 because they always have an empty content.

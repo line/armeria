@@ -5,7 +5,7 @@ Using Armeria with Spring WebFlux
 
 .. note::
 
-    Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find the fully working example code.
+    Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find a fully working example.
 
 Spring framework provides powerful features which are necessary for building a web application, such as
 dependency injection, data binding, AOP, transaction, etc. In addition, if your Spring application integrates

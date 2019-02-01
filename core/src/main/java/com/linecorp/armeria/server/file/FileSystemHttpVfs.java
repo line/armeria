@@ -16,18 +16,25 @@
 
 package com.linecorp.armeria.server.file;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Clock;
+import java.util.List;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.PathMappingUtil;
 
 final class FileSystemHttpVfs extends AbstractHttpVfs {
 
@@ -43,15 +50,44 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
     }
 
     @Override
-    public HttpFile get(String path, Clock clock,
-                        @Nullable String contentEncoding) {
+    public HttpFile get(String path, Clock clock, @Nullable String contentEncoding) {
+        path = normalizePath(path);
+
+        final HttpFileBuilder builder = HttpFileBuilder.of(Paths.get(rootDir + path));
+        return build(builder, clock, path, contentEncoding);
+    }
+
+    @Override
+    public boolean canList(String path) {
+        path = normalizePath(path);
+        final Path fsPath = Paths.get(rootDir + path);
+        return Files.isDirectory(fsPath) && Files.isReadable(fsPath);
+    }
+
+    @Override
+    public List<String> list(String path) {
+        path = normalizePath(path);
+        try (Stream<Path> stream = Files.list(Paths.get(rootDir + path))) {
+            return stream.filter(Files::isReadable)
+                         .map(p -> {
+                             final String fileName = p.getFileName().toString();
+                             return Files.isDirectory(p) ? fileName + '/' : fileName;
+                         })
+                         .sorted(String.CASE_INSENSITIVE_ORDER)
+                         .collect(toImmutableList());
+        } catch (IOException e) {
+            // Failed to retrieve the listing.
+            return ImmutableList.of();
+        }
+    }
+
+    private static String normalizePath(String path) {
+        PathMappingUtil.ensureAbsolutePath(path, "path");
         // Replace '/' with the platform dependent file separator if necessary.
         if (FILE_SEPARATOR_IS_NOT_SLASH) {
             path = path.replace(File.separatorChar, '/');
         }
-
-        final HttpFileBuilder builder = HttpFileBuilder.of(Paths.get(rootDir + path));
-        return build(builder, clock, path, contentEncoding);
+        return path;
     }
 
     static HttpFile build(HttpFileBuilder builder,

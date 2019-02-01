@@ -16,10 +16,24 @@
 
 package com.linecorp.armeria.server.file;
 
+import java.util.List;
+
+import com.google.common.collect.ImmutableList;
+
 /**
  * A skeletal {@link HttpVfs} implementation.
  */
 public abstract class AbstractHttpVfs implements HttpVfs {
+
+    @Override
+    public boolean canList(String path) {
+        return false;
+    }
+
+    @Override
+    public List<String> list(String path) {
+        return ImmutableList.of();
+    }
 
     /**
      * Returns the {@link #meterTag()} of this {@link HttpVfs}.

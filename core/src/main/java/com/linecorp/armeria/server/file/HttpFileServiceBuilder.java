@@ -27,6 +27,9 @@ import java.time.Clock;
  */
 public final class HttpFileServiceBuilder {
 
+    private static final int DEFAULT_MAX_CACHE_ENTRIES = 1024;
+    private static final int DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES = 65536;
+
     /**
      * Creates a new {@link HttpFileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
      */
@@ -66,9 +69,10 @@ public final class HttpFileServiceBuilder {
 
     private final HttpVfs vfs;
     private Clock clock = Clock.systemUTC();
-    private int maxCacheEntries = 1024;
-    private int maxCacheEntrySizeBytes = 65536;
+    private int maxCacheEntries = DEFAULT_MAX_CACHE_ENTRIES;
+    private int maxCacheEntrySizeBytes = DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES;
     private boolean serveCompressedFiles;
+    private boolean autoIndex;
 
     private HttpFileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -83,7 +87,8 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
-     * Sets the maximum allowed number of cached file entries.
+     * Sets the maximum allowed number of cached file entries. If not set, {@value #DEFAULT_MAX_CACHE_ENTRIES}
+     * is used by default.
      */
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
         this.maxCacheEntries = HttpFileServiceConfig.validateMaxCacheEntries(maxCacheEntries);
@@ -91,11 +96,11 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
-     * Whether pre-compressed files should be served. {@link HttpFileService} supports serving files
+     * Sets whether pre-compressed files should be served. {@link HttpFileService} supports serving files
      * compressed with gzip, with the extension {@code ".gz"}, and brotli, with the extension {@code ".br"}.
      * The extension should be appended to the original file. For example, to serve {@code index.js} either
      * raw, gzip-compressed, or brotli-compressed, there should be three files, {@code index.js},
-     * {@code index.js.gz}, and {@code index.js.br}.
+     * {@code index.js.gz}, and {@code index.js.br}. By default, this feature is disabled.
      *
      * <p>Some tools for precompressing resources during a build process include {@code gulp-zopfli} and
      * {@code gulp-brotli}, which by default create files with the correct extension.
@@ -106,8 +111,8 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
-     * Returns the maximum allowed size of a cached file entry. The file bigger than this value will not be
-     * cached.
+     * Sets the maximum allowed size of a cached file entry. The file bigger than this value will not be
+     * cached. If not set, {@value #DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES} is used by default.
      */
     public HttpFileServiceBuilder maxCacheEntrySizeBytes(int maxCacheEntrySizeBytes) {
         this.maxCacheEntrySizeBytes =
@@ -116,15 +121,27 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
+     * Sets whether {@link HttpFileService} auto-generates a directory listing for a directory without an
+     * {@code index.html} file. By default, this feature is disabled. Consider the security implications of
+     * when enabling this feature.
+     */
+    public HttpFileServiceBuilder autoIndex(boolean autoIndex) {
+        this.autoIndex = autoIndex;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link HttpFileService} based on the properties of this builder.
      */
     public HttpFileService build() {
         return new HttpFileService(new HttpFileServiceConfig(
-                vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes, serveCompressedFiles));
+                vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes,
+                serveCompressedFiles, autoIndex));
     }
 
     @Override
     public String toString() {
-        return HttpFileServiceConfig.toString(this, vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes);
+        return HttpFileServiceConfig.toString(this, vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes,
+                                              serveCompressedFiles, autoIndex);
     }
 }

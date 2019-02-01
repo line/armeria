@@ -21,6 +21,8 @@ import java.time.Clock;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.PathMappingUtil;
+
 final class ClassPathHttpVfs extends AbstractHttpVfs {
 
     private final ClassLoader classLoader;
@@ -47,6 +49,7 @@ final class ClassPathHttpVfs extends AbstractHttpVfs {
     @Override
     public HttpFile get(String path, Clock clock,
                         @Nullable String contentEncoding) {
+        PathMappingUtil.ensureAbsolutePath(path, "path");
         final String resourcePath = rootDir.isEmpty() ? path.substring(1) : rootDir + path;
         final HttpFileBuilder builder = HttpFileBuilder.ofResource(classLoader, resourcePath);
         return FileSystemHttpVfs.build(builder, clock, path, contentEncoding);
