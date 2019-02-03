@@ -24,9 +24,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayDeque;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -94,6 +96,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private static final AtomicIntegerFieldUpdater<ArmeriaServerCall> pendingMessagesUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ArmeriaServerCall.class, "pendingMessages");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<ArmeriaServerCall> flushingCallbacksUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(ArmeriaServerCall.class, "flushingCallbacks");
+
     // Only most significant bit of a byte is set.
     @VisibleForTesting
     static final byte TRAILERS_FRAME_HEADER = (byte) (1 << 7);
@@ -129,6 +135,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private Compressor compressor;
     private boolean messageCompression;
     private boolean messageReceived;
+
+    @Nullable
+    private Queue<Runnable> blockingCallbacks;
+    private volatile int flushingCallbacks;
 
     // state
     private volatile boolean cancelled;
@@ -260,7 +270,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             res.onDemand(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     if (useBlockingTaskExecutor) {
-                        ctx.blockingTaskExecutor().execute(this::invokeOnReady);
+                        runInBlockingExecutor(this::invokeOnReady);
                     } else {
                         invokeOnReady();
                     }
@@ -395,7 +405,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         if (useBlockingTaskExecutor) {
-            ctx.blockingTaskExecutor().execute(() -> invokeOnMessage(request));
+            runInBlockingExecutor(() -> invokeOnMessage(request));
         } else {
             invokeOnMessage(request);
         }
@@ -418,7 +428,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
 
             if (useBlockingTaskExecutor) {
-                ctx.blockingTaskExecutor().execute(this::invokeHalfClose);
+                runInBlockingExecutor(this::invokeHalfClose);
             } else {
                 invokeHalfClose();
             }
@@ -453,14 +463,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             if (newStatus.isOk()) {
                 if (useBlockingTaskExecutor) {
-                    ctx.blockingTaskExecutor().execute(this::invokeOnComplete);
+                    runInBlockingExecutor(this::invokeOnComplete);
                 } else {
                     invokeOnComplete();
                 }
             } else {
                 cancelled = true;
                 if (useBlockingTaskExecutor) {
-                    ctx.blockingTaskExecutor().execute(this::invokeOnCancel);
+                    runInBlockingExecutor(this::invokeOnCancel);
                 } else {
                     invokeOnCancel();
                 }
@@ -605,6 +615,38 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {
         for (int i = 0; i < valueLen; ++i) {
             buf.setByte(offset++, c2b(value.charAt(i)));
+        }
+    }
+
+    private void runInBlockingExecutor(Runnable callback) {
+        if (blockingCallbacks == null) {
+            blockingCallbacks = new ArrayDeque<>();
+        }
+        blockingCallbacks.add(callback);
+        flushCallbacks();
+    }
+
+    private void flushCallbacks() {
+        if (flushingCallbacksUpdater.compareAndSet(this, 0, 1)) {
+            ctx.blockingTaskExecutor().execute(() -> {
+                assert blockingCallbacks != null;
+                Runnable r;
+                try {
+                    while ((r = blockingCallbacks.poll()) != null) {
+                        try {
+                            r.run();
+                        } catch (Throwable t) {
+                            logger.warn("Exception while executing runnable " + r, t);
+                        }
+                    }
+                } finally {
+                    flushingCallbacksUpdater.set(this, 0);
+                }
+
+                if (!blockingCallbacks.isEmpty()) {
+                    flushCallbacks();
+                }
+            });
         }
     }
 }
