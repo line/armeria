@@ -24,11 +24,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.ArrayDeque;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -40,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
@@ -119,9 +119,9 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final ServiceRequestContext ctx;
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
-    private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final String advertisedEncodingsHeader;
+    @Nullable private final Executor blockingExecutor;
 
     // Only set once.
     @Nullable
@@ -136,8 +136,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private boolean messageCompression;
     private boolean messageReceived;
 
-    @Nullable
-    private Queue<Runnable> blockingCallbacks;
     private volatile int flushingCallbacks;
 
     // state
@@ -166,7 +164,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
-        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
                 new ArmeriaMessageDeframer(
@@ -185,6 +182,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
+        blockingExecutor = useBlockingTaskExecutor ?
+                           MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
 
         res.completionFuture().handleAsync((unused, t) -> {
             if (!closeCalled) {
@@ -269,8 +268,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
             res.onDemand(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    if (useBlockingTaskExecutor) {
-                        runInBlockingExecutor(this::invokeOnReady);
+                    if (blockingExecutor != null) {
+                        blockingExecutor.execute(this::invokeOnReady);
                     } else {
                         invokeOnReady();
                     }
@@ -404,8 +403,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             GrpcUnsafeBufferUtil.storeBuffer(message.buf(), request, ctx);
         }
 
-        if (useBlockingTaskExecutor) {
-            runInBlockingExecutor(() -> invokeOnMessage(request));
+        if (blockingExecutor != null) {
+            blockingExecutor.execute(() -> invokeOnMessage(request));
         } else {
             invokeOnMessage(request);
         }
@@ -427,8 +426,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
             }
 
-            if (useBlockingTaskExecutor) {
-                runInBlockingExecutor(this::invokeHalfClose);
+            if (blockingExecutor != null) {
+                blockingExecutor.execute(this::invokeHalfClose);
             } else {
                 invokeHalfClose();
             }
@@ -462,15 +461,15 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             messageFramer.close();
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             if (newStatus.isOk()) {
-                if (useBlockingTaskExecutor) {
-                    runInBlockingExecutor(this::invokeOnComplete);
+                if (blockingExecutor != null) {
+                    blockingExecutor.execute(this::invokeOnComplete);
                 } else {
                     invokeOnComplete();
                 }
             } else {
                 cancelled = true;
-                if (useBlockingTaskExecutor) {
-                    runInBlockingExecutor(this::invokeOnCancel);
+                if (blockingExecutor != null) {
+                    blockingExecutor.execute(this::invokeOnCancel);
                 } else {
                     invokeOnCancel();
                 }
@@ -615,38 +614,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {
         for (int i = 0; i < valueLen; ++i) {
             buf.setByte(offset++, c2b(value.charAt(i)));
-        }
-    }
-
-    private void runInBlockingExecutor(Runnable callback) {
-        if (blockingCallbacks == null) {
-            blockingCallbacks = new ArrayDeque<>();
-        }
-        blockingCallbacks.add(callback);
-        flushCallbacks();
-    }
-
-    private void flushCallbacks() {
-        if (flushingCallbacksUpdater.compareAndSet(this, 0, 1)) {
-            ctx.blockingTaskExecutor().execute(() -> {
-                assert blockingCallbacks != null;
-                Runnable r;
-                try {
-                    while ((r = blockingCallbacks.poll()) != null) {
-                        try {
-                            r.run();
-                        } catch (Throwable t) {
-                            logger.warn("Exception while executing runnable " + r, t);
-                        }
-                    }
-                } finally {
-                    flushingCallbacksUpdater.set(this, 0);
-                }
-
-                if (!blockingCallbacks.isEmpty()) {
-                    flushCallbacks();
-                }
-            });
         }
     }
 }

@@ -402,8 +402,8 @@ public class GrpcServiceServerTest {
         assertThat(blockingClient.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
 
         // Confirm gRPC paths are cached despite using serviceUnder
-        assertThat(PathAndQuery.cachedPaths())
-                .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+        await().untilAsserted(() -> assertThat(PathAndQuery.cachedPaths())
+                .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall"));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
