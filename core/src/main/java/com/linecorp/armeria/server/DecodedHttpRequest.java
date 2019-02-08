@@ -105,6 +105,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
             inboundTrafficController.inc(length);
             assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
             ctx.logBuilder().requestLength(transferredBytes);
+            ctx.logBuilder().writeRequestContentPreview((HttpData)obj);
         }
         return published;
     }

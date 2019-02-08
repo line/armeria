@@ -23,13 +23,11 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 import com.linecorp.armeria.internal.logging.Sampler;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Builds a new {@link LoggingService}.
  */
-public class LoggingServiceBuilder
-        extends LoggingDecoratorBuilder<LoggingServiceBuilder, ServiceRequestContext> {
+public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServiceBuilder> {
 
     /**
      * Returns a newly-created {@link LoggingService} decorating {@code delegate} based on the properties of
@@ -44,9 +42,7 @@ public class LoggingServiceBuilder
                                     requestContentSanitizer(),
                                     responseHeadersSanitizer(),
                                     responseContentSanitizer(),
-                                    Sampler.create(samplingRate()),
-                                    requestContentPreviewWriterMapper(),
-                                    responseContentPreviewWriterMapper());
+                                    Sampler.create(samplingRate()));
     }
 
     /**

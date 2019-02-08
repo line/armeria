@@ -70,9 +70,6 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent) {}
 
     @Override
-    public void requestContentPreviewWriter(ContentPreviewWriter writer) {}
-
-    @Override
     public void writeRequestContentPreview(HttpData data) {}
 
     @Override
@@ -118,9 +115,6 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent) {}
-
-    @Override
-    public void responseContentPreviewWriter(ContentPreviewWriter writer) {}
 
     @Override
     public void writeResponseContentPreview(HttpData data) {}

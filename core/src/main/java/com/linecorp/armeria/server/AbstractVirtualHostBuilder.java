@@ -25,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +45,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
@@ -131,6 +133,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
     @Nullable
     private Function<VirtualHost, Logger> accessLoggerMapper;
+
+    private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.DISABLED;
+    private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.DISABLED;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -524,7 +529,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,
-                                new MediaTypeSet(producibleTypes), accessLoggerMapper);
+                                new MediaTypeSet(producibleTypes), RejectedPathMappingHandler.DISABLED,
+                                accessLoggerMapper, requestContentPreviewerFactory,
+                                responseContentPreviewerFactory);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
@@ -553,6 +560,48 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     public B accessLogger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
         return accessLogger(host -> LoggerFactory.getLogger(loggerName));
+    }
+
+    public B requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory = factory;
+        return self();
+    }
+
+    public B requestContentPreview(int length, Charset defaultCharset) {
+        return requestContentPreviewerFactory(ContentPreviewerFactory.ofString(length, defaultCharset));
+    }
+
+    public B requestContentPreview(int length) {
+        return requestContentPreview(length, Charset.defaultCharset());
+    }
+
+    public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        responseContentPreviewerFactory = factory;
+        return self();
+    }
+
+    public B responseContentPreview(int length, Charset defaultCharset) {
+        return responseContentPreviewerFactory(ContentPreviewerFactory.ofString(length, defaultCharset));
+    }
+
+    public B responseContentPreview(int length) {
+        return responseContentPreview(length, Charset.defaultCharset());
+    }
+
+    public B contentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory(factory);
+        responseContentPreviewerFactory(factory);
+        return self();
+    }
+
+    public B contentPreview(int requestLength, int responseLength) {
+        requestContentPreview(requestLength);
+        responseContentPreview(responseLength);
+        return self();
+    }
+
+    public B contentPreview(int length) {
+        return contentPreview(length, length);
     }
 
     @Override

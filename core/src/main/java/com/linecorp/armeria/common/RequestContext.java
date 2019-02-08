@@ -36,6 +36,7 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -77,6 +78,14 @@ public interface RequestContext extends AttributeMap {
      * Note that the references of {@link Attribute}s in the {@link #attrs()} are copied as well.
      */
     RequestContext newDerivedContext(Request request);
+
+    default ContentPreviewerFactory requestContentPreviewerFactory() {
+        return ContentPreviewerFactory.DISABLED;
+    }
+
+    default ContentPreviewerFactory responseContentPreviewerFactory() {
+        return ContentPreviewerFactory.DISABLED;
+    }
 
     /**
      * Returns the context of the {@link Request} that is being handled in the current thread.

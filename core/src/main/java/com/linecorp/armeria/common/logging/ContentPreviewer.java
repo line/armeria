@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.logging;
 
 import java.nio.charset.Charset;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpData;
@@ -24,34 +25,41 @@ import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.buffer.ByteBuf;
 
-public interface ContentPreviewWriter {
-    void write(HttpHeaders headers, HttpData data);
+public interface ContentPreviewer {
+    void onData(HttpData data);
 
     String produce();
 
-    ContentPreviewWriter EMPTY = new ContentPreviewWriter() {
+    default void onHeaders(HttpHeaders headers) {}
+
+    ContentPreviewer DISABLED = new ContentPreviewer() {
+
         @Override
-        public void write(HttpHeaders headers, HttpData data) { }
+        public void onData(HttpData data) { }
 
         @Override
         public String produce() {
-            return "";
+            return null;
         }
     };
 
-    static ContentPreviewWriter ofByteBuf(int length, Function<ByteBuf, String> reproducer) {
-        return new ByteBufAggreatedWriter(length, (headers, buffer) -> reproducer.apply(buffer));
+    static ContentPreviewer ofByteBuf(int length, Function<ByteBuf, String> reproducer) {
+        return ofByteBuf(length, (headers, buffer) -> reproducer.apply(buffer));
     }
 
-    static ContentPreviewWriter ofString(int length, Charset defaultCharset) {
-        return new StringAggregatedWriter(length, defaultCharset);
+    static ContentPreviewer ofByteBuf(int length, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
+        return new ByteBufAggreatedPreviewer(length, reproducer);
     }
 
-    static ContentPreviewWriter ofString(int length) {
+    static ContentPreviewer ofString(int length, Charset defaultCharset) {
+        return new StringAggregatedPreviewer(length, defaultCharset);
+    }
+
+    static ContentPreviewer ofString(int length) {
         return ofString(length, Charset.defaultCharset());
     }
 
-    static ContentPreviewWriter of() {
-        return EMPTY;
+    static ContentPreviewer of() {
+        return DISABLED;
     }
 }

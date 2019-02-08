@@ -178,8 +178,6 @@ public interface RequestLogBuilder {
      */
     void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
 
-    void requestContentPreviewWriter(ContentPreviewWriter writer);
-
     void writeRequestContentPreview(HttpData data);
 
     /**
@@ -298,8 +296,6 @@ public interface RequestLogBuilder {
      * Sets the {@link RequestLog#responseContent()} and the {@link RequestLog#rawResponseContent()}.
      */
     void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent);
-
-    void responseContentPreviewWriter(ContentPreviewWriter writer);
 
     void writeResponseContentPreview(HttpData data);
 

@@ -19,20 +19,18 @@ package com.linecorp.armeria.common.logging;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.RequestContext;
 
 /**
  * Builds a new logging decorator.
  */
 public abstract class LoggingDecoratorBuilder
-        <T extends LoggingDecoratorBuilder<T, R>, R extends RequestContext> {
+        <T extends LoggingDecoratorBuilder<T>> {
     private static final Function<HttpHeaders, HttpHeaders> DEFAULT_HEADERS_SANITIZER = Function.identity();
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
 
@@ -44,10 +42,6 @@ public abstract class LoggingDecoratorBuilder
     private Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, Object> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private float samplingRate = 1.0f;
-    private Function<R, ContentPreviewWriter> requestContentPreviewWriterMapper =
-            ctx -> ContentPreviewWriter.EMPTY;
-    private Function<R, ContentPreviewWriter> responseContentPreviewWriterMapper =
-            ctx -> ContentPreviewWriter.EMPTY;
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
@@ -132,27 +126,6 @@ public abstract class LoggingDecoratorBuilder
     }
 
     /**
-     * TODO: Add Javadocs.
-     */
-    public T requestContentPreviewWriterMapper(Function<R, ContentPreviewWriter> writerMapper) {
-        requireNonNull(writerMapper, "writerMapper");
-        requestContentPreviewWriterMapper = writerMapper;
-        return unsafeCast(this);
-    }
-
-    protected Function<R, ContentPreviewWriter> requestContentPreviewWriterMapper() {
-        return requestContentPreviewWriterMapper;
-    }
-
-    public T requestContentPreview(int length) {
-        return requestContentPreview(length, Charset.defaultCharset());
-    }
-
-    public T requestContentPreview(int length, Charset defaultCharset) {
-        return requestContentPreviewWriterMapper(req -> ContentPreviewWriter.ofString(length, defaultCharset));
-    }
-
-    /**
      * Sets the {@link Function} to use to sanitize response headers before logging. It is common to have the
      * {@link Function} remove sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will use {@link Function#identity()}.
@@ -187,27 +160,6 @@ public abstract class LoggingDecoratorBuilder
     }
 
     /**
-     * TODO: Add Javadocs.
-     */
-    public T responseContentPreviewWriterMapper(Function<R, ContentPreviewWriter> writerMapper) {
-        requireNonNull(writerMapper, "writerMapper");
-        responseContentPreviewWriterMapper = writerMapper;
-        return unsafeCast(this);
-    }
-
-    protected Function<R, ContentPreviewWriter> responseContentPreviewWriterMapper() {
-        return responseContentPreviewWriterMapper;
-    }
-
-    public T responseContentPreview(int length, Charset defaultCharset) {
-        return responseContentPreviewWriterMapper(req -> ContentPreviewWriter.ofString(length, defaultCharset));
-    }
-
-    public T responseContentPreview(int length) {
-        return responseContentPreview(length, Charset.defaultCharset());
-    }
-
-    /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged. The random sampling is appropriate for low-traffic
      * (ex servers that each receive &lt;100K requests). If unset, all requests will be logged.
@@ -226,7 +178,7 @@ public abstract class LoggingDecoratorBuilder
     }
 
     @SuppressWarnings("unchecked")
-    private T unsafeCast(LoggingDecoratorBuilder<T, ?> self) {
+    private T unsafeCast(LoggingDecoratorBuilder<T> self) {
         return (T) self;
     }
 
@@ -234,12 +186,11 @@ public abstract class LoggingDecoratorBuilder
     public String toString() {
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
                         requestHeadersSanitizer, requestContentSanitizer, responseHeadersSanitizer,
-                        responseContentSanitizer, samplingRate, requestContentPreviewWriterMapper,
-                        responseContentPreviewWriterMapper);
+                        responseContentSanitizer, samplingRate);
     }
 
-    private static <T extends LoggingDecoratorBuilder<T, ?>> String toString(
-            LoggingDecoratorBuilder<T, ?> self,
+    private static <T extends LoggingDecoratorBuilder<T>> String toString(
+            LoggingDecoratorBuilder<T> self,
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failureResponseLogLevel,
@@ -247,18 +198,12 @@ public abstract class LoggingDecoratorBuilder
             Function<Object, Object> requestContentSanitizer,
             Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
             Function<Object, Object> responseContentSanitizer,
-            float samplingRate,
-            Function<? extends RequestContext, ContentPreviewWriter> requestContentPreviewWriterMapper,
-            Function<? extends RequestContext, ContentPreviewWriter> responseContentPreviewWriterMapper) {
+            float samplingRate) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)
                                                  .add("failedResponseLogLevel", failureResponseLogLevel)
-                                                 .add("samplingRate", samplingRate)
-                                                 .add("requestContentPreviewWriterMapper",
-                                                      requestContentPreviewWriterMapper)
-                                                 .add("responseContentPreviewWriterMapper",
-                                                      responseContentPreviewWriterMapper);
+                                                 .add("samplingRate", samplingRate);
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
         }

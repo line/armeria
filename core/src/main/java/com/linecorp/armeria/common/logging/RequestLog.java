@@ -444,6 +444,7 @@ public interface RequestLog {
     @Nullable
     Object requestContent();
 
+    @Nullable
     String requestContentPreview();
 
     /**
@@ -485,6 +486,7 @@ public interface RequestLog {
     @Nullable
     Object rawResponseContent();
 
+    @Nullable
     String responseContentPreview();
 
     /**

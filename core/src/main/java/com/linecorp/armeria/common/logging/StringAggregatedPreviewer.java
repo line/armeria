@@ -28,11 +28,13 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
 
 import io.netty.buffer.ByteBufHolder;
 
-final class StringAggregatedWriter implements ContentPreviewWriter {
+final class StringAggregatedPreviewer implements ContentPreviewer {
 
+    private static final int MAX_BYTES_PER_CHAR = 4;
     private final CharBuffer buffer;
     private final Charset defaultCharset;
     @Nullable
@@ -43,23 +45,17 @@ final class StringAggregatedWriter implements ContentPreviewWriter {
 
     private final ByteBuffer remainedBuffer;
 
-    StringAggregatedWriter(int length, Charset defaultCharset) {
+    StringAggregatedPreviewer(int length, Charset defaultCharset) {
         buffer = CharBuffer.allocate(length);
         this.defaultCharset = defaultCharset;
-        remainedBuffer = ByteBuffer.allocate(10);
+        remainedBuffer = ByteBuffer.allocate(MAX_BYTES_PER_CHAR);
     }
 
     @Override
-    public void write(HttpHeaders headers, HttpData data) {
+    public void onData(HttpData data) {
+        checkState(decoder != null, "decoder should not be null.");
         if (produced != null || !buffer.hasRemaining()) {
             return;
-        }
-        if (decoder == null) {
-            if (headers.contentType() == null) {
-                decoder = defaultCharset.newDecoder();
-            } else {
-                decoder = headers.contentType().charset().orElse(defaultCharset).newDecoder();
-            }
         }
         if (data instanceof ByteBufHolder) {
             Arrays.stream(((ByteBufHolder) data).content().nioBuffers()).forEach(this::append);
@@ -74,6 +70,24 @@ final class StringAggregatedWriter implements ContentPreviewWriter {
             produced = new String(buffer.array(), 0, buffer.position());
         }
         return produced;
+    }
+
+    @Override
+    public void onHeaders(HttpHeaders headers) {
+        final MediaType contentType = headers.contentType();
+        if (contentType == null) {
+            return;
+        }
+        if (contentType.charset().isPresent()) {
+            decoder = contentType.charset().get().newDecoder();
+            return;
+        }
+        // TOOD: Add more text types ( maybe create a new function ) .
+        if (contentType.is(MediaType.ANY_TEXT_TYPE) ||
+            contentType.is(MediaType.JSON)) {
+            decoder = contentType.charset().orElse(defaultCharset).newDecoder();
+            return;
+        }
     }
 
     private void append(ByteBuffer buf) {
@@ -101,7 +115,9 @@ final class StringAggregatedWriter implements ContentPreviewWriter {
 
         if (buffer.hasRemaining()) {
             if (decoder.decode(buf, buffer, false).isUnderflow() && buffer.hasRemaining()) {
-                remainedBuffer.put(buf);
+                while (remainedBuffer.hasRemaining() && buf.hasRemaining()) {
+                    remainedBuffer.put(buf.get());
+                }
             }
         }
     }

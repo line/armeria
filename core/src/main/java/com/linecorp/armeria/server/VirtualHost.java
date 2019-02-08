@@ -36,6 +36,7 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaTypeSet;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -84,6 +85,9 @@ public final class VirtualHost {
     @Nullable
     private String strVal;
 
+    private ContentPreviewerFactory requestContentPreviewerFactory;
+    private ContentPreviewerFactory responseContentPreviewerFactory;
+
     /**
      * Use this constructor when you are sure that the {@link ServiceConfig}s have no duplicate
      * {@link PathMapping}s or it's OK to have them. This is useful when you create a new {@link VirtualHost}
@@ -93,27 +97,31 @@ public final class VirtualHost {
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {}, null);
+             RejectedPathMappingHandler.DISABLED, null,
+             ContentPreviewerFactory.DISABLED, ContentPreviewerFactory.DISABLED);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, Function<VirtualHost, Logger> accessLoggerMapper) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {}, accessLoggerMapper);
+             RejectedPathMappingHandler.DISABLED, accessLoggerMapper,
+             ContentPreviewerFactory.DISABLED, ContentPreviewerFactory.DISABLED);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             rejectionHandler, null);
+             rejectionHandler, null, ContentPreviewerFactory.DISABLED, ContentPreviewerFactory.DISABLED);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler,
-                Function<VirtualHost, Logger> accessLoggerMapper) {
+                Function<VirtualHost, Logger> accessLoggerMapper,
+                ContentPreviewerFactory requestContentPreviewerFactory,
+                ContentPreviewerFactory responseContentPreviewerFactory) {
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
@@ -123,6 +131,8 @@ public final class VirtualHost {
         this.hostnamePattern = hostnamePattern;
         this.sslContext = validateSslContext(sslContext);
         this.producibleMediaTypes = producibleMediaTypes;
+        this.requestContentPreviewerFactory = requestContentPreviewerFactory;
+        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
 
@@ -256,6 +266,22 @@ public final class VirtualHost {
     @Nullable
     Logger accessLoggerOrNull() {
         return accessLogger;
+    }
+
+    public ContentPreviewerFactory requestContentPreviewerFactory() {
+        return requestContentPreviewerFactory;
+    }
+
+    void requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory = requireNonNull(factory, "factory");
+    }
+
+    public ContentPreviewerFactory responseContentPreviewerFactory() {
+        return responseContentPreviewerFactory;
+    }
+
+    void responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        responseContentPreviewerFactory = requireNonNull(factory, "factory");
     }
 
     /**

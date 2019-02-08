@@ -25,7 +25,6 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.ContentPreviewWriter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.logging.Sampler;
@@ -74,8 +73,6 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final Function<Object, Object> requestContentSanitizer;
     private final Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer;
     private final Function<Object, Object> responseContentSanitizer;
-    private final Function<ServiceRequestContext, ContentPreviewWriter> requestContentPreviewWriterMapper;
-    private final Function<ServiceRequestContext, ContentPreviewWriter> responseContentPreviewWriterMapper;
 
     private final Sampler sampler;
 
@@ -104,9 +101,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
              Function.identity(),
              Function.identity(),
              Function.identity(),
-             Sampler.always(),
-             ctx -> ContentPreviewWriter.EMPTY,
-             ctx -> ContentPreviewWriter.EMPTY);
+             Sampler.always());
     }
 
     /**
@@ -122,9 +117,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
             Function<Object, Object> requestContentSanitizer,
             Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
             Function<Object, Object> responseContentSanitizer,
-            Sampler sampler,
-            Function<ServiceRequestContext, ContentPreviewWriter> requestContentPreviewWriterMapper,
-            Function<ServiceRequestContext, ContentPreviewWriter> responseContentPreviewWriterMapper) {
+            Sampler sampler) {
         super(requireNonNull(delegate, "delegate"));
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         this.successfulResponseLogLevel =
@@ -135,10 +128,6 @@ public final class LoggingService<I extends Request, O extends Response> extends
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "resposneContentSanitizer");
         this.sampler = requireNonNull(sampler, "sampler");
-        this.requestContentPreviewWriterMapper = requireNonNull(requestContentPreviewWriterMapper,
-                                                                "requestContentPreviewWriterMapper");
-        this.responseContentPreviewWriterMapper = requireNonNull(responseContentPreviewWriterMapper,
-                                                                 "responseContentPreviewWriterMapper");
     }
 
     @Override
@@ -154,8 +143,6 @@ public final class LoggingService<I extends Request, O extends Response> extends
                                                      successfulResponseLogLevel, failedResponseLogLevel,
                                                      responseHeadersSanitizer, responseContentSanitizer),
                                   RequestLogAvailability.COMPLETE);
-            ctx.logBuilder().requestContentPreviewWriter(requestContentPreviewWriterMapper.apply(ctx));
-            ctx.logBuilder().responseContentPreviewWriter(responseContentPreviewWriterMapper.apply(ctx));
         }
         return delegate().serve(ctx, req);
     }

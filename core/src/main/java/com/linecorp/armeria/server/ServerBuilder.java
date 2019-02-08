@@ -31,6 +31,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -61,6 +62,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -180,6 +182,8 @@ public final class ServerBuilder {
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
+    private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.DISABLED;
+    private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.DISABLED;
 
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -1203,6 +1207,60 @@ public final class ServerBuilder {
     }
 
     /**
+     * TODO: Add Javadocs.
+     */
+    public ServerBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory = factory;
+        return this;
+    }
+
+    public ServerBuilder requestContentPreview(int length, Charset defaultCharset) {
+        return requestContentPreviewerFactory(ContentPreviewerFactory.ofString(length, defaultCharset));
+    }
+
+    public ServerBuilder requestContentPreview(int length) {
+        return requestContentPreview(length, Charset.defaultCharset());
+    }
+
+    /**
+     * TODO: Add Javadocs.
+     */
+    public ServerBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        responseContentPreviewerFactory = factory;
+        return this;
+    }
+
+    public ServerBuilder responseContentPreview(int length, Charset defaultCharset) {
+        return responseContentPreviewerFactory(ContentPreviewerFactory.ofString(length, defaultCharset));
+    }
+
+    public ServerBuilder responseContentPreview(int length) {
+        return responseContentPreview(length, Charset.defaultCharset());
+    }
+
+    /**
+     * TODO: Add Javadocs.
+     */
+    public ServerBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory(factory);
+        responseContentPreviewerFactory(factory);
+        return this;
+    }
+
+    /**
+     * TODO: Add Javadocs.
+     */
+    public ServerBuilder contentPreview(int requestLength, int responseLength) {
+        requestContentPreview(requestLength);
+        responseContentPreview(responseLength);
+        return this;
+    }
+
+    public ServerBuilder contentPreview(int length) {
+        return contentPreview(length, length);
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1233,6 +1291,13 @@ public final class ServerBuilder {
                            vh.hostnamePattern());
                 vh.accessLogger(logger);
             }
+            // combine content preview factories (one for VirtualHost, the other for Server)
+            vh.requestContentPreviewerFactory(ContentPreviewerFactory.of(vh.requestContentPreviewerFactory(),
+                                                                         requestContentPreviewerFactory)
+                                                                     .asImmutable());
+            vh.responseContentPreviewerFactory(ContentPreviewerFactory.of(vh.responseContentPreviewerFactory(),
+                                                                          responseContentPreviewerFactory)
+                                                                      .asImmutable());
         });
         if (defaultVirtualHost.accessLoggerOrNull() == null) {
             final Logger logger = accessLoggerMapper.apply(defaultVirtualHost);
@@ -1240,6 +1305,13 @@ public final class ServerBuilder {
                        "accessLoggerMapper.apply() has returned null for the default virtual host.");
             defaultVirtualHost.accessLogger(logger);
         }
+
+        defaultVirtualHost.requestContentPreviewerFactory(
+                ContentPreviewerFactory.of(defaultVirtualHost.requestContentPreviewerFactory(),
+                                           requestContentPreviewerFactory).asImmutable());
+        defaultVirtualHost.responseContentPreviewerFactory(
+                ContentPreviewerFactory.of(defaultVirtualHost.responseContentPreviewerFactory(),
+                                           responseContentPreviewerFactory).asImmutable());
 
         // Pre-populate the domain name mapping for later matching.
         final DomainNameMapping<SslContext> sslContexts;
@@ -1338,7 +1410,8 @@ public final class ServerBuilder {
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
                  .collect(Collectors.toList()), h.producibleMediaTypes(),
-                          rejectedPathMappingHandler, host -> h.accessLogger());
+                rejectedPathMappingHandler, host -> h.accessLogger(), h.requestContentPreviewerFactory(),
+                h.responseContentPreviewerFactory());
     }
 
     @Nullable

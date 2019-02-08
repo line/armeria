@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -64,6 +65,9 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long responseTimeoutMillis;
     private long maxResponseLength;
 
+    private final ContentPreviewerFactory requestContentPreviewerFactory;
+    private final ContentPreviewerFactory responseContentPreviewerFactory;
+
     @Nullable
     private String strVal;
 
@@ -94,6 +98,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = options.defaultWriteTimeoutMillis();
         responseTimeoutMillis = options.defaultResponseTimeoutMillis();
         maxResponseLength = options.defaultMaxResponseLength();
+        requestContentPreviewerFactory = options.requestContentPreviewerFactory();
+        responseContentPreviewerFactory = options.responseContentPreviewerFactory();
 
         final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
         if (!headers.isEmpty()) {
@@ -136,6 +142,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
+        requestContentPreviewerFactory = ctx.requestContentPreviewerFactory();
+        responseContentPreviewerFactory = ctx.responseContentPreviewerFactory();
 
         final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
         if (!additionalHeaders.isEmpty()) {
@@ -162,6 +170,16 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public ClientRequestContext newDerivedContext(Request request) {
         return new DefaultClientRequestContext(this, request);
+    }
+
+    @Override
+    public ContentPreviewerFactory requestContentPreviewerFactory() {
+        return requestContentPreviewerFactory;
+    }
+
+    @Override
+    public ContentPreviewerFactory responseContentPreviewerFactory() {
+        return responseContentPreviewerFactory;
     }
 
     @Override

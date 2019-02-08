@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.TextFormatter;
 
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.util.internal.PlatformDependent;
 
@@ -101,7 +102,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestFirstBytesTransferredTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
-    private ContentPreviewWriter requestContentPreviewWriter = ContentPreviewWriter.EMPTY;
+    private ContentPreviewer requestContentPreviewer = ContentPreviewer.DISABLED;
+    @Nullable
     private String requestContentPreview;
     @Nullable
     private Throwable requestCause;
@@ -111,7 +113,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long responseFirstBytesTransferredTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
-    private ContentPreviewWriter responseContentPreviewWriter = ContentPreviewWriter.EMPTY;
+    private ContentPreviewer responseContentPreviewer = ContentPreviewer.DISABLED;
+    @Nullable
     private String responseContentPreview;
     @Nullable
     private Throwable responseCause;
@@ -511,6 +514,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.requestHeaders = requireNonNull(requestHeaders, "requestHeaders");
+        requestContentPreviewer = ctx.requestContentPreviewerFactory().get(ctx, this.requestHeaders);
+        requestContentPreviewer.onHeaders(requestHeaders);
         updateAvailability(REQUEST_HEADERS);
     }
 
@@ -533,16 +538,22 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void writeRequestContentPreview(HttpData data) {
-        requestContentPreviewWriter.write(requestHeaders, data);
-    }
-
-    @Override
-    public void requestContentPreviewWriter(ContentPreviewWriter writer) {
-        requestContentPreviewWriter = writer;
+        if (requestContentPreviewer == ContentPreviewer.DISABLED) {
+            return;
+        }
+        HttpData httpData = data;
+        if (httpData instanceof ByteBufHolder) {
+            final ByteBufHolder duplicated = ((ByteBufHolder) httpData).duplicate();
+            if (duplicated instanceof HttpData) {
+                httpData = (HttpData)duplicated;
+            }
+        }
+        requestContentPreviewer.onData(httpData);
     }
 
     @Override
     public String requestContentPreview() {
+        ensureAvailability(REQUEST_END);
         return requestContentPreview;
     }
 
@@ -596,8 +607,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
-        requestContentPreview = requestContentPreviewWriter.produce();
-
+        requestContentPreview = requestContentPreviewer.produce();
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
         startRequest0(null, context().sessionProtocol(), null,
@@ -742,6 +752,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.responseHeaders = requireNonNull(responseHeaders, "responseHeaders");
+        responseContentPreviewer = ctx.responseContentPreviewerFactory().get(ctx, this.responseHeaders);
+        responseContentPreviewer.onHeaders(responseHeaders);
         updateAvailability(RESPONSE_HEADERS);
     }
 
@@ -773,17 +785,23 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void responseContentPreviewWriter(ContentPreviewWriter writer) {
-        responseContentPreviewWriter = writer;
-    }
-
-    @Override
     public void writeResponseContentPreview(HttpData data) {
-        responseContentPreviewWriter.write(responseHeaders, data);
+        if (responseContentPreviewer == ContentPreviewer.DISABLED) {
+            return;
+        }
+        HttpData httpData = data;
+        if (httpData instanceof ByteBufHolder) {
+            final ByteBufHolder duplicated = ((ByteBufHolder) httpData).duplicate();
+            if (duplicated instanceof HttpData) {
+                httpData = (HttpData)duplicated;
+            }
+        }
+        responseContentPreviewer.onData(httpData);
     }
 
     @Override
     public String responseContentPreview() {
+        ensureAvailability(RESPONSE_END);
         return responseContentPreview;
     }
 
@@ -837,7 +855,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
-        responseContentPreview = responseContentPreviewWriter.produce();
+        responseContentPreview = responseContentPreviewer.produce();
 
         // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
         // totalResponseDuration will be 0
@@ -987,12 +1005,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 buf.append(", headers=").append(headersSanitizer.apply(requestHeaders));
             }
 
-            if (isAvailable(flags, REQUEST_CONTENT)) {
-                if (requestContent != null) {
-                    buf.append(", content=").append(contentSanitizer.apply(requestContent));
-                } else if (requestContentPreview != null) {
-                    buf.append(", content-preview=").append(requestContentPreview);
-                }
+            if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
+                buf.append(", content=").append(contentSanitizer.apply(requestContent));
+            } else if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
+                buf.append(", content-preview=").append(requestContentPreview);
             }
         }
         buf.append('}');
@@ -1041,12 +1057,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 buf.append(", headers=").append(headersSanitizer.apply(responseHeaders));
             }
 
-            if (isAvailable(flags, RESPONSE_CONTENT)) {
-                if (responseContent != null) {
-                    buf.append(", content=").append(contentSanitizer.apply(responseContent));
-                } else if (responseContentPreview != null) {
-                    buf.append(", content-preview=").append(responseContentPreview);
-                }
+            if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
+                buf.append(", content=").append(contentSanitizer.apply(responseContent));
+            } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
+                buf.append(", content-preview=").append(responseContentPreview);
             }
         }
         buf.append('}');

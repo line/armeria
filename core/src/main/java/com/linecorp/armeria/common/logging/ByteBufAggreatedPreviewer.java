@@ -30,7 +30,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 
-final class ByteBufAggreatedWriter implements ContentPreviewWriter {
+final class ByteBufAggreatedPreviewer implements ContentPreviewer {
 
     public static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
     private final int capacity;
@@ -41,15 +41,14 @@ final class ByteBufAggreatedWriter implements ContentPreviewWriter {
     private String produced;
     private int aggregatedLength;
 
-    ByteBufAggreatedWriter(int capacity, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
+    ByteBufAggreatedPreviewer(int capacity, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
         this.capacity = capacity;
         bufferList = new ArrayList<>();
         this.reproducer = reproducer;
     }
 
     @Override
-    public void write(HttpHeaders headers, HttpData data) {
-        this.headers = headers;
+    public void onData(HttpData data) {
         if (data.isEmpty() || produced != null) {
             return;
         }
@@ -60,7 +59,7 @@ final class ByteBufAggreatedWriter implements ContentPreviewWriter {
             newBuffer = Unpooled.wrappedBuffer(data.array(), data.offset(), data.length() - data.offset());
         }
         aggregatedLength += data.length();
-        bufferList.add(newBuffer.retainedDuplicate());
+        bufferList.add(newBuffer.retain());
         if (aggregatedLength >= capacity) {
             produce();
         }
@@ -78,5 +77,10 @@ final class ByteBufAggreatedWriter implements ContentPreviewWriter {
             bufferList.forEach(ReferenceCountUtil::safeRelease);
             bufferList.clear();
         }
+    }
+
+    @Override
+    public void onHeaders(HttpHeaders headers) {
+        this.headers = headers;
     }
 }
