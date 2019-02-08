@@ -1098,7 +1098,7 @@ final class AnnotatedValueResolver {
                 case ALWAYS:
                     return true;
                 case FOR_FORM_DATA:
-                    return isFormData(req.headers().contentType());
+                    return isFormData(req.contentType());
             }
             return false;
         }
@@ -1162,7 +1162,7 @@ final class AnnotatedValueResolver {
                     result = httpParameters;
                     if (result == null) {
                         httpParameters = result = httpParametersOf(context.query(),
-                                                                   request.headers().contentType(),
+                                                                   request.contentType(),
                                                                    message);
                     }
                 }
@@ -1202,7 +1202,7 @@ final class AnnotatedValueResolver {
 
                 if (message != null && isFormData(contentType)) {
                     // Respect 'charset' attribute of the 'content-type' header if it exists.
-                    final String body = message.content().toString(
+                    final String body = message.content(
                             contentType.charset().orElse(StandardCharsets.US_ASCII));
                     if (!body.isEmpty()) {
                         final Map<String, List<String>> p =

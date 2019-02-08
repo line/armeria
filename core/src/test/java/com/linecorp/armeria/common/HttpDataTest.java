@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.Test;
@@ -66,5 +67,17 @@ public class HttpDataTest {
         assertThat(in.read()).isEqualTo(65533);
         assertThat(in.read()).isEqualTo((int) 'C');
         assertThat(in.read()).isEqualTo(-1);
+    }
+
+    @Test
+    public void fromUtf8CharSequence() throws Exception {
+        assertThat(HttpData.ofUtf8((CharSequence) "가A").toStringUtf8()).isEqualTo("가A");
+        assertThat(HttpData.ofUtf8(CharBuffer.wrap("あB")).toStringUtf8()).isEqualTo("あB");
+    }
+
+    @Test
+    public void fromAsciiCharSequence() throws Exception {
+        assertThat(HttpData.ofAscii((CharSequence) "가A").toStringUtf8()).isEqualTo("?A");
+        assertThat(HttpData.ofAscii(CharBuffer.wrap("あB")).toStringUtf8()).isEqualTo("?B");
     }
 }

@@ -77,7 +77,7 @@ public class HttpHealthCheckServiceTest {
         final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
 
         assertEquals(HttpStatus.OK, res.status());
-        assertEquals("ok", res.content().toStringUtf8());
+        assertEquals("ok", res.contentUtf8());
     }
 
     @Test
@@ -105,7 +105,7 @@ public class HttpHealthCheckServiceTest {
         final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, res.status());
-        assertEquals("not ok", res.content().toStringUtf8());
+        assertEquals("not ok", res.contentUtf8());
     }
 
     @Test

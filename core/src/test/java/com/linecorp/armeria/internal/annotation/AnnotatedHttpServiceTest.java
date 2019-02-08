@@ -315,14 +315,14 @@ public class AnnotatedHttpServiceTest {
         @Path("/a/string")
         public String postString(AggregatedHttpMessage message, RequestContext ctx) {
             validateContext(ctx);
-            return message.content().toStringUtf8();
+            return message.contentUtf8();
         }
 
         @Post
         @Path("/a/string-async1")
         public CompletionStage<String> postStringAsync1(AggregatedHttpMessage message, RequestContext ctx) {
             validateContext(ctx);
-            return CompletableFuture.supplyAsync(() -> message.content().toStringUtf8());
+            return CompletableFuture.supplyAsync(message::contentUtf8);
         }
 
         @Post

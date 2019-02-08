@@ -119,7 +119,7 @@ public class PrometheusMetricsIntegrationTest {
         makeRequest1("world");
 
         // Wait until all RequestLogs are collected.
-        await().untilAsserted(() -> assertThat(makeMetricsRequest().content().toStringUtf8())
+        await().untilAsserted(() -> assertThat(makeMetricsRequest().contentUtf8())
                 .contains("server_active_requests{handler=\"Foo\"",
                           "server_active_requests{handler=\"Foo\"",
                           "server_requests_total{handler=\"Foo\",",
@@ -146,7 +146,7 @@ public class PrometheusMetricsIntegrationTest {
                           "client_total_duration_seconds_count{handler=\"Foo\",",
                           "client_total_duration_seconds_sum{handler=\"Foo\","));
 
-        final String content = makeMetricsRequest().content().toStringUtf8();
+        final String content = makeMetricsRequest().contentUtf8();
         logger.debug("Metrics reported by the exposition service:\n{}", content);
 
         // Server entry count check
@@ -209,7 +209,7 @@ public class PrometheusMetricsIntegrationTest {
         makeRequest2("world");
 
         // Wait until all RequestLogs are collected.
-        await().untilAsserted(() -> assertThat(makeMetricsRequest().content().toStringUtf8())
+        await().untilAsserted(() -> assertThat(makeMetricsRequest().contentUtf8())
                 .contains("server_active_requests{handler=\"Bar\"",
                           "server_active_requests{handler=\"Bar\"",
                           "server_requests_total{handler=\"Bar\",",
@@ -236,7 +236,7 @@ public class PrometheusMetricsIntegrationTest {
                           "client_total_duration_seconds_count{handler=\"Bar\",",
                           "client_total_duration_seconds_sum{handler=\"Bar\","));
 
-        final String content = makeMetricsRequest().content().toStringUtf8();
+        final String content = makeMetricsRequest().contentUtf8();
 
         // Server entry count check
         assertThat(content).containsPattern(

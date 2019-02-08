@@ -164,7 +164,7 @@ using :api:`RetryingHttpClientBuilder`:
                         // The response timed out or the request has not been handled by the server.
                         return backoff;
                     }
-                } else if ("Should I retry?".equals(result.content().toStringUtf8())) {
+                } else if ("Should I retry?".equals(result.contentUtf8())) {
                     return backoff;
                 }
                 return null; // Return null to stop retrying.

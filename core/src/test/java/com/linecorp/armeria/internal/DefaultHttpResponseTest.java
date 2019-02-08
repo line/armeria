@@ -127,7 +127,7 @@ public class DefaultHttpResponseTest {
                 HttpHeaders.of(200)
                            .add(HttpHeaderNames.of("c"), "d"));
         // Content
-        assertThat(aggregated.content().toStringUtf8()).isEqualTo("foo");
+        assertThat(aggregated.contentUtf8()).isEqualTo("foo");
         // Trailing headers
         assertThat(aggregated.trailingHeaders()).isEqualTo(
                 HttpHeaders.of(HttpHeaderNames.of("e"), "f", HttpHeaderNames.of("g"), "h"));

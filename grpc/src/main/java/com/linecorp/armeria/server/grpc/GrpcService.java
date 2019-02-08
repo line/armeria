@@ -120,7 +120,7 @@ public final class GrpcService extends AbstractHttpService
 
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final MediaType contentType = req.headers().contentType();
+        final MediaType contentType = req.contentType();
         final SerializationFormat serializationFormat = findSerializationFormat(contentType);
         if (serializationFormat == null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,

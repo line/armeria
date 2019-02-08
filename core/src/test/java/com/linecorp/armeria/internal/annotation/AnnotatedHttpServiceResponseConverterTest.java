@@ -497,24 +497,24 @@ public class AnnotatedHttpServiceResponseConverterTest {
         shouldBeConvertedByDefaultResponseConverter(HttpClient.of(rule.uri("/publish/single")));
     }
 
-    private void shouldBeConvertedByDefaultResponseConverter(HttpClient client) throws Exception {
+    private static void shouldBeConvertedByDefaultResponseConverter(HttpClient client) throws Exception {
         AggregatedHttpMessage msg;
 
         msg = aggregated(client.get("/string"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.content().toStringUtf8()).isEqualTo("¥");
-        assertThat(msg.content().toStringAscii()).isNotEqualTo("¥");
+        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.contentUtf8()).isEqualTo("¥");
+        assertThat(msg.contentAscii()).isNotEqualTo("¥");
 
         msg = aggregated(client.get("/byteArray"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
+        assertThat(msg.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/httpData"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
+        assertThat(msg.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/jsonNode"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final JsonNode expected = mapper.readTree("{\"a\":\"¥\"}");
         assertThat(msg.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
     }
@@ -526,14 +526,14 @@ public class AnnotatedHttpServiceResponseConverterTest {
         AggregatedHttpMessage msg;
 
         msg = aggregated(client.get("/string"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.content().toStringUtf8())
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.contentUtf8())
                 .isArray().ofLength(3)
                 .thatContains("a").thatContains("b").thatContains("c");
 
         msg = aggregated(client.get("/jsonNode"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.content().toStringUtf8())
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.contentUtf8())
                 .isEqualTo("[{\"a\":\"1\"},{\"b\":\"2\"},{\"c\":\"3\"}]");
     }
 
@@ -557,19 +557,19 @@ public class AnnotatedHttpServiceResponseConverterTest {
         AggregatedHttpMessage msg;
 
         msg = aggregated(client.get("/string"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(msg.content().array()).isEqualTo("100".getBytes());
 
         msg = aggregated(client.get("/byteArray"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
+        assertThat(msg.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/httpData"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.OCTET_STREAM);
+        assertThat(msg.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(msg.content().array()).isEqualTo("¥".getBytes());
 
         msg = aggregated(client.get("/jsonNode"));
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final JsonNode expected = mapper.readTree("{\"a\":\"¥\"}");
         assertThat(msg.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
     }
@@ -606,7 +606,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
             final AggregatedHttpMessage message = aggregated(client.get(path));
             assertThat(message.status()).isEqualTo(HttpStatus.OK);
             assertThat(message.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
-            assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableMap.of("a", "b"));
+            assertThatJson(message.contentUtf8()).isEqualTo(ImmutableMap.of("a", "b"));
             assertThat(message.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
                     "annotated-value");
         });
@@ -616,7 +616,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
             final AggregatedHttpMessage message = aggregated(client.get(path));
             assertThat(message.status()).isEqualTo(HttpStatus.OK);
             assertThat(message.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
-            assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableList.of("a", "b"));
+            assertThatJson(message.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
             assertThat(message.trailingHeaders().get(HttpHeaderNames.of("x-custom-trailing-header")))
                     .isEqualTo("value");
             assertThat(message.trailingHeaders().get(HttpHeaderNames.of("x-custom-annotated-trailing-header")))
@@ -629,7 +629,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
         ImmutableList.of("/wildcard", "/generic").forEach(path -> {
             final AggregatedHttpMessage message = aggregated(client.get(path));
             assertThat(message.status()).isEqualTo(HttpStatus.OK);
-            assertThatJson(message.content().toStringUtf8()).isEqualTo(ImmutableList.of("a", "b"));
+            assertThatJson(message.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
         });
 
         msg = aggregated(client.get("/header"));
@@ -649,14 +649,13 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         msg = aggregated(client.get("/mono/jsonNode"));
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.content().toStringUtf8()).isEqualTo(ImmutableMap.of("a", "¥"));
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.contentUtf8()).isEqualTo(ImmutableMap.of("a", "¥"));
 
         msg = aggregated(client.get("/jsonNode"));
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.content().toStringUtf8())
-                .isEqualTo(ImmutableList.of(ImmutableMap.of("a", "¥")));
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.contentUtf8()).isEqualTo(ImmutableList.of(ImmutableMap.of("a", "¥")));
 
         msg = aggregated(client.get("/defer"));
         assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);

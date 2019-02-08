@@ -122,7 +122,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
                                      Class<?> expectedResultType) throws Exception {
             if (expectedResultType == MyRequest.class) {
                 final String decorated = ctx.attr(decoratedFlag).get();
-                return new MyRequest(request.content().toStringUtf8() + decorated);
+                return new MyRequest(request.contentUtf8() + decorated);
             }
             return RequestConverterFunction.fallthrough();
         }
@@ -240,10 +240,10 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
                                    HttpData.ofUtf8("Armeria"))
                           .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
         assertThat(msg.headers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
-        assertThat(msg.content().toStringUtf8())
+        assertThat(msg.contentUtf8())
                 .isEqualTo("Hello, Armeria (decorated-1) (decorated-2) (decorated-3)!");
         assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
         assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
@@ -260,10 +260,10 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
                                    HttpData.ofUtf8("Armeria"))
                           .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
         assertThat(msg.headers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
-        assertThat(msg.content().toStringUtf8())
+        assertThat(msg.contentUtf8())
                 .isEqualTo("Hello, Armeria (decorated-1) (decorated-2) (decorated-3)!");
         assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
         assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
@@ -277,7 +277,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
-        assertThat(msg.content().toStringUtf8())
+        assertThat(msg.contentUtf8())
                 .isEqualTo("Cause:" + IllegalArgumentException.class.getSimpleName());
         assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
     }
@@ -290,7 +290,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
-        assertThat(msg.content().toStringUtf8())
+        assertThat(msg.contentUtf8())
                 .isEqualTo("Cause:" + IllegalStateException.class.getSimpleName());
         assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
     }

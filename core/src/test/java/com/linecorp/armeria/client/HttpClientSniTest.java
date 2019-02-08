@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import static org.junit.Assert.assertEquals;
 
-import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.CompletableFuture;
 
@@ -126,8 +125,8 @@ public class HttpClientSniTest {
 
         final AggregatedHttpMessage response = client.get("/").aggregate().get();
 
-        assertEquals(HttpStatus.OK, response.headers().status());
-        return response.content().toString(StandardCharsets.UTF_8);
+        assertEquals(HttpStatus.OK, response.status());
+        return response.contentUtf8();
     }
 
     @Test
@@ -138,8 +137,8 @@ public class HttpClientSniTest {
                                           .set(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort))
                       .aggregate().get();
 
-        assertEquals(HttpStatus.OK, response.headers().status());
-        assertEquals("a.com: CN=a.com", response.content().toStringUtf8());
+        assertEquals(HttpStatus.OK, response.status());
+        assertEquals("a.com: CN=a.com", response.contentUtf8());
     }
 
     @Test
@@ -147,8 +146,8 @@ public class HttpClientSniTest {
         final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
         try (SafeCloseable unused = Clients.withHttpHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpMessage response = client.get("/").aggregate().get();
-            assertEquals(HttpStatus.OK, response.headers().status());
-            assertEquals("a.com: CN=a.com", response.content().toStringUtf8());
+            assertEquals(HttpStatus.OK, response.status());
+            assertEquals("a.com: CN=a.com", response.contentUtf8());
         }
     }
 

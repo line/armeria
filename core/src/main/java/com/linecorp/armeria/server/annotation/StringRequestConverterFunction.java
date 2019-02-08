@@ -35,11 +35,10 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
                                  Class<?> expectedResultType) throws Exception {
         if (expectedResultType == String.class ||
             expectedResultType == CharSequence.class) {
-            final MediaType contentType = request.headers().contentType();
+            final MediaType contentType = request.contentType();
             if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
                 // See https://tools.ietf.org/html/rfc2616#section-3.7.1
-                return request.content().toString(
-                        contentType.charset().orElse(StandardCharsets.ISO_8859_1));
+                return request.content(contentType.charset().orElse(StandardCharsets.ISO_8859_1));
             }
         }
         return RequestConverterFunction.fallthrough();

@@ -100,7 +100,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
 
             final AggregatedHttpMessage res = client.get("/hello").aggregate().join();
             assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
-            assertThat(res.content().toStringUtf8()).isEmpty();
+            assertThat(res.contentUtf8()).isEmpty();
         });
     }
 
@@ -142,7 +142,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
             final AggregatedHttpMessage res = sendPostRequest(httpClient(server));
             assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
             assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
-            assertThat(res.content().toStringUtf8()).isNotEqualTo("hello");
+            assertThat(res.contentUtf8()).isNotEqualTo("hello");
         });
     }
 
@@ -186,7 +186,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
 
     private void validateEchoResponse(AggregatedHttpMessage res) {
         assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
-        assertThat(res.content().toStringUtf8()).isEqualTo(POST_BODY);
+        assertThat(res.contentUtf8()).isEqualTo(POST_BODY);
     }
 
     private void runEchoServer(ReactiveWebServerFactory factory,

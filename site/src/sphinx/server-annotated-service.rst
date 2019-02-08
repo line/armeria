@@ -454,7 +454,7 @@ converter is not able to convert the request.
                                      Class<?> expectedResultType) {
             if (expectedResultType == Greeting.class) {
                 // Convert the request to a Java object.
-                return new Greeting(translateToEnglish(request.content().toStringUtf8()));
+                return new Greeting(translateToEnglish(request.contentUtf8()));
             }
 
             // To the next request converter.
@@ -1143,13 +1143,13 @@ You can annotate them with :api:`@Consumes` annotation.
         @Post("/hello")
         @Consumes("text/plain")
         public HttpResponse helloText(AggregatedHttpMessage message) {
-            // Get a text content by calling message.content().toStringAscii().
+            // Get a text content by calling message.contentAscii().
         }
 
         @Post("/hello")
         @Consumes("application/json")
         public HttpResponse helloJson(AggregatedHttpMessage message) {
-            // Get a JSON object by calling message.content().toStringUtf8().
+            // Get a JSON object by calling message.contentUtf8().
         }
     }
 
@@ -1191,7 +1191,7 @@ as follows. ``helloCatchAll()`` method would accept every request except for the
         @Post("/hello")
         @Consumes("application/json")
         public HttpResponse helloJson(AggregatedHttpMessage message) {
-            // Get a JSON object by calling message.content().toStringUtf8().
+            // Get a JSON object by calling message.contentUtf8().
         }
     }
 

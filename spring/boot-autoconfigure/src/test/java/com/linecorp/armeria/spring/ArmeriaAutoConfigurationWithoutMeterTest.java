@@ -92,6 +92,6 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
 
         final AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.content().toStringUtf8()).isEqualTo("ok");
+        assertThat(msg.contentUtf8()).isEqualTo("ok");
     }
 }

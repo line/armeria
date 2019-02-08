@@ -37,6 +37,6 @@ public class HttpResponseExceptionTest {
 
         final AggregatedHttpMessage message = exception.httpResponse().aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(message.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(message.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }
 }

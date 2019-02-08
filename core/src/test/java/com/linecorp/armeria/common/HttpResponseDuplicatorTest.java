@@ -38,14 +38,14 @@ public class HttpResponseDuplicatorTest {
         final AggregatedHttpMessage res2 = resDuplicator.duplicateStream().aggregate().join();
 
         assertThat(res1.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res1.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res1.headers().get(VARY)).isNull();
-        assertThat(res1.content().toStringUtf8()).isEqualTo("Armeria is awesome!");
+        assertThat(res1.contentUtf8()).isEqualTo("Armeria is awesome!");
 
         assertThat(res2.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res2.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res2.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res2.headers().get(VARY)).isNull();
-        assertThat(res2.content().toStringUtf8()).isEqualTo("Armeria is awesome!");
+        assertThat(res2.contentUtf8()).isEqualTo("Armeria is awesome!");
         resDuplicator.close();
     }
 }
