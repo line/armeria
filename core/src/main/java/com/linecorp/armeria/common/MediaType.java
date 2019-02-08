@@ -170,6 +170,12 @@ public final class MediaType {
     public static final MediaType PLAIN_TEXT_UTF_8 = createConstantUtf8(TEXT_TYPE, "plain");
 
     /**
+     * As described in <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a>, this constant
+     * ({@code text/event-stream}) is used when sending notifications in the form of DOM events from a server.
+     */
+    public static final MediaType EVENT_STREAM = createConstant(TEXT_TYPE, "event-stream");
+
+    /**
      * <a href="http://www.rfc-editor.org/rfc/rfc4329.txt">RFC 4329</a> declares {@link
      * #JAVASCRIPT_UTF_8 application/javascript} to be the correct media type for JavaScript, but this
      * may be necessary in certain situations for compatibility.
@@ -405,17 +411,17 @@ public final class MediaType {
     public static final MediaType JSON = createConstant(APPLICATION_TYPE, "json");
 
     /**
-     * As described in <a href="https://tools.ietf.org/html/rfc7464">RFC 7464</a>, this constant
-     * ({@code application/json-seq}) is used for expressing JSON text sequences.
-     */
-    public static final MediaType JSON_SEQ = createConstant(APPLICATION_TYPE, "json-seq");
-
-    /**
      * As described in <a href="https://www.ietf.org/rfc/rfc6902.txt">RFC 6902</a>, this constant
      * ({@code application/json-patch+json}) is used for expressing a sequence of operations to apply
      * to a JavaScript Object Notation(JSON) document.
      */
     public static final MediaType JSON_PATCH = createConstant(APPLICATION_TYPE, "json-patch+json");
+
+    /**
+     * As described in <a href="https://tools.ietf.org/html/rfc7464">RFC 7464</a>, this constant
+     * ({@code application/json-seq}) is used for expressing JSON text sequences.
+     */
+    public static final MediaType JSON_SEQ = createConstant(APPLICATION_TYPE, "json-seq");
 
     /**
      * Media type for the <a href="http://www.w3.org/TR/appmanifest/">Manifest for a web

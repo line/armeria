@@ -15,8 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.annotation.ResponseConversionUtil.streamingFrom;
-import static com.linecorp.armeria.internal.annotation.ResponseConversionUtil.toMutableHeaders;
+import static com.linecorp.armeria.internal.ResponseConversionUtil.streamingFrom;
 
 import java.util.stream.Stream;
 
@@ -68,10 +67,10 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                 return ResponseConverterFunction.fallthrough();
             }
         } else if (result instanceof HttpData) {
-            return HttpResponse.of(toMutableHeaders(headers).contentType(MediaType.OCTET_STREAM),
+            return HttpResponse.of(headers.toMutable().contentType(MediaType.OCTET_STREAM),
                                    (HttpData) result, trailingHeaders);
         } else if (result instanceof byte[]) {
-            return HttpResponse.of(toMutableHeaders(headers).contentType(MediaType.OCTET_STREAM),
+            return HttpResponse.of(headers.toMutable().contentType(MediaType.OCTET_STREAM),
                                    HttpData.of((byte[]) result), trailingHeaders);
         }
 
