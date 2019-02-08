@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -119,6 +120,12 @@ public abstract class TomcatService implements HttpService {
             }
         }
     }
+
+    private static final HttpHeaders INVALID_AUTHORITY_HEADERS =
+            HttpHeaders.of(HttpStatus.BAD_REQUEST)
+                       .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+    private static final HttpData INVALID_AUTHORITY_DATA =
+            HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nInvalid authority");
 
     TomcatService() {}
 
@@ -277,7 +284,11 @@ public abstract class TomcatService implements HttpService {
 
                 final Request coyoteReq = convertRequest(ctx, aReq);
                 if (coyoteReq == null) {
-                    res.close(HttpHeaders.of(HttpStatus.BAD_REQUEST));
+                    if (res.tryWrite(INVALID_AUTHORITY_HEADERS)) {
+                        if (res.tryWrite(INVALID_AUTHORITY_DATA)) {
+                            res.close();
+                        }
+                    }
                     return null;
                 }
                 final Response coyoteRes = new Response();
