@@ -100,9 +100,9 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             WebEndpointsSupplier endpointsSupplier,
             EndpointMediaTypes mediaTypes,
             WebEndpointProperties properties) {
-        EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
+        final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
-        Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
+        final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
         return sb -> {
             endpoints
                              .stream()
@@ -116,7 +116,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                             new WebOperationHttpService(operation));
                              });
             if (StringUtils.hasText(endpointMapping.getPath())) {
-                PathMapping mapping = getPathMapping(
+                final PathMapping mapping = getPathMapping(
                         HttpMethod.GET.name(),
                         endpointMapping.getPath(),
                         ImmutableList.of(),

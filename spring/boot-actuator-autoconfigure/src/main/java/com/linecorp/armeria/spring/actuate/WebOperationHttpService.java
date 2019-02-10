@@ -61,7 +61,7 @@ final class WebOperationHttpService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-        CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
+        final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
         req.aggregate().thenAccept(msg -> {
             if (operation.isBlocking()) {
                 ctx.blockingTaskExecutor().execute(() -> invoke(ctx, msg, resFuture));
@@ -75,11 +75,11 @@ final class WebOperationHttpService implements HttpService {
     private void invoke(ServiceRequestContext ctx,
                         AggregatedHttpMessage msg,
                         CompletableFuture<HttpResponse> resFuture) {
-        Map<String, Object> arguments = getArguments(ctx, msg);
-        Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
+        final Map<String, Object> arguments = getArguments(ctx, msg);
+        final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
 
         try {
-            HttpResponse res = handleResult(result, msg.method());
+            final HttpResponse res = handleResult(result, msg.method());
             resFuture.complete(res);
         } catch (IOException e) {
             resFuture.completeExceptionally(e);
@@ -97,7 +97,7 @@ final class WebOperationHttpService implements HttpService {
                                    OBJECT_MAPPER.writeValueAsBytes(result));
         }
 
-        WebEndpointResponse<?> response = (WebEndpointResponse<?>) result;
+        final WebEndpointResponse<?> response = (WebEndpointResponse<?>) result;
         return HttpResponse.of(
                 HttpStatus.valueOf(response.getStatus()),
                 MediaType.JSON_UTF_8,
