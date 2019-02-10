@@ -13,6 +13,8 @@ includeWithFlags ':jetty',                              'java', 'publish', 'relo
 includeWithFlags ':kafka',                              'java', 'publish', 'relocate'
 includeWithFlags ':logback',                            'java', 'publish', 'relocate'
 includeWithFlags ':retrofit2',                          'java', 'publish', 'relocate'
+includeWithFlags ':spring:boot-actuator-autoconfigure', 'java', 'publish', 'relocate'
+includeWithFlags ':spring:boot-actuator-starter',       'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-autoconfigure',          'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-starter',                'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-webflux-autoconfigure',  'java', 'publish', 'relocate'
