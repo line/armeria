@@ -64,7 +64,6 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
 
     @SpringBootApplication
     public static class TestConfiguration {
-
     }
 
     @Rule

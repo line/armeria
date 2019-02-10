@@ -74,13 +74,13 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public EndpointMediaTypes endpointMediaTypes() {
+    EndpointMediaTypes endpointMediaTypes() {
         return new EndpointMediaTypes(MEDIA_TYPES, MEDIA_TYPES);
     }
 
     @Bean
     @ConditionalOnMissingBean(WebEndpointsSupplier.class)
-    public WebEndpointDiscoverer webEndpointDiscoverer(
+    WebEndpointDiscoverer webEndpointDiscoverer(
             ApplicationContext applicationContext,
             ParameterValueMapper parameterValueMapper,
             EndpointMediaTypes endpointMediaTypes,
@@ -96,7 +96,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     @Bean
-    public ArmeriaServerConfigurator actuatorServerConfigurator(
+    ArmeriaServerConfigurator actuatorServerConfigurator(
             WebEndpointsSupplier endpointsSupplier,
             EndpointMediaTypes mediaTypes,
             WebEndpointProperties properties) {
