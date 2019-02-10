@@ -119,7 +119,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 PathMapping mapping = getPathMapping(
                         HttpMethod.GET.name(),
                         endpointMapping.getPath(),
-                        mediaTypes.getConsumed(),
+                        ImmutableList.of(),
                         mediaTypes.getProduced()
                 );
                 sb.service(mapping, (ctx, req) -> {
@@ -136,7 +136,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static PathMapping getPathMapping(
             String method, String path, Collection<String> consumes, Collection<String> produces) {
-        return PathMapping.ofExact(path)
+        return PathMapping.of(path)
                           .withHttpHeaderInfo(
                                   ImmutableSet.of(HttpMethod.valueOf(method)),
                                   convertMediaTypes(consumes),
