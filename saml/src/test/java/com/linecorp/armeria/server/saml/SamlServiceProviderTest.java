@@ -317,9 +317,9 @@ public class SamlServiceProviderTest {
     public void shouldRespondAuthnRequest_HttpPost() throws Exception {
         final AggregatedHttpMessage resp = client.get("/post").aggregate().join();
         assertThat(resp.status()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.headers().contentType()).isEqualTo(MediaType.HTML_UTF_8);
+        assertThat(resp.contentType()).isEqualTo(MediaType.HTML_UTF_8);
 
-        final Document doc = Jsoup.parse(resp.content().toStringUtf8());
+        final Document doc = Jsoup.parse(resp.contentUtf8());
         assertThat(doc.body().attr("onLoad")).isEqualTo("document.forms[0].submit()");
 
         // SAMLRequest will be posted to the IdP's SSO URL.
@@ -336,17 +336,17 @@ public class SamlServiceProviderTest {
                                            .add(HttpHeaderNames.COOKIE, "test=test");
         final AggregatedHttpMessage resp = client.execute(req).aggregate().join();
         assertThat(resp.status()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.content().toStringUtf8()).isEqualTo("authenticated");
+        assertThat(resp.contentUtf8()).isEqualTo("authenticated");
     }
 
     @Test
     public void shouldRespondMetadataWithoutAuthentication() throws Exception {
         final AggregatedHttpMessage resp = client.get("/saml/metadata").aggregate().join();
         assertThat(resp.status()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.headers().contentType()).isEqualTo(CONTENT_TYPE_SAML_METADATA);
+        assertThat(resp.contentType()).isEqualTo(CONTENT_TYPE_SAML_METADATA);
 
         final EntityDescriptor metadata =
-                (EntityDescriptor) deserialize(resp.content().toStringUtf8().getBytes());
+                (EntityDescriptor) deserialize(resp.contentUtf8().getBytes());
         assertThat(metadata).isNotNull();
 
         final SPSSODescriptor sp = metadata.getSPSSODescriptor(SAMLConstants.SAML20P_NS);
@@ -472,9 +472,9 @@ public class SamlServiceProviderTest {
                                                                          SAML_REQUEST, logoutRequest);
 
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.HTML_UTF_8);
+        assertThat(msg.contentType()).isEqualTo(MediaType.HTML_UTF_8);
 
-        final Document doc = Jsoup.parse(msg.content().toStringUtf8());
+        final Document doc = Jsoup.parse(msg.contentUtf8());
         assertThat(doc.body().attr("onLoad")).isEqualTo("document.forms[0].submit()");
 
         // SAMLResponse will be posted to the IdP's logout response URL.

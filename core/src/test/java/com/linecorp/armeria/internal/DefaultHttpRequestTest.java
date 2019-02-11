@@ -122,7 +122,7 @@ public class DefaultHttpRequestTest {
                 HttpHeaders.of(HttpMethod.GET, "/foo")
                            .add(HttpHeaderNames.CONTENT_LENGTH, "3"));
         // Content
-        assertThat(aggregated.content().toStringUtf8()).isEqualTo("foo");
+        assertThat(aggregated.contentUtf8()).isEqualTo("foo");
         // Trailing headers
         assertThat(aggregated.trailingHeaders()).isEqualTo(
                 HttpHeaders.of(HttpHeaderNames.of("a"), "b", HttpHeaderNames.of("c"), "d"));

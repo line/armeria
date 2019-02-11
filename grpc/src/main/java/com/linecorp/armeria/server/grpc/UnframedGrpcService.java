@@ -242,7 +242,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             return;
         }
 
-        final MediaType grpcMediaType = grpcResponse.headers().contentType();
+        final MediaType grpcMediaType = grpcResponse.contentType();
         final HttpHeaders unframedHeaders = HttpHeaders.copyOf(grpcResponse.headers());
         if (grpcMediaType != null) {
             if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {

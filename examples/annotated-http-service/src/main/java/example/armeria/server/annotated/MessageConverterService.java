@@ -171,9 +171,9 @@ public class MessageConverterService {
         @Override
         public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                      Class<?> expectedResultType) throws Exception {
-            final MediaType mediaType = request.headers().contentType();
+            final MediaType mediaType = request.contentType();
             if (mediaType != null && mediaType.is(MediaType.PLAIN_TEXT_UTF_8)) {
-                return new Request(request.content().toStringUtf8());
+                return new Request(request.contentUtf8());
             }
             return RequestConverterFunction.fallthrough();
         }

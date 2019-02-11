@@ -97,16 +97,16 @@ public class AnnotatedHttpServiceAccessModifierTest {
     public void testAccessModifier() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/"));
 
-        assertThat(client.get("/anonymous/public").aggregate().join().content().toStringUtf8())
+        assertThat(client.get("/anonymous/public").aggregate().join().contentUtf8())
                 .isEqualTo("hello");
         assertThat(client.get("/anonymous/package").aggregate().join().status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(client.get("/anonymous/private").aggregate().join().status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
-        assertThat(client.get("/named/public").aggregate().join().content().toStringUtf8())
+        assertThat(client.get("/named/public").aggregate().join().contentUtf8())
                 .isEqualTo("hello");
-        assertThat(client.get("/named/public/static").aggregate().join().content().toStringUtf8())
+        assertThat(client.get("/named/public/static").aggregate().join().contentUtf8())
                 .isEqualTo("hello");
         assertThat(client.get("/named/package").aggregate().join().status())
                 .isEqualTo(HttpStatus.NOT_FOUND);

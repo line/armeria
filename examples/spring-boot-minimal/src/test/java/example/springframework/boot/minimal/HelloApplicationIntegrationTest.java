@@ -23,7 +23,7 @@ public class HelloApplicationIntegrationTest {
     public void success() {
         final AggregatedHttpMessage response = client.get("/hello/Spring").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8())
+        assertThat(response.contentUtf8())
                 .isEqualTo("Hello, Spring! This message is from Armeria annotated service!");
     }
 
@@ -31,7 +31,7 @@ public class HelloApplicationIntegrationTest {
     public void failure() {
         final AggregatedHttpMessage response = client.get("/hello/a").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThatJson(response.content().toStringUtf8())
+        assertThatJson(response.contentUtf8())
                 .node("message")
                 .isEqualTo("hello.name: name should have between 3 and 10 characters");
     }

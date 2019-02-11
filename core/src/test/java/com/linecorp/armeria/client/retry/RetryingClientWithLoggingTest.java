@@ -101,7 +101,7 @@ public class RetryingClientWithLoggingTest {
                 .decorator(loggingDecorator())
                 .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()))
                 .build();
-        assertThat(client.get("/hello").aggregate().join().content().toStringUtf8()).isEqualTo("hello");
+        assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 6 logs(3 requests and 3 responses) are called back
         await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
@@ -116,7 +116,7 @@ public class RetryingClientWithLoggingTest {
                 .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()))
                 .decorator(loggingDecorator())
                 .build();
-        assertThat(client.get("/hello").aggregate().join().content().toStringUtf8()).isEqualTo("hello");
+        assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 2 logs are called back
         await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));

@@ -570,7 +570,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         public RequestJsonObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                               Class<?> expectedResultType) throws Exception {
             if (expectedResultType.isAssignableFrom(RequestJsonObj1.class)) {
-                return mapper.readValue(request.content().toStringUtf8(), RequestJsonObj1.class);
+                return mapper.readValue(request.contentUtf8(), RequestJsonObj1.class);
             }
             return RequestConverterFunction.fallthrough();
         }
@@ -583,7 +583,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         public RequestJsonObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                               Class<?> expectedResultType) throws Exception {
             if (expectedResultType.isAssignableFrom(RequestJsonObj1.class)) {
-                final RequestJsonObj1 obj1 = mapper.readValue(request.content().toStringUtf8(),
+                final RequestJsonObj1 obj1 = mapper.readValue(request.contentUtf8(),
                                                               RequestJsonObj1.class);
                 return new RequestJsonObj1(obj1.intVal() + 1, obj1.strVal() + 'a');
             }
@@ -609,7 +609,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         public Optional<RequestJsonObj1> convertRequest(ServiceRequestContext ctx,
                                                         AggregatedHttpMessage request,
                                                         Class<?> expectedResultType) throws Exception {
-            return Optional.of(mapper.readValue(request.content().toStringUtf8(), RequestJsonObj1.class));
+            return Optional.of(mapper.readValue(request.contentUtf8(), RequestJsonObj1.class));
         }
     }
 
@@ -633,19 +633,19 @@ public class AnnotatedHttpServiceRequestConverterTest {
         final String content1 = mapper.writeValueAsString(obj1);
 
         response = client.post("/1/convert1", content1).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(obj1.toString());
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(obj1.toString());
 
         // The order of converters
         final RequestJsonObj1 obj1a = new RequestJsonObj1(2, "abca");
         response = client.post("/1/convert2", content1).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(obj1a.toString());
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(obj1a.toString());
 
         // Multiple @RequestConverter annotated parameters
         response = client.post("/1/convert3", content1).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(HttpMethod.POST.name());
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(HttpMethod.POST.name());
     }
 
     @Test
@@ -675,8 +675,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                             .contentType(MediaType.FORM_DATA);
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
         // Normal Request: GET + Query String
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
@@ -685,8 +685,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                 .set(HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
         // Bad Request: age=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
@@ -695,7 +695,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                 .set(HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Bad Request: seqNum=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
@@ -704,7 +704,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                 .set(HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Bad Request: gender=badParam
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
@@ -713,7 +713,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                 .set(HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -742,8 +742,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                             .contentType(MediaType.FORM_DATA);
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
         // Normal Request: GET + Query String
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
@@ -753,8 +753,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                 .set(HttpHeaderNames.of("uid"), "abcd-efgh");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
     }
 
     @Test
@@ -782,8 +782,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                             .contentType(MediaType.FORM_DATA);
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
         // Normal Request: GET + Query String
         reqHeaders = HttpHeaders.of(HttpMethod.GET,
@@ -792,8 +792,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                 .set(HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
     }
 
     @Test
@@ -804,19 +804,19 @@ public class AnnotatedHttpServiceRequestConverterTest {
         AggregatedHttpMessage response;
 
         response = client.get("/composite1/10").aggregate().join();
-        assertThat(response.content().toStringUtf8())
+        assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean1.class.getSimpleName() + ":10:20");
 
         response = client.get("/composite2/10").aggregate().join();
-        assertThat(response.content().toStringUtf8())
+        assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean2.class.getSimpleName() + ":10:20");
 
         response = client.get("/composite3/10").aggregate().join();
-        assertThat(response.content().toStringUtf8())
+        assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean3.class.getSimpleName() + ":10:20");
 
         response = client.get("/composite4/10").aggregate().join();
-        assertThat(response.content().toStringUtf8())
+        assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean4.class.getSimpleName() + ":10:20");
 
         final RequestJsonObj1 obj1 = new RequestJsonObj1(1, "abc");
@@ -824,7 +824,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         response = client.execute(AggregatedHttpMessage.of(
                 HttpMethod.POST, "/composite5/10", MediaType.JSON_UTF_8, content1)).aggregate().join();
-        assertThat(response.content().toStringUtf8())
+        assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean5.class.getSimpleName() + ":10:20:" +
                            obj1.strVal() + ':' + obj1.intVal());
     }
@@ -843,8 +843,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/json",
                                                            MediaType.JSON_UTF_8, content1))
                          .aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("abc");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("abc");
 
         // MediaType.JSON_PATCH
         // obj1 is not a json-patch+json format, but just check if it's converted by
@@ -852,22 +852,22 @@ public class AnnotatedHttpServiceRequestConverterTest {
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/json",
                                                            MediaType.JSON_PATCH, content1))
                          .aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("abc");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("abc");
 
         // "application/vnd.api+json"
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/json",
                                                            MediaType.create("application", "vnd.api+json"),
                                                            content1))
                          .aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("abc");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("abc");
 
         final String invalidJson = "{\"foo:\"bar\"}"; // should be \"foo\"
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/invalidJson",
                                                            MediaType.JSON_UTF_8, invalidJson))
                          .aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -880,7 +880,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/binary",
                                                            MediaType.OCTET_STREAM, binary))
                          .aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().array()).isEqualTo(binary);
     }
 
@@ -894,7 +894,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/text",
                                                            MediaType.PLAIN_TEXT_UTF_8, utf8))
                          .aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().array()).isEqualTo(utf8);
 
         final MediaType textPlain = MediaType.create("text", "plain");
@@ -902,7 +902,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/text",
                                                            textPlain, iso8859_1))
                          .aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
         // Response is encoded as UTF-8.
         assertThat(response.content().array()).isEqualTo(utf8);
     }
@@ -920,7 +920,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
                                                   .setObject(HttpHeaderNames.of("foo"), 200);
 
         final AggregatedHttpMessage response = client.execute(reqHeaders).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo(expectedResponseContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
     }
 }

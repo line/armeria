@@ -114,7 +114,7 @@ public class CachingHttpFileTest {
         // First read() should trigger uncached.aggregate().
         HttpResponse res = cached.read(executor, alloc);
         assertThat(res).isNotNull();
-        assertThat(res.aggregate().join().content().toStringUtf8()).isEqualTo("foo");
+        assertThat(res.aggregate().join().contentUtf8()).isEqualTo("foo");
         verify(uncached, times(1)).readAttributes();
         verify(uncached, times(1)).aggregate(executor);
         verifyNoMoreInteractions(uncached);
@@ -123,7 +123,7 @@ public class CachingHttpFileTest {
         // Second read() should not trigger uncached.aggregate().
         res = cached.read(executor, alloc);
         assertThat(res).isNotNull();
-        assertThat(res.aggregate().join().content().toStringUtf8()).isEqualTo("foo");
+        assertThat(res.aggregate().join().contentUtf8()).isEqualTo("foo");
         verify(uncached, times(1)).readAttributes();
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
@@ -137,7 +137,7 @@ public class CachingHttpFileTest {
         // Make sure read() invalidates the cache and triggers uncached.aggregate().
         res = cached.read(executor, alloc);
         assertThat(res).isNotNull();
-        assertThat(res.aggregate().join().content().toStringUtf8()).isEqualTo("bar");
+        assertThat(res.aggregate().join().contentUtf8()).isEqualTo("bar");
         verify(uncached, times(1)).readAttributes();
         verify(uncached, times(1)).aggregate(executor);
         verifyNoMoreInteractions(uncached);

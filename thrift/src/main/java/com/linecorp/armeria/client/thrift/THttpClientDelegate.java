@@ -131,7 +131,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
                     return null;
                 }
 
-                final HttpStatus status = res.headers().status();
+                final HttpStatus status = res.status();
                 if (status.code() != HttpStatus.OK.code()) {
                     handlePreDecodeException(ctx, reply, func, new InvalidResponseException(status.toString()));
                     return null;

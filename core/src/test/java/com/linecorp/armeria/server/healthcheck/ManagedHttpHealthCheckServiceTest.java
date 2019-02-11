@@ -52,7 +52,7 @@ public class ManagedHttpHealthCheckServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE))
                   .isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
-        assertThat(res.content().toStringUtf8()).isEqualTo("Set unhealthy.");
+        assertThat(res.contentUtf8()).isEqualTo("Set unhealthy.");
 
         ctx = ServiceRequestContextBuilder.of(hcReq).service(service).build();
         res = service.serve(ctx, hcReq).aggregate().get();
@@ -70,7 +70,7 @@ public class ManagedHttpHealthCheckServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
                 MediaType.PLAIN_TEXT_UTF_8.toString());
-        assertThat(res.content().toStringUtf8()).isEqualTo("Set healthy.");
+        assertThat(res.contentUtf8()).isEqualTo("Set healthy.");
 
         ctx = ServiceRequestContextBuilder.of(hcReq).service(service).build();
         res = service.serve(ctx, hcReq).aggregate().get();
@@ -92,7 +92,7 @@ public class ManagedHttpHealthCheckServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
                 MediaType.PLAIN_TEXT_UTF_8.toString());
-        assertThat(res.content().toStringUtf8()).isEqualTo("Not supported.");
+        assertThat(res.contentUtf8()).isEqualTo("Not supported.");
 
         service.serverHealth.setHealthy(true);
 
@@ -106,6 +106,6 @@ public class ManagedHttpHealthCheckServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
                 MediaType.PLAIN_TEXT_UTF_8.toString());
-        assertThat(res.content().toStringUtf8()).isEqualTo("Not supported.");
+        assertThat(res.contentUtf8()).isEqualTo("Not supported.");
     }
 }

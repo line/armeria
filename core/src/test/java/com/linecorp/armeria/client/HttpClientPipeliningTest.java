@@ -139,8 +139,8 @@ public class HttpClientPipeliningTest {
         semaphore.release(2);
 
         // Two requests should go through two different connections.
-        final String remoteAddress1 = res1.aggregate(aggregateExecutors.next()).get().content().toStringUtf8();
-        final String remoteAddress2 = res2.aggregate(aggregateExecutors.next()).get().content().toStringUtf8();
+        final String remoteAddress1 = res1.aggregate(aggregateExecutors.next()).get().contentUtf8();
+        final String remoteAddress2 = res2.aggregate(aggregateExecutors.next()).get().contentUtf8();
         assertThat(remoteAddress1).isNotEqualTo(remoteAddress2);
     }
 
@@ -173,8 +173,8 @@ public class HttpClientPipeliningTest {
         semaphore.release(2);
 
         // Two requests should go through one same connection.
-        final String remoteAddress1 = res1.aggregate(aggregateExecutors.next()).get().content().toStringUtf8();
-        final String remoteAddress2 = res2.aggregate(aggregateExecutors.next()).get().content().toStringUtf8();
+        final String remoteAddress1 = res1.aggregate(aggregateExecutors.next()).get().contentUtf8();
+        final String remoteAddress2 = res2.aggregate(aggregateExecutors.next()).get().contentUtf8();
         assertThat(remoteAddress1).isEqualTo(remoteAddress2);
     }
 }

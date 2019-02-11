@@ -28,7 +28,7 @@ public class HttpResponseTest {
         final HttpResponse res = HttpResponse.of("Armeriaはいろんな使い方がアルメリア");
         final AggregatedHttpMessage message = res.aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        assertThat(message.content().toStringUtf8())
+        assertThat(message.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
 
@@ -39,7 +39,7 @@ public class HttpResponseTest {
                 "%sはいろんな使い方が%s", "Armeria", "アルメリア");
         final AggregatedHttpMessage message = res.aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        assertThat(message.content().toStringUtf8())
+        assertThat(message.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
 
@@ -50,7 +50,7 @@ public class HttpResponseTest {
                 MediaType.PLAIN_TEXT_UTF_8, "Armeriaはいろんな使い方がアルメリア");
         final AggregatedHttpMessage message = res.aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        assertThat(message.content().toStringUtf8())
+        assertThat(message.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
 
@@ -62,7 +62,7 @@ public class HttpResponseTest {
                 "%sはいろんな使い方が%s", "Armeria", "アルメリア");
         final AggregatedHttpMessage message = res.aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        assertThat(message.content().toStringUtf8())
+        assertThat(message.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
 }

@@ -74,7 +74,7 @@ public class RetryingClientAuthorityHeaderTest {
         final HttpClient client = newHttpClientWithEndpointGroup();
 
         final AggregatedHttpMessage msg = client.get("/").aggregate().join();
-        assertThat(msg.content().toStringUtf8()).contains("www.bar.com");
+        assertThat(msg.contentUtf8()).contains("www.bar.com");
     }
 
     @Test
@@ -83,7 +83,7 @@ public class RetryingClientAuthorityHeaderTest {
 
         final HttpHeaders headers = HttpHeaders.of(GET, "/").authority("www.armeria.com");
         final AggregatedHttpMessage msg = client.execute(headers).aggregate().join();
-        assertThat(msg.content().toStringUtf8()).contains("www.armeria.com");
+        assertThat(msg.contentUtf8()).contains("www.armeria.com");
     }
 
     private static HttpClient newHttpClientWithEndpointGroup() {

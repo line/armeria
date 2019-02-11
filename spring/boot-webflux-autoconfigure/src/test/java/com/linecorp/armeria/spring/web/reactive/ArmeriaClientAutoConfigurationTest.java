@@ -72,6 +72,6 @@ public class ArmeriaClientAutoConfigurationTest {
     public void shouldGetHelloFromRestController() throws Exception {
         final HttpClient client = HttpClient.of("http://127.0.0.1:" + port);
         final AggregatedHttpMessage response = client.get("/proxy?port=" + port).aggregate().join();
-        assertThat(response.content().toStringUtf8()).isEqualTo("hello");
+        assertThat(response.contentUtf8()).isEqualTo("hello");
     }
 }

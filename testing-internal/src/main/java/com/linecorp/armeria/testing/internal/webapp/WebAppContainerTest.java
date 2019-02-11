@@ -144,7 +144,7 @@ public abstract class WebAppContainerTest {
                 .build();
         final HttpClient client = HttpClient.of(clientFactory, server().httpsUri("/"));
         final AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
-        final String actualContent = CR_OR_LF.matcher(response.content().toStringUtf8())
+        final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");
         assertThat(actualContent).isEqualTo(
                 "<html><body>" +

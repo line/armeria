@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
@@ -88,6 +90,31 @@ public interface HttpData extends HttpObject {
      *
      * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
      */
+    static HttpData of(Charset charset, CharSequence text) {
+        requireNonNull(charset, "charset");
+        requireNonNull(text, "text");
+
+        if (text instanceof String) {
+            return of(charset, (String) text);
+        }
+
+        if (text.length() == 0) {
+            return EMPTY_DATA;
+        }
+
+        final CharBuffer cb = CharBuffer.wrap(text);
+        final ByteBuffer buf = charset.encode(cb);
+        return of(buf.array(), buf.arrayOffset(), buf.remaining());
+    }
+
+    /**
+     * Converts the specified {@code text} into an {@link HttpData}.
+     *
+     * @param charset the {@link Charset} to use for encoding {@code text}
+     * @param text the {@link String} to convert
+     *
+     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     */
     static HttpData of(Charset charset, String text) {
         requireNonNull(charset, "charset");
         requireNonNull(text, "text");
@@ -141,6 +168,17 @@ public interface HttpData extends HttpObject {
      *
      * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
      */
+    static HttpData ofUtf8(CharSequence text) {
+        return of(StandardCharsets.UTF_8, text);
+    }
+
+    /**
+     * Converts the specified {@code text} into a UTF-8 {@link HttpData}.
+     *
+     * @param text the {@link String} to convert
+     *
+     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     */
     static HttpData ofUtf8(String text) {
         return of(StandardCharsets.UTF_8, text);
     }
@@ -156,6 +194,17 @@ public interface HttpData extends HttpObject {
      */
     static HttpData ofUtf8(String format, Object... args) {
         return of(StandardCharsets.UTF_8, format, args);
+    }
+
+    /**
+     * Converts the specified {@code text} into a US-ASCII {@link HttpData}.
+     *
+     * @param text the {@link String} to convert
+     *
+     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     */
+    static HttpData ofAscii(CharSequence text) {
+        return of(StandardCharsets.US_ASCII, text);
     }
 
     /**

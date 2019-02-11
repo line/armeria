@@ -136,7 +136,7 @@ public class AnnotatedHttpDocServiceTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
         final AggregatedHttpMessage msg = client.get("/docs/specification.json").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(msg.content().toStringUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
+        assertThatJson(msg.contentUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {

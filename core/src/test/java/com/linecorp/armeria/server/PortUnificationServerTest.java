@@ -89,6 +89,6 @@ public class PortUnificationServerTest {
                                                 scheme + "://127.0.0.1:" + server.httpsPort() + '/');
         final AggregatedHttpMessage response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
                                                      .aggregate().join();
-        assertThat(response.content().toStringUtf8()).isEqualToIgnoringCase(scheme);
+        assertThat(response.contentUtf8()).isEqualToIgnoringCase(scheme);
     }
 }

@@ -107,8 +107,26 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
      */
+    static HttpResponse of(HttpStatus status, MediaType mediaType, CharSequence content) {
+        if (content instanceof String) {
+            return of(status, mediaType, (String) content);
+        }
+
+        requireNonNull(mediaType, "mediaType");
+        return of(status, mediaType,
+                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String content) {
-        return of(status, mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
+        requireNonNull(mediaType, "mediaType");
+        return of(status, mediaType,
+                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -165,10 +183,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param args the arguments referenced by the format specifiers in the format string
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
-        return of(status,
-                  mediaType,
-                  String.format(Locale.ENGLISH, format, args).getBytes(
-                          mediaType.charset().orElse(StandardCharsets.UTF_8)));
+        requireNonNull(mediaType, "mediaType");
+        return of(status, mediaType,
+                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), format, args));
     }
 
     /**

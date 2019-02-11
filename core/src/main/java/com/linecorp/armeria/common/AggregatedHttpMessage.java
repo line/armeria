@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Formatter;
@@ -61,13 +62,34 @@ public interface AggregatedHttpMessage {
      * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
      */
+    static AggregatedHttpMessage of(HttpMethod method, String path, MediaType mediaType, CharSequence content) {
+        if (content instanceof String) {
+            return of(method, path, mediaType, (String) content);
+        }
+
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(content, "content");
+        requireNonNull(mediaType, "mediaType");
+        return of(method, path, mediaType,
+                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+    }
+
+    /**
+     * Creates a new HTTP request.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     */
     static AggregatedHttpMessage of(HttpMethod method, String path, MediaType mediaType, String content) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
-        return of(method, path,
-                  mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
+        return of(method, path, mediaType,
+                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -87,11 +109,8 @@ public interface AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(format, "format");
         requireNonNull(args, "args");
-        return of(method,
-                  path,
-                  mediaType,
-                  String.format(Locale.ENGLISH, format, args).getBytes(
-                          mediaType.charset().orElse(StandardCharsets.UTF_8)));
+        return of(method, path, mediaType,
+                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), format, args));
     }
 
     /**
@@ -196,12 +215,30 @@ public interface AggregatedHttpMessage {
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
      */
+    static AggregatedHttpMessage of(HttpStatus status, MediaType mediaType, CharSequence content) {
+        if (content instanceof String) {
+            return of(status, mediaType, (String) content);
+        }
+
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(status, mediaType,
+                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
     static AggregatedHttpMessage of(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        return of(status,
-                  mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
+        return of(status, mediaType,
+                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -375,6 +412,27 @@ public interface AggregatedHttpMessage {
     HttpData content();
 
     /**
+     * Returns the content of this message as a string encoded in the specified {@link Charset}.
+     */
+    default String content(Charset charset) {
+        return content().toString(charset);
+    }
+
+    /**
+     * Returns the content of this message as a UTF-8 string.
+     */
+    default String contentUtf8() {
+        return content().toStringUtf8();
+    }
+
+    /**
+     * Returns the content of this message as an ASCII string.
+     */
+    default String contentAscii() {
+        return content().toStringAscii();
+    }
+
+    /**
      * Returns the {@link HttpHeaderNames#SCHEME SCHEME} of this message.
      *
      * @return the scheme, or {@code null} if there's no such header
@@ -423,6 +481,15 @@ public interface AggregatedHttpMessage {
     @Nullable
     default HttpStatus status() {
         return headers().status();
+    }
+
+    /**
+     * Returns the value of the {@code 'content-type'} header.
+     * @return the valid header value if present. {@code null} otherwise.
+     */
+    @Nullable
+    default MediaType contentType() {
+        return headers().contentType();
     }
 
     /**
