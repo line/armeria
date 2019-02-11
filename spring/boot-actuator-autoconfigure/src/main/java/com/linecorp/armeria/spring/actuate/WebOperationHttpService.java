@@ -62,12 +62,17 @@ final class WebOperationHttpService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-        req.aggregate().thenAccept(msg -> {
+        req.aggregate().handle((msg, t) -> {
+            if (t != null) {
+                resFuture.completeExceptionally(t);
+                return null;
+            }
             if (operation.isBlocking()) {
                 ctx.blockingTaskExecutor().execute(() -> invoke(ctx, msg, resFuture));
             } else {
                 invoke(ctx, msg, resFuture);
             }
+            return null;
         });
         return HttpResponse.from(resFuture);
     }
