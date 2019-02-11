@@ -112,6 +112,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             return of(status, mediaType, (String) content);
         }
 
+        requireNonNull(mediaType, "mediaType");
         return of(status, mediaType,
                   HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
     }
@@ -123,6 +124,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String content) {
+        requireNonNull(mediaType, "mediaType");
         return of(status, mediaType,
                   HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
     }
