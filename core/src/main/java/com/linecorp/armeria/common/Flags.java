@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +27,7 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +52,7 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 
 /**
@@ -65,6 +69,8 @@ public final class Flags {
     private static final int NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
 
     private static final boolean VERBOSE_EXCEPTIONS = getBoolean("verboseExceptions", false);
+
+    private static final boolean VERBOSE_SOCKET_EXCEPTIONS = getBoolean("verboseSocketExceptions", false);
 
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
@@ -277,6 +283,31 @@ public final class Flags {
      */
     public static boolean verboseExceptions() {
         return VERBOSE_EXCEPTIONS;
+    }
+
+    /**
+     * Returns whether to log the socket exceptions which are mostly harmless. If enabled, the following
+     * exceptions will be logged:
+     * <ul>
+     *   <li>{@link ClosedChannelException}</li>
+     *   <li>{@link ClosedSessionException}</li>
+     *   <li>{@link IOException} - 'Connection reset/closed/aborted by peer'</li>
+     *   <li>'Broken pipe'</li>
+     *   <li>{@link Http2Exception} - 'Stream closed'</li>
+     *   <li>{@link SSLException} - 'SSLEngine closed already'</li>
+     * </ul>
+     *
+     * <p>It is recommended to keep this flag disabled, because it increases the amount of log messages for
+     * the errors you usually do not have control over, e.g. unexpected socket disconnection due to network
+     * or remote peer issues.</p>
+     *
+     * <p>This flag is disabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.verboseSocketExceptions=true} JVM option to enable it.</p>
+     *
+     * @see Exceptions#isExpected(Throwable)
+     */
+    public static boolean verboseSocketExceptions() {
+        return VERBOSE_SOCKET_EXCEPTIONS;
     }
 
     /**
