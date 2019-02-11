@@ -104,17 +104,16 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
         return sb -> {
-            endpoints
-                             .stream()
-                             .flatMap(endpoint -> endpoint.getOperations().stream())
-                             .forEach(operation -> {
-                                 final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
-                                 sb.service(getPathMapping(predicate.getHttpMethod().name(),
-                                                           endpointMapping.createSubPath(predicate.getPath()),
-                                                           predicate.getConsumes(),
-                                                           predicate.getProduces()),
-                                            new WebOperationHttpService(operation));
-                             });
+            endpoints.stream()
+                     .flatMap(endpoint -> endpoint.getOperations().stream())
+                     .forEach(operation -> {
+                         final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
+                         sb.service(getPathMapping(predicate.getHttpMethod().name(),
+                                                   endpointMapping.createSubPath(predicate.getPath()),
+                                                   predicate.getConsumes(),
+                                                   predicate.getProduces()),
+                                    new WebOperationHttpService(operation));
+                     });
             if (StringUtils.hasText(endpointMapping.getPath())) {
                 final PathMapping mapping = getPathMapping(
                         HttpMethod.GET.name(),
