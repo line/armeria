@@ -33,6 +33,8 @@ an ``index.html`` file using the ``autoIndex(boolean)`` method in :api:`HttpFile
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.file.HttpFileServiceBuilder;
+
     HttpFileServiceBuilder fsb =
             HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
 

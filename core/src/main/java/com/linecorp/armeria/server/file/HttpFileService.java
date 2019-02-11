@@ -214,7 +214,7 @@ public final class HttpFileService extends AbstractHttpService {
             }
         } else {
             // Redirect to the slash appended path if 1) /index.html exists or 2) it has a directory listing.
-            if (findFile(ctx, decodedMappedPath + "index.html", supportedEncodings) != null ||
+            if (findFile(ctx, decodedMappedPath + "/index.html", supportedEncodings) != null ||
                 config.autoIndex() && config.vfs().canList(decodedMappedPath)) {
                 throw HttpResponseException.of(HttpResponse.of(
                         HttpHeaders.of(HttpStatus.TEMPORARY_REDIRECT)

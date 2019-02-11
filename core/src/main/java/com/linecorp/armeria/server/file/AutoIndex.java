@@ -34,7 +34,7 @@ final class AutoIndex {
             ".directory-listing ul { padding-left: 1.75em; }" +
             "</style></head><body>\n" +
             "<div class=\"container\"><div class=\"directory-listing\"><h1>Directory listing: ";
-    private static final String PART3 = "</h1>\n<p class=\"\">";
+    private static final String PART3 = "</h1>\n<p>";
     private static final String PART4 = " file(s) total\n<ul>\n";
     private static final String PART5 = "</ul></p></div></div></body>\n</html>\n";
 

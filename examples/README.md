@@ -19,7 +19,7 @@
   - See [Using Armeria with Spring WebFlux](https://line.github.io/armeria/advanced-spring-webflux-integration.html).
 
 - `static-files`
-  - Learn how to server static files.
+  - Learn how to serve static files.
   - See [Serving static files](https://line.github.io/armeria/server-http-file.html).
 
 ## License
