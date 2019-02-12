@@ -398,6 +398,7 @@ org.slf4j:
     version: *SLF4J_VERSION
     javadocs:
     - https://www.slf4j.org/api/
+  slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework.boot:
   spring-boot-starter:

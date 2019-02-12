@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
 
+import com.google.common.base.MoreObjects;
+
 /**
  * {@link HttpFileService} configuration.
  */
@@ -30,14 +32,16 @@ public final class HttpFileServiceConfig {
     private final int maxCacheEntries;
     private final int maxCacheEntrySizeBytes;
     private final boolean serveCompressedFiles;
+    private final boolean autoIndex;
 
     HttpFileServiceConfig(HttpVfs vfs, Clock clock, int maxCacheEntries, int maxCacheEntrySizeBytes,
-                          boolean serveCompressedFiles) {
+                          boolean serveCompressedFiles, boolean autoIndex) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.maxCacheEntries = validateMaxCacheEntries(maxCacheEntries);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
         this.serveCompressedFiles = serveCompressedFiles;
+        this.autoIndex = autoIndex;
     }
 
     static int validateMaxCacheEntries(int maxCacheEntries) {
@@ -85,24 +89,37 @@ public final class HttpFileServiceConfig {
     }
 
     /**
-     * Whether pre-compressed files should be served.
+     * Returns whether pre-compressed files should be served.
      */
     public boolean serveCompressedFiles() {
         return serveCompressedFiles;
     }
 
+    /**
+     * Returns whether a directory listing for a directory without an {@code index.html} file will be
+     * auto-generated.
+     */
+    public boolean autoIndex() {
+        return autoIndex;
+    }
+
     @Override
     public String toString() {
-        return toString(this, vfs(), clock(), maxCacheEntries(), maxCacheEntrySizeBytes());
+        return toString(this, vfs(), clock(), maxCacheEntries(), maxCacheEntrySizeBytes(),
+                        serveCompressedFiles(), autoIndex());
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
-                           int maxCacheEntries, int maxCacheEntrySizeBytes) {
+                           int maxCacheEntries, int maxCacheEntrySizeBytes,
+                           boolean serveCompressedFiles, boolean autoIndex) {
 
-        return holder.getClass().getSimpleName() +
-               "(vfs: " + vfs +
-               ", clock: " + clock +
-               ", maxCacheEntries: " + maxCacheEntries +
-               ", maxCacheEntrySizeBytes: " + maxCacheEntrySizeBytes + ')';
+        return MoreObjects.toStringHelper(holder)
+                          .add("vfs", vfs)
+                          .add("clock", clock)
+                          .add("maxCacheEntries", maxCacheEntries)
+                          .add("maxCacheEntrySizeBytes", maxCacheEntrySizeBytes)
+                          .add("serveCompressedFiles", serveCompressedFiles)
+                          .add("autoIndex", autoIndex)
+                          .toString();
     }
 }
