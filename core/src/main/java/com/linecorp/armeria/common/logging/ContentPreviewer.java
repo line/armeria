@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.logging;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -43,23 +44,53 @@ public interface ContentPreviewer {
         }
     };
 
+    /**
+     * TODO: Add Javadocs.
+     */
     static ContentPreviewer ofByteBuf(int length, Function<ByteBuf, String> reproducer) {
         return ofByteBuf(length, (headers, buffer) -> reproducer.apply(buffer));
     }
 
+    /**
+     * TODO: Add Javadocs.
+     */
     static ContentPreviewer ofByteBuf(int length, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
         return new ByteBufAggreatedPreviewer(length, reproducer);
     }
 
+    /**
+     * TODO: Add Javadocs.
+     */
     static ContentPreviewer ofString(int length, Charset defaultCharset) {
         return new StringAggregatedPreviewer(length, defaultCharset);
     }
 
+    /**
+     * TODO: Add Javadocs.
+     */
     static ContentPreviewer ofString(int length) {
-        return ofString(length, Charset.defaultCharset());
+        return ofString(length, StandardCharsets.ISO_8859_1);
     }
 
+    /**
+     * TODO: Add Javadocs.
+     */
     static ContentPreviewer of() {
         return DISABLED;
+    }
+
+    /**
+     * TODO: Add Javadocs.
+     */
+    static ContentPreviewer of(String produced) {
+        return new ContentPreviewer() {
+            @Override
+            public void onData(HttpData data) { }
+
+            @Override
+            public String produce() {
+                return produced;
+            }
+        };
     }
 }

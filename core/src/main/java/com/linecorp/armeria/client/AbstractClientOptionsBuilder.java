@@ -17,7 +17,6 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -178,7 +177,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
 
     public B requestContentPreview(int length) {
         return requestContentPreviewerFactory(
-                ContentPreviewerFactory.ofString(length, Charset.defaultCharset()));
+                ContentPreviewerFactory.ofString(length));
     }
 
     public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
@@ -188,7 +187,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
 
     public B responseContentPreview(int length) {
         return responseContentPreviewerFactory(
-                ContentPreviewerFactory.ofString(length, Charset.defaultCharset()));
+                ContentPreviewerFactory.ofString(length));
     }
 
     public B contentPreview(int length) {

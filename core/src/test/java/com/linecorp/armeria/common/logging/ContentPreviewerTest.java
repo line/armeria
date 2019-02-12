@@ -283,7 +283,7 @@ public class ContentPreviewerTest {
     }
 
     @Test
-    public void testResponseContentPreview() throws Exception {
+    public void testClientLog() throws Exception {
         final MyHttpClient client = new MyHttpClient("/example", 10, 10);
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
         assertThat(client.getBody("/get").aggregate().get()
@@ -303,7 +303,7 @@ public class ContentPreviewerTest {
     }
 
     @Test
-    public void testServer() throws Exception {
+    public void testServerLog() throws Exception {
 
         MyHttpServer.Client client = server.newClient("/example");
 

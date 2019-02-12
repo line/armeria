@@ -26,6 +26,8 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
@@ -34,7 +36,6 @@ import io.netty.buffer.ByteBufHolder;
 
 final class StringAggregatedPreviewer implements ContentPreviewer {
 
-    private static final int MAX_BYTES_PER_CHAR = 4;
     private final CharBuffer buffer;
     private final Charset defaultCharset;
     @Nullable
@@ -43,12 +44,11 @@ final class StringAggregatedPreviewer implements ContentPreviewer {
     @Nullable
     private String produced;
 
-    private final ByteBuffer remainedBuffer;
+    private ByteBuffer remainedBuffer;
 
     StringAggregatedPreviewer(int length, Charset defaultCharset) {
         buffer = CharBuffer.allocate(length);
         this.defaultCharset = defaultCharset;
-        remainedBuffer = ByteBuffer.allocate(MAX_BYTES_PER_CHAR);
     }
 
     @Override
@@ -78,16 +78,10 @@ final class StringAggregatedPreviewer implements ContentPreviewer {
         if (contentType == null) {
             return;
         }
-        if (contentType.charset().isPresent()) {
-            decoder = contentType.charset().get().newDecoder();
-            return;
-        }
-        // TOOD: Add more text types ( maybe create a new function ) .
-        if (contentType.is(MediaType.ANY_TEXT_TYPE) ||
-            contentType.is(MediaType.JSON)) {
-            decoder = contentType.charset().orElse(defaultCharset).newDecoder();
-            return;
-        }
+        final Charset charset = contentType.charset().orElse(defaultCharset);
+        decoder = charset.newDecoder();
+        remainedBuffer = ByteBuffer.allocate((int)Math.ceil(charset.newEncoder().maxBytesPerChar()));
+        LoggerFactory.getLogger(getClass()).debug("MAX BYTES {}", remainedBuffer.capacity());
     }
 
     private void append(ByteBuffer buf) {

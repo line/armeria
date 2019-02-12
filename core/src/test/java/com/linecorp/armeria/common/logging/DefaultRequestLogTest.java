@@ -120,6 +120,8 @@ public class DefaultRequestLogTest {
 
     @Test
     public void addChild() {
+        when(ctx.requestContentPreviewerFactory()).thenReturn(ContentPreviewerFactory.DISABLED);
+        when(ctx.responseContentPreviewerFactory()).thenReturn(ContentPreviewerFactory.DISABLED);
         final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
         child.startRequest(channel, SessionProtocol.H2C);

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common.logging;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,7 +28,6 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.util.Combinable;
 
 @FunctionalInterface
 public interface ContentPreviewerFactory {
@@ -88,7 +88,6 @@ public interface ContentPreviewerFactory {
     /**
      * TODO: AddJavadocs.
      */
-    @SuppressWarnings("unchecked")
     static ContentPreviewerFactory of(ContentPreviewerFactory... factories) {
         final List<ContentPreviewerFactory> factoryList = new ArrayList<>();
         ContentPreviewerFactory combined = DISABLED;
@@ -97,9 +96,9 @@ public interface ContentPreviewerFactory {
                 continue;
             }
             if (factory instanceof ContentPreviewerFactoryCombinable) {
-                combined = ((Combinable<ContentPreviewerFactory>) factory).combine(combined);
+                combined = ((ContentPreviewerFactoryCombinable) factory).combine(combined);
             } else if (combined instanceof ContentPreviewerFactoryCombinable) {
-                combined = ((Combinable<ContentPreviewerFactory>) combined).combine(factory);
+                combined = ((ContentPreviewerFactoryCombinable) combined).combine(factory);
             }
             factoryList.add(factory);
         }
@@ -143,10 +142,10 @@ public interface ContentPreviewerFactory {
     }
 
     static ContentPreviewerFactory ofString(int length, Charset defaultCharset) {
-        return ofString(length, defaultCharset, MediaType.ANY_TEXT_TYPE, MediaType.JSON);
+        return ofString(length, defaultCharset, MediaType.ANY_TEXT_TYPE, MediaType.ANY_APPLICATION_TYPE);
     }
 
     static ContentPreviewerFactory ofString(int length) {
-        return ofString(length, Charset.defaultCharset());
+        return ofString(length, StandardCharsets.ISO_8859_1);
     }
 }

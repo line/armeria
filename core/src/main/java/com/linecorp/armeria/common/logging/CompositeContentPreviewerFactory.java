@@ -51,7 +51,6 @@ final class CompositeContentPreviewerFactory
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public ContentPreviewerFactory combine(ContentPreviewerFactory subject) {
         if (subject == ContentPreviewerFactory.DISABLED) {
             return this;

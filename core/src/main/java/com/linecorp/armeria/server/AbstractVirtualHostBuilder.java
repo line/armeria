@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
@@ -563,7 +564,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     public B requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory = factory;
+        requestContentPreviewerFactory = requireNonNull(factory, "factory");
         return self();
     }
 
@@ -572,11 +573,11 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     public B requestContentPreview(int length) {
-        return requestContentPreview(length, Charset.defaultCharset());
+        return requestContentPreview(length, StandardCharsets.ISO_8859_1);
     }
 
     public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        responseContentPreviewerFactory = factory;
+        responseContentPreviewerFactory = requireNonNull(factory, "factory");
         return self();
     }
 
@@ -585,7 +586,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     public B responseContentPreview(int length) {
-        return responseContentPreview(length, Charset.defaultCharset());
+        return responseContentPreviewerFactory(ContentPreviewerFactory.ofString(length));
     }
 
     public B contentPreviewerFactory(ContentPreviewerFactory factory) {
