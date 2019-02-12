@@ -63,6 +63,7 @@ import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
@@ -180,7 +181,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
 
         Class<?> resultClass;
         try {
-            resultClass =  Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
+            resultClass = Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
         } catch (ClassNotFoundException ignored) {
             // Oneway function does not have a result type.
             resultClass = null;
@@ -315,9 +316,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
             typeSignature = toTypeSignature(fieldValueMetaData);
         }
 
-        return new FieldInfo(fieldMetaData.fieldName,
-                             convertRequirement(fieldMetaData.requirementType),
-                             typeSignature);
+        return new FieldInfoBuilder(fieldMetaData.fieldName, typeSignature)
+                .requirement(convertRequirement(fieldMetaData.requirementType)).build();
     }
 
     @VisibleForTesting
@@ -383,7 +383,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
             case TFieldRequirementType.OPTIONAL:
                 return FieldRequirement.OPTIONAL;
             case TFieldRequirementType.DEFAULT:
-                return FieldRequirement.DEFAULT;
+                // Convert to unspecified for consistency with gRPC and AnnotatedHttpService.
+                return FieldRequirement.UNSPECIFIED;
             default:
                 throw new IllegalArgumentException("unknown requirement type: " + value);
         }

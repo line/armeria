@@ -138,7 +138,7 @@ public class ReactiveWebServerAutoConfigurationTest {
         protocols.forEach(scheme -> {
             final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
             final AggregatedHttpMessage response = client.get("/hello").aggregate().join();
-            assertThat(response.content().toStringUtf8()).isEqualTo("hello");
+            assertThat(response.contentUtf8()).isEqualTo("hello");
         });
     }
 
@@ -148,15 +148,15 @@ public class ReactiveWebServerAutoConfigurationTest {
             final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
 
             final AggregatedHttpMessage res = client.get("/route").aggregate().join();
-            assertThat(res.content().toStringUtf8()).isEqualTo("route");
+            assertThat(res.contentUtf8()).isEqualTo("route");
 
             final AggregatedHttpMessage res2 =
                     client.execute(HttpHeaders.of(HttpMethod.POST, "/route2")
                                               .contentType(com.linecorp.armeria.common.MediaType.JSON_UTF_8),
                                    HttpData.of("{\"a\":1}".getBytes())).aggregate().join();
-            assertThatJson(res2.content().toStringUtf8()).isArray()
-                                                         .ofLength(1)
-                                                         .thatContains("route");
+            assertThatJson(res2.contentUtf8()).isArray()
+                                              .ofLength(1)
+                                              .thatContains("route");
         });
     }
 

@@ -268,7 +268,7 @@ public class RedirectServiceTest {
             }
 
             assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-            assertThat(msg.content().toStringUtf8()).isEqualTo(expectedResponse[i]);
+            assertThat(msg.contentUtf8()).isEqualTo(expectedResponse[i]);
         }
         serverRule1.stop();
     }

@@ -162,7 +162,7 @@ public class CircuitBreakerHttpClientTest {
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             // Need to call execute() one more to change the state of the circuit breaker.
             final long currentTime = ticker.read();
-            assertThat(client.get("/unavailable").aggregate().join().headers().status())
+            assertThat(client.get("/unavailable").aggregate().join().status())
                     .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
             await().until(() -> currentTime != ticker.read());
         }

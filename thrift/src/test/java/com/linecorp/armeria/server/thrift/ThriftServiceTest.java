@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -645,12 +644,11 @@ public class ThriftServiceTest {
         final HttpResponse res = service.serve(ctx, req);
         res.aggregate().handle(voidFunction((aReq, cause) -> {
             if (cause == null) {
-                if (aReq.headers().status().code() == 200) {
+                if (aReq.status().code() == 200) {
                     promise.complete(aReq.content());
                 } else {
-                    promise.completeExceptionally(new AssertionError(
-                            aReq.headers().status() + ", " +
-                            aReq.content().toString(StandardCharsets.UTF_8)));
+                    promise.completeExceptionally(
+                            new AssertionError(aReq.status() + ", " + aReq.contentUtf8()));
                 }
             } else {
                 promise.completeExceptionally(cause);

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.cors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -114,7 +115,7 @@ public class HttpServerCorsTest {
                                       .allowRequestHeaders(HttpHeaderNames.of("allow_request_header"))
                                       .exposeHeaders(HttpHeaderNames.of("expose_header_1"),
                                                      HttpHeaderNames.of("expose_header_2"))
-                                      .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                                      .preflightResponseHeader("x-preflight-cors", "Hello CORS", "Hello CORS2")
                                       .maxAge(3600)
                                       .andForOrigins("http://example2.com")
                                       .allowNullOrigin()
@@ -158,7 +159,8 @@ public class HttpServerCorsTest {
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" },
                         allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
                         preflightRequestHeaders = {
-                                @AdditionalHeader(name = "x-preflight-cors", value = "Hello CORS")
+                                @AdditionalHeader(name = "x-preflight-cors",
+                                        value = { "Hello CORS", "Hello CORS2" })
                         })
                 public HttpResponse anyoneGet() {
                     return HttpResponse.of(HttpStatus.OK);
@@ -222,7 +224,9 @@ public class HttpServerCorsTest {
                      response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
         assertEquals("*", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
         assertEquals("3600", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE));
-        assertEquals("Hello CORS", response.headers().get(HttpHeaderNames.of("x-preflight-cors")));
+
+        assertThat(response.headers().getAll(HttpHeaderNames.of("x-preflight-cors"))).containsExactly(
+                "Hello CORS", "Hello CORS2");
 
         final AggregatedHttpMessage response3 = request(client, HttpMethod.GET, "/cors6/multi/get",
                                                         "http://example.com", "GET");

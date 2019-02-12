@@ -97,18 +97,19 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             encodedStream = new ByteArrayOutputStream();
             encodingStream = HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
 
+            final HttpHeaders mutable = headers.toMutable();
             // Always use chunked encoding when compressing.
-            headers.remove(HttpHeaderNames.CONTENT_LENGTH);
+            mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
             switch (encodingType) {
                 case GZIP:
-                    headers.set(HttpHeaderNames.CONTENT_ENCODING, "gzip");
+                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "gzip");
                     break;
                 case DEFLATE:
-                    headers.set(HttpHeaderNames.CONTENT_ENCODING, "deflate");
+                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "deflate");
                     break;
             }
-            headers.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
-            return headers;
+            mutable.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
+            return mutable;
         }
 
         if (encodingStream == null) {

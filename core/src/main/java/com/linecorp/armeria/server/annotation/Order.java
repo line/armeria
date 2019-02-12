@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
  * Specifies an order which is used to sort the annotated service methods.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })
 public @interface Order {
 
     /**

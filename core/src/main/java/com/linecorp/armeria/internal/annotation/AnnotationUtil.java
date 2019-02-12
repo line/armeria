@@ -196,19 +196,27 @@ final class AnnotationUtil {
         for (final AnnotatedElement e : resolveTargetElements(element, findOptions)) {
             for (final Annotation annotation : e.getDeclaredAnnotations()) {
                 if (findOptions.contains(FindOption.LOOKUP_META_ANNOTATIONS)) {
-                    final Annotation[] metaAnnotations = annotation.annotationType().getDeclaredAnnotations();
-                    for (final Annotation metaAnnotation : metaAnnotations) {
-                        // If the metaAnnotation is "repeatable", we can try to find the annotation
-                        // from the container annotation which is defined by "@Repeatable" annotation.
-                        // There is no way to know whether the metaAnnotation is a container of
-                        // repeatable annotations.
-                        collectAnnotations(builder, metaAnnotation, annotationType, containerType);
-                    }
+                    findMetaAnnotations(builder, annotation, annotationType, containerType);
                 }
                 collectAnnotations(builder, annotation, annotationType, containerType);
             }
         }
         return builder.build();
+    }
+
+    private static <T extends Annotation> void findMetaAnnotations(
+            Builder<T> builder, Annotation annotation,
+            Class<T> annotationType, Class<? extends Annotation> containerType) {
+        final Annotation[] metaAnnotations = annotation.annotationType().getDeclaredAnnotations();
+        for (final Annotation metaAnnotation : metaAnnotations) {
+            // Lookup meta-annotations of a meta-annotation. Do not go into deeper if the metaAnnotation
+            // is one of built-in Java meta-annotations in order to avoid stack overflow.
+            if (!BUILT_IN_META_ANNOTATIONS.contains(metaAnnotation.annotationType())) {
+                findMetaAnnotations(builder, metaAnnotation, annotationType, containerType);
+            }
+
+            collectAnnotations(builder, metaAnnotation, annotationType, containerType);
+        }
     }
 
     /**
@@ -274,12 +282,7 @@ final class AnnotationUtil {
         for (final AnnotatedElement e : resolveTargetElements(element, findOptions)) {
             for (final Annotation annotation : e.getDeclaredAnnotations()) {
                 if (findOptions.contains(FindOption.LOOKUP_META_ANNOTATIONS)) {
-                    final Annotation[] metaAnnotations = annotation.annotationType().getDeclaredAnnotations();
-                    for (final Annotation metaAnnotation : metaAnnotations) {
-                        if (collectingFilter.test(metaAnnotation)) {
-                            builder.add(metaAnnotation);
-                        }
-                    }
+                    getMetaAnnotations(builder, annotation, collectingFilter);
                 }
                 if (collectingFilter.test(annotation)) {
                     builder.add(annotation);
@@ -287,6 +290,22 @@ final class AnnotationUtil {
             }
         }
         return builder.build();
+    }
+
+    private static void getMetaAnnotations(Builder<Annotation> builder, Annotation annotation,
+                                           Predicate<Annotation> collectingFilter) {
+        final Annotation[] metaAnnotations = annotation.annotationType().getDeclaredAnnotations();
+        for (final Annotation metaAnnotation : metaAnnotations) {
+            // Get meta-annotations of a meta-annotation. Do not go into deeper even if one of the built-in Java
+            // meta-annotations can be accepted by the collectingFilter, in order to avoid stack overflow.
+            if (!BUILT_IN_META_ANNOTATIONS.contains(metaAnnotation.annotationType())) {
+                getMetaAnnotations(builder, metaAnnotation, collectingFilter);
+            }
+
+            if (collectingFilter.test(metaAnnotation)) {
+                builder.add(metaAnnotation);
+            }
+        }
     }
 
     /**
@@ -346,6 +365,8 @@ final class AnnotationUtil {
             return;
         }
 
+        // If this annotation is a containing annotation of the target annotation,
+        // try to call "value" method of it in order to get annotations we are finding.
         final Method method = Iterables.getFirst(
                 getMethods(containerType, withName("value"), withParametersCount(0)), null);
         if (method == null) {

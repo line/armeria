@@ -373,8 +373,17 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void unsupportMetaOfMetaAnnotation() {
-        assertThat(findAll(TestClass.class, TestMetaOfMetaAnnotation.class)).isEmpty();
+    public void findAll_metaAnnotationOfMetaAnnotation() {
+        List<TestMetaOfMetaAnnotation> list;
+
+        list = findAll(TestClass.class, TestMetaOfMetaAnnotation.class);
+        assertThat(list).hasSize(2);
+
+        list = findAll(TestChildClass.class, TestMetaOfMetaAnnotation.class);
+        assertThat(list).hasSize(4);
+
+        list = findAll(TestGrandChildClass.class, TestMetaOfMetaAnnotation.class);
+        assertThat(list).hasSize(6);
     }
 
     @Test
@@ -430,14 +439,16 @@ public class AnnotationUtilTest {
     @Test
     public void getAnnotations_all() {
         final List<Annotation> list = getAllAnnotations(TestGrandChildClass.class);
-        assertThat(list.size()).isEqualTo(12);
-        for (int i = 0; i < 3 * 4; i += 4) {
-            assertThat(list.get(i)).isInstanceOf(TestMetaAnnotation.class);
-            assertThat(((TestMetaAnnotation) list.get(i)).value()).isEqualTo("TestRepeatables");
-            assertThat(list.get(i + 1)).isInstanceOf(TestRepeatables.class);
-            assertThat(list.get(i + 2)).isInstanceOf(TestMetaAnnotation.class);
-            assertThat(((TestMetaAnnotation) list.get(i + 2)).value()).isEqualTo("TestAnnotation");
-            assertThat(list.get(i + 3)).isInstanceOf(TestAnnotation.class);
+        assertThat(list.size()).isEqualTo(18);
+        for (int i = 0; i < 3 * 6; i += 6) {
+            assertThat(list.get(i)).isInstanceOf(TestMetaOfMetaAnnotation.class);
+            assertThat(list.get(i + 1)).isInstanceOf(TestMetaAnnotation.class);
+            assertThat(((TestMetaAnnotation) list.get(i + 1)).value()).isEqualTo("TestRepeatables");
+            assertThat(list.get(i + 2)).isInstanceOf(TestRepeatables.class);
+            assertThat(list.get(i + 3)).isInstanceOf(TestMetaOfMetaAnnotation.class);
+            assertThat(list.get(i + 4)).isInstanceOf(TestMetaAnnotation.class);
+            assertThat(((TestMetaAnnotation) list.get(i + 4)).value()).isEqualTo("TestAnnotation");
+            assertThat(list.get(i + 5)).isInstanceOf(TestAnnotation.class);
         }
     }
 }

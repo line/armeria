@@ -228,9 +228,9 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
         final AggregatedHttpMessage aRes = executeRequest(aReq);
 
-        assertThat(aRes.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(aRes.status()).isEqualTo(HttpStatus.OK);
         // Converted from the default converter which is JacksonRequestConverterFunction.
-        assertThat(aRes.content().toStringUtf8()).isEqualTo(body);
+        assertThat(aRes.contentUtf8()).isEqualTo(body);
 
         // parameter level(+1) -> method level(+1) -> class level(+1) -> service level(+1) -> default
         assertThat(requestCounter.get()).isEqualTo(4);
@@ -242,9 +242,9 @@ public class AnnotatedHttpServiceHandlersOrderTest {
                 HttpMethod.POST, "/1/responseConverterOrder", MediaType.PLAIN_TEXT_UTF_8, "foo");
         final AggregatedHttpMessage aRes = executeRequest(aReq);
 
-        assertThat(aRes.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(aRes.status()).isEqualTo(HttpStatus.OK);
         // Converted from the ServiceLevelResponseConverter.
-        assertThat(aRes.content().toStringUtf8()).isEqualTo("hello foo");
+        assertThat(aRes.contentUtf8()).isEqualTo("hello foo");
 
         // method level(+1) -> class level(+1) -> service level(+1)
         assertThat(responseCounter.get()).isEqualTo(3);
@@ -256,9 +256,9 @@ public class AnnotatedHttpServiceHandlersOrderTest {
                 HttpMethod.POST, "/1/exceptionHandlerOrder", MediaType.PLAIN_TEXT_UTF_8, "foo");
         final AggregatedHttpMessage aRes = executeRequest(aReq);
 
-        assertThat(aRes.headers().status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
+        assertThat(aRes.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         // Converted from the default Handler which is DefaultExceptionHandler in AnnotatedHttpServices.
-        assertThat(aRes.content().toStringUtf8()).isEqualTo("hello foo");
+        assertThat(aRes.contentUtf8()).isEqualTo("hello foo");
 
         // method level(+1) -> class level(+1) -> service level(+1) -> default
         assertThat(exceptionCounter.get()).isEqualTo(3);

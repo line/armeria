@@ -28,6 +28,7 @@ import org.springframework.http.server.reactive.HttpHandler;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import reactor.core.publisher.Mono;
@@ -52,8 +53,11 @@ final class ArmeriaHttpHandlerAdapter {
         try {
             convertedRequest = new ArmeriaServerHttpRequest(ctx, req, factoryWrapper);
         } catch (Exception e) {
-            logger.warn("{} Invalid request path: {}", ctx, req.path(), e);
-            future.complete(HttpResponse.of(HttpStatus.BAD_REQUEST));
+            final String path = req.path();
+            logger.warn("{} Invalid request path: {}", ctx, path, e);
+            future.complete(HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                            MediaType.PLAIN_TEXT_UTF_8,
+                                            HttpStatus.BAD_REQUEST + "\nInvalid request path: " + path));
             return Mono.empty();
         }
 

@@ -16,3 +16,4 @@ Writing a server
     server-servlet
     server-access-log
     server-cors
+    server-sse

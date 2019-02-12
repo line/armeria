@@ -36,7 +36,7 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
     @Override
     public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                  Class<?> expectedResultType) throws Exception {
-        final MediaType mediaType = request.headers().contentType();
+        final MediaType mediaType = request.contentType();
         if (mediaType == null ||
             mediaType.is(MediaType.OCTET_STREAM) ||
             mediaType.is(MediaType.APPLICATION_BINARY)) {

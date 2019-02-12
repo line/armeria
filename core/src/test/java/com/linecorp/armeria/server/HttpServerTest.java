@@ -473,14 +473,14 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testGet() throws Exception {
         final AggregatedHttpMessage res = client().get("/path/foo").aggregate().get();
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().toStringUtf8()).isEqualTo("/foo");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("/foo");
     }
 
     @Test(timeout = 10000)
     public void testHead() throws Exception {
         final AggregatedHttpMessage res = client().head("/path/blah").aggregate().get();
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.content().isEmpty()).isTrue();
         assertThat(res.headers().getInt(HttpHeaderNames.CONTENT_LENGTH)).isEqualTo(5);
     }
@@ -488,17 +488,17 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testPost() throws Exception {
         final AggregatedHttpMessage res = client().post("/echo", "foo").aggregate().get();
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().toStringUtf8()).isEqualTo("foo");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("foo");
     }
 
     @Test(timeout = 10000)
     public void testTimeout() throws Exception {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay/2000").aggregate().get();
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(res.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.content().toStringUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
         assertThat(requestLogs.take().statusCode()).isEqualTo(503);
     }
 
@@ -506,9 +506,9 @@ public class HttpServerTest {
     public void testTimeout_deferred() throws Exception {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay-deferred/2000").aggregate().get();
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(res.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.content().toStringUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
         assertThat(requestLogs.take().statusCode()).isEqualTo(503);
     }
 
@@ -516,9 +516,9 @@ public class HttpServerTest {
     public void testTimeout_customHandler() throws Exception {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay-custom/2000").aggregate().get();
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.content().toStringUtf8()).isEqualTo("timed out");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("timed out");
         assertThat(requestLogs.take().statusCode()).isEqualTo(200);
     }
 
@@ -526,9 +526,9 @@ public class HttpServerTest {
     public void testTimeout_customHandler_deferred() throws Exception {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay-custom-deferred/2000").aggregate().get();
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.content().toStringUtf8()).isEqualTo("timed out");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("timed out");
         assertThat(requestLogs.take().statusCode()).isEqualTo(200);
     }
 
@@ -542,9 +542,9 @@ public class HttpServerTest {
             assertThat(h.names()).contains(HttpHeaderNames.STATUS);
         });
 
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(res.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.content().toStringUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
         assertThat(requestLogs.take().statusCode()).isEqualTo(503);
     }
 
@@ -587,8 +587,8 @@ public class HttpServerTest {
     public void testTooLargeContentToNonExistentService() throws Exception {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
         final AggregatedHttpMessage res = client().post("/non-existent", content).aggregate().get();
-        assertThat(res.headers().status()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(res.content().toStringUtf8()).isEqualTo("404 Not Found");
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
     }
 
     @Test(timeout = 10000)
@@ -601,7 +601,7 @@ public class HttpServerTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Armeria is awesome!");
+        assertThat(res.contentUtf8()).isEqualTo("Armeria is awesome!");
     }
 
     @Test(timeout = 10000)
@@ -636,7 +636,7 @@ public class HttpServerTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Armeria is awesome!");
+        assertThat(res.contentUtf8()).isEqualTo("Armeria is awesome!");
     }
 
     @Test(timeout = 10000)
@@ -650,7 +650,7 @@ public class HttpServerTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
-        assertThat(res.content().toStringUtf8()).isEqualTo(Strings.repeat("a", 1023));
+        assertThat(res.contentUtf8()).isEqualTo(Strings.repeat("a", 1023));
     }
 
     @Test(timeout = 10000)
@@ -703,7 +703,7 @@ public class HttpServerTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Armeria is awesome!");
+        assertThat(res.contentUtf8()).isEqualTo("Armeria is awesome!");
     }
 
     @Test(timeout = 10000)
@@ -743,7 +743,7 @@ public class HttpServerTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.informationals()).containsExactly(HttpHeaders.of(100));
-        assertThat(res.content().toStringUtf8()).isEqualTo("met expectation");
+        assertThat(res.contentUtf8()).isEqualTo("met expectation");
 
         // Makes sure the server does not send a '100 Continue' response if 'expect: 100-continue' header
         // does not exists.
@@ -753,7 +753,7 @@ public class HttpServerTest {
 
         assertThat(res2.status()).isEqualTo(HttpStatus.OK);
         assertThat(res2.informationals()).isEmpty();
-        assertThat(res2.content().toStringUtf8()).isEqualTo("without expectation");
+        assertThat(res2.contentUtf8()).isEqualTo("without expectation");
     }
 
     @Test(timeout = 10000)
@@ -778,7 +778,7 @@ public class HttpServerTest {
             assertThat(new String(ByteStreams.toByteArray(in)))
                     .isEqualTo(Strings.repeat("HTTP/1.1 100 Continue\r\n\r\n" +
                                               "HTTP/1.1 200 OK\r\n" +
-                                              "transfer-encoding: chunked\r\n\r\n0\r\n\r\n", 4));
+                                              "content-length: 0\r\n\r\n", 4));
         }
     }
 
@@ -802,7 +802,7 @@ public class HttpServerTest {
         Thread.sleep(2000);
         request.write(HttpData.ofUtf8("e"));
         request.close();
-        assertThat(response.aggregate().get().content().toStringUtf8()).isEqualTo("abcde");
+        assertThat(response.aggregate().get().contentUtf8()).isEqualTo("abcde");
     }
 
     @Test(timeout = 10000)
@@ -822,7 +822,7 @@ public class HttpServerTest {
 
         assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header1"))).isEqualTo("custom1");
         assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header2"))).isEqualTo("custom2");
-        assertThat(res.content().toStringUtf8()).isEqualTo("headers");
+        assertThat(res.contentUtf8()).isEqualTo("headers");
     }
 
     @Test(timeout = 10000)

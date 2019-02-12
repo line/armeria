@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction.LINE_FEED;
-import static com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction.RECORD_SEPARATOR;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -48,6 +46,10 @@ public class JacksonResponseConverterFunctionTest {
 
     private static final ResponseConverterFunction function = new JacksonResponseConverterFunction();
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+
+    // Copied from JsonTextSequences class.
+    private static final byte RECORD_SEPARATOR = 0x1E;
+    private static final byte LINE_FEED = 0x0A;
 
     private static final HttpHeaders JSON_HEADERS =
             HttpHeaders.of(HttpStatus.OK).contentType(MediaType.JSON_UTF_8);

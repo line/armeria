@@ -177,7 +177,7 @@ public class ArmeriaAutoConfigurationTest {
 
         final AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.content().toStringUtf8()).isEqualTo("ok");
+        assertThat(msg.contentUtf8()).isEqualTo("ok");
     }
 
     @Test
@@ -188,12 +188,12 @@ public class ArmeriaAutoConfigurationTest {
 
         AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.content().toStringUtf8()).isEqualTo("annotated");
+        assertThat(msg.contentUtf8()).isEqualTo("annotated");
 
         response = client.get("/annotated/get/2");
         msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.content().toStringUtf8()).isEqualTo("exception");
+        assertThat(msg.contentUtf8()).isEqualTo("exception");
     }
 
     @Test
@@ -208,7 +208,7 @@ public class ArmeriaAutoConfigurationTest {
 
         final AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(msg.content().toStringUtf8())
+        assertThatJson(msg.contentUtf8())
                 .node("services[1].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
     }
 
@@ -225,7 +225,7 @@ public class ArmeriaAutoConfigurationTest {
         final String metricReport = HttpClient.of(newUrl("http"))
                                               .get("/internal/metrics")
                                               .aggregate().join()
-                                              .content().toStringUtf8();
+                                              .contentUtf8();
         assertThat(metricReport).contains("# TYPE jvm_gc_live_data_size_bytes gauge");
     }
 }

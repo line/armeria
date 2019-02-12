@@ -175,19 +175,19 @@ public class ObservableResponseConverterFunctionTest {
         AggregatedHttpMessage msg;
 
         msg = client.get("/string").aggregate().join();
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.content().toStringUtf8()).isEqualTo("a");
+        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.contentUtf8()).isEqualTo("a");
 
         msg = client.get("/json").aggregate().join();
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.content().toStringUtf8()).isStringEqualTo("a");
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.contentUtf8()).isStringEqualTo("a");
 
         msg = client.get("/empty").aggregate().join();
-        assertThat(msg.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.content().isEmpty()).isTrue();
 
         msg = client.get("/error").aggregate().join();
-        assertThat(msg.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
@@ -197,15 +197,15 @@ public class ObservableResponseConverterFunctionTest {
         AggregatedHttpMessage msg;
 
         msg = client.get("/string").aggregate().join();
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.content().toStringUtf8()).isEqualTo("a");
+        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.contentUtf8()).isEqualTo("a");
 
         msg = client.get("/json").aggregate().join();
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.content().toStringUtf8()).isStringEqualTo("a");
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.contentUtf8()).isStringEqualTo("a");
 
         msg = client.get("/error").aggregate().join();
-        assertThat(msg.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
@@ -215,10 +215,10 @@ public class ObservableResponseConverterFunctionTest {
         AggregatedHttpMessage msg;
 
         msg = client.get("/done").aggregate().join();
-        assertThat(msg.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
 
         msg = client.get("/error").aggregate().join();
-        assertThat(msg.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
@@ -228,21 +228,21 @@ public class ObservableResponseConverterFunctionTest {
         AggregatedHttpMessage msg;
 
         msg = client.get("/string").aggregate().join();
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.content().toStringUtf8()).isEqualTo("a");
+        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(msg.contentUtf8()).isEqualTo("a");
 
         msg = client.get("/json/1").aggregate().join();
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.content().toStringUtf8())
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.contentUtf8())
                 .isArray().ofLength(1).thatContains("a");
 
         msg = client.get("/json/3").aggregate().join();
-        assertThat(msg.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.content().toStringUtf8())
+        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(msg.contentUtf8())
                 .isArray().ofLength(3).thatContains("a").thatContains("b").thatContains("c");
 
         msg = client.get("/error").aggregate().join();
-        assertThat(msg.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test

@@ -24,8 +24,13 @@ import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
 import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
+import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
+import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
+import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
+import static com.linecorp.armeria.server.docs.FieldLocation.UNSPECIFIED;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
@@ -53,16 +58,20 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
+import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
@@ -76,26 +85,16 @@ import com.linecorp.armeria.server.docs.TypeSignature;
  */
 public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
-    private static final String PATH_PARAM = "path";
-    private static final String QUERY_PARAM = "query";
-    private static final String HEADER_PARAM = "header";
-
     // The formats defined by OpenAPI Specification
     // (https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#dataTypes):
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     @VisibleForTesting
-    static final TypeSignature BOOL = TypeSignature.ofBase("boolean");
-    // Not defined in the spec, but added to support byte type.
+    static final TypeSignature BOOLEAN = TypeSignature.ofBase("boolean");
     @VisibleForTesting
-    static final TypeSignature INT8 = TypeSignature.ofBase("int8");
-    // Not defined in the spec, but added to support char and short types.
+    static final TypeSignature INT = TypeSignature.ofBase("int");
     @VisibleForTesting
-    static final TypeSignature INT16 = TypeSignature.ofBase("int16");
-    @VisibleForTesting
-    static final TypeSignature INT32 = TypeSignature.ofBase("int32");
-    @VisibleForTesting
-    static final TypeSignature INT64 = TypeSignature.ofBase("int64");
+    static final TypeSignature LONG = TypeSignature.ofBase("long");
     @VisibleForTesting
     static final TypeSignature FLOAT = TypeSignature.ofBase("float");
     @VisibleForTesting
@@ -104,6 +103,14 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     static final TypeSignature STRING = TypeSignature.ofBase("string");
     @VisibleForTesting
     static final TypeSignature BINARY = TypeSignature.ofBase("binary");
+
+    // Not defined in the spec.
+    @VisibleForTesting
+    static final TypeSignature BYTE = TypeSignature.ofBase("byte");
+    @VisibleForTesting
+    static final TypeSignature SHORT = TypeSignature.ofBase("short");
+    @VisibleForTesting
+    static final TypeSignature BEAN = TypeSignature.ofBase("bean");
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -129,7 +136,8 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         return generate(serviceDescription, methodInfos);
     }
 
-    private void addServiceDescription(Map<Class<?>, String> serviceDescription, AnnotatedHttpService service) {
+    private static void addServiceDescription(Map<Class<?>, String> serviceDescription,
+                                              AnnotatedHttpService service) {
         final Class<?> clazz = service.object().getClass();
         serviceDescription.computeIfAbsent(clazz, AnnotatedHttpServiceFactory::findDescription);
     }
@@ -203,38 +211,70 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         return builder.build();
     }
 
-    @VisibleForTesting
-    static List<FieldInfo> fieldInfos(List<AnnotatedValueResolver> resolvers) {
-        final ImmutableList.Builder<FieldInfo> fieldInfoBuilder = ImmutableList.builder();
+    private static List<FieldInfo> fieldInfos(List<AnnotatedValueResolver> resolvers) {
+        final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
         for (AnnotatedValueResolver resolver : resolvers) {
-            if (!(resolver.annotationType() == Param.class || resolver.annotationType() == Header.class)) {
-                continue;
+            final FieldInfo fieldInfo = fieldInfo(resolver);
+            if (fieldInfo != null) {
+                fieldInfosBuilder.add(fieldInfo);
             }
-            final TypeSignature signature;
-            if (resolver.hasContainer()) {
-                final Class<?> containerType = resolver.containerType();
-                assert containerType != null;
-                final TypeSignature parameterTypeSignature = toTypeSignature(resolver.elementType());
-                if (List.class.isAssignableFrom(containerType)) {
-                    signature = TypeSignature.ofList(parameterTypeSignature);
-                } else if (Set.class.isAssignableFrom(containerType)) {
-                    signature = TypeSignature.ofSet(parameterTypeSignature);
-                } else {
-                    // Only List and Set are supported for the containerType.
-                    continue;
-                }
-            } else {
-                signature = toTypeSignature(resolver.elementType());
-            }
-            final String name = resolver.httpElementName();
-            assert name != null;
-
-            fieldInfoBuilder.add(
-                    new FieldInfo(name, location(resolver), resolver.shouldExist() ? FieldRequirement.REQUIRED
-                                                                                   : FieldRequirement.OPTIONAL,
-                                  signature, resolver.description()));
         }
-        return fieldInfoBuilder.build();
+        return fieldInfosBuilder.build();
+    }
+
+    @Nullable
+    private static FieldInfo fieldInfo(AnnotatedValueResolver resolver) {
+        final Class<? extends Annotation> annotationType = resolver.annotationType();
+        if (annotationType == RequestObject.class) {
+            final BeanFactoryId beanFactoryId = resolver.beanFactoryId();
+            final Optional<AnnotatedBeanFactory<?>> optional =
+                    AnnotatedBeanFactoryRegistry.find(beanFactoryId);
+            if (optional.isPresent()) {
+                final AnnotatedBeanFactory<?> factory = optional.get();
+                final Builder<AnnotatedValueResolver> builder = ImmutableList.builder();
+                factory.constructor().getValue().forEach(builder::add);
+                factory.methods().values().forEach(resolvers -> resolvers.forEach(builder::add));
+                factory.fields().values().forEach(builder::add);
+                final List<AnnotatedValueResolver> resolvers = builder.build();
+                if (!resolvers.isEmpty()) {
+                    // Just use the simple name of the bean class as the field name.
+                    return new FieldInfoBuilder(beanFactoryId.type().getSimpleName(), BEAN,
+                                                fieldInfos(resolvers)).build();
+                }
+            }
+            return null;
+        }
+
+        if (annotationType != Param.class && annotationType != Header.class) {
+            return null;
+        }
+        final TypeSignature signature;
+        if (resolver.hasContainer()) {
+            final Class<?> containerType = resolver.containerType();
+            assert containerType != null;
+            final TypeSignature parameterTypeSignature = toTypeSignature(resolver.elementType());
+            if (List.class.isAssignableFrom(containerType)) {
+                signature = TypeSignature.ofList(parameterTypeSignature);
+            } else if (Set.class.isAssignableFrom(containerType)) {
+                signature = TypeSignature.ofSet(parameterTypeSignature);
+            } else {
+                // Only List and Set are supported for the containerType.
+                return null;
+            }
+        } else {
+            signature = toTypeSignature(resolver.elementType());
+        }
+        final String name = resolver.httpElementName();
+        assert name != null;
+
+        final FieldInfoBuilder builder = new FieldInfoBuilder(name, signature)
+                .location(location(resolver))
+                .requirement(resolver.shouldExist() ? FieldRequirement.REQUIRED
+                                                    : FieldRequirement.OPTIONAL);
+        if (resolver.description() != null) {
+            builder.docString(resolver.description());
+        }
+        return builder.build();
     }
 
     @VisibleForTesting
@@ -246,15 +286,15 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         if (type == Void.class || type == void.class) {
             return VOID;
         } else if (type == Boolean.class || type == boolean.class) {
-            return BOOL;
+            return BOOLEAN;
         } else if (type == Byte.class || type == byte.class) {
-            return INT8;
+            return BYTE;
         } else if (type == Short.class || type == short.class) {
-            return INT16;
+            return SHORT;
         } else if (type == Integer.class || type == int.class) {
-            return INT32;
+            return INT;
         } else if (type == Long.class || type == long.class) {
-            return INT64;
+            return LONG;
         } else if (type == Float.class || type == float.class) {
             return FLOAT;
         } else if (type == Double.class || type == double.class) {
@@ -312,18 +352,17 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         return TypeSignature.ofBase(clazz.getSimpleName());
     }
 
-    @Nullable
-    private static String location(AnnotatedValueResolver resolver) {
+    private static FieldLocation location(AnnotatedValueResolver resolver) {
         if (resolver.isPathVariable()) {
-            return PATH_PARAM;
+            return PATH;
         }
         if (resolver.annotationType() == Param.class) {
-            return QUERY_PARAM;
+            return QUERY;
         }
         if (resolver.annotationType() == Header.class) {
-            return HEADER_PARAM;
+            return HEADER;
         }
-        return null;
+        return UNSPECIFIED;
     }
 
     @VisibleForTesting
@@ -362,8 +401,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final Field[] declaredFields = structClass.getDeclaredFields();
         final List<FieldInfo> fields =
                 Stream.of(declaredFields)
-                      .map(f -> new FieldInfo(f.getName(), FieldRequirement.DEFAULT,
-                                              toTypeSignature(f.getGenericType())))
+                      .map(f -> FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType())))
                       .collect(Collectors.toList());
         return new StructInfo(name, fields);
     }

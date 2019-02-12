@@ -233,7 +233,7 @@ public class ArmeriaCallFactoryTest {
                                                      MediaType.PLAIN_TEXT_UTF_8,
                                                      Exceptions.traceText(cause));
                           }
-                          final String text = aReq.content().toStringUtf8();
+                          final String text = aReq.contentUtf8();
                           final Pojo request;
                           try {
                               request = OBJECT_MAPPER.readValue(text, Pojo.class);
@@ -257,8 +257,7 @@ public class ArmeriaCallFactoryTest {
                                                      Exceptions.traceText(cause));
                           }
                           final Map<String, List<String>> params = new QueryStringDecoder(
-                                  aReq.content().toStringUtf8(), false)
-                                  .parameters();
+                                  aReq.contentUtf8(), false).parameters();
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                                  "{\"name\":\"" + params.get("name").get(0) + "\", " +
                                                  "\"age\":" + params.get("age").get(0) + '}');
@@ -274,7 +273,7 @@ public class ArmeriaCallFactoryTest {
                                                      MediaType.PLAIN_TEXT_UTF_8,
                                                      Exceptions.traceText(cause));
                           }
-                          assertThat(req.headers().contentType()).isNull();
+                          assertThat(req.contentType()).isNull();
                           return HttpResponse.of(HttpStatus.OK);
                       }));
                   }

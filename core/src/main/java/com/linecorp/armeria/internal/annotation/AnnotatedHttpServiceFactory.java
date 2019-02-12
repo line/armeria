@@ -72,11 +72,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotationUtil.FindOption;
@@ -89,6 +92,8 @@ import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.annotation.AdditionalHeader;
+import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -214,6 +219,44 @@ public final class AnnotatedHttpServiceFactory {
                       .collect(toImmutableList());
     }
 
+    private static HttpStatus defaultResponseStatus(Optional<HttpStatus> defaultResponseStatus,
+                                                    Method method) {
+        return defaultResponseStatus.orElseGet(() -> {
+            // Set a default HTTP status code for a response depending on the return type of the method.
+            final Class<?> returnType = method.getReturnType();
+            return returnType == Void.class ||
+                   returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        });
+    }
+
+    private static <T extends Annotation> void setAdditionalHeader(HttpHeaders headers,
+                                                                   AnnotatedElement element,
+                                                                   String clsAlias,
+                                                                   String elementAlias,
+                                                                   String level,
+                                                                   Class<T> annotation,
+                                                                   Function<T, String> nameGetter,
+                                                                   Function<T, String[]> valueGetter) {
+        requireNonNull(headers, "headers");
+        requireNonNull(element, "element");
+        requireNonNull(level, "level");
+
+        final Set<String> addedHeaderSets = new HashSet<>();
+        findAll(element, annotation).forEach(header -> {
+            final String name = nameGetter.apply(header);
+            final String[] value = valueGetter.apply(header);
+
+            if (addedHeaderSets.contains(name)) {
+                logger.warn("The additional {} named '{}' at '{}' is set at the same {} level already;" +
+                            "ignoring.",
+                            clsAlias, name, elementAlias, level);
+                return;
+            }
+            headers.set(HttpHeaderNames.of(name), value);
+            addedHeaderSets.add(name);
+        });
+    }
+
     /**
      * Returns an {@link AnnotatedHttpService} instance defined to {@code method} of {@code object} using
      * {@link Path} annotation.
@@ -291,6 +334,26 @@ public final class AnnotatedHttpServiceFactory {
                                   "invalid HTTP status code: %s (expected: >= 0)", statusCode);
                     return HttpStatus.valueOf(statusCode);
                 });
+        final HttpHeaders defaultHeaders = HttpHeaders.of(defaultResponseStatus(defaultResponseStatus, method));
+
+        final HttpHeaders defaultTrailingHeaders = HttpHeaders.of();
+        final String classAlias = clazz.getName();
+        final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
+        setAdditionalHeader(defaultHeaders, clazz, "header", classAlias, "class", AdditionalHeader.class,
+                            AdditionalHeader::name, AdditionalHeader::value);
+        setAdditionalHeader(defaultHeaders, method, "header", methodAlias, "method", AdditionalHeader.class,
+                            AdditionalHeader::name, AdditionalHeader::value);
+        setAdditionalHeader(defaultTrailingHeaders, clazz, "trailer", classAlias, "class",
+                            AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
+        setAdditionalHeader(defaultTrailingHeaders, method, "trailer", methodAlias, "method",
+                            AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
+
+        if (ArmeriaHttpUtil.isContentAlwaysEmpty(defaultHeaders.status()) &&
+            !defaultTrailingHeaders.isEmpty()) {
+            logger.warn("A response with HTTP status code '{}' cannot have a content. " +
+                        "Trailing headers defined at '{}' might be ignored.",
+                        defaultHeaders.status().code(), methodAlias);
+        }
 
         // A CORS preflight request can be received because we handle it specially. The following
         // decorator will prevent the service from an unexpected request which has OPTIONS method.
@@ -312,8 +375,8 @@ public final class AnnotatedHttpServiceFactory {
         }
         return new AnnotatedHttpServiceElement(pathMapping,
                                                new AnnotatedHttpService(object, method, resolvers, eh,
-                                                                        res, pathMapping,
-                                                                        defaultResponseStatus),
+                                                                        res, pathMapping, defaultHeaders,
+                                                                        defaultTrailingHeaders),
                                                decorator(method, clazz, initialDecorator));
     }
 

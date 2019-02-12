@@ -17,7 +17,6 @@ configure(projectsWithFlags('java')) {
     tasks.withType(Test) {
         jacoco {
             enabled = true
-            append = false
         }
     }
 
@@ -79,13 +78,13 @@ configure(rootProject) {
             }
 
             // Include all sources and classes directories so that the report includes other modules.
-            sourceDirectories = files(projectsWithFlags('java').inject([], { a, b ->
+            sourceDirectories.from = files(projectsWithFlags('java').inject([], { a, b ->
                 a + b.sourceSets.main.java.srcDirs.findAll { File srcDir ->
                     // Exclude generated sources.
                     return !srcDir.path.contains('/gen-src/') && !srcDir.path.contains('\\gen-src\\')
                 }
             }))
-            classDirectories = files(projectsWithFlags('java').inject([], { a, b ->
+            classDirectories.from = files(projectsWithFlags('java').inject([], { a, b ->
                 if (b.hasFlags('no_aggregation')) {
                     return a
                 }
@@ -101,7 +100,7 @@ configure(rootProject) {
             if (additionalExclusions) {
                 additionalExclusions.each { exclusions.add("${it}") }
             }
-            classDirectories = files(classDirectories.files.collect {
+            classDirectories.from = files(classDirectories.files.collect {
                 fileTree(dir: it, exclude: exclusions)
             })
         }

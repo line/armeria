@@ -196,21 +196,19 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
      * Copies the entries missing in this headers from the specified {@link Headers}.
      * This method is a shortcut of the following code:
      * <pre>{@code
-     * headers.forEach(entry -> {
-     *     final AsciiString name = entry.getKey();
-     *     if (!this.contains(name)) {
-     *         this.set(name, entry.getValue());
-     *     }
+     * headers.names().forEach(name -> {
+     *      if (!contains(name)) {
+     *          set(name, headers.getAll(name));
+     *      }
      * });
      * }</pre>
      */
-    default HttpHeaders setAllIfAbsent(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    default HttpHeaders setAllIfAbsent(Headers<AsciiString, String, ?> headers) {
         requireNonNull(headers, "headers");
         if (!headers.isEmpty()) {
-            headers.forEach(entry -> {
-                final AsciiString name = entry.getKey();
-                if (!this.contains(name)) {
-                    this.set(name, entry.getValue());
+            headers.names().forEach(name -> {
+                if (!contains(name)) {
+                    set(name, headers.getAll(name));
                 }
             });
         }

@@ -11,12 +11,15 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
+
+import reactor.test.StepVerifier;
 
 public class AnnotatedHttpServiceTest {
 
@@ -45,15 +48,15 @@ public class AnnotatedHttpServiceTest {
         AggregatedHttpMessage res;
 
         res = client.get("/pathPattern/path/armeria").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("path: armeria");
+        assertThat(res.contentUtf8()).isEqualTo("path: armeria");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
 
         res = client.get("/pathPattern/regex/armeria").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("regex: armeria");
+        assertThat(res.contentUtf8()).isEqualTo("regex: armeria");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
 
         res = client.get("/pathPattern/glob/armeria").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("glob: armeria");
+        assertThat(res.contentUtf8()).isEqualTo("glob: armeria");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
     }
 
@@ -63,7 +66,7 @@ public class AnnotatedHttpServiceTest {
 
         res = client.get("/injection/param/armeria/1?gender=male").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(res.content().toStringUtf8()).isArray()
+        assertThatJson(res.contentUtf8()).isArray()
                                                     .ofLength(3)
                                                     .thatContains("armeria")
                                                     .thatContains(1)
@@ -78,11 +81,11 @@ public class AnnotatedHttpServiceTest {
 
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(res.content().toStringUtf8()).isArray()
-                                                    .ofLength(3)
-                                                    .thatContains("armeria")
-                                                    .thatContains(Arrays.asList(1, 2))
-                                                    .thatContains(Arrays.asList("a", "b"));
+        assertThatJson(res.contentUtf8()).isArray()
+                                         .ofLength(3)
+                                         .thatContains("armeria")
+                                         .thatContains(Arrays.asList(1, 2))
+                                         .thatContains(Arrays.asList("a", "b"));
     }
 
     @Test
@@ -100,9 +103,9 @@ public class AnnotatedHttpServiceTest {
                                  "{\"name\":\"armeria\"}").aggregate().join();
 
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
-            assertThat(res.headers().contentType().is(MediaType.JSON_UTF_8)).isTrue();
+            assertThat(res.contentType().is(MediaType.JSON_UTF_8)).isTrue();
 
-            body = res.content().toStringUtf8();
+            body = res.contentUtf8();
             assertThatJson(body).node("result").isStringEqualTo("success");
             assertThatJson(body).node("from").isStringEqualTo("armeria");
         }
@@ -112,8 +115,8 @@ public class AnnotatedHttpServiceTest {
                                         .contentType(MediaType.PLAIN_TEXT_UTF_8),
                              "armeria").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().contentType().is(MediaType.PLAIN_TEXT_UTF_8)).isTrue();
-        assertThat(res.content().toStringUtf8()).isEqualTo("success:armeria");
+        assertThat(res.contentType().is(MediaType.PLAIN_TEXT_UTF_8)).isTrue();
+        assertThat(res.contentUtf8()).isEqualTo("success:armeria");
     }
 
     @Test
@@ -138,5 +141,20 @@ public class AnnotatedHttpServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         res = client.get("/exception/default/409").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    public void testServerSentEventsService() {
+        StepVerifier.create(client.get("/sse/3"))
+                    .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.EVENT_STREAM))
+                    .expectNext(HttpData.ofUtf8("data:foo\n"))
+                    .expectNext(HttpData.ofUtf8("data:bar\n"))
+                    .expectNext(HttpData.ofUtf8("data:baz\n"))
+                    .assertNext(lastContent -> {
+                        assertThat(lastContent.isEndOfStream()).isTrue();
+                        assertThat(((HttpData) lastContent).isEmpty()).isTrue();
+                    })
+                    .expectComplete()
+                    .verify();
     }
 }

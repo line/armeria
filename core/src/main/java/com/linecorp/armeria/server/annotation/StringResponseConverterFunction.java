@@ -15,8 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.annotation.ResponseConversionUtil.aggregateFrom;
-import static com.linecorp.armeria.internal.annotation.ResponseConversionUtil.toMutableHeaders;
+import static com.linecorp.armeria.internal.ResponseConversionUtil.aggregateFrom;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -62,7 +61,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
                 return HttpResponse.of(headers, toHttpData(result, charset), trailingHeaders);
             }
         } else if (result instanceof CharSequence) {
-            return HttpResponse.of(toMutableHeaders(headers).contentType(MediaType.PLAIN_TEXT_UTF_8),
+            return HttpResponse.of(headers.toMutable().contentType(MediaType.PLAIN_TEXT_UTF_8),
                                    HttpData.ofUtf8(((CharSequence) result).toString()),
                                    trailingHeaders);
         }

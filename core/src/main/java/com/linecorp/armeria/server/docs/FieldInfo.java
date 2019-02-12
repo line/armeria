@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static java.util.Objects.requireNonNull;
-
+import java.util.List;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
@@ -26,54 +25,44 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Metadata about a field of a struct or an exception.
+ *
+ * @see FieldInfoBuilder
  */
 public final class FieldInfo {
 
     private final String name;
-    @Nullable
-    private final String location;
+    private final FieldLocation location;
     private final FieldRequirement requirement;
     private final TypeSignature typeSignature;
+    private final List<FieldInfo> childFieldInfos;
     @Nullable
     private final String docString;
 
     /**
-     * Creates a new instance.
+     * Creates a new {@link FieldInfo} with the specified {@code name} and {@link TypeSignature}.
+     * The {@link FieldLocation} and {@link FieldRequirement} of the {@link FieldInfo} will be
+     * {@code UNSPECIFIED}.
      */
-    public FieldInfo(String name, FieldRequirement requirement, TypeSignature typeSignature) {
-        this(name, null, requirement, typeSignature, null);
+    public static FieldInfo of(String name, TypeSignature typeSignature) {
+        return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
+                             ImmutableList.of(), null);
     }
 
     /**
      * Creates a new instance.
      */
-    public FieldInfo(String name, @Nullable String location, FieldRequirement requirement,
-                     TypeSignature typeSignature) {
-        this(name, location, requirement, typeSignature, null);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public FieldInfo(String name, FieldRequirement requirement,
-                     TypeSignature typeSignature, @Nullable String docString) {
-        this(name, null, requirement, typeSignature, docString);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public FieldInfo(String name, @Nullable String location, FieldRequirement requirement,
-                     TypeSignature typeSignature, @Nullable String docString) {
-        this.name = requireNonNull(name, "name");
-        this.location = Strings.emptyToNull(location);
-        this.requirement = requireNonNull(requirement, "requirement");
-        this.typeSignature = requireNonNull(typeSignature, "typeSignature");
-        this.docString = Strings.emptyToNull(docString);
+    FieldInfo(String name, FieldLocation location, FieldRequirement requirement,
+              TypeSignature typeSignature, List<FieldInfo> childFieldInfos, @Nullable String docString) {
+        this.name = name;
+        this.location = location;
+        this.requirement = requirement;
+        this.typeSignature = typeSignature;
+        this.childFieldInfos = childFieldInfos;
+        this.docString = docString;
     }
 
     /**
@@ -86,12 +75,9 @@ public final class FieldInfo {
 
     /**
      * Returns the location of the field.
-     * e.g. {@code "param"}, {@code "header"} and {@code "query"}
      */
     @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
-    public String location() {
+    public FieldLocation location() {
         return location;
     }
 
@@ -109,6 +95,14 @@ public final class FieldInfo {
     @JsonProperty
     public TypeSignature typeSignature() {
         return typeSignature;
+    }
+
+    /**
+     * Returns the child field infos of the field.
+     */
+    @JsonProperty
+    public List<FieldInfo> childFieldInfos() {
+        return childFieldInfos;
     }
 
     /**
@@ -133,13 +127,15 @@ public final class FieldInfo {
 
         final FieldInfo that = (FieldInfo) o;
         return name.equals(that.name) &&
+               location == that.location &&
                requirement == that.requirement &&
-               typeSignature.equals(that.typeSignature);
+               typeSignature.equals(that.typeSignature) &&
+               childFieldInfos.equals(that.childFieldInfos);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, requirement, typeSignature);
+        return Objects.hash(name, location, requirement, typeSignature, childFieldInfos);
     }
 
     @Override
@@ -149,6 +145,7 @@ public final class FieldInfo {
                           .add("location", location)
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
+                          .add("childFieldInfos", childFieldInfos)
                           .add("docString", docString)
                           .toString();
     }

@@ -177,7 +177,7 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
                             return false;
                         }
 
-                        final String content = res.content().toStringUtf8();
+                        final String content = res.contentUtf8();
                         if ("Success".equals(content)) {
                             return true;
                         } else if ("Failure".equals(content)) {

@@ -151,7 +151,7 @@ public final class EndpointInfoBuilder {
      * Returns a newly-created {@link EndpointInfo} based on the properties of this builder.
      */
     public EndpointInfo build() {
-        checkState(availableMimeTypes != null && !Iterables.isEmpty(availableMimeTypes),
+        checkState(availableMimeTypes != null && !availableMimeTypes.isEmpty(),
                    "Should at least have an available media type.");
         return new EndpointInfo(hostnamePattern, pathMapping, regexPathPrefix,
                                 fragment, defaultMimeType, availableMimeTypes);

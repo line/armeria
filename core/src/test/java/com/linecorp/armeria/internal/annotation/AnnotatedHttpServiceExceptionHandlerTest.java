@@ -252,61 +252,61 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         NoExceptionHandler.counter.set(0);
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/sync")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("handler1");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler1");
 
         assertThat(NoExceptionHandler.counter.get()).isEqualTo(1);
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/async")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("handler1");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler1");
 
         assertThat(NoExceptionHandler.counter.get()).isEqualTo(2);
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/resp1")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("handler1");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler1");
 
         assertThat(NoExceptionHandler.counter.get()).isEqualTo(3);
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/resp2")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("handler2");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler2");
 
         assertThat(NoExceptionHandler.counter.get()).isEqualTo(4);
 
         // By default exception handler.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/sync")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // The method returns CompletionStage<?>. It throws an exception immediately if it is called.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/async")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // The method returns CompletionStage<?>. It throws an exception after the request is aggregated.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/async/aggregation"))
                          .aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Timeout because of bad exception handler.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/3/bad1")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
 
         // Internal server error would be returned due to invalid response.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/3/bad2")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         NoExceptionHandler.counter.set(0);
 
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/4/handler3")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("handler3");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler3");
 
         assertThat(NoExceptionHandler.counter.get()).isZero();
 
         // A decorator throws an exception.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/5/handler3")).aggregate().join();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content().toStringUtf8()).isEqualTo("handler3");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler3");
     }
 }

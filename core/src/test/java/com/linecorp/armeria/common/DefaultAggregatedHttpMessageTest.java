@@ -132,8 +132,7 @@ public class DefaultAggregatedHttpMessageTest {
 
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
-                           .contentType(PLAIN_TEXT_UTF_8)
-                           .setInt(CONTENT_LENGTH, 3),
+                           .contentType(PLAIN_TEXT_UTF_8),
                 HttpData.of(StandardCharsets.UTF_8, "bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
     }
@@ -151,6 +150,70 @@ public class DefaultAggregatedHttpMessageTest {
                 HttpHeaders.of(HttpStatus.CONTINUE),
                 HttpHeaders.of(HttpStatus.OK)
                            .setInt(CONTENT_LENGTH, 0));
+    }
+
+    @Test
+    public void errorWhenContentOrTrailingHeadersShouldBeEmpty() throws Exception {
+        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.ofUtf8("bob"),
+                                               HttpHeaders.EMPTY_HEADERS);
+        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.ofUtf8("bob"),
+                                               HttpHeaders.EMPTY_HEADERS);
+        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.ofUtf8("bob"),
+                                               HttpHeaders.EMPTY_HEADERS);
+        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"),
+                                               HttpHeaders.EMPTY_HEADERS);
+
+        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.EMPTY_DATA,
+                                               HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.EMPTY_DATA,
+                                               HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.EMPTY_DATA,
+                                               HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.EMPTY_DATA,
+                                               HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+    }
+
+    private static void contentAndTrailingHeadersShouldBeEmpty(HttpStatus status, HttpData content,
+                                                               HttpHeaders trailingHeaders) {
+        assertThatThrownBy(() -> AggregatedHttpMessage.of(status, PLAIN_TEXT_UTF_8, content, trailingHeaders))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void contentLengthIsNotSetWhen1xxOr204Or205() {
+        HttpHeaders headers = HttpHeaders.of(HttpStatus.CONTINUE).addInt(CONTENT_LENGTH, 100);
+        assertThat(AggregatedHttpMessage.of(headers).headers().get(CONTENT_LENGTH)).isNull();
+
+        headers = HttpHeaders.of(HttpStatus.NO_CONTENT).addInt(CONTENT_LENGTH, 100);
+        assertThat(AggregatedHttpMessage.of(headers).headers().get(CONTENT_LENGTH)).isNull();
+
+        headers = HttpHeaders.of(HttpStatus.RESET_CONTENT).addInt(CONTENT_LENGTH, 100);
+        assertThat(AggregatedHttpMessage.of(headers).headers().get(CONTENT_LENGTH)).isNull();
+
+        // 304 response can have the 'Content-length' header when it is a response to a conditional
+        // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
+        headers = HttpHeaders.of(HttpStatus.NOT_MODIFIED).addInt(CONTENT_LENGTH, 100);
+        assertThat(AggregatedHttpMessage.of(headers).headers().getInt(CONTENT_LENGTH)).isEqualTo(100);
+    }
+
+    @Test
+    public void contentLengthIsSet() {
+        AggregatedHttpMessage msg = AggregatedHttpMessage.of(HttpStatus.OK);
+        assertThat(msg.headers().getInt(CONTENT_LENGTH)).isEqualTo(6); // the length of status.toHttpData()
+
+        msg = AggregatedHttpMessage.of(HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8("foo"));
+        assertThat(msg.headers().getInt(CONTENT_LENGTH)).isEqualTo(3);
+
+        msg = AggregatedHttpMessage.of(HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8(""));
+        assertThat(msg.headers().getInt(CONTENT_LENGTH)).isEqualTo(0);
+
+        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK).addInt(CONTENT_LENGTH, 1000000);
+        // It can have 'Content-length' even though it does not have content, because it can be a response
+        // to a HEAD request.
+        assertThat(AggregatedHttpMessage.of(headers).headers().getInt(CONTENT_LENGTH)).isEqualTo(1000000);
+
+        msg = AggregatedHttpMessage.of(headers, HttpData.ofUtf8("foo"));
+        assertThat(msg.headers().getInt(CONTENT_LENGTH)).isEqualTo(3); // The length is reset to 3 from 1000000.
     }
 
     @Test

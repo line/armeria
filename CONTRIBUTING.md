@@ -6,7 +6,7 @@ source projects you are aware of. It will be amazing if you could help us by doi
 - File an issue in [the issue tracker](https://github.com/line/armeria/issues) to report bugs and propose new features and
   improvements.
 - Ask a question by creating a new issue in [the issue tracker](https://github.com/line/armeria/issues).
-  - Browse [the list of previously answered questions](https://github.com/line/armeria/issues?q=label%3Aquestion-answered).
+  - Browse [the list of previously answered questions](https://github.com/line/armeria/issues?q=label%3Aquestion).
 - Contribute your work by sending [a pull request](https://github.com/line/armeria/pulls).
 
 ### Contributor license agreement
