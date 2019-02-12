@@ -17,6 +17,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
@@ -172,32 +174,30 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
      */
     public B requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         return option(ClientOption.REQ_CONTENT_PREVIEWER_FACTORY,
-                      requireNonNull(factory, "factory").asImmutable());
+                      requireNonNull(factory, "factory"));
+    }
+
+    public B requestContentPreview(int length, Charset defaultCharset) {
+        return requestContentPreviewerFactory(
+                ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     public B requestContentPreview(int length) {
-        return requestContentPreviewerFactory(
-                ContentPreviewerFactory.ofString(length));
+        return requestContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         return option(ClientOption.RES_CONTENT_PREVIEWER_FACTORY,
-                      requireNonNull(factory, "factory").asImmutable());
+                      requireNonNull(factory, "factory"));
+    }
+
+    public B responseContentPreview(int length, Charset defaultCharset) {
+        return responseContentPreviewerFactory(
+                ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     public B responseContentPreview(int length) {
-        return responseContentPreviewerFactory(
-                ContentPreviewerFactory.ofString(length));
-    }
-
-    public B contentPreview(int length) {
-        return contentPreview(length, length);
-    }
-
-    public B contentPreview(int requestLength, int responseLength) {
-        requestContentPreview(requestLength);
-        responseContentPreview(responseLength);
-        return self();
+        return responseContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     public B contentPreviewerFactory(ContentPreviewerFactory factory) {
@@ -205,6 +205,24 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
         return self();
+    }
+
+    public B contentPreview(int requestLength, int responseLength, Charset defaultCharset) {
+        requestContentPreview(requestLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+        responseContentPreview(responseLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+        return self();
+    }
+
+    public B contentPreview(int requestLength, int responseLength) {
+        return contentPreview(requestLength, responseLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+    }
+
+    public B contentPreview(int length, Charset defaultCharset) {
+        return contentPreview(length, length, defaultCharset);
+    }
+
+    public B contentPreview(int length) {
+        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     /**

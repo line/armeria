@@ -142,7 +142,6 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled()) {
-
             ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
                                                     requestHeadersSanitizer, requestContentSanitizer),
                                   RequestLogAvailability.REQUEST_END);

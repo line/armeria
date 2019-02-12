@@ -65,9 +65,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long responseTimeoutMillis;
     private long maxResponseLength;
 
-    private final ContentPreviewerFactory requestContentPreviewerFactory;
-    private final ContentPreviewerFactory responseContentPreviewerFactory;
-
     @Nullable
     private String strVal;
 
@@ -98,8 +95,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = options.defaultWriteTimeoutMillis();
         responseTimeoutMillis = options.defaultResponseTimeoutMillis();
         maxResponseLength = options.defaultMaxResponseLength();
-        requestContentPreviewerFactory = options.requestContentPreviewerFactory();
-        responseContentPreviewerFactory = options.responseContentPreviewerFactory();
 
         final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
         if (!headers.isEmpty()) {
@@ -142,8 +137,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
-        requestContentPreviewerFactory = ctx.requestContentPreviewerFactory();
-        responseContentPreviewerFactory = ctx.responseContentPreviewerFactory();
 
         final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
         if (!additionalHeaders.isEmpty()) {
@@ -174,12 +167,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return requestContentPreviewerFactory;
+        return options.requestContentPreviewerFactory();
     }
 
     @Override
     public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return responseContentPreviewerFactory;
+        return options.responseContentPreviewerFactory();
     }
 
     @Override

@@ -537,7 +537,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void writeRequestContentPreview(HttpData data) {
+    public void onRequestContent(HttpData data) {
+        increaseRequestLength(data.length());
         if (requestContentPreviewer == ContentPreviewer.DISABLED) {
             return;
         }
@@ -785,7 +786,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void writeResponseContentPreview(HttpData data) {
+    public void onResponseContent(HttpData data) {
+        increaseResponseLength(data.length());
         if (responseContentPreviewer == ContentPreviewer.DISABLED) {
             return;
         }

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -51,8 +49,19 @@ final class StringAggregatedPreviewer implements ContentPreviewer {
     }
 
     @Override
+    public void onHeaders(HttpHeaders headers) {
+        final MediaType contentType = headers.contentType();
+        if (contentType == null) {
+            return;
+        }
+        final Charset charset = contentType.charset().orElse(defaultCharset);
+        decoder = charset.newDecoder();
+        remainedBuffer = ByteBuffer.allocate((int) Math.ceil(charset.newEncoder().maxBytesPerChar()));
+    }
+
+    @Override
     public void onData(HttpData data) {
-        checkState(decoder != null, "decoder should not be null.");
+        assert decoder != null : "decoder should not be null to append the content preview.";
         if (produced != null || !buffer.hasRemaining()) {
             return;
         }
@@ -71,21 +80,10 @@ final class StringAggregatedPreviewer implements ContentPreviewer {
         return produced;
     }
 
-    @Override
-    public void onHeaders(HttpHeaders headers) {
-        final MediaType contentType = headers.contentType();
-        if (contentType == null) {
-            return;
-        }
-        final Charset charset = contentType.charset().orElse(defaultCharset);
-        decoder = charset.newDecoder();
-        remainedBuffer = ByteBuffer.allocate((int) Math.ceil(charset.newEncoder().maxBytesPerChar()));
-    }
-
     private void append(ByteBuffer buf) {
-        checkState(decoder != null, "decoder should not be null to append the content preview.");
-        checkState(remainedBuffer != null,
-                   "remainedBuffer should be allocated before appending the content preview.");
+        assert decoder != null : "decoder should not be null to append the content preview.";
+        assert remainedBuffer != null
+                : "remainedBuffer should be allocated before appending the content preview.";
         if (produced != null || !buffer.hasRemaining() || !buf.hasRemaining()) {
             return;
         }

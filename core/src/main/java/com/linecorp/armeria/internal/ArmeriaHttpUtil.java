@@ -44,6 +44,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
@@ -107,6 +108,12 @@ public final class ArmeriaHttpUtil {
                     return a.contentEqualsIgnoreCase(b);
                 }
             };
+
+    /**
+     * The default HTTP content-type charset.
+     * See https://tools.ietf.org/html/rfc2616#section-3.7.1
+     */
+    public static final Charset HTTP_DEFAULT_CONTENT_CHARSET = StandardCharsets.ISO_8859_1;
 
     private static final URI ROOT = URI.create("/");
 

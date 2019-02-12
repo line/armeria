@@ -62,17 +62,23 @@ public class ContentPreviewerTest {
 
         MyHttpClient(String uri, int reqLength, int resLength) {
             client = new HttpClientBuilder(serverRule.uri(uri))
-                    .requestContentPreviewerFactory(ContentPreviewerFactory.ofString(reqLength))
-                    .responseContentPreviewerFactory(ContentPreviewerFactory.ofString(resLength))
+                    .requestContentPreviewerFactory(
+                            ContentPreviewerFactory.ofText(reqLength, Charset.defaultCharset()))
+                    .responseContentPreviewerFactory(
+                            ContentPreviewerFactory.ofText(resLength, Charset.defaultCharset()))
                     .decorator(new LoggingClientBuilder().requestLogLevel(LogLevel.INFO)
                                                          .successfulResponseLogLevel(LogLevel.INFO)
                                                          .newDecorator())
                     .decorator((delegate, ctx, req) -> {
-                        if (waitingFuture != null) {
-                            ctx.log().addListener(waitingFuture::complete, RequestLogAvailability.COMPLETE);
-                        }
+                        ctx.log().addListener(this::complete, RequestLogAvailability.COMPLETE);
                         return delegate.execute(ctx, req);
                     }).build();
+        }
+
+        void complete(RequestLog log) {
+            if (waitingFuture != null) {
+                waitingFuture.complete(log);
+            }
         }
 
         public RequestLog get(String path) throws Exception {
@@ -89,13 +95,16 @@ public class ContentPreviewerTest {
                                                   MediaType.ANY_TEXT_TYPE.toString()));
         }
 
+        public HttpResponse postBody(String path, byte[] content, MediaType contentType) {
+            return client.execute(HttpHeaders.of(HttpMethod.POST, path)
+                                             .contentType(contentType)
+                                             .set(HttpHeaderNames.ACCEPT, "utf-8"),
+                                  content);
+        }
+
         public RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
             waitingFuture = new CompletableFuture<>();
-            client.execute(HttpHeaders.of(HttpMethod.POST, path)
-                                      .contentType(contentType)
-                                      .set(HttpHeaderNames.ACCEPT, "utf-8")
-                                      .set(HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE.toString()),
-                           content);
+            postBody(path, content, contentType).aggregate().join();
             final RequestLog log = waitingFuture.get();
             waitingFuture = null;
             return log;
@@ -186,11 +195,11 @@ public class ContentPreviewerTest {
         }
 
         void build(ServerBuilder sb) {
-            sb.contentPreview(10);
+            sb.contentPreview(10, Charset.defaultCharset());
             sb.decorator(delegate -> {
                 return (ctx, req) -> {
                     ctx.log().addListener(this::complete, RequestLogAvailability.COMPLETE);
-                    return delegate.serve(ctx,req);
+                    return delegate.serve(ctx, req);
                 };
             });
             sb.annotatedService("/example", new Object() {
@@ -206,7 +215,7 @@ public class ContentPreviewerTest {
 
                 @Get("/get-audio")
                 public HttpResponse getBinary() {
-                    return HttpResponse.of(HttpStatus.OK, MediaType.BASIC_AUDIO, new byte[] { 1, 2, 3, 4});
+                    return HttpResponse.of(HttpStatus.OK, MediaType.BASIC_AUDIO, new byte[] { 1, 2, 3, 4 });
                 }
 
                 @Get("/get-json")
@@ -256,14 +265,14 @@ public class ContentPreviewerTest {
                                            "가갸거겨고교구규그기가나다라마바사아자차카타파하";
 
     private static void testSlice(String str, Charset charset, int maxLength, int sliceLength) {
-        final ContentPreviewer writer = ContentPreviewer.ofString(maxLength);
+        final ContentPreviewer writer = ContentPreviewer.ofText(maxLength);
         final String expected = str.substring(0, Math.min(str.length(), maxLength));
         sliceBytes(str.getBytes(charset), sliceLength).forEach(plainText(writer, charset));
         assertThat(writer.produce()).isEqualTo(expected);
     }
 
     private static void testSliceBytes(byte[] bytes, int maxLength, int sliceLength) {
-        final ContentPreviewer writer = ContentPreviewer.ofByteBuf(maxLength, byteBuf -> {
+        final ContentPreviewer writer = ContentPreviewer.ofBinary(maxLength, byteBuf -> {
             byte[] b = new byte[maxLength];
             byteBuf.readBytes(b, 0, Math.min(byteBuf.readableBytes(), maxLength));
             return Hex.encodeHexString(b);
@@ -274,7 +283,7 @@ public class ContentPreviewerTest {
 
     @Test
     public void testAggreagted() {
-        for (int sliceLength : new int[] {1,3,6,10}) {
+        for (int sliceLength : new int[] { 1, 3, 6, 10 }) {
             for (int maxLength : new int[] { 1, 3, 6, 10, 12, 15, 25, 35, 200 }) {
                 testSlice(TEST_STR, StandardCharsets.UTF_8, maxLength, sliceLength);
                 testSliceBytes(TEST_STR.getBytes(), maxLength, sliceLength);
@@ -292,7 +301,7 @@ public class ContentPreviewerTest {
         assertThat(client.getBody("/get-unicode").aggregate().get()
                          .content().toString(Charset.defaultCharset())).isEqualTo("안녕");
         assertThat(client.getBody("/get-audio").aggregate().get()
-                         .content().array()).containsExactly(new byte[] {1, 2, 3, 4});
+                         .content().array()).containsExactly(new byte[] { 1, 2, 3, 4 });
         assertThat(client.get("/get-audio").responseContentPreview()).isNull();
         assertThat(client.get("/get-json").responseContentPreview()).isEqualTo("{\"value\":1");
         assertThat(client.getBody("/get-json").aggregate().get()
@@ -304,8 +313,7 @@ public class ContentPreviewerTest {
 
     @Test
     public void testServerLog() throws Exception {
-
-        MyHttpServer.Client client = server.newClient("/example");
+        final MyHttpServer.Client client = server.newClient("/example");
 
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
         assertThat(client.getBody("/get").aggregate().get()
@@ -314,7 +322,7 @@ public class ContentPreviewerTest {
         assertThat(client.getBody("/get-unicode").aggregate().get()
                          .content().toString(Charset.defaultCharset())).isEqualTo("안녕");
         assertThat(client.getBody("/get-audio").aggregate().get()
-                         .content().array()).containsExactly(new byte[] {1, 2, 3, 4});
+                         .content().array()).containsExactly(new byte[] { 1, 2, 3, 4 });
         assertThat(client.get("/get-audio").responseContentPreview()).isNull();
         assertThat(client.get("/get-json").responseContentPreview()).isEqualTo("{\"value\":1");
         assertThat(client.getBody("/get-json").aggregate().get()

@@ -48,6 +48,11 @@ final class ByteBufAggreatedPreviewer implements ContentPreviewer {
     }
 
     @Override
+    public void onHeaders(HttpHeaders headers) {
+        this.headers = headers;
+    }
+
+    @Override
     public void onData(HttpData data) {
         if (data.isEmpty() || produced != null) {
             return;
@@ -56,7 +61,7 @@ final class ByteBufAggreatedPreviewer implements ContentPreviewer {
         if (data instanceof ByteBufHolder) {
             newBuffer = ((ByteBufHolder) data).content();
         } else {
-            newBuffer = Unpooled.wrappedBuffer(data.array(), data.offset(), data.length() - data.offset());
+            newBuffer = Unpooled.wrappedBuffer(data.array(), data.offset(), data.length());
         }
         aggregatedLength += data.length();
         bufferList.add(newBuffer.retain());
@@ -77,10 +82,5 @@ final class ByteBufAggreatedPreviewer implements ContentPreviewer {
             bufferList.forEach(ReferenceCountUtil::safeRelease);
             bufferList.clear();
         }
-    }
-
-    @Override
-    public void onHeaders(HttpHeaders headers) {
-        this.headers = headers;
     }
 }

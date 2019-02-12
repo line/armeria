@@ -24,19 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 
-final class CompositeContentPreviewerFactory
-        implements ContentPreviewerFactory, ContentPreviewerFactoryCombinable {
+final class CompositeContentPreviewerFactory implements ContentPreviewerFactory {
 
-    private List<ContentPreviewerFactory> factoryList;
+    final List<ContentPreviewerFactory> factoryList;
 
     CompositeContentPreviewerFactory(List<ContentPreviewerFactory> factories) {
-        factoryList = requireNonNull(factories, "factories");
-    }
-
-    @Override
-    public ContentPreviewerFactory asImmutable() {
-        factoryList = factoryList instanceof ImmutableList ? factoryList : ImmutableList.copyOf(factoryList);
-        return this;
+        factoryList = ImmutableList.copyOf(requireNonNull(factories, "factories"));
     }
 
     @Override
@@ -48,24 +41,5 @@ final class CompositeContentPreviewerFactory
             }
         }
         return ContentPreviewer.DISABLED;
-    }
-
-    @Override
-    public ContentPreviewerFactory combine(ContentPreviewerFactory subject) {
-        if (subject == ContentPreviewerFactory.DISABLED) {
-            return this;
-        }
-        if (subject instanceof MappedContentPreviewerFactory) {
-            for (ContentPreviewerFactory factory : factoryList) {
-                if (factory instanceof MappedContentPreviewerFactory) {
-                    ((MappedContentPreviewerFactory) factory).combine(subject);
-                    return this;
-                }
-            }
-        } else if (subject instanceof CompositeContentPreviewerFactory) {
-            factoryList.addAll(((CompositeContentPreviewerFactory) subject).factoryList);
-        }
-        factoryList.add(subject);
-        return this;
     }
 }

@@ -15,34 +15,28 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import java.util.Arrays;
-import java.util.HashMap;
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.function.Supplier;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 
-final class MappedContentPreviewerFactory
-        implements ContentPreviewerFactory, ContentPreviewerFactoryCombinable {
-    private Map<MediaType, Supplier<ContentPreviewer>> map;
-
-    MappedContentPreviewerFactory() {
-        map = new HashMap<>();
-    }
+final class MappedContentPreviewerFactory implements ContentPreviewerFactory {
+    final Set<Entry<MediaType, Supplier<ContentPreviewer>>> entries;
 
     MappedContentPreviewerFactory(Map<MediaType, Supplier<ContentPreviewer>> map) {
-        this.map = map;
+        this(requireNonNull(map, "map").entrySet());
     }
 
-    @Override
-    public ContentPreviewerFactory asImmutable() {
-        map = map instanceof ImmutableMap ? map : ImmutableMap.copyOf(map);
-        return this;
+    MappedContentPreviewerFactory(Set<Entry<MediaType, Supplier<ContentPreviewer>>> entries) {
+        this.entries = ImmutableSet.copyOf(requireNonNull(entries, "entries"));
     }
 
     @Override
@@ -51,26 +45,11 @@ final class MappedContentPreviewerFactory
         if (contentType == null) {
             return ContentPreviewer.DISABLED;
         }
-        for (Entry<MediaType, Supplier<ContentPreviewer>> entry : map.entrySet()) {
+        for (Entry<MediaType, Supplier<ContentPreviewer>> entry : entries) {
             if (contentType.is(entry.getKey())) {
                 return entry.getValue().get();
             }
         }
         return ContentPreviewer.DISABLED;
-    }
-
-    @Override
-    public ContentPreviewerFactory combine(ContentPreviewerFactory subject) {
-        if (subject == ContentPreviewerFactory.DISABLED) {
-            return this;
-        }
-        if (subject instanceof CompositeContentPreviewerFactory) {
-            return ((CompositeContentPreviewerFactory) subject).combine(this);
-        }
-        if (subject instanceof MappedContentPreviewerFactory) {
-            map.putAll(((MappedContentPreviewerFactory) subject).map);
-            return this;
-        }
-        return new CompositeContentPreviewerFactory(Arrays.asList(this, subject));
     }
 }

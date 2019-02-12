@@ -26,7 +26,6 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
@@ -569,11 +569,11 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     public B requestContentPreview(int length, Charset defaultCharset) {
-        return requestContentPreviewerFactory(ContentPreviewerFactory.ofString(length, defaultCharset));
+        return requestContentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     public B requestContentPreview(int length) {
-        return requestContentPreview(length, StandardCharsets.ISO_8859_1);
+        return requestContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
@@ -582,11 +582,11 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     public B responseContentPreview(int length, Charset defaultCharset) {
-        return responseContentPreviewerFactory(ContentPreviewerFactory.ofString(length, defaultCharset));
+        return responseContentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     public B responseContentPreview(int length) {
-        return responseContentPreviewerFactory(ContentPreviewerFactory.ofString(length));
+        return responseContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     public B contentPreviewerFactory(ContentPreviewerFactory factory) {
@@ -595,10 +595,18 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         return self();
     }
 
-    public B contentPreview(int requestLength, int responseLength) {
-        requestContentPreview(requestLength);
-        responseContentPreview(responseLength);
+    public B contentPreview(int requestLength, int responseLength, Charset defaultCharset) {
+        requestContentPreview(requestLength, defaultCharset);
+        responseContentPreview(responseLength, defaultCharset);
         return self();
+    }
+
+    public B contentPreview(int requestLength, int responseLength) {
+        return contentPreview(requestLength, responseLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+    }
+
+    public B contentPreview(int length, Charset defaultCharset) {
+        return contentPreview(length, length, defaultCharset);
     }
 
     public B contentPreview(int length) {

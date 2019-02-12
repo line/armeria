@@ -17,12 +17,12 @@
 package com.linecorp.armeria.common.logging;
 
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBuf;
 
@@ -36,7 +36,7 @@ public interface ContentPreviewer {
     ContentPreviewer DISABLED = new ContentPreviewer() {
 
         @Override
-        public void onData(HttpData data) { }
+        public void onData(HttpData data) {}
 
         @Override
         public String produce() {
@@ -47,50 +47,35 @@ public interface ContentPreviewer {
     /**
      * TODO: Add Javadocs.
      */
-    static ContentPreviewer ofByteBuf(int length, Function<ByteBuf, String> reproducer) {
-        return ofByteBuf(length, (headers, buffer) -> reproducer.apply(buffer));
+    static ContentPreviewer ofBinary(int length, Function<ByteBuf, String> reproducer) {
+        return ofBinary(length, (headers, buffer) -> reproducer.apply(buffer));
     }
 
     /**
      * TODO: Add Javadocs.
      */
-    static ContentPreviewer ofByteBuf(int length, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
+    static ContentPreviewer ofBinary(int length, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
         return new ByteBufAggreatedPreviewer(length, reproducer);
     }
 
     /**
      * TODO: Add Javadocs.
      */
-    static ContentPreviewer ofString(int length, Charset defaultCharset) {
+    static ContentPreviewer ofText(int length, Charset defaultCharset) {
         return new StringAggregatedPreviewer(length, defaultCharset);
     }
 
     /**
      * TODO: Add Javadocs.
      */
-    static ContentPreviewer ofString(int length) {
-        return ofString(length, StandardCharsets.ISO_8859_1);
+    static ContentPreviewer ofText(int length) {
+        return ofText(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     /**
      * TODO: Add Javadocs.
      */
-    static ContentPreviewer of() {
+    static ContentPreviewer disabled() {
         return DISABLED;
-    }
-
-    /**
-     * TODO: Add Javadocs.
-     */
-    static ContentPreviewer of(String produced) {
-        return new ContentPreviewer() {
-            @Override
-            public void onData(HttpData data) { }
-
-            @Override
-            public String produce() {
-                return produced;
-            }
-        };
     }
 }

@@ -178,7 +178,7 @@ public interface RequestLogBuilder {
      */
     void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
 
-    void writeRequestContentPreview(HttpData data);
+    void onRequestContent(HttpData data);
 
     /**
      * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.
@@ -297,7 +297,7 @@ public interface RequestLogBuilder {
      */
     void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent);
 
-    void writeResponseContentPreview(HttpData data);
+    void onResponseContent(HttpData data);
 
     /**
      * Allows the {@link #responseContent(Object, Object)} called after {@link #endResponse()}.
