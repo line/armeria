@@ -26,8 +26,6 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
@@ -44,6 +42,7 @@ final class StringAggregatedPreviewer implements ContentPreviewer {
     @Nullable
     private String produced;
 
+    @Nullable
     private ByteBuffer remainedBuffer;
 
     StringAggregatedPreviewer(int length, Charset defaultCharset) {
@@ -80,12 +79,13 @@ final class StringAggregatedPreviewer implements ContentPreviewer {
         }
         final Charset charset = contentType.charset().orElse(defaultCharset);
         decoder = charset.newDecoder();
-        remainedBuffer = ByteBuffer.allocate((int)Math.ceil(charset.newEncoder().maxBytesPerChar()));
-        LoggerFactory.getLogger(getClass()).debug("MAX BYTES {}", remainedBuffer.capacity());
+        remainedBuffer = ByteBuffer.allocate((int) Math.ceil(charset.newEncoder().maxBytesPerChar()));
     }
 
     private void append(ByteBuffer buf) {
         checkState(decoder != null, "decoder should not be null to append the content preview.");
+        checkState(remainedBuffer != null,
+                   "remainedBuffer should be allocated before appending the content preview.");
         if (produced != null || !buffer.hasRemaining() || !buf.hasRemaining()) {
             return;
         }
