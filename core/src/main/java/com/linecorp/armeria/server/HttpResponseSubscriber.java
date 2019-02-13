@@ -119,7 +119,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private void onTimeout() {
         if (state != State.DONE) {
-            reqCtx.setTimedOut();
+            reqCtx.setRequestTimedOut();
             final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
             if (requestTimeoutHandler != null) {
                 requestTimeoutHandler.run();

@@ -362,14 +362,6 @@ public class RequestContextTest {
         }
     }
 
-    @Test
-    public void timedOut() {
-        final AbstractRequestContext ctx = createContext();
-        assertThat(ctx.isTimedOut()).isFalse();
-        ctx.setTimedOut();
-        assertThat(ctx.isTimedOut()).isTrue();
-    }
-
     private void assertDepth(int expectedDepth) {
         assertThat(ctxStack).hasSize(expectedDepth);
     }

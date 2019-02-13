@@ -40,18 +40,22 @@ import io.netty.util.NetUtil;
 public class DefaultServiceRequestContextTest {
 
     @Test
-    public void deriveContext() {
-        final VirtualHost virtualHost = virtualHost();
+    public void requestTimedOut() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
-        final DefaultPathMappingContext mappingCtx = new DefaultPathMappingContext(
-                virtualHost, "example.com", HttpMethod.GET, "/hello", null, MediaType.JSON_UTF_8,
-                ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8));
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(request).build();
+        assert ctx instanceof DefaultServiceRequestContext;
+        final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
+        assertThat(defaultCtx.isRequestTimedOut()).isFalse();
+        assertThat(defaultCtx.isTimedOut()).isFalse();
+        defaultCtx.setRequestTimedOut();
+        assertThat(defaultCtx.isRequestTimedOut()).isTrue();
+        assertThat(defaultCtx.isTimedOut()).isTrue();
+    }
 
-        final ServiceRequestContext originalCtx = new DefaultServiceRequestContext(
-                virtualHost.serviceConfigs().get(0), mock(Channel.class), NoopMeterRegistry.get(),
-                SessionProtocol.H2,
-                mappingCtx, PathMappingResult.of("/foo"),
-                request, null, null, NetUtil.LOCALHOST4);
+    @Test
+    public void deriveContext() {
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
+        final ServiceRequestContext originalCtx = ServiceRequestContextBuilder.of(request).build();
 
         setAdditionalHeaders(originalCtx);
         setAdditionalTrailers(originalCtx);
@@ -95,14 +99,6 @@ public class DefaultServiceRequestContextTest {
 
         // the Attribute added to the original context after creation is not propagated to the derived context
         assertThat(derivedCtx.attr(bar).get()).isEqualTo(null);
-    }
-
-    private static VirtualHost virtualHost() {
-        final HttpService service = mock(HttpService.class);
-        final Server server = new ServerBuilder().withVirtualHost("example.com")
-                                                 .serviceUnder("/", service)
-                                                 .and().build();
-        return server.config().findVirtualHost("example.com");
     }
 
     private static void setAdditionalHeaders(ServiceRequestContext originalCtx) {

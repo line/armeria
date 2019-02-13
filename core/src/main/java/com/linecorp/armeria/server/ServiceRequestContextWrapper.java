@@ -154,6 +154,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public boolean isRequestTimedOut() {
+        return delegate().isRequestTimedOut();
+    }
+
+    @Override
     public long maxRequestLength() {
         return delegate().maxRequestLength();
     }
