@@ -395,7 +395,7 @@ When a project has a `java` flag:
 
 - The `.thrift` files under `src/*/thrift` will be compiled into Java code.
 
-  - Thrift compiler 0.11 will be used by default. Override `thriftVersion`
+  - Thrift compiler 0.12 will be used by default. Override `thriftVersion`
     property if you prefer 0.9:
 
     ```groovy
