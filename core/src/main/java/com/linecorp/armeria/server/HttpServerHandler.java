@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -705,7 +706,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                       @Nullable String query, Request request) {
             super(meterRegistry, sessionProtocol, method, path, query, request);
             this.channel = requireNonNull(channel, "channel");
-            requestLog = new DefaultRequestLog(this);
+            requestLog = new DefaultRequestLog(this, ContentPreviewerFactory.disabled(),
+                                               ContentPreviewerFactory.disabled());
         }
 
         @Override

@@ -444,6 +444,11 @@ public interface RequestLog {
     @Nullable
     Object requestContent();
 
+    /**
+     * Returns the preview of response content of the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet.
+     */
     @Nullable
     String requestContentPreview();
 
@@ -486,6 +491,11 @@ public interface RequestLog {
     @Nullable
     Object rawResponseContent();
 
+    /**
+     * Returns the preview of response content of the {@link Response}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet.
+     */
     @Nullable
     String responseContentPreview();
 

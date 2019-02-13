@@ -249,10 +249,10 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return getOrElse(REQ_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.DISABLED);
+        return getOrElse(REQ_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
     }
 
     public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return getOrElse(RES_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.DISABLED);
+        return getOrElse(RES_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
     }
 }

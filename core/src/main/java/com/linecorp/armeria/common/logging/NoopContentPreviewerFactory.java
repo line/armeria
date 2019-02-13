@@ -15,31 +15,17 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.List;
-
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 
-final class CompositeContentPreviewerFactory implements ContentPreviewerFactory {
+final class NoopContentPreviewerFactory implements ContentPreviewerFactory {
 
-    final List<ContentPreviewerFactory> factoryList;
+    static final ContentPreviewerFactory INSTANCE = new NoopContentPreviewerFactory();
 
-    CompositeContentPreviewerFactory(List<ContentPreviewerFactory> factories) {
-        factoryList = ImmutableList.copyOf(requireNonNull(factories, "factories"));
-    }
+    private NoopContentPreviewerFactory() {}
 
     @Override
     public ContentPreviewer get(RequestContext ctx, HttpHeaders headers) {
-        for (ContentPreviewerFactory factory : factoryList) {
-            final ContentPreviewer previewer = factory.get(ctx, headers);
-            if (previewer != ContentPreviewer.disabled()) {
-                return previewer;
-            }
-        }
         return ContentPreviewer.disabled();
     }
 }

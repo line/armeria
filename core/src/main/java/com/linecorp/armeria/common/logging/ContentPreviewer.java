@@ -27,55 +27,67 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import io.netty.buffer.ByteBuf;
 
 public interface ContentPreviewer {
-    void onData(HttpData data);
-
-    String produce();
-
-    default void onHeaders(HttpHeaders headers) {}
-
-    ContentPreviewer DISABLED = new ContentPreviewer() {
-
-        @Override
-        public void onData(HttpData data) {}
-
-        @Override
-        public String produce() {
-            return null;
-        }
-    };
 
     /**
-     * TODO: Add Javadocs.
+     * Creates a new instance of {@link ContentPreviewer} which produces the preview through {@code reproducer}
+     * when the contents has been aggregated more than {@code length} bytes.
      */
     static ContentPreviewer ofBinary(int length, Function<ByteBuf, String> reproducer) {
         return ofBinary(length, (headers, buffer) -> reproducer.apply(buffer));
     }
 
     /**
-     * TODO: Add Javadocs.
+     * Creates a new instance of {@link ContentPreviewer} which produces the preview through {@code reproducer}
+     * when the contents has been aggregated more than {@code length} bytes.
      */
     static ContentPreviewer ofBinary(int length, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
         return new ByteBufAggreatedPreviewer(length, reproducer);
     }
 
     /**
-     * TODO: Add Javadocs.
+     * Creates a new instance of {@link ContentPreviewer} which produces the text
+     * with the maximum {@code length} limit.
+     * Note that {@code defaultCharset} will be applied
+     * if the charset has not been specified in {@code "Content-Type"} header.
      */
     static ContentPreviewer ofText(int length, Charset defaultCharset) {
         return new StringAggregatedPreviewer(length, defaultCharset);
     }
 
     /**
-     * TODO: Add Javadocs.
+     * Creates a new instance of {@link ContentPreviewer} which produces the text
+     * with the maximum {@code length} limit.
+     * Note that {@link ArmeriaHttpUtil#HTTP_DEFAULT_CONTENT_CHARSET} will be applied
+     * if the charset has not been specified in {@code "Content-Type"} header.
      */
     static ContentPreviewer ofText(int length) {
         return ofText(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
-    /**
-     * TODO: Add Javadocs.
-     */
     static ContentPreviewer disabled() {
-        return DISABLED;
+        return NoopContentPreviewer.INSTANCE;
     }
+
+    /**
+     * Invoked after request/response headers is received.
+     */
+    void onHeaders(HttpHeaders headers);
+
+    /**
+     * Invoked after request/response data is received.
+     * Note that it is not invoked when the request/response is completed or {@link #isDone()} returns
+     * {@code true} even if a new content is received.
+     */
+    void onData(HttpData data);
+
+    /**
+     * Produces the preview.
+     * Note that it is invoked when the request or response is ended.
+     */
+    String produce();
+
+    /**
+     * Determines if the previewer has been ready to produce the preview.
+     */
+    boolean isDone();
 }

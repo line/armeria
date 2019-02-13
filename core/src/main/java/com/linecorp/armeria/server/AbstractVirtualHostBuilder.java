@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
@@ -135,8 +136,10 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     @Nullable
     private Function<VirtualHost, Logger> accessLoggerMapper;
 
-    private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.DISABLED;
-    private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.DISABLED;
+    @Nullable
+    private ContentPreviewerFactory requestContentPreviewerFactory;
+    @Nullable
+    private ContentPreviewerFactory responseContentPreviewerFactory;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -563,54 +566,45 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         return accessLogger(host -> LoggerFactory.getLogger(loggerName));
     }
 
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request of this {@link VirtualHost}.
+     */
     public B requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
         return self();
     }
 
-    public B requestContentPreview(int length, Charset defaultCharset) {
-        return requestContentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    public B requestContentPreview(int length) {
-        return requestContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a response of this {@link VirtualHost}.
+     */
     public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         responseContentPreviewerFactory = requireNonNull(factory, "factory");
         return self();
     }
 
-    public B responseContentPreview(int length, Charset defaultCharset) {
-        return responseContentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    public B responseContentPreview(int length) {
-        return responseContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request and a response of this {@link VirtualHost}.
+     */
     public B contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
         return self();
     }
 
-    public B contentPreview(int requestLength, int responseLength, Charset defaultCharset) {
-        requestContentPreview(requestLength, defaultCharset);
-        responseContentPreview(responseLength, defaultCharset);
-        return self();
-    }
-
-    public B contentPreview(int requestLength, int responseLength) {
-        return contentPreview(requestLength, responseLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response of this {@link VirtualHost}.
+     */
     public B contentPreview(int length, Charset defaultCharset) {
-        return contentPreview(length, length, defaultCharset);
+        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response of this {@link VirtualHost}.
+     */
     public B contentPreview(int length) {
-        return contentPreview(length, length);
+        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     @Override

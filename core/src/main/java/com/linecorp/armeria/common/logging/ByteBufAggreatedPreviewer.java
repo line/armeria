@@ -71,6 +71,11 @@ final class ByteBufAggreatedPreviewer implements ContentPreviewer {
     }
 
     @Override
+    public boolean isDone() {
+        return aggregatedLength >= capacity;
+    }
+
+    @Override
     public String produce() {
         if (produced != null) {
             return produced;

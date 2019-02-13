@@ -42,7 +42,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -171,7 +170,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.proxiedAddresses = proxiedAddresses;
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
-        log = new DefaultRequestLog(this);
+        log = new DefaultRequestLog(this, virtualHost().requestContentPreviewerFactory(),
+                                    virtualHost().responseContentPreviewerFactory());
         if (requestStartTimeSet) {
             log.startRequest(ch, sessionProtocol, sslSession, requestStartTimeNanos, requestStartTimeMicros);
         } else {
@@ -521,16 +521,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public ByteBufAllocator alloc() {
         return ch.alloc();
-    }
-
-    @Override
-    public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return virtualHost().requestContentPreviewerFactory();
-    }
-
-    @Override
-    public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return virtualHost().responseContentPreviewerFactory();
     }
 
     /**

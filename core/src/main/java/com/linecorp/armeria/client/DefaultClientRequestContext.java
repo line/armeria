@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -90,7 +89,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         this.endpoint = requireNonNull(endpoint, "endpoint");
         this.fragment = fragment;
 
-        log = new DefaultRequestLog(this);
+        log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
+                                    options.responseContentPreviewerFactory());
 
         writeTimeoutMillis = options.defaultWriteTimeoutMillis();
         responseTimeoutMillis = options.defaultResponseTimeoutMillis();
@@ -132,7 +132,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         endpoint = ctx.endpoint();
         fragment = ctx.fragment();
 
-        log = new DefaultRequestLog(this);
+        log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
+                                    options.responseContentPreviewerFactory());
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();
@@ -163,16 +164,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public ClientRequestContext newDerivedContext(Request request) {
         return new DefaultClientRequestContext(this, request);
-    }
-
-    @Override
-    public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return options.requestContentPreviewerFactory();
-    }
-
-    @Override
-    public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return options.responseContentPreviewerFactory();
     }
 
     @Override

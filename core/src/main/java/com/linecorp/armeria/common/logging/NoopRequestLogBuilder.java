@@ -55,6 +55,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void increaseRequestLength(long deltaBytes) {}
 
     @Override
+    public void increaseRequestLength(HttpData data) {}
+
+    @Override
     public void requestLength(long requestLength) {}
 
     @Override
@@ -68,9 +71,6 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent) {}
-
-    @Override
-    public void onRequestContent(HttpData data) {}
 
     @Override
     public void deferRequestContent() {}
@@ -102,6 +102,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void increaseResponseLength(long deltaBytes) {}
 
     @Override
+    public void increaseResponseLength(HttpData data) {}
+
+    @Override
     public void responseLength(long responseLength) {}
 
     @Override
@@ -115,9 +118,6 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent) {}
-
-    @Override
-    public void onResponseContent(HttpData data) {}
 
     @Override
     public void deferResponseContent() {}

@@ -58,6 +58,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.Flags;
@@ -67,6 +68,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.MediaType;
 
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
@@ -114,6 +116,15 @@ public final class ArmeriaHttpUtil {
      * See https://tools.ietf.org/html/rfc2616#section-3.7.1
      */
     public static final Charset HTTP_DEFAULT_CONTENT_CHARSET = StandardCharsets.ISO_8859_1;
+
+    public static final List<MediaType> HTTP_TEXTIBLE_MEDIA_TYPES = ImmutableList.of(
+            MediaType.ANY_TEXT_TYPE,
+            MediaType.JSON,
+            MediaType.APPLICATION_XML,
+            MediaType.ATOM,
+            MediaType.DART,
+            MediaType.FORM_DATA
+    );
 
     private static final URI ROOT = URI.create("/");
 

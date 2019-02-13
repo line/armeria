@@ -36,6 +36,7 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaTypeSet;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -97,31 +98,29 @@ public final class VirtualHost {
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             RejectedPathMappingHandler.DISABLED, null,
-             ContentPreviewerFactory.DISABLED, ContentPreviewerFactory.DISABLED);
+             RejectedPathMappingHandler.DISABLED, null, null, null);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, Function<VirtualHost, Logger> accessLoggerMapper) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             RejectedPathMappingHandler.DISABLED, accessLoggerMapper,
-             ContentPreviewerFactory.DISABLED, ContentPreviewerFactory.DISABLED);
+             RejectedPathMappingHandler.DISABLED, accessLoggerMapper, null, null);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
         this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             rejectionHandler, null, ContentPreviewerFactory.DISABLED, ContentPreviewerFactory.DISABLED);
+             rejectionHandler, null, null, null);
     }
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler,
                 Function<VirtualHost, Logger> accessLoggerMapper,
-                ContentPreviewerFactory requestContentPreviewerFactory,
-                ContentPreviewerFactory responseContentPreviewerFactory) {
+                @Nullable ContentPreviewerFactory requestContentPreviewerFactory,
+                @Nullable ContentPreviewerFactory responseContentPreviewerFactory) {
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
@@ -131,8 +130,12 @@ public final class VirtualHost {
         this.hostnamePattern = hostnamePattern;
         this.sslContext = validateSslContext(sslContext);
         this.producibleMediaTypes = producibleMediaTypes;
-        this.requestContentPreviewerFactory = requestContentPreviewerFactory;
-        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
+        this.requestContentPreviewerFactory =
+                requestContentPreviewerFactory != null ? requestContentPreviewerFactory
+                                                       : ContentPreviewerFactory.disabled();
+        this.responseContentPreviewerFactory =
+                responseContentPreviewerFactory != null ? responseContentPreviewerFactory
+                                                        : ContentPreviewerFactory.disabled();
 
         requireNonNull(serviceConfigs, "serviceConfigs");
 
@@ -268,6 +271,10 @@ public final class VirtualHost {
         return accessLogger;
     }
 
+    /**
+     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
+     * which produces the request content preview of this virtual host.
+     */
     public ContentPreviewerFactory requestContentPreviewerFactory() {
         return requestContentPreviewerFactory;
     }
@@ -276,6 +283,10 @@ public final class VirtualHost {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
     }
 
+    /**
+     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
+     * which produces the response content preview of this virtual host.
+     */
     public ContentPreviewerFactory responseContentPreviewerFactory() {
         return responseContentPreviewerFactory;
     }
@@ -339,7 +350,7 @@ public final class VirtualHost {
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
-                                            Service<HttpRequest, HttpResponse>> decorator) {
+            Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {
             return this;
         }

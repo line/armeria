@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
@@ -170,36 +171,24 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
     }
 
     /**
-     * TODO: Add Javadocs.
+     * Sets the {@link ContentPreviewerFactory} for a request.
      */
     public B requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         return option(ClientOption.REQ_CONTENT_PREVIEWER_FACTORY,
                       requireNonNull(factory, "factory"));
     }
 
-    public B requestContentPreview(int length, Charset defaultCharset) {
-        return requestContentPreviewerFactory(
-                ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    public B requestContentPreview(int length) {
-        return requestContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a response.
+     */
     public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         return option(ClientOption.RES_CONTENT_PREVIEWER_FACTORY,
                       requireNonNull(factory, "factory"));
     }
 
-    public B responseContentPreview(int length, Charset defaultCharset) {
-        return responseContentPreviewerFactory(
-                ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    public B responseContentPreview(int length) {
-        return responseContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request and a response.
+     */
     public B contentPreviewerFactory(ContentPreviewerFactory factory) {
         requireNonNull(factory, "factory");
         requestContentPreviewerFactory(factory);
@@ -207,20 +196,18 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
         return self();
     }
 
-    public B contentPreview(int requestLength, int responseLength, Charset defaultCharset) {
-        requestContentPreview(requestLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-        responseContentPreview(responseLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-        return self();
-    }
-
-    public B contentPreview(int requestLength, int responseLength) {
-        return contentPreview(requestLength, responseLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response.
+     */
     public B contentPreview(int length, Charset defaultCharset) {
-        return contentPreview(length, length, defaultCharset);
+        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response.
+     */
     public B contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }

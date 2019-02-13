@@ -73,6 +73,11 @@ final class StringAggregatedPreviewer implements ContentPreviewer {
     }
 
     @Override
+    public boolean isDone() {
+        return !buffer.hasRemaining();
+    }
+
+    @Override
     public String produce() {
         if (produced == null) {
             produced = new String(buffer.array(), 0, buffer.position());

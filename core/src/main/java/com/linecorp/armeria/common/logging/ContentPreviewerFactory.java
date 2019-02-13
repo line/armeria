@@ -15,17 +15,21 @@
  */
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.BiPredicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
@@ -34,52 +38,40 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 @FunctionalInterface
 public interface ContentPreviewerFactory {
-    ContentPreviewer get(RequestContext ctx, HttpHeaders headers);
-
-    ContentPreviewerFactory DISABLED = (ctx, headers) -> ContentPreviewer.DISABLED;
 
     /**
-     * TODO: AddJavadocs.
+     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
+     * through {@code supplier} for the request/response with the {@code contentType}.
      */
     static ContentPreviewerFactory of(MediaType contentType, Supplier<ContentPreviewer> supplier) {
-        return of((ctx, headers) -> {
-            final MediaType type = headers.contentType();
-            return type != null && type.is(contentType);
-        }, supplier);
+        return of(ImmutableMap.of(contentType, supplier));
     }
 
+    /**
+     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
+     * through {@code supplier} for the request/response with the {@code contentType}.
+     */
     static ContentPreviewerFactory of(String contentType, Supplier<ContentPreviewer> supplier) {
         return of(MediaType.parse(contentType), supplier);
     }
 
     /**
-     * TODO: AddJavadocs.
-     */
-    static ContentPreviewerFactory of(BiPredicate<RequestContext, HttpHeaders> predicate,
-                                      Supplier<ContentPreviewer> supplier) {
-        return (ctx, headers) -> {
-            if (predicate.test(ctx, headers)) {
-                return supplier.get();
-            }
-            return ContentPreviewer.DISABLED;
-        };
-    }
-
-    /**
-     * TODO: AddJavadocs.
+     * Creates a new instance of {@link ContentPreviewerFactory}
+     * which wraps a list of {@link ContentPreviewerFactory}s.
      */
     static ContentPreviewerFactory of(ContentPreviewerFactory... factories) {
-        return of(Arrays.asList(factories));
+        return of(Arrays.asList(requireNonNull(factories, "factories")));
     }
 
     /**
-     * TODO: AddJavadocs.
+     * Creates a new instance of {@link ContentPreviewerFactory}
+     * which wraps a list of {@link ContentPreviewerFactory}s.
      */
     static ContentPreviewerFactory of(Iterable<? extends ContentPreviewerFactory> factories) {
         final List<ContentPreviewerFactory> factoryList = new ArrayList<>();
-        final Set<Entry<MediaType, Supplier<ContentPreviewer>>> typeSet = new HashSet<>();
+        final Set<Entry<MediaType, Supplier<ContentPreviewer>>> typeSet = new LinkedHashSet<>();
         for (ContentPreviewerFactory factory : factories) {
-            if (factory == DISABLED) {
+            if (factory == disabled()) {
                 continue;
             }
             if (factory instanceof CompositeContentPreviewerFactory) {
@@ -93,23 +85,29 @@ public interface ContentPreviewerFactory {
         if (!typeSet.isEmpty()) {
             factoryList.add(new MappedContentPreviewerFactory(typeSet));
         }
-        if (factoryList.size() < 2) {
-            return factoryList.isEmpty() ? DISABLED : factoryList.get(0);
+        switch (factoryList.size()) {
+            case 0:
+                return disabled();
+            case 1:
+                return factoryList.get(0);
+            default:
+                return new CompositeContentPreviewerFactory(factoryList);
         }
-        return new CompositeContentPreviewerFactory(factoryList);
     }
 
     /**
-     * TODO: AddJavadocs.
+     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
+     * through the supplier that matches with {@code "Content-Type"} header.
      */
     static ContentPreviewerFactory of(Map<MediaType, Supplier<ContentPreviewer>> map) {
         return new MappedContentPreviewerFactory(map);
     }
 
     /**
-     * TODO: AddJavadocs.
+     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
+     * through {@code supplier} if a request/response mathces any of {@code contentTypes}.
      */
-    static ContentPreviewerFactory of(Supplier<ContentPreviewer> supplier, MediaType... contentTypes) {
+    static ContentPreviewerFactory of(Supplier<ContentPreviewer> supplier, Iterable<MediaType> contentTypes) {
         final Map<MediaType, Supplier<ContentPreviewer>> maps = new HashMap<>();
         for (MediaType type : contentTypes) {
             maps.put(type, supplier);
@@ -117,23 +115,77 @@ public interface ContentPreviewerFactory {
         return of(maps);
     }
 
+    /**
+     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
+     * through {@code supplier} if a request/response mathces any of {@code contentTypes}.
+     */
+    static ContentPreviewerFactory of(Supplier<ContentPreviewer> supplier, MediaType... contentTypes) {
+        return of(supplier, Arrays.asList(contentTypes));
+    }
+
+    /**
+     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
+     * through {@code supplier} if the content type of a request/response mathces any of {@code contentTypes}.
+     */
     static ContentPreviewerFactory of(Supplier<ContentPreviewer> supplier, String... contentTypes) {
-        return of(supplier, Arrays.stream(contentTypes).map(MediaType::parse).toArray(MediaType[]::new));
+        return of(supplier, Arrays.stream(contentTypes).map(MediaType::parse).collect(Collectors.toList()));
     }
 
+    /**
+     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
+     * which produces the text with the maximum {@code length}
+     * if the content type of a request/response mathces any of {@code contentTypes}.
+     */
+    static ContentPreviewerFactory ofText(int length, Charset defaultCharset,
+                                          Iterable<MediaType> contentTypes) {
+        return of(() -> ContentPreviewer.ofText(length, defaultCharset), contentTypes);
+    }
+
+    /**
+     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
+     * which produces the text with the maximum {@code length}
+     * if the content type of a request/response mathces any of {@code contentTypes}.
+     */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset, MediaType... contentTypes) {
-        return of(() -> ContentPreviewer.ofText(length, defaultCharset), contentTypes);
+        return ofText(length, defaultCharset, Arrays.asList(contentTypes));
     }
 
+    /**
+     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
+     * which produces the text with the maximum {@code length} limit
+     * if the content type of a request/response matches any of {@code contentTypes}.
+     */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset, String... contentTypes) {
-        return of(() -> ContentPreviewer.ofText(length, defaultCharset), contentTypes);
+        return ofText(length, defaultCharset, Arrays.stream(contentTypes).map(MediaType::parse).collect(
+                Collectors.toList()));
     }
 
+    /**
+     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
+     * which produces the text with the maximum {@code length} limit
+     * if the content type of a request/response matches
+     * any of {@link ArmeriaHttpUtil#HTTP_TEXTIBLE_MEDIA_TYPES}.
+     */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset) {
-        return ofText(length, defaultCharset, MediaType.ANY_TEXT_TYPE, MediaType.ANY_APPLICATION_TYPE);
+        return ofText(length, defaultCharset, ArmeriaHttpUtil.HTTP_TEXTIBLE_MEDIA_TYPES);
     }
 
+    /**
+     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
+     * which produces the text with the maximum {@code length} limit
+     * if the content type of a request/response matches
+     * any of {@link ArmeriaHttpUtil#HTTP_TEXTIBLE_MEDIA_TYPES}.
+     */
     static ContentPreviewerFactory ofText(int length) {
         return ofText(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
+
+    static ContentPreviewerFactory disabled() {
+        return NoopContentPreviewerFactory.INSTANCE;
+    }
+
+    /**
+     * Returns a {@link ContentPreviewer}, given {@link RequestContext} and {@link HttpHeaders}.
+     */
+    ContentPreviewer get(RequestContext ctx, HttpHeaders headers);
 }

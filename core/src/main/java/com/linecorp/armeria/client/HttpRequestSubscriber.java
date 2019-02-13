@@ -280,7 +280,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (o instanceof HttpData) {
             final HttpData data = (HttpData) o;
             future = encoder.writeData(id, streamId(), data, endOfStream);
-            logBuilder.onRequestContent(data);
+            logBuilder.increaseRequestLength(data);
         } else if (o instanceof HttpHeaders) {
             future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream);
         } else {

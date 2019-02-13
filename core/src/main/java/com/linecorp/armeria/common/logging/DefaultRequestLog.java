@@ -102,7 +102,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestFirstBytesTransferredTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
-    private ContentPreviewer requestContentPreviewer = ContentPreviewer.DISABLED;
+    private ContentPreviewer requestContentPreviewer = ContentPreviewer.disabled();
+    private final ContentPreviewerFactory requestContentPreviewerFactory;
     @Nullable
     private String requestContentPreview;
     @Nullable
@@ -113,7 +114,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long responseFirstBytesTransferredTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
-    private ContentPreviewer responseContentPreviewer = ContentPreviewer.DISABLED;
+    private ContentPreviewer responseContentPreviewer = ContentPreviewer.disabled();
+    private final ContentPreviewerFactory responseContentPreviewerFactory;
     @Nullable
     private String responseContentPreview;
     @Nullable
@@ -148,8 +150,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     /**
      * Creates a new instance.
      */
-    public DefaultRequestLog(RequestContext ctx) {
+    public DefaultRequestLog(RequestContext ctx, ContentPreviewerFactory requestContentPreviewerFactory,
+                             ContentPreviewerFactory responseContentPreviewerFactory) {
         this.ctx = requireNonNull(ctx, "ctx");
+        this.requestContentPreviewerFactory = requireNonNull(requestContentPreviewerFactory,
+                                                             "requestContentPreviewerFactory");
+        this.responseContentPreviewerFactory = requireNonNull(responseContentPreviewerFactory,
+                                                              "responseContentPreviewerFactory");
     }
 
     @Override
@@ -502,6 +509,22 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void increaseRequestLength(HttpData data) {
+        increaseRequestLength(data.length());
+        if (requestContentPreviewer.isDone()) {
+            return;
+        }
+        HttpData httpData = data;
+        if (httpData instanceof ByteBufHolder) {
+            final ByteBufHolder duplicated = ((ByteBufHolder) httpData).duplicate();
+            if (duplicated instanceof HttpData) {
+                httpData = (HttpData) duplicated;
+            }
+        }
+        requestContentPreviewer.onData(httpData);
+    }
+
+    @Override
     public HttpHeaders requestHeaders() {
         ensureAvailability(REQUEST_HEADERS);
         return requestHeaders;
@@ -514,7 +537,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.requestHeaders = requireNonNull(requestHeaders, "requestHeaders");
-        requestContentPreviewer = ctx.requestContentPreviewerFactory().get(ctx, this.requestHeaders);
+        requestContentPreviewer = requestContentPreviewerFactory.get(ctx, this.requestHeaders);
         requestContentPreviewer.onHeaders(requestHeaders);
         updateAvailability(REQUEST_HEADERS);
     }
@@ -534,22 +557,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
         updateAvailability(REQUEST_CONTENT);
-    }
-
-    @Override
-    public void onRequestContent(HttpData data) {
-        increaseRequestLength(data.length());
-        if (requestContentPreviewer == ContentPreviewer.DISABLED) {
-            return;
-        }
-        HttpData httpData = data;
-        if (httpData instanceof ByteBufHolder) {
-            final ByteBufHolder duplicated = ((ByteBufHolder) httpData).duplicate();
-            if (duplicated instanceof HttpData) {
-                httpData = (HttpData)duplicated;
-            }
-        }
-        requestContentPreviewer.onData(httpData);
     }
 
     @Override
@@ -741,6 +748,22 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void increaseResponseLength(HttpData data) {
+        increaseResponseLength(data.length());
+        if (responseContentPreviewer.isDone()) {
+            return;
+        }
+        HttpData httpData = data;
+        if (httpData instanceof ByteBufHolder) {
+            final ByteBufHolder duplicated = ((ByteBufHolder) httpData).duplicate();
+            if (duplicated instanceof HttpData) {
+                httpData = (HttpData) duplicated;
+            }
+        }
+        responseContentPreviewer.onData(httpData);
+    }
+
+    @Override
     public HttpHeaders responseHeaders() {
         ensureAvailability(RESPONSE_HEADERS);
         return responseHeaders;
@@ -753,7 +776,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.responseHeaders = requireNonNull(responseHeaders, "responseHeaders");
-        responseContentPreviewer = ctx.responseContentPreviewerFactory().get(ctx, this.responseHeaders);
+        responseContentPreviewer = responseContentPreviewerFactory.get(ctx, this.responseHeaders);
         responseContentPreviewer.onHeaders(responseHeaders);
         updateAvailability(RESPONSE_HEADERS);
     }
@@ -783,22 +806,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.responseContent = responseContent;
         this.rawResponseContent = rawResponseContent;
         updateAvailability(RESPONSE_CONTENT);
-    }
-
-    @Override
-    public void onResponseContent(HttpData data) {
-        increaseResponseLength(data.length());
-        if (responseContentPreviewer == ContentPreviewer.DISABLED) {
-            return;
-        }
-        HttpData httpData = data;
-        if (httpData instanceof ByteBufHolder) {
-            final ByteBufHolder duplicated = ((ByteBufHolder) httpData).duplicate();
-            if (duplicated instanceof HttpData) {
-                httpData = (HttpData)duplicated;
-            }
-        }
-        responseContentPreviewer.onData(httpData);
     }
 
     @Override
@@ -881,7 +888,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void updateAvailability(int flags) {
-        for (;;) {
+        for (; ;) {
             final int oldAvailability = this.flags;
             final int newAvailability = oldAvailability | flags;
             if (flagsUpdater.compareAndSet(this, oldAvailability, newAvailability)) {

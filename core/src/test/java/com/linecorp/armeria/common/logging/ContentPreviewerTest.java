@@ -63,9 +63,9 @@ public class ContentPreviewerTest {
         MyHttpClient(String uri, int reqLength, int resLength) {
             client = new HttpClientBuilder(serverRule.uri(uri))
                     .requestContentPreviewerFactory(
-                            ContentPreviewerFactory.ofText(reqLength, Charset.defaultCharset()))
+                            ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8))
                     .responseContentPreviewerFactory(
-                            ContentPreviewerFactory.ofText(resLength, Charset.defaultCharset()))
+                            ContentPreviewerFactory.ofText(resLength, StandardCharsets.UTF_8))
                     .decorator(new LoggingClientBuilder().requestLogLevel(LogLevel.INFO)
                                                          .successfulResponseLogLevel(LogLevel.INFO)
                                                          .newDecorator())
@@ -94,8 +94,7 @@ public class ContentPreviewerTest {
         public HttpResponse postBody(String path, byte[] content, MediaType contentType) {
             return client.execute(HttpHeaders.of(HttpMethod.POST, path)
                                              .contentType(contentType)
-                                             .set(HttpHeaderNames.ACCEPT, "utf-8"),
-                                  content);
+                                             .set(HttpHeaderNames.ACCEPT, "utf-8"), content);
         }
 
         public RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
@@ -187,7 +186,7 @@ public class ContentPreviewerTest {
         }
 
         void build(ServerBuilder sb) {
-            sb.contentPreview(10, Charset.defaultCharset());
+            sb.contentPreview(10, StandardCharsets.UTF_8);
             sb.decorator(delegate -> {
                 return (ctx, req) -> {
                     if (waitingFuture != null) {
@@ -322,7 +321,6 @@ public class ContentPreviewerTest {
         assertThat(client.getBody("/get-json").aggregate().get()
                          .content().toString(Charset.defaultCharset())).isEqualTo("{\"value\":1}");
         assertThat(client.post("/post").responseContentPreview()).isEqualTo("abcdefghij");
-
         assertThat(client.post("/post", "abcdefghijkmno").requestContentPreview()).isEqualTo("abcdefghij");
         assertThat(client.get("/get-longstring").responseContentPreview()).isEqualTo("aaaaaaaaaa");
     }

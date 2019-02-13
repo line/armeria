@@ -62,6 +62,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -183,8 +184,8 @@ public final class ServerBuilder {
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
-    private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.DISABLED;
-    private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.DISABLED;
+    private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.disabled();
+    private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.disabled();
 
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -1208,39 +1209,23 @@ public final class ServerBuilder {
     }
 
     /**
-     * TODO: Add Javadocs.
+     * Sets the {@link ContentPreviewerFactory} for a request of this {@link Server}.
      */
     public ServerBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
     }
 
-    public ServerBuilder requestContentPreview(int length, Charset defaultCharset) {
-        return requestContentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    public ServerBuilder requestContentPreview(int length) {
-        return requestContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
     /**
-     * TODO: Add Javadocs.
+     * Sets the {@link ContentPreviewerFactory} for a response of this {@link Server}.
      */
     public ServerBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         responseContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
     }
 
-    public ServerBuilder responseContentPreview(int length, Charset defaultCharset) {
-        return responseContentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    public ServerBuilder responseContentPreview(int length) {
-        return responseContentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
     /**
-     * TODO: Add Javadocs.
+     * Sets the {@link ContentPreviewerFactory} for a request and a response of this {@link Server}.
      */
     public ServerBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
@@ -1249,27 +1234,19 @@ public final class ServerBuilder {
     }
 
     /**
-     * TODO: Add Javadocs.
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response of this {@link Server}.
      */
-    public ServerBuilder contentPreview(int requestLength, int responseLength, Charset defaultCharset) {
-        requestContentPreview(requestLength, defaultCharset);
-        responseContentPreview(responseLength, defaultCharset);
-        return this;
+    public ServerBuilder contentPreview(int length, Charset defaultCharset) {
+        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     /**
-     * TODO: Add Javadocs.
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response of this {@link Server}.
      */
-    public ServerBuilder contentPreview(int requestLength, int responseLength) {
-        return contentPreview(requestLength, responseLength, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
     public ServerBuilder contentPreview(int length) {
-        return contentPreview(length, length);
-    }
-
-    public ServerBuilder contentPreview(int length, Charset defaultCharset) {
-        return contentPreview(length, length, defaultCharset);
+        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     /**

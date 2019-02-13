@@ -17,39 +17,39 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.function.Supplier;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 
 final class MappedContentPreviewerFactory implements ContentPreviewerFactory {
-    final Set<Entry<MediaType, Supplier<ContentPreviewer>>> entries;
+    final List<Entry<MediaType, Supplier<ContentPreviewer>>> entries;
 
     MappedContentPreviewerFactory(Map<MediaType, Supplier<ContentPreviewer>> map) {
         this(requireNonNull(map, "map").entrySet());
     }
 
-    MappedContentPreviewerFactory(Set<Entry<MediaType, Supplier<ContentPreviewer>>> entries) {
-        this.entries = ImmutableSet.copyOf(requireNonNull(entries, "entries"));
+    MappedContentPreviewerFactory(Iterable<Entry<MediaType, Supplier<ContentPreviewer>>> entries) {
+        this.entries = ImmutableList.copyOf(requireNonNull(entries, "entries"));
     }
 
     @Override
     public ContentPreviewer get(RequestContext ctx, HttpHeaders headers) {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
-            return ContentPreviewer.DISABLED;
+            return ContentPreviewer.disabled();
         }
         for (Entry<MediaType, Supplier<ContentPreviewer>> entry : entries) {
             if (contentType.is(entry.getKey())) {
                 return entry.getValue().get();
             }
         }
-        return ContentPreviewer.DISABLED;
+        return ContentPreviewer.disabled();
     }
 }

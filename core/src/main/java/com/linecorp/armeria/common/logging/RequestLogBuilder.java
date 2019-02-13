@@ -154,6 +154,12 @@ public interface RequestLogBuilder {
     void increaseRequestLength(long deltaBytes);
 
     /**
+     * Increases the {@link RequestLog#requestLength()} by {@code data.length()} and passes {@code data}
+     * to the previewer.
+     */
+    void increaseRequestLength(HttpData data);
+
+    /**
      * Sets the {@link RequestLog#requestLength()}.
      */
     void requestLength(long requestLength);
@@ -177,8 +183,6 @@ public interface RequestLogBuilder {
      * Sets the {@link RequestLog#requestContent()} and the {@link RequestLog#rawRequestContent()}.
      */
     void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
-
-    void onRequestContent(HttpData data);
 
     /**
      * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.
@@ -273,6 +277,12 @@ public interface RequestLogBuilder {
     void increaseResponseLength(long deltaBytes);
 
     /**
+     * Increases the {@link RequestLog#responseLength()} by {@code data.length()} and passes {@code data}
+     * to the previewer.
+     */
+    void increaseResponseLength(HttpData data);
+
+    /**
      * Sets the {@link RequestLog#responseLength()}.
      */
     void responseLength(long responseLength);
@@ -296,8 +306,6 @@ public interface RequestLogBuilder {
      * Sets the {@link RequestLog#responseContent()} and the {@link RequestLog#rawResponseContent()}.
      */
     void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent);
-
-    void onResponseContent(HttpData data);
 
     /**
      * Allows the {@link #responseContent(Object, Object)} called after {@link #endResponse()}.
