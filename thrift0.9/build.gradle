@@ -1,3 +1,12 @@
+// This module builds and publishes 'armeria-thrift0.9', which is compiled with
+// the source code of ':thrift' and libthrift 0.9.
+//
+// The reason we have to do this is because libthrift kept API compatibility but
+// not ABI compatibility between 0.9 and 0.10, i.e. we can use the same source
+// but not the same class files.
+//
+// See also: ../thrift0.11/build.gradle
+
 dependencyManagement {
     dependencies {
         dependency('org.apache.thrift:libthrift:0.9.3') {
