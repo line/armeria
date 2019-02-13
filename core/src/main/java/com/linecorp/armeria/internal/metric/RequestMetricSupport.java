@@ -89,7 +89,7 @@ public final class RequestMetricSupport {
                                                                           DefaultServiceRequestMetrics::new);
             updateMetrics(log, metrics);
             if (log.responseCause() instanceof RequestTimeoutException) {
-                metrics.requestTimeout().increment();
+                metrics.requestTimeouts().increment();
             }
             return;
         }
@@ -100,9 +100,9 @@ public final class RequestMetricSupport {
         updateMetrics(log, metrics);
         final Throwable responseCause = log.responseCause();
         if (responseCause instanceof WriteTimeoutException) {
-            metrics.writeTimeout().increment();
+            metrics.writeTimeouts().increment();
         } else if (responseCause instanceof ResponseTimeoutException) {
-            metrics.responseTimeout().increment();
+            metrics.responseTimeouts().increment();
         }
     }
 
@@ -163,13 +163,13 @@ public final class RequestMetricSupport {
     }
 
     private interface ClientRequestMetrics extends RequestMetrics {
-        Counter writeTimeout();
+        Counter writeTimeouts();
 
-        Counter responseTimeout();
+        Counter responseTimeouts();
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
-        Counter requestTimeout();
+        Counter requestTimeouts();
     }
 
     private static final class ActiveRequestMetrics extends LongAdder {}
@@ -240,39 +240,41 @@ public final class RequestMetricSupport {
     private static class DefaultClientRequestMetrics
             extends AbstractRequestMetrics implements ClientRequestMetrics {
 
-        private final Counter writeTimeout;
-        private final Counter responseTimeout;
+        private final Counter writeTimeouts;
+        private final Counter responseTimeouts;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
-            writeTimeout = parent.counter(idPrefix.name("writeTimeout"), idPrefix.tags());
-            responseTimeout = parent.counter(idPrefix.name("responseTimeout"), idPrefix.tags());
+            final String timeouts = idPrefix.name("timeouts");
+            writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
+            responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
         }
 
         @Override
-        public Counter writeTimeout() {
-            return writeTimeout;
+        public Counter writeTimeouts() {
+            return writeTimeouts;
         }
 
         @Override
-        public Counter responseTimeout() {
-            return responseTimeout;
+        public Counter responseTimeouts() {
+            return responseTimeouts;
         }
     }
 
     private static class DefaultServiceRequestMetrics
             extends AbstractRequestMetrics implements ServiceRequestMetrics {
 
-        private final Counter requestTimeout;
+        private final Counter requestTimeouts;
 
         DefaultServiceRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
-            requestTimeout = parent.counter(idPrefix.name("requestTimeout"), idPrefix.tags());
+            requestTimeouts = parent.counter(idPrefix.name("timeouts"),
+                                             idPrefix.tags("cause", "RequestTimeoutException"));
         }
 
         @Override
-        public Counter requestTimeout() {
-            return requestTimeout;
+        public Counter requestTimeouts() {
+            return requestTimeouts;
         }
     }
 }

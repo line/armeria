@@ -118,8 +118,10 @@ public class RequestMetricSupportTest {
                                                0.0)
                                 .containsEntry("foo.requests#count{httpStatus=0,method=POST,result=failure}",
                                                1.0)
-                                .containsEntry("foo.writeTimeout#count{httpStatus=0,method=POST}", 0.0)
-                                .containsEntry("foo.responseTimeout#count{httpStatus=0,method=POST}", 1.0)
+                                .containsEntry("foo.timeouts#count{cause=WriteTimeoutException," +
+                                               "httpStatus=0,method=POST}", 0.0)
+                                .containsEntry("foo.timeouts#count{cause=ResponseTimeoutException," +
+                                               "httpStatus=0,method=POST}", 1.0)
                                 .containsEntry("foo.responseDuration#count{httpStatus=0,method=POST}", 1.0)
                                 .containsEntry("foo.responseLength#count{httpStatus=0,method=POST}", 1.0)
                                 .containsEntry("foo.totalDuration#count{httpStatus=0,method=POST}", 1.0);
@@ -139,8 +141,10 @@ public class RequestMetricSupportTest {
                                                0.0)
                                 .containsEntry("foo.requests#count{httpStatus=0,method=POST,result=failure}",
                                                1.0)
-                                .containsEntry("foo.writeTimeout#count{httpStatus=0,method=POST}", 1.0)
-                                .containsEntry("foo.responseTimeout#count{httpStatus=0,method=POST}", 0.0)
+                                .containsEntry("foo.timeouts#count{cause=WriteTimeoutException," +
+                                               "httpStatus=0,method=POST}", 1.0)
+                                .containsEntry("foo.timeouts#count{cause=ResponseTimeoutException," +
+                                               "httpStatus=0,method=POST}", 0.0)
                                 .containsEntry("foo.responseDuration#count{httpStatus=0,method=POST}", 0.0)
                                 .containsEntry("foo.responseLength#count{httpStatus=0,method=POST}", 0.0)
                                 .containsEntry("foo.totalDuration#count{httpStatus=0,method=POST}", 0.0);
@@ -189,6 +193,8 @@ public class RequestMetricSupportTest {
                                "pathMapping=exact:/foo,result=success}", 0.0)
                 .containsEntry("foo.requests#count{hostnamePattern=*,httpStatus=503,method=POST," +
                                "pathMapping=exact:/foo,result=failure}", 1.0)
+                .containsEntry("foo.timeouts#count{cause=RequestTimeoutException,hostnamePattern=*," +
+                               "httpStatus=503,method=POST,pathMapping=exact:/foo}", 1.0)
                 .containsEntry("foo.responseDuration#count{hostnamePattern=*,httpStatus=503,method=POST," +
                                "pathMapping=exact:/foo}", 1.0)
                 .containsEntry("foo.responseLength#count{hostnamePattern=*,httpStatus=503,method=POST," +

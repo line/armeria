@@ -440,7 +440,7 @@ public interface RequestContext extends AttributeMap {
      * Returns whether this {@link RequestContext} has been timed-out (e.g., when the corresponding request
      * passes a deadline).
      *
-     * @deprecated Use {@link ServiceRequestContext#isRequestTimedOut()}.
+     * @deprecated Use {@link ServiceRequestContext#isTimedOut()}.
      */
     @Deprecated
     boolean isTimedOut();

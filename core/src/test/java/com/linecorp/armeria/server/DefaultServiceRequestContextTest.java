@@ -17,25 +17,17 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
-import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
-import io.netty.util.NetUtil;
 
 public class DefaultServiceRequestContextTest {
 
@@ -43,13 +35,13 @@ public class DefaultServiceRequestContextTest {
     public void requestTimedOut() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(request).build();
+        assertThat(ctx.isTimedOut()).isFalse();
+
         assert ctx instanceof DefaultServiceRequestContext;
         final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
-        assertThat(defaultCtx.isRequestTimedOut()).isFalse();
-        assertThat(defaultCtx.isTimedOut()).isFalse();
-        defaultCtx.setRequestTimedOut();
-        assertThat(defaultCtx.isRequestTimedOut()).isTrue();
-        assertThat(defaultCtx.isTimedOut()).isTrue();
+        defaultCtx.setTimedOut();
+
+        assertThat(ctx.isTimedOut()).isTrue();
     }
 
     @Test

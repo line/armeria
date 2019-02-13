@@ -220,7 +220,8 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns whether this {@link ServiceRequestContext} has been timed-out (e.g., when the
      * corresponding request passes a deadline).
      */
-    boolean isRequestTimedOut();
+    @Override
+    boolean isTimedOut();
 
     /**
      * Returns the maximum length of the current {@link Request}.
