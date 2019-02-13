@@ -58,7 +58,7 @@ public class ContentPreviewerTest {
     static class MyHttpClient {
         private final HttpClient client;
         @Nullable
-        private CompletableFuture<RequestLog> waitingFuture;
+        private volatile CompletableFuture<RequestLog> waitingFuture;
 
         MyHttpClient(String uri, int reqLength, int resLength) {
             client = new HttpClientBuilder(serverRule.uri(uri))
@@ -70,15 +70,11 @@ public class ContentPreviewerTest {
                                                          .successfulResponseLogLevel(LogLevel.INFO)
                                                          .newDecorator())
                     .decorator((delegate, ctx, req) -> {
-                        ctx.log().addListener(this::complete, RequestLogAvailability.COMPLETE);
+                        if (waitingFuture != null) {
+                            ctx.log().addListener(waitingFuture::complete, RequestLogAvailability.COMPLETE);
+                        }
                         return delegate.execute(ctx, req);
                     }).build();
-        }
-
-        void complete(RequestLog log) {
-            if (waitingFuture != null) {
-                waitingFuture.complete(log);
-            }
         }
 
         public RequestLog get(String path) throws Exception {
@@ -152,9 +148,11 @@ public class ContentPreviewerTest {
             }
 
             public HttpResponse getBody(String path) throws Exception {
-                return client.execute(HttpHeaders.of(HttpMethod.GET, path).set(HttpHeaderNames.ACCEPT, "utf-8")
+                return client.execute(HttpHeaders.of(HttpMethod.GET, path)
+                                                 .set(HttpHeaderNames.ACCEPT, "utf-8")
                                                  .set(HttpHeaderNames.CONTENT_TYPE,
-                                                      MediaType.ANY_TEXT_TYPE.toString()));
+                                                      MediaType.ANY_TEXT_TYPE
+                                                              .toString()));
             }
 
             public RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
@@ -188,17 +186,13 @@ public class ContentPreviewerTest {
             }
         }
 
-        void complete(RequestLog log) {
-            if (waitingFuture != null) {
-                waitingFuture.complete(log);
-            }
-        }
-
         void build(ServerBuilder sb) {
             sb.contentPreview(10, Charset.defaultCharset());
             sb.decorator(delegate -> {
                 return (ctx, req) -> {
-                    ctx.log().addListener(this::complete, RequestLogAvailability.COMPLETE);
+                    if (waitingFuture != null) {
+                        ctx.log().addListener(waitingFuture::complete, RequestLogAvailability.COMPLETE);
+                    }
                     return delegate.serve(ctx, req);
                 };
             });
