@@ -30,31 +30,53 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 
-final class ByteBufAggreatedPreviewer implements ContentPreviewer {
+abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
 
     public static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
-    private final int capacity;
+    private int capacity;
     private final List<ByteBuf> bufferList;
-    private final BiFunction<HttpHeaders, ByteBuf, String> reproducer;
+    @Nullable
     private HttpHeaders headers;
     @Nullable
     private String produced;
     private int aggregatedLength;
 
-    ByteBufAggreatedPreviewer(int capacity, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
+    ByteBufAggreatedPreviewer(int capacity) {
         this.capacity = capacity;
         bufferList = new ArrayList<>();
-        this.reproducer = reproducer;
+    }
+
+    ByteBufAggreatedPreviewer() {
+        bufferList = new ArrayList<>();
+        capacity = 0;
+    }
+
+    void increaseCapacity(int delta) {
+        if (Integer.MAX_VALUE - delta >= capacity) {
+            capacity = Integer.MAX_VALUE;
+        } else {
+            capacity += delta;
+        }
+    }
+
+    static ContentPreviewer create(int capacity, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
+        return new ByteBufAggreatedPreviewer(capacity) {
+            @Override
+            protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
+                return reproducer.apply(headers, wrappedBuffer);
+            }
+        };
     }
 
     @Override
     public void onHeaders(HttpHeaders headers) {
+        assert this.headers == null : "onHeaders() has been already invoked.";
         this.headers = headers;
     }
 
     @Override
     public void onData(HttpData data) {
-        if (data.isEmpty() || produced != null) {
+        if (data.isEmpty()) {
             return;
         }
         final ByteBuf newBuffer;
@@ -72,16 +94,19 @@ final class ByteBufAggreatedPreviewer implements ContentPreviewer {
 
     @Override
     public boolean isDone() {
-        return aggregatedLength >= capacity;
+        return produced != null || aggregatedLength >= capacity;
     }
+
+    protected abstract String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer);
 
     @Override
     public String produce() {
+        assert headers != null : "headers has not been initialized yet.";
         if (produced != null) {
             return produced;
         }
         try {
-            return produced = reproducer.apply(headers, Unpooled.wrappedBuffer(bufferList.toArray(
+            return produced = reproduce(headers, Unpooled.wrappedBuffer(bufferList.toArray(
                     BYTE_BUFS)).asReadOnly());
         } finally {
             bufferList.forEach(ReferenceCountUtil::safeRelease);

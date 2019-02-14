@@ -289,16 +289,16 @@ public class ContentPreviewerTest {
         final MyHttpClient client = new MyHttpClient("/example", 10, 10);
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
         assertThat(client.getBody("/get").aggregate().get()
-                         .content().toString(Charset.defaultCharset())).isEqualTo("test");
-        assertThat(client.get("/get-unicode").responseContentPreview()).isEqualTo("안녕");
+                         .content().toStringUtf8()).isEqualTo("test");
         assertThat(client.getBody("/get-unicode").aggregate().get()
-                         .content().toString(Charset.defaultCharset())).isEqualTo("안녕");
+                         .content().toStringUtf8()).isEqualTo("안녕");
+        assertThat(client.get("/get-unicode").responseContentPreview()).isEqualTo("안녕");
         assertThat(client.getBody("/get-audio").aggregate().get()
                          .content().array()).containsExactly(new byte[] { 1, 2, 3, 4 });
         assertThat(client.get("/get-audio").responseContentPreview()).isNull();
         assertThat(client.get("/get-json").responseContentPreview()).isEqualTo("{\"value\":1");
         assertThat(client.getBody("/get-json").aggregate().get()
-                         .content().toString(Charset.defaultCharset())).isEqualTo("{\"value\":1}");
+                         .content().toStringUtf8()).isEqualTo("{\"value\":1}");
         assertThat(client.post("/post").responseContentPreview()).isEqualTo("abcdefghij");
         assertThat(client.post("/post", "abcdefghijkmno").requestContentPreview()).isEqualTo("abcdefghij");
         assertThat(client.get("/get-longstring").responseContentPreview()).isEqualTo("aaaaaaaaaa");
@@ -310,16 +310,16 @@ public class ContentPreviewerTest {
 
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
         assertThat(client.getBody("/get").aggregate().get()
-                         .content().toString(Charset.defaultCharset())).isEqualTo("test");
+                         .content().toStringUtf8()).isEqualTo("test");
         assertThat(client.get("/get-unicode").responseContentPreview()).isEqualTo("안녕");
         assertThat(client.getBody("/get-unicode").aggregate().get()
-                         .content().toString(Charset.defaultCharset())).isEqualTo("안녕");
+                         .content().toStringUtf8()).isEqualTo("안녕");
         assertThat(client.getBody("/get-audio").aggregate().get()
                          .content().array()).containsExactly(new byte[] { 1, 2, 3, 4 });
         assertThat(client.get("/get-audio").responseContentPreview()).isNull();
         assertThat(client.get("/get-json").responseContentPreview()).isEqualTo("{\"value\":1");
         assertThat(client.getBody("/get-json").aggregate().get()
-                         .content().toString(Charset.defaultCharset())).isEqualTo("{\"value\":1}");
+                         .content().toStringUtf8()).isEqualTo("{\"value\":1}");
         assertThat(client.post("/post").responseContentPreview()).isEqualTo("abcdefghij");
         assertThat(client.post("/post", "abcdefghijkmno").requestContentPreview()).isEqualTo("abcdefghij");
         assertThat(client.get("/get-longstring").responseContentPreview()).isEqualTo("aaaaaaaaaa");

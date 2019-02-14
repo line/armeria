@@ -41,7 +41,7 @@ public interface ContentPreviewer {
      * when the contents has been aggregated more than {@code length} bytes.
      */
     static ContentPreviewer ofBinary(int length, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
-        return new ByteBufAggreatedPreviewer(length, reproducer);
+        return ByteBufAggreatedPreviewer.create(length, reproducer);
     }
 
     /**

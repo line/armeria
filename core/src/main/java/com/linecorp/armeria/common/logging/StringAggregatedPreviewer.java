@@ -16,106 +16,43 @@
 
 package com.linecorp.armeria.common.logging;
 
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
+import static java.util.Objects.requireNonNull;
+
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.util.Arrays;
 
-import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.MediaType;
 
-import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBuf;
 
-final class StringAggregatedPreviewer implements ContentPreviewer {
-
-    private final CharBuffer buffer;
+final class StringAggregatedPreviewer extends ByteBufAggreatedPreviewer {
     private final Charset defaultCharset;
-    @Nullable
-    private CharsetDecoder decoder;
-
-    @Nullable
-    private String produced;
-
-    @Nullable
-    private ByteBuffer remainedBuffer;
+    private Charset charset;
+    private final int length;
 
     StringAggregatedPreviewer(int length, Charset defaultCharset) {
-        buffer = CharBuffer.allocate(length);
-        this.defaultCharset = defaultCharset;
+        this.defaultCharset = requireNonNull(defaultCharset, "defaultCharset");
+        this.length = length;
     }
 
     @Override
     public void onHeaders(HttpHeaders headers) {
-        final MediaType contentType = headers.contentType();
-        if (contentType == null) {
-            return;
-        }
-        final Charset charset = contentType.charset().orElse(defaultCharset);
-        decoder = charset.newDecoder();
-        remainedBuffer = ByteBuffer.allocate((int) Math.ceil(charset.newEncoder().maxBytesPerChar()));
-    }
-
-    @Override
-    public void onData(HttpData data) {
-        assert decoder != null : "decoder should not be null to append the content preview.";
-        if (produced != null || !buffer.hasRemaining()) {
-            return;
-        }
-        if (data instanceof ByteBufHolder) {
-            Arrays.stream(((ByteBufHolder) data).content().nioBuffers()).forEach(this::append);
+        super.onHeaders(headers);
+        if (headers.contentType() != null) {
+            charset = headers.contentType().charset().orElse(defaultCharset);
         } else {
-            append(ByteBuffer.wrap(data.array(), data.offset(), data.length() - data.offset()));
+            charset = defaultCharset;
         }
+        final int maxBytesPerChar = (int)Math.ceil(charset.newEncoder().maxBytesPerChar());
+        increaseCapacity(maxBytesPerChar * length);
     }
 
     @Override
-    public boolean isDone() {
-        return !buffer.hasRemaining();
-    }
-
-    @Override
-    public String produce() {
-        if (produced == null) {
-            produced = new String(buffer.array(), 0, buffer.position());
-        }
-        return produced;
-    }
-
-    private void append(ByteBuffer buf) {
-        assert decoder != null : "decoder should not be null to append the content preview.";
-        assert remainedBuffer != null
-                : "remainedBuffer should be allocated before appending the content preview.";
-        if (produced != null || !buffer.hasRemaining() || !buf.hasRemaining()) {
-            return;
-        }
-
-        if (remainedBuffer.position() > 0) {
-            while (remainedBuffer.hasRemaining() && buf.hasRemaining()) {
-                remainedBuffer.put(buf.get());
-            }
-            final int prevPos = remainedBuffer.position();
-            remainedBuffer.flip();
-            if (decoder.decode(remainedBuffer, buffer, false).isUnderflow() && buffer.hasRemaining()) {
-                if (remainedBuffer.position() == 0) {
-                    remainedBuffer.position(prevPos);
-                    remainedBuffer.limit(remainedBuffer.capacity());
-                    return;
-                }
-                buf.position(buf.position() - (prevPos - remainedBuffer.position()));
-                remainedBuffer.clear();
-            }
-        }
-
-        if (buffer.hasRemaining()) {
-            if (decoder.decode(buf, buffer, false).isUnderflow() && buffer.hasRemaining()) {
-                while (remainedBuffer.hasRemaining() && buf.hasRemaining()) {
-                    remainedBuffer.put(buf.get());
-                }
-            }
+    protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
+        final String produced = wrappedBuffer.toString(charset);
+        if (produced.length() > length) {
+            return produced.substring(0, length);
+        } else {
+            return produced;
         }
     }
 }
