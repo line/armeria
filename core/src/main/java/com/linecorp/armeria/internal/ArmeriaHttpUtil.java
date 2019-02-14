@@ -117,13 +117,17 @@ public final class ArmeriaHttpUtil {
      */
     public static final Charset HTTP_DEFAULT_CONTENT_CHARSET = StandardCharsets.ISO_8859_1;
 
-    public static final List<MediaType> HTTP_TEXTIBLE_MEDIA_TYPES = ImmutableList.of(
+    public static final List<MediaType> HTTP_TEXTUAL_MEDIA_TYPES = ImmutableList.of(
             MediaType.ANY_TEXT_TYPE,
             MediaType.JSON,
-            MediaType.APPLICATION_XML,
-            MediaType.ATOM,
-            MediaType.DART,
-            MediaType.FORM_DATA
+            MediaType.HAL_JSON,
+            MediaType.create("application", "manifest+json"),
+            MediaType.create("application", "xml"),
+            MediaType.create("application", "atom+xml"),
+            MediaType.KML,
+            MediaType.create("application", "dart"),
+            MediaType.FORM_DATA,
+            MediaType.create("application", "soap+xml")
     );
 
     private static final URI ROOT = URI.create("/");

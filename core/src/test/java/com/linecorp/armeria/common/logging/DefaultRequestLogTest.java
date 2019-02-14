@@ -54,8 +54,7 @@ public class DefaultRequestLogTest {
 
     @Before
     public void setUp() {
-        log = new DefaultRequestLog(ctx, ContentPreviewerFactory.disabled(),
-                                    ContentPreviewerFactory.disabled());
+        log = new DefaultRequestLog(ctx);
     }
 
     @Test
@@ -121,8 +120,7 @@ public class DefaultRequestLogTest {
 
     @Test
     public void addChild() {
-        final DefaultRequestLog child = new DefaultRequestLog(ctx, ContentPreviewerFactory.disabled(),
-                                                              ContentPreviewerFactory.disabled());
+        final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
         child.startRequest(channel, SessionProtocol.H2C);
         assertThat(log.requestStartTimeMicros()).isEqualTo(child.requestStartTimeMicros());

@@ -481,6 +481,7 @@ interface AccessLogComponent {
                     return RequestLog::status;
                 case "statusCode":
                     return RequestLog::statusCode;
+
                 default:
                     throw new IllegalArgumentException("unexpected request log variable: " + variable);
             }

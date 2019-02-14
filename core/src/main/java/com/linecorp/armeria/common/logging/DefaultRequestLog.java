@@ -150,6 +150,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     /**
      * Creates a new instance.
      */
+    public DefaultRequestLog(RequestContext ctx) {
+        this(ctx, ContentPreviewerFactory.disabled(), ContentPreviewerFactory.disabled());
+    }
+
+    /**
+     * Creates a new instance.
+     */
     public DefaultRequestLog(RequestContext ctx, ContentPreviewerFactory requestContentPreviewerFactory,
                              ContentPreviewerFactory responseContentPreviewerFactory) {
         this.ctx = requireNonNull(ctx, "ctx");
@@ -888,7 +895,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void updateAvailability(int flags) {
-        for (; ;) {
+        for (;;) {
             final int oldAvailability = this.flags;
             final int newAvailability = oldAvailability | flags;
             if (flagsUpdater.compareAndSet(this, oldAvailability, newAvailability)) {
@@ -1017,7 +1024,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
                 buf.append(", content=").append(contentSanitizer.apply(requestContent));
             } else if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
-                buf.append(", content-preview=").append(requestContentPreview);
+                buf.append(", contentPreview=").append(requestContentPreview);
             }
         }
         buf.append('}');
@@ -1069,7 +1076,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
                 buf.append(", content=").append(contentSanitizer.apply(responseContent));
             } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
-                buf.append(", content-preview=").append(responseContentPreview);
+                buf.append(", contentPreview=").append(responseContentPreview);
             }
         }
         buf.append('}');

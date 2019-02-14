@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.nio.charset.Charset;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -47,18 +49,22 @@ public interface ContentPreviewer {
     /**
      * Creates a new instance of {@link ContentPreviewer} which produces the text
      * with the maximum {@code length} limit.
-     * Note that {@code defaultCharset} will be applied
-     * if the charset has not been specified in {@code "Content-Type"} header.
+     * @param length the maximum length of the preview.
+     * @param defaultCharset the default charset for a request/response with unspecified charset in
+     *                       {@code "Content-Type"} header.
      */
     static ContentPreviewer ofText(int length, Charset defaultCharset) {
+        checkArgument(length >= 0, "length : %d (expected: >= 0)", length);
+        if (length == 0) {
+            return disabled();
+        }
         return new StringAggregatedPreviewer(length, defaultCharset);
     }
 
     /**
      * Creates a new instance of {@link ContentPreviewer} which produces the text
      * with the maximum {@code length} limit.
-     * Note that {@link ArmeriaHttpUtil#HTTP_DEFAULT_CONTENT_CHARSET} will be applied
-     * if the charset has not been specified in {@code "Content-Type"} header.
+     * @param length the maximum length of the preview.
      */
     static ContentPreviewer ofText(int length) {
         return ofText(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);

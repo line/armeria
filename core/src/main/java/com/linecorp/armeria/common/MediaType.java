@@ -340,11 +340,7 @@ public final class MediaType {
      */
     public static final MediaType APPLICATION_XML_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "xml");
 
-    public static final MediaType APPLICATION_XML = createConstant(APPLICATION_TYPE, "xml");
-
     public static final MediaType ATOM_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "atom+xml");
-
-    public static final MediaType ATOM = createConstant(APPLICATION_TYPE, "atom");
 
     public static final MediaType BZIP2 = createConstant(APPLICATION_TYPE, "x-bzip2");
 
@@ -352,8 +348,6 @@ public final class MediaType {
      * Media type for <a href="https://www.dartlang.org/articles/embedding-in-html/">dart files</a>.
      */
     public static final MediaType DART_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "dart");
-
-    public static final MediaType DART = createConstant(APPLICATION_TYPE, "dart");
 
     /**
      * Media type for <a href="https://goo.gl/2QoMvg">Apple Passbook</a>.
@@ -703,7 +697,7 @@ public final class MediaType {
 
     /**
      * Returns a new instance with the same type and subtype as this instance, with the {@code
-     * charset} parameter set to the {@link Charset#name()} of the given charset. Only one {@code
+     * charset} parameter set to the {@linkplain Charset#name() name} of the given charset. Only one {@code
      * charset} parameter will be present on the new instance regardless of the number set on this
      * one.
      *

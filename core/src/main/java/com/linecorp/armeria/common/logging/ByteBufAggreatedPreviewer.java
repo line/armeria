@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -32,7 +34,7 @@ import io.netty.util.ReferenceCountUtil;
 
 abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
 
-    public static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
+    private static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
     private int capacity;
     private final List<ByteBuf> bufferList;
     @Nullable
@@ -42,6 +44,7 @@ abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
     private int aggregatedLength;
 
     ByteBufAggreatedPreviewer(int capacity) {
+        checkArgument(capacity >= 0, "capacity: %d (expected: >= 0)", capacity);
         this.capacity = capacity;
         bufferList = new ArrayList<>();
     }
@@ -52,6 +55,7 @@ abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
     }
 
     void increaseCapacity(int delta) {
+        checkArgument(delta >= 0, "delta: %d (expected: >= 0)", delta);
         if (Integer.MAX_VALUE - delta >= capacity) {
             capacity = Integer.MAX_VALUE;
         } else {

@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -35,7 +37,13 @@ final class MappedContentPreviewerFactory implements ContentPreviewerFactory {
         this(requireNonNull(map, "map").entrySet());
     }
 
-    MappedContentPreviewerFactory(Iterable<Entry<MediaType, Supplier<ContentPreviewer>>> entries) {
+    MappedContentPreviewerFactory(
+            Iterable<Entry<MediaType,Supplier<ContentPreviewer>>> entries) {
+        entries.forEach(entry -> {
+            checkArgument(entry != null, "entry should not be null.");
+            checkArgument(entry.getKey() != null, "entry.getKey() should not be null.");
+            checkArgument(entry.getValue() != null, "entry.getValue() should not be null.");
+        });
         this.entries = ImmutableList.copyOf(requireNonNull(entries, "entries"));
     }
 
@@ -47,7 +55,9 @@ final class MappedContentPreviewerFactory implements ContentPreviewerFactory {
         }
         for (Entry<MediaType, Supplier<ContentPreviewer>> entry : entries) {
             if (contentType.is(entry.getKey())) {
-                return entry.getValue().get();
+                final ContentPreviewer previewer = entry.getValue().get();
+                checkState(previewer != null, "supplier.get() returns null.");
+                return previewer;
             }
         }
         return ContentPreviewer.disabled();

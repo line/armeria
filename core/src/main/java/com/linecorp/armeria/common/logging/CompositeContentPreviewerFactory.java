@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -36,6 +37,7 @@ final class CompositeContentPreviewerFactory implements ContentPreviewerFactory 
     public ContentPreviewer get(RequestContext ctx, HttpHeaders headers) {
         for (ContentPreviewerFactory factory : factoryList) {
             final ContentPreviewer previewer = factory.get(ctx, headers);
+            checkState(previewer != null, "%s returned null", factory.getClass().getName());
             if (previewer != ContentPreviewer.disabled()) {
                 return previewer;
             }

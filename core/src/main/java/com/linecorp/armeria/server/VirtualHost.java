@@ -350,7 +350,7 @@ public final class VirtualHost {
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
-            Service<HttpRequest, HttpResponse>> decorator) {
+                                            Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {
             return this;
         }

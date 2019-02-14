@@ -594,6 +594,23 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     /**
      * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
      * with the maxmium {@code length} limit for a request and a response of this {@link VirtualHost}.
+     * The previewer is enabled only
+     * when {@code "Content-Type"} header matches any of the following media types.
+     * <ul>
+     *     <li>{@code text/*}</li>
+     *     <li>{@code application/json}</li>
+     *     <li>{@code application/hal+json}</li>
+     *     <li>{@code application/manifest+json}</li>
+     *     <li>{@code application/xml}</li>
+     *     <li>{@code application/atom+xml}</li>
+     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
+     *     <li>{@code application/soap+xml}</li>
+     *     <li>{@code application/dart}</li>
+     *     <li>{@code application/x-www-form-urlencoded}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
+     * @param defaultCharset the default charset for a request/response with unspecified charset in
+     *                       {@code "Content-Type"} header.
      */
     public B contentPreview(int length, Charset defaultCharset) {
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
@@ -602,6 +619,21 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     /**
      * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
      * with the maxmium {@code length} limit for a request and a response of this {@link VirtualHost}.
+     * The previewer is enabled only
+     * when {@code "Content-Type"} header matches any of the following media types.
+     * <ul>
+     *     <li>{@code text/*}</li>
+     *     <li>{@code application/json}</li>
+     *     <li>{@code application/hal+json}</li>
+     *     <li>{@code application/manifest+json}</li>
+     *     <li>{@code application/xml}</li>
+     *     <li>{@code application/atom+xml}</li>
+     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
+     *     <li>{@code application/soap+xml}</li>
+     *     <li>{@code application/dart}</li>
+     *     <li>{@code application/x-www-form-urlencoded}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
      */
     public B contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);

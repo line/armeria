@@ -34,6 +34,9 @@ import org.slf4j.LoggerFactory;
 @FunctionalInterface
 public interface RejectedPathMappingHandler {
 
+    /**
+     * A {@link RejectedPathMappingHandler} that does nothing for a problematic {@link PathMapping}.
+     */
     RejectedPathMappingHandler DISABLED = (virtualHost, mapping, existingMapping) -> {};
 
     /**

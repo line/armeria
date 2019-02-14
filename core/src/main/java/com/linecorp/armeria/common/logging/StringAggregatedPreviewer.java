@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -30,6 +31,7 @@ final class StringAggregatedPreviewer extends ByteBufAggreatedPreviewer {
     private final int length;
 
     StringAggregatedPreviewer(int length, Charset defaultCharset) {
+        checkArgument(length >= 0, "length: %d (expected: >= 0)", length);
         this.defaultCharset = requireNonNull(defaultCharset, "defaultCharset");
         this.length = length;
     }

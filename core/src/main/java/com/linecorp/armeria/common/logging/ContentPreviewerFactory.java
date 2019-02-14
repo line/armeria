@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -43,7 +44,7 @@ public interface ContentPreviewerFactory {
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
      * through {@code supplier} for the request/response with the {@code contentType}.
      */
-    static ContentPreviewerFactory of(MediaType contentType, Supplier<ContentPreviewer> supplier) {
+    static ContentPreviewerFactory of(MediaType contentType, Supplier<? extends ContentPreviewer> supplier) {
         return of(ImmutableMap.of(contentType, supplier));
     }
 
@@ -51,7 +52,7 @@ public interface ContentPreviewerFactory {
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
      * through {@code supplier} for the request/response with the {@code contentType}.
      */
-    static ContentPreviewerFactory of(String contentType, Supplier<ContentPreviewer> supplier) {
+    static ContentPreviewerFactory of(String contentType, Supplier<? extends ContentPreviewer> supplier) {
         return of(MediaType.parse(contentType), supplier);
     }
 
@@ -99,16 +100,18 @@ public interface ContentPreviewerFactory {
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
      * through the supplier that matches with {@code "Content-Type"} header.
      */
-    static ContentPreviewerFactory of(Map<MediaType, Supplier<ContentPreviewer>> map) {
-        return new MappedContentPreviewerFactory(map);
+    @SuppressWarnings("unchecked")
+    static ContentPreviewerFactory of(Map<MediaType, ? extends Supplier<? extends ContentPreviewer>> map) {
+        return new MappedContentPreviewerFactory((Map<MediaType, Supplier<ContentPreviewer>>) map);
     }
 
     /**
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
      * through {@code supplier} if a request/response mathces any of {@code contentTypes}.
      */
-    static ContentPreviewerFactory of(Supplier<ContentPreviewer> supplier, Iterable<MediaType> contentTypes) {
-        final Map<MediaType, Supplier<ContentPreviewer>> maps = new HashMap<>();
+    static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier,
+                                      Iterable<MediaType> contentTypes) {
+        final Map<MediaType, Supplier<? extends ContentPreviewer>> maps = new HashMap<>();
         for (MediaType type : contentTypes) {
             maps.put(type, supplier);
         }
@@ -119,7 +122,8 @@ public interface ContentPreviewerFactory {
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
      * through {@code supplier} if a request/response mathces any of {@code contentTypes}.
      */
-    static ContentPreviewerFactory of(Supplier<ContentPreviewer> supplier, MediaType... contentTypes) {
+    static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier,
+                                      MediaType... contentTypes) {
         return of(supplier, Arrays.asList(contentTypes));
     }
 
@@ -127,7 +131,7 @@ public interface ContentPreviewerFactory {
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
      * through {@code supplier} if the content type of a request/response mathces any of {@code contentTypes}.
      */
-    static ContentPreviewerFactory of(Supplier<ContentPreviewer> supplier, String... contentTypes) {
+    static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier, String... contentTypes) {
         return of(supplier, Arrays.stream(contentTypes).map(MediaType::parse).collect(Collectors.toList()));
     }
 
@@ -138,6 +142,10 @@ public interface ContentPreviewerFactory {
      */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset,
                                           Iterable<MediaType> contentTypes) {
+        checkArgument(length >= 0, "length : %d (expected: >= 0)", length);
+        if (length == 0) {
+            return disabled();
+        }
         return of(() -> ContentPreviewer.ofText(length, defaultCharset), contentTypes);
     }
 
@@ -164,17 +172,46 @@ public interface ContentPreviewerFactory {
      * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
      * which produces the text with the maximum {@code length} limit
      * if the content type of a request/response matches
-     * any of {@link ArmeriaHttpUtil#HTTP_TEXTIBLE_MEDIA_TYPES}.
+     * any of the following media types.
+     * <ul>
+     *     <li>{@code text/*}</li>
+     *     <li>{@code application/json}</li>
+     *     <li>{@code application/hal+json}</li>
+     *     <li>{@code application/manifest+json}</li>
+     *     <li>{@code application/xml}</li>
+     *     <li>{@code application/atom+xml}</li>
+     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
+     *     <li>{@code application/soap+xml}</li>
+     *     <li>{@code application/dart}</li>
+     *     <li>{@code application/x-www-form-urlencoded}</li>
+     * </ul>
+     *
+     * @param length the maximum length of the preview.
+     * @param defaultCharset the default charset for a request/response with unspecified charset in
+     *                       {@code "Content-Type"} header.
      */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset) {
-        return ofText(length, defaultCharset, ArmeriaHttpUtil.HTTP_TEXTIBLE_MEDIA_TYPES);
+        return ofText(length, defaultCharset, ArmeriaHttpUtil.HTTP_TEXTUAL_MEDIA_TYPES);
     }
 
     /**
      * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
      * which produces the text with the maximum {@code length} limit
      * if the content type of a request/response matches
-     * any of {@link ArmeriaHttpUtil#HTTP_TEXTIBLE_MEDIA_TYPES}.
+     * any of the following media types.
+     * <ul>
+     *     <li>{@code text/*}</li>
+     *     <li>{@code application/json}</li>
+     *     <li>{@code application/hal+json}</li>
+     *     <li>{@code application/manifest+json}</li>
+     *     <li>{@code application/xml}</li>
+     *     <li>{@code application/atom+xml}</li>
+     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
+     *     <li>{@code application/soap+xml}</li>
+     *     <li>{@code application/dart}</li>
+     *     <li>{@code application/x-www-form-urlencoded}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
      */
     static ContentPreviewerFactory ofText(int length) {
         return ofText(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
