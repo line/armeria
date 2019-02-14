@@ -106,6 +106,12 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
         ctx.logBuilder().addChild(derivedCtx.log());
         final BiFunction<ClientRequestContext, Throwable, RpcResponse> fallback =
                 (context, cause) -> new DefaultRpcResponse(cause);
+
+        final int totalAttempts = getTotalAttempts(ctx);
+        if (totalAttempts > 1) {
+            derivedCtx.addAdditionalRequestHeader(TOTAL_ATTEMPTS, Integer.toString(totalAttempts));
+        }
+
         final RpcResponse res = executeWithFallback(delegate(), derivedCtx, req, fallback);
 
         res.handle((unused1, unused2) -> {

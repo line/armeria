@@ -103,6 +103,38 @@ public class RequestMetricSupportTest {
     }
 
     @Test
+    public void actualRequestsIncreasedWhenRetrying() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx = setupClientRequestCtx(registry);
+
+        addLogInfoInDerivedCtx(ctx);
+
+        Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0);
+
+        addLogInfoInDerivedCtx(ctx);
+        // Does not increase the active requests.
+        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0);
+
+        ctx.logBuilder().endResponseWithLastChild();
+
+        measurements = measureAll(registry);
+        assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 0.0)
+                                .containsEntry("foo.requests#count{httpStatus=500,method=POST,result=success}",
+                                               0.0)
+                                .containsEntry("foo.requests#count{httpStatus=500,method=POST,result=failure}",
+                                               1.0)
+                                .containsEntry("foo.actualRequests#count{httpStatus=500,method=POST}",
+                                               2.0)
+                                .containsEntry("foo.requestLength#count{httpStatus=500,method=POST}", 1.0)
+                                .containsEntry("foo.requestLength#total{httpStatus=500,method=POST}", 123.0)
+                                .containsEntry("foo.responseDuration#count{httpStatus=500,method=POST}", 1.0)
+                                .containsEntry("foo.responseLength#count{httpStatus=500,method=POST}", 1.0)
+                                .containsEntry("foo.responseLength#total{httpStatus=500,method=POST}", 456.0)
+                                .containsEntry("foo.totalDuration#count{httpStatus=500,method=POST}", 1.0);
+    }
+
+    @Test
     public void responseTimedOutInClientSide() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
@@ -162,6 +194,22 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction, false);
         return ctx;
+    }
+
+    private static void addLogInfoInDerivedCtx(ClientRequestContext ctx) {
+        final ClientRequestContext derivedCtx = ctx.newDerivedContext();
+        ctx.logBuilder().addChild(derivedCtx.log());
+
+        derivedCtx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        derivedCtx.logBuilder().requestFirstBytesTransferred();
+        derivedCtx.logBuilder().requestContent(null, null);
+        derivedCtx.logBuilder().requestLength(123);
+
+        derivedCtx.logBuilder().responseHeaders(HttpHeaders.of(500));
+        ctx.logBuilder().responseFirstBytesTransferred();
+        ctx.logBuilder().responseLength(456);
+        derivedCtx.logBuilder().endRequest();
+        derivedCtx.logBuilder().endResponse();
     }
 
     @Test

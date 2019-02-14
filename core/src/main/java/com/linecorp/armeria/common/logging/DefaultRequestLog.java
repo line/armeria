@@ -166,7 +166,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         child.addListener(log -> requestHeaders(log.requestHeaders()), REQUEST_HEADERS);
         child.addListener(log -> requestContent(log.requestContent(), log.rawRequestContent()),
                           REQUEST_CONTENT);
-        child.addListener(log -> endRequest0(log.requestCause(), log.requestEndTimeNanos()), REQUEST_END);
+        child.addListener(log -> {
+            increaseRequestLength(log.requestLength());
+            endRequest0(log.requestCause(), log.requestEndTimeNanos());
+        }, REQUEST_END);
     }
 
     @Override
@@ -197,6 +200,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (lastChild.isAvailable(RESPONSE_END)) {
+            increaseResponseLength(lastChild.responseLength());
             endResponse0(lastChild.responseCause(), lastChild.responseEndTimeNanos());
         }
 
@@ -207,8 +211,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
-        lastChild.addListener(log -> endResponse0(
-                log.responseCause(), log.responseEndTimeNanos()), RESPONSE_END);
+        lastChild.addListener(log -> {
+            increaseResponseLength(lastChild.responseLength());
+            endResponse0(log.responseCause(), log.responseEndTimeNanos());
+        }, RESPONSE_END);
     }
 
     @Override
@@ -892,16 +898,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
            .append(res)
            .append('}');     // 1 char
         if (children != null && children.size() > 1) {
-            buf.append(", {totalAttempts=");
-            buf.append(children.size());
-            buf.append("}[");
+            buf.append(", {");
             for (int i = 0; i < children.size(); i++) {
+                buf.append('[');
                 buf.append(children.get(i));
+                buf.append(']');
                 if (i != children.size() - 1) {
                     buf.append(", ");
                 }
             }
-            buf.append(']');
+            buf.append('}');
         }
         return buf.toString();
     }
@@ -1003,6 +1009,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
         }
         buf.append('}');
+
+        if (children != null && children.size() > 1) {
+            buf.append(", {totalAttempts=");
+            buf.append(children.size());
+            buf.append('}');
+        }
 
         responseStr = buf.toString();
         responseStrFlags = flags;

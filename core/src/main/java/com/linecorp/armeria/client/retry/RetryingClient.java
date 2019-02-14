@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
+import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -47,6 +48,12 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
+
+    /**
+     * An Armeria specific header. This header is used to represent the total attempts.
+     * The server might use this value to reject excessive retries, etc.
+     */
+    public static final AsciiString TOTAL_ATTEMPTS = AsciiString.cached("total-attempts");
 
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(RetryingClient.class, "STATE");
@@ -228,6 +235,13 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         }
 
         return nextDelay;
+    }
+
+    /**
+     * Returns the total attempts number of the current request.
+     */
+    protected static int getTotalAttempts(ClientRequestContext ctx) {
+        return ctx.attr(STATE).get().totalAttemptNo;
     }
 
     private static class State {

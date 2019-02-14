@@ -98,12 +98,17 @@ public final class RequestMetricSupport {
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
         updateMetrics(log, metrics);
-        final Throwable responseCause = log.responseCause();
-        if (responseCause instanceof WriteTimeoutException) {
-            metrics.writeTimeouts().increment();
-        } else if (responseCause instanceof ResponseTimeoutException) {
+        if (log.requestCause() != null) {
+            if (log.requestCause() instanceof WriteTimeoutException) {
+                metrics.writeTimeouts().increment();
+            }
+            return;
+        }
+
+        if (log.responseCause() instanceof ResponseTimeoutException) {
             metrics.responseTimeouts().increment();
         }
+        metrics.actualRequests().increment(log.children().size());
     }
 
     private static void updateMetrics(RequestLog log, RequestMetrics metrics) {
@@ -163,6 +168,8 @@ public final class RequestMetricSupport {
     }
 
     private interface ClientRequestMetrics extends RequestMetrics {
+        Counter actualRequests();
+
         Counter writeTimeouts();
 
         Counter responseTimeouts();
@@ -240,14 +247,22 @@ public final class RequestMetricSupport {
     private static class DefaultClientRequestMetrics
             extends AbstractRequestMetrics implements ClientRequestMetrics {
 
+        private final Counter actualRequests;
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
+
+            actualRequests = parent.counter(idPrefix.name("actualRequests"), idPrefix.tags());
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
+        }
+
+        @Override
+        public Counter actualRequests() {
+            return actualRequests;
         }
 
         @Override

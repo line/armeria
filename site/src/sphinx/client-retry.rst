@@ -331,12 +331,12 @@ do the reverse:
             .decorator(LoggingClient.newDecorator())
             .build();
 
-This will produce only single request and response log pair regardless how many attempts are made:
+This will produce only single request and response log pair and the total attempts count:
 
 .. code-block:: java
 
     LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
-    LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=200, ...]
+    LoggingClient - Response: {startTime=..., length=..., headers=[:status=200, ...]}, {totalAttempts=3}
 
 .. note::
 

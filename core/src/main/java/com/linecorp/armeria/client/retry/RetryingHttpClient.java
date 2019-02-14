@@ -170,6 +170,12 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         if (!hasInitialAuthority) {
             duplicateReq.headers().remove(HttpHeaderNames.AUTHORITY);
         }
+
+        final int totalAttempts = getTotalAttempts(ctx);
+        if (totalAttempts > 1) {
+            duplicateReq.headers().setInt(TOTAL_ATTEMPTS, totalAttempts);
+        }
+
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx, duplicateReq, fallback);
 
         derivedCtx.log().addListener(log -> {
