@@ -24,6 +24,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -403,6 +404,15 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
         this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
+    }
+
+    /**
+     * Marks this {@link ServiceRequestContext} as having been timed out. Any callbacks created with
+     * {@code makeContextAware} that are run after this will be failed with {@link CancellationException}.
+     */
+    @Override
+    public void setTimedOut() {
+        super.setTimedOut();
     }
 
     @Override

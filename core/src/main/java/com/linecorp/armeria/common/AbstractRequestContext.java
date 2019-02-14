@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
@@ -151,7 +152,10 @@ public abstract class AbstractRequestContext implements RequestContext {
     /**
      * Marks this {@link RequestContext} as having been timed out. Any callbacks created with
      * {@code makeContextAware} that are run after this will be failed with {@link CancellationException}.
+     *
+     * @deprecated Use {@link DefaultServiceRequestContext#setTimedOut()}.
      */
+    @Deprecated
     public void setTimedOut() {
         timedOut = true;
     }

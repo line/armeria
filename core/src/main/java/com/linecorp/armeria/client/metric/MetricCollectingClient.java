@@ -69,7 +69,7 @@ public final class MetricCollectingClient<I extends Request, O extends Response>
 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
-        RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
+        RequestMetricSupport.setup(ctx, meterIdPrefixFunction, false);
         return delegate().execute(ctx, req);
     }
 }
