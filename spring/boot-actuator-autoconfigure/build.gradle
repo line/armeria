@@ -1,0 +1,9 @@
+dependencies {
+    compile project(':spring:boot-autoconfigure')
+
+    compile 'org.springframework.boot:spring-boot-actuator-autoconfigure'
+
+    testCompile project(':spring:boot-starter')
+    testCompile 'org.springframework.boot:spring-boot-starter-actuator'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+}

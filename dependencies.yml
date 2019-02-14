@@ -405,6 +405,7 @@ org.springframework.boot:
     version: &SPRING_BOOT_VERSION '2.1.2.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
+  spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
