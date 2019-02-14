@@ -496,8 +496,8 @@ public interface RequestLog {
      * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
      *     {@link Function} is what is actually logged as content.
      */
-    String toStringRequestOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                               Function<Object, Object> contentSanitizer);
+    String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                               Function<Object, ?> contentSanitizer);
 
     /**
      * Returns the string representation of the {@link Response}, with no sanitization of headers or content.
@@ -512,6 +512,6 @@ public interface RequestLog {
      * @param contentSanitizer a {@link Function} for sanitizing response content for logging. The result of the
      *     {@link Function} is what is actually logged as content.
      */
-    String toStringResponseOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                Function<Object, Object> contentSanitizer);
+    String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                Function<Object, ?> contentSanitizer);
 }
