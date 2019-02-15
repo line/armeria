@@ -22,6 +22,8 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.RequestContext;
@@ -108,7 +110,11 @@ public final class RequestMetricSupport {
         if (log.responseCause() instanceof ResponseTimeoutException) {
             metrics.responseTimeouts().increment();
         }
-        metrics.actualRequests().increment(log.children().size());
+
+        final int childrenSize = log.children().size();
+        if (childrenSize > 0) {
+            metrics.actualRequests().increment(childrenSize);
+        }
     }
 
     private static void updateMetrics(RequestLog log, RequestMetrics metrics) {
@@ -183,6 +189,9 @@ public final class RequestMetricSupport {
 
     private abstract static class AbstractRequestMetrics implements RequestMetrics {
 
+        private final MeterRegistry parent;
+        private final MeterIdPrefix idPrefix;
+
         private final Counter success;
         private final Counter failure;
         private final Timer requestDuration;
@@ -192,6 +201,9 @@ public final class RequestMetricSupport {
         private final Timer totalDuration;
 
         AbstractRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
+            this.parent = parent;
+            this.idPrefix = idPrefix;
+
             final String requests = idPrefix.name("requests");
             success = parent.counter(requests, idPrefix.tags("result", "success"));
             failure = parent.counter(requests, idPrefix.tags("result", "failure"));
@@ -206,6 +218,14 @@ public final class RequestMetricSupport {
                     parent, idPrefix.name("responseLength"), idPrefix.tags());
             totalDuration = newTimer(
                     parent, idPrefix.name("totalDuration"), idPrefix.tags());
+        }
+
+        MeterRegistry parent() {
+            return parent;
+        }
+
+        MeterIdPrefix idPrefix() {
+            return idPrefix;
         }
 
         @Override
@@ -247,14 +267,14 @@ public final class RequestMetricSupport {
     private static class DefaultClientRequestMetrics
             extends AbstractRequestMetrics implements ClientRequestMetrics {
 
-        private final Counter actualRequests;
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
 
+        @Nullable
+        private Counter actualRequests;
+
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
-
-            actualRequests = parent.counter(idPrefix.name("actualRequests"), idPrefix.tags());
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
@@ -262,6 +282,10 @@ public final class RequestMetricSupport {
 
         @Override
         public Counter actualRequests() {
+            if (actualRequests == null) {
+                final MeterIdPrefix idPrefix = idPrefix();
+                actualRequests = parent().counter(idPrefix.name("actualRequests"), idPrefix.tags());
+            }
             return actualRequests;
         }
 

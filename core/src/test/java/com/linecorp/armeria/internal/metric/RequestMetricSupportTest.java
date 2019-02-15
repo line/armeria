@@ -75,7 +75,9 @@ public class RequestMetricSupportTest {
                                 .containsEntry("foo.responseDuration#count{httpStatus=200,method=POST}", 1.0)
                                 .containsEntry("foo.responseLength#count{httpStatus=200,method=POST}", 1.0)
                                 .containsEntry("foo.responseLength#total{httpStatus=200,method=POST}", 456.0)
-                                .containsEntry("foo.totalDuration#count{httpStatus=200,method=POST}", 1.0);
+                                .containsEntry("foo.totalDuration#count{httpStatus=200,method=POST}", 1.0)
+                                // This metric is inserted only when RetryingClient is Used.
+                                .doesNotContainKey("foo.actualRequests#count{httpStatus=200,method=POST}");
     }
 
     @Test
