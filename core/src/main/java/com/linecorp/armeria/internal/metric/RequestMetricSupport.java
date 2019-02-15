@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSumma
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 
 import javax.annotation.Nullable;
@@ -189,9 +190,6 @@ public final class RequestMetricSupport {
 
     private abstract static class AbstractRequestMetrics implements RequestMetrics {
 
-        private final MeterRegistry parent;
-        private final MeterIdPrefix idPrefix;
-
         private final Counter success;
         private final Counter failure;
         private final Timer requestDuration;
@@ -201,9 +199,6 @@ public final class RequestMetricSupport {
         private final Timer totalDuration;
 
         AbstractRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
-            this.parent = parent;
-            this.idPrefix = idPrefix;
-
             final String requests = idPrefix.name("requests");
             success = parent.counter(requests, idPrefix.tags("result", "success"));
             failure = parent.counter(requests, idPrefix.tags("result", "failure"));
@@ -218,14 +213,6 @@ public final class RequestMetricSupport {
                     parent, idPrefix.name("responseLength"), idPrefix.tags());
             totalDuration = newTimer(
                     parent, idPrefix.name("totalDuration"), idPrefix.tags());
-        }
-
-        MeterRegistry parent() {
-            return parent;
-        }
-
-        MeterIdPrefix idPrefix() {
-            return idPrefix;
         }
 
         @Override
@@ -267,14 +254,23 @@ public final class RequestMetricSupport {
     private static class DefaultClientRequestMetrics
             extends AbstractRequestMetrics implements ClientRequestMetrics {
 
+        private static final AtomicReferenceFieldUpdater<DefaultClientRequestMetrics, Counter>
+                actualRequestsUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                DefaultClientRequestMetrics.class, Counter.class, "actualRequests");
+
+        private final MeterRegistry parent;
+        private final MeterIdPrefix idPrefix;
+
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
 
         @Nullable
-        private Counter actualRequests;
+        private volatile Counter actualRequests;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
+            this.parent = parent;
+            this.idPrefix = idPrefix;
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
@@ -282,11 +278,16 @@ public final class RequestMetricSupport {
 
         @Override
         public Counter actualRequests() {
-            if (actualRequests == null) {
-                final MeterIdPrefix idPrefix = idPrefix();
-                actualRequests = parent().counter(idPrefix.name("actualRequests"), idPrefix.tags());
+            final Counter actualRequests = this.actualRequests;
+            if (actualRequests != null) {
+                return actualRequests;
             }
-            return actualRequests;
+
+            final Counter counter = parent.counter(idPrefix.name("actualRequests"), idPrefix.tags());
+            if (actualRequestsUpdater.compareAndSet(this, null, counter)) {
+                return counter;
+            }
+            return this.actualRequests;
         }
 
         @Override
