@@ -16,7 +16,7 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
@@ -42,7 +42,7 @@ import io.netty.channel.EventLoop;
  * by calling {@link #toResponseBodyPublisher()} which returns {@link ResponseBodyPublisher}.
  */
 final class ArmeriaHttpClientResponseSubscriber
-        implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
+        implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
 
     private final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
     private final EventLoop eventLoop = CommonPools.workerGroup().next();
@@ -58,7 +58,7 @@ final class ArmeriaHttpClientResponseSubscriber
     private Throwable completedCause;
 
     ArmeriaHttpClientResponseSubscriber(HttpResponse httpResponse) {
-        httpResponse.completionFuture().whenComplete(this);
+        httpResponse.completionFuture().handle(this);
         httpResponse.subscribe(this, eventLoop);
     }
 
@@ -115,16 +115,18 @@ final class ArmeriaHttpClientResponseSubscriber
     }
 
     @Override
-    public void accept(Void unused, Throwable cause) {
+    public Void apply(Void unused, Throwable cause) {
         if (future.isDone()) {
-            return;
+            return null;
         }
+
         if (cause != null && !(cause instanceof CancelledSubscriptionException) &&
             !(cause instanceof AbortedStreamException)) {
             future.completeExceptionally(cause);
         } else {
             future.complete(HttpHeaders.EMPTY_HEADERS);
         }
+        return null;
     }
 
     private Subscription ensureSubscribed() {

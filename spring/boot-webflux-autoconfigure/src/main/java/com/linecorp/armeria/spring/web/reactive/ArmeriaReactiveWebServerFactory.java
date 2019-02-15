@@ -155,11 +155,12 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final HttpResponse response = HttpResponse.from(future);
             final Disposable disposable = handler.handle(ctx, req, future, serverHeader).subscribe();
-            response.completionFuture().whenComplete((unused, cause) -> {
+            response.completionFuture().handle((unused, cause) -> {
                 if (cause != null) {
                     logger.debug("{} Response stream has been cancelled.", ctx, cause);
                     disposable.dispose();
                 }
+                return null;
             });
             return response;
         });
