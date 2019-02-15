@@ -312,10 +312,16 @@ This will produce following logs when there are three attempts:
 
     LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
     LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=500, ...]
-    LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
+    LoggingClient - Request: {startTime=..., ..., headers=[..., armeria-retry-count=1, ...]
     LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=500, ...]
-    LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
+    LoggingClient - Request: {startTime=..., ..., headers=[..., armeria-retry-count=2, ...]
     LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=200, ...]
+
+.. note::
+
+    Did you notice that the ``armeria-retry-count`` header is inserted from the second request?
+    :api:`RetryingClient` inserts it to indicate the retry count of a request.
+    The server might use this value to reject excessive retries, etc.
 
 If you want to log the first request and the last response, no matter if it's successful or not,
 do the reverse:
@@ -331,12 +337,13 @@ do the reverse:
             .decorator(LoggingClient.newDecorator())
             .build();
 
-This will produce only single request and response log pair regardless how many attempts are made:
+This will produce single request and response log pair and the total number of attempts only, regardless
+how many attempts are made:
 
 .. code-block:: java
 
     LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
-    LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=200, ...]
+    LoggingClient - Response: {startTime=..., length=..., headers=[:status=200, ...]}, {totalAttempts=3}
 
 .. note::
 

@@ -56,7 +56,7 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
     /**
      * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
      * The length of request is limited by default with the server-side parameter which is
-     * {@link Flags#DEFAULT_MAX_REQUEST_LENGTH}. If you are at client-side, you need to use
+     * {@link Flags#defaultMaxResponseLength()}. If you are at client-side, you need to use
      * {@link #HttpRequestDuplicator(HttpRequest, long)} and the {@code long} value should be greater than
      * the length of request or {@code 0} which disables the limit.
      * @param req the request that will publish data to subscribers

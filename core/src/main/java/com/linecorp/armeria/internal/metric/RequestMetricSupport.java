@@ -20,7 +20,10 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSumma
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
@@ -98,11 +101,20 @@ public final class RequestMetricSupport {
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
         updateMetrics(log, metrics);
-        final Throwable responseCause = log.responseCause();
-        if (responseCause instanceof WriteTimeoutException) {
-            metrics.writeTimeouts().increment();
-        } else if (responseCause instanceof ResponseTimeoutException) {
+        if (log.requestCause() != null) {
+            if (log.requestCause() instanceof WriteTimeoutException) {
+                metrics.writeTimeouts().increment();
+            }
+            return;
+        }
+
+        if (log.responseCause() instanceof ResponseTimeoutException) {
             metrics.responseTimeouts().increment();
+        }
+
+        final int childrenSize = log.children().size();
+        if (childrenSize > 0) {
+            metrics.actualRequests().increment(childrenSize);
         }
     }
 
@@ -163,6 +175,8 @@ public final class RequestMetricSupport {
     }
 
     private interface ClientRequestMetrics extends RequestMetrics {
+        Counter actualRequests();
+
         Counter writeTimeouts();
 
         Counter responseTimeouts();
@@ -240,14 +254,40 @@ public final class RequestMetricSupport {
     private static class DefaultClientRequestMetrics
             extends AbstractRequestMetrics implements ClientRequestMetrics {
 
+        private static final AtomicReferenceFieldUpdater<DefaultClientRequestMetrics, Counter>
+                actualRequestsUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                DefaultClientRequestMetrics.class, Counter.class, "actualRequests");
+
+        private final MeterRegistry parent;
+        private final MeterIdPrefix idPrefix;
+
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
 
+        @Nullable
+        private volatile Counter actualRequests;
+
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
+            this.parent = parent;
+            this.idPrefix = idPrefix;
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
+        }
+
+        @Override
+        public Counter actualRequests() {
+            final Counter actualRequests = this.actualRequests;
+            if (actualRequests != null) {
+                return actualRequests;
+            }
+
+            final Counter counter = parent.counter(idPrefix.name("actualRequests"), idPrefix.tags());
+            if (actualRequestsUpdater.compareAndSet(this, null, counter)) {
+                return counter;
+            }
+            return this.actualRequests;
         }
 
         @Override
