@@ -46,9 +46,6 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
 
     private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
 
-    private static final String REQUEST_FORMAT = "{} Request: {}";
-    private static final String RESPONSE_FORMAT = "{} Response: {}";
-
     /**
      * Returns a new {@link Client} decorator that logs {@link Request}s and {@link Response}s at
      * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
@@ -79,10 +76,11 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     private final LogLevel requestLogLevel;
     private final LogLevel successfulResponseLogLevel;
     private final LogLevel failedResponseLogLevel;
-    private final Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer;
-    private final Function<Object, Object> requestContentSanitizer;
-    private final Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer;
-    private final Function<Object, Object> responseContentSanitizer;
+    private final Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer;
+    private final Function<Object, ?> requestContentSanitizer;
+    private final Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer;
+    private final Function<Object, ?> responseContentSanitizer;
+    private final Function<? super Throwable, ? extends Throwable> responseCauseSanitizer;
     private final Sampler sampler;
 
     /**
@@ -111,6 +109,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
              Function.identity(),
              Function.identity(),
              Function.identity(),
+             Function.identity(),
              Sampler.always());
     }
 
@@ -122,10 +121,11 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
                   LogLevel requestLogLevel,
                   LogLevel successfulResponseLogLevel,
                   LogLevel failedResponseLogLevel,
-                  Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer,
-                  Function<Object, Object> requestContentSanitizer,
-                  Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
-                  Function<Object, Object> responseContentSanitizer,
+                  Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+                  Function<Object, ?> requestContentSanitizer,
+                  Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
+                  Function<Object, ?> responseContentSanitizer,
+                  Function<? super Throwable, ? extends Throwable> responseCauseSanitizer,
                   Sampler sampler) {
         super(requireNonNull(delegate, "delegate"));
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
@@ -135,7 +135,8 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
-        this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "resposneContentSanitizer");
+        this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
+        this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         this.sampler = requireNonNull(sampler, "sampler");
     }
 
@@ -143,13 +144,17 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled()) {
             ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
-                                                    requestHeadersSanitizer, requestContentSanitizer),
+                                                    requestHeadersSanitizer,
+                                                    requestContentSanitizer),
                                   RequestLogAvailability.REQUEST_END);
             ctx.log().addListener(log -> logResponse(logger, log, requestLogLevel,
-                                                     requestHeadersSanitizer, requestContentSanitizer,
+                                                     requestHeadersSanitizer,
+                                                     requestContentSanitizer,
                                                      successfulResponseLogLevel,
-                                                     failedResponseLogLevel, responseHeadersSanitizer,
-                                                     responseContentSanitizer),
+                                                     failedResponseLogLevel,
+                                                     responseHeadersSanitizer,
+                                                     responseContentSanitizer,
+                                                     responseCauseSanitizer),
                                   RequestLogAvailability.COMPLETE);
         }
         return delegate().execute(ctx, req);

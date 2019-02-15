@@ -912,8 +912,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringRequestOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                      Function<Object, Object> contentSanitizer) {
+    public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                      Function<Object, ?> contentSanitizer) {
         final int flags = this.flags & 0xFFFF; // Only interested in the bits related with request.
         if (requestStrFlags == flags) {
             return requestStr;
@@ -966,8 +966,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringResponseOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                       Function<Object, Object> contentSanitizer) {
+    public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                       Function<Object, ?> contentSanitizer) {
 
         final int flags = this.flags & 0xFFFF0000; // Only interested in the bits related with response.
         if (responseStrFlags == flags) {
