@@ -176,19 +176,13 @@ public interface ContentPreviewerFactory {
     /**
      * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
      * which produces the text with the maximum {@code length} limit
-     * if the content type of a request/response matches
-     * any of the following media types.
+     * if the content type of a request/response meets
+     * any of the following situations.
      * <ul>
-     *     <li>{@code text/*}</li>
-     *     <li>{@code application/json}</li>
-     *     <li>{@code application/hal+json}</li>
-     *     <li>{@code application/manifest+json}</li>
-     *     <li>{@code application/xml}</li>
-     *     <li>{@code application/atom+xml}</li>
-     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
-     *     <li>{@code application/soap+xml}</li>
-     *     <li>{@code application/dart}</li>
-     *     <li>{@code application/x-www-form-urlencoded}</li>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
      *
      * @param length the maximum length of the preview.
@@ -196,25 +190,19 @@ public interface ContentPreviewerFactory {
      *                       {@code "Content-Type"} header.
      */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset) {
-        return ofText(length, defaultCharset, ArmeriaHttpUtil.HTTP_TEXTUAL_MEDIA_TYPES);
+        return new TextualContentPreviewerFactory(() -> ContentPreviewer.ofText(length, defaultCharset));
     }
 
     /**
      * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
      * which produces the text with the maximum {@code length} limit
-     * if the content type of a request/response matches
-     * any of the following media types.
+     * if the content type of a request/response meets
+     * any of the following situations.
      * <ul>
-     *     <li>{@code text/*}</li>
-     *     <li>{@code application/json}</li>
-     *     <li>{@code application/hal+json}</li>
-     *     <li>{@code application/manifest+json}</li>
-     *     <li>{@code application/xml}</li>
-     *     <li>{@code application/atom+xml}</li>
-     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
-     *     <li>{@code application/soap+xml}</li>
-     *     <li>{@code application/dart}</li>
-     *     <li>{@code application/x-www-form-urlencoded}</li>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
      * @param length the maximum length of the preview.
      */

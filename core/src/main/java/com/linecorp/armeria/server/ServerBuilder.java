@@ -1236,19 +1236,13 @@ public final class ServerBuilder {
     /**
      * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
      * with the maxmium {@code length} limit for a request and a response of this {@link Server}.
-     * The previewer is enabled only
-     * when {@code "Content-Type"} header matches any of the following media types.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following situations.
      * <ul>
-     *     <li>{@code text/*}</li>
-     *     <li>{@code application/json}</li>
-     *     <li>{@code application/hal+json}</li>
-     *     <li>{@code application/manifest+json}</li>
-     *     <li>{@code application/xml}</li>
-     *     <li>{@code application/atom+xml}</li>
-     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
-     *     <li>{@code application/soap+xml}</li>
-     *     <li>{@code application/dart}</li>
-     *     <li>{@code application/x-www-form-urlencoded}</li>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
      * @param length the maximum length of the preview.
      * @param defaultCharset the default charset for a request/response with unspecified charset in
@@ -1261,19 +1255,13 @@ public final class ServerBuilder {
     /**
      * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
      * with the maxmium {@code length} limit for a request and a response of this {@link Server}.
-     * The previewer is enabled only
-     * when {@code "Content-Type"} header matches any of the following media types.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following situations.
      * <ul>
-     *     <li>{@code text/*}</li>
-     *     <li>{@code application/json}</li>
-     *     <li>{@code application/hal+json}</li>
-     *     <li>{@code application/manifest+json}</li>
-     *     <li>{@code application/xml}</li>
-     *     <li>{@code application/atom+xml}</li>
-     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
-     *     <li>{@code application/soap+xml}</li>
-     *     <li>{@code application/dart}</li>
-     *     <li>{@code application/x-www-form-urlencoded}</li>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
      * @param length the maximum length of the preview.
      */

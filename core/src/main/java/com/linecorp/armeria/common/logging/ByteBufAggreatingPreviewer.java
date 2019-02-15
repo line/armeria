@@ -32,10 +32,10 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 
-abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
+abstract class ByteBufAggreatingPreviewer implements ContentPreviewer {
 
     private static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
-    private int capacity;
+    private int maxAggregatedLength;
     private final List<ByteBuf> bufferList;
     @Nullable
     private HttpHeaders headers;
@@ -43,28 +43,26 @@ abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
     private String produced;
     private int aggregatedLength;
 
-    ByteBufAggreatedPreviewer(int capacity) {
-        checkArgument(capacity >= 0, "capacity: %d (expected: >= 0)", capacity);
-        this.capacity = capacity;
+    ByteBufAggreatingPreviewer(int maxAggregatedLength) {
+        checkArgument(maxAggregatedLength >= 0,
+                      "maxAggregatedLength: %d (expected: >= 0)", maxAggregatedLength);
+        this.maxAggregatedLength = maxAggregatedLength;
         bufferList = new ArrayList<>();
     }
 
-    ByteBufAggreatedPreviewer() {
-        bufferList = new ArrayList<>();
-        capacity = 0;
+    ByteBufAggreatingPreviewer() {
+        this(0);
     }
 
-    void increaseCapacity(int delta) {
-        checkArgument(delta >= 0, "delta: %d (expected: >= 0)", delta);
-        if (Integer.MAX_VALUE - delta >= capacity) {
-            capacity = Integer.MAX_VALUE;
-        } else {
-            capacity += delta;
-        }
+    void maxAggregatedLength(int length) {
+        checkArgument(length > 0,
+                      "length: %d (expected: > 0", length);
+        maxAggregatedLength = length;
     }
 
-    static ContentPreviewer create(int capacity, BiFunction<HttpHeaders, ByteBuf, String> reproducer) {
-        return new ByteBufAggreatedPreviewer(capacity) {
+    static ContentPreviewer create(int maxAggregatedLength,
+                                   BiFunction<? super HttpHeaders, ? super ByteBuf, String> reproducer) {
+        return new ByteBufAggreatingPreviewer(maxAggregatedLength) {
             @Override
             protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
                 return reproducer.apply(headers, wrappedBuffer);
@@ -80,6 +78,7 @@ abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
 
     @Override
     public void onData(HttpData data) {
+        assert maxAggregatedLength > 0 : "maxAggreagtedLength() should be called more than once.";
         if (data.isEmpty()) {
             return;
         }
@@ -91,7 +90,7 @@ abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
         }
         aggregatedLength += data.length();
         bufferList.add(newBuffer.retain());
-        if (aggregatedLength >= capacity) {
+        if (aggregatedLength >= maxAggregatedLength) {
             produce();
         }
     }

@@ -73,7 +73,6 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final Function<Object, Object> requestContentSanitizer;
     private final Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer;
     private final Function<Object, Object> responseContentSanitizer;
-
     private final Sampler sampler;
 
     /**
