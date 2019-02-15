@@ -194,6 +194,9 @@ public interface ContentPreviewerFactory {
      *                       {@code "Content-Type"} header.
      */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset) {
+        if (length == 0) {
+            return disabled();
+        }
         return new TextualContentPreviewerFactory(() -> ContentPreviewer.ofText(length, defaultCharset));
     }
 

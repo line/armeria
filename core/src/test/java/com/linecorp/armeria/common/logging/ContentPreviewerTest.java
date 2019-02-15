@@ -285,6 +285,14 @@ public class ContentPreviewerTest {
     }
 
     @Test
+    public void testProduce() {
+        assertThat(ContentPreviewer.ofText(0)).isEqualTo(ContentPreviewer.disabled());
+        assertThat(ContentPreviewer.ofBinary(0, a -> "")).isEqualTo(ContentPreviewer.disabled());
+        assertThat(ContentPreviewer.ofText(10)).isInstanceOf(StringContentPreviewer.class);
+        assertThat(ContentPreviewer.ofBinary(1, a -> "")).isInstanceOf(BinaryContentPreviewer.class);
+    }
+
+    @Test
     public void testClientLog() throws Exception {
         final MyHttpClient client = new MyHttpClient("/example", 10, 10);
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
