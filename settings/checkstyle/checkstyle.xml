@@ -78,9 +78,19 @@
   </module>
   <!-- Test classes -->
   <module name="RegexpSingleline">
-    <property name="format" value="org.assertj.core.api.Java6Assertions" />
+    <property name="format" value="org.assertj.core.api.Java6Assertions"/>
     <property name="message"
-              value="Java6Assertions must not be used with Java8. Use org.assertj.core.api.Assertions instead." />
+              value="Java6Assertions must not be used with Java8. Use org.assertj.core.api.Assertions instead."/>
+  </module>
+  <!--
+    for (;;) with spaces, e.g.
+    - for ( ;;)
+    - for (; ;)
+    - for (;; )
+  -->
+  <module name="RegexpSingleline">
+    <property name="format" value="for\s*(?:\(\s+;|\(;\s+;|\(;;\s+\))"/>
+    <property name="message" value="unnecessary spaces in for (;;)"/>
   </module>
 
   <module name="JavadocPackage"/>
