@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogListener;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 public class LoggingServiceTest {
 
@@ -176,6 +177,44 @@ public class LoggingServiceTest {
                             "headers: " + sanitizedRequestHeaders + ", content: clean request");
         verify(logger).info(RESPONSE_FORMAT,
                             "headers: " + sanitizedResponseHeaders + ", content: clean response");
+    }
+
+    @Test
+    public void sanitize_error() throws Exception {
+        final IllegalStateException dirtyCause = new IllegalStateException("dirty");
+        final AnticipatedException cleanCause = new AnticipatedException("clean");
+        final Function<Throwable, Throwable> responseCauseSanitizer = cause -> {
+            assertThat(cause).isSameAs(dirtyCause);
+            return cleanCause;
+        };
+        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
+                .requestLogLevel(LogLevel.INFO)
+                .successfulResponseLogLevel(LogLevel.INFO)
+                .responseCauseSanitizer(responseCauseSanitizer)
+                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        when(log.responseCause()).thenReturn(dirtyCause);
+        service.serve(ctx, REQUEST);
+        verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT);
+        verify(logger).warn(RESPONSE_FORMAT, "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT,
+                            cleanCause);
+    }
+
+    @Test
+    public void sanitize_error_silenced() throws Exception {
+        final IllegalStateException dirtyCause = new IllegalStateException("dirty");
+        final Function<Throwable, Throwable> responseCauseSanitizer = cause -> {
+            assertThat(cause).isSameAs(dirtyCause);
+            return null;
+        };
+        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
+                .requestLogLevel(LogLevel.INFO)
+                .successfulResponseLogLevel(LogLevel.INFO)
+                .responseCauseSanitizer(responseCauseSanitizer)
+                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        when(log.responseCause()).thenReturn(dirtyCause);
+        service.serve(ctx, REQUEST);
+        verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT);
+        verify(logger).warn(RESPONSE_FORMAT, "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT);
     }
 
     @Test

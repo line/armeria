@@ -71,7 +71,7 @@ public final class MetricCollectingService<I extends Request, O extends Response
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
+        RequestMetricSupport.setup(ctx, meterIdPrefixFunction, true);
         return delegate().serve(ctx, req);
     }
 }

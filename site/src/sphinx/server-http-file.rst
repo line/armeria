@@ -3,6 +3,10 @@
 Serving static files
 ====================
 
+.. note::
+
+    Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find a fully working example.
+
 Use :api:`HttpFileService` to serve static files under a certain directory. :api:`HttpFileService` supports
 ``GET`` and ``HEAD`` HTTP methods and will auto-fill ``Date``, ``Last-Modified``, ``ETag`` and auto-detected
 ``Content-Type`` headers for you. It is also capable of sending a ``304 Not Modified`` response based on
@@ -21,6 +25,28 @@ Use :api:`HttpFileService` to serve static files under a certain directory. :api
     sb.serviceUnder("/resources",
                     HttpFileService.forClassPath("/com/example/resources"));
 
+Auto-generating directory listings
+----------------------------------
+
+You can configure :api:`HttpFileService` to generate the directory listing of the directories without
+an ``index.html`` file using the ``autoIndex(boolean)`` method in :api:`HttpFileServiceBuilder`.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.file.HttpFileServiceBuilder;
+
+    HttpFileServiceBuilder fsb =
+            HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
+
+    // Enable auto-index.
+    fsb.autoIndex(true);
+
+    HttpFileService fs = fsb.build();
+
+.. note::
+
+   Be careful when you enable this feature in production environment; consider its security implications.
+
 Adjusting static file cache
 ---------------------------
 
@@ -29,7 +55,8 @@ By default, :api:`HttpFileService` caches up to 1024 files whose length is less 
 
 .. code-block:: java
 
-    HttpFileServiceBuilder fsb = HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
+    HttpFileServiceBuilder fsb =
+            HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
 
     // Cache up to 4096 files.
     fsb.maxCacheEntries(4096);
@@ -82,9 +109,12 @@ This behavior is enabled by calling ``serveCompressedFiles(true)`` for :api:`Htt
 
 .. code-block:: java
 
-    HttpFileServiceBuilder fsb = HttpFileServiceBuilder.forClassPath("/com/example/resources");
+    HttpFileServiceBuilder fsb =
+            HttpFileServiceBuilder.forClassPath("/com/example/resources");
+
     // Enable serving pre-compressed files.
     fsb.serveCompressedFiles(true);
+
     HttpFileService fs = fsb.build();
 
 Serving an individual file
@@ -114,8 +144,10 @@ path, which is useful when serving a frontend application with client-side routi
 
     ServerBuilder sb = new ServerBuilder();
     // Register the file service for assets.
-    sb.serviceUnder("/node_modules", HttpFileService.forFileSystem("/var/lib/www/node_modules"));
-    sb.serviceUnder("/static", HttpFileService.forFileSystem("/var/lib/www/static"));
+    sb.serviceUnder("/node_modules",
+                    HttpFileService.forFileSystem("/var/lib/www/node_modules"));
+    sb.serviceUnder("/static",
+                    HttpFileService.forFileSystem("/var/lib/www/static"));
     // Register the fallback file service.
     sb.serviceUnder("/", index.asService());
 

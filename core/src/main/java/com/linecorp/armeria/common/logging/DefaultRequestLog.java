@@ -977,17 +977,18 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
            .append(", res=") // 6 chars
            .append(res)
            .append('}');     // 1 char
-        if (children != null && children.size() > 1) {
-            buf.append(", {totalAttempts=");
-            buf.append(children.size());
-            buf.append("}[");
-            for (int i = 0; i < children.size(); i++) {
+        final int numChildren = children != null ? children.size() : 0;
+        if (numChildren > 0) {
+            buf.append(", {");
+            for (int i = 0; i < numChildren; i++) {
+                buf.append('[');
                 buf.append(children.get(i));
-                if (i != children.size() - 1) {
+                buf.append(']');
+                if (i != numChildren - 1) {
                     buf.append(", ");
                 }
             }
-            buf.append(']');
+            buf.append('}');
         }
         return buf.toString();
     }
@@ -998,8 +999,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringRequestOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                      Function<Object, Object> contentSanitizer) {
+    public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                      Function<Object, ?> contentSanitizer) {
         final int flags = this.flags & 0xFFFF; // Only interested in the bits related with request.
         if (requestStrFlags == flags) {
             return requestStr;
@@ -1054,8 +1055,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringResponseOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                       Function<Object, Object> contentSanitizer) {
+    public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                       Function<Object, ?> contentSanitizer) {
 
         final int flags = this.flags & 0xFFFF0000; // Only interested in the bits related with response.
         if (responseStrFlags == flags) {
@@ -1093,6 +1094,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
         }
         buf.append('}');
+
+        final int numChildren = children != null ? children.size() : 0;
+        if (numChildren > 1) {
+            // Append only when there were retries which the numChildren is greater than 1.
+            buf.append(", {totalAttempts=");
+            buf.append(numChildren);
+            buf.append('}');
+        }
 
         responseStr = buf.toString();
         responseStrFlags = flags;

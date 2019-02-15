@@ -1,6 +1,7 @@
 dependencies {
     compile project(':core')
     compile 'io.projectreactor:reactor-core'
+    runtime 'org.slf4j:slf4j-simple'
 
     testCompile 'io.projectreactor:reactor-test'
     testCompile 'junit:junit'

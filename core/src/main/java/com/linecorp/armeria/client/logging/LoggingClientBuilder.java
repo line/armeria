@@ -42,6 +42,7 @@ public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientB
                                    requestContentSanitizer(),
                                    responseHeadersSanitizer(),
                                    responseContentSanitizer(),
+                                   responseCauseSanitizer(),
                                    Sampler.create(samplingRate()));
     }
 

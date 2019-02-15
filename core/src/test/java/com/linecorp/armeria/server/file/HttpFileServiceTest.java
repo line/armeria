@@ -93,12 +93,15 @@ public class HttpFileServiceTest {
         try {
             sb.serviceUnder(
                     "/cached/fs/",
-                    HttpFileService.forFileSystem(tmpDir.toPath()));
+                    HttpFileServiceBuilder.forFileSystem(tmpDir.toPath())
+                                          .autoIndex(true)
+                                          .build());
 
             sb.serviceUnder(
                     "/uncached/fs/",
                     HttpFileServiceBuilder.forFileSystem(tmpDir.toPath())
                                           .maxCacheEntries(0)
+                                          .autoIndex(true)
                                           .build());
 
             sb.serviceUnder(
@@ -250,6 +253,67 @@ public class HttpFileServiceTest {
     }
 
     @Test
+    public void testAutoIndex() throws Exception {
+        final File rootDir = new File(tmpDir, "auto_index");
+        final File childFile = new File(rootDir, "child_file");
+        final File childDir = new File(rootDir, "child_dir");
+        final File grandchildFile = new File(childDir, "grandchild_file");
+        final File emptyChildDir = new File(rootDir, "empty_child_dir");
+        final File childDirWithCustomIndex = new File(rootDir, "child_dir_with_custom_index");
+        final File customIndexFile = new File(childDirWithCustomIndex, "index.html");
+
+        childDir.mkdirs();
+        emptyChildDir.mkdirs();
+        childDirWithCustomIndex.mkdirs();
+
+        Files.write(childFile.toPath(), "child_file".getBytes(StandardCharsets.UTF_8));
+        Files.write(grandchildFile.toPath(), "grandchild_file".getBytes(StandardCharsets.UTF_8));
+        Files.write(customIndexFile.toPath(), "custom_index_file".getBytes(StandardCharsets.UTF_8));
+
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Ensure auto-redirect works as expected.
+            HttpUriRequest req = new HttpGet(newUri("/fs/auto_index"));
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 307 Temporary Redirect");
+                assertThat(header(res, "location")).isEqualTo(newPath("/fs/auto_index/"));
+            }
+
+            // Ensure directory listing works as expected.
+            req = new HttpGet(newUri("/fs/auto_index/"));
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                final String content = contentString(res);
+                assertThat(content)
+                        .contains("Directory listing: " + newPath("/fs/auto_index/"))
+                        .contains("4 file(s) total")
+                        .contains("<a href=\"../\">../</a>")
+                        .contains("<a href=\"child_dir/\">child_dir/</a>")
+                        .contains("<a href=\"child_file\">child_file</a>")
+                        .contains("<a href=\"child_dir_with_custom_index/\">child_dir_with_custom_index/</a>")
+                        .contains("<a href=\"empty_child_dir/\">empty_child_dir/</a>");
+            }
+
+            // Ensure directory listing on an empty directory works as expected.
+            req = new HttpGet(newUri("/fs/auto_index/empty_child_dir/"));
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                final String content = contentString(res);
+                assertThat(content)
+                        .contains("Directory listing: " + newPath("/fs/auto_index/empty_child_dir/"))
+                        .contains("0 file(s) total")
+                        .contains("<a href=\"../\">../</a>");
+            }
+
+            // Ensure custom index.html takes precedence over auto-generated directory listing.
+            req = new HttpGet(newUri("/fs/auto_index/child_dir_with_custom_index/"));
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                assertThat(contentString(res)).isEqualTo("custom_index_file");
+            }
+        }
+    }
+
+    @Test
     public void testUnknownMediaType() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal();
              CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.unknown")))) {
@@ -268,7 +332,7 @@ public class HttpFileServiceTest {
                 assertThat(res.getFirstHeader("Content-Encoding")).isNull();
                 assertThat(headerOrNull(res, "Content-Type")).isEqualTo(
                         "text/plain; charset=utf-8");
-                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                final byte[] content = content(res);
                 assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo");
 
                 // Confirm path not cached when cache disabled.
@@ -307,7 +371,7 @@ public class HttpFileServiceTest {
                         "text/plain; charset=utf-8");
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
-                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                final byte[] content = content(res);
                 assertThat(content).containsExactly(
                         Resources.toByteArray(Resources.getResource(baseResourceDir + "foo/foo.txt.br")));
             }
@@ -325,7 +389,7 @@ public class HttpFileServiceTest {
                         "text/plain; charset=utf-8");
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
-                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                final byte[] content = content(res);
                 assertThat(content).containsExactly(
                         Resources.toByteArray(Resources.getResource(baseResourceDir + "foo/foo.txt.br")));
             }
@@ -583,11 +647,23 @@ public class HttpFileServiceTest {
         return res.getFirstHeader(name).getValue();
     }
 
+    private static byte[] content(CloseableHttpResponse res) throws IOException {
+        return ByteStreams.toByteArray(res.getEntity().getContent());
+    }
+
+    private static String contentString(CloseableHttpResponse res) throws IOException {
+        return new String(ByteStreams.toByteArray(res.getEntity().getContent()), StandardCharsets.UTF_8);
+    }
+
     private static String currentHttpDate() {
         return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(UTC));
     }
 
     private String newUri(String path) {
-        return "http://127.0.0.1:" + httpPort + '/' + (cached ? "cached" : "uncached") + path;
+        return "http://127.0.0.1:" + httpPort + newPath(path);
+    }
+
+    private String newPath(String path) {
+        return '/' + (cached ? "cached" : "uncached") + path;
     }
 }

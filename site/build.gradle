@@ -44,11 +44,7 @@ task xref(group: 'Documentation',
 
     def outputDir = "${project.buildDir}/site/xref"
     def sourceDirs = aggregatedProjects.inject([]) { srcDirs, project ->
-        project.sourceSets.main.java.srcDirs.each {
-            if (it.exists()) {
-                srcDirs << it.path
-            }
-        }
+        project.sourceSets.main.java.srcDirs.each { srcDirs << it.path }
         return srcDirs
     }
 
@@ -63,7 +59,8 @@ task xref(group: 'Documentation',
         jxr.log = new JxrLog(logger: logger)
 
         def title = "Armeria ${project.version} cross-reference"
-        jxr.xref(sourceDirs, 'templates', title, title, rootProject.ext.copyrightFooter)
+        jxr.xref(sourceDirs.findAll { new File(it).isDirectory() }, 'templates',
+                 title, title, rootProject.ext.copyrightFooter)
         ant.copy(file: "${project.projectDir}/src/xref/stylesheet.css", todir: jxr.dest)
     }
 }
