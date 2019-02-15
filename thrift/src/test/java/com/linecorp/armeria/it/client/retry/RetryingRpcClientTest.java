@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.it.client.retry;
 
-import static com.linecorp.armeria.client.retry.RetryingClient.TOTAL_ATTEMPTS;
+import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -79,7 +79,7 @@ public class RetryingRpcClientTest {
                     (delegate, ctx, req) -> {
                         final int count = retryCount.getAndIncrement();
                         if (count != 0) {
-                            assertThat(count + 1).isEqualTo(req.headers().getInt(TOTAL_ATTEMPTS));
+                            assertThat(count).isEqualTo(req.headers().getInt(ARMERIA_RETRY_COUNT));
                         }
                         return delegate.serve(ctx, req);
                     }));

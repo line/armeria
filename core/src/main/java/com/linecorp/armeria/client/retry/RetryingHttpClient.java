@@ -173,7 +173,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
         final int totalAttempts = getTotalAttempts(ctx);
         if (totalAttempts > 1) {
-            duplicateReq.headers().setInt(TOTAL_ATTEMPTS, totalAttempts);
+            duplicateReq.headers().setInt(ARMERIA_RETRY_COUNT, totalAttempts - 1);
         }
 
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx, duplicateReq, fallback);

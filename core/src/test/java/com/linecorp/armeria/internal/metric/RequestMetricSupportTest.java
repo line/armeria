@@ -206,8 +206,8 @@ public class RequestMetricSupportTest {
         derivedCtx.logBuilder().requestLength(123);
 
         derivedCtx.logBuilder().responseHeaders(HttpHeaders.of(500));
-        ctx.logBuilder().responseFirstBytesTransferred();
-        ctx.logBuilder().responseLength(456);
+        derivedCtx.logBuilder().responseFirstBytesTransferred();
+        derivedCtx.logBuilder().responseLength(456);
         derivedCtx.logBuilder().endRequest();
         derivedCtx.logBuilder().endResponse();
     }

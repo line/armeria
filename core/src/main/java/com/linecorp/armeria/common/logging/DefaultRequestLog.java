@@ -167,7 +167,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         child.addListener(log -> requestContent(log.requestContent(), log.rawRequestContent()),
                           REQUEST_CONTENT);
         child.addListener(log -> {
-            increaseRequestLength(log.requestLength());
+            requestLength(log.requestLength());
             endRequest0(log.requestCause(), log.requestEndTimeNanos());
         }, REQUEST_END);
     }
@@ -200,7 +200,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (lastChild.isAvailable(RESPONSE_END)) {
-            increaseResponseLength(lastChild.responseLength());
+            responseLength(lastChild.responseLength());
             endResponse0(lastChild.responseCause(), lastChild.responseEndTimeNanos());
         }
 
@@ -212,7 +212,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
         lastChild.addListener(log -> {
-            increaseResponseLength(lastChild.responseLength());
+            responseLength(lastChild.responseLength());
             endResponse0(log.responseCause(), log.responseEndTimeNanos());
         }, RESPONSE_END);
     }
@@ -897,13 +897,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
            .append(", res=") // 6 chars
            .append(res)
            .append('}');     // 1 char
-        if (children != null && children.size() > 1) {
+        final int numChildren = children != null ? children.size() : 0;
+        if (numChildren > 0) {
             buf.append(", {");
-            for (int i = 0; i < children.size(); i++) {
+            for (int i = 0; i < numChildren; i++) {
                 buf.append('[');
                 buf.append(children.get(i));
                 buf.append(']');
-                if (i != children.size() - 1) {
+                if (i != numChildren - 1) {
                     buf.append(", ");
                 }
             }
@@ -1010,9 +1011,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
         buf.append('}');
 
-        if (children != null && children.size() > 1) {
+        final int numChildren = children != null ? children.size() : 0;
+        if (numChildren > 1) {
+            // Append only when there were retries which the numChildren is greater than 1.
             buf.append(", {totalAttempts=");
-            buf.append(children.size());
+            buf.append(numChildren);
             buf.append('}');
         }
 

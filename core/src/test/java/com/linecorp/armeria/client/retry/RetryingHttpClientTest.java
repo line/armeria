@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.RetryingClient.TOTAL_ATTEMPTS;
+import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -101,7 +101,7 @@ public class RetryingHttpClientTest {
                         throws Exception {
                     final int retryCount = reqCount.getAndIncrement();
                     if (retryCount != 0) {
-                        assertThat(retryCount + 1).isEqualTo(req.headers().getInt(TOTAL_ATTEMPTS));
+                        assertThat(retryCount).isEqualTo(req.headers().getInt(ARMERIA_RETRY_COUNT));
                     }
                     if (retryCount < 2) {
                         return HttpResponse.of("Need to retry");

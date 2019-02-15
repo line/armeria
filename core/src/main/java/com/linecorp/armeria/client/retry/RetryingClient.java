@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -50,10 +51,10 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
 
     /**
-     * An Armeria specific header. This header is used to represent the total attempts.
+     * The header which indicates the retry count of the {@link Request}.
      * The server might use this value to reject excessive retries, etc.
      */
-    public static final AsciiString TOTAL_ATTEMPTS = AsciiString.cached("total-attempts");
+    public static final AsciiString ARMERIA_RETRY_COUNT = HttpHeaderNames.of("armeria-retry-count");
 
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(RetryingClient.class, "STATE");
@@ -89,8 +90,8 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * Creates a new instance that decorates the specified {@link Client}.
      */
     private RetryingClient(Client<I, O> delegate, @Nullable RetryStrategy retryStrategy,
-                             @Nullable RetryStrategyWithContent<O> retryStrategyWithContent,
-                             int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+                           @Nullable RetryStrategyWithContent<O> retryStrategyWithContent,
+                           int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         super(delegate);
         this.retryStrategy = retryStrategy;
         this.retryStrategyWithContent = retryStrategyWithContent;
@@ -238,10 +239,17 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     }
 
     /**
-     * Returns the total attempts number of the current request.
+     * Returns the total number of attempts of the current request represented by the specified
+     * {@link ClientRequestContext}.
      */
     protected static int getTotalAttempts(ClientRequestContext ctx) {
-        return ctx.attr(STATE).get().totalAttemptNo;
+        final State state = ctx.attr(STATE).get();
+        if (state == null) {
+            throw new IllegalStateException("state is null. You should call " +
+                                            "RetryingClient.execute(ClientRequestContext ctx, I req) " +
+                                            "before this method is called.");
+        }
+        return state.totalAttemptNo;
     }
 
     private static class State {
