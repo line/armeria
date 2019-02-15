@@ -21,19 +21,27 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.buffer.ByteBuf;
 
-final class StringAggregatingPreviewer extends ByteBufAggregatingPreviewer {
+final class StringContentPreviewer extends BinaryContentPreviewer {
     private final Charset defaultCharset;
     private Charset charset;
     private final int length;
 
-    StringAggregatingPreviewer(int length, Charset defaultCharset) {
+    StringContentPreviewer(int length, Charset defaultCharset) {
+        super(0);
         checkArgument(length >= 0, "length: %d (expected: >= 0)", length);
         this.defaultCharset = requireNonNull(defaultCharset, "defaultCharset");
         this.length = length;
+    }
+
+    @VisibleForTesting
+    int length() {
+        return length;
     }
 
     @Override

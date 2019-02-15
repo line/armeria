@@ -27,6 +27,8 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -39,6 +41,9 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.ChainedVirtualHostBuilder;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.channel.Channel;
 
@@ -446,8 +451,17 @@ public interface RequestLog {
 
     /**
      * Returns the preview of response content of the {@link Request}.
+     * Note that the content preview needs to be enabled when configuring a {@link Server} or a {@link Client}
+     * to use this functionality.
      *
+     * @return the preview, or {@code null} if preview is not available or disabled.
      * @throws RequestLogAvailabilityException if this property is not available yet.
+     * @see ServerBuilder#contentPreview(int)
+     * @see ServerBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ChainedVirtualHostBuilder#contentPreview(int)
+     * @see ChainedVirtualHostBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ClientBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ClientBuilder#contentPreview(int)
      */
     @Nullable
     String requestContentPreview();
@@ -493,8 +507,17 @@ public interface RequestLog {
 
     /**
      * Returns the preview of response content of the {@link Response}.
+     * Note that the content preview needs to be enabled when configuring a {@link Server} or a {@link Client}
+     * to use this functionality.
      *
+     * @return the preview, or {@code null} if preview is not available or disabled.
      * @throws RequestLogAvailabilityException if this property is not available yet.
+     * @see ServerBuilder#contentPreview(int)
+     * @see ServerBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ChainedVirtualHostBuilder#contentPreview(int)
+     * @see ChainedVirtualHostBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ClientBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ClientBuilder#contentPreview(int)
      */
     @Nullable
     String responseContentPreview();

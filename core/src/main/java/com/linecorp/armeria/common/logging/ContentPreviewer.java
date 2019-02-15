@@ -49,7 +49,10 @@ public interface ContentPreviewer {
      */
     static ContentPreviewer ofBinary(int length,
                                      BiFunction<? super HttpHeaders, ? super ByteBuf, String> reproducer) {
-        return ByteBufAggregatingPreviewer.create(length, reproducer);
+        if (length == 0) {
+            return disabled();
+        }
+        return BinaryContentPreviewer.create(length, reproducer);
     }
 
     /**
@@ -64,7 +67,7 @@ public interface ContentPreviewer {
         if (length == 0) {
             return disabled();
         }
-        return new StringAggregatingPreviewer(length, defaultCharset);
+        return new StringContentPreviewer(length, defaultCharset);
     }
 
     /**
@@ -99,6 +102,7 @@ public interface ContentPreviewer {
      * Produces the preview of {@link RequestLog}.
      * Note that it is invoked when the request or response is ended
      * or the preview has been ready to be produced.
+     * @return the preview, or {@code null} if disabled.
      */
     @Nullable
     String produce();

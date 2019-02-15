@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +33,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 
-abstract class ByteBufAggregatingPreviewer implements ContentPreviewer {
+abstract class BinaryContentPreviewer implements ContentPreviewer {
 
     private static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
     private final List<ByteBuf> bufferList;
@@ -43,15 +44,11 @@ abstract class ByteBufAggregatingPreviewer implements ContentPreviewer {
     private int aggregatedLength;
     private int maxAggregatedLength;
 
-    ByteBufAggregatingPreviewer(int maxAggregatedLength) {
+    BinaryContentPreviewer(int maxAggregatedLength) {
         checkArgument(maxAggregatedLength >= 0,
                       "maxAggregatedLength: %d (expected: >= 0)", maxAggregatedLength);
         this.maxAggregatedLength = maxAggregatedLength;
         bufferList = new ArrayList<>();
-    }
-
-    ByteBufAggregatingPreviewer() {
-        this(0);
     }
 
     void maxAggregatedLength(int length) {
@@ -63,7 +60,8 @@ abstract class ByteBufAggregatingPreviewer implements ContentPreviewer {
 
     static ContentPreviewer create(int maxAggregatedLength,
                                    BiFunction<? super HttpHeaders, ? super ByteBuf, String> reproducer) {
-        return new ByteBufAggregatingPreviewer(maxAggregatedLength) {
+        requireNonNull(reproducer, "reproducer");
+        return new BinaryContentPreviewer(maxAggregatedLength) {
             @Override
             protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
                 return reproducer.apply(headers, wrappedBuffer);

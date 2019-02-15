@@ -84,6 +84,10 @@ public interface ContentPreviewerFactory {
             } else if (factory instanceof MappedContentPreviewerFactory) {
                 typeSet.addAll(((MappedContentPreviewerFactory) factory).entries);
             } else {
+                if (!typeSet.isEmpty()) {
+                    factoryList.add(new MappedContentPreviewerFactory(typeSet));
+                    typeSet.clear();
+                }
                 factoryList.add(factory);
             }
         }
