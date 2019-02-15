@@ -320,7 +320,7 @@ This will produce following logs when there are three attempts:
 .. note::
 
     Did you notice that the ``armeria-retry-count`` header is inserted from the second request?
-    :api:`RetryingClient` inserts the header to indicate the retry count of the request.
+    :api:`RetryingClient` inserts it to indicate the retry count of a request.
     The server might use this value to reject excessive retries, etc.
 
 If you want to log the first request and the last response, no matter if it's successful or not,

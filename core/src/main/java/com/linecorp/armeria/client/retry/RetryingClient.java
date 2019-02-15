@@ -51,7 +51,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
 
     /**
-     * The header which indicates the retry count of the {@link Request}.
+     * The header which indicates the retry count of a {@link Request}.
      * The server might use this value to reject excessive retries, etc.
      */
     public static final AsciiString ARMERIA_RETRY_COUNT = HttpHeaderNames.of("armeria-retry-count");
@@ -245,9 +245,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     protected static int getTotalAttempts(ClientRequestContext ctx) {
         final State state = ctx.attr(STATE).get();
         if (state == null) {
-            throw new IllegalStateException("state is null. You should call " +
-                                            "RetryingClient.execute(ClientRequestContext ctx, I req) " +
-                                            "before this method is called.");
+            return 0;
         }
         return state.totalAttemptNo;
     }

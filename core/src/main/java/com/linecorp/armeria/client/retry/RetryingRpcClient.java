@@ -109,7 +109,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
         final int totalAttempts = getTotalAttempts(ctx);
         if (totalAttempts > 1) {
-            derivedCtx.addAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
+            derivedCtx.setAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
         }
 
         final RpcResponse res = executeWithFallback(delegate(), derivedCtx, req, fallback);
