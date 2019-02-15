@@ -28,6 +28,9 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBuf;
 
+/**
+ * Produces the preview of {@link RequestLog}.
+ */
 public interface ContentPreviewer {
 
     /**
@@ -70,6 +73,9 @@ public interface ContentPreviewer {
         return ofText(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
+    /**
+     * A dummy {@link ContentPreviewer} which discards everything it collected and produces {@code null}.
+     */
     static ContentPreviewer disabled() {
         return NoopContentPreviewer.INSTANCE;
     }
@@ -87,13 +93,14 @@ public interface ContentPreviewer {
     void onData(HttpData data);
 
     /**
-     * Produces the preview.
-     * Note that it is invoked when the request or response is ended.
+     * Produces the preview of {@link RequestLog}.
+     * Note that it is invoked when the request or response is ended
+     * or the preview has been ready to be produced.
      */
     String produce();
 
     /**
-     * Determines if the previewer has been ready to produce the preview.
+     * Determines if the previewer has been ready to be produced the preview or it is already produced.
      */
     boolean isDone();
 }

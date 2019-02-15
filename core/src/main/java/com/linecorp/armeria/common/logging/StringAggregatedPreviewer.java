@@ -44,7 +44,7 @@ final class StringAggregatedPreviewer extends ByteBufAggreatedPreviewer {
         } else {
             charset = defaultCharset;
         }
-        final int maxBytesPerChar = (int)Math.ceil(charset.newEncoder().maxBytesPerChar());
+        final int maxBytesPerChar = (int) Math.ceil(charset.newEncoder().maxBytesPerChar());
         increaseCapacity(maxBytesPerChar * length);
     }
 

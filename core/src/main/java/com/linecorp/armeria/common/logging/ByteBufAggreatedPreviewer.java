@@ -98,7 +98,7 @@ abstract class ByteBufAggreatedPreviewer implements ContentPreviewer {
 
     @Override
     public boolean isDone() {
-        return produced != null || aggregatedLength >= capacity;
+        return produced != null;
     }
 
     protected abstract String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer);

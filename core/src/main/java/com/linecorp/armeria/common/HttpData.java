@@ -247,6 +247,11 @@ public interface HttpData extends HttpObject {
     int length();
 
     /**
+     * Duplicates this {@link HttpData}.
+     */
+    HttpData duplicate();
+
+    /**
      * Returns whether the {@link #length()} is 0.
      */
     default boolean isEmpty() {

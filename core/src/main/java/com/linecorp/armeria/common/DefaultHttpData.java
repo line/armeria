@@ -54,6 +54,11 @@ public final class DefaultHttpData extends AbstractHttpData {
     }
 
     @Override
+    public HttpData duplicate() {
+        return new DefaultHttpData(data, offset, length, endOfStream);
+    }
+
+    @Override
     @SuppressWarnings("ImplicitArrayToString")
     public String toString() {
         return MoreObjects.toStringHelper(this)

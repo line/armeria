@@ -364,7 +364,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         final HttpData content = message.content();
 
         logBuilder().responseHeaders(headers);
-        logBuilder().increaseResponseLength(content.length());
+        logBuilder().increaseResponseLength(content);
 
         final State oldState = setDone();
         subscription.cancel();

@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.TextFormatter;
 
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.util.internal.PlatformDependent;
 
@@ -521,14 +520,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (requestContentPreviewer.isDone()) {
             return;
         }
-        HttpData httpData = data;
-        if (httpData instanceof ByteBufHolder) {
-            final ByteBufHolder duplicated = ((ByteBufHolder) httpData).duplicate();
-            if (duplicated instanceof HttpData) {
-                httpData = (HttpData) duplicated;
-            }
-        }
-        requestContentPreviewer.onData(httpData);
+        requestContentPreviewer.onData(data.duplicate());
     }
 
     @Override
@@ -760,14 +752,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (responseContentPreviewer.isDone()) {
             return;
         }
-        HttpData httpData = data;
-        if (httpData instanceof ByteBufHolder) {
-            final ByteBufHolder duplicated = ((ByteBufHolder) httpData).duplicate();
-            if (duplicated instanceof HttpData) {
-                httpData = (HttpData) duplicated;
-            }
-        }
-        responseContentPreviewer.onData(httpData);
+        responseContentPreviewer.onData(data.duplicate());
     }
 
     @Override

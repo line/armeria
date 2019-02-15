@@ -204,8 +204,12 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
      * <ul>
      *     <li>{@code text/*}</li>
      *     <li>{@code application/json}</li>
+     *     <li>{@code application/hal+json}</li>
+     *     <li>{@code application/manifest+json}</li>
      *     <li>{@code application/xml}</li>
-     *     <li>{@code application/atom}</li>
+     *     <li>{@code application/atom+xml}</li>
+     *     <li>{@code application/vnd.google-earth.kml+xml}</li>
+     *     <li>{@code application/soap+xml}</li>
      *     <li>{@code application/dart}</li>
      *     <li>{@code application/x-www-form-urlencoded}</li>
      * </ul>

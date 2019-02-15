@@ -37,6 +37,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
+/**
+ * A factory creating a {@link ContentPreviewer}.
+ */
 @FunctionalInterface
 public interface ContentPreviewerFactory {
 
@@ -69,6 +72,7 @@ public interface ContentPreviewerFactory {
      * which wraps a list of {@link ContentPreviewerFactory}s.
      */
     static ContentPreviewerFactory of(Iterable<? extends ContentPreviewerFactory> factories) {
+        requireNonNull(factories, "factories");
         final List<ContentPreviewerFactory> factoryList = new ArrayList<>();
         final Set<Entry<MediaType, Supplier<ContentPreviewer>>> typeSet = new LinkedHashSet<>();
         for (ContentPreviewerFactory factory : factories) {
@@ -111,6 +115,7 @@ public interface ContentPreviewerFactory {
      */
     static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier,
                                       Iterable<MediaType> contentTypes) {
+        requireNonNull(contentTypes, "contentTypes");
         final Map<MediaType, Supplier<? extends ContentPreviewer>> maps = new HashMap<>();
         for (MediaType type : contentTypes) {
             maps.put(type, supplier);
@@ -217,6 +222,9 @@ public interface ContentPreviewerFactory {
         return ofText(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
+    /**
+     * A dummy {@link ContentPreviewerFactory} which returns {@link ContentPreviewer#disabled()}.
+     */
     static ContentPreviewerFactory disabled() {
         return NoopContentPreviewerFactory.INSTANCE;
     }
