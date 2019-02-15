@@ -83,14 +83,12 @@ abstract class ByteBufAggregatingPreviewer implements ContentPreviewer {
         if (data.isEmpty()) {
             return;
         }
-        final ByteBuf newBuffer;
         if (data instanceof ByteBufHolder) {
-            newBuffer = ((ByteBufHolder) data).content();
+            bufferList.add(((ByteBufHolder) data).content().retainedDuplicate());
         } else {
-            newBuffer = Unpooled.wrappedBuffer(data.array(), data.offset(), data.length());
+            bufferList.add(Unpooled.wrappedBuffer(data.array(), data.offset(), data.length()));
         }
         aggregatedLength += data.length();
-        bufferList.add(newBuffer.retainedDuplicate());
         if (aggregatedLength >= maxAggregatedLength) {
             produce();
         }
