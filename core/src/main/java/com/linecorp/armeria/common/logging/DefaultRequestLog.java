@@ -189,7 +189,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                           REQUEST_CONTENT);
         child.addListener(log -> {
             requestLength(log.requestLength());
-            requestContentPreview = log.requestContentPreview();
+            requestContentPreview(log.requestContentPreview());
             endRequest0(log.requestCause(), log.requestEndTimeNanos());
         }, REQUEST_END);
     }
@@ -223,7 +223,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         if (lastChild.isAvailable(RESPONSE_END)) {
             responseLength(lastChild.responseLength());
-            responseContentPreview = lastChild.responseContentPreview();
+            responseContentPreview(lastChild.responseContentPreview());
             endResponse0(lastChild.responseCause(), lastChild.responseEndTimeNanos());
         }
 
@@ -236,7 +236,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
         lastChild.addListener(log -> {
             responseLength(log.responseLength());
-            responseContentPreview = log.responseContentPreview();
+            responseContentPreview(log.responseContentPreview());
             endResponse0(log.responseCause(), log.responseEndTimeNanos());
         }, RESPONSE_END);
     }
@@ -574,6 +574,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void requestContentPreview(@Nullable String requestContentPreview) {
+        this.requestContentPreview = requestContentPreview;
+    }
+
+    @Override
     public Object rawRequestContent() {
         ensureAvailability(REQUEST_CONTENT);
         return rawRequestContent;
@@ -624,7 +629,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (requestContentPreview == null) {
-            requestContentPreview = requestContentPreviewer.produce();
+            requestContentPreview(requestContentPreviewer.produce());
         }
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
@@ -818,6 +823,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void responseContentPreview(@Nullable String responseContentPreview) {
+        this.responseContentPreview = responseContentPreview;
+    }
+
+    @Override
     public Object rawResponseContent() {
         ensureAvailability(RESPONSE_CONTENT);
         return rawResponseContent;
@@ -868,7 +878,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (responseContentPreview == null) {
-            responseContentPreview = responseContentPreviewer.produce();
+            responseContentPreview(responseContentPreviewer.produce());
         }
         // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
         // totalResponseDuration will be 0

@@ -185,6 +185,11 @@ public interface RequestLogBuilder {
     void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
 
     /**
+     * Sets the {@link RequestLog#requestContentPreview()}.
+     */
+    void requestContentPreview(String requestContentPreview);
+
+    /**
      * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.
      * By default, if {@link #requestContent(Object, Object)} was not called yet, {@link #endRequest()} will
      * call {@code requestContent(null, null)} automatically. This method turns off this default behavior.
@@ -306,6 +311,11 @@ public interface RequestLogBuilder {
      * Sets the {@link RequestLog#responseContent()} and the {@link RequestLog#rawResponseContent()}.
      */
     void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent);
+
+    /**
+     * Sets the {@link RequestLog#responseContentPreview()}.
+     */
+    void responseContentPreview(@Nullable String responseContentPreview);
 
     /**
      * Allows the {@link #responseContent(Object, Object)} called after {@link #endResponse()}.
