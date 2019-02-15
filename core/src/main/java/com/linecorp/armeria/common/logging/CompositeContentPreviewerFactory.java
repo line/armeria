@@ -38,7 +38,7 @@ final class CompositeContentPreviewerFactory implements ContentPreviewerFactory 
             final ContentPreviewer previewer = factory.get(ctx, headers);
             if (previewer == null) {
                 throw new IllegalStateException(
-                        String.format("%s returned null", factory.getClass().getName()));
+                        String.format("%s returned null.", factory.getClass().getName()));
             }
             if (previewer != ContentPreviewer.disabled()) {
                 return previewer;

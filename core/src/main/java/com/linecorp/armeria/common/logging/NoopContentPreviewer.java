@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.logging;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 
@@ -30,6 +32,7 @@ final class NoopContentPreviewer implements ContentPreviewer {
     @Override
     public void onData(HttpData data) {}
 
+    @Nullable
     @Override
     public String produce() {
         return null;

@@ -187,7 +187,7 @@ public interface RequestLogBuilder {
     /**
      * Sets the {@link RequestLog#requestContentPreview()}.
      */
-    void requestContentPreview(String requestContentPreview);
+    void requestContentPreview(@Nullable String requestContentPreview);
 
     /**
      * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.

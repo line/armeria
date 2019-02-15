@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.buffer.ByteBuf;
 
-final class StringAggregatingPreviewer extends ByteBufAggreatingPreviewer {
+final class StringAggregatingPreviewer extends ByteBufAggregatingPreviewer {
     private final Charset defaultCharset;
     private Charset charset;
     private final int length;
@@ -45,12 +45,7 @@ final class StringAggregatingPreviewer extends ByteBufAggreatingPreviewer {
             charset = defaultCharset;
         }
         final long maxBytesPerChar = (long) Math.ceil(charset.newEncoder().maxBytesPerChar());
-        final long capacity = maxBytesPerChar * (long)length;
-        if (capacity > Integer.MAX_VALUE) {
-            maxAggregatedLength(Integer.MAX_VALUE);
-        } else {
-            maxAggregatedLength((int)capacity);
-        }
+        maxAggregatedLength((int) Long.min(Integer.MAX_VALUE, maxBytesPerChar * (long) length));
     }
 
     @Override

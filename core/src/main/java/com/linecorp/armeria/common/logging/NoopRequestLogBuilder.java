@@ -73,7 +73,7 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent) {}
 
     @Override
-    public void requestContentPreview(String requestContentPreview) {}
+    public void requestContentPreview(@Nullable String requestContentPreview) {}
 
     @Override
     public void deferRequestContent() {}

@@ -32,29 +32,30 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 
-abstract class ByteBufAggreatingPreviewer implements ContentPreviewer {
+abstract class ByteBufAggregatingPreviewer implements ContentPreviewer {
 
     private static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
-    private int maxAggregatedLength;
     private final List<ByteBuf> bufferList;
     @Nullable
     private HttpHeaders headers;
     @Nullable
     private String produced;
     private int aggregatedLength;
+    private int maxAggregatedLength;
 
-    ByteBufAggreatingPreviewer(int maxAggregatedLength) {
+    ByteBufAggregatingPreviewer(int maxAggregatedLength) {
         checkArgument(maxAggregatedLength >= 0,
                       "maxAggregatedLength: %d (expected: >= 0)", maxAggregatedLength);
         this.maxAggregatedLength = maxAggregatedLength;
         bufferList = new ArrayList<>();
     }
 
-    ByteBufAggreatingPreviewer() {
+    ByteBufAggregatingPreviewer() {
         this(0);
     }
 
     void maxAggregatedLength(int length) {
+        assert maxAggregatedLength == 0 : "maxAggregatedLength() should not be called more than once.";
         checkArgument(length > 0,
                       "length: %d (expected: > 0", length);
         maxAggregatedLength = length;
@@ -62,7 +63,7 @@ abstract class ByteBufAggreatingPreviewer implements ContentPreviewer {
 
     static ContentPreviewer create(int maxAggregatedLength,
                                    BiFunction<? super HttpHeaders, ? super ByteBuf, String> reproducer) {
-        return new ByteBufAggreatingPreviewer(maxAggregatedLength) {
+        return new ByteBufAggregatingPreviewer(maxAggregatedLength) {
             @Override
             protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
                 return reproducer.apply(headers, wrappedBuffer);
@@ -78,7 +79,7 @@ abstract class ByteBufAggreatingPreviewer implements ContentPreviewer {
 
     @Override
     public void onData(HttpData data) {
-        assert maxAggregatedLength > 0 : "maxAggreagtedLength() should be called more than once.";
+        assert maxAggregatedLength > 0 : "maxAggreagtedLength() should be called before onData().";
         if (data.isEmpty()) {
             return;
         }
@@ -89,7 +90,7 @@ abstract class ByteBufAggreatingPreviewer implements ContentPreviewer {
             newBuffer = Unpooled.wrappedBuffer(data.array(), data.offset(), data.length());
         }
         aggregatedLength += data.length();
-        bufferList.add(newBuffer.retain());
+        bufferList.add(newBuffer.retainedDuplicate());
         if (aggregatedLength >= maxAggregatedLength) {
             produce();
         }

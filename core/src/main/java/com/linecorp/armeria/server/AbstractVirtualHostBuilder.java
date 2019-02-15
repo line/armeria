@@ -595,7 +595,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
      * with the maxmium {@code length} limit for a request and a response of this {@link VirtualHost}.
      * The previewer is enabled only if the content type of a request/response meets
-     * any of the following situations.
+     * any of the following cases.
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
      *     <li>when its charset has been specified</li>
@@ -614,7 +614,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
      * with the maxmium {@code length} limit for a request and a response of this {@link VirtualHost}.
      * The previewer is enabled only if the content type of a request/response meets
-     * any of the following situations.
+     * any of the following cases.
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
      *     <li>when its charset has been specified</li>

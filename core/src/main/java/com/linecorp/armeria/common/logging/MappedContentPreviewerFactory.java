@@ -56,7 +56,7 @@ final class MappedContentPreviewerFactory implements ContentPreviewerFactory {
         for (Entry<MediaType, Supplier<ContentPreviewer>> entry : entries) {
             if (contentType.is(entry.getKey())) {
                 final ContentPreviewer previewer = entry.getValue().get();
-                checkState(previewer != null, "supplier.get() returns null.");
+                checkState(previewer != null, "supplier.get() returned null.");
                 return previewer;
             }
         }

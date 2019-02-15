@@ -22,6 +22,8 @@ import java.nio.charset.Charset;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
@@ -47,7 +49,7 @@ public interface ContentPreviewer {
      */
     static ContentPreviewer ofBinary(int length,
                                      BiFunction<? super HttpHeaders, ? super ByteBuf, String> reproducer) {
-        return ByteBufAggreatingPreviewer.create(length, reproducer);
+        return ByteBufAggregatingPreviewer.create(length, reproducer);
     }
 
     /**
@@ -98,6 +100,7 @@ public interface ContentPreviewer {
      * Note that it is invoked when the request or response is ended
      * or the preview has been ready to be produced.
      */
+    @Nullable
     String produce();
 
     /**

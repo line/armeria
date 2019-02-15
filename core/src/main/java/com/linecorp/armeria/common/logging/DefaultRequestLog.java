@@ -529,7 +529,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (requestContentPreviewer.isDone()) {
             return;
         }
-        requestContentPreviewer.onData(data.duplicate());
+        requestContentPreviewer.onData(data);
     }
 
     @Override
@@ -575,6 +575,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void requestContentPreview(@Nullable String requestContentPreview) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_END)) {
+            return;
+        }
         this.requestContentPreview = requestContentPreview;
     }
 
@@ -768,7 +771,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (responseContentPreviewer.isDone()) {
             return;
         }
-        responseContentPreviewer.onData(data.duplicate());
+        responseContentPreviewer.onData(data);
     }
 
     @Override
@@ -824,6 +827,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void responseContentPreview(@Nullable String responseContentPreview) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_END)) {
+            return;
+        }
         this.responseContentPreview = responseContentPreview;
     }
 
