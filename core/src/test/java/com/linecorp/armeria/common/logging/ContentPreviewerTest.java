@@ -28,11 +28,11 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.apache.commons.codec.binary.Hex;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.base.Strings;
+import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.HttpClient;
@@ -268,10 +268,10 @@ public class ContentPreviewerTest {
         final ContentPreviewer writer = ContentPreviewer.ofBinary(maxLength, byteBuf -> {
             byte[] b = new byte[maxLength];
             byteBuf.readBytes(b, 0, Math.min(byteBuf.readableBytes(), maxLength));
-            return Hex.encodeHexString(b);
+            return BaseEncoding.base16().encode(b);
         });
         sliceBytes(bytes, sliceLength).forEach(plainText(writer, Charset.defaultCharset()));
-        assertThat(writer.produce()).isEqualTo(Hex.encodeHexString(Arrays.copyOf(bytes, maxLength)));
+        assertThat(writer.produce()).isEqualTo(BaseEncoding.base16().encode(Arrays.copyOf(bytes, maxLength)));
     }
 
     @Test

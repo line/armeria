@@ -108,7 +108,8 @@ public interface ContentPreviewer {
     String produce();
 
     /**
-     * Determines if the previewer has been ready to be produced the preview or it is already produced.
+     * Determines if the previewer has been ready to produce the preview or
+     * the preview has been already produced.
      */
     boolean isDone();
 }

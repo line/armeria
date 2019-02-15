@@ -72,8 +72,8 @@ public class ContentPreviewerFactoryTest {
         assertThat(ContentPreviewerFactory.ofText(10).get(ctx, pXmlHeader))
                 .isInstanceOf(StringContentPreviewer.class);
         // returns disabled when length == 0
-        assertThat(ContentPreviewerFactory.ofText(0)).isEqualTo(ContentPreviewerFactory.disabled());
-        assertThat(ContentPreviewerFactory.ofText(0, Charset.defaultCharset(), "text/plain")).isEqualTo(
+        assertThat(ContentPreviewerFactory.ofText(0)).isSameAs(ContentPreviewerFactory.disabled());
+        assertThat(ContentPreviewerFactory.ofText(0, Charset.defaultCharset(), "text/plain")).isSameAs(
                 ContentPreviewerFactory.disabled());
     }
 
@@ -96,12 +96,11 @@ public class ContentPreviewerFactoryTest {
                                               ContentPreviewerFactory.disabled()))
                 .isEqualTo(ContentPreviewerFactory.disabled());
         // returns the left one if others are disabled.
-        assertThat(ContentPreviewerFactory.of(ContentPreviewerFactory.disabled(),
-                                              ContentPreviewerFactory.ofText(10)))
-                .isInstanceOf(TextualContentPreviewerFactory.class);
-        assertThat(((CompositeContentPreviewerFactory)ContentPreviewerFactory.of(factory,
-                                              ContentPreviewerFactory.ofText(10))).factoryList.size())
-                .isEqualTo(4);
+        final ContentPreviewerFactory f = ContentPreviewerFactory.ofText(10);
+        assertThat(ContentPreviewerFactory.of(ContentPreviewerFactory.disabled(), f))
+                .isSameAs(f);
+        assertThat(((CompositeContentPreviewerFactory) ContentPreviewerFactory.of(
+                factory, ContentPreviewerFactory.ofText(10))).factoryList).hasSize(4);
     }
 
     @Test

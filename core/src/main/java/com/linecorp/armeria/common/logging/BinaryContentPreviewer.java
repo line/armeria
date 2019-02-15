@@ -87,7 +87,7 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
             bufferList.add(Unpooled.wrappedBuffer(data.array(), data.offset(), data.length()));
         }
         aggregatedLength += data.length();
-        if (aggregatedLength >= maxAggregatedLength) {
+        if (aggregatedLength >= maxAggregatedLength || data.isEndOfStream()) {
             produce();
         }
     }
