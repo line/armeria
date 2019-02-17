@@ -255,7 +255,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         // Indicate that all of the data for this stream has been received.
         this.endOfStream = endOfStream;
         deliver();
-    };
+    }
 
     /** Close when any messages currently queued have been requested and delivered. */
     public void closeWhenComplete() {
@@ -268,7 +268,6 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         }
     }
 
-
     /**
      * Closes this deframer and frees any resources. After this method is called, additional
      * calls will have no effect.
@@ -278,6 +277,10 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         try {
             if (unprocessed != null) {
                 unprocessed.forEach(ByteBuf::release);
+
+                if (endOfStream) {
+                    listener.endOfStream();
+                }
             }
         } finally {
             unprocessed = null;
