@@ -96,10 +96,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private static final AtomicIntegerFieldUpdater<ArmeriaServerCall> pendingMessagesUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ArmeriaServerCall.class, "pendingMessages");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<ArmeriaServerCall> flushingCallbacksUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(ArmeriaServerCall.class, "flushingCallbacks");
-
     // Only most significant bit of a byte is set.
     @VisibleForTesting
     static final byte TRAILERS_FRAME_HEADER = (byte) (1 << 7);
@@ -135,8 +131,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private Compressor compressor;
     private boolean messageCompression;
     private boolean messageReceived;
-
-    private volatile int flushingCallbacks;
 
     // state
     private volatile boolean cancelled;
