@@ -219,7 +219,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * that no additional data can be delivered to the application.
      */
     public boolean isStalled() {
-        return unprocessedBytes == 0;
+        return !hasRequiredBytes();
     }
 
     /**
@@ -274,16 +274,16 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      */
     @Override
     public void close() {
-        try {
-            if (unprocessed != null) {
+        if (unprocessed != null) {
+            try {
                 unprocessed.forEach(ByteBuf::release);
-
-                if (endOfStream) {
-                    listener.endOfStream();
-                }
+            } finally {
+                unprocessed = null;
             }
-        } finally {
-            unprocessed = null;
+
+            if (endOfStream) {
+                listener.endOfStream();
+            }
         }
     }
 
