@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.server.annotation;
 
-import java.nio.charset.StandardCharsets;
-
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -37,8 +36,8 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
             expectedResultType == CharSequence.class) {
             final MediaType contentType = request.contentType();
             if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
-                // See https://tools.ietf.org/html/rfc2616#section-3.7.1
-                return request.content(contentType.charset().orElse(StandardCharsets.ISO_8859_1));
+                return request.content(
+                        contentType.charset().orElse(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET));
             }
         }
         return RequestConverterFunction.fallthrough();

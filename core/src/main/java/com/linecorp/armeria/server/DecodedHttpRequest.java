@@ -104,7 +104,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
             final int length = ((HttpData) obj).length();
             inboundTrafficController.inc(length);
             assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
-            ctx.logBuilder().requestLength(transferredBytes);
+            ctx.logBuilder().increaseRequestLength((HttpData) obj);
         }
         return published;
     }

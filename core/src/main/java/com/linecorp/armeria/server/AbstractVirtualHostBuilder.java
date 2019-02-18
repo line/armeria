@@ -25,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +45,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
@@ -131,6 +135,11 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
     @Nullable
     private Function<VirtualHost, Logger> accessLoggerMapper;
+
+    @Nullable
+    private ContentPreviewerFactory requestContentPreviewerFactory;
+    @Nullable
+    private ContentPreviewerFactory responseContentPreviewerFactory;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -524,7 +533,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,
-                                new MediaTypeSet(producibleTypes), accessLoggerMapper);
+                                new MediaTypeSet(producibleTypes), RejectedPathMappingHandler.DISABLED,
+                                accessLoggerMapper, requestContentPreviewerFactory,
+                                responseContentPreviewerFactory);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
@@ -553,6 +564,67 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     public B accessLogger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
         return accessLogger(host -> LoggerFactory.getLogger(loggerName));
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request of this {@link VirtualHost}.
+     */
+    public B requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory = requireNonNull(factory, "factory");
+        return self();
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a response of this {@link VirtualHost}.
+     */
+    public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        responseContentPreviewerFactory = requireNonNull(factory, "factory");
+        return self();
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request and a response of this {@link VirtualHost}.
+     */
+    public B contentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory(factory);
+        responseContentPreviewerFactory(factory);
+        return self();
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response of this {@link VirtualHost}.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following cases.
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
+     * @param defaultCharset the default charset for a request/response with unspecified charset in
+     *                       {@code "Content-Type"} header.
+     */
+    public B contentPreview(int length, Charset defaultCharset) {
+        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response of this {@link VirtualHost}.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following cases.
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
+     */
+    public B contentPreview(int length) {
+        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     @Override

@@ -437,6 +437,8 @@ interface AccessLogComponent {
                     return RequestLog::requestLength;
                 case "requestCause":
                     return log -> handleThrowable(log.requestCause());
+                case "requestContentPreview":
+                    return RequestLog::requestContentPreview;
 
                 case "responseStartTimeMillis":
                     return RequestLog::responseStartTimeMillis;
@@ -451,6 +453,8 @@ interface AccessLogComponent {
                     return RequestLog::responseLength;
                 case "responseCause":
                     return log -> handleThrowable(log.responseCause());
+                case "responseContentPreview":
+                    return RequestLog::responseContentPreview;
 
                 case "totalDurationMillis":
                     return log -> Duration.ofNanos(log.totalDurationNanos()).toMillis();

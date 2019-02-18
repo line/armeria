@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.AbstractOption;
 
 import io.netty.util.ConstantPool;
@@ -67,6 +68,12 @@ public final class ClientOption<T> extends AbstractOption<T> {
      * The {@link Function} that decorates the client components.
      */
     public static final ClientOption<ClientDecoration> DECORATION = valueOf("DECORATION");
+
+    public static final ClientOption<ContentPreviewerFactory> REQ_CONTENT_PREVIEWER_FACTORY = valueOf(
+            "REQ_CONTENT_PREVIEWER_FACTORY");
+
+    public static final ClientOption<ContentPreviewerFactory> RES_CONTENT_PREVIEWER_FACTORY = valueOf(
+            "RES_CONTENT_PREVIEWER_FACTORY");
 
     /**
      * Returns the {@link ClientOption} of the specified name.

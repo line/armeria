@@ -297,7 +297,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             final HttpData data = (HttpData) o;
             wroteEmptyData = data.isEmpty();
             future = responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream);
-            logBuilder().increaseResponseLength(data.length());
+            logBuilder().increaseResponseLength(data);
         } else if (o instanceof HttpHeaders) {
             wroteEmptyData = false;
             future = responseEncoder.writeHeaders(req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
@@ -364,7 +364,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         final HttpData content = message.content();
 
         logBuilder().responseHeaders(headers);
-        logBuilder().increaseResponseLength(content.length());
+        logBuilder().increaseResponseLength(content);
 
         final State oldState = setDone();
         subscription.cancel();
