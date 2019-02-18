@@ -35,6 +35,8 @@ What properties can be retrieved?
 | ``requestContent``          | the serialization-dependent content object of the request.           |
 |                             | ``ThriftCall`` for Thrift. ``null`` otherwise.                       |
 +-----------------------------+----------------------------------------------------------------------+
+| ``requestContentPreview``   | the preview of the request content                                   |
++-----------------------------+----------------------------------------------------------------------+
 
 +-----------------------------+----------------------------------------------------------------------+
 | Response properties                                                                                |
@@ -55,6 +57,8 @@ What properties can be retrieved?
 +-----------------------------+----------------------------------------------------------------------+
 | ``responseContent``         | the serialization-dependent content object of the response.          |
 |                             | ``ThriftReply`` for Thrift. ``null`` otherwise.                      |
++-----------------------------+----------------------------------------------------------------------+
+| ``responseContentPreview``  | the preview of the response content                                  |
 +-----------------------------+----------------------------------------------------------------------+
 
 Availability of properties
@@ -147,6 +151,54 @@ automatically for you:
             ...
         }
     }
+
+Retrieve the content via previewing
+-----------------------------------
+Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
+to retrieve the content.
+However, the properties are disabled by default so they always return ``null``.
+You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`Client`.
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    // Enable previewing the content with the maxium length of 100 for textual content.
+    sb.contentPreview(100);
+    ...
+    VirtualHostBuilder vhb = new VirtualHostBuilder("http://example.com");
+    // In this case, the property of virtual host takes precedence over that of server.
+    vhb.contentPreview(150);
+    ...
+    sb.virtualHost(vhb.build());
+
+
+.. code-block:: java
+
+    ClientBuilder cb = new HttpClientBuilder();
+    ...
+    cb.contentPreview(100);
+
+Note that the properties are enabled only for textual contents and
+Armeria considers the following contents as textual contents.
+
+
+- when its type matches ``text/*`` or ``application/x-www-form-urlencoded``.
+- when its charset has been specified. e,g) application/json; charset=utf-8.
+- when its subtype is ``xml`` or ``json``. e,g) application/xml, application/json.
+- when its subtype ends with ``+xml`` or ``+json``. e,g) application/atom+xml, application/hal+json
+
+Customize the way to retrieve the content.
+------------------------------------------
+As mentioned earlier, Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties
+and a user enables it via ``contentPreview(length)`` in :api:`ServerBuilder`, :api:`VirtualHostBuilder`,
+:api:`ClientBuilder` but the preview is enabled only for textual contents.
+
+However, a user may want to
+
+When a request or response has been made with headers, the :api:`ContentPreviewerFactory` set by a user
+creates a :api:`ContentPreviewer` which produces the preview.
+
 
 .. _nested-log:
 

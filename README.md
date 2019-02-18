@@ -12,7 +12,7 @@ by [LINE Corporation](https://linecorp.com/en/), who uses it in production.
 
 ## How to build
 
-We use [Gradle](https://gradle.org/) and [Java 10 or later](https://java.oracle.com/) to build Armeria. The following command will compile Armeria and generate
+We use [Gradle](https://gradle.org/) and [Java 11 or later](https://java.oracle.com/) to build Armeria. The following command will compile Armeria and generate
 JARs and web site:
 
 ```bash
