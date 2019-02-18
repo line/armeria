@@ -189,18 +189,19 @@ Note that the properties are enabled only for textual contents and
 Armeria considers the following contents as textual contents.
 
 - when its type matches ``text/*`` or ``application/x-www-form-urlencoded``.
-- when its charset has been specified. e,g) application/json; charset=utf-8.
-- when its subtype is ``xml`` or ``json``. e,g) application/xml, application/json.
-- when its subtype ends with ``+xml`` or ``+json``. e,g) application/atom+xml, application/hal+json
+- when its charset has been specified. e.g. application/json; charset=utf-8.
+- when its subtype is ``xml`` or ``json``. e.g. application/xml, application/json.
+- when its subtype ends with ``+xml`` or ``+json``. e.g. application/atom+xml, application/hal+json
 
 When a request or response has been made with headers, the :api:`ContentPreviewerFactory` set by a user
 creates a :api:`ContentPreviewer` which produces the preview when a request or response is ended.
 
 You can use your own :api:`ContentPreviewerFactory` and :api:`ContentPreviewer` and set the factory
-when configuring :api:`Server`, :api:`VirtualHost`, or :api:`Client`. e,g.
+when configuring :api:`Server`, :api:`VirtualHost`, or :api:`Client`. e.g.
 
 .. code-block:: java
 
+    import com.google.common.io.BaseEncoding;
     import com.linecorp.armeria.common.logging.ContentPreviewer;
 
     ServerBuilder sb = new ServerBuilder();
@@ -211,9 +212,11 @@ when configuring :api:`Server`, :api:`VirtualHost`, or :api:`Client`. e,g.
         // the previewer which produces the preview through customized function
         // when the contents have been aggregated more than specific bytes or the stream has been ended.
         // In this case, the preview is produced when the contents have been aggregated more than 100 bytes
-        // Or the stream has been ended.
+        // or the stream has been ended.
         return ContentPreviewer.ofBinary(100, byteBuf -> {
-            return ...
+            byte[] contents = new byte[Math.min(byteBuf.readableBytes(), 100)];
+            byteBuf.readBytes(contents);
+            return BaseEncoding.base16().encode(contents);
         });
     });
 
