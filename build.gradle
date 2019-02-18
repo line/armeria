@@ -128,7 +128,7 @@ allprojects {
 
 // Require to use JDK 11 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_1_11) {
+    if (JavaVersion.current() != JavaVersion.VERSION_11) {
         throw new IllegalStateException("You must release using JDK 11.");
     }
 }
