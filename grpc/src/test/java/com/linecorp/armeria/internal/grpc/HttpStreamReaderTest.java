@@ -152,7 +152,7 @@ public class HttpStreamReaderTest {
     public void clientDone() {
         reader.apply(null, null);
         verify(deframer).deframe(HttpData.EMPTY_DATA, true);
-        verify(deframer).close();
+        verify(deframer).closeWhenComplete();
     }
 
     @Test

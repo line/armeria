@@ -177,13 +177,13 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
     private boolean compressedFlag;
     private boolean endOfStream;
+    private boolean closeWhenComplete;
 
     @Nullable
     private Queue<ByteBuf> unprocessed;
     private int unprocessedBytes;
 
     private long pendingDeliveries;
-    private boolean deliveryStalled = true;
     private boolean inDelivery;
     private boolean startedDeframing;
 
@@ -219,7 +219,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * that no additional data can be delivered to the application.
      */
     public boolean isStalled() {
-        return deliveryStalled;
+        return !hasRequiredBytes();
     }
 
     /**
@@ -257,18 +257,33 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         deliver();
     }
 
+    /** Requests closing this deframer when any messages currently queued have been requested and delivered. */
+    public void closeWhenComplete() {
+        if (isClosed()) {
+            return;
+        } else if (isStalled()) {
+            close();
+        } else {
+            closeWhenComplete = true;
+        }
+    }
+
     /**
      * Closes this deframer and frees any resources. After this method is called, additional
      * calls will have no effect.
      */
     @Override
     public void close() {
-        try {
-            if (unprocessed != null) {
+        if (unprocessed != null) {
+            try {
                 unprocessed.forEach(ByteBuf::release);
+            } finally {
+                unprocessed = null;
             }
-        } finally {
-            unprocessed = null;
+
+            if (endOfStream) {
+                listener.endOfStream();
+            }
         }
     }
 
@@ -330,23 +345,9 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             * frame and not in unprocessed.  If there is extra data but no pending deliveries, it will
             * be in unprocessed.
             */
-            final boolean stalled = !hasRequiredBytes();
-
-            if (endOfStream && stalled) {
-                assert unprocessed != null;
-                final boolean havePartialMessage = !unprocessed.isEmpty();
-                if (!havePartialMessage) {
-                    listener.endOfStream();
-                    deliveryStalled = false;
-                    return;
-                } else {
-                    // We've received the entire stream and have data available but we don't have
-                    // enough to read the next frame ... this is bad.
-                    throw Status.INTERNAL.withDescription(
-                            DEBUG_STRING + ": Encountered end-of-stream mid-frame").asRuntimeException();
-                }
+            if (closeWhenComplete && isStalled()) {
+                close();
             }
-            deliveryStalled = stalled;
         } finally {
             inDelivery = false;
         }
@@ -492,6 +493,10 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
     private static ByteBufOrStream getUncompressedBody(ByteBuf buf) {
         return new ByteBufOrStream(buf);
+    }
+
+    private boolean isClosedOrScheduledToClose() {
+        return isClosed() || closeWhenComplete;
     }
 
     private ByteBufOrStream getCompressedBody(ByteBuf buf) {
