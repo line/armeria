@@ -58,7 +58,9 @@ final class StringContentPreviewer extends BinaryContentPreviewer {
 
     @Override
     protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
-        final String produced = wrappedBuffer.toString(charset);
+        final String produced = wrappedBuffer.toString(wrappedBuffer.readerIndex(),
+                                                       Math.min(maxAggregatedLength(),
+                                                                wrappedBuffer.readableBytes()), charset);
         if (produced.length() > length) {
             return produced.substring(0, length);
         } else {
