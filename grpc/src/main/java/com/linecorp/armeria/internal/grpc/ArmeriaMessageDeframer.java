@@ -257,7 +257,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         deliver();
     }
 
-    /** Close when any messages currently queued have been requested and delivered. */
+    /** Requests closing this deframer when any messages currently queued have been requested and delivered. */
     public void closeWhenComplete() {
         if (isClosed()) {
             return;
