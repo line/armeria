@@ -97,9 +97,9 @@ using :api:`ServerBuilder`. You may use one of the pre-defined log formats.
 
     ServerBuilder sb = new ServerBuilder();
     // Use NCSA common log format.
-    sb.accessLogWriter(AccessLogWriters.common());
+    sb.accessLogWriter(AccessLogWriter.common());
     // Use NCSA combined log format.
-    sb.accessLogWriter(AccessLogWriters.combined());
+    sb.accessLogWriter(AccessLogWriter.combined());
     // Use your own log format.
     sb.accessLogFormat("...log format...");
     ...
@@ -214,6 +214,8 @@ supported variable:
 | ``requestCause``              | the cause of request processing failure. The class name of the     |
 |                               | cause and the detail message of it will be contained if exists.    |
 +-------------------------------+--------------------------------------------------------------------+
+| ``requestContentPreview``     | the preview of the request content                                 |
++-------------------------------+--------------------------------------------------------------------+
 | ``responseStartTimeMillis``   | the time when the processing of the response started,              |
 |                               | in milliseconds since the epoch                                    |
 +-------------------------------+--------------------------------------------------------------------+
@@ -227,6 +229,8 @@ supported variable:
 +-------------------------------+--------------------------------------------------------------------+
 | ``responseCause``             | the cause of response processing failure. The class name of the    |
 |                               | cause and the detail message of it will be contained if exists.    |
++-------------------------------+--------------------------------------------------------------------+
+| ``responseContentPreview``    | the preview of the response content                                |
 +-------------------------------+--------------------------------------------------------------------+
 | ``totalDurationMillis``       | the amount of time taken since the request processing started and  |
 |                               | until the response processing ended, in milliseconds               |

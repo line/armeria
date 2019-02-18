@@ -21,6 +21,8 @@ import static com.linecorp.armeria.client.ClientOption.DEFAULT_MAX_RESPONSE_LENG
 import static com.linecorp.armeria.client.ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
+import static com.linecorp.armeria.client.ClientOption.REQ_CONTENT_PREVIEWER_FACTORY;
+import static com.linecorp.armeria.client.ClientOption.RES_CONTENT_PREVIEWER_FACTORY;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
@@ -243,5 +246,13 @@ public final class ClientOptions extends AbstractOptions {
      */
     public HttpHeaders httpHeaders() {
         return getOrElse(HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
+    }
+
+    public ContentPreviewerFactory requestContentPreviewerFactory() {
+        return getOrElse(REQ_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
+    }
+
+    public ContentPreviewerFactory responseContentPreviewerFactory() {
+        return getOrElse(RES_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
     }
 }

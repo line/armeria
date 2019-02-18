@@ -214,7 +214,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
     private void closeDeframer() {
         if (!deframer.isClosed()) {
             deframer.deframe(HttpData.EMPTY_DATA, true);
-            deframer.close();
+            deframer.closeWhenComplete();
         }
     }
 

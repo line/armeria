@@ -17,6 +17,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -32,6 +33,9 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
@@ -164,6 +168,68 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
      */
     public B defaultMaxResponseLength(long defaultMaxResponseLength) {
         return option(ClientOption.DEFAULT_MAX_RESPONSE_LENGTH, defaultMaxResponseLength);
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request.
+     */
+    public B requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        return option(ClientOption.REQ_CONTENT_PREVIEWER_FACTORY,
+                      requireNonNull(factory, "factory"));
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a response.
+     */
+    public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        return option(ClientOption.RES_CONTENT_PREVIEWER_FACTORY,
+                      requireNonNull(factory, "factory"));
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request and a response.
+     */
+    public B contentPreviewerFactory(ContentPreviewerFactory factory) {
+        requireNonNull(factory, "factory");
+        requestContentPreviewerFactory(factory);
+        responseContentPreviewerFactory(factory);
+        return self();
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following cases.
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
+     * @param defaultCharset the default charset for a request/response with unspecified charset in
+     *                       {@code "Content-Type"} header.
+     */
+    public B contentPreview(int length, Charset defaultCharset) {
+        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following cases.
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
+     */
+    public B contentPreview(int length) {
+        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     /**

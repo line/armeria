@@ -607,7 +607,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         logBuilder.responseHeaders(mutableHeaders);
         if (hasContent) {
             future = responseEncoder.writeData(req.id(), req.streamId(), resContent, true);
-            logBuilder.increaseResponseLength(resContent.length());
+            logBuilder.increaseResponseLength(resContent);
         }
 
         future.addListener(f -> {

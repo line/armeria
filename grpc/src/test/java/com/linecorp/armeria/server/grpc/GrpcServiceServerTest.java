@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
@@ -40,8 +41,12 @@ import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
@@ -100,11 +105,17 @@ import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
+@RunWith(Parameterized.class)
 public class GrpcServiceServerTest {
 
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
 
     private static AsciiString LARGE_PAYLOAD;
+
+    @Parameters(name = "{index}: useBlockingExecutor={0}")
+    public static Collection<Boolean> parameters() {
+        return ImmutableList.of(false, true);
+    }
 
     @BeforeClass
     public static void createLargePayload() {
@@ -288,6 +299,28 @@ public class GrpcServiceServerTest {
     };
 
     @ClassRule
+    public static ServerRule serverWithBlockingExecutor = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.defaultMaxRequestLength(0);
+
+            sb.serviceUnder("/", new GrpcServiceBuilder()
+                    .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                    .addService(new UnitTestServiceImpl())
+                    .enableUnframedRequests(true)
+                    .supportedSerializationFormats(GrpcSerializationFormats.values())
+                    .useBlockingTaskExecutor(true)
+                    .build()
+                    .decorate(LoggingService.newDecorator())
+                    .decorate((delegate, ctx, req) -> {
+                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
+                        return delegate.serve(ctx, req);
+                    }));
+        }
+    };
+
+    @ClassRule
     public static ServerRule serverWithNoMaxMessageSize = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
@@ -327,6 +360,13 @@ public class GrpcServiceServerTest {
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     private static ManagedChannel channel;
+    private static ManagedChannel blockingChannel;
+
+    private final boolean useBlockingExecutor;
+
+    public GrpcServiceServerTest(boolean useBlockingExecutor) {
+        this.useBlockingExecutor = useBlockingExecutor;
+    }
 
     private UnitTestServiceBlockingStub blockingClient;
     private UnitTestServiceStub streamingClient;
@@ -336,19 +376,23 @@ public class GrpcServiceServerTest {
         channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
                                        .usePlaintext()
                                        .build();
+        blockingChannel = ManagedChannelBuilder.forAddress("127.0.0.1", serverWithBlockingExecutor.httpPort())
+                                       .usePlaintext()
+                                       .build();
     }
 
     @AfterClass
     public static void tearDownChannel() {
         channel.shutdownNow();
+        blockingChannel.shutdownNow();
     }
 
     @Before
     public void setUp() {
         COMPLETED.set(false);
         CLIENT_CLOSED.set(false);
-        blockingClient = UnitTestServiceGrpc.newBlockingStub(channel);
-        streamingClient = UnitTestServiceGrpc.newStub(channel);
+        blockingClient = UnitTestServiceGrpc.newBlockingStub(useBlockingExecutor ? blockingChannel : channel);
+        streamingClient = UnitTestServiceGrpc.newStub(useBlockingExecutor ? blockingChannel : channel);
 
         PathAndQuery.clearCachedPaths();
         requestLogQueue.clear();
@@ -359,8 +403,8 @@ public class GrpcServiceServerTest {
         assertThat(blockingClient.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
 
         // Confirm gRPC paths are cached despite using serviceUnder
-        assertThat(PathAndQuery.cachedPaths())
-                .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+        await().untilAsserted(() -> assertThat(PathAndQuery.cachedPaths())
+                .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall"));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");

@@ -152,14 +152,17 @@ automatically for you:
         }
     }
 
-Retrieve the content via previewing
------------------------------------
+Enable previewing the contents
+------------------------------
 Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
 to retrieve the content.
 However, the properties are disabled by default so they always return ``null``.
 You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`Client`.
 
 .. code-block:: java
+
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.VirtualHostBuilder;
 
     ServerBuilder sb = new ServerBuilder();
     ...
@@ -175,6 +178,9 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.ClientBuilder;
+    import com.linecorp.armeria.client.HttpClientBuilder;
+
     ClientBuilder cb = new HttpClientBuilder();
     ...
     cb.contentPreview(100);
@@ -182,22 +188,34 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
 Note that the properties are enabled only for textual contents and
 Armeria considers the following contents as textual contents.
 
-
 - when its type matches ``text/*`` or ``application/x-www-form-urlencoded``.
 - when its charset has been specified. e,g) application/json; charset=utf-8.
 - when its subtype is ``xml`` or ``json``. e,g) application/xml, application/json.
 - when its subtype ends with ``+xml`` or ``+json``. e,g) application/atom+xml, application/hal+json
 
-Customize the way to retrieve the content.
-------------------------------------------
-As mentioned earlier, Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties
-and a user enables it via ``contentPreview(length)`` in :api:`ServerBuilder`, :api:`VirtualHostBuilder`,
-:api:`ClientBuilder` but the preview is enabled only for textual contents.
-
-However, a user may want to
-
 When a request or response has been made with headers, the :api:`ContentPreviewerFactory` set by a user
-creates a :api:`ContentPreviewer` which produces the preview.
+creates a :api:`ContentPreviewer` which produces the preview when a request or response is ended.
+
+You can use your own :api:`ContentPreviewerFactory` and :api:`ContentPreviewer` and set the factory
+when configuring :api:`Server`, :api:`VirtualHost`, or :api:`Client`. e,g.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.common.logging.ContentPreviewer;
+
+    ServerBuilder sb = new ServerBuilder();
+
+    // A user can use their customized previewer factory.
+    sb.contentPreviewerFactory((ctx, headers) -> {
+        ...
+        // the previewer which produces the preview through customized function
+        // when the contents have been aggregated more than specific bytes or the stream has been ended.
+        // In this case, the preview is produced when the contents have been aggregated more than 100 bytes
+        // Or the stream has been ended.
+        return ContentPreviewer.ofBinary(100, byteBuf -> {
+            return ...
+        });
+    });
 
 
 .. _nested-log:

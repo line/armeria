@@ -46,6 +46,7 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -100,6 +101,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestFirstBytesTransferredTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
+    private ContentPreviewer requestContentPreviewer = ContentPreviewer.disabled();
+    private final ContentPreviewerFactory requestContentPreviewerFactory;
+    @Nullable
+    private String requestContentPreview;
     @Nullable
     private Throwable requestCause;
 
@@ -108,6 +113,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long responseFirstBytesTransferredTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
+    private ContentPreviewer responseContentPreviewer = ContentPreviewer.disabled();
+    private final ContentPreviewerFactory responseContentPreviewerFactory;
+    @Nullable
+    private String responseContentPreview;
     @Nullable
     private Throwable responseCause;
 
@@ -141,7 +150,19 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      * Creates a new instance.
      */
     public DefaultRequestLog(RequestContext ctx) {
+        this(ctx, ContentPreviewerFactory.disabled(), ContentPreviewerFactory.disabled());
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public DefaultRequestLog(RequestContext ctx, ContentPreviewerFactory requestContentPreviewerFactory,
+                             ContentPreviewerFactory responseContentPreviewerFactory) {
         this.ctx = requireNonNull(ctx, "ctx");
+        this.requestContentPreviewerFactory = requireNonNull(requestContentPreviewerFactory,
+                                                             "requestContentPreviewerFactory");
+        this.responseContentPreviewerFactory = requireNonNull(responseContentPreviewerFactory,
+                                                              "responseContentPreviewerFactory");
     }
 
     @Override
@@ -168,6 +189,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                           REQUEST_CONTENT);
         child.addListener(log -> {
             requestLength(log.requestLength());
+            requestContentPreview(log.requestContentPreview());
             endRequest0(log.requestCause(), log.requestEndTimeNanos());
         }, REQUEST_END);
     }
@@ -201,6 +223,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         if (lastChild.isAvailable(RESPONSE_END)) {
             responseLength(lastChild.responseLength());
+            responseContentPreview(lastChild.responseContentPreview());
             endResponse0(lastChild.responseCause(), lastChild.responseEndTimeNanos());
         }
 
@@ -212,7 +235,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
         lastChild.addListener(log -> {
-            responseLength(lastChild.responseLength());
+            responseLength(log.responseLength());
+            responseContentPreview(log.responseContentPreview());
             endResponse0(log.responseCause(), log.responseEndTimeNanos());
         }, RESPONSE_END);
     }
@@ -500,6 +524,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void increaseRequestLength(HttpData data) {
+        increaseRequestLength(data.length());
+        if (requestContentPreviewer.isDone()) {
+            return;
+        }
+        requestContentPreviewer.onData(data);
+    }
+
+    @Override
     public HttpHeaders requestHeaders() {
         ensureAvailability(REQUEST_HEADERS);
         return requestHeaders;
@@ -512,6 +545,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.requestHeaders = requireNonNull(requestHeaders, "requestHeaders");
+        requestContentPreviewer = requestContentPreviewerFactory.get(ctx, this.requestHeaders);
+        requestContentPreviewer.onHeaders(requestHeaders);
         updateAvailability(REQUEST_HEADERS);
     }
 
@@ -530,6 +565,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
         updateAvailability(REQUEST_CONTENT);
+    }
+
+    @Override
+    public String requestContentPreview() {
+        ensureAvailability(REQUEST_END);
+        return requestContentPreview;
+    }
+
+    @Override
+    public void requestContentPreview(@Nullable String requestContentPreview) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_END)) {
+            return;
+        }
+        this.requestContentPreview = requestContentPreview;
     }
 
     @Override
@@ -582,6 +631,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
+        if (requestContentPreview == null) {
+            requestContentPreview(requestContentPreviewer.produce());
+        }
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
         startRequest0(null, context().sessionProtocol(), null,
@@ -714,6 +766,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void increaseResponseLength(HttpData data) {
+        increaseResponseLength(data.length());
+        if (responseContentPreviewer.isDone()) {
+            return;
+        }
+        responseContentPreviewer.onData(data);
+    }
+
+    @Override
     public HttpHeaders responseHeaders() {
         ensureAvailability(RESPONSE_HEADERS);
         return responseHeaders;
@@ -726,6 +787,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.responseHeaders = requireNonNull(responseHeaders, "responseHeaders");
+        responseContentPreviewer = responseContentPreviewerFactory.get(ctx, this.responseHeaders);
+        responseContentPreviewer.onHeaders(responseHeaders);
         updateAvailability(RESPONSE_HEADERS);
     }
 
@@ -754,6 +817,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.responseContent = responseContent;
         this.rawResponseContent = rawResponseContent;
         updateAvailability(RESPONSE_CONTENT);
+    }
+
+    @Override
+    public String responseContentPreview() {
+        ensureAvailability(RESPONSE_END);
+        return responseContentPreview;
+    }
+
+    @Override
+    public void responseContentPreview(@Nullable String responseContentPreview) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_END)) {
+            return;
+        }
+        this.responseContentPreview = responseContentPreview;
     }
 
     @Override
@@ -806,6 +883,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
+        if (responseContentPreview == null) {
+            responseContentPreview(responseContentPreviewer.produce());
+        }
         // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
         // totalResponseDuration will be 0
         startResponse0(responseEndTimeNanos, currentTimeMicros(), false);
@@ -957,6 +1037,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
                 buf.append(", content=").append(contentSanitizer.apply(requestContent));
+            } else if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
+                buf.append(", contentPreview=").append(requestContentPreview);
             }
         }
         buf.append('}');
@@ -1007,6 +1089,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
                 buf.append(", content=").append(contentSanitizer.apply(responseContent));
+            } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
+                buf.append(", contentPreview=").append(responseContentPreview);
             }
         }
         buf.append('}');

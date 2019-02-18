@@ -31,6 +31,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -61,6 +62,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -180,6 +184,8 @@ public final class ServerBuilder {
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
+    private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.disabled();
+    private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.disabled();
 
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -1203,6 +1209,67 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link ContentPreviewerFactory} for a request of this {@link Server}.
+     */
+    public ServerBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory = requireNonNull(factory, "factory");
+        return this;
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a response of this {@link Server}.
+     */
+    public ServerBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        responseContentPreviewerFactory = requireNonNull(factory, "factory");
+        return this;
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request and a response of this {@link Server}.
+     */
+    public ServerBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory(factory);
+        responseContentPreviewerFactory(factory);
+        return this;
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response of this {@link Server}.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following cases.
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
+     * @param defaultCharset the default charset for a request/response with unspecified charset in
+     *                       {@code "Content-Type"} header.
+     */
+    public ServerBuilder contentPreview(int length, Charset defaultCharset) {
+        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
+     * with the maxmium {@code length} limit for a request and a response of this {@link Server}.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following cases.
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
+     */
+    public ServerBuilder contentPreview(int length) {
+        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1233,6 +1300,11 @@ public final class ServerBuilder {
                            vh.hostnamePattern());
                 vh.accessLogger(logger);
             }
+            // combine content preview factories (one for VirtualHost, the other for Server)
+            vh.requestContentPreviewerFactory(ContentPreviewerFactory.of(vh.requestContentPreviewerFactory(),
+                                                                         requestContentPreviewerFactory));
+            vh.responseContentPreviewerFactory(ContentPreviewerFactory.of(vh.responseContentPreviewerFactory(),
+                                                                          responseContentPreviewerFactory));
         });
         if (defaultVirtualHost.accessLoggerOrNull() == null) {
             final Logger logger = accessLoggerMapper.apply(defaultVirtualHost);
@@ -1240,6 +1312,13 @@ public final class ServerBuilder {
                        "accessLoggerMapper.apply() has returned null for the default virtual host.");
             defaultVirtualHost.accessLogger(logger);
         }
+
+        defaultVirtualHost.requestContentPreviewerFactory(
+                ContentPreviewerFactory.of(defaultVirtualHost.requestContentPreviewerFactory(),
+                                           requestContentPreviewerFactory));
+        defaultVirtualHost.responseContentPreviewerFactory(
+                ContentPreviewerFactory.of(defaultVirtualHost.responseContentPreviewerFactory(),
+                                           responseContentPreviewerFactory));
 
         // Pre-populate the domain name mapping for later matching.
         final DomainNameMapping<SslContext> sslContexts;
@@ -1338,7 +1417,8 @@ public final class ServerBuilder {
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
                  .collect(Collectors.toList()), h.producibleMediaTypes(),
-                          rejectedPathMappingHandler, host -> h.accessLogger());
+                rejectedPathMappingHandler, host -> h.accessLogger(), h.requestContentPreviewerFactory(),
+                h.responseContentPreviewerFactory());
     }
 
     @Nullable

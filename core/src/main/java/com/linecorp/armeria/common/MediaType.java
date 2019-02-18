@@ -696,7 +696,7 @@ public final class MediaType {
 
     /**
      * Returns a new instance with the same type and subtype as this instance, with the {@code
-     * charset} parameter set to the {@link Charset#name name} of the given charset. Only one {@code
+     * charset} parameter set to the {@linkplain Charset#name() name} of the given charset. Only one {@code
      * charset} parameter will be present on the new instance regardless of the number set on this
      * one.
      *
