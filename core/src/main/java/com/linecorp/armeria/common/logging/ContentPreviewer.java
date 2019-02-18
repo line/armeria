@@ -37,7 +37,7 @@ public interface ContentPreviewer {
 
     /**
      * Creates a new instance of {@link ContentPreviewer} which produces the preview through {@code reproducer}
-     * when the contents has been aggregated more than {@code length} bytes.
+     * when the contents have been aggregated more than {@code length} bytes.
      */
     static ContentPreviewer ofBinary(int length, Function<? super ByteBuf, String> reproducer) {
         return ofBinary(length, (headers, buffer) -> reproducer.apply(buffer));
@@ -45,7 +45,7 @@ public interface ContentPreviewer {
 
     /**
      * Creates a new instance of {@link ContentPreviewer} which produces the preview through {@code reproducer}
-     * when the contents has been aggregated more than {@code length} bytes.
+     * when the contents have been aggregated more than {@code length} bytes.
      */
     static ContentPreviewer ofBinary(int length,
                                      BiFunction<? super HttpHeaders, ? super ByteBuf, String> reproducer) {
