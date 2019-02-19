@@ -152,11 +152,11 @@ automatically for you:
         }
     }
 
-Enable previewing the contents
-------------------------------
+Enabling content previews
+-------------------------
 Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
-to retrieve the content.
-However, the properties are disabled by default so they always return ``null``.
+to retrieve the textual representation of the first N bytes of the request and response content.
+However, the properties are disabled by default so they always return ``null`` due to performance overhead.
 You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`Client`.
 
 .. code-block:: java
@@ -193,11 +193,11 @@ Armeria considers the following contents as textual contents.
 - when its subtype is ``xml`` or ``json``. e.g. application/xml, application/json.
 - when its subtype ends with ``+xml`` or ``+json``. e.g. application/atom+xml, application/hal+json
 
-When a request or response has been made with headers, the :api:`ContentPreviewerFactory` set by a user
-creates a :api:`ContentPreviewer` which produces the preview when a request or response is ended.
+When a request or response begins, the :api:`ContentPreviewerFactory` set by a user
+creates a :api:`ContentPreviewer` based on HTTP headers to produce the preview when a request or response ends.
 
-You can use your own :api:`ContentPreviewerFactory` and :api:`ContentPreviewer` and set the factory
-when configuring :api:`Server`, :api:`VirtualHost`, or :api:`Client`. e.g.
+You can configure :api:`Server`, :api:`VirtualHost`, or :api:`Client` to use your own :api:`ContentPreviewerFactory`
+and :api:`ContentPreviewer`. e.g.
 
 .. code-block:: java
 
@@ -208,13 +208,11 @@ when configuring :api:`Server`, :api:`VirtualHost`, or :api:`Client`. e.g.
 
     // A user can use their customized previewer factory.
     sb.contentPreviewerFactory((ctx, headers) -> {
-        ...
         // the previewer which produces the preview through customized function
         // when the contents have been aggregated more than specific bytes or the stream has been ended.
-        // In this case, the preview is produced when the contents have been aggregated more than 100 bytes
-        // or the stream has been ended.
         return ContentPreviewer.ofBinary(100, byteBuf -> {
-            byte[] contents = new byte[Math.min(byteBuf.readableBytes(), 100)];
+            // byteBuf has no more than 100 bytes.
+            byte[] contents = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(contents);
             return BaseEncoding.base16().encode(contents);
         });

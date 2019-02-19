@@ -117,8 +117,11 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
             return produced;
         }
         try {
-            return produced = reproduce(headers, Unpooled.wrappedBuffer(bufferList.toArray(
-                    BYTE_BUFS)).asReadOnly());
+            ByteBuf buffer = Unpooled.wrappedBuffer(bufferList.toArray(BYTE_BUFS));
+            if (buffer.readableBytes() > maxAggregatedLength) {
+                buffer = buffer.slice(0, maxAggregatedLength);
+            }
+            return produced = reproduce(headers, buffer);
         } finally {
             bufferList.forEach(ReferenceCountUtil::safeRelease);
             bufferList.clear();
