@@ -151,7 +151,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * @return {@code this} to support method chaining.
      */
     public B maxAge(long maxAge) {
-        checkState(maxAge > 0, "maxAge: %d (expected: > 0)", maxAge);
+        checkState(maxAge > 0, "maxAge: %s (expected: > 0)", maxAge);
         this.maxAge = maxAge;
         return self();
     }

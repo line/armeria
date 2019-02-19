@@ -250,7 +250,9 @@ public class ContentPreviewerTest {
     private static Consumer<ByteBuf> plainText(ContentPreviewer writer, Charset charset) {
         writer.onHeaders(HttpHeaders.of().contentType(MediaType.PLAIN_TEXT_UTF_8.withCharset(charset)));
         return b -> {
-            writer.onData(new ByteBufHttpData(b, false));
+            if (!writer.isDone()) {
+                writer.onData(new ByteBufHttpData(b, false));
+            }
         };
     }
 
@@ -267,6 +269,7 @@ public class ContentPreviewerTest {
     private static void testSliceBytes(byte[] bytes, int maxLength, int sliceLength) {
         final ContentPreviewer writer = ContentPreviewer.ofBinary(maxLength, byteBuf -> {
             byte[] b = new byte[maxLength];
+            assertThat(byteBuf.readableBytes()).isLessThanOrEqualTo(maxLength);
             byteBuf.readBytes(b, 0, Math.min(byteBuf.readableBytes(), maxLength));
             return BaseEncoding.base16().encode(b);
         });
@@ -276,12 +279,16 @@ public class ContentPreviewerTest {
 
     @Test
     public void testAggreagted() {
-        for (int sliceLength : new int[] { 1, 3, 6, 10 }) {
+        for (int sliceLength : new int[] { 1, 3, 6, 10, 200 }) {
             for (int maxLength : new int[] { 1, 3, 6, 10, 12, 15, 25, 35, 200 }) {
                 testSlice(TEST_STR, StandardCharsets.UTF_8, maxLength, sliceLength);
                 testSliceBytes(TEST_STR.getBytes(), maxLength, sliceLength);
             }
         }
+        final ContentPreviewer writer = ContentPreviewer.ofBinary(2, byteBuf -> {
+            assertThat(byteBuf.readableBytes()).isEqualTo(2);
+            return "";
+        });
     }
 
     @Test

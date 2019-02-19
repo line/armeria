@@ -201,20 +201,17 @@ and :api:`ContentPreviewer`. e.g.
 
 .. code-block:: java
 
-    import com.google.common.io.BaseEncoding;
+    import io.netty.buffer.ByteBufUtil;
     import com.linecorp.armeria.common.logging.ContentPreviewer;
 
     ServerBuilder sb = new ServerBuilder();
 
     // A user can use their customized previewer factory.
     sb.contentPreviewerFactory((ctx, headers) -> {
-        // the previewer which produces the preview through customized function
-        // when the contents have been aggregated more than specific bytes or the stream has been ended.
+        // Produces the hex dump of the first 100 bytes.
         return ContentPreviewer.ofBinary(100, byteBuf -> {
             // byteBuf has no more than 100 bytes.
-            byte[] contents = new byte[byteBuf.readableBytes()];
-            byteBuf.readBytes(contents);
-            return BaseEncoding.base16().encode(contents);
+            return ByteBufUtil.hexDump(byteBuf);
         });
     });
 
