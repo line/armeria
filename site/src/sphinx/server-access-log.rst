@@ -97,9 +97,9 @@ using :api:`ServerBuilder`. You may use one of the pre-defined log formats.
 
     ServerBuilder sb = new ServerBuilder();
     // Use NCSA common log format.
-    sb.accessLogWriter(AccessLogWriter.common());
+    sb.accessLogWriter(AccessLogWriter.common(), true);
     // Use NCSA combined log format.
-    sb.accessLogWriter(AccessLogWriter.combined());
+    sb.accessLogWriter(AccessLogWriter.combined(), true);
     // Use your own log format.
     sb.accessLogFormat("...log format...");
     ...
@@ -309,7 +309,7 @@ You can specify your own log writer which implements a ``Consumer`` of :api:`Req
     sb.accessLogWriter(requestLog -> {
         // Write your access log with the given RequestLog instance.
         ....
-    });
+    }, true);
 
 
 Customizing an access logger
