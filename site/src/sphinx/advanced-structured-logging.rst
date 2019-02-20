@@ -175,17 +175,15 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
     ...
     sb.virtualHost(vhb.build());
 
-
 .. code-block:: java
 
-    import com.linecorp.armeria.client.ClientBuilder;
     import com.linecorp.armeria.client.HttpClientBuilder;
 
-    ClientBuilder cb = new HttpClientBuilder();
+    HttpClientBuilder cb = new HttpClientBuilder();
     ...
     cb.contentPreview(100);
 
-Note that the contentPreview() method enables the previews only for textual content
+Note that the ``contentPreview()`` method enables the previews only for textual content
 which meets the following cases:
 
 - when its type matches ``text/*`` or ``application/x-www-form-urlencoded``.
@@ -193,26 +191,72 @@ which meets the following cases:
 - when its subtype is ``xml`` or ``json``. e.g. application/xml, application/json.
 - when its subtype ends with ``+xml`` or ``+json``. e.g. application/atom+xml, application/hal+json
 
-You can also use your own way to make the previews by customizing :api:`ContentPreviewerFactory`.
-The factory creates a :api:`ContentPreviewer` based on HTTP headers to produce the previews
-when a request or response ends.
-The following example enables the hex dump preview of first 100 bytes, regardless of the content type:
+You can also customize the previews by specifying your own :api:`ContentPreviewerFactory` implementation.
+The following example enables the textual preview of first 100 characters for text/*, and
+the hex dump preview of first 100 bytes for other types:
 
 .. code-block:: java
 
     import io.netty.buffer.ByteBufUtil;
+    import com.linecorp.armeria.common.MediaType;
     import com.linecorp.armeria.common.logging.ContentPreviewer;
 
     ServerBuilder sb = new ServerBuilder();
 
     // A user can use their customized previewer factory.
     sb.contentPreviewerFactory((ctx, headers) -> {
+        MediaType contentType = headers.contentType();
+        if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
+            // Produces the textual preview of the first 100 characters.
+            return ContentPreviewer.ofText(100);
+        }
         // Produces the hex dump of the first 100 bytes.
         return ContentPreviewer.ofBinary(100, byteBuf -> {
             // byteBuf has no more than 100 bytes.
             return ByteBufUtil.hexDump(byteBuf);
         });
     });
+
+Moreover, you can also customize :api:`ContentPreviewer` by returning your own `ContentPreviewer`.
+The following example enables the hex dump preview of all contents.
+
+.. code-block:: java
+
+    class HexDumpContentPreviewer implements ContentPreviewer {
+        private final StringBuilder builder = new StringBuilder();
+        @Override
+        public void onHeaders(HttpHeaders headers) {
+            // it is called when headers of a request or response is received.
+        }
+
+        @Override
+        public void onData(HttpData data) {
+            // it is called when a new content is received.
+            builder.append(ByteBufUtil.hexDump(data.array(), data.offset(), data.length()));
+        }
+
+        @Override
+        public void isDone() {
+            // if it returns true, no further event is called but produce().
+            return false;
+        }
+
+        @Override
+        public String produce() {
+            // it is called when a request or response ends.
+            return builder.build();
+        }
+    }
+    ...
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    sb.contentPreviewFactory((ctx, headers) -> {
+        return new HexDumpContentPreviewer();
+    });
+
+Note that ``ContentPreviewer.onHeaders()`` is called when headers of a request or response is received,
+and ``ContentPreviewer.onData()`` is called when a new content is received.
+
 
 .. _nested-log:
 
