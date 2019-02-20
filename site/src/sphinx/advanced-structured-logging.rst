@@ -156,7 +156,7 @@ Enabling content previews
 -------------------------
 Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
 to retrieve the textual representation of the first N bytes of the request and response content.
-However, the properties are disabled by default so they always return ``null`` due to performance overhead.
+However, the properties are disabled by default due to performance overhead and thus they always return ``null``.
 You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`Client`.
 
 .. code-block:: java
@@ -185,19 +185,17 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
     ...
     cb.contentPreview(100);
 
-Note that the properties are enabled only for textual contents and
-Armeria considers the following contents as textual contents.
+Note that the contentPreview() method enables the previews only for textual content
+which meets the following cases:
 
 - when its type matches ``text/*`` or ``application/x-www-form-urlencoded``.
 - when its charset has been specified. e.g. application/json; charset=utf-8.
 - when its subtype is ``xml`` or ``json``. e.g. application/xml, application/json.
 - when its subtype ends with ``+xml`` or ``+json``. e.g. application/atom+xml, application/hal+json
 
-When a request or response begins, the :api:`ContentPreviewerFactory` set by a user
-creates a :api:`ContentPreviewer` based on HTTP headers to produce the preview when a request or response ends.
-
-You can configure :api:`Server`, :api:`VirtualHost`, or :api:`Client` to use your own :api:`ContentPreviewerFactory`
-and :api:`ContentPreviewer`. e.g.
+You can also use your own way to make the previews via your own :api:`ContentPreviewerFactory` which
+creates a :api:`ContentPreviewer` based on HTTP headers to produce the previews when a request or response ends.
+The following example makes the preview of first 100 bytes hex dump.
 
 .. code-block:: java
 
@@ -214,7 +212,6 @@ and :api:`ContentPreviewer`. e.g.
             return ByteBufUtil.hexDump(byteBuf);
         });
     });
-
 
 .. _nested-log:
 
