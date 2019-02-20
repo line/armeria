@@ -193,9 +193,10 @@ which meets the following cases:
 - when its subtype is ``xml`` or ``json``. e.g. application/xml, application/json.
 - when its subtype ends with ``+xml`` or ``+json``. e.g. application/atom+xml, application/hal+json
 
-You can also use your own way to make the previews via your own :api:`ContentPreviewerFactory` which
-creates a :api:`ContentPreviewer` based on HTTP headers to produce the previews when a request or response ends.
-The following example makes the preview of first 100 bytes hex dump.
+You can also use your own way to make the previews by customizing :api:`ContentPreviewerFactory`.
+The factory creates a :api:`ContentPreviewer` based on HTTP headers to produce the previews
+when a request or response ends.
+The following example enables the hex dump preview of first 100 bytes, regardless of the content type:
 
 .. code-block:: java
 
