@@ -217,8 +217,7 @@ the hex dump preview of first 100 bytes for other types:
         });
     });
 
-Moreover, you can also customize :api:`ContentPreviewer` by returning your own `ContentPreviewer`.
-The following example enables the hex dump preview of all contents.
+Returns your own :api:`ContentPreviewer` to change the way to make the preview. e.g.
 
 .. code-block:: java
 
@@ -253,10 +252,6 @@ The following example enables the hex dump preview of all contents.
     sb.contentPreviewFactory((ctx, headers) -> {
         return new HexDumpContentPreviewer();
     });
-
-Note that ``ContentPreviewer.onHeaders()`` is called when headers of a request or response is received,
-and ``ContentPreviewer.onData()`` is called when a new content is received.
-
 
 .. _nested-log:
 
