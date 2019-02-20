@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.docs;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -44,8 +45,16 @@ public interface DocServicePlugin {
      *
      * @param serviceConfigs the {@link ServiceConfig}s of the {@link Service}s that are instances of the
      *                       {@link #supportedServiceTypes()}
+     * @param includeMethodPredicate the {@link BiPredicate} that checks whether a method will be included while
+     *                               building {@link DocService}. The {@link BiPredicate} will be invoked with
+     *                               the service and method name.
+     * @param excludeMethodPredicate the {@link BiPredicate} that checks whether a method will be excluded while
+     *                               building {@link DocService}. The {@link BiPredicate} will be invoked with
+     *                               the service and method name.
      */
-    ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs);
+    ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
+                                               BiPredicate<String, String> includeMethodPredicate,
+                                               BiPredicate<String, String> excludeMethodPredicate);
 
     // Methods related with extracting documentation strings.
     // TODO(trustin): Define the docstring format.

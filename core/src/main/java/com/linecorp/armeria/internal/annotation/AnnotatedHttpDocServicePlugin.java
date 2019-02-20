@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -120,14 +121,25 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     }
 
     @Override
-    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs) {
+    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
+                                                      BiPredicate<String, String> includeMethodPredicate,
+                                                      BiPredicate<String, String> excludeMethodPredicate) {
         requireNonNull(serviceConfigs, "serviceConfigs");
+        requireNonNull(includeMethodPredicate, "includeMethodPredicate");
+        requireNonNull(excludeMethodPredicate, "excludeMethodPredicate");
+
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, String> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
             final Optional<AnnotatedHttpService> service = sc.service().as(AnnotatedHttpService.class);
             service.ifPresent(
                     httpService -> {
+                        final String className = httpService.object().getClass().getName();
+                        final String methodName = httpService.method().getName();
+                        if (!includeMethodPredicate.test(className, methodName) ||
+                            excludeMethodPredicate.test(className, methodName)) {
+                            return;
+                        }
                         addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), httpService);
                         addServiceDescription(serviceDescription, httpService);
                     });

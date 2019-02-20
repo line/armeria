@@ -30,6 +30,8 @@ import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -73,6 +75,11 @@ import com.linecorp.armeria.server.file.HttpFileService;
  * <p>{@link DocService} looks up the {@link DocServicePlugin}s available in the current JVM
  * using Java SPI (Service Provider Interface). The {@link DocServicePlugin} implementations will
  * generate {@link ServiceSpecification}s for the {@link Service}s they support.
+ *
+ * @see DocServiceBuilder#includeService(Predicate)
+ * @see DocServiceBuilder#includeMethod(BiPredicate)
+ * @see DocServiceBuilder#excludeService(Predicate)
+ * @see DocServiceBuilder#excludeMethod(BiPredicate)
  */
 public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
@@ -86,6 +93,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders;
     private final Map<String, ListMultimap<String, String>> exampleRequests;
+    private final BiPredicate<String, String> includeMethodPredicate;
+    private final BiPredicate<String, String> excludeMethodPredicate;
 
     @Nullable
     private Server server;
@@ -94,7 +103,9 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      * Creates a new instance.
      */
     public DocService() {
-        this(ImmutableMap.of(), ImmutableMap.of(), ImmutableList.of());
+        this(ImmutableMap.of(), ImmutableMap.of(), (service, method) -> true, // Include all methods.
+             (service, method) -> false, // Exclude no methods.
+             ImmutableList.of());
     }
 
     /**
@@ -102,6 +113,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      */
     DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders,
                Map<String, ListMultimap<String, String>> exampleRequests,
+               BiPredicate<String, String> includeMethodPredicate,
+               BiPredicate<String, String> excludeMethodPredicate,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers) {
 
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
@@ -114,6 +127,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                                                       "com/linecorp/armeria/server/docs")));
         this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
+        this.includeMethodPredicate = requireNonNull(includeMethodPredicate, "includeMethodPredicate");
+        this.excludeMethodPredicate = requireNonNull(excludeMethodPredicate, "excludeMethodPredicate");
     }
 
     private static <T> Map<String, ListMultimap<String, T>> immutableCopyOf(
@@ -150,7 +165,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
 
-                ServiceSpecification spec = generate(services);
+                ServiceSpecification spec = generate(services, includeMethodPredicate, excludeMethodPredicate);
 
                 spec = addDocStrings(spec, services);
                 spec = addExamples(spec);
@@ -161,11 +176,14 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         });
     }
 
-    private static ServiceSpecification generate(List<ServiceConfig> services) {
+    private static ServiceSpecification generate(List<ServiceConfig> services,
+                                                 BiPredicate<String, String> includeMethodPredicate,
+                                                 BiPredicate<String, String> excludeMethodPredicate) {
         return ServiceSpecification.merge(
                 plugins.stream()
                        .map(plugin -> plugin.generateSpecification(
-                               findSupportedServices(plugin, services)))
+                               findSupportedServices(plugin, services),
+                               includeMethodPredicate, excludeMethodPredicate))
                        .collect(toImmutableList()));
     }
 

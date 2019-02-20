@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newExceptionInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newFieldInfo;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import org.apache.thrift.TFieldRequirementType;
@@ -64,40 +66,27 @@ import com.linecorp.armeria.service.test.thrift.main.FooServiceException;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 import com.linecorp.armeria.service.test.thrift.main.FooUnion;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 
 public class ThriftDocServicePluginTest {
 
-    private final DocServicePlugin generator = new ThriftDocServicePlugin();
+    private static final String HELLO_NAME = HelloService.class.getName();
+
+    private static final String FOO_NAME = FooService.class.getName();
+
+    private static final DocServicePlugin generator = new ThriftDocServicePlugin();
 
     @Test
     public void servicesTest() {
-        final ServiceConfig helloService = new ServiceConfig(
-                new VirtualHostBuilder().build(),
-                PathMapping.ofExact("/hello"),
-                THttpService.of(mock(AsyncIface.class)));
+        final Map<String, ServiceInfo> services = services((service, method) -> true,
+                                                           (service, method) -> false);
 
-        final ServiceConfig fooService = new ServiceConfig(
-                new VirtualHostBuilder().build(),
-                PathMapping.ofExact("/foo"),
-                THttpService.ofFormats(mock(FooService.AsyncIface.class), ThriftSerializationFormats.COMPACT));
-
-        // Generate the specification with the ServiceConfigs.
-        final ServiceSpecification specification =
-                generator.generateSpecification(ImmutableSet.of(helloService, fooService));
-
-        // Ensure the specification contains all services.
-        final Map<String, ServiceInfo> services =
-                specification.services().stream()
-                             .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
-
-        assertThat(services).containsOnlyKeys(HelloService.class.getName(), FooService.class.getName());
+        assertThat(services).containsOnlyKeys(HELLO_NAME, FOO_NAME);
 
         // Ensure each service contains the endpoint and does not have example HTTP headers.
-        final ServiceInfo helloServiceInfo = services.get(HelloService.class.getName());
+        final ServiceInfo helloServiceInfo = services.get(HELLO_NAME);
         assertThat(helloServiceInfo.exampleHttpHeaders()).isEmpty();
 
-        final ServiceInfo fooServiceInfo = services.get(FooService.class.getName());
+        final ServiceInfo fooServiceInfo = services.get(FOO_NAME);
         assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
 
         // Ensure the example request is empty as well.
@@ -111,6 +100,85 @@ public class ThriftDocServicePluginTest {
         assertThat(bar4.endpoints())
                 .containsExactly(new EndpointInfoBuilder("*", "/foo")
                                          .defaultFormat(ThriftSerializationFormats.COMPACT).build());
+    }
+
+    @Test
+    public void include() {
+        // Include all services.
+        BiPredicate<String, String> include = allServices();
+        final BiPredicate<String, String> noExclude = (service, method) -> false;
+        Map<String, ServiceInfo> services = services(include, noExclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME, HELLO_NAME);
+
+        // Include only FooClass.
+        include = (service, method) -> FOO_NAME.equals(service);
+        services = services(include, noExclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME);
+
+        List<String> methods = services.get(FOO_NAME).methods()
+                                       .stream()
+                                       .map(MethodInfo::name)
+                                       .collect(toImmutableList());
+        assertThat(methods).containsExactlyInAnyOrder("bar1", "bar2", "bar3", "bar4", "bar5", "bar6");
+
+        // Include only fooMethod in FooClass.
+        include = (service, method) -> FOO_NAME.equals(service) && "bar2".equals(method);
+        services = services(include, noExclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME);
+
+        methods = services.get(FOO_NAME).methods()
+                          .stream()
+                          .map(MethodInfo::name)
+                          .collect(toImmutableList());
+        assertThat(methods).containsOnlyOnce("bar2");
+    }
+
+    @Test
+    public void excludes() {
+        // Exclude all services.
+        BiPredicate<String, String> exclude = allServices();
+        final BiPredicate<String, String> includeAll = (service, method) -> true;
+        Map<String, ServiceInfo> services = services(includeAll, exclude);
+        assertThat(services.size()).isZero();
+
+        // Exclude specific services.
+        exclude = (service, method) -> FOO_NAME.equals(service) &&
+                                       ("bar1".equals(method) || "bar4".equals(method));
+        services = services(includeAll, exclude);
+        final Map<String, MethodInfo> methods =
+                services.get(FOO_NAME)
+                        .methods()
+                        .stream()
+                        .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+
+        assertThat(methods).containsKeys("bar2", "bar3", "bar5", "bar6");
+        assertThat(methods).doesNotContainKeys("bar1", "bar4");
+    }
+
+    private static BiPredicate<String, String> allServices() {
+        return (service, method) -> FOO_NAME.equals(service) || HELLO_NAME.equals(service);
+    }
+
+    private static Map<String, ServiceInfo> services(BiPredicate<String, String> include,
+                                                     BiPredicate<String, String> exclude) {
+        final ServiceConfig helloService = new ServiceConfig(
+                new VirtualHostBuilder().build(),
+                PathMapping.ofExact("/hello"),
+                THttpService.of(mock(HelloService.AsyncIface.class)));
+
+        final ServiceConfig fooService = new ServiceConfig(
+                new VirtualHostBuilder().build(),
+                PathMapping.ofExact("/foo"),
+                THttpService.ofFormats(mock(FooService.AsyncIface.class), ThriftSerializationFormats.COMPACT));
+
+        // Generate the specification with the ServiceConfigs.
+        final ServiceSpecification specification =
+                generator.generateSpecification(ImmutableSet.of(helloService, fooService), include, exclude);
+
+        // Ensure the specification contains all services.
+        return specification.services()
+                            .stream()
+                            .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
     }
 
     @Test
@@ -137,16 +205,15 @@ public class ThriftDocServicePluginTest {
 
     @Test
     public void testNewServiceInfo() {
-        final ServiceInfo service =
-                newServiceInfo(FooService.class, ImmutableList.of(
-                        new EndpointInfoBuilder("*", "/foo")
-                                .fragment("a")
-                                .defaultFormat(ThriftSerializationFormats.BINARY)
-                                .build(),
-                        new EndpointInfoBuilder("*", "/debug/foo")
-                                .fragment("b")
-                                .defaultFormat(ThriftSerializationFormats.TEXT)
-                                .build()));
+        final ServiceInfo service = newServiceInfo(
+                FooService.class,
+                ImmutableList.of(new EndpointInfoBuilder("*", "/foo")
+                                         .fragment("a").defaultFormat(ThriftSerializationFormats.BINARY)
+                                         .build(),
+                                 new EndpointInfoBuilder("*", "/debug/foo")
+                                         .fragment("b").defaultFormat(ThriftSerializationFormats.TEXT)
+                                         .build()),
+                (serviceName, method) -> true, (serviceName, method) -> false);
 
         final Map<String, MethodInfo> methods =
                 service.methods().stream().collect(toImmutableMap(MethodInfo::name, Function.identity()));

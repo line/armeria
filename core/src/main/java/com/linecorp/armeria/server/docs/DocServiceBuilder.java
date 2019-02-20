@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -37,6 +39,14 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Builds a new {@link DocService}.
  */
 public final class DocServiceBuilder {
+
+    private static final BiPredicate<String, String> includeAllMethods = (service, method) -> true;
+
+    private static final BiPredicate<String, String> excludeNoMethods = (service, method) -> false;
+
+    private BiPredicate<String, String> includeMethodPredicate = includeAllMethods;
+
+    private BiPredicate<String, String> excludeMethodPredicate = excludeNoMethods;
 
     // These maps contain the entries whose key is a service name and value is a multimap.
     // The multimap contains the entries whose key is the method name.
@@ -249,6 +259,82 @@ public final class DocServiceBuilder {
     }
 
     /**
+     * Sets the {@link Predicate} that checks whether a service will be <b>included</b> while building
+     * {@link DocService}. The {@link Predicate} will be invoked with the service name.
+     * If this method and {@link #includeMethod(BiPredicate)} is not invoked, {@link DocService} will include
+     * all the services and methods it finds while generating documentation.
+     *
+     * <P>Note that this can be called multiple times and the {@link Predicate}s are composed using
+     * {@link Predicate#or(Predicate)}.
+     *
+     * @see #includeMethod(BiPredicate)
+     * @see DocService to find out how {@link DocService} generates documentaion
+     */
+    public DocServiceBuilder includeService(Predicate<String> predicate) {
+        requireNonNull(predicate, "predicate");
+        includeMethod((service, method) -> predicate.test(service));
+        return this;
+    }
+
+    /**
+     * Sets the {@link BiPredicate} that checks whether a method will be <b>included</b> while building
+     * {@link DocService}. The {@link BiPredicate} will be invoked with the service and method name.
+     * If this method and {@link #includeService(Predicate)} is not invoked, {@link DocService} will include
+     * all the services and methods it finds while generating documentation.
+     *
+     * <P>Note that this can be called multiple times and the {@link BiPredicate}s are composed using
+     * {@link BiPredicate#or(BiPredicate)}.
+     *
+     * @see #includeService(Predicate)
+     * @see DocService to find out how {@link DocService} generates documentaion
+     */
+    public DocServiceBuilder includeMethod(BiPredicate<String, String> predicate) {
+        requireNonNull(predicate, "predicate");
+        if (includeMethodPredicate == includeAllMethods) {
+            includeMethodPredicate = predicate;
+        } else {
+            includeMethodPredicate = includeMethodPredicate.or(predicate);
+        }
+        return this;
+    }
+
+    /**
+     * Sets the {@link Predicate} that checks whether a service will be <b>excluded</b> while building
+     * {@link DocService}. The {@link Predicate} will be invoked with the service name.
+     *
+     * <P>Note that this can be called multiple times and the {@link Predicate}s are composed using
+     * {@link Predicate#or(Predicate)}.
+     *
+     * @see #excludeMethod(BiPredicate)
+     * @see DocService to find out how {@link DocService} generates documentaion
+     */
+    public DocServiceBuilder excludeService(Predicate<String> predicate) {
+        requireNonNull(predicate, "predicate");
+        excludeMethod((service, method) -> predicate.test(service));
+        return this;
+    }
+
+    /**
+     * Sets the {@link BiPredicate} that checks whether a method will be <b>excluded</b> while building
+     * {@link DocService}. The {@link BiPredicate} will be invoked with the service and method name.
+     *
+     * <P>Note that this can be called multiple times and the {@link BiPredicate}s are composed using
+     * {@link BiPredicate#or(BiPredicate)}.
+     *
+     * @see #excludeService(Predicate)
+     * @see DocService to find out how {@link DocService} generates documentaion
+     */
+    public DocServiceBuilder excludeMethod(BiPredicate<String, String> predicate) {
+        requireNonNull(predicate, "predicate");
+        if (excludeMethodPredicate == excludeNoMethods) {
+            excludeMethodPredicate = predicate;
+        } else {
+            excludeMethodPredicate = excludeMethodPredicate.or(predicate);
+        }
+        return this;
+    }
+
+    /**
      * Adds Javascript scripts to inject into the {@code <head />} of the debug page HTML. This can be used to
      * customize the debug page (e.g., to provide a HeaderProvider for enabling authentication based on local
      * storage). All scripts are concatenated into the content of a single script tag.
@@ -375,6 +461,7 @@ public final class DocServiceBuilder {
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
-        return new DocService(exampleHttpHeaders, exampleRequests,  injectedScriptSuppliers);
+        return new DocService(exampleHttpHeaders, exampleRequests, includeMethodPredicate,
+                              excludeMethodPredicate, injectedScriptSuppliers);
     }
 }

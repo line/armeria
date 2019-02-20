@@ -29,8 +29,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -99,7 +101,12 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     @Override
-    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs) {
+    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
+                                                      BiPredicate<String, String> includeMethodPredicate,
+                                                      BiPredicate<String, String> excludeMethodPredicate) {
+        requireNonNull(serviceConfigs, "serviceConfigs");
+        requireNonNull(includeMethodPredicate, "includeMethodPredicate");
+        requireNonNull(excludeMethodPredicate, "excludeMethodPredicate");
 
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
@@ -129,20 +136,28 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         final List<Entry> entries = map.values().stream()
                                        .map(EntryBuilder::build)
                                        .collect(Collectors.toList());
-        return generate(entries);
+        return generate(entries, includeMethodPredicate, excludeMethodPredicate);
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(List<Entry> entries) {
-        final List<ServiceInfo> services = entries.stream()
-                                                  .map(e -> newServiceInfo(e.serviceType, e.endpointInfos))
-                                                  .collect(toImmutableList());
+    static ServiceSpecification generate(List<Entry> entries,
+                                         BiPredicate<String, String> includeMethodPredicate,
+                                         BiPredicate<String, String> excludeMethodPredicate) {
+        final List<ServiceInfo> services =
+                entries.stream()
+                       .map(e -> newServiceInfo(e.serviceType, e.endpointInfos,
+                                                includeMethodPredicate, excludeMethodPredicate))
+                       .filter(Objects::nonNull)
+                       .collect(toImmutableList());
 
         return ServiceSpecification.generate(services, ThriftDocServicePlugin::newNamedTypeInfo);
     }
 
     @VisibleForTesting
-    static ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints) {
+    @Nullable
+    static ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
+                                      BiPredicate<String, String> includeMethodPredicate,
+                                      BiPredicate<String, String> excludeMethodPredicate) {
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -156,16 +171,29 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         }
         final Method[] methods = interfaceClass.getDeclaredMethods();
 
-        return new ServiceInfo(name, Arrays.stream(methods).map(m -> newMethodInfo(m, endpoints))::iterator);
+        final List<MethodInfo> methodInfos = Arrays.stream(methods)
+                                                   .map(m -> newMethodInfo(m, endpoints, includeMethodPredicate,
+                                                                           excludeMethodPredicate))
+                                                   .filter(Objects::nonNull)
+                                                   .collect(toImmutableList());
+        if (methodInfos.isEmpty()) {
+            return null;
+        }
+        return new ServiceInfo(name, methodInfos);
     }
 
-    private static MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints) {
-        requireNonNull(method, "method");
-
+    @Nullable
+    private static MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints,
+                                            BiPredicate<String, String> includeMethodPredicate,
+                                            BiPredicate<String, String> excludeMethodPredicate) {
         final String methodName = method.getName();
 
         final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
         final String serviceName = serviceClass.getName();
+        if (!includeMethodPredicate.test(serviceName, methodName) ||
+            excludeMethodPredicate.test(serviceName, methodName)) {
+            return null;
+        }
         final ClassLoader classLoader = serviceClass.getClassLoader();
 
         final String argsClassName = serviceName + '$' + methodName + "_args";
