@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <h2>Server-Sent Events with Armeria!</h2>
+  <script>
+    var long = new EventSource('/long');
+    long.onmessage = function (e) {
+      document.getElementById("long").innerHTML = e.data;
+    };
+    var short = new EventSource('/short');
+    short.onmessage = function (e) {
+      document.getElementById("short").innerHTML = e.data;
+    };
+  </script>
+</head>
+<body>
+<table>
+  <tr>
+    <td>Random strings from long-lived stream:</td>
+    <td>
+      <div id="long"></div>
+    </td>
+  </tr>
+  <tr>
+    <td>Random strings from short-lived streams:</td>
+    <td>
+      <div id="short"></div>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

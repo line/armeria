@@ -729,10 +729,10 @@ public class AnnotatedHttpServiceResponseConverterTest {
     private void testEventStream(String path) {
         StepVerifier.create(HttpClient.of(rule.uri("/event-stream")).get(path))
                     .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.EVENT_STREAM))
-                    .expectNext(HttpData.ofUtf8("data:foo\n"))
-                    .expectNext(HttpData.ofUtf8("data:bar\n"))
-                    .expectNext(HttpData.ofUtf8("data:baz\n"))
-                    .expectNext(HttpData.ofUtf8("data:qux\n"))
+                    .expectNext(HttpData.ofUtf8("data:foo\n\n"))
+                    .expectNext(HttpData.ofUtf8("data:bar\n\n"))
+                    .expectNext(HttpData.ofUtf8("data:baz\n\n"))
+                    .expectNext(HttpData.ofUtf8("data:qux\n\n"))
                     .assertNext(this::assertThatLastContent)
                     .expectComplete()
                     .verify();

@@ -55,8 +55,8 @@ public class ServerSentEventResponseConverterFunctionTest {
                                                           ServerSentEvent.ofData("bar")));
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
-                    .expectNext(HttpData.ofUtf8("data:foo\n"))
-                    .expectNext(HttpData.ofUtf8("data:bar\n"))
+                    .expectNext(HttpData.ofUtf8("data:foo\n\n"))
+                    .expectNext(HttpData.ofUtf8("data:bar\n\n"))
                     .expectComplete()
                     .verify();
     }
@@ -76,8 +76,8 @@ public class ServerSentEventResponseConverterFunctionTest {
                           ServerSentEvent.ofData(stringifier.apply(ImmutableMap.of("foo", "bar")))));
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
-                    .expectNext(HttpData.ofUtf8("data:[\"foo\",\"bar\"]\n"))
-                    .expectNext(HttpData.ofUtf8("data:{\"foo\":\"bar\"}\n"))
+                    .expectNext(HttpData.ofUtf8("data:[\"foo\",\"bar\"]\n\n"))
+                    .expectNext(HttpData.ofUtf8("data:{\"foo\":\"bar\"}\n\n"))
                     .expectComplete()
                     .verify();
     }
@@ -91,7 +91,7 @@ public class ServerSentEventResponseConverterFunctionTest {
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
                     .expectNext(HttpData.ofUtf8(":additional\n:description\nid:1\nid:2\n" +
-                                                "event:add\nevent:add\ndata:foo\ndata:bar\n"))
+                                                "event:add\nevent:add\ndata:foo\ndata:bar\n\n"))
                     .expectComplete()
                     .verify();
     }
@@ -106,9 +106,9 @@ public class ServerSentEventResponseConverterFunctionTest {
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
                     .expectNext(HttpData.EMPTY_DATA)
-                    .expectNext(HttpData.ofUtf8("id\n"))
-                    .expectNext(HttpData.ofUtf8("event\n"))
-                    .expectNext(HttpData.ofUtf8("data\n"))
+                    .expectNext(HttpData.ofUtf8("id\n\n"))
+                    .expectNext(HttpData.ofUtf8("event\n\n"))
+                    .expectNext(HttpData.ofUtf8("data\n\n"))
                     .expectComplete()
                     .verify();
     }
@@ -118,7 +118,7 @@ public class ServerSentEventResponseConverterFunctionTest {
         final HttpResponse response = doConvert(Mono.just(ServerSentEvent.ofRetry(Duration.ofSeconds(1))));
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
-                    .expectNext(HttpData.ofUtf8("retry:1000\n"))
+                    .expectNext(HttpData.ofUtf8("retry:1000\n\n"))
                     .expectComplete()
                     .verify();
     }
@@ -128,8 +128,8 @@ public class ServerSentEventResponseConverterFunctionTest {
         final HttpResponse response = doConvert(Flux.just("foo", "bar"));
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
-                    .expectNext(HttpData.ofUtf8("data:foo\n"))
-                    .expectNext(HttpData.ofUtf8("data:bar\n"))
+                    .expectNext(HttpData.ofUtf8("data:foo\n\n"))
+                    .expectNext(HttpData.ofUtf8("data:bar\n\n"))
                     .expectComplete()
                     .verify();
     }
@@ -153,8 +153,8 @@ public class ServerSentEventResponseConverterFunctionTest {
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
                     // String#valueOf will work by default.
-                    .expectNext(HttpData.ofUtf8("data:<bar>\n"))
-                    .expectNext(HttpData.ofUtf8("data:<baz>\n"))
+                    .expectNext(HttpData.ofUtf8("data:<bar>\n\n"))
+                    .expectNext(HttpData.ofUtf8("data:<baz>\n\n"))
                     .expectComplete()
                     .verify();
     }
@@ -164,7 +164,7 @@ public class ServerSentEventResponseConverterFunctionTest {
         final HttpResponse response = doConvert(ServerSentEvent.ofData("foo"));
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
-                    .expectNext(HttpData.ofUtf8("data:foo\n"))
+                    .expectNext(HttpData.ofUtf8("data:foo\n\n"))
                     .expectComplete()
                     .verify();
     }

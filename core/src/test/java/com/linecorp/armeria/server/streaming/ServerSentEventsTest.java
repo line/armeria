@@ -64,7 +64,7 @@ public class ServerSentEventsTest {
             final AggregatedHttpMessage response = client.get(path).aggregate().join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);
-            assertThat(response.content().toStringUtf8()).isEqualTo("data:foo\ndata:bar\n");
+            assertThat(response.content().toStringUtf8()).isEqualTo("data:foo\n\ndata:bar\n\n");
         }
     }
 
@@ -75,7 +75,7 @@ public class ServerSentEventsTest {
             final AggregatedHttpMessage response = client.get(path).aggregate().join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);
-            assertThat(response.content().toStringUtf8()).isEqualTo(":foo\n:bar\n");
+            assertThat(response.content().toStringUtf8()).isEqualTo(":foo\n\n:bar\n\n");
         }
     }
 
@@ -85,6 +85,6 @@ public class ServerSentEventsTest {
                 HttpClient.of(rule.uri("/single")).get("/sse").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);
-        assertThat(response.content().toStringUtf8()).isEqualTo("event:add\n");
+        assertThat(response.content().toStringUtf8()).isEqualTo("event:add\n\n");
     }
 }
