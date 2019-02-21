@@ -53,10 +53,6 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
         bufferList = new ArrayList<>();
     }
 
-    int maxAggregatedLength() {
-        return maxAggregatedLength;
-    }
-
     void maxAggregatedLength(int length) {
         assert maxAggregatedLength == 0 : "maxAggregatedLength() should not be called more than once.";
         checkArgument(length > 0,
