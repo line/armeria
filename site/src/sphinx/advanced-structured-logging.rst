@@ -216,12 +216,15 @@ and the hex dump preview of first 100 bytes for other types:
         });
     });
 
-You can write your own :api:`ContentPreviewer` to change the way to make the preview. e.g.
+You can write your own :api:`ContentPreviewer` to change the way to make the preview, e.g.
 
 .. code-block:: java
 
     class HexDumpContentPreviewer implements ContentPreviewer {
         private final StringBuilder builder = new StringBuilder();
+        @Nullable;
+        private String preview;
+
         @Override
         public void onHeaders(HttpHeaders headers) {
             // Invoked when headers of a request or response is received.
@@ -234,15 +237,20 @@ You can write your own :api:`ContentPreviewer` to change the way to make the pre
         }
 
         @Override
-        public void isDone() {
-            // If it returns true, no further event is called but produce().
-            return false;
+        public boolean isDone() {
+            // If it returns true, no further event is invoked but produce().
+            return preview != null;
         }
 
         @Override
         public String produce() {
             // Invoked when a request or response ends.
-            return builder.build();
+            if (preview != null) {
+                return preview;
+            }
+            preview = builder.build();
+            builder = null;
+            return preview;
         }
     }
     ...
