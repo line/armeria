@@ -91,7 +91,7 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
                 // No need to slice.
                 return content.retainedDuplicate();
             }
-            return content.slice(content.readerIndex(), length).retain();
+            return content.retainedSlice(content.readerIndex(), length);
         } else {
             return Unpooled.wrappedBuffer(httpData.array(), httpData.offset(), length);
         }

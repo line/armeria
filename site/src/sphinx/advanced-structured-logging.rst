@@ -156,7 +156,7 @@ Enabling content previews
 -------------------------
 Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
 to retrieve the textual representation of the first N bytes of the request and response content.
-However, the properties are disabled by default so they always return ``null`` due to performance overhead.
+However, the properties are disabled by default due to performance overhead and thus they always return ``null``.
 You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`Client`.
 
 .. code-block:: java
@@ -175,39 +175,41 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
     ...
     sb.virtualHost(vhb.build());
 
-
 .. code-block:: java
 
-    import com.linecorp.armeria.client.ClientBuilder;
     import com.linecorp.armeria.client.HttpClientBuilder;
 
-    ClientBuilder cb = new HttpClientBuilder();
+    HttpClientBuilder cb = new HttpClientBuilder();
     ...
     cb.contentPreview(100);
 
-Note that the properties are enabled only for textual contents and
-Armeria considers the following contents as textual contents.
+Note that the ``contentPreview()`` method enables the previews only for textual content
+which meets the following cases:
 
 - when its type matches ``text/*`` or ``application/x-www-form-urlencoded``.
 - when its charset has been specified. e.g. application/json; charset=utf-8.
 - when its subtype is ``xml`` or ``json``. e.g. application/xml, application/json.
 - when its subtype ends with ``+xml`` or ``+json``. e.g. application/atom+xml, application/hal+json
 
-When a request or response begins, the :api:`ContentPreviewerFactory` set by a user
-creates a :api:`ContentPreviewer` based on HTTP headers to produce the preview when a request or response ends.
-
-You can configure :api:`Server`, :api:`VirtualHost`, or :api:`Client` to use your own :api:`ContentPreviewerFactory`
-and :api:`ContentPreviewer`. e.g.
+You can also customize the previews by specifying your own :api:`ContentPreviewerFactory` implementation.
+The following example enables the textual preview of first 100 characters for text/*, and
+the hex dump preview of first 100 bytes for other types:
 
 .. code-block:: java
 
     import io.netty.buffer.ByteBufUtil;
+    import com.linecorp.armeria.common.MediaType;
     import com.linecorp.armeria.common.logging.ContentPreviewer;
 
     ServerBuilder sb = new ServerBuilder();
 
     // A user can use their customized previewer factory.
     sb.contentPreviewerFactory((ctx, headers) -> {
+        MediaType contentType = headers.contentType();
+        if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
+            // Produces the textual preview of the first 100 characters.
+            return ContentPreviewer.ofText(100);
+        }
         // Produces the hex dump of the first 100 bytes.
         return ContentPreviewer.ofBinary(100, byteBuf -> {
             // byteBuf has no more than 100 bytes.
@@ -215,6 +217,41 @@ and :api:`ContentPreviewer`. e.g.
         });
     });
 
+Returns your own :api:`ContentPreviewer` to change the way to make the preview. e.g.
+
+.. code-block:: java
+
+    class HexDumpContentPreviewer implements ContentPreviewer {
+        private final StringBuilder builder = new StringBuilder();
+        @Override
+        public void onHeaders(HttpHeaders headers) {
+            // it is called when headers of a request or response is received.
+        }
+
+        @Override
+        public void onData(HttpData data) {
+            // it is called when a new content is received.
+            builder.append(ByteBufUtil.hexDump(data.array(), data.offset(), data.length()));
+        }
+
+        @Override
+        public void isDone() {
+            // if it returns true, no further event is called but produce().
+            return false;
+        }
+
+        @Override
+        public String produce() {
+            // it is called when a request or response ends.
+            return builder.build();
+        }
+    }
+    ...
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    sb.contentPreviewFactory((ctx, headers) -> {
+        return new HexDumpContentPreviewer();
+    });
 
 .. _nested-log:
 
