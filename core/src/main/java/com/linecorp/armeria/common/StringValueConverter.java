@@ -71,6 +71,9 @@ final class StringValueConverter implements ValueConverter<String> {
             return DateFormatter.format(new Date(((Instant) value).toEpochMilli()));
         }
 
+        if (value instanceof CacheControl) {
+            return ((CacheControl) value).asHeaderValue();
+        }
         return value.toString();
     }
 

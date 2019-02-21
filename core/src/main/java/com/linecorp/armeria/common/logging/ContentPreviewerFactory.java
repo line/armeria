@@ -106,7 +106,7 @@ public interface ContentPreviewerFactory {
 
     /**
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through the supplier that matches with {@code "Content-Type"} header.
+     * through the supplier that matches with {@code "content-type"} header.
      */
     @SuppressWarnings("unchecked")
     static ContentPreviewerFactory of(Map<MediaType, ? extends Supplier<? extends ContentPreviewer>> map) {
@@ -191,7 +191,7 @@ public interface ContentPreviewerFactory {
      *
      * @param length the maximum length of the preview.
      * @param defaultCharset the default charset for a request/response with unspecified charset in
-     *                       {@code "Content-Type"} header.
+     *                       {@code "content-type"} header.
      */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset) {
         if (length == 0) {

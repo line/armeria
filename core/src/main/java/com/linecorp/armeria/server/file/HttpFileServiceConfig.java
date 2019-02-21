@@ -22,6 +22,8 @@ import java.time.Clock;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaders;
+
 /**
  * {@link HttpFileService} configuration.
  */
@@ -33,15 +35,17 @@ public final class HttpFileServiceConfig {
     private final int maxCacheEntrySizeBytes;
     private final boolean serveCompressedFiles;
     private final boolean autoIndex;
+    private final HttpHeaders headers;
 
     HttpFileServiceConfig(HttpVfs vfs, Clock clock, int maxCacheEntries, int maxCacheEntrySizeBytes,
-                          boolean serveCompressedFiles, boolean autoIndex) {
+                          boolean serveCompressedFiles, boolean autoIndex, HttpHeaders headers) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.maxCacheEntries = validateMaxCacheEntries(maxCacheEntries);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
         this.serveCompressedFiles = serveCompressedFiles;
         this.autoIndex = autoIndex;
+        this.headers = requireNonNull(headers, "headers").asImmutable();
     }
 
     static int validateMaxCacheEntries(int maxCacheEntries) {
@@ -103,15 +107,23 @@ public final class HttpFileServiceConfig {
         return autoIndex;
     }
 
+    /**
+     * Returns the additional {@link HttpHeaders} to send in a response.
+     */
+    public HttpHeaders headers() {
+        return headers;
+    }
+
     @Override
     public String toString() {
         return toString(this, vfs(), clock(), maxCacheEntries(), maxCacheEntrySizeBytes(),
-                        serveCompressedFiles(), autoIndex());
+                        serveCompressedFiles(), autoIndex(), headers());
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
                            int maxCacheEntries, int maxCacheEntrySizeBytes,
-                           boolean serveCompressedFiles, boolean autoIndex) {
+                           boolean serveCompressedFiles, boolean autoIndex,
+                           HttpHeaders headers) {
 
         return MoreObjects.toStringHelper(holder)
                           .add("vfs", vfs)
@@ -120,6 +132,7 @@ public final class HttpFileServiceConfig {
                           .add("maxCacheEntrySizeBytes", maxCacheEntrySizeBytes)
                           .add("serveCompressedFiles", serveCompressedFiles)
                           .add("autoIndex", autoIndex)
+                          .add("headers", headers)
                           .toString();
     }
 }

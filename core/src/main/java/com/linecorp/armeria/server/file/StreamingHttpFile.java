@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -228,7 +227,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                                            .lastModified(isLastModifiedEnabled());
 
                     if (contentType() != null) {
-                        builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType());
+                        builder.contentType(contentType());
                     }
 
                     final String etag = generateEntityTag(attrs);

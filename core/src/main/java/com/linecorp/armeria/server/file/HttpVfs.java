@@ -25,6 +25,8 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpHeaders;
+
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 
@@ -68,10 +70,11 @@ public interface HttpVfs {
      * @param clock the {@link Clock} which provides the current date and time
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
+     * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
      *
      * @return the {@link HttpFile} at the specified {@code path}
      */
-    HttpFile get(String path, Clock clock, @Nullable String contentEncoding);
+    HttpFile get(String path, Clock clock, @Nullable String contentEncoding, HttpHeaders additionalHeaders);
 
     /**
      * Returns whether the file at the specified {@code path} is a directory.
