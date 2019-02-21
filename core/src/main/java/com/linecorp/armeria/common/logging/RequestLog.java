@@ -523,6 +523,13 @@ public interface RequestLog {
     String responseContentPreview();
 
     /**
+     * Returns the trailing {@link HttpHeaders} of the {@link Response}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    HttpHeaders responseTrailers();
+
+    /**
      * Returns the string representation of the {@link Request}, with no sanitization of headers or content.
      */
     String toStringRequestOnly();
@@ -531,9 +538,9 @@ public interface RequestLog {
      * Returns the string representation of the {@link Request}.
      *
      * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
-     *     {@link Function} is what is actually logged as headers.
+     *                         {@link Function} is what is actually logged as headers.
      * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
-     *     {@link Function} is what is actually logged as content.
+     *                         {@link Function} is what is actually logged as content.
      */
     String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                Function<Object, ?> contentSanitizer);
@@ -547,10 +554,24 @@ public interface RequestLog {
      * Returns the string representation of the {@link Response}.
      *
      * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
-     *     {@link Function} is what is actually logged as headers.
+     *                         {@link Function} is what is actually logged as headers.
      * @param contentSanitizer a {@link Function} for sanitizing response content for logging. The result of the
-     *     {@link Function} is what is actually logged as content.
+     *                         {@link Function} is what is actually logged as content.
      */
     String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                 Function<Object, ?> contentSanitizer);
+
+    /**
+     * Returns the string representation of the {@link Response}.
+     *
+     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
+     *                         {@link Function} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing response content for logging. The result of the
+     *                         {@link Function} is what is actually logged as content.
+     * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
+     *                         {@link Function} is what is actually logged as trailers.
+     */
+    String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                Function<Object, ?> contentSanitizer,
+                                Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer);
 }

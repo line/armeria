@@ -30,6 +30,11 @@ import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -53,6 +58,21 @@ public class HttpServiceTest {
                                     HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
                         }
                     }.decorate(LoggingService.newDecorator()));
+            sb.service("/trailers", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                                           HttpData.ofUtf8("trailer"),
+                                           HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
+                }
+            });
+            sb.service("/additionalTrailers", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("foo"), "baz");
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            });
 
             sb.service(
                     "/200",
@@ -129,5 +149,17 @@ public class HttpServiceTest {
                 assertThat(res.getEntity()).isNull();
             }
         }
+    }
+
+    @Test
+    public void contentLengthIsNotSetWhenTrailerExists() {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+        AggregatedHttpMessage message = client.get("/trailers").aggregate().join();
+        assertThat(message.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(message.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+
+        message = client.get("/additionalTrailers").aggregate().join();
+        assertThat(message.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(message.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("baz");
     }
 }

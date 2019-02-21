@@ -232,7 +232,7 @@ abstract class HttpResponseDecoder {
                 case WAIT_DATA_OR_TRAILERS:
                     if (o instanceof HttpHeaders) {
                         state = State.DONE;
-                        // TODO(minwoox) Log trailers.
+                        logBuilder.responseTrailers((HttpHeaders) o);
                     } else {
                         logBuilder.increaseResponseLength((HttpData) o);
                     }

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.HttpHeaders.EMPTY_HEADERS;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.COMPLETE;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_CONTENT;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_END;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -46,6 +48,7 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -67,6 +70,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private static final AtomicIntegerFieldUpdater<DefaultRequestLog> flagsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "flags");
+
+    private static final AtomicReferenceFieldUpdater<DefaultRequestLog, HttpHeaders>
+            responseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            DefaultRequestLog.class, HttpHeaders.class, "responseTrailers");
 
     private static final int FLAGS_REQUEST_END_WITHOUT_CONTENT =
             REQUEST_END.setterFlags() & ~REQUEST_CONTENT.setterFlags();
@@ -130,6 +137,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private HttpHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
     private HttpHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
+
+    private volatile HttpHeaders responseTrailers = EMPTY_HEADERS;
+
     @Nullable
     private Object requestContent;
     @Nullable
@@ -222,9 +232,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (lastChild.isAvailable(RESPONSE_END)) {
-            responseLength(lastChild.responseLength());
-            responseContentPreview(lastChild.responseContentPreview());
-            endResponse0(lastChild.responseCause(), lastChild.responseEndTimeNanos());
+            propagateResponseEndData(lastChild);
         }
 
         lastChild.addListener(log -> startResponse0(
@@ -234,11 +242,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
-        lastChild.addListener(log -> {
-            responseLength(log.responseLength());
-            responseContentPreview(log.responseContentPreview());
-            endResponse0(log.responseCause(), log.responseEndTimeNanos());
-        }, RESPONSE_END);
+        lastChild.addListener(this::propagateResponseEndData, RESPONSE_END);
+    }
+
+    private void propagateResponseEndData(RequestLog log) {
+        responseLength(log.responseLength());
+        responseContentPreview(log.responseContentPreview());
+        responseTrailers(log.responseTrailers());
+        endResponse0(log.responseCause(), log.responseEndTimeNanos());
     }
 
     @Override
@@ -853,6 +864,33 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public HttpHeaders responseTrailers() {
+        ensureAvailability(RESPONSE_END);
+        return responseTrailers;
+    }
+
+    @Override
+    public void responseTrailers(HttpHeaders responseTrailers) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_END) || responseTrailers.isEmpty()) {
+            return;
+        }
+
+        final HttpHeaders trailers = this.responseTrailers;
+        final HttpHeaders toSet;
+        if (trailers == EMPTY_HEADERS) {
+            final HttpHeaders newHeaders = new DefaultHttpHeaders();
+            if (responseTrailersUpdater.compareAndSet(this, EMPTY_HEADERS, newHeaders)) {
+                toSet = newHeaders;
+            } else {
+                toSet = this.responseTrailers;
+            }
+        } else {
+            toSet = trailers;
+        }
+        toSet.setAll(responseTrailers);
+    }
+
+    @Override
     public void endResponse() {
         endResponse0(responseContent instanceof RpcResponse ? ((RpcResponse) responseContent).cause() : null);
     }
@@ -1057,6 +1095,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                        Function<Object, ?> contentSanitizer) {
+        return toStringResponseOnly(headersSanitizer, contentSanitizer, Function.identity());
+    }
+
+    @Override
+    public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                       Function<Object, ?> contentSanitizer,
+                                       Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+        requireNonNull(headersSanitizer, "headersSanitizer");
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        requireNonNull(trailersSanitizer, "trailersSanitizer");
 
         final int flags = this.flags & 0xFFFF0000; // Only interested in the bits related with response.
         if (responseStrFlags == flags) {
@@ -1091,6 +1139,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 buf.append(", content=").append(contentSanitizer.apply(responseContent));
             } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
                 buf.append(", contentPreview=").append(responseContentPreview);
+            }
+
+            final HttpHeaders responseTrailers = this.responseTrailers;
+            if (!responseTrailers.isEmpty()) {
+                buf.append(", trailers=").append(trailersSanitizer.apply(responseTrailers));
             }
         }
         buf.append('}');

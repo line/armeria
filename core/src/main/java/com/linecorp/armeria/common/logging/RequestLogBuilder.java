@@ -332,6 +332,11 @@ public interface RequestLogBuilder {
     boolean isResponseContentDeferred();
 
     /**
+     * Sets the {@link RequestLog#responseTrailers()}.
+     */
+    void responseTrailers(HttpHeaders responseTrailers);
+
+    /**
      * Finishes the collection of the {@link Response} information. If a {@link Throwable} cause has been set
      * with {@link #responseContent(Object, Object)}, it will be treated as the {@code responseCause} for this
      * log. This method sets the following properties:

@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -59,6 +60,7 @@ public class RetryingClientWithLoggingTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
+                    ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("foo"), "bar");
                     if (reqCount.getAndIncrement() < 2) {
                         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                     } else {
@@ -99,7 +101,14 @@ public class RetryingClientWithLoggingTest {
         successLogIndex = 5;
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .decorator(loggingDecorator())
-                .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()))
+                .decorator(new RetryingHttpClientBuilder(
+                        (RetryStrategyWithContent<HttpResponse>)
+                                (ctx, response) -> response.aggregate().handle((msg, cause) -> {
+                                    if ("hello".equals(msg.contentUtf8())) {
+                                        return null;
+                                    }
+                                    return Backoff.ofDefault();
+                                })).newDecorator())
                 .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
@@ -148,6 +157,7 @@ public class RetryingClientWithLoggingTest {
     private static void assertResponseSideLog(RequestLog log, boolean success) {
         assertThat(log.requestHeaders()).isNotNull();
         assertThat(log.responseHeaders()).isNotNull();
+        assertThat(log.responseTrailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
 
         assertThat(log.responseHeaders().status()).isEqualTo(success ? HttpStatus.OK
                                                                      : HttpStatus.INTERNAL_SERVER_ERROR);

@@ -134,6 +134,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     }
 
     @Override
+    public void responseTrailers(HttpHeaders responseTrailers) {}
+
+    @Override
     public void endResponse() {}
 
     @Override

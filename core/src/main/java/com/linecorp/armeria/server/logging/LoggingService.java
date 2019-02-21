@@ -73,6 +73,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final Function<Object, ?> requestContentSanitizer;
     private final Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer;
     private final Function<Object, ?> responseContentSanitizer;
+    private final Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer;
     private final Function<? super Throwable, ? extends Throwable> responseCauseSanitizer;
     private final Sampler sampler;
 
@@ -102,6 +103,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
              Function.identity(),
              Function.identity(),
              Function.identity(),
+             Function.identity(),
              Sampler.always());
     }
 
@@ -118,6 +120,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
             Function<Object, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
             Function<? super Throwable, ? extends Throwable> responseCauseSanitizer,
             Sampler sampler) {
         super(requireNonNull(delegate, "delegate"));
@@ -129,6 +132,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
+        this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         this.sampler = requireNonNull(sampler, "sampler");
     }
@@ -146,6 +150,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
                                                      successfulResponseLogLevel, failedResponseLogLevel,
                                                      responseHeadersSanitizer,
                                                      responseContentSanitizer,
+                                                     responseTrailersSanitizer,
                                                      responseCauseSanitizer),
                                   RequestLogAvailability.COMPLETE);
         }

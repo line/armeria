@@ -58,6 +58,7 @@ public final class LoggingDecorators {
             LogLevel failedResponseLogLevel,
             Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
             Function<? super Throwable, ? extends Throwable> responseCauseSanitizer) {
 
         final Throwable responseCause = log.responseCause();
@@ -65,7 +66,8 @@ public final class LoggingDecorators {
                                                      : failedResponseLogLevel;
         if (level.isEnabled(logger)) {
             final String responseStr = log.toStringResponseOnly(responseHeadersSanitizer,
-                                                                responseContentSanitizer);
+                                                                responseContentSanitizer,
+                                                                responseTrailersSanitizer);
             if (responseCause == null) {
                 level.log(logger, RESPONSE_FORMAT, responseStr);
             } else {
