@@ -221,8 +221,9 @@ You can write your own :api:`ContentPreviewer` to change the way to make the pre
 .. code-block:: java
 
     class HexDumpContentPreviewer implements ContentPreviewer {
-        private final StringBuilder builder = new StringBuilder();
-        @Nullable;
+        @Nullable
+        private StringBuilder builder = new StringBuilder();
+        @Nullable
         private String preview;
 
         @Override
@@ -233,6 +234,7 @@ You can write your own :api:`ContentPreviewer` to change the way to make the pre
         @Override
         public void onData(HttpData data) {
             // Invoked when a new content is received.
+            assert builder != null;
             builder.append(ByteBufUtil.hexDump(data.array(), data.offset(), data.length()));
         }
 
@@ -248,7 +250,7 @@ You can write your own :api:`ContentPreviewer` to change the way to make the pre
             if (preview != null) {
                 return preview;
             }
-            preview = builder.build();
+            preview = builder.toString();
             builder = null;
             return preview;
         }
@@ -256,9 +258,7 @@ You can write your own :api:`ContentPreviewer` to change the way to make the pre
     ...
     ServerBuilder sb = new ServerBuilder();
     ...
-    sb.contentPreviewFactory((ctx, headers) -> {
-        return new HexDumpContentPreviewer();
-    });
+    sb.contentPreviewerFactory((ctx, headers) -> new HexDumpContentPreviewer());
 
 .. _nested-log:
 
