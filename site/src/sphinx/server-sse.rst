@@ -57,14 +57,13 @@ use the annotation.
 Adjusting the request timeout
 -----------------------------
 
-The events may being sent for a longer time depending on the application. Even it can continue infinitely,
-for example streaming stock quotes. But the server allows receiving a request and sending the corresponding
-response completely only within the amount of time, which is configured as the request timeout property.
-Even if you do not configure the property, it is configured to ``10`` seconds by default.
-So you must adjust the timeout if your event stream is possible to exceed it because the response will be
-terminated if it lasts longer than the configured timeout. The following example shows how to adjust
-the timeout of a single request. As you might know, it is not only for `Server-Sent Events`_, so you can
-use this way for any request which you want to adjust its timeout.
+An event stream may be sent for a longer period than the configured timeout depending on the application.
+It even can continue infinitely, for example streaming stock quotes. Such a long running stream may be
+terminated prematurely because Armeria has the default request timeout of ``10`` seconds, i.e. your stream
+will be broken after 10 seconds at most. Therefore, you must adjust the timeout if your event stream lasts
+longer than the configured timeout. The following example shows how to adjust the timeout of a single request.
+As you might know, it is not only for `Server-Sent Events`_, so you can use this method for any requests
+which you want to adjust timeout for.
 
 .. code-block:: java
 
@@ -76,11 +75,12 @@ use this way for any request which you want to adjust its timeout.
     import reactor.core.publisher.Flux;
 
     Server server = new ServerBuilder()
-            // This service infinitely sends numbers as the data of events for every second.
+            // This service infinitely sends numbers as the data of events every second.
             .service("/long-sse", (ctx, req) -> {
                 // Note that you MUST adjust the request timeout if you want to send events for a
-                // longer time than the configured request timeout. The timeout can be unset by
-                // setting 0 like the below, but it is NOT RECOMMENDED in the real world application.
+                // longer period than the configured request timeout. The timeout can be disabled by
+                // setting 0 like the below, but it is NOT RECOMMENDED in the real world application,
+                // because it can leave a lot of unfinished requests.
                 ctx.setRequestTimeout(Duration.ZERO);
                 return ServerSentEvents.fromPublisher(
                         Flux.interval(Duration.ofSeconds(1))
