@@ -1294,8 +1294,8 @@ because they always have an empty content.
 Using a composite annotation
 ----------------------------
 
-In some cases, you may want to make a composite annotation which includes several types of annotations.
-Let's assume that there is a service class like the below:
+To avoid specifying a common set of annotations repetitively, you may want to create a composite annotation
+which is annotated by other annotations. For example, let's assume that there is a service class like the below:
 
 .. code-block:: java
 
@@ -1316,9 +1316,8 @@ Let's assume that there is a service class like the below:
         public HttpResponse update() { ... }
     }
 
-In the example, you need to add the same 4 annotations to the two different methods. It is obviously
-uncomfortable and noisy. So Armeria provides a way to make a composite annotation. You can create your own
-composite annotation as follows.
+In the above example, you had to add the same 4 annotations to the two different methods. It is obviously
+too verbose and duplicate, so we could simplify them by creating a composite annotation like the following:
 
 .. code-block:: java
 
@@ -1329,8 +1328,9 @@ composite annotation as follows.
     @MyAuthenticationDecorator
     public @interface MyCreateOrUpdateApiSpec {}
 
-Now let's rewrite the service class with the composite annotation. It is definitely more clear than before.
-Moreover it makes you can manage your annotations in the better way.
+Now, let's rewrite the service class with the composite annotation. It is definitely less verbose than before.
+Moreover, you don't need to update both ``create()`` and ``update()`` but only ``MyCreateOrUpdateApiSpec``
+when you add more common annotations to them.
 
 .. code-block:: java
 
