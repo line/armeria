@@ -1291,3 +1291,56 @@ because they always have an empty content.
 | 304          | Not modified   |
 +--------------+----------------+
 
+Using a composite annotation
+----------------------------
+
+In some cases, you may want to make a composite annotation which includes several types of annotations.
+Let's assume that there is a service class like the below:
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        @Post("/create")
+        @ConsumesJson
+        @ProducesJson
+        @LoggingDecorator
+        @MyAuthenticationDecorator
+        public HttpResponse create() { ... }
+
+        @Post("/update")
+        @ConsumesJson
+        @ProducesJson
+        @LoggingDecorator
+        @MyAuthenticationDecorator
+        public HttpResponse update() { ... }
+    }
+
+In the example, you need to add the same 4 annotations to the two different methods. It is obviously
+uncomfortable and noisy. So Armeria provides a way to make a composite annotation. You can create your own
+composite annotation as follows.
+
+.. code-block:: java
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @ConsumesJson
+    @ProducesJson
+    @LoggingDecorator
+    @MyAuthenticationDecorator
+    public @interface MyCreateOrUpdateApiSpec {}
+
+Now let's rewrite the service class with the composite annotation. It is definitely more clear than before.
+Moreover it makes you can manage your annotations in the better way.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        @Post("/create")
+        @MyCreateOrUpdateApiSpec
+        public HttpResponse create() { ... }
+
+        @Post("/update")
+        @MyCreateOrUpdateApiSpec
+        public HttpResponse update() { ... }
+    }
