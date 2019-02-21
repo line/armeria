@@ -398,7 +398,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         @Override
         protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            logger.warn("{} TLS handshake failed:", ctx.channel(), cause);
+            if (!Exceptions.isExpected(cause)) {
+                logger.warn("{} TLS handshake failed:", ctx.channel(), cause);
+            }
             ctx.close();
 
             // On handshake failure, ApplicationProtocolNegotiationHandler will remove itself,
