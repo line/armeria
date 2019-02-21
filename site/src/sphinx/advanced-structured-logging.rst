@@ -184,7 +184,7 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
     cb.contentPreview(100);
 
 Note that the ``contentPreview()`` method enables the previews only for textual content
-which meets the following cases:
+which meets one of the following cases:
 
 - when its type matches ``text/*`` or ``application/x-www-form-urlencoded``.
 - when its charset has been specified. e.g. application/json; charset=utf-8.
@@ -192,8 +192,8 @@ which meets the following cases:
 - when its subtype ends with ``+xml`` or ``+json``. e.g. application/atom+xml, application/hal+json
 
 You can also customize the previews by specifying your own :api:`ContentPreviewerFactory` implementation.
-The following example enables the textual preview of first 100 characters for text/*, and
-the hex dump preview of first 100 bytes for other types:
+The following example enables the textual preview of first 100 characters for the content type of ``text/*``,
+and the hex dump preview of first 100 bytes for other types:
 
 .. code-block:: java
 
@@ -203,7 +203,6 @@ the hex dump preview of first 100 bytes for other types:
 
     ServerBuilder sb = new ServerBuilder();
 
-    // A user can use their customized previewer factory.
     sb.contentPreviewerFactory((ctx, headers) -> {
         MediaType contentType = headers.contentType();
         if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
@@ -217,7 +216,7 @@ the hex dump preview of first 100 bytes for other types:
         });
     });
 
-Returns your own :api:`ContentPreviewer` to change the way to make the preview. e.g.
+You can write your own :api:`ContentPreviewer` to change the way to make the preview. e.g.
 
 .. code-block:: java
 
@@ -225,24 +224,24 @@ Returns your own :api:`ContentPreviewer` to change the way to make the preview. 
         private final StringBuilder builder = new StringBuilder();
         @Override
         public void onHeaders(HttpHeaders headers) {
-            // it is called when headers of a request or response is received.
+            // Invoked when headers of a request or response is received.
         }
 
         @Override
         public void onData(HttpData data) {
-            // it is called when a new content is received.
+            // Invoked when a new content is received.
             builder.append(ByteBufUtil.hexDump(data.array(), data.offset(), data.length()));
         }
 
         @Override
         public void isDone() {
-            // if it returns true, no further event is called but produce().
+            // If it returns true, no further event is called but produce().
             return false;
         }
 
         @Override
         public String produce() {
-            // it is called when a request or response ends.
+            // Invoked when a request or response ends.
             return builder.build();
         }
     }

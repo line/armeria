@@ -285,10 +285,6 @@ public class ContentPreviewerTest {
                 testSliceBytes(TEST_STR.getBytes(), maxLength, sliceLength);
             }
         }
-        final ContentPreviewer writer = ContentPreviewer.ofBinary(2, byteBuf -> {
-            assertThat(byteBuf.readableBytes()).isEqualTo(2);
-            return "";
-        });
     }
 
     @Test
