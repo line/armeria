@@ -87,19 +87,6 @@ public class HttpHeadersTest {
     }
 
     @Test
-    public void cacheControl() {
-        final HttpHeaders headers = HttpHeaders.of();
-
-        headers.cacheControl(ServerCacheControl.DISABLED);
-        assertThat(headers).hasSize(1);
-        assertThat(headers.getAll(CACHE_CONTROL)).containsExactly("no-cache, no-store, must-revalidate");
-
-        // An empty directives must clear the header.
-        headers.cacheControl(ServerCacheControl.EMPTY);
-        assertThat(headers).isEmpty();
-    }
-
-    @Test
     public void testSetObject() {
         final String expectedDate = "Mon, 3 Dec 2007 10:15:30 GMT";
         final Instant instant = Instant.parse("2007-12-03T10:15:30.00Z");

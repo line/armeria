@@ -103,11 +103,6 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
-    public HttpHeaders cacheControl(CacheControl cacheControl) {
-        return unsupported();
-    }
-
-    @Override
     public HttpHeaders setAllIfAbsent(Headers<AsciiString, String, ?> headers) {
         return unsupported();
     }

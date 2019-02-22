@@ -15,7 +15,13 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControl;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControlSeconds;
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CacheControl;
 
@@ -50,6 +56,71 @@ public final class ServerCacheControl extends CacheControl {
      */
     public static final ServerCacheControl IMMUTABLE = new ServerCacheControlBuilder()
             .maxAgeSeconds(31536000).cachePublic().cacheImmutable().build();
+
+    /**
+     * Parses the specified {@code "cache-control"} header values into a {@link ServerCacheControl}.
+     * Note that any unknown directives will be ignored.
+     *
+     * @return the {@link ServerCacheControl} decoded from the specified header values.
+     */
+    public static ServerCacheControl parse(String... directives) {
+        return parse(ImmutableList.copyOf(requireNonNull(directives, "directives")));
+    }
+
+    /**
+     * Parses the specified {@code "cache-control"} header values into a {@link ServerCacheControl}.
+     * Note that any unknown directives will be ignored.
+     *
+     * @return the {@link ServerCacheControl} decoded from the specified header values.
+     */
+    public static ServerCacheControl parse(Iterable<String> directives) {
+        requireNonNull(directives, "directives");
+        final ServerCacheControlBuilder builder = new ServerCacheControlBuilder();
+        for (String d : directives) {
+            parseCacheControl(d, (name, value) -> {
+                switch (name) {
+                    case "no-cache":
+                        builder.noCache();
+                        break;
+                    case "no-store":
+                        builder.noStore();
+                        break;
+                    case "no-transform":
+                        builder.noTransform();
+                        break;
+                    case "max-age":
+                        final long maxAgeSeconds = parseCacheControlSeconds(value);
+                        if (maxAgeSeconds >= 0) {
+                            builder.maxAgeSeconds(maxAgeSeconds);
+                        }
+                        break;
+                    case "public":
+                        builder.cachePublic();
+                        break;
+                    case "private":
+                        builder.cachePrivate();
+                        break;
+                    case "immutable":
+                        builder.cacheImmutable();
+                        break;
+                    case "must-revalidate":
+                        builder.mustRevalidate();
+                        break;
+                    case "proxy-revalidate":
+                        builder.proxyRevalidate();
+                        break;
+                    case "s-maxage":
+                        final long sMaxAgeSeconds = parseCacheControlSeconds(value);
+                        if (sMaxAgeSeconds >= 0) {
+                            builder.sMaxAgeSeconds(sMaxAgeSeconds);
+                        }
+                        break;
+                }
+            });
+        }
+
+        return builder.build();
+    }
 
     private final boolean cachePublic;
     private final boolean cachePrivate;

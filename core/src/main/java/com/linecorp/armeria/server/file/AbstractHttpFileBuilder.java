@@ -245,8 +245,7 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      */
     public final B cacheControl(CacheControl cacheControl) {
         requireNonNull(cacheControl, "cacheControl");
-        getOrCreateHeaders().cacheControl(cacheControl);
-        return self();
+        return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
     }
 
     /**

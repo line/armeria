@@ -15,7 +15,13 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControl;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControlSeconds;
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CacheControl;
 
@@ -46,6 +52,81 @@ public final class ClientCacheControl extends CacheControl {
             .onlyIfCached()
             .maxStaleSeconds(Integer.MAX_VALUE)
             .build();
+
+    /**
+     * Parses the specified {@code "cache-control"} header values into a {@link ClientCacheControl}.
+     * Note that any unknown directives will be ignored.
+     *
+     * @return the {@link ClientCacheControl} decoded from the specified header values.
+     */
+    public static ClientCacheControl parse(String... directives) {
+        return parse(ImmutableList.copyOf(requireNonNull(directives, "directives")));
+    }
+
+    /**
+     * Parses the specified {@code "cache-control"} header values into a {@link ClientCacheControl}.
+     * Note that any unknown directives will be ignored.
+     *
+     * @return the {@link ClientCacheControl} decoded from the specified header values.
+     */
+    public static ClientCacheControl parse(Iterable<String> directives) {
+        requireNonNull(directives, "directives");
+        final ClientCacheControlBuilder builder = new ClientCacheControlBuilder();
+        for (String d : directives) {
+            parseCacheControl(d, (name, value) -> {
+                switch (name) {
+                    case "no-cache":
+                        builder.noCache();
+                        break;
+                    case "no-store":
+                        builder.noStore();
+                        break;
+                    case "no-transform":
+                        builder.noTransform();
+                        break;
+                    case "max-age":
+                        final long maxAgeSeconds = parseCacheControlSeconds(value);
+                        if (maxAgeSeconds >= 0) {
+                            builder.maxAgeSeconds(maxAgeSeconds);
+                        }
+                        break;
+                    case "only-if-cached":
+                        builder.onlyIfCached();
+                        break;
+                    case "max-stale":
+                        if (value == null) {
+                            builder.maxStale();
+                        } else {
+                            final long maxStaleSeconds = parseCacheControlSeconds(value);
+                            if (maxStaleSeconds >= 0) {
+                                builder.maxStaleSeconds(maxStaleSeconds);
+                            }
+                        }
+                        break;
+                    case "min-fresh":
+                        final long minFreshSeconds = parseCacheControlSeconds(value);
+                        if (minFreshSeconds >= 0) {
+                            builder.minFreshSeconds(minFreshSeconds);
+                        }
+                        break;
+                    case "stale-while-revalidate":
+                        final long staleWhileRevalidateSeconds = parseCacheControlSeconds(value);
+                        if (staleWhileRevalidateSeconds >= 0) {
+                            builder.staleWhileRevalidateSeconds(staleWhileRevalidateSeconds);
+                        }
+                        break;
+                    case "stale-if-error":
+                        final long staleIfErrorSeconds = parseCacheControlSeconds(value);
+                        if (staleIfErrorSeconds >= 0) {
+                            builder.staleIfErrorSeconds(staleIfErrorSeconds);
+                        }
+                        break;
+                }
+            });
+        }
+
+        return builder.build();
+    }
 
     static final long UNSPECIFIED_MAX_STALE = -2;
 

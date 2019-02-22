@@ -193,11 +193,6 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     HttpHeaders contentType(MediaType mediaType);
 
     /**
-     * Sets the {@link HttpHeaderNames#CACHE_CONTROL} header.
-     */
-    HttpHeaders cacheControl(CacheControl cacheControl);
-
-    /**
      * Copies the entries missing in this headers from the specified {@link Headers}.
      * This method is a shortcut of the following code:
      * <pre>{@code

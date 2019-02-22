@@ -156,4 +156,34 @@ public class ClientCacheControlTest {
                      .staleIfError(null)
                      .build().isEmpty()).isTrue();
     }
+
+    @Test
+    public void testParse() {
+        // Make sure an empty directives return an empty object.
+        assertThat(ClientCacheControl.parse("")).isEqualTo(ClientCacheControl.EMPTY);
+
+        // Make sure unknown directives are ignored.
+        assertThat(ClientCacheControl.parse("proxy-revalidate, s-maxage=1"))
+                .isEqualTo(ClientCacheControl.EMPTY);
+
+        // Make sure all directives are set.
+        assertThat(ClientCacheControl.parse("no-cache, no-store, no-transform, only-if-cached, " +
+                                            "max-age=1, max-stale=2, min-fresh=3, " +
+                                            "stale-while-revalidate=4, stale-if-error=5"))
+                .isEqualTo(new ClientCacheControlBuilder()
+                                   .noCache()
+                                   .noStore()
+                                   .noTransform()
+                                   .maxAgeSeconds(1)
+                                   .onlyIfCached()
+                                   .maxStaleSeconds(2)
+                                   .minFreshSeconds(3)
+                                   .staleWhileRevalidateSeconds(4)
+                                   .staleIfErrorSeconds(5)
+                                   .build());
+
+        // Make sure 'max-stale' without a value is parsed.
+        assertThat(ClientCacheControl.parse("max-stale"))
+                .isEqualTo(new ClientCacheControlBuilder().maxStale().build());
+    }
 }

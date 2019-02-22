@@ -212,17 +212,6 @@ public final class DefaultHttpHeaders
     }
 
     @Override
-    public HttpHeaders cacheControl(CacheControl cacheControl) {
-        requireNonNull(cacheControl, "cacheControl");
-        if (cacheControl.isEmpty()){
-            remove(HttpHeaderNames.CACHE_CONTROL);
-        } else {
-            set(HttpHeaderNames.CACHE_CONTROL, cacheControl.asHeaderValue());
-        }
-        return this;
-    }
-
-    @Override
     public boolean isEndOfStream() {
         return endOfStream;
     }

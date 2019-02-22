@@ -205,8 +205,7 @@ public final class HttpFileServiceBuilder {
      */
     public HttpFileServiceBuilder cacheControl(CacheControl cacheControl) {
         requireNonNull(cacheControl, "cacheControl");
-        getOrCreateHeaders().cacheControl(cacheControl);
-        return this;
+        return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
     }
 
     /**

@@ -153,4 +153,31 @@ public class ServerCacheControlTest {
                      .sMaxAge(null)
                      .build().isEmpty()).isTrue();
     }
+
+    @Test
+    public void testParse() {
+        // Make sure an empty directives return an empty object.
+        assertThat(ServerCacheControl.parse("")).isEqualTo(ServerCacheControl.EMPTY);
+
+        // Make sure unknown directives are ignored.
+        assertThat(ServerCacheControl.parse("only-if-cached, stall-if-error=1"))
+                .isEqualTo(ServerCacheControl.EMPTY);
+
+        // Make sure all directives are set.
+        assertThat(ServerCacheControl.parse("no-cache, no-store, no-transform, must-revalidate, " +
+                                            "max-age=1, public, private, immutable, proxy-revalidate, " +
+                                            "s-maxage=2"))
+                .isEqualTo(new ServerCacheControlBuilder()
+                                   .noCache()
+                                   .noStore()
+                                   .noTransform()
+                                   .maxAgeSeconds(1)
+                                   .cachePublic()
+                                   .cachePrivate()
+                                   .cacheImmutable()
+                                   .mustRevalidate()
+                                   .proxyRevalidate()
+                                   .sMaxAgeSeconds(2)
+                                   .build());
+    }
 }
