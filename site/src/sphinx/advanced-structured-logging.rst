@@ -35,6 +35,8 @@ What properties can be retrieved?
 | ``requestContent``          | the serialization-dependent content object of the request.           |
 |                             | ``ThriftCall`` for Thrift. ``null`` otherwise.                       |
 +-----------------------------+----------------------------------------------------------------------+
+| ``requestContentPreview``   | the preview of the request content                                   |
++-----------------------------+----------------------------------------------------------------------+
 
 +-----------------------------+----------------------------------------------------------------------+
 | Response properties                                                                                |
@@ -55,6 +57,8 @@ What properties can be retrieved?
 +-----------------------------+----------------------------------------------------------------------+
 | ``responseContent``         | the serialization-dependent content object of the response.          |
 |                             | ``ThriftReply`` for Thrift. ``null`` otherwise.                      |
++-----------------------------+----------------------------------------------------------------------+
+| ``responseContentPreview``  | the preview of the response content                                  |
 +-----------------------------+----------------------------------------------------------------------+
 
 Availability of properties
@@ -147,6 +151,114 @@ automatically for you:
             ...
         }
     }
+
+Enabling content previews
+-------------------------
+Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
+to retrieve the textual representation of the first N bytes of the request and response content.
+However, the properties are disabled by default due to performance overhead and thus they always return ``null``.
+You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`Client`.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.VirtualHostBuilder;
+
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    // Enable previewing the content with the maxium length of 100 for textual content.
+    sb.contentPreview(100);
+    ...
+    VirtualHostBuilder vhb = new VirtualHostBuilder("http://example.com");
+    // In this case, the property of virtual host takes precedence over that of server.
+    vhb.contentPreview(150);
+    ...
+    sb.virtualHost(vhb.build());
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.HttpClientBuilder;
+
+    HttpClientBuilder cb = new HttpClientBuilder();
+    ...
+    cb.contentPreview(100);
+
+Note that the ``contentPreview()`` method enables the previews only for textual content
+which meets one of the following cases:
+
+- when its type matches ``text/*`` or ``application/x-www-form-urlencoded``.
+- when its charset has been specified. e.g. application/json; charset=utf-8.
+- when its subtype is ``xml`` or ``json``. e.g. application/xml, application/json.
+- when its subtype ends with ``+xml`` or ``+json``. e.g. application/atom+xml, application/hal+json
+
+You can also customize the previews by specifying your own :api:`ContentPreviewerFactory` implementation.
+The following example enables the textual preview of first 100 characters for the content type of ``text/*``,
+and the hex dump preview of first 100 bytes for other types:
+
+.. code-block:: java
+
+    import io.netty.buffer.ByteBufUtil;
+    import com.linecorp.armeria.common.MediaType;
+    import com.linecorp.armeria.common.logging.ContentPreviewer;
+
+    ServerBuilder sb = new ServerBuilder();
+
+    sb.contentPreviewerFactory((ctx, headers) -> {
+        MediaType contentType = headers.contentType();
+        if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
+            // Produces the textual preview of the first 100 characters.
+            return ContentPreviewer.ofText(100);
+        }
+        // Produces the hex dump of the first 100 bytes.
+        return ContentPreviewer.ofBinary(100, byteBuf -> {
+            // byteBuf has no more than 100 bytes.
+            return ByteBufUtil.hexDump(byteBuf);
+        });
+    });
+
+You can write your own :api:`ContentPreviewer` to change the way to make the preview, e.g.
+
+.. code-block:: java
+
+    class HexDumpContentPreviewer implements ContentPreviewer {
+        @Nullable
+        private StringBuilder builder = new StringBuilder();
+        @Nullable
+        private String preview;
+
+        @Override
+        public void onHeaders(HttpHeaders headers) {
+            // Invoked when headers of a request or response is received.
+        }
+
+        @Override
+        public void onData(HttpData data) {
+            // Invoked when a new content is received.
+            assert builder != null;
+            builder.append(ByteBufUtil.hexDump(data.array(), data.offset(), data.length()));
+        }
+
+        @Override
+        public boolean isDone() {
+            // If it returns true, no further event is invoked but produce().
+            return preview != null;
+        }
+
+        @Override
+        public String produce() {
+            // Invoked when a request or response ends.
+            if (preview != null) {
+                return preview;
+            }
+            preview = builder.toString();
+            builder = null;
+            return preview;
+        }
+    }
+    ...
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    sb.contentPreviewerFactory((ctx, headers) -> new HexDumpContentPreviewer());
 
 .. _nested-log:
 

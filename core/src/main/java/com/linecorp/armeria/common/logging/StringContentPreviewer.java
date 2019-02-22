@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.CharsetUtil;
 
 final class StringContentPreviewer extends BinaryContentPreviewer {
     private final Charset defaultCharset;
@@ -52,15 +53,14 @@ final class StringContentPreviewer extends BinaryContentPreviewer {
         } else {
             charset = defaultCharset;
         }
-        final long maxBytesPerChar = (long) Math.ceil(charset.newEncoder().maxBytesPerChar());
+        final long maxBytesPerChar = (long) Math.ceil(CharsetUtil.encoder(charset).maxBytesPerChar());
         maxAggregatedLength((int) Long.min(Integer.MAX_VALUE, maxBytesPerChar * (long) length));
     }
 
     @Override
     protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
         final String produced = wrappedBuffer.toString(wrappedBuffer.readerIndex(),
-                                                       Math.min(maxAggregatedLength(),
-                                                                wrappedBuffer.readableBytes()), charset);
+                                                       wrappedBuffer.readableBytes(), charset);
         if (produced.length() > length) {
             return produced.substring(0, length);
         } else {

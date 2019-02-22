@@ -25,6 +25,8 @@ import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
+import com.google.common.math.IntMath;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 
@@ -46,26 +48,22 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
 
     BinaryContentPreviewer(int maxAggregatedLength) {
         checkArgument(maxAggregatedLength >= 0,
-                      "maxAggregatedLength: %d (expected: >= 0)", maxAggregatedLength);
+                      "maxAggregatedLength: %s (expected: >= 0)", maxAggregatedLength);
         this.maxAggregatedLength = maxAggregatedLength;
         bufferList = new ArrayList<>();
-    }
-
-    int maxAggregatedLength() {
-        return maxAggregatedLength;
     }
 
     void maxAggregatedLength(int length) {
         assert maxAggregatedLength == 0 : "maxAggregatedLength() should not be called more than once.";
         checkArgument(length > 0,
-                      "length: %d (expected: > 0", length);
+                      "length: %s (expected: > 0", length);
         maxAggregatedLength = length;
     }
 
     static ContentPreviewer create(int maxAggregatedLength,
                                    BiFunction<? super HttpHeaders, ? super ByteBuf, String> reproducer) {
         requireNonNull(reproducer, "reproducer");
-        checkArgument(maxAggregatedLength > 0, "maxAggregatedLength: %d (expected > 0)", maxAggregatedLength);
+        checkArgument(maxAggregatedLength > 0, "maxAggregatedLength: %s (expected > 0)", maxAggregatedLength);
         return new BinaryContentPreviewer(maxAggregatedLength) {
             @Override
             protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
@@ -80,18 +78,33 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
         this.headers = headers;
     }
 
+    private static ByteBuf duplicateData(HttpData httpData, int length) {
+        checkArgument(length > 0 && length <= httpData.length(),
+                      "length: %s, HttpData.length(): %s (expected: 0 < length <= HttpData.length())",
+                      length, httpData.length());
+        if (httpData instanceof ByteBufHolder) {
+            final ByteBuf content = ((ByteBufHolder) httpData).content();
+            if (content.readableBytes() == length) {
+                // No need to slice.
+                return content.retainedDuplicate();
+            }
+            return content.retainedSlice(content.readerIndex(), length);
+        } else {
+            return Unpooled.wrappedBuffer(httpData.array(), httpData.offset(), length);
+        }
+    }
+
     @Override
     public void onData(HttpData data) {
         assert maxAggregatedLength > 0 : "maxAggreagtedLength() should be called before onData().";
         if (data.isEmpty()) {
             return;
         }
-        if (data instanceof ByteBufHolder) {
-            bufferList.add(((ByteBufHolder) data).content().retainedDuplicate());
-        } else {
-            bufferList.add(Unpooled.wrappedBuffer(data.array(), data.offset(), data.length()));
-        }
-        aggregatedLength += data.length();
+        final int length = Math.min(maxAggregatedLength - aggregatedLength, data.length());
+        bufferList.add(duplicateData(data, length));
+
+        aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
+
         if (aggregatedLength >= maxAggregatedLength || data.isEndOfStream()) {
             produce();
         }
@@ -111,8 +124,7 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
             return produced;
         }
         try {
-            return produced = reproduce(headers, Unpooled.wrappedBuffer(bufferList.toArray(
-                    BYTE_BUFS)).asReadOnly());
+            return produced = reproduce(headers, Unpooled.wrappedBuffer(bufferList.toArray(BYTE_BUFS)));
         } finally {
             bufferList.forEach(ReferenceCountUtil::safeRelease);
             bufferList.clear();
