@@ -87,6 +87,19 @@ public class HttpHeadersTest {
     }
 
     @Test
+    public void cacheControl() {
+        final HttpHeaders headers = HttpHeaders.of();
+
+        headers.cacheControl(ServerCacheControl.DISABLED);
+        assertThat(headers).hasSize(1);
+        assertThat(headers.getAll(CACHE_CONTROL)).containsExactly("no-cache, no-store, must-revalidate");
+
+        // An empty directives must clear the header.
+        headers.cacheControl(ServerCacheControl.EMPTY);
+        assertThat(headers).isEmpty();
+    }
+
+    @Test
     public void testSetObject() {
         final String expectedDate = "Mon, 3 Dec 2007 10:15:30 GMT";
         final Instant instant = Instant.parse("2007-12-03T10:15:30.00Z");
@@ -99,10 +112,12 @@ public class HttpHeadersTest {
         headers.setObject(LAST_MODIFIED, instant);
         headers.setObject(IF_MODIFIED_SINCE, calendar);
         headers.setObject(CACHE_CONTROL, ServerCacheControl.DISABLED);
+        headers.setObject(CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
 
         assertThat(headers.get(DATE)).isEqualTo(expectedDate);
         assertThat(headers.get(LAST_MODIFIED)).isEqualTo(expectedDate);
         assertThat(headers.get(IF_MODIFIED_SINCE)).isEqualTo(expectedDate);
         assertThat(headers.get(CACHE_CONTROL)).isEqualTo("no-cache, no-store, must-revalidate");
+        assertThat(headers.get(CONTENT_TYPE)).isEqualTo("text/plain; charset=utf-8");
     }
 }

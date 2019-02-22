@@ -205,6 +205,18 @@ public final class HttpFileServiceBuilder {
      */
     public HttpFileServiceBuilder cacheControl(CacheControl cacheControl) {
         requireNonNull(cacheControl, "cacheControl");
+        getOrCreateHeaders().cacheControl(cacheControl);
+        return this;
+    }
+
+    /**
+     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * <pre>{@code
+     * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+     * }</pre>
+     */
+    public HttpFileServiceBuilder cacheControl(CharSequence cacheControl) {
+        requireNonNull(cacheControl, "cacheControl");
         return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
     }
 

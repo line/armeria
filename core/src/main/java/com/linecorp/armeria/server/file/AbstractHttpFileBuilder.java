@@ -220,7 +220,8 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
     public final B contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
         autoDetectedContentType(false);
-        return setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+        getOrCreateHeaders().contentType(contentType);
+        return self();
     }
 
     /**
@@ -243,6 +244,18 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * }</pre>
      */
     public final B cacheControl(CacheControl cacheControl) {
+        requireNonNull(cacheControl, "cacheControl");
+        getOrCreateHeaders().cacheControl(cacheControl);
+        return self();
+    }
+
+    /**
+     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * <pre>{@code
+     * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+     * }</pre>
+     */
+    public final B cacheControl(CharSequence cacheControl) {
         requireNonNull(cacheControl, "cacheControl");
         return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
     }
