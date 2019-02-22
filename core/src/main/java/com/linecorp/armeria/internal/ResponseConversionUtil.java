@@ -202,17 +202,8 @@ public final class ResponseConversionUtil {
                 }
                 return null;
             });
-            try {
-                writer.onDemand(new Runnable() {
-                    @Override
-                    public void run() {
-                        s.request(1);
-                        writer.onDemand(this);
-                    }
-                });
-            } catch (Exception e) {
-                onError(e);
-            }
+
+            s.request(1);
         }
 
         @Override
@@ -228,6 +219,10 @@ public final class ResponseConversionUtil {
                     headersSent = true;
                 }
                 writer.write(content);
+                writer.onDemand(() -> {
+                    assert subscription != null;
+                    subscription.request(1);
+                });
             } catch (Exception e) {
                 onError(e);
             }

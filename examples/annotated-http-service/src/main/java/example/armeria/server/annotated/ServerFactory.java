@@ -20,7 +20,6 @@ public final class ServerFactory {
                  .annotatedService("/injection", new InjectionService())
                  .annotatedService("/messageConverter", new MessageConverterService())
                  .annotatedService("/exception", new ExceptionHandlerService())
-                 .annotatedService("/sse", new ServerSentEventsService())
                  .build();
     }
 

@@ -364,8 +364,8 @@ public final class ServerSentEvents {
             sb.append("retry:").append(retry.toMillis()).append(LINE_FEED);
         }
 
-        final String sseText = sb.toString();
-        return sseText.isEmpty() ? HttpData.EMPTY_DATA : HttpData.ofUtf8(sseText);
+        return sb.length() == 0 ? HttpData.EMPTY_DATA
+                                : HttpData.ofUtf8(sb.append(LINE_FEED).toString());
     }
 
     private static <T> HttpData toHttpData(

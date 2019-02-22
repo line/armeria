@@ -8,6 +8,10 @@
   - Learn how to authenticate users using SAML.
   - See [SAML Single Sign-on](https://line.github.io/armeria/advanced-saml.html).
 
+- `server-sent-events`
+  - Learn how to serve Server-Sent Events.
+  - See [Serving Server-Sent Events](https://line.github.io/armeria/server-sse.html).
+  
 - `spring-boot-minimal`
   - Learn how to use Armeria with the minimal Spring Boot dependencies.
 
