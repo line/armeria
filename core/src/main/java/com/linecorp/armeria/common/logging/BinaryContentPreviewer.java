@@ -79,8 +79,9 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
     }
 
     private static ByteBuf duplicateData(HttpData httpData, int length) {
-        checkArgument(length > 0 && length <= httpData.length(), "length: %s, HttpData.length(): %s" +
-                      " (expected: length > 0 && length <= HttpData.length())", length, httpData.length());
+        checkArgument(length > 0 && length <= httpData.length(),
+                      "length: %s, HttpData.length(): %s (expected: 0 < length <= HttpData.length())",
+                      length, httpData.length());
         if (httpData instanceof ByteBufHolder) {
             final ByteBuf content = ((ByteBufHolder) httpData).content();
             if (content.readableBytes() == length) {
