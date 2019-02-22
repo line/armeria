@@ -1291,3 +1291,56 @@ because they always have an empty content.
 | 304          | Not modified   |
 +--------------+----------------+
 
+Using a composite annotation
+----------------------------
+
+To avoid specifying a common set of annotations repetitively, you may want to create a composite annotation
+which is annotated by other annotations. For example, let's assume that there is a service class like the below:
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        @Post("/create")
+        @ConsumesJson
+        @ProducesJson
+        @LoggingDecorator
+        @MyAuthenticationDecorator
+        public HttpResponse create() { ... }
+
+        @Post("/update")
+        @ConsumesJson
+        @ProducesJson
+        @LoggingDecorator
+        @MyAuthenticationDecorator
+        public HttpResponse update() { ... }
+    }
+
+In the above example, you had to add the same 4 annotations to the two different methods. It is obviously
+too verbose and duplicate, so we could simplify them by creating a composite annotation like the following:
+
+.. code-block:: java
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @ConsumesJson
+    @ProducesJson
+    @LoggingDecorator
+    @MyAuthenticationDecorator
+    public @interface MyCreateOrUpdateApiSpec {}
+
+Now, let's rewrite the service class with the composite annotation. It is definitely less verbose than before.
+Moreover, you don't need to update both ``create()`` and ``update()`` but only ``MyCreateOrUpdateApiSpec``
+when you add more common annotations to them.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        @Post("/create")
+        @MyCreateOrUpdateApiSpec
+        public HttpResponse create() { ... }
+
+        @Post("/update")
+        @MyCreateOrUpdateApiSpec
+        public HttpResponse update() { ... }
+    }
