@@ -44,7 +44,7 @@ public final class DropwizardMeterRegistries {
     @VisibleForTesting
     static final HierarchicalNameMapper DEFAULT_NAME_MAPPER = (id, convention) -> {
         final String name = id.getConventionName(convention);
-        if (!id.getTags().iterator().hasNext()) {
+        if (!id.getTagsAsIterable().iterator().hasNext()) {
             return name;
         }
 
