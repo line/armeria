@@ -19,9 +19,13 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControl;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControlSeconds;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Map;
+import java.util.function.BiConsumer;
+
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.CacheControl;
 
@@ -46,16 +50,40 @@ public final class ServerCacheControl extends CacheControl {
             .noCache().noStore().mustRevalidate().build();
 
     /**
-     * {@code "no-cache"}.
+     * {@code "no-cache, must-revalidate"}.
      */
     public static final ServerCacheControl REVALIDATED = new ServerCacheControlBuilder()
-            .noCache().build();
+            .noCache().mustRevalidate().build();
 
     /**
      * {@code "max-age=31536000, public, immutable"}.
      */
     public static final ServerCacheControl IMMUTABLE = new ServerCacheControlBuilder()
             .maxAgeSeconds(31536000).cachePublic().immutable().build();
+
+    private static final Map<String, BiConsumer<ServerCacheControlBuilder, String>> DIRECTIVES =
+            ImmutableMap.<String, BiConsumer<ServerCacheControlBuilder, String>>builder()
+                    .put("no-cache", (b, v) -> b.noCache())
+                    .put("no-store", (b, v) -> b.noStore())
+                    .put("no-transform", (b, v) -> b.noTransform())
+                    .put("max-age", (b, v) -> {
+                        final long maxAgeSeconds = parseCacheControlSeconds(v);
+                        if (maxAgeSeconds >= 0) {
+                            b.maxAgeSeconds(maxAgeSeconds);
+                        }
+                    })
+                    .put("public", (b, v) -> b.cachePublic())
+                    .put("private", (b, v) -> b.cachePrivate())
+                    .put("immutable", (b, v) -> b.immutable())
+                    .put("must-revalidate", (b, v) -> b.mustRevalidate())
+                    .put("proxy-revalidate", (b, v) -> b.proxyRevalidate())
+                    .put("s-maxage", (b, v) -> {
+                        final long sMaxAgeSeconds = parseCacheControlSeconds(v);
+                        if (sMaxAgeSeconds >= 0) {
+                            b.sMaxAgeSeconds(sMaxAgeSeconds);
+                        }
+                    })
+                    .build();
 
     /**
      * Parses the specified {@code "cache-control"} header values into a {@link ServerCacheControl}.
@@ -78,43 +106,9 @@ public final class ServerCacheControl extends CacheControl {
         final ServerCacheControlBuilder builder = new ServerCacheControlBuilder();
         for (String d : directives) {
             parseCacheControl(d, (name, value) -> {
-                switch (name) {
-                    case "no-cache":
-                        builder.noCache();
-                        break;
-                    case "no-store":
-                        builder.noStore();
-                        break;
-                    case "no-transform":
-                        builder.noTransform();
-                        break;
-                    case "max-age":
-                        final long maxAgeSeconds = parseCacheControlSeconds(value);
-                        if (maxAgeSeconds >= 0) {
-                            builder.maxAgeSeconds(maxAgeSeconds);
-                        }
-                        break;
-                    case "public":
-                        builder.cachePublic();
-                        break;
-                    case "private":
-                        builder.cachePrivate();
-                        break;
-                    case "immutable":
-                        builder.immutable();
-                        break;
-                    case "must-revalidate":
-                        builder.mustRevalidate();
-                        break;
-                    case "proxy-revalidate":
-                        builder.proxyRevalidate();
-                        break;
-                    case "s-maxage":
-                        final long sMaxAgeSeconds = parseCacheControlSeconds(value);
-                        if (sMaxAgeSeconds >= 0) {
-                            builder.sMaxAgeSeconds(sMaxAgeSeconds);
-                        }
-                        break;
+                final BiConsumer<ServerCacheControlBuilder, String> action = DIRECTIVES.get(name);
+                if (action != null) {
+                    action.accept(builder, value);
                 }
             });
         }

@@ -464,7 +464,8 @@ public final class ArmeriaHttpUtil {
     /**
      * Converts the specified {@code "cache-control"} directive value into a long integer.
      *
-     * @return the converted value or {@code -1} if {@code value} is {@code null} or not an integer.
+     * @return the converted value if {@code value} is equal to or greater than {@code 0}.
+     *         {@code -1} otherwise, i.e. if a negative integer or not a number.
      */
     public static long parseCacheControlSeconds(@Nullable String value) {
         if (value == null) {

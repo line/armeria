@@ -19,9 +19,13 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControl;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControlSeconds;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Map;
+import java.util.function.BiConsumer;
+
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.CacheControl;
 
@@ -53,6 +57,48 @@ public final class ClientCacheControl extends CacheControl {
             .maxStaleSeconds(Integer.MAX_VALUE)
             .build();
 
+    private static final Map<String, BiConsumer<ClientCacheControlBuilder, String>> DIRECTIVES =
+            ImmutableMap.<String, BiConsumer<ClientCacheControlBuilder, String>>builder()
+                    .put("no-cache", (b, v) -> b.noCache())
+                    .put("no-store", (b, v) -> b.noStore())
+                    .put("no-transform", (b, v) -> b.noTransform())
+                    .put("max-age", (b, v) -> {
+                        final long maxAgeSeconds = parseCacheControlSeconds(v);
+                        if (maxAgeSeconds >= 0) {
+                            b.maxAgeSeconds(maxAgeSeconds);
+                        }
+                    })
+                    .put("only-if-cached", (b, v) -> b.onlyIfCached())
+                    .put("max-stale", (b, v) -> {
+                        if (v == null) {
+                            b.maxStale();
+                        } else {
+                            final long maxStaleSeconds = parseCacheControlSeconds(v);
+                            if (maxStaleSeconds >= 0) {
+                                b.maxStaleSeconds(maxStaleSeconds);
+                            }
+                        }
+                    })
+                    .put("min-fresh", (b, v) -> {
+                        final long minFreshSeconds = parseCacheControlSeconds(v);
+                        if (minFreshSeconds >= 0) {
+                            b.minFreshSeconds(minFreshSeconds);
+                        }
+                    })
+                    .put("stale-while-revalidate", (b, v) -> {
+                        final long staleWhileRevalidateSeconds = parseCacheControlSeconds(v);
+                        if (staleWhileRevalidateSeconds >= 0) {
+                            b.staleWhileRevalidateSeconds(staleWhileRevalidateSeconds);
+                        }
+                    })
+                    .put("stale-if-error", (b, v) -> {
+                        final long staleIfErrorSeconds = parseCacheControlSeconds(v);
+                        if (staleIfErrorSeconds >= 0) {
+                            b.staleIfErrorSeconds(staleIfErrorSeconds);
+                        }
+                    })
+                    .build();
+
     /**
      * Parses the specified {@code "cache-control"} header values into a {@link ClientCacheControl}.
      * Note that any unknown directives will be ignored.
@@ -74,53 +120,9 @@ public final class ClientCacheControl extends CacheControl {
         final ClientCacheControlBuilder builder = new ClientCacheControlBuilder();
         for (String d : directives) {
             parseCacheControl(d, (name, value) -> {
-                switch (name) {
-                    case "no-cache":
-                        builder.noCache();
-                        break;
-                    case "no-store":
-                        builder.noStore();
-                        break;
-                    case "no-transform":
-                        builder.noTransform();
-                        break;
-                    case "max-age":
-                        final long maxAgeSeconds = parseCacheControlSeconds(value);
-                        if (maxAgeSeconds >= 0) {
-                            builder.maxAgeSeconds(maxAgeSeconds);
-                        }
-                        break;
-                    case "only-if-cached":
-                        builder.onlyIfCached();
-                        break;
-                    case "max-stale":
-                        if (value == null) {
-                            builder.maxStale();
-                        } else {
-                            final long maxStaleSeconds = parseCacheControlSeconds(value);
-                            if (maxStaleSeconds >= 0) {
-                                builder.maxStaleSeconds(maxStaleSeconds);
-                            }
-                        }
-                        break;
-                    case "min-fresh":
-                        final long minFreshSeconds = parseCacheControlSeconds(value);
-                        if (minFreshSeconds >= 0) {
-                            builder.minFreshSeconds(minFreshSeconds);
-                        }
-                        break;
-                    case "stale-while-revalidate":
-                        final long staleWhileRevalidateSeconds = parseCacheControlSeconds(value);
-                        if (staleWhileRevalidateSeconds >= 0) {
-                            builder.staleWhileRevalidateSeconds(staleWhileRevalidateSeconds);
-                        }
-                        break;
-                    case "stale-if-error":
-                        final long staleIfErrorSeconds = parseCacheControlSeconds(value);
-                        if (staleIfErrorSeconds >= 0) {
-                            builder.staleIfErrorSeconds(staleIfErrorSeconds);
-                        }
-                        break;
+                final BiConsumer<ClientCacheControlBuilder, String> action = DIRECTIVES.get(name);
+                if (action != null) {
+                    action.accept(builder, value);
                 }
             });
         }

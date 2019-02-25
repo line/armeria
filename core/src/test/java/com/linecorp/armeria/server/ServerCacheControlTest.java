@@ -31,7 +31,7 @@ public class ServerCacheControlTest {
         assertThat(ServerCacheControl.IMMUTABLE.asHeaderValue())
                 .isEqualTo("max-age=31536000, public, immutable");
         assertThat(ServerCacheControl.REVALIDATED.asHeaderValue())
-                .isEqualTo("no-cache");
+                .isEqualTo("no-cache, must-revalidate");
     }
 
     @Test
@@ -141,11 +141,12 @@ public class ServerCacheControlTest {
                                                                      .proxyRevalidate()
                                                                      .sMaxAgeSeconds(3600)
                                                                      .build();
+
+        // 'public' and 'private' are mutually exclusive. 'private' must win.
         assertThat(cc.asHeaderValue())
-                .isEqualTo("public, private, immutable, must-revalidate, proxy-revalidate, s-maxage=3600");
+                .isEqualTo("private, immutable, must-revalidate, proxy-revalidate, s-maxage=3600");
         assertThat(cc.toBuilder().build()).isEqualTo(cc);
         assertThat(cc.toBuilder()
-                     .cachePublic(false)
                      .cachePrivate(false)
                      .immutable(false)
                      .mustRevalidate(false)
@@ -172,7 +173,6 @@ public class ServerCacheControlTest {
                                    .noStore()
                                    .noTransform()
                                    .maxAgeSeconds(1)
-                                   .cachePublic()
                                    .cachePrivate()
                                    .immutable()
                                    .mustRevalidate()

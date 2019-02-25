@@ -165,8 +165,8 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
      * Returns a newly created {@link CacheControl} with the directives enabled so far.
      */
     public CacheControl build() {
-        // 'no-cache' and 'no-store' are mutually exclusive.
-        final boolean noCache = noStore ? false : this.noCache;
+        // Note: 'no-cache' and 'no-store' are mutually exclusive, but we need to allow a user to specify
+        //       both to work around known browser issues. See: https://stackoverflow.com/q/866822
         return build(noCache, noStore, noTransform, maxAgeSeconds);
     }
 
