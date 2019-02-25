@@ -55,7 +55,7 @@ public final class ServerCacheControl extends CacheControl {
      * {@code "max-age=31536000, public, immutable"}.
      */
     public static final ServerCacheControl IMMUTABLE = new ServerCacheControlBuilder()
-            .maxAgeSeconds(31536000).cachePublic().cacheImmutable().build();
+            .maxAgeSeconds(31536000).cachePublic().immutable().build();
 
     /**
      * Parses the specified {@code "cache-control"} header values into a {@link ServerCacheControl}.
@@ -101,7 +101,7 @@ public final class ServerCacheControl extends CacheControl {
                         builder.cachePrivate();
                         break;
                     case "immutable":
-                        builder.cacheImmutable();
+                        builder.immutable();
                         break;
                     case "must-revalidate":
                         builder.mustRevalidate();
@@ -124,7 +124,7 @@ public final class ServerCacheControl extends CacheControl {
 
     private final boolean cachePublic;
     private final boolean cachePrivate;
-    private final boolean cacheImmutable;
+    private final boolean immutable;
     private final boolean mustRevalidate;
     private final boolean proxyRevalidate;
     private final long sMaxAgeSeconds;
@@ -132,12 +132,12 @@ public final class ServerCacheControl extends CacheControl {
     private String headerValue;
 
     ServerCacheControl(boolean noCache, boolean noStore, boolean noTransform, long maxAgeSeconds,
-                       boolean cachePublic, boolean cachePrivate, boolean cacheImmutable,
+                       boolean cachePublic, boolean cachePrivate, boolean immutable,
                        boolean mustRevalidate, boolean proxyRevalidate, long sMaxAgeSeconds) {
         super(noCache, noStore, noTransform, maxAgeSeconds);
         this.cachePublic = cachePublic;
         this.cachePrivate = cachePrivate;
-        this.cacheImmutable = cacheImmutable;
+        this.immutable = immutable;
         this.mustRevalidate = mustRevalidate;
         this.proxyRevalidate = proxyRevalidate;
         this.sMaxAgeSeconds = sMaxAgeSeconds;
@@ -145,7 +145,7 @@ public final class ServerCacheControl extends CacheControl {
 
     @Override
     public boolean isEmpty() {
-        return super.isEmpty() && !cachePublic && !cachePrivate && !cacheImmutable &&
+        return super.isEmpty() && !cachePublic && !cachePrivate && !immutable &&
                !mustRevalidate && !proxyRevalidate && sMaxAgeSeconds < 0;
     }
 
@@ -166,8 +166,8 @@ public final class ServerCacheControl extends CacheControl {
     /**
      * Returns whether the {@code "immutable"} directive is enabled.
      */
-    public boolean cacheImmutable() {
-        return cacheImmutable;
+    public boolean immutable() {
+        return immutable;
     }
 
     /**
@@ -213,7 +213,7 @@ public final class ServerCacheControl extends CacheControl {
         if (cachePrivate) {
             buf.append(", private");
         }
-        if (cacheImmutable) {
+        if (immutable) {
             buf.append(", immutable");
         }
         if (mustRevalidate) {
@@ -242,7 +242,7 @@ public final class ServerCacheControl extends CacheControl {
         final ServerCacheControl that = (ServerCacheControl) o;
         return cachePublic == that.cachePublic &&
                cachePrivate == that.cachePrivate &&
-               cacheImmutable == that.cacheImmutable &&
+               immutable == that.immutable &&
                mustRevalidate == that.mustRevalidate &&
                proxyRevalidate == that.proxyRevalidate &&
                sMaxAgeSeconds == that.sMaxAgeSeconds;
@@ -253,7 +253,7 @@ public final class ServerCacheControl extends CacheControl {
         return (((((super.hashCode() * 31 +
                     (cachePublic ? 1 : 0)) * 31 +
                    (cachePrivate ? 1 : 0)) * 31 +
-                  (cacheImmutable ? 1 : 0)) * 31 +
+                  (immutable ? 1 : 0)) * 31 +
                  (mustRevalidate ? 1 : 0)) * 31 +
                 (proxyRevalidate ? 1 : 0)) * 31 +
                (int) (sMaxAgeSeconds ^ (sMaxAgeSeconds >>> 32));

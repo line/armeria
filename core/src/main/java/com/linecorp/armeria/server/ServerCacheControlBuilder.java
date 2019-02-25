@@ -42,7 +42,7 @@ public final class ServerCacheControlBuilder extends CacheControlBuilder<ServerC
 
     private boolean cachePublic;
     private boolean cachePrivate;
-    private boolean cacheImmutable;
+    private boolean immutable;
     private boolean mustRevalidate;
     private boolean proxyRevalidate;
     private long sMaxAgeSeconds = -1;
@@ -56,7 +56,7 @@ public final class ServerCacheControlBuilder extends CacheControlBuilder<ServerC
         super(c);
         cachePublic = c.cachePublic();
         cachePrivate = c.cachePrivate();
-        cacheImmutable = c.cacheImmutable();
+        immutable = c.immutable();
         mustRevalidate = c.mustRevalidate();
         proxyRevalidate = c.proxyRevalidate();
         sMaxAgeSeconds = c.sMaxAgeSeconds();
@@ -99,17 +99,17 @@ public final class ServerCacheControlBuilder extends CacheControlBuilder<ServerC
     /**
      * Enables the {@code "immutable"} directive.
      */
-    public ServerCacheControlBuilder cacheImmutable() {
-        return cacheImmutable(true);
+    public ServerCacheControlBuilder immutable() {
+        return immutable(true);
     }
 
     /**
      * Enables or disables the {@code "immutable"} directive.
      *
-     * @param cacheImmutable {@code true} to enable or {@code false} to disable.
+     * @param immutable {@code true} to enable or {@code false} to disable.
      */
-    public ServerCacheControlBuilder cacheImmutable(boolean cacheImmutable) {
-        this.cacheImmutable = cacheImmutable;
+    public ServerCacheControlBuilder immutable(boolean immutable) {
+        this.immutable = immutable;
         return this;
     }
 
@@ -179,7 +179,7 @@ public final class ServerCacheControlBuilder extends CacheControlBuilder<ServerC
     protected ServerCacheControl build(boolean noCache, boolean noStore,
                                        boolean noTransform, long maxAgeSeconds) {
         return new ServerCacheControl(noCache, noStore, noTransform, maxAgeSeconds,
-                                      cachePublic, cachePrivate, cacheImmutable,
+                                      cachePublic, cachePrivate, immutable,
                                       mustRevalidate, proxyRevalidate, sMaxAgeSeconds);
     }
 }

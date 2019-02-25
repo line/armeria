@@ -44,7 +44,7 @@ public class ServerCacheControlTest {
         assertThat(cc.maxAgeSeconds()).isEqualTo(-1);
         assertThat(cc.cachePublic()).isFalse();
         assertThat(cc.cachePrivate()).isFalse();
-        assertThat(cc.cacheImmutable()).isFalse();
+        assertThat(cc.immutable()).isFalse();
         assertThat(cc.mustRevalidate()).isFalse();
         assertThat(cc.proxyRevalidate()).isFalse();
         assertThat(cc.sMaxAgeSeconds()).isEqualTo(-1);
@@ -57,7 +57,7 @@ public class ServerCacheControlTest {
         final ServerCacheControl cc = new ServerCacheControlBuilder().cachePublic().build();
         assertThat(cc.cachePublic()).isTrue();
         assertThat(cc.cachePrivate()).isFalse();
-        assertThat(cc.cacheImmutable()).isFalse();
+        assertThat(cc.immutable()).isFalse();
         assertThat(cc.mustRevalidate()).isFalse();
         assertThat(cc.proxyRevalidate()).isFalse();
         assertThat(cc.sMaxAgeSeconds()).isEqualTo(-1);
@@ -70,7 +70,7 @@ public class ServerCacheControlTest {
         final ServerCacheControl cc = new ServerCacheControlBuilder().cachePrivate().build();
         assertThat(cc.cachePublic()).isFalse();
         assertThat(cc.cachePrivate()).isTrue();
-        assertThat(cc.cacheImmutable()).isFalse();
+        assertThat(cc.immutable()).isFalse();
         assertThat(cc.mustRevalidate()).isFalse();
         assertThat(cc.proxyRevalidate()).isFalse();
         assertThat(cc.sMaxAgeSeconds()).isEqualTo(-1);
@@ -80,10 +80,10 @@ public class ServerCacheControlTest {
 
     @Test
     public void testImmutable() {
-        final ServerCacheControl cc = new ServerCacheControlBuilder().cacheImmutable().build();
+        final ServerCacheControl cc = new ServerCacheControlBuilder().immutable().build();
         assertThat(cc.cachePublic()).isFalse();
         assertThat(cc.cachePrivate()).isFalse();
-        assertThat(cc.cacheImmutable()).isTrue();
+        assertThat(cc.immutable()).isTrue();
         assertThat(cc.mustRevalidate()).isFalse();
         assertThat(cc.proxyRevalidate()).isFalse();
         assertThat(cc.sMaxAgeSeconds()).isEqualTo(-1);
@@ -96,7 +96,7 @@ public class ServerCacheControlTest {
         final ServerCacheControl cc = new ServerCacheControlBuilder().mustRevalidate().build();
         assertThat(cc.cachePublic()).isFalse();
         assertThat(cc.cachePrivate()).isFalse();
-        assertThat(cc.cacheImmutable()).isFalse();
+        assertThat(cc.immutable()).isFalse();
         assertThat(cc.mustRevalidate()).isTrue();
         assertThat(cc.proxyRevalidate()).isFalse();
         assertThat(cc.sMaxAgeSeconds()).isEqualTo(-1);
@@ -109,7 +109,7 @@ public class ServerCacheControlTest {
         final ServerCacheControl cc = new ServerCacheControlBuilder().proxyRevalidate().build();
         assertThat(cc.cachePublic()).isFalse();
         assertThat(cc.cachePrivate()).isFalse();
-        assertThat(cc.cacheImmutable()).isFalse();
+        assertThat(cc.immutable()).isFalse();
         assertThat(cc.mustRevalidate()).isFalse();
         assertThat(cc.proxyRevalidate()).isTrue();
         assertThat(cc.sMaxAgeSeconds()).isEqualTo(-1);
@@ -122,7 +122,7 @@ public class ServerCacheControlTest {
         final ServerCacheControl cc = new ServerCacheControlBuilder().sMaxAge(Duration.ofMinutes(1)).build();
         assertThat(cc.cachePublic()).isFalse();
         assertThat(cc.cachePrivate()).isFalse();
-        assertThat(cc.cacheImmutable()).isFalse();
+        assertThat(cc.immutable()).isFalse();
         assertThat(cc.mustRevalidate()).isFalse();
         assertThat(cc.proxyRevalidate()).isFalse();
         assertThat(cc.sMaxAgeSeconds()).isEqualTo(60);
@@ -136,7 +136,7 @@ public class ServerCacheControlTest {
     public void testToBuilder() {
         final ServerCacheControl cc = new ServerCacheControlBuilder().cachePublic()
                                                                      .cachePrivate()
-                                                                     .cacheImmutable()
+                                                                     .immutable()
                                                                      .mustRevalidate()
                                                                      .proxyRevalidate()
                                                                      .sMaxAgeSeconds(3600)
@@ -147,7 +147,7 @@ public class ServerCacheControlTest {
         assertThat(cc.toBuilder()
                      .cachePublic(false)
                      .cachePrivate(false)
-                     .cacheImmutable(false)
+                     .immutable(false)
                      .mustRevalidate(false)
                      .proxyRevalidate(false)
                      .sMaxAge(null)
@@ -174,7 +174,7 @@ public class ServerCacheControlTest {
                                    .maxAgeSeconds(1)
                                    .cachePublic()
                                    .cachePrivate()
-                                   .cacheImmutable()
+                                   .immutable()
                                    .mustRevalidate()
                                    .proxyRevalidate()
                                    .sMaxAgeSeconds(2)
