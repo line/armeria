@@ -54,6 +54,9 @@ You can specify additional response headers such as ``cache-control`` and other 
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.ServerCacheControl;
+    import com.linecorp.armeria.server.ServerCacheControlBuilder;
+
     HttpFileServiceBuilder fsb =
             HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
 

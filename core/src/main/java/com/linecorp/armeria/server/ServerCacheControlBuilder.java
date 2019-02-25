@@ -178,6 +178,8 @@ public final class ServerCacheControlBuilder extends CacheControlBuilder<ServerC
     @Override
     protected ServerCacheControl build(boolean noCache, boolean noStore,
                                        boolean noTransform, long maxAgeSeconds) {
+        // 'public' and 'private' are mutually exclusive.
+        final boolean cachePublic = cachePrivate ? false : this.cachePublic;
         return new ServerCacheControl(noCache, noStore, noTransform, maxAgeSeconds,
                                       cachePublic, cachePrivate, immutable,
                                       mustRevalidate, proxyRevalidate, sMaxAgeSeconds);
