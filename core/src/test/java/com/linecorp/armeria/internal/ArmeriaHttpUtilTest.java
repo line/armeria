@@ -18,11 +18,16 @@ package com.linecorp.armeria.internal;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.decodePath;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControl;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setHttp2Authority;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toArmeria;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp1;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp2;
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 import org.junit.Test;
 
@@ -70,6 +75,60 @@ public class ArmeriaHttpUtilTest {
         assertThat(decodePath("/%G0")).isEqualTo("/�"); // First digit is not hex.
         assertThat(decodePath("/%0G")).isEqualTo("/�"); // Second digit is not hex.
         assertThat(decodePath("/%C3%28")).isEqualTo("/�("); // Invalid UTF-8 sequence
+    }
+
+    @Test
+    public void testParseCacheControl() {
+        final Map<String, String> values = new LinkedHashMap<>();
+        final BiConsumer<String, String> cb = (name, value) -> assertThat(values.put(name, value)).isNull();
+
+        // Make sure an effectively empty string does not invoke a callback.
+        parseCacheControl("", cb);
+        assertThat(values).isEmpty();
+        parseCacheControl(" \t ", cb);
+        assertThat(values).isEmpty();
+        parseCacheControl(" ,,=, =,= ,", cb);
+        assertThat(values).isEmpty();
+
+        // Name only.
+        parseCacheControl("no-cache", cb);
+        assertThat(values).hasSize(1).containsEntry("no-cache", null);
+        values.clear();
+        parseCacheControl(" no-cache ", cb);
+        assertThat(values).hasSize(1).containsEntry("no-cache", null);
+        values.clear();
+        parseCacheControl("no-cache ,", cb);
+        assertThat(values).hasSize(1).containsEntry("no-cache", null);
+        values.clear();
+
+        // Name and value.
+        parseCacheControl("max-age=86400", cb);
+        assertThat(values).hasSize(1).containsEntry("max-age", "86400");
+        values.clear();
+        parseCacheControl(" max-age = 86400 ", cb);
+        assertThat(values).hasSize(1).containsEntry("max-age", "86400");
+        values.clear();
+        parseCacheControl(" max-age = 86400 ,", cb);
+        assertThat(values).hasSize(1).containsEntry("max-age", "86400");
+        values.clear();
+        parseCacheControl("max-age=\"86400\"", cb);
+        assertThat(values).hasSize(1).containsEntry("max-age", "86400");
+        values.clear();
+        parseCacheControl(" max-age = \"86400\" ", cb);
+        assertThat(values).hasSize(1).containsEntry("max-age", "86400");
+        values.clear();
+        parseCacheControl(" max-age = \"86400\" ,", cb);
+        assertThat(values).hasSize(1).containsEntry("max-age", "86400");
+        values.clear();
+
+        // Multiple names and values.
+        parseCacheControl("a,b=c,d,e=\"f\",g", cb);
+        assertThat(values).hasSize(5)
+                          .containsEntry("a", null)
+                          .containsEntry("b", "c")
+                          .containsEntry("d",null)
+                          .containsEntry("e", "f")
+                          .containsEntry("g", null);
     }
 
     @Test

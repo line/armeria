@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.PathMappingUtil;
 
@@ -50,11 +51,12 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
     }
 
     @Override
-    public HttpFile get(String path, Clock clock, @Nullable String contentEncoding) {
+    public HttpFile get(String path, Clock clock, @Nullable String contentEncoding,
+                        HttpHeaders additionalHeaders) {
         path = normalizePath(path);
 
         final HttpFileBuilder builder = HttpFileBuilder.of(Paths.get(rootDir + path));
-        return build(builder, clock, path, contentEncoding);
+        return build(builder, clock, path, contentEncoding, additionalHeaders);
     }
 
     @Override
@@ -93,14 +95,16 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
     static HttpFile build(HttpFileBuilder builder,
                           Clock clock,
                           String pathOrUri,
-                          @Nullable String contentEncoding) {
+                          @Nullable String contentEncoding,
+                          HttpHeaders additionalHeaders) {
 
         builder.autoDetectedContentType(false);
         builder.clock(clock);
+        builder.setHeaders(additionalHeaders);
 
         final MediaType contentType = MimeTypeUtil.guessFromPath(pathOrUri, contentEncoding);
         if (contentType != null) {
-            builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+            builder.contentType(contentType);
         }
         if (contentEncoding != null) {
             builder.setHeader(HttpHeaderNames.CONTENT_ENCODING, contentEncoding);

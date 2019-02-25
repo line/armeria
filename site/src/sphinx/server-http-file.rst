@@ -47,6 +47,31 @@ an ``index.html`` file using the ``autoIndex(boolean)`` method in :api:`HttpFile
 
    Be careful when you enable this feature in production environment; consider its security implications.
 
+Specifying additional response headers
+--------------------------------------
+
+You can specify additional response headers such as ``cache-control`` and other custom headers.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.ServerCacheControl;
+    import com.linecorp.armeria.server.ServerCacheControlBuilder;
+
+    HttpFileServiceBuilder fsb =
+            HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
+
+    // Specify cache control directives.
+    ServerCacheControl cc = new ServerCacheControlBuilder()
+            .maxAgeSeconds(86400)
+            .cachePublic()
+            .build();
+    fsb.cacheControl(cc /* "max-age=86400, public" */);
+
+    // Specify a custom header.
+    fsb.setHeader("foo", "bar");
+
+    HttpFileService fs = fsb.build();
+
 Adjusting static file cache
 ---------------------------
 
@@ -190,7 +215,9 @@ An :api:`HttpFile` can be configured to send different headers than the auto-fil
     // Disable the 'Content-Type' header.
     fb.autoDetectContentType(false);
     // Set the 'Content-Type' header manually.
-    fb.setHeader(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=EUC-KR");
+    fb.contentType("text/html; charset=EUC-KR");
+    // Set the 'Cache-Control' header.
+    fb.cacheControl(ServerCacheControl.REVALIDATED /* "no-cache" */);
     // Set a custom header.
     fb.setHeader("x-powered-by", "Armeria");
     HttpFile f = fb.build();

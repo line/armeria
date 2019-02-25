@@ -22,9 +22,11 @@ import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.CacheControl;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
@@ -105,6 +107,9 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * Sets whether to set the {@code "content-type"} header automatically based on the extension of the file.
      */
     protected final boolean isContentTypeAutoDetectionEnabled() {
+        if (headers != null && headers.contains(HttpHeaderNames.CONTENT_TYPE)) {
+            return false;
+        }
         return contentTypeAutoDetectionEnabled;
     }
 
@@ -199,7 +204,58 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      */
     public final B setHeaders(Headers<AsciiString, String, ?> headers) {
         requireNonNull(headers, "headers");
-        getOrCreateHeaders().setAll(headers);
+        if (!headers.isEmpty()) {
+            getOrCreateHeaders().setAll(headers);
+        }
         return self();
+    }
+
+    /**
+     * Sets the {@code "content-type"} header. This method is a shortcut of:
+     * <pre>{@code
+     * builder.autoDetectedContentType(false);
+     * builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+     * }</pre>
+     */
+    public final B contentType(MediaType contentType) {
+        requireNonNull(contentType, "contentType");
+        autoDetectedContentType(false);
+        getOrCreateHeaders().contentType(contentType);
+        return self();
+    }
+
+    /**
+     * Sets the {@code "content-type"} header. This method is a shortcut of:
+     * <pre>{@code
+     * builder.autoDetectedContentType(false);
+     * builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+     * }</pre>
+     */
+    public final B contentType(CharSequence contentType) {
+        requireNonNull(contentType, "contentType");
+        autoDetectedContentType(false);
+        return setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+    }
+
+    /**
+     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * <pre>{@code
+     * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+     * }</pre>
+     */
+    public final B cacheControl(CacheControl cacheControl) {
+        requireNonNull(cacheControl, "cacheControl");
+        return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+    }
+
+    /**
+     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * <pre>{@code
+     * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+     * }</pre>
+     */
+    public final B cacheControl(CharSequence cacheControl) {
+        requireNonNull(cacheControl, "cacheControl");
+        return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
     }
 }

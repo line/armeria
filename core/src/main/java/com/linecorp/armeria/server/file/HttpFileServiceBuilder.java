@@ -21,6 +21,16 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Clock;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.CacheControl;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpResponse;
+
+import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
+
 /**
  * Builds a new {@link HttpFileService} and its {@link HttpFileServiceConfig}. Use the factory methods in
  * {@link HttpFileService} if you do not override the default settings.
@@ -73,6 +83,8 @@ public final class HttpFileServiceBuilder {
     private int maxCacheEntrySizeBytes = DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES;
     private boolean serveCompressedFiles;
     private boolean autoIndex;
+    @Nullable
+    private HttpHeaders headers;
 
     private HttpFileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -131,17 +143,94 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
+     * Returns the immutable additional {@link HttpHeaders} which will be set when building an
+     * {@link HttpResponse}.
+     */
+    private HttpHeaders headers() {
+        return headers != null ? headers.asImmutable() : HttpHeaders.EMPTY_HEADERS;
+    }
+
+    private HttpHeaders getOrCreateHeaders() {
+        if (headers == null) {
+            headers = HttpHeaders.of();
+        }
+        return headers;
+    }
+
+    /**
+     * Adds the specified HTTP header.
+     */
+    public HttpFileServiceBuilder addHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        getOrCreateHeaders().addObject(HttpHeaderNames.of(name), value);
+        return this;
+    }
+
+    /**
+     * Adds the specified HTTP headers.
+     */
+    public HttpFileServiceBuilder addHeaders(Headers<AsciiString, String, ?> headers) {
+        requireNonNull(headers, "headers");
+        getOrCreateHeaders().add(headers);
+        return this;
+    }
+
+    /**
+     * Sets the specified HTTP header.
+     */
+    public HttpFileServiceBuilder setHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        getOrCreateHeaders().setObject(HttpHeaderNames.of(name), value);
+        return this;
+    }
+
+    /**
+     * Sets the specified HTTP headers.
+     */
+    public HttpFileServiceBuilder setHeaders(Headers<AsciiString, String, ?> headers) {
+        requireNonNull(headers, "headers");
+        if (!headers.isEmpty()) {
+            getOrCreateHeaders().setAll(headers);
+        }
+        return this;
+    }
+
+    /**
+     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * <pre>{@code
+     * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+     * }</pre>
+     */
+    public HttpFileServiceBuilder cacheControl(CacheControl cacheControl) {
+        requireNonNull(cacheControl, "cacheControl");
+        return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+    }
+
+    /**
+     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * <pre>{@code
+     * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+     * }</pre>
+     */
+    public HttpFileServiceBuilder cacheControl(CharSequence cacheControl) {
+        requireNonNull(cacheControl, "cacheControl");
+        return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+    }
+
+    /**
      * Returns a newly-created {@link HttpFileService} based on the properties of this builder.
      */
     public HttpFileService build() {
         return new HttpFileService(new HttpFileServiceConfig(
                 vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes,
-                serveCompressedFiles, autoIndex));
+                serveCompressedFiles, autoIndex, headers()));
     }
 
     @Override
     public String toString() {
         return HttpFileServiceConfig.toString(this, vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes,
-                                              serveCompressedFiles, autoIndex);
+                                              serveCompressedFiles, autoIndex, headers());
     }
 }

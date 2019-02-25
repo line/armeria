@@ -51,13 +51,16 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.function.BiConsumer;
 
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.Flags;
@@ -340,16 +343,6 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Returns {@code true} if the specified {@code request} is a CORS preflight request.
-     */
-    public static boolean isCorsPreflightRequest(com.linecorp.armeria.common.HttpRequest request) {
-        requireNonNull(request, "request");
-        return request.method() == HttpMethod.OPTIONS &&
-               request.headers().contains(HttpHeaderNames.ORIGIN) &&
-               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
-    }
-
-    /**
      * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
      * be always empty (1xx, 204, 205 and 304 responses.)
      *
@@ -372,6 +365,119 @@ public final class ArmeriaHttpUtil {
         }
 
         return true;
+    }
+
+    /**
+     * Returns {@code true} if the specified {@code request} is a CORS preflight request.
+     */
+    public static boolean isCorsPreflightRequest(com.linecorp.armeria.common.HttpRequest request) {
+        requireNonNull(request, "request");
+        return request.method() == HttpMethod.OPTIONS &&
+               request.headers().contains(HttpHeaderNames.ORIGIN) &&
+               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    }
+
+    /**
+     * Parses the specified {@code "cache-control"} directives and invokes the specified {@code callback}
+     * with the directive names and values.
+     */
+    public static void parseCacheControl(String directives, BiConsumer<String, String> callback) {
+        final int len = directives.length();
+        for (int i = 0; i < len;) {
+            final int nameStart = i;
+            final String name;
+            final String value;
+
+            // Find the name.
+            for (; i < len; i++) {
+                final char ch = directives.charAt(i);
+                if (ch == ',' || ch == '=') {
+                    break;
+                }
+            }
+            name = directives.substring(nameStart, i).trim();
+
+            // Find the value.
+            if (i == len || directives.charAt(i) == ',') {
+                // Skip comma or go beyond 'len' to break the loop.
+                i++;
+                value = null;
+            } else {
+                // Skip '='.
+                i++;
+
+                // Skip whitespaces.
+                for (; i < len; i++) {
+                    final char ch = directives.charAt(i);
+                    if (ch != ' ' && ch != '\t') {
+                        break;
+                    }
+                }
+
+                if (i < len && directives.charAt(i) == '\"') {
+                    // Handle quoted string.
+                    // Skip the opening quote.
+                    i++;
+                    final int valueStart = i;
+
+                    // Find the closing quote.
+                    for (; i < len; i++) {
+                        if (directives.charAt(i) == '\"') {
+                            break;
+                        }
+                    }
+                    value = directives.substring(valueStart, i);
+
+                    // Skip the closing quote.
+                    i++;
+
+                    // Find the comma and skip it.
+                    for (; i < len; i++) {
+                        if (directives.charAt(i) == ',') {
+                            i++;
+                            break;
+                        }
+                    }
+                } else {
+                    // Handle unquoted string.
+                    final int valueStart = i;
+
+                    // Find the comma.
+                    for (; i < len; i++) {
+                        if (directives.charAt(i) == ',') {
+                            break;
+                        }
+                    }
+                    value = directives.substring(valueStart, i).trim();
+
+                    // Skip the comma.
+                    i++;
+                }
+            }
+
+            if (!name.isEmpty()) {
+                callback.accept(Ascii.toLowerCase(name), Strings.emptyToNull(value));
+            }
+        }
+    }
+
+    /**
+     * Converts the specified {@code "cache-control"} directive value into a long integer.
+     *
+     * @return the converted value if {@code value} is equal to or greater than {@code 0}.
+     *         {@code -1} otherwise, i.e. if a negative integer or not a number.
+     */
+    public static long parseCacheControlSeconds(@Nullable String value) {
+        if (value == null) {
+            return -1;
+        }
+
+        try {
+            final long converted = Long.parseLong(value);
+            return converted >= 0 ? converted : -1;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     /**

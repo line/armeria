@@ -60,7 +60,7 @@ public interface ContentPreviewer {
      * with the maximum {@code length} limit.
      * @param length the maximum length of the preview.
      * @param defaultCharset the default charset for a request/response with unspecified charset in
-     *                       {@code "Content-Type"} header.
+     *                       {@code "content-type"} header.
      */
     static ContentPreviewer ofText(int length, Charset defaultCharset) {
         checkArgument(length >= 0, "length : %d (expected: >= 0)", length);

@@ -210,6 +210,7 @@ public final class HttpFileService extends AbstractHttpService {
                         AutoIndex.listingToHtml(ctx.decodedPath(), decodedMappedPath, listing);
                 return HttpFileBuilder.of(autoIndex)
                                       .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8)
+                                      .setHeaders(config.headers())
                                       .build();
             }
         } else {
@@ -242,7 +243,7 @@ public final class HttpFileService extends AbstractHttpService {
     @Nullable
     private HttpFile findFile(ServiceRequestContext ctx, String path,
                               @Nullable String contentEncoding) throws IOException {
-        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentEncoding);
+        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentEncoding, config.headers());
         final HttpFileAttributes uncachedAttrs = uncachedFile.readAttributes();
         if (cache == null) {
             return uncachedAttrs != null ? uncachedFile : null;

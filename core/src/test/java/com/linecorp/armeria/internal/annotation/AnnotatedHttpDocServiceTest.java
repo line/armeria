@@ -136,6 +136,7 @@ public class AnnotatedHttpDocServiceTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
         final AggregatedHttpMessage msg = client.get("/docs/specification.json").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("no-cache, must-revalidate");
         assertThatJson(msg.contentUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
     }
 

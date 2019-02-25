@@ -44,13 +44,13 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerCacheControl;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.Service;
@@ -326,8 +326,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         private volatile HttpFile file = HttpFile.nonExistent();
 
         @Override
-        public HttpFile get(String path, Clock clock,
-                            @Nullable String contentEncoding) {
+        public HttpFile get(String path, Clock clock, @Nullable String contentEncoding,
+                            HttpHeaders additionalHeaders) {
             return file;
         }
 
@@ -343,7 +343,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         void setContent(byte[] content, MediaType mediaType) {
             assert file == HttpFile.nonExistent();
             file = HttpFileBuilder.of(HttpData.of(content))
-                                  .setHeader(HttpHeaderNames.CONTENT_TYPE, mediaType)
+                                  .contentType(mediaType)
+                                  .cacheControl(ServerCacheControl.REVALIDATED)
                                   .build();
         }
     }
