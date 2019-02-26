@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -48,7 +47,6 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -70,10 +68,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private static final AtomicIntegerFieldUpdater<DefaultRequestLog> flagsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "flags");
-
-    private static final AtomicReferenceFieldUpdater<DefaultRequestLog, HttpHeaders>
-            responseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultRequestLog.class, HttpHeaders.class, "responseTrailers");
 
     private static final int FLAGS_REQUEST_END_WITHOUT_CONTENT =
             REQUEST_END.setterFlags() & ~REQUEST_CONTENT.setterFlags();
@@ -136,9 +130,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
 
     private HttpHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
-    private HttpHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
+    private HttpHeaders requestTrailers = EMPTY_HEADERS;
 
-    private volatile HttpHeaders responseTrailers = EMPTY_HEADERS;
+    private HttpHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
+    private HttpHeaders responseTrailers = EMPTY_HEADERS;
 
     @Nullable
     private Object requestContent;
@@ -612,6 +607,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public HttpHeaders requestTrailers() {
+        ensureAvailability(REQUEST_END);
+        return requestTrailers;
+    }
+
+    @Override
+    public void requestTrailers(HttpHeaders requestTrailers) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_END)) {
+            return;
+        }
+        requireNonNull(requestTrailers, "requestTrailers");
+        if (requestTrailers.isEmpty()) {
+            return;
+        }
+
+        this.requestTrailers = requestTrailers;
+    }
+
+    @Override
     public void endRequest() {
         endRequest0(null);
     }
@@ -871,23 +885,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void responseTrailers(HttpHeaders responseTrailers) {
-        if (isAvailabilityAlreadyUpdated(RESPONSE_END) || responseTrailers.isEmpty()) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_END)) {
+            return;
+        }
+        requireNonNull(responseTrailers, "responseTrailers");
+        if (responseTrailers.isEmpty()) {
             return;
         }
 
-        final HttpHeaders trailers = this.responseTrailers;
-        final HttpHeaders toSet;
-        if (trailers == EMPTY_HEADERS) {
-            final HttpHeaders newHeaders = new DefaultHttpHeaders();
-            if (responseTrailersUpdater.compareAndSet(this, EMPTY_HEADERS, newHeaders)) {
-                toSet = newHeaders;
-            } else {
-                toSet = this.responseTrailers;
-            }
-        } else {
-            toSet = trailers;
-        }
-        toSet.setAll(responseTrailers);
+        this.responseTrailers = responseTrailers;
     }
 
     @Override
@@ -1039,6 +1045,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                       Function<Object, ?> contentSanitizer) {
+        return toStringRequestOnly(headersSanitizer, contentSanitizer, Function.identity());
+    }
+
+    @Override
+    public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                      Function<Object, ?> contentSanitizer,
+                                      Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
         final int flags = this.flags & 0xFFFF; // Only interested in the bits related with request.
         if (requestStrFlags == flags) {
             return requestStr;
@@ -1077,6 +1090,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 buf.append(", content=").append(contentSanitizer.apply(requestContent));
             } else if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
                 buf.append(", contentPreview=").append(requestContentPreview);
+            }
+
+            final HttpHeaders requestTrailers = this.requestTrailers;
+            if (!requestTrailers.isEmpty()) {
+                buf.append(", trailers=").append(trailersSanitizer.apply(requestTrailers));
             }
         }
         buf.append('}');

@@ -204,6 +204,11 @@ public interface RequestLogBuilder {
     boolean isRequestContentDeferred();
 
     /**
+     * Sets the {@link RequestLog#requestTrailers()}.
+     */
+    void requestTrailers(HttpHeaders requestTrailers);
+
+    /**
      * Finishes the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#requestEndTimeNanos()}</li>

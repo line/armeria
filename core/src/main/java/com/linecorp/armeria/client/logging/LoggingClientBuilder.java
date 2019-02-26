@@ -40,6 +40,7 @@ public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientB
                                    failedResponseLogLevel(),
                                    requestHeadersSanitizer(),
                                    requestContentSanitizer(),
+                                   requestTrailersSanitizer(),
                                    responseHeadersSanitizer(),
                                    responseContentSanitizer(),
                                    responseTrailersSanitizer(),

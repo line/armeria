@@ -39,11 +39,13 @@ public final class LoggingDecorators {
     public static void logRequest(
             Logger logger, RequestLog log, LogLevel requestLogLevel,
             Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
-            Function<Object, ?> requestContentSanitizer) {
+            Function<Object, ?> requestContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer) {
 
         if (requestLogLevel.isEnabled(logger)) {
             requestLogLevel.log(logger, REQUEST_FORMAT,
-                                log.toStringRequestOnly(requestHeadersSanitizer, requestContentSanitizer));
+                                log.toStringRequestOnly(requestHeadersSanitizer, requestContentSanitizer,
+                                                        requestTrailersSanitizer));
         }
     }
 
@@ -54,6 +56,7 @@ public final class LoggingDecorators {
             Logger logger, RequestLog log, LogLevel requestLogLevel,
             Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer,
             LogLevel successfulResponseLogLevel,
             LogLevel failedResponseLogLevel,
             Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
@@ -75,7 +78,8 @@ public final class LoggingDecorators {
                     // Request wasn't logged but this is an unsuccessful response, log the request too to help
                     // debugging.
                     level.log(logger, REQUEST_FORMAT, log.toStringRequestOnly(requestHeadersSanitizer,
-                                                                              requestContentSanitizer));
+                                                                              requestContentSanitizer,
+                                                                              requestTrailersSanitizer));
                 }
 
                 final Throwable sanitizedResponseCause = responseCauseSanitizer.apply(responseCause);

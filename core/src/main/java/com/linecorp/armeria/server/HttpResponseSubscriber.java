@@ -179,12 +179,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     !reqCtx.additionalResponseTrailers().isEmpty()) {
                     final HttpHeaders mutable = headers.toMutable();
                     mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
-                    o = mutable;
-                } else {
-                    o = headers;
+                    headers = mutable;
                 }
 
                 logBuilder().responseHeaders(headers);
+                o = headers;
 
                 if (req.method() == HttpMethod.HEAD) {
                     // HEAD responses always close the stream with the initial headers, even if not explicitly

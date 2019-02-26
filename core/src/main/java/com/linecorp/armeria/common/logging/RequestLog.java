@@ -477,6 +477,13 @@ public interface RequestLog {
     Object rawRequestContent();
 
     /**
+     * Returns the trailing {@link HttpHeaders} of the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    HttpHeaders requestTrailers();
+
+    /**
      * Returns the non-informational status {@link HttpHeaders} of the {@link Response}.
      * If the {@link Response} was not received or sent at all, it will return a dummy
      * {@link HttpHeaders} whose {@code :status} is {@code "0"}.
@@ -544,6 +551,20 @@ public interface RequestLog {
      */
     String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                Function<Object, ?> contentSanitizer);
+
+    /**
+     * Returns the string representation of the {@link Request}.
+     *
+     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
+     *                         {@link Function} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
+     *                         {@link Function} is what is actually logged as content.
+     * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
+     *                          {@link Function} is what is actually logged as trailers.
+     */
+    String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                               Function<Object, ?> contentSanitizer,
+                               Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer);
 
     /**
      * Returns the string representation of the {@link Response}, with no sanitization of headers or content.

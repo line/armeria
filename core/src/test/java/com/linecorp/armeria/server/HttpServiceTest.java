@@ -58,7 +58,15 @@ public class HttpServiceTest {
                                     HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
                         }
                     }.decorate(LoggingService.newDecorator()));
-            sb.service("/trailers", new AbstractHttpService() {
+            sb.service("/trailersOnly", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                                           HttpData.EMPTY_DATA,
+                                           HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
+                }
+            });
+            sb.service("/dataAndTrailers", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
@@ -154,9 +162,15 @@ public class HttpServiceTest {
     @Test
     public void contentLengthIsNotSetWhenTrailerExists() {
         final HttpClient client = HttpClient.of(rule.uri("/"));
-        AggregatedHttpMessage message = client.get("/trailers").aggregate().join();
+        AggregatedHttpMessage message = client.get("/trailersOnly").aggregate().join();
         assertThat(message.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
         assertThat(message.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(message.content()).isSameAs(HttpData.EMPTY_DATA);
+
+        message = client.get("/dataAndTrailers").aggregate().join();
+        assertThat(message.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(message.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(message.contentUtf8()).isEqualTo("trailer");
 
         message = client.get("/additionalTrailers").aggregate().join();
         assertThat(message.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
