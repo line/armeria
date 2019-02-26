@@ -137,8 +137,7 @@ you build a :api:`GrpcService`:
                               // Allow Content-type and X-GRPC-WEB headers.
                               .allowRequestHeaders(HttpHeaderNames.CONTENT_TYPE,
                                                    HttpHeaderNames.of("X-GRPC-WEB"))
-                              // Expose trailers of the HTTP response to the client so that it can get
-                              // the their values.
+                              // Expose trailers of the HTTP response to the client.
                               .exposeHeaders(GrpcHeaderNames.GRPC_STATUS,
                                              GrpcHeaderNames.GRPC_MESSAGE,
                                              GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
