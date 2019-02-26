@@ -27,6 +27,7 @@ import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
+import io.netty.util.ReferenceCountUtil;
 
 final class DecodedHttpRequest extends DefaultHttpRequest {
 
@@ -43,6 +44,8 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     @Nullable
     private HttpResponse response;
     private boolean isResponseAborted;
+
+    private boolean receivedTrailers;
 
     DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, HttpHeaders headers, boolean keepAlive,
                        InboundTrafficController inboundTrafficController, long defaultMaxRequestLength) {
@@ -99,13 +102,26 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     @Override
     public boolean tryWrite(HttpObject obj) {
-        final boolean published = super.tryWrite(obj);
-        if (published && obj instanceof HttpData) {
-            final int length = ((HttpData) obj).length();
-            inboundTrafficController.inc(length);
-            assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
-            ctx.logBuilder().increaseRequestLength((HttpData) obj);
+        if (receivedTrailers) {
+            ReferenceCountUtil.safeRelease(obj);
+            return false;
         }
+
+        boolean published = false;
+        if (obj instanceof HttpHeaders) { // HTTP trailers.
+            published = super.tryWrite(obj);
+            receivedTrailers = true;
+            // TODO(minwoox) Log HTTP trailers.
+        } else if (obj instanceof HttpData) {
+            published = super.tryWrite(obj);
+            if (published) {
+                final HttpData httpData = (HttpData) obj;
+                inboundTrafficController.inc(httpData.length());
+                assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
+                ctx.logBuilder().increaseRequestLength(httpData);
+            }
+        }
+
         return published;
     }
 

@@ -222,6 +222,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 break;
             }
             case DONE:
+                // Cancel the subscription if any message comes here after the state has been changed to DONE.
+                assert subscription != null;
+                subscription.cancel();
                 ReferenceCountUtil.safeRelease(o);
                 return;
         }

@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 
+import io.netty.util.ReferenceCountUtil;
 import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.Protocol;
@@ -43,6 +44,13 @@ import okhttp3.ResponseBody;
 import okio.BufferedSource;
 
 abstract class AbstractSubscriber implements Subscriber<HttpObject> {
+
+    enum State {
+        WAIT_NON_INFORMATIONAL,
+        WAIT_DATA_OR_TRAILERS,
+        DONE
+    }
+
     private static final long NO_CONTENT_LENGTH = -1;
     private final Response.Builder responseBuilder = new Response.Builder();
     private final ArmeriaCall armeriaCall;
@@ -51,10 +59,11 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
     @Nullable
     private Subscription subscription;
     private boolean callbackCalled;
-    private boolean nonInformationalHeadersStarted;
     @Nullable
     private String contentType;
     private long contentLength = NO_CONTENT_LENGTH;
+
+    private State state = State.WAIT_NON_INFORMATIONAL;
 
     AbstractSubscriber(ArmeriaCall armeriaCall, Request request, Callback callback, Executor callbackExecutor) {
         this.armeriaCall = armeriaCall;
@@ -79,36 +88,45 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
     public final void onNext(HttpObject httpObject) {
         if (armeriaCall.isCanceled()) {
             onCancelled();
+            assert subscription != null;
             subscription.cancel();
             return;
         }
-        if (httpObject instanceof HttpHeaders) {
-            onHttpHeaders();
-            final HttpHeaders headers = (HttpHeaders) httpObject;
-            final HttpStatus status = headers.status();
-            if (!nonInformationalHeadersStarted) { // If not received a non-informational header yet
-                // Ignore informational headers or the headers without :status.
-                if (status == null || status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-                    return;
+
+        switch (state) {
+            case WAIT_NON_INFORMATIONAL:
+                assert httpObject instanceof HttpHeaders;
+                final HttpHeaders headers = (HttpHeaders) httpObject;
+                onHttpHeaders();
+
+                final HttpStatus status = headers.status();
+                if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+                    state = State.WAIT_DATA_OR_TRAILERS;
+                    responseBuilder.code(status.code());
+                    responseBuilder.message(status.reasonPhrase());
+
+                    headers.forEach(header -> responseBuilder.addHeader(header.getKey().toString(),
+                                                                        header.getValue()));
+                    contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
+                    contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, NO_CONTENT_LENGTH);
                 }
-                nonInformationalHeadersStarted = true;
-                responseBuilder.code(status.code());
-                responseBuilder.message(status.reasonPhrase());
-            }
-
-            headers.forEach(header -> responseBuilder.addHeader(header.getKey().toString(),
-                                                                header.getValue()));
-            if (contentType == null) {
-                contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
-            }
-            if (contentLength == NO_CONTENT_LENGTH) {
-                contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, NO_CONTENT_LENGTH);
-            }
-            return;
+                break;
+            case WAIT_DATA_OR_TRAILERS:
+                if (httpObject instanceof HttpHeaders) {
+                    onHttpHeaders();
+                    // TODO(minwoox) Add trailers to responseBuilder after upgrading okhttp3 to 3.13.1.
+                    state = State.DONE;
+                } else {
+                    onHttpData((HttpData) httpObject);
+                }
+                break;
+            case DONE:
+                // Cancel the subscription if any message comes here after the state has been changed to DONE.
+                assert subscription != null;
+                subscription.cancel();
+                ReferenceCountUtil.safeRelease(httpObject);
+                break;
         }
-
-        final HttpData data = (HttpData) httpObject;
-        onHttpData(data);
     }
 
     @Override
