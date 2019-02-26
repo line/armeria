@@ -195,10 +195,11 @@ public final class GrpcStatus {
     }
 
     private static StackTraceElementProto serializeStackTraceElement(StackTraceElement element) {
-        final StackTraceElementProto.Builder builder = StackTraceElementProto.newBuilder()
-                .setClassName(element.getClassName())
-                .setMethodName(element.getMethodName())
-                .setLineNumber(element.getLineNumber());
+        final StackTraceElementProto.Builder builder =
+                StackTraceElementProto.newBuilder()
+                                      .setClassName(element.getClassName())
+                                      .setMethodName(element.getMethodName())
+                                      .setLineNumber(element.getLineNumber());
         if (element.getFileName() != null) {
             builder.setFileName(element.getFileName());
         }

@@ -68,6 +68,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -83,7 +84,6 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBloc
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
 import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
@@ -377,8 +377,8 @@ public class GrpcServiceServerTest {
                                        .usePlaintext()
                                        .build();
         blockingChannel = ManagedChannelBuilder.forAddress("127.0.0.1", serverWithBlockingExecutor.httpPort())
-                                       .usePlaintext()
-                                       .build();
+                                               .usePlaintext()
+                                               .build();
     }
 
     @AfterClass

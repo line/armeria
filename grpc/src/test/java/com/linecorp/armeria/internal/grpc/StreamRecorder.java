@@ -134,7 +134,8 @@ public final class StreamRecorder<T> implements StreamObserver<T> {
     /**
      * Returns the stream terminating error.
      */
-    @Nullable public Throwable getError() {
+    @Nullable
+    public Throwable getError() {
         return error;
     }
 

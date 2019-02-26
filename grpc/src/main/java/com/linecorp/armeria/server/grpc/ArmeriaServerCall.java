@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -56,7 +57,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
@@ -117,7 +117,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final boolean unsafeWrapRequestBuffers;
     private final String advertisedEncodingsHeader;
-    @Nullable private final Executor blockingExecutor;
+    @Nullable
+    private final Executor blockingExecutor;
 
     // Only set once.
     @Nullable

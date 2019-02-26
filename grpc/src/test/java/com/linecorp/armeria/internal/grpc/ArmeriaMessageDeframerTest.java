@@ -196,8 +196,8 @@ public class ArmeriaMessageDeframerTest {
     public void deframe_tooLargeUncompressed() throws Exception {
         final SimpleRequest request = SimpleRequest.newBuilder()
                                                    .setPayload(Payload.newBuilder()
-                                                                .setBody(ByteString.copyFromUtf8(
-                                                                        Strings.repeat("a", 1024))))
+                                                                      .setBody(ByteString.copyFromUtf8(
+                                                                              Strings.repeat("a", 1024))))
                                                    .build();
         final byte[] frame = GrpcTestUtil.uncompressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
         assertThat(frame.length).isGreaterThan(1024);

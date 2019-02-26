@@ -338,13 +338,13 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             }
 
             /*
-            * We are stalled when there are no more bytes to process. This allows delivering errors as
-            * soon as the buffered input has been consumed, independent of whether the application
-            * has requested another message.  At this point in the function, either all frames have been
-            * delivered, or unprocessed is empty.  If there is a partial message, it will be inside next
-            * frame and not in unprocessed.  If there is extra data but no pending deliveries, it will
-            * be in unprocessed.
-            */
+             * We are stalled when there are no more bytes to process. This allows delivering errors as
+             * soon as the buffered input has been consumed, independent of whether the application
+             * has requested another message.  At this point in the function, either all frames have been
+             * delivered, or unprocessed is empty.  If there is a partial message, it will be inside next
+             * frame and not in unprocessed.  If there is extra data but no pending deliveries, it will
+             * be in unprocessed.
+             */
             if (closeWhenComplete && isStalled()) {
                 close();
             }

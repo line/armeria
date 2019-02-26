@@ -93,11 +93,11 @@ public class GrpcMetricsIntegrationTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.meterRegistry(registry);
             sb.serviceUnder("/", new GrpcServiceBuilder()
-                         .addService(new TestServiceImpl())
-                         .enableUnframedRequests(true)
-                         .build()
-                         .decorate(MetricCollectingService.newDecorator(
-                                 MeterIdPrefixFunction.ofDefault("server"))));
+                    .addService(new TestServiceImpl())
+                    .enableUnframedRequests(true)
+                    .build()
+                    .decorate(MetricCollectingService.newDecorator(
+                            MeterIdPrefixFunction.ofDefault("server"))));
         }
     };
 

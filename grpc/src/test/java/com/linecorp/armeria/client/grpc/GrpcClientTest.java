@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -83,7 +84,6 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
 import com.linecorp.armeria.grpc.testing.UnimplementedServiceGrpc;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.grpc.TestServiceImpl;
@@ -1007,10 +1007,10 @@ public class GrpcClientTest {
         final SimpleRequest simpleRequest = SimpleRequest.newBuilder()
                                                          .setResponseStatus(responseStatus)
                                                          .build();
-        final StreamingOutputCallRequest streamingRequest = StreamingOutputCallRequest.newBuilder()
-                                                                                      .setResponseStatus(
-                                                                                        responseStatus)
-                                                                                      .build();
+        final StreamingOutputCallRequest streamingRequest =
+                StreamingOutputCallRequest.newBuilder()
+                                          .setResponseStatus(responseStatus)
+                                          .build();
 
         // Test UnaryCall
         final Throwable t = catchThrowable(() -> blockingStub.unaryCall(simpleRequest));
@@ -1120,15 +1120,16 @@ public class GrpcClientTest {
 
     @Test
     public void nonAsciiStatusMessage() {
-        String statusMessage = "ほげほげ";
+        final String statusMessage = "ほげほげ";
         assertThatThrownBy(() -> blockingStub.unaryCall(
                 SimpleRequest.newBuilder()
                              .setResponseStatus(EchoStatus.newBuilder()
                                                           .setCode(2)
                                                           .setMessage(statusMessage))
-                             .build())).isInstanceOfSatisfying(
-                                     StatusRuntimeException.class,
-                                     e -> assertThat(e.getStatus().getDescription()).isEqualTo(statusMessage));
+                             .build()))
+                .isInstanceOfSatisfying(StatusRuntimeException.class,
+                                        e -> assertThat(e.getStatus().getDescription())
+                                                .isEqualTo(statusMessage));
     }
 
     private static void assertSuccess(StreamRecorder<?> recorder) {
