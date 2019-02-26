@@ -134,8 +134,8 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
             if (grpcStatus != null) {
                 Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
                 if (status.getCode() == Status.OK.getCode()) {
-                   // Successful response, finish delivering messages before returning the status.
-                   closeDeframer();
+                    // Successful response, finish delivering messages before returning the status.
+                    closeDeframer();
                 }
                 final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
                 if (grpcMessage != null) {
