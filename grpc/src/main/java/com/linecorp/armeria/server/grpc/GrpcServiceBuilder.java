@@ -156,9 +156,9 @@ public final class GrpcServiceBuilder {
 
     /**
      * Sets the maximum size in bytes of an individual incoming message. If not set, will use
-     * {@link ServerConfig#defaultMaxRequestLength}. To support long-running RPC streams, it is recommended to
-     * set {@link ServerConfig#defaultMaxRequestLength} and {@link ServerConfig#defaultRequestTimeoutMillis} to
-     * very high values and set this to the expected limit of individual messages in the stream.
+     * {@link ServerConfig#defaultMaxRequestLength()}. To support long-running RPC streams, it is recommended to
+     * set {@link ServerConfig#defaultMaxRequestLength()} and {@link ServerConfig#defaultRequestTimeoutMillis()}
+     * to very high values and set this to the expected limit of individual messages in the stream.
      */
     public GrpcServiceBuilder setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
         checkArgument(maxInboundMessageSizeBytes > 0,

@@ -125,6 +125,7 @@ you build a :api:`GrpcService`:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
     import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
     ServerBuilder sb = new ServerBuilder();
@@ -135,7 +136,12 @@ you build a :api:`GrpcService`:
                               .allowRequestMethods(HttpMethod.POST) // Allow POST method.
                               // Allow Content-type and X-GRPC-WEB headers.
                               .allowRequestHeaders(HttpHeaderNames.CONTENT_TYPE,
-                                                   HttpHeaderNames.of("X-GRPC-WEB"));
+                                                   HttpHeaderNames.of("X-GRPC-WEB"))
+                              // Expose trailers of the HTTP response to the client so that it can get
+                              // the their values.
+                              .exposeHeaders(GrpcHeaderNames.GRPC_STATUS,
+                                             GrpcHeaderNames.GRPC_MESSAGE,
+                                             GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
 
     sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
                                        .supportedSerializationFormats(GrpcSerializationFormats.values())
