@@ -37,7 +37,7 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;

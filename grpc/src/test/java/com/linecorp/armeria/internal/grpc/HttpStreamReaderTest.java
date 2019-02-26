@@ -37,6 +37,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;

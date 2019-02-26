@@ -125,7 +125,7 @@ you build a :api:`GrpcService`:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+    import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
     import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
     ServerBuilder sb = new ServerBuilder();

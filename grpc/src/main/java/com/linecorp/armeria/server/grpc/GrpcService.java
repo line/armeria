@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;

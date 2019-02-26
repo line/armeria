@@ -83,7 +83,7 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBloc
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
 import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;

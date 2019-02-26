@@ -14,27 +14,40 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.grpc;
+package com.linecorp.armeria.common.grpc;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.grpc.ThrowableProto;
 
 import io.grpc.protobuf.ProtoUtils;
 import io.netty.util.AsciiString;
 
+/**
+ * gRPC-related HTTP header names.
+ */
 public final class GrpcHeaderNames {
-
+    /**
+     * {@code "grpc-status"}.
+     */
     public static final AsciiString GRPC_STATUS = HttpHeaderNames.of("grpc-status");
-
+    /**
+     * {@code "grpc-message"}.
+     */
     public static final AsciiString GRPC_MESSAGE = HttpHeaderNames.of("grpc-message");
-
+    /**
+     * {@code "grpc-encoding"}.
+     */
     public static final AsciiString GRPC_ENCODING = HttpHeaderNames.of("grpc-encoding");
-
+    /**
+     * {@code "grpc-accept-encoding"}.
+     */
     public static final AsciiString GRPC_ACCEPT_ENCODING = HttpHeaderNames.of("grpc-accept-encoding");
-
+    /**
+     * {@code "grpc-timeout"}.
+     */
     public static final AsciiString GRPC_TIMEOUT = HttpHeaderNames.of("grpc-timeout");
-
-    // Header name is armeria.grpc.ThrowableProto-bin
+    /**
+     * {@code "armeria.grpc.ThrowableProto-bin"}.
+     */
     public static final AsciiString ARMERIA_GRPC_THROWABLEPROTO_BIN =
             HttpHeaderNames.of(ProtoUtils.keyForProto(ThrowableProto.getDefaultInstance()).name());
 
