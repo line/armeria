@@ -90,14 +90,14 @@ public class StreamMessageDrainerTest {
         streamMessage.close(new AnticipatedException());
 
         final FilteredStreamMessage<ByteBuf, ByteBuf> filtered =
-                new FilteredStreamMessage<ByteBuf, ByteBuf>(streamMessage) {
+                new FilteredStreamMessage<ByteBuf, ByteBuf>(streamMessage, true) {
                     @Override
                     protected ByteBuf filter(ByteBuf obj) {
                         return obj;
                     }
                 };
 
-        assertThatThrownBy(() -> filtered.drainAll().join())
+        assertThatThrownBy(() -> filtered.drainAll(true).join())
                 .hasCauseExactlyInstanceOf(AnticipatedException.class);
         await().untilAsserted(() -> assertThat(buf.refCnt()).isZero());
     }

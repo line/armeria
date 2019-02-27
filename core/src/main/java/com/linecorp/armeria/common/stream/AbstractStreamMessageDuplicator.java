@@ -536,7 +536,6 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             requireNonNull(executor, "executor");
 
             final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>();
-
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
                     this, drainer, processor, executor, withPooledObjects, lastStream);
             if (!subscribe0(subscription)) {

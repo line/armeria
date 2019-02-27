@@ -231,32 +231,36 @@ public interface StreamMessage<T> extends Publisher<T> {
     void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects);
 
     /**
-     * Returns a {@link CompletableFuture} that contains the list of {@link T}s which were written to this
-     * {@link StreamMessage}. The {@link CompletableFuture} can be competed exceptionally with one of the
-     * following exceptions:
-     *
+     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
+     * The returned {@link CompletableFuture} will be completed exceptionally when one of the
+     * following exceptions is raised:
      * <ul>
      *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
      *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
      * </ul>
+     *
+     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
     CompletableFuture<List<T>> drainAll();
 
     /**
-     * Returns a {@link CompletableFuture} that contains the list of {@link T}s which were written to this
-     * {@link StreamMessage}. The {@link CompletableFuture} can be competed exceptionally with one of the
-     * following exceptions:
+     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
+     * The returned {@link CompletableFuture} will be completed exceptionally when one of the
+     * following exceptions is raised:
      * <ul>
      *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
      *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
      * </ul>
+     *
+     * @param executor the executor to use retrieves all elements
+     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
     CompletableFuture<List<T>> drainAll(EventExecutor executor);
 
     /**
-     * Returns a {@link CompletableFuture} that contains the list of {@link T}s which were written to this
-     * {@link StreamMessage}. The {@link CompletableFuture} can be competed exceptionally with one of the
-     * following exceptions:
+     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
+     * The returned {@link CompletableFuture} will be completed exceptionally when one of the
+     * following exceptions is raised:
      * <ul>
      *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
      *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
@@ -265,21 +269,24 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
      *                          as is, without making a copy. If you don't know what this means, use
      *                          {@link StreamMessage#subscribe(Subscriber)}.
+     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
     CompletableFuture<List<T>> drainAll(boolean withPooledObjects);
 
     /**
-     * Returns a {@link CompletableFuture} that contains the list of {@link T}s which were written to this
-     * {@link StreamMessage}. The {@link CompletableFuture} can be competed exceptionally with one of the
-     * following exceptions:
+     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
+     * The returned {@link CompletableFuture} will be completed exceptionally when one of the
+     * following exceptions is raised:
      * <ul>
      *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
      *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
      * </ul>
      *
+     * @param executor the executor to use retrieves all elements
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
      *                          as is, without making a copy. If you don't know what this means, use
      *                          {@link StreamMessage#subscribe(Subscriber)}.
+     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
     CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects);
 
