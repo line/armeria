@@ -126,11 +126,11 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     }
 
     @Override
-    void subscribe(SubscriptionImpl subscription) {
-        final Subscriber<?> subscriber = subscription.subscriber();
+    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
-            eventLoop.execute(() -> failLateSubscriber(this.subscription, subscriber));
-            return;
+            final SubscriptionImpl oldSubscription = this.subscription;
+            assert oldSubscription != null;
+            return oldSubscription;
         }
 
         if (eventLoop.inEventLoop()) {
@@ -138,6 +138,8 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
         } else {
             eventLoop.execute(() -> doSubscribe(subscription));
         }
+
+        return subscription;
     }
 
     @Override

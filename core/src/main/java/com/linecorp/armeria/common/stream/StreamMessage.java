@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -200,7 +201,6 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
      *                          as is, without making a copy. If you don't know what this means, use
      *                          {@link StreamMessage#subscribe(Subscriber)}.
-     * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
      */
     void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects);
 
@@ -229,6 +229,59 @@ public interface StreamMessage<T> extends Publisher<T> {
      *                          {@link StreamMessage#subscribe(Subscriber)}.
      */
     void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects);
+
+    /**
+     * Returns a {@link CompletableFuture} that contains the list of {@link T}s which were written to this
+     * {@link StreamMessage}. The {@link CompletableFuture} can be competed exceptionally with one of the
+     * following exceptions:
+     *
+     * <ul>
+     *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     * </ul>
+     */
+    CompletableFuture<List<T>> drainAll();
+
+    /**
+     * Returns a {@link CompletableFuture} that contains the list of {@link T}s which were written to this
+     * {@link StreamMessage}. The {@link CompletableFuture} can be competed exceptionally with one of the
+     * following exceptions:
+     * <ul>
+     *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     * </ul>
+     */
+    CompletableFuture<List<T>> drainAll(EventExecutor executor);
+
+    /**
+     * Returns a {@link CompletableFuture} that contains the list of {@link T}s which were written to this
+     * {@link StreamMessage}. The {@link CompletableFuture} can be competed exceptionally with one of the
+     * following exceptions:
+     * <ul>
+     *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     * </ul>
+     *
+     * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
+     *                          as is, without making a copy. If you don't know what this means, use
+     *                          {@link StreamMessage#subscribe(Subscriber)}.
+     */
+    CompletableFuture<List<T>> drainAll(boolean withPooledObjects);
+
+    /**
+     * Returns a {@link CompletableFuture} that contains the list of {@link T}s which were written to this
+     * {@link StreamMessage}. The {@link CompletableFuture} can be competed exceptionally with one of the
+     * following exceptions:
+     * <ul>
+     *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     * </ul>
+     *
+     * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
+     *                          as is, without making a copy. If you don't know what this means, use
+     *                          {@link StreamMessage#subscribe(Subscriber)}.
+     */
+    CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects);
 
     /**
      * Closes this stream with {@link AbortedStreamException} and prevents further subscription.

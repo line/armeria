@@ -18,14 +18,10 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -33,7 +29,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.testing.common.EventLoopRule;
 
@@ -45,56 +40,56 @@ public class DecodedHttpRequestTest {
     @Test
     public void dataOnly() throws Exception {
         final DecodedHttpRequest req = decodedHttpRequest();
-        req.tryWrite(HttpData.ofUtf8("foo"));
+        assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         req.close();
 
-        final List<HttpObject> unaggregated = unaggregate(req);
-        assertThat(unaggregated).containsExactly(HttpData.ofUtf8("foo"));
+        final List<HttpObject> drained = req.drainAll().join();
+        assertThat(drained).containsExactly(HttpData.ofUtf8("foo"));
     }
 
     @Test
     public void trailersOnly() throws Exception {
         final DecodedHttpRequest req = decodedHttpRequest();
-        req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         req.close();
 
-        final List<HttpObject> unaggregated = unaggregate(req);
-        assertThat(unaggregated).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        final List<HttpObject> drained = req.drainAll().join();
+        assertThat(drained).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
     @Test
     public void dataIsIgnoreAfterTrailers() throws Exception {
         final DecodedHttpRequest req = decodedHttpRequest();
-        req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
-        req.tryWrite(HttpData.ofUtf8("foo"));
+        assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isFalse();
         req.close();
 
-        final List<HttpObject> unaggregated = unaggregate(req);
-        assertThat(unaggregated).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        final List<HttpObject> drained = req.drainAll().join();
+        assertThat(drained).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
     @Test
     public void splitTrailersIsIgnored() throws Exception {
         final DecodedHttpRequest req = decodedHttpRequest();
-        req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
-        req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"));
+        assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         req.close();
 
-        final List<HttpObject> unaggregated = unaggregate(req);
-        assertThat(unaggregated).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        final List<HttpObject> drained = req.drainAll().join();
+        assertThat(drained).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
     @Test
     public void splitTrailersAfterDataIsIgnored() throws Exception {
         final DecodedHttpRequest req = decodedHttpRequest();
-        req.tryWrite(HttpData.ofUtf8("foo"));
-        req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
-        req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"));
+        assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
+        assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         req.close();
 
-        final List<HttpObject> unaggregated = unaggregate(req);
-        assertThat(unaggregated).containsExactly(HttpData.ofUtf8("foo"),
-                                                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        final List<HttpObject> drained = req.drainAll().join();
+        assertThat(drained).containsExactly(HttpData.ofUtf8("foo"),
+                                            HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
     private static DecodedHttpRequest decodedHttpRequest() {
@@ -106,29 +101,5 @@ public class DecodedHttpRequestTest {
                                                                   sctx.maxRequestLength());
         request.init(sctx);
         return request;
-    }
-
-    private static List<HttpObject> unaggregate(StreamMessage<HttpObject> req) throws Exception {
-        final List<HttpObject> unaggregated = new ArrayList<>();
-        req.subscribe(new Subscriber<HttpObject>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);
-            }
-
-            @Override
-            public void onNext(HttpObject httpObject) {
-                unaggregated.add(httpObject);
-            }
-
-            @Override
-            public void onError(Throwable t) {}
-
-            @Override
-            public void onComplete() {}
-        });
-
-        req.completionFuture().get(10, TimeUnit.SECONDS);
-        return unaggregated;
     }
 }

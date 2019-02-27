@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -138,6 +140,38 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         delegate.subscribe(new FilteringSubscriber(subscriber), executor, withPooledObjects);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll() {
+        return filterElements(delegate.drainAll());
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        return filterElements(delegate.drainAll(executor), executor);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(boolean withPooledObjects) {
+        return filterElements(delegate.drainAll(withPooledObjects));
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        requireNonNull(executor, "executor");
+        return filterElements(delegate.drainAll(executor, withPooledObjects), executor);
+    }
+
+    private CompletableFuture<List<U>> filterElements(CompletableFuture<List<T>> future) {
+        return future.thenApply(list -> list.stream().map(this::filter).collect(toImmutableList()));
+    }
+
+    private CompletableFuture<List<U>> filterElements(CompletableFuture<List<T>> future,
+                                                      EventExecutor executor) {
+        return future.thenApplyAsync(list -> list.stream().map(this::filter).collect(toImmutableList()),
+                                     executor);
     }
 
     @Override

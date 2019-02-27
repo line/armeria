@@ -84,6 +84,11 @@ public class EventLoopStreamMessageVerification extends StreamMessageVerificatio
     }
 
     @Override
+    public void optional_spec104_mustSignalOnErrorWhenFails() throws Throwable {
+       super.optional_spec104_mustSignalOnErrorWhenFails();
+    }
+
+    @Override
     public StreamMessage<Long> createFailedPublisher() {
         final EventLoopStreamMessage<Long> stream = new EventLoopStreamMessage<>(eventLoop);
         stream.subscribe(new NoopSubscriber<>());
