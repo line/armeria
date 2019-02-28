@@ -21,8 +21,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.annotation.Nullable;
 
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
@@ -66,8 +71,17 @@ public class StreamMessageDrainerTest {
     @Test
     public void filteredStreamMessage() {
         final DefaultStreamMessage<String> streamMessage = streamMessage();
+        final AtomicInteger counter = new AtomicInteger();
         final FilteredStreamMessage<String, String> filtered =
                 new FilteredStreamMessage<String, String>(streamMessage) {
+
+                    @Override
+                    protected void beforeSubscribe(Subscriber<? super String> subscriber,
+                                                   Subscription subscription) {
+                        counter.incrementAndGet();
+                        assertThat(subscriber instanceof StreamMessageDrainer).isTrue();
+                    }
+
                     @Override
                     protected String filter(String obj) {
                         if ("foo".equals(obj)) {
@@ -75,10 +89,17 @@ public class StreamMessageDrainerTest {
                         }
                         return obj;
                     }
+
+                    @Override
+                    protected void beforeComplete(Subscriber<? super String> subscriber) {
+                        counter.incrementAndGet();
+                        assertThat(subscriber instanceof StreamMessageDrainer).isTrue();
+                    }
                 };
 
         final List<String> drained = filtered.drainAll().join();
         assertThat(drained).containsExactly("qux", "bar", "baz");
+        await().untilAsserted(() -> assertThat(counter.get()).isEqualTo(2));
     }
 
     @Test
@@ -87,7 +108,6 @@ public class StreamMessageDrainerTest {
         final ByteBuf buf = newUnpooledBuffer();
         assertThat(buf.refCnt()).isOne();
         streamMessage.write(buf);
-        streamMessage.close(new AnticipatedException());
 
         final FilteredStreamMessage<ByteBuf, ByteBuf> filtered =
                 new FilteredStreamMessage<ByteBuf, ByteBuf>(streamMessage, true) {
@@ -95,10 +115,19 @@ public class StreamMessageDrainerTest {
                     protected ByteBuf filter(ByteBuf obj) {
                         return obj;
                     }
+
+                    @Nullable
+                    @Override
+                    protected Throwable beforeError(Subscriber<? super ByteBuf> subscriber, Throwable cause) {
+                        return new AnticipatedException("after");
+                    }
                 };
 
+        await().untilAsserted(() -> assertThat(buf.refCnt()).isOne());
+        streamMessage.close(new AnticipatedException("before"));
+
         assertThatThrownBy(() -> filtered.drainAll(true).join())
-                .hasCauseExactlyInstanceOf(AnticipatedException.class);
+                .hasCauseExactlyInstanceOf(AnticipatedException.class).hasMessageContaining("after");
         await().untilAsserted(() -> assertThat(buf.refCnt()).isZero());
     }
 

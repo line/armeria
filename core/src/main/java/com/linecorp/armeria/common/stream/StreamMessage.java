@@ -183,8 +183,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
      * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
      * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      */
     @Override
@@ -194,8 +195,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
      * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
      * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
@@ -209,8 +211,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      * {@link Executor}. If there is a problem subscribing, {@link Subscriber#onError(Throwable)} will be
      * invoked with one of the following exceptions:
      * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      */
     void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
@@ -220,8 +223,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      * {@link Executor}. If there is a problem subscribing, {@link Subscriber#onError(Throwable)} will be
      * invoked with one of the following exceptions:
      * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
@@ -232,11 +236,11 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} will be completed exceptionally when one of the
-     * following exceptions is raised:
+     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
      * <ul>
-     *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
-     *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
      * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
@@ -245,47 +249,47 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} will be completed exceptionally when one of the
-     * following exceptions is raised:
+     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
      * <ul>
-     *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
-     *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
-     * @param executor the executor to use retrieves all elements
+     * @param executor the executor to retrieve all elements
      * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
     CompletableFuture<List<T>> drainAll(EventExecutor executor);
 
     /**
      * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} will be completed exceptionally when one of the
-     * following exceptions is raised:
+     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
      * <ul>
-     *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
-     *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
      *                          as is, without making a copy. If you don't know what this means, use
-     *                          {@link StreamMessage#subscribe(Subscriber)}.
+     *                          {@link StreamMessage#drainAll()}.
      * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
     CompletableFuture<List<T>> drainAll(boolean withPooledObjects);
 
     /**
      * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} will be completed exceptionally when one of the
-     * following exceptions is raised:
+     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
      * <ul>
-     *      <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
-     *      <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
-     * @param executor the executor to use retrieves all elements
+     * @param executor the executor to retrieve all elements
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
      *                          as is, without making a copy. If you don't know what this means, use
-     *                          {@link StreamMessage#subscribe(Subscriber)}.
+     *                          {@link StreamMessage#drainAll(EventExecutor)}.
      * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
     CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects);

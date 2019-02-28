@@ -156,7 +156,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     @Override
     public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
         requireNonNull(executor, "executor");
-        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>();
+        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
 
         if (!subscribe0(drainer, executor)) {
             final AbortableSubscriber subscriber = this.subscriber;

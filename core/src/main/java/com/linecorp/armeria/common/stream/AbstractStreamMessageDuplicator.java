@@ -535,7 +535,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
             requireNonNull(executor, "executor");
 
-            final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>();
+            final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
                     this, drainer, processor, executor, withPooledObjects, lastStream);
             if (!subscribe0(subscription)) {

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -144,34 +143,28 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public CompletableFuture<List<U>> drainAll() {
-        return filterElements(delegate.drainAll());
+        return drainAll(false);
     }
 
     @Override
     public CompletableFuture<List<U>> drainAll(EventExecutor executor) {
-        requireNonNull(executor, "executor");
-        return filterElements(delegate.drainAll(executor), executor);
+        return drainAll(executor, false);
     }
 
     @Override
     public CompletableFuture<List<U>> drainAll(boolean withPooledObjects) {
-        return filterElements(delegate.drainAll(withPooledObjects));
+        final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
+        delegate.subscribe(new FilteringSubscriber(drainer), withPooledObjects);
+        return drainer.future();
     }
 
     @Override
     public CompletableFuture<List<U>> drainAll(EventExecutor executor, boolean withPooledObjects) {
         requireNonNull(executor, "executor");
-        return filterElements(delegate.drainAll(executor, withPooledObjects), executor);
-    }
 
-    private CompletableFuture<List<U>> filterElements(CompletableFuture<List<T>> future) {
-        return future.thenApply(list -> list.stream().map(this::filter).collect(toImmutableList()));
-    }
-
-    private CompletableFuture<List<U>> filterElements(CompletableFuture<List<T>> future,
-                                                      EventExecutor executor) {
-        return future.thenApplyAsync(list -> list.stream().map(this::filter).collect(toImmutableList()),
-                                     executor);
+        final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
+        delegate.subscribe(new FilteringSubscriber(drainer), executor, withPooledObjects);
+        return drainer.future();
     }
 
     @Override

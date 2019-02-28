@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.stream;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -31,7 +33,14 @@ final class StreamMessageDrainer<T> implements Subscriber<T> {
 
     private final CompletableFuture<List<T>> future = new CompletableFuture<>();
 
-    private final Builder<T> drained = ImmutableList.builder();
+    @Nullable
+    private Builder<T> drained = ImmutableList.builder();
+
+    private final boolean withPooledObjects;
+
+    StreamMessageDrainer(boolean withPooledObjects) {
+        this.withPooledObjects = withPooledObjects;
+    }
 
     CompletableFuture<List<T>> future() {
         return future;
@@ -44,17 +53,27 @@ final class StreamMessageDrainer<T> implements Subscriber<T> {
 
     @Override
     public void onNext(T t) {
+        assert drained != null;
         drained.add(t);
     }
 
     @Override
     public void onError(Throwable t) {
+        if (withPooledObjects) {
+            assert drained != null;
+            drained.build().forEach(ReferenceCountUtil::safeRelease);
+        }
+        // Dereference to make the objects GC'd.
+        drained = null;
+
         future.completeExceptionally(t);
-        drained.build().forEach(ReferenceCountUtil::safeRelease);
     }
 
     @Override
     public void onComplete() {
+        assert drained != null;
         future.complete(drained.build());
+        // Dereference to make the objects GC'd.
+        drained = null;
     }
 }

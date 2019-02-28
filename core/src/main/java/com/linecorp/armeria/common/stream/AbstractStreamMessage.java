@@ -79,8 +79,9 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     /**
      * Sets the specified {@code subscription} for the current stream.
      *
-     * @return the {@link SubscriptionImpl} which is used in actual subscription. It is not the specified
-     *         {@code subscription}, the current stream is subscribed by other {@link Subscriber} or aborted.
+     * @return the {@link SubscriptionImpl} which is used in actual subscription. If it's not the specified
+     *         {@code subscription}, it means the current stream is subscribed by other {@link Subscriber}
+     *         or aborted.
      */
     abstract SubscriptionImpl subscribe(SubscriptionImpl subscription);
 
@@ -111,7 +112,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
         requireNonNull(executor, "executor");
 
-        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>();
+        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
         final SubscriptionImpl subscription = new SubscriptionImpl(this, drainer,
                                                                    executor, withPooledObjects);
         final SubscriptionImpl actualSubscription = subscribe(subscription);
