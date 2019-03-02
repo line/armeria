@@ -289,18 +289,24 @@ public class GrpcServiceServerTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.defaultMaxRequestLength(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .addService(new UnitTestServiceImpl())
-                    .addService(ProtoReflectionService.newInstance())
-                    .enableUnframedRequests(true)
-                    .supportedSerializationFormats(GrpcSerializationFormats.values())
-                    .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.service(
+                    new GrpcServiceBuilder()
+                            .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                            .addService(new UnitTestServiceImpl())
+                            .enableUnframedRequests(true)
+                            .supportedSerializationFormats(GrpcSerializationFormats.values())
+                            .build(),
+                    service -> service
+                            .decorate(LoggingService.newDecorator())
+                            .decorate((delegate, ctx, req) -> {
+                                ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
+                                return delegate.serve(ctx, req);
+                            }));
+            sb.service(
+                    new GrpcServiceBuilder()
+                            .addService(ProtoReflectionService.newInstance())
+                            .build(),
+                    service -> service.decorate(LoggingService.newDecorator()));
         }
     };
 

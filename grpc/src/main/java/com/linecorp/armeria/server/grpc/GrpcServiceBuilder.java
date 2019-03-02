@@ -21,10 +21,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -48,7 +46,6 @@ import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
-import io.grpc.Server;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.protobuf.services.ProtoReflectionService;
 
@@ -258,64 +255,6 @@ public final class GrpcServiceBuilder {
     public ServiceWithPathMappings<HttpRequest, HttpResponse> build() {
         final HandlerRegistry handlerRegistry = registryBuilder.build();
 
-        if (protoReflectionService != null) {
-            protoReflectionService.notifyOnBuild(new Server() {
-                @Override
-                public Server start() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public List<ServerServiceDefinition> getServices() {
-                    return handlerRegistry.services();
-                }
-
-                @Override
-                public List<ServerServiceDefinition> getImmutableServices() {
-                    // NB: This will probably go away in favor of just getServices above, so we implement both
-                    //     the same.
-                    // https://github.com/grpc/grpc-java/issues/4600
-                    return handlerRegistry.services();
-                }
-
-                @Override
-                public List<ServerServiceDefinition> getMutableServices() {
-                    // Armeria does not have the concept of mutable services.
-                    return ImmutableList.of();
-                }
-
-                @Override
-                public Server shutdown() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public Server shutdownNow() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public boolean isShutdown() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public boolean isTerminated() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public boolean awaitTermination(long timeout, TimeUnit unit) {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public void awaitTermination() {
-                    throw new UnsupportedOperationException();
-                }
-            });
-        }
-
         final GrpcService grpcService = new GrpcService(
                 handlerRegistry,
                 handlerRegistry
@@ -330,6 +269,7 @@ public final class GrpcServiceBuilder {
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
+                protoReflectionService,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
     }
