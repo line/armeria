@@ -3,7 +3,7 @@ dependencies {
     compile 'com.google.protobuf:protobuf-java-util'
 
     // gRPC
-    [ 'grpc-core', 'grpc-stub', 'grpc-protobuf' ].each {
+    [ 'grpc-core', 'grpc-protobuf', 'grpc-services', 'grpc-stub' ].each {
         compile "io.grpc:$it"
     }
 

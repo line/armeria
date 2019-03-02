@@ -143,6 +143,7 @@ io.grpc:
   grpc-netty-shaded: { version: *GRPC_VERSION }
   grpc-okhttp: { version: *GRPC_VERSION }
   grpc-protobuf: { version: *GRPC_VERSION }
+  grpc-services: { version: *GRPC_VERSION }
   grpc-stub: { version: *GRPC_VERSION }
   grpc-testing: { version: *GRPC_VERSION }
 
