@@ -299,8 +299,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         if (o instanceof HttpData) {
             final HttpData data = (HttpData) o;
             wroteEmptyData = data.isEmpty();
-            future = responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream);
             logBuilder().increaseResponseLength(data);
+            future = responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream);
         } else if (o instanceof HttpHeaders) {
             wroteEmptyData = false;
             future = responseEncoder.writeHeaders(req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
