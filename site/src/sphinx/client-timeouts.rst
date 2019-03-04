@@ -15,8 +15,8 @@ Using ``ClientBuilder``
 
     import com.linecorp.armeria.client.ClientBuilder;
 
-    int responseTimeout = 15;
-    int writeTimeout = 1;
+    int responseTimeout = 30;
+    int writeTimeout = 10;
 
     HelloService.Iface client = new ClientBuilder("tbinary+http://example.com/hello")
             .defaultResponseTimeout(Duration.ofSeconds(responseTimeout))
@@ -36,8 +36,8 @@ Using ``ClientOptionsBuilder``
 
     // Defaults are defined in com.linecorp.armeria.common.Flags and
     // com.linecorp.armeria.client.ClientOptions
-    int responseTimeout = 15;
-    int writeTimeout = 1;
+    int responseTimeout = 30;
+    int writeTimeout = 10;
 
     HelloService.Iface client = Clients.newClient(
             "tbinary+http://example.com/hello",
