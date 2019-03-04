@@ -7,10 +7,10 @@ Writing a client
     :maxdepth: 1
 
     client-http
-    client-retrofit
     client-thrift
     client-grpc
     client-decorator
+    client-retrofit
     client-custom-http-headers
     client-timeouts
     client-retry
