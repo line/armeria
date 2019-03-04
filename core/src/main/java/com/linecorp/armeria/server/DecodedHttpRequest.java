@@ -27,7 +27,6 @@ import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
-import io.netty.util.ReferenceCountUtil;
 
 final class DecodedHttpRequest extends DefaultHttpRequest {
 
@@ -44,8 +43,6 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     @Nullable
     private HttpResponse response;
     private boolean isResponseAborted;
-
-    private boolean receivedTrailers;
 
     DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, HttpHeaders headers, boolean keepAlive,
                        InboundTrafficController inboundTrafficController, long defaultMaxRequestLength) {
@@ -102,17 +99,13 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     @Override
     public boolean tryWrite(HttpObject obj) {
-        if (receivedTrailers) {
-            ReferenceCountUtil.safeRelease(obj);
-            return false;
-        }
-
-        boolean published = false;
+        final boolean published;
         if (obj instanceof HttpHeaders) { // HTTP trailers.
             published = super.tryWrite(obj);
-            receivedTrailers = true;
             // TODO(minwoox) Log HTTP trailers.
-        } else if (obj instanceof HttpData) {
+            // Close this stream because HTTP trailers is the last element of the request.
+            close();
+        } else {
             published = super.tryWrite(obj);
             if (published) {
                 final HttpData httpData = (HttpData) obj;
