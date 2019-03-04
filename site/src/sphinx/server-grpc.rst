@@ -232,7 +232,7 @@ and lifecycle callbacks.
                                        .build());
 
 Exception propagation
-=====================
+---------------------
 
 It can be very useful to enable ``Flags.verboseResponses()`` in your server by specifying the
 ``-Dcom.linecorp.armeria.verboseResponses=true`` system property, which will automatically return
@@ -244,7 +244,7 @@ to all your clients before enabling this flag!
 See more details at :ref:`client-grpc`.
 
 Server Reflection
-=================
+-----------------
 
 Armeria supports gRPC server reflection - just add an instance of ``ProtoReflectionService`` to your server.
 
