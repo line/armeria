@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
@@ -348,25 +349,44 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s.
+     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * of the default {@link VirtualHost}.
+     *
+     * @param serviceWithPathMappings the {@link ServiceWithPathMappings}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
      */
-    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>>
-    B service(T serviceWithPathMappings) {
-        return service(serviceWithPathMappings, Function.identity());
+    public B service(ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
+                     Iterable<Function<? super Service<HttpRequest, HttpResponse>,
+                                       ? extends Service<HttpRequest, HttpResponse>>> decorators) {
+        requireNonNull(serviceWithPathMappings, "serviceWithPathMappings");
+        requireNonNull(serviceWithPathMappings.pathMappings(), "serviceWithPathMappings.pathMappings()");
+        requireNonNull(decorators, "decorators");
+
+        Service<HttpRequest, HttpResponse> decorated = serviceWithPathMappings;
+        for (Function<? super Service<HttpRequest, HttpResponse>,
+                      ? extends Service<HttpRequest, HttpResponse>> d : decorators) {
+            checkNotNull(d, "decorators contains null: %s", decorators);
+            decorated = d.apply(decorated);
+            checkNotNull(decorated, "A decorator returned null: %s", d);
+        }
+
+        final Service<HttpRequest, HttpResponse> finalDecorated = decorated;
+        serviceWithPathMappings.pathMappings().forEach(pathMapping -> service(pathMapping, finalDecorated));
+        return self();
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s.
+     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * of the default {@link VirtualHost}.
+     *
+     * @param serviceWithPathMappings the {@link ServiceWithPathMappings}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
      */
-    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
-            R extends Service<HttpRequest, HttpResponse>>
-    B service(T serviceWithPathMappings, Function<? super T, R> decorator) {
-        requireNonNull(serviceWithPathMappings, "serviceWithPathMappings");
-        requireNonNull(serviceWithPathMappings.pathMappings(), "serviceWithPathMappings.pathMappings()");
-        requireNonNull(decorator, "decorator");
-        final Service<HttpRequest, HttpResponse> decorated = decorator.apply(serviceWithPathMappings);
-        serviceWithPathMappings.pathMappings().forEach(pathMapping -> service(pathMapping, decorated));
-        return self();
+    @SafeVarargs
+    public final B service(ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
+                           Function<? super Service<HttpRequest, HttpResponse>,
+                                    ? extends Service<HttpRequest, HttpResponse>>... decorators) {
+        return service(serviceWithPathMappings, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 
     /**

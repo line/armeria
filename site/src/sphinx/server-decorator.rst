@@ -135,6 +135,45 @@ a certain type from a server:
         }
     }
 
+.. _server-decorator-service-with-path-mappings:
+
+Decorating ``ServiceWithPathMappings``
+--------------------------------------
+
+:api:`ServiceWithPathMappings` is a special variant of :api:`Service` which allows a user to register multiple
+routes for a single service easily. Because it requires a special treatment unlike usual :apiplural:`Service`,
+the two following restrictions apply:
+
+- You cannot specify path mappings when registering a :api:`ServiceWithPathMappings`.
+- You cannot use ``Service.decorate()`` method to decorate a :api:`ServiceWithPathMappings`. You have to
+  specify the decorators as extra parameters.
+
+The following example shows a simple :api:`ServiceWithPathMappings` implementation which is decorated with
+two decorators, :api:`LoggingService` and ``MyDecoratedService``:
+
+.. code-block:: java
+
+    public class MyServiceWithPathMappings implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+
+        @Override
+        public Set<PathMapping> pathMappings() {
+            Set<PathMapping> pathMappings = new HashSet<>();
+            pathMappings.add(PathMapping.of("/services/greet");
+            pathMappings.add(PathMapping.of("/services/hello");
+            return pathMappings;
+        }
+    }
+
+    ServerBuilder sb = new ServerBuilder();
+    sb.service(new MyServiceWithPathMappings(),
+               MyDecoratedService::new,
+               LoggingService.newDecorator())
+
+A good real-world example of :api:`ServiceWithPathMappings` is :api:`GrpcService`.
+See :ref:`server-grpc-decorator` for more information.
+
 See also
 --------
 
