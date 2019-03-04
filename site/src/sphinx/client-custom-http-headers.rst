@@ -2,7 +2,7 @@
 
 Sending custom HTTP headers
 ===========================
-When send an RPC request, it is sometimes required to send HTTP headers with it, such as authentication token.
+When sending an RPC request, it is sometimes required to send HTTP headers with it, such as an authentication token.
 There are four ways to customize the HTTP headers of your RPC request:
 
 - Using the ``Clients.withHttpHeaders()`` method
