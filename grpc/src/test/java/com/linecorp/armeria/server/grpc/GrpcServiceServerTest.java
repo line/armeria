@@ -99,6 +99,11 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
+import io.grpc.protobuf.services.ProtoReflectionService;
+import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
+import io.grpc.reflection.v1alpha.ServerReflectionGrpc.ServerReflectionStub;
+import io.grpc.reflection.v1alpha.ServerReflectionRequest;
+import io.grpc.reflection.v1alpha.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.netty.util.AsciiString;
@@ -284,17 +289,24 @@ public class GrpcServiceServerTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.defaultMaxRequestLength(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .addService(new UnitTestServiceImpl())
-                    .enableUnframedRequests(true)
-                    .supportedSerializationFormats(GrpcSerializationFormats.values())
-                    .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.service(
+                    new GrpcServiceBuilder()
+                            .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                            .addService(new UnitTestServiceImpl())
+                            .enableUnframedRequests(true)
+                            .supportedSerializationFormats(GrpcSerializationFormats.values())
+                            .build(),
+                    service -> service
+                            .decorate(LoggingService.newDecorator())
+                            .decorate((delegate, ctx, req) -> {
+                                ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
+                                return delegate.serve(ctx, req);
+                            }));
+            sb.service(
+                    new GrpcServiceBuilder()
+                            .addService(ProtoReflectionService.newInstance())
+                            .build(),
+                    service -> service.decorate(LoggingService.newDecorator()));
         }
     };
 
@@ -891,6 +903,42 @@ public class GrpcServiceServerTest {
         } finally {
             channel.shutdownNow();
         }
+    }
+
+    @Test
+    public void reflectionService() {
+        ServerReflectionStub stub = ServerReflectionGrpc.newStub(channel);
+
+        AtomicReference<ServerReflectionResponse> response = new AtomicReference<>();
+
+        StreamObserver<ServerReflectionRequest> request = stub.serverReflectionInfo(
+                new StreamObserver<ServerReflectionResponse>() {
+                    @Override
+                    public void onNext(ServerReflectionResponse value) {
+                        response.set(value);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
+        request.onNext(ServerReflectionRequest.newBuilder()
+                                              .setListServices("")
+                                              .build());
+        request.onCompleted();
+
+        await().untilAsserted(
+                () -> {
+                    assertThat(response).doesNotHaveValue(null);
+                    // Instead of making this test depend on every other one, just check that there is at least
+                    // two services returned corresponding to UnitTestService and ProtoReflectionService.
+                    assertThat(response.get().getListServicesResponse().getServiceList())
+                            .hasSizeGreaterThanOrEqualTo(2);
+                });
     }
 
     private static void checkRequestLog(RequestLogChecker checker) throws Exception {

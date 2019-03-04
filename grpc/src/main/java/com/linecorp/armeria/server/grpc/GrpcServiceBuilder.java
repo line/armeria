@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
@@ -46,6 +47,7 @@ import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.ServerServiceDefinition;
+import io.grpc.protobuf.services.ProtoReflectionService;
 
 /**
  * Constructs a {@link GrpcService} to serve gRPC services from within Armeria.
@@ -75,6 +77,9 @@ public final class GrpcServiceBuilder {
 
     private boolean unsafeWrapRequestBuffers;
 
+    @Nullable
+    private ProtoReflectionService protoReflectionService;
+
     /**
      * Adds a gRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as
      * what's returned by {@link BindableService#bindService()}.
@@ -89,6 +94,13 @@ public final class GrpcServiceBuilder {
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
+        if (bindableService instanceof ProtoReflectionService) {
+            checkState(protoReflectionService == null,
+                       "Attempting to add a ProtoReflectionService but one is already present. " +
+                       "ProtoReflectionService must only be added once.");
+            protoReflectionService = (ProtoReflectionService) bindableService;
+        }
+
         return addService(bindableService.bindService());
     }
 
@@ -242,6 +254,7 @@ public final class GrpcServiceBuilder {
      */
     public ServiceWithPathMappings<HttpRequest, HttpResponse> build() {
         final HandlerRegistry handlerRegistry = registryBuilder.build();
+
         final GrpcService grpcService = new GrpcService(
                 handlerRegistry,
                 handlerRegistry
@@ -256,6 +269,7 @@ public final class GrpcServiceBuilder {
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
+                protoReflectionService,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
     }

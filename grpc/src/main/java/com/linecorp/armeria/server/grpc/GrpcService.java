@@ -17,17 +17,24 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -51,10 +58,12 @@ import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
+import io.grpc.Server;
 import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
+import io.grpc.protobuf.services.ProtoReflectionService;
 
 /**
  * A {@link AbstractHttpService} that implements the gRPC wire protocol. Interfaces and binding logic of gRPC
@@ -93,6 +102,8 @@ public final class GrpcService extends AbstractHttpService
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final String advertisedEncodingsHeader;
+    @Nullable
+    private final ProtoReflectionService protoReflectionService;
 
     private int maxInboundMessageSizeBytes;
 
@@ -104,12 +115,14 @@ public final class GrpcService extends AbstractHttpService
                 int maxOutboundMessageSizeBytes,
                 boolean useBlockingTaskExecutor,
                 boolean unsafeWrapRequestBuffers,
+                @Nullable ProtoReflectionService protoReflectionService,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
         this.pathMappings = requireNonNull(pathMappings, "pathMappings");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
+        this.protoReflectionService = protoReflectionService;
         jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats);
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -219,6 +232,76 @@ public final class GrpcService extends AbstractHttpService
         if (maxInboundMessageSizeBytes == NO_MAX_INBOUND_MESSAGE_SIZE) {
             maxInboundMessageSizeBytes = (int) Math.min(cfg.server().config().defaultMaxRequestLength(),
                                                         Integer.MAX_VALUE);
+        }
+
+        if (protoReflectionService != null) {
+            Map<String, ServerServiceDefinition> grpcServices =
+                    cfg.server().config().virtualHosts().stream()
+                       .flatMap(host -> host.serviceConfigs().stream())
+                       .map(serviceConfig -> serviceConfig.service().as(GrpcService.class))
+                       .filter(Optional::isPresent)
+                       .flatMap(service -> service.get().services().stream())
+                       // Armeria allows the same service to be registered multiple times at different
+                       // paths, but proto reflection service only supports a single instance of each
+                       // service so we dedupe here.
+                       .collect(toImmutableMap(def -> def.getServiceDescriptor().getName(),
+                                               Function.identity(),
+                                               (a, b) -> a));
+            protoReflectionService.notifyOnBuild(new Server() {
+                @Override
+                public Server start() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public List<ServerServiceDefinition> getServices() {
+                    return ImmutableList.copyOf(grpcServices.values());
+                }
+
+                @Override
+                public List<ServerServiceDefinition> getImmutableServices() {
+                    // NB: This will probably go away in favor of just getServices above, so we
+                    // implement both the same.
+                    // https://github.com/grpc/grpc-java/issues/4600
+                    return getServices();
+                }
+
+                @Override
+                public List<ServerServiceDefinition> getMutableServices() {
+                    // Armeria does not have the concept of mutable services.
+                    return ImmutableList.of();
+                }
+
+                @Override
+                public Server shutdown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public Server shutdownNow() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean isShutdown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean isTerminated() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean awaitTermination(long timeout, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public void awaitTermination() {
+                    throw new UnsupportedOperationException();
+                }
+            });
         }
     }
 
