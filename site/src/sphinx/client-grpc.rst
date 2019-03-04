@@ -158,7 +158,7 @@ requests and responses. You might be interested in decorating a client using oth
 to gather metrics. Please also refer to :api:`ClientBuilder` for more configuration options.
 
 Exception propagation
-=====================
+---------------------
 
 If you have enabled ``Flags.verboseResponses()`` in the server being accessed by specifying
 ``-Dcom.linecorp.armeria.verboseResponses=true`` system property, then any exception during processing
