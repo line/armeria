@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -28,6 +30,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
@@ -98,7 +101,12 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                                 boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        subscribe0(subscriber, executor);
+
+        if (!subscribe0(subscriber, executor)) {
+            final AbortableSubscriber oldSubscriber = this.subscriber;
+            assert oldSubscriber != null;
+            failLateSubscriber(executor, subscriber, oldSubscriber.subscriber);
+        }
     }
 
     /**
@@ -109,28 +117,54 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
     }
 
-    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor) {
+    private boolean subscribe0(Subscriber<? super T> subscriber, EventExecutor executor) {
         final AbortableSubscriber s = new AbortableSubscriber(this, subscriber, executor);
         if (!subscriberUpdater.compareAndSet(this, null, s)) {
-            failLateSubscriber(executor, subscriber, this.subscriber.subscriber);
+            return false;
         }
 
         publisher.subscribe(s);
+
+        return true;
     }
 
     private static void failLateSubscriber(EventExecutor executor,
                                            Subscriber<?> lateSubscriber, Subscriber<?> oldSubscriber) {
-        final Throwable cause;
-        if (oldSubscriber instanceof AbortingSubscriber) {
-            cause = AbortedStreamException.get();
-        } else {
-            cause = new IllegalStateException("subscribed by other subscriber already");
-        }
+        final Throwable cause = abortedOrLate(oldSubscriber);
 
         executor.execute(() -> {
             lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
             lateSubscriber.onError(cause);
         });
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll() {
+        return drainAll(defaultSubscriberExecutor(), false);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+        return drainAll(requireNonNull(executor, "executor"), false);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
+        return drainAll(defaultSubscriberExecutor(), withPooledObjects);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        requireNonNull(executor, "executor");
+        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
+
+        if (!subscribe0(drainer, executor)) {
+            final AbortableSubscriber subscriber = this.subscriber;
+            assert subscriber != null;
+            return CompletableFutures.exceptionallyCompletedFuture(abortedOrLate(subscriber.subscriber));
+        }
+
+        return drainer.future();
     }
 
     @Override

@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
@@ -472,7 +474,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @Override
         public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
             requireNonNull(subscriber, "subscriber");
-            subscribe0(subscriber, parent.duplicatorExecutor(), withPooledObjects);
+            subscribe(subscriber, parent.duplicatorExecutor(), withPooledObjects);
         }
 
         @Override
@@ -485,35 +487,65 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                               boolean withPooledObjects) {
             requireNonNull(subscriber, "subscriber");
             requireNonNull(executor, "executor");
-            subscribe0(subscriber, executor, withPooledObjects);
-        }
-
-        private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
-                                boolean withPooledObjects) {
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
                     this, subscriber, processor, executor, withPooledObjects, lastStream);
 
+            if (!subscribe0(subscription)) {
+                final DownstreamSubscription<T> oldSubscription = this.subscription;
+                assert oldSubscription != null;
+                failLateSubscriber(executor, subscriber, oldSubscription.subscriber());
+            }
+        }
+
+        private boolean subscribe0(DownstreamSubscription<T> subscription) {
             if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
-                failLateSubscriber(executor, subscriber, this.subscription.subscriber());
-                return;
+                return false;
             }
 
             processor.subscribe(subscription);
+            return true;
         }
 
         private static void failLateSubscriber(EventExecutor executor,
                                                Subscriber<?> lateSubscriber, Subscriber<?> oldSubscriber) {
-            final Throwable cause;
-            if (oldSubscriber instanceof AbortingSubscriber) {
-                cause = AbortedStreamException.get();
-            } else {
-                cause = new IllegalStateException("subscribed by other subscriber already");
-            }
+            final Throwable cause = abortedOrLate(oldSubscriber);
 
             executor.execute(() -> {
                 lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
                 lateSubscriber.onError(cause);
             });
+        }
+
+        @Override
+        public CompletableFuture<List<T>> drainAll() {
+            return drainAll(parent.duplicatorExecutor(), false);
+        }
+
+        @Override
+        public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+            return drainAll(executor, false);
+        }
+
+        @Override
+        public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
+            return drainAll(parent.duplicatorExecutor(), withPooledObjects);
+        }
+
+        @Override
+        public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+            requireNonNull(executor, "executor");
+
+            final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
+            final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
+                    this, drainer, processor, executor, withPooledObjects, lastStream);
+            if (!subscribe0(subscription)) {
+                final DownstreamSubscription<T> oldSubscription = this.subscription;
+                assert oldSubscription != null;
+                return CompletableFutures.exceptionallyCompletedFuture(
+                        abortedOrLate(oldSubscription.subscriber()));
+            }
+
+            return drainer.future();
         }
 
         @Override

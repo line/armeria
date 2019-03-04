@@ -34,7 +34,6 @@ import com.linecorp.armeria.client.retrofit2.ArmeriaCallFactory.ArmeriaCall;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.MediaType;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -92,7 +91,7 @@ public class BlockingCallSubscriberTest {
     }
 
     @Test
-    public void splitHeaders() throws Exception {
+    public void dataIsIgnoredAfterTrailers() throws Exception {
         when(armeriaCall.tryFinish()).thenReturn(true);
 
         final ManualMockCallback callback = new ManualMockCallback();
@@ -101,14 +100,14 @@ public class BlockingCallSubscriberTest {
         subscriber.onSubscribe(subscription);
         subscriber.onNext(HttpHeaders.of(100));
         subscriber.onNext(HttpHeaders.of(200));
-        subscriber.onNext(HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8.toString()));
-        subscriber.onNext(HttpData.ofUtf8("bar"));
+        subscriber.onNext(HttpHeaders.of(HttpHeaderNames.of("foo"), "bar")); // Trailers.
+        subscriber.onNext(HttpData.ofUtf8("baz")); // Ignored.
         subscriber.onComplete();
 
         verify(subscription).request(Long.MAX_VALUE);
         assertThat(callback.callbackCallingCount).isEqualTo(1);
-        assertThat(callback.response.header("content-type")).isEqualToIgnoringCase("text/plain; charset=utf-8");
-        assertThat(callback.response.body().string()).isEqualTo("bar");
+        assertThat(callback.response.header("foo")).isNull(); // Currently, there's no way to retrieve trailers.
+        assertThat(callback.response.body().string()).isEmpty();
     }
 
     @Test

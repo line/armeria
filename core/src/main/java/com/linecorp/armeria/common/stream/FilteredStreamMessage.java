@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -138,6 +139,32 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         delegate.subscribe(new FilteringSubscriber(subscriber), executor, withPooledObjects);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll() {
+        return drainAll(false);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(EventExecutor executor) {
+        return drainAll(executor, false);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(boolean withPooledObjects) {
+        final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
+        delegate.subscribe(new FilteringSubscriber(drainer), withPooledObjects);
+        return drainer.future();
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        requireNonNull(executor, "executor");
+
+        final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
+        delegate.subscribe(new FilteringSubscriber(drainer), executor, withPooledObjects);
+        return drainer.future();
     }
 
     @Override

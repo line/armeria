@@ -109,11 +109,11 @@ public class DefaultHttpRequestTest {
     }
 
     @Test
-    public void splitHeaders() {
+    public void ignoresAfterTrailersIsWritten() {
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/foo");
         req.write(HttpData.ofUtf8("foo"));
         req.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
-        req.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
+        req.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d")); // Ignored.
         req.close();
 
         final AggregatedHttpMessage aggregated = req.aggregate().join();
@@ -124,7 +124,6 @@ public class DefaultHttpRequestTest {
         // Content
         assertThat(aggregated.contentUtf8()).isEqualTo("foo");
         // Trailing headers
-        assertThat(aggregated.trailingHeaders()).isEqualTo(
-                HttpHeaders.of(HttpHeaderNames.of("a"), "b", HttpHeaderNames.of("c"), "d"));
+        assertThat(aggregated.trailingHeaders()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
     }
 }

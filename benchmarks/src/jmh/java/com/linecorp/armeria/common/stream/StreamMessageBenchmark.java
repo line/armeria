@@ -55,7 +55,6 @@ public class StreamMessageBenchmark {
 
         public enum StreamType {
             DEFAULT_STREAM_MESSAGE,
-            EVENT_LOOP_MESSAGE,
             FIXED_STREAM_MESSAGE,
             DEFERRED_FIXED_STREAM_MESSAGE,
         }
@@ -159,8 +158,6 @@ public class StreamMessageBenchmark {
 
     private static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
         switch (streamObjects.streamType) {
-            case EVENT_LOOP_MESSAGE:
-                return new EventLoopStreamMessage<>(EventLoopJmhExecutor.currentEventLoop());
             case DEFAULT_STREAM_MESSAGE:
                 return new DefaultStreamMessage<>();
             case FIXED_STREAM_MESSAGE:
@@ -180,107 +177,6 @@ public class StreamMessageBenchmark {
                 return stream;
             default:
                 throw new Error();
-        }
-    }
-
-    @Fork(jvmArgsAppend = { EventLoopJmhExecutor.JVM_ARG_1, EventLoopJmhExecutor.JVM_ARG_2 })
-    @State(Scope.Benchmark)
-    public static class StreamMessageThreadingBenchmark {
-
-        private static final EventLoop EVENT_LOOP1 = new DefaultEventLoop();
-        private static final EventLoop EVENT_LOOP2 = new DefaultEventLoop();
-        private static final EventLoop EVENT_LOOP3 = new DefaultEventLoop();
-
-        @TearDown(Level.Trial)
-        public void closeEventLoops() {
-            EVENT_LOOP1.shutdownGracefully().syncUninterruptibly();
-            EVENT_LOOP2.shutdownGracefully().syncUninterruptibly();
-            EVENT_LOOP3.shutdownGracefully().syncUninterruptibly();
-        }
-
-        // To evaluate performance with various threading models, we need to use multiple event loops with
-        // synchronization. These benchmarks will not be useful for evaluating raw stream performance but can
-        // compare different implementations under similar synchronization conditions.
-        public enum EventLoopType {
-            // Both reader and writer are the stream's event loop.
-            READ_WRITE(EVENT_LOOP1, EVENT_LOOP1),
-            // Only readers are the stream's event loop.
-            READ_ONLY(EVENT_LOOP1, EVENT_LOOP2),
-            // Only writers are the stream's event loop.
-            WRITE_ONLY(EVENT_LOOP3, EVENT_LOOP1),
-            // Neither are the stream's event loop.
-            NONE(EVENT_LOOP3, EVENT_LOOP2);
-
-            private final EventLoop readLoop;
-            private final EventLoop writeLoop;
-
-            EventLoopType(EventLoop readLoop, EventLoop writeLoop) {
-                this.readLoop = readLoop;
-                this.writeLoop = writeLoop;
-            }
-        }
-
-        @Param
-        private EventLoopType eventLoopType;
-
-        @Benchmark
-        public long writeFirst(StreamObjects streamObjects) throws Exception {
-            final StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
-
-            eventLoopType.writeLoop.execute(() -> streamObjects.writeAllValues(stream));
-            streamObjects.wroteLatch.await(10, TimeUnit.SECONDS);
-
-            stream.subscribe(streamObjects.subscriber, eventLoopType.readLoop);
-
-            streamObjects.completedLatch.await(10, TimeUnit.SECONDS);
-
-            return streamObjects.computedSum();
-        }
-
-        @Benchmark
-        public long writeLast(StreamObjects streamObjects) throws Exception {
-            final StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
-
-            stream.subscribe(streamObjects.subscriber, eventLoopType.readLoop);
-
-            eventLoopType.writeLoop.execute(() -> streamObjects.writeAllValues(stream));
-            streamObjects.wroteLatch.await(10, TimeUnit.SECONDS);
-
-            streamObjects.completedLatch.await(10, TimeUnit.SECONDS);
-
-            return streamObjects.computedSum();
-        }
-
-        @Benchmark
-        public long writeOnDemand(StreamObjects streamObjects) throws Exception {
-            final StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
-            stream.onDemand(() -> writeOnDemand(streamObjects, stream));
-
-            stream.subscribe(streamObjects.subscriber, eventLoopType.readLoop);
-
-            streamObjects.completedLatch.await(10, TimeUnit.SECONDS);
-
-            return streamObjects.computedSum();
-        }
-
-        private void writeOnDemand(StreamObjects streamObjects, StreamMessageAndWriter<Integer> stream) {
-            eventLoopType.writeLoop.submit(() -> {
-                streamObjects.writeNextValue(stream);
-                if (stream.isOpen()) {
-                    stream.onDemand(() -> writeOnDemand(streamObjects, stream));
-                }
-            });
-        }
-
-        private static StreamMessageAndWriter<Integer> newStream(StreamObjects streamObjects) {
-            switch (streamObjects.streamType) {
-                case EVENT_LOOP_MESSAGE:
-                    return new EventLoopStreamMessage<>(EVENT_LOOP1);
-                case DEFAULT_STREAM_MESSAGE:
-                    return new DefaultStreamMessage<>();
-                default:
-                    throw new Error();
-            }
         }
     }
 

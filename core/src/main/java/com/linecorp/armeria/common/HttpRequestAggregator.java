@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 
 final class HttpRequestAggregator extends HttpMessageAggregator {
 
@@ -43,8 +44,20 @@ final class HttpRequestAggregator extends HttpMessageAggregator {
         if (trailingHeaders.isEmpty()) {
             trailingHeaders = headers;
         } else {
-            trailingHeaders.add(headers);
+            // Optionally, only one trailers can be present.
+            // See https://tools.ietf.org/html/rfc7540#section-8.1
         }
+    }
+
+    @Override
+    protected void onData(HttpData data) {
+        if (!trailingHeaders.isEmpty()) {
+            ReferenceCountUtil.safeRelease(data);
+            // Data can't come after trailers.
+            // See https://tools.ietf.org/html/rfc7540#section-8.1
+            return;
+        }
+        super.onData(data);
     }
 
     @Override

@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 
@@ -27,6 +29,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
@@ -63,13 +66,24 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                                 boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        subscribe(new SubscriptionImpl(this, subscriber, executor, withPooledObjects));
+
+        final SubscriptionImpl subscription =
+                new SubscriptionImpl(this, subscriber, executor, withPooledObjects);
+        final SubscriptionImpl actualSubscription = subscribe(subscription);
+        if (actualSubscription != subscription) {
+            // Failed to subscribe.
+            failLateSubscriber(actualSubscription, subscriber);
+        }
     }
 
     /**
-     * Sets the current subscription for the stream.
+     * Sets the specified {@code subscription} for the current stream.
+     *
+     * @return the {@link SubscriptionImpl} which is used in actual subscription. If it's not the specified
+     *         {@code subscription}, it means the current stream is subscribed by other {@link Subscriber}
+     *         or aborted.
      */
-    abstract void subscribe(SubscriptionImpl subscription);
+    abstract SubscriptionImpl subscribe(SubscriptionImpl subscription);
 
     /**
      * Returns the default {@link EventExecutor} which will be used when a user subscribes using
@@ -77,6 +91,39 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      */
     protected EventExecutor defaultSubscriberExecutor() {
         return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll() {
+        return drainAll(defaultSubscriberExecutor(), false);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+        return drainAll(requireNonNull(executor, "executor"), false);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
+        return drainAll(defaultSubscriberExecutor(), withPooledObjects);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        requireNonNull(executor, "executor");
+
+        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
+        final SubscriptionImpl subscription = new SubscriptionImpl(this, drainer,
+                                                                   executor, withPooledObjects);
+        final SubscriptionImpl actualSubscription = subscribe(subscription);
+
+        if (actualSubscription != subscription) {
+            // Failed to subscribe.
+            return CompletableFutures.exceptionallyCompletedFuture(
+                    abortedOrLate(actualSubscription.subscriber()));
+        }
+
+        return drainer.future();
     }
 
     @Override
@@ -115,12 +162,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     static void failLateSubscriber(SubscriptionImpl subscription, Subscriber<?> lateSubscriber) {
         final Subscriber<?> oldSubscriber = subscription.subscriber();
-        final Throwable cause;
-        if (oldSubscriber instanceof AbortingSubscriber) {
-            cause = AbortedStreamException.get();
-        } else {
-            cause = new IllegalStateException("subscribed by other subscriber already");
-        }
+        final Throwable cause = abortedOrLate(oldSubscriber);
 
         if (subscription.needsDirectInvocation()) {
             lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);

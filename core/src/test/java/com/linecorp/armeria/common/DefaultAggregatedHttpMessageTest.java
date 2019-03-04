@@ -23,17 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.stream.StreamMessage;
 
 public class DefaultAggregatedHttpMessageTest {
 
@@ -42,22 +36,22 @@ public class DefaultAggregatedHttpMessageTest {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
                 HttpMethod.POST, "/foo", PLAIN_TEXT_UTF_8, "bar");
         final HttpRequest req = HttpRequest.of(aReq);
-        final List<HttpObject> unaggregated = unaggregate(req);
+        final List<HttpObject> drained = req.drainAll().join();
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.POST, "/foo")
                                                        .contentType(PLAIN_TEXT_UTF_8)
                                                        .setInt(CONTENT_LENGTH, 3));
-        assertThat(unaggregated).containsExactly(HttpData.of(StandardCharsets.UTF_8, "bar"));
+        assertThat(drained).containsExactly(HttpData.of(StandardCharsets.UTF_8, "bar"));
     }
 
     @Test
     public void toHttpRequestWithoutContent() throws Exception {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(HttpMethod.GET, "/bar");
         final HttpRequest req = HttpRequest.of(aReq);
-        final List<HttpObject> unaggregated = unaggregate(req);
+        final List<HttpObject> drained = req.drainAll().join();
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.GET, "/bar"));
-        assertThat(unaggregated).isEmpty();
+        assertThat(drained).isEmpty();
     }
 
     @Test
@@ -66,12 +60,12 @@ public class DefaultAggregatedHttpMessageTest {
                 HttpMethod.PUT, "/baz", PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bar"),
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
         final HttpRequest req = HttpRequest.of(aReq);
-        final List<HttpObject> unaggregated = unaggregate(req);
+        final List<HttpObject> drained = req.drainAll().join();
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.PUT, "/baz")
                                                        .contentType(PLAIN_TEXT_UTF_8)
                                                        .setInt(CONTENT_LENGTH, 3));
-        assertThat(unaggregated).containsExactly(
+        assertThat(drained).containsExactly(
                 HttpData.of(StandardCharsets.UTF_8, "bar"),
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
     }
@@ -100,9 +94,9 @@ public class DefaultAggregatedHttpMessageTest {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, "alice");
         final HttpResponse res = HttpResponse.of(aRes);
-        final List<HttpObject> unaggregated = unaggregate(res);
+        final List<HttpObject> drained = res.drainAll().join();
 
-        assertThat(unaggregated).containsExactly(
+        assertThat(drained).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
                            .contentType(PLAIN_TEXT_UTF_8)
                            .setInt(CONTENT_LENGTH, 5),
@@ -114,9 +108,9 @@ public class DefaultAggregatedHttpMessageTest {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(HttpStatus.OK, PLAIN_TEXT_UTF_8,
                                                                     HttpData.EMPTY_DATA);
         final HttpResponse res = HttpResponse.of(aRes);
-        final List<HttpObject> unaggregated = unaggregate(res);
+        final List<HttpObject> drained = res.drainAll().join();
 
-        assertThat(unaggregated).containsExactly(
+        assertThat(drained).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
                            .contentType(PLAIN_TEXT_UTF_8)
                            .setInt(CONTENT_LENGTH, 0));
@@ -128,9 +122,9 @@ public class DefaultAggregatedHttpMessageTest {
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
         final HttpResponse res = HttpResponse.of(aRes);
-        final List<HttpObject> unaggregated = unaggregate(res);
+        final List<HttpObject> drained = res.drainAll().join();
 
-        assertThat(unaggregated).containsExactly(
+        assertThat(drained).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
                            .contentType(PLAIN_TEXT_UTF_8),
                 HttpData.of(StandardCharsets.UTF_8, "bob"),
@@ -144,9 +138,9 @@ public class DefaultAggregatedHttpMessageTest {
                 HttpHeaders.of(HttpStatus.OK), HttpData.EMPTY_DATA, HttpHeaders.EMPTY_HEADERS);
 
         final HttpResponse res = HttpResponse.of(aRes);
-        final List<HttpObject> unaggregated = unaggregate(res);
+        final List<HttpObject> drained = res.drainAll().join();
 
-        assertThat(unaggregated).containsExactly(
+        assertThat(drained).containsExactly(
                 HttpHeaders.of(HttpStatus.CONTINUE),
                 HttpHeaders.of(HttpStatus.OK)
                            .setInt(CONTENT_LENGTH, 0));
@@ -220,29 +214,5 @@ public class DefaultAggregatedHttpMessageTest {
     public void toHttpResponseAgainstRequest() {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(HttpMethod.GET, "/qux");
         assertThatThrownBy(() -> HttpResponse.of(aReq)).isInstanceOf(IllegalStateException.class);
-    }
-
-    private static List<HttpObject> unaggregate(StreamMessage<HttpObject> req) throws Exception {
-        final List<HttpObject> unaggregated = new ArrayList<>();
-        req.subscribe(new Subscriber<HttpObject>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);
-            }
-
-            @Override
-            public void onNext(HttpObject httpObject) {
-                unaggregated.add(httpObject);
-            }
-
-            @Override
-            public void onError(Throwable t) {}
-
-            @Override
-            public void onComplete() {}
-        });
-
-        req.completionFuture().get(10, TimeUnit.SECONDS);
-        return unaggregated;
     }
 }

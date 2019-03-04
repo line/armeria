@@ -107,12 +107,14 @@ public class DefaultHttpResponseTest {
     }
 
     @Test
-    public void splitHeaders() {
+    public void ignoresAfterTrailersIsWritten() {
         final HttpResponseWriter res = HttpResponse.streaming();
         res.write(HttpHeaders.of(100));
         res.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
         res.write(HttpHeaders.of(200));
-        res.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d")); // Split headers is trailers.
+
+        // Ignored after trailers is written.
         res.write(HttpData.ofUtf8("foo"));
         res.write(HttpHeaders.of(HttpHeaderNames.of("e"), "f"));
         res.write(HttpHeaders.of(HttpHeaderNames.of("g"), "h"));
@@ -123,13 +125,9 @@ public class DefaultHttpResponseTest {
         assertThat(aggregated.informationals()).containsExactly(
                 HttpHeaders.of(100).add(HttpHeaderNames.of("a"), "b"));
         // Non-informational header
-        assertThat(aggregated.headers()).isEqualTo(
-                HttpHeaders.of(200)
-                           .add(HttpHeaderNames.of("c"), "d"));
-        // Content
-        assertThat(aggregated.contentUtf8()).isEqualTo("foo");
-        // Trailing headers
-        assertThat(aggregated.trailingHeaders()).isEqualTo(
-                HttpHeaders.of(HttpHeaderNames.of("e"), "f", HttpHeaderNames.of("g"), "h"));
+        assertThat(aggregated.headers()).isEqualTo(HttpHeaders.of(200));
+
+        assertThat(aggregated.contentUtf8()).isEmpty();
+        assertThat(aggregated.trailingHeaders()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
     }
 }

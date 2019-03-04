@@ -111,7 +111,7 @@ public class HttpServiceTest {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.containsHeader("Content-Length")).isTrue();
                 assertThat(res.getHeaders("Content-Length"))
-                          .extracting(Header::getValue).containsExactly("6");
+                        .extracting(Header::getValue).containsExactly("6");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("200 OK");
             }
         }

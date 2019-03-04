@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,12 +16,17 @@
 
 package com.linecorp.armeria.common.stream;
 
-import java.util.List;
+import org.reactivestreams.Subscriber;
 
-public class EventLoopStreamMessageTest extends AbstractStreamMessageAndWriterTest {
+final class StreamMessageUtil {
 
-    @Override
-    <T> StreamMessageAndWriter<T> newStreamWriter(List<T> unused) {
-        return new EventLoopStreamMessage<>(eventLoop.get());
+    static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
+        if (oldSubscriber instanceof AbortingSubscriber) {
+            return AbortedStreamException.get();
+        }
+
+        return new IllegalStateException("subscribed by other subscriber already");
     }
+
+    private StreamMessageUtil() {}
 }
