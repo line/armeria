@@ -261,7 +261,7 @@ Armeria supports gRPC server reflection - just add an instance of ``ProtoReflect
     Server server = sb.build();
     server.start();
 
-For more information, see the official `Link tutorial <https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md>`_.
+For more information, see the official `gRPC Server Reflection tutorial <https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md>`_.
 
 See also
 --------
