@@ -243,6 +243,26 @@ to all your clients before enabling this flag!
 
 See more details at :ref:`client-grpc`.
 
+Server Reflection
+=================
+
+Armeria supports gRPC server reflection - just add an instance of ``ProtoReflectionService`` to your server.
+
+.. code-block:: java
+
+    import io.grpc.protobuf.services.ProtoReflectionService;
+
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+                                       .addService(ProtoReflectionService.newInstance())
+                                       .build());
+    ...
+    Server server = sb.build();
+    server.start();
+
+For more information, see the official `Link tutorial <https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md>`_.
+
 See also
 --------
 
