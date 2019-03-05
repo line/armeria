@@ -141,15 +141,8 @@ Decorating ``ServiceWithPathMappings``
 --------------------------------------
 
 :api:`ServiceWithPathMappings` is a special variant of :api:`Service` which allows a user to register multiple
-routes for a single service easily. Because it requires a special treatment unlike usual :apiplural:`Service`,
-the two following restrictions apply:
-
-- You cannot specify path mappings when registering a :api:`ServiceWithPathMappings`.
-- You cannot use ``Service.decorate()`` method to decorate a :api:`ServiceWithPathMappings`. You have to
-  specify the decorators as extra parameters.
-
-The following example shows a simple :api:`ServiceWithPathMappings` implementation which is decorated with
-two decorators, :api:`LoggingService` and ``MyDecoratedService``:
+routes for a single service. It has a method called ``pathMappings()`` which returns a ``Set<PathMapping>``
+so that you do not have to specify path mappings when registering your service:
 
 .. code-block:: java
 
@@ -167,6 +160,38 @@ two decorators, :api:`LoggingService` and ``MyDecoratedService``:
     }
 
     ServerBuilder sb = new ServerBuilder();
+    // No path mapping is specified.
+    sb.service(new MyServiceWithPathMappings());
+    // Override the mappings provided by pathMappings().
+    sb.service("/services/hola", new MyServiceWithPathMappings());
+
+However, decorating a :api:`ServiceWithPathMappings` can lead to a compilation error when you attempt to
+register it without specifying a path mapping explicitly, because a decorated service is not a
+:api:`ServiceWithPathMappings` anymore but just a :api:`Service`:
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+
+    // Works.
+    ServiceWithPathMappings<HttpRequest, HttpResponse> service =
+            new MyServiceWithPathMappings();
+    sb.service(service);
+
+    // Does not work - not a ServiceWithPathMappings anymore due to decoration.
+    Service<HttpRequest, HttpResponse> decoratedService =
+            service.decorate(LoggingService.newDecorator());
+    sb.service(decoratedService); // Compilation error
+
+    // Works if a path mapping is specified explicitly.
+    sb.service("/services/bonjour", decoratedService);
+
+Therefore, you need to specify the decorators as extra parameters:
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+    // Register a service decorated with two decorators at multiple routes.
     sb.service(new MyServiceWithPathMappings(),
                MyDecoratedService::new,
                LoggingService.newDecorator())
