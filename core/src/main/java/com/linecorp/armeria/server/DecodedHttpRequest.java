@@ -106,12 +106,12 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
             // Close this stream because HTTP trailers is the last element of the request.
             close();
         } else {
-            published = super.tryWrite(obj);
+            final HttpData httpData = (HttpData) obj;
+            assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
+            ctx.logBuilder().increaseRequestLength(httpData);
+            published = super.tryWrite(httpData);
             if (published) {
-                final HttpData httpData = (HttpData) obj;
                 inboundTrafficController.inc(httpData.length());
-                assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
-                ctx.logBuilder().increaseRequestLength(httpData);
             }
         }
 
