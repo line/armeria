@@ -32,16 +32,15 @@ a decorating service. It enables you to write a decorating service with a single
 
     ServerBuilder sb = new ServerBuilder();
     HttpService service = ...;
-    sb.serviceUnder("/web",
-                    service.decorate((delegate, ctx, req) -> {
-                        if (!authenticate(req)) {
-                            // Authentication failed; fail the request.
-                            return HttpResponse.of(HttpStatus.UNAUTHORIZED);
-                        }
+    sb.serviceUnder("/web", service.decorate((delegate, ctx, req) -> {
+        if (!authenticate(req)) {
+            // Authentication failed; fail the request.
+            return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+        }
 
-                        // Authenticated; pass the request to the actual service.
-                        return delegate.serve(ctx, req);
-                    });
+        // Authenticated; pass the request to the actual service.
+        return delegate.serve(ctx, req);
+    });
 
 Extending ``SimpleDecoratingService``
 -------------------------------------
