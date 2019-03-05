@@ -141,8 +141,8 @@ Decorating ``ServiceWithPathMappings``
 --------------------------------------
 
 :api:`ServiceWithPathMappings` is a special variant of :api:`Service` which allows a user to register multiple
-routes for a single service. It has a method called ``pathMappings()`` which returns a ``Set<PathMapping>``
-so that you do not have to specify path mappings when registering your service:
+routes for a single service. It has a method called ``pathMappings()`` which returns a ``Set`` of
+:apiplural:`PathMapping` so that you do not have to specify path mappings when registering your service:
 
 .. code-block:: java
 
