@@ -99,8 +99,8 @@ Decorating a ``GrpcService``
 ----------------------------
 
 Unlike a usual Armeria :api:`Service`, :api:`GrpcService` implements a special interface called
-:api:`ServiceWithPathMappings`. It is recommended to decorate a :api:`GrpcService` by specifying decorator
-functions as extra parameters rather than using ``Service.decorate()``:
+:api:`ServiceWithPathMappings`. Therefore, it is recommended to decorate a :api:`GrpcService` by specifying
+decorator functions as extra parameters rather than using ``Service.decorate()``:
 
 .. code-block:: java
 
