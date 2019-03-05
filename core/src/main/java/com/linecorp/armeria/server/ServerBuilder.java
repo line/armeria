@@ -884,16 +884,20 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
      * of the default {@link VirtualHost}.
      *
+     * @param serviceWithPathMappings the {@link ServiceWithPathMappings}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>>
-    ServerBuilder service(T serviceWithPathMappings) {
+    public ServerBuilder service(
+            ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
+            Iterable<Function<? super Service<HttpRequest, HttpResponse>,
+                              ? extends Service<HttpRequest, HttpResponse>>> decorators) {
         defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.service(serviceWithPathMappings);
+        defaultVirtualHostBuilder.service(serviceWithPathMappings, decorators);
         return this;
     }
 
@@ -901,14 +905,18 @@ public final class ServerBuilder {
      * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
      * of the default {@link VirtualHost}.
      *
+     * @param serviceWithPathMappings the {@link ServiceWithPathMappings}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
-            R extends Service<HttpRequest, HttpResponse>>
-    ServerBuilder service(T serviceWithPathMappings, Function<? super T, R> decorator) {
+    @SafeVarargs
+    public final ServerBuilder service(
+            ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
+            Function<? super Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>>... decorators) {
         defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.service(serviceWithPathMappings, decorator);
+        defaultVirtualHostBuilder.service(serviceWithPathMappings, decorators);
         return this;
     }
 

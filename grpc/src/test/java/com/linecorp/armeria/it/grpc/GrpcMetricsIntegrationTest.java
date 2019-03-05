@@ -54,6 +54,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -92,12 +93,11 @@ public class GrpcMetricsIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.meterRegistry(registry);
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new TestServiceImpl())
-                    .enableUnframedRequests(true)
-                    .build()
-                    .decorate(MetricCollectingService.newDecorator(
-                            MeterIdPrefixFunction.ofDefault("server"))));
+            sb.service(new GrpcServiceBuilder().addService(new TestServiceImpl())
+                                               .enableUnframedRequests(true)
+                                               .build(),
+                       MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("server")),
+                       LoggingService.newDecorator());
         }
     };
 
@@ -175,7 +175,7 @@ public class GrpcMetricsIntegrationTest {
                 "server." + suffix + '#' + type.getTagValueRepresentation(),
                 "method", "armeria.grpc.testing.TestService/" + method,
                 "hostnamePattern", "*",
-                "pathMapping", "catch-all");
+                "pathMapping", "exact:/armeria.grpc.testing.TestService/" + method);
         final String meterIdStr = prefix.withTags(keyValues).toString();
         return Optional.ofNullable(MoreMeters.measureAll(registry).get(meterIdStr));
     }
