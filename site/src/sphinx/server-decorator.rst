@@ -51,6 +51,12 @@ If your decorator is expected to be reusable, it is recommended to define a new 
 
 .. code-block:: java
 
+    import com.linecorp.armeria.common.HttpRequest;
+    import com.linecorp.armeria.common.HttpResponse;
+    import com.linecorp.armeria.server.Service;
+    import com.linecorp.armeria.server.ServiceRequestContext;
+    import com.linecorp.armeria.server.SimpleDecoratingService;
+
     public class AuthService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
         public AuthService(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);
@@ -82,6 +88,9 @@ So far, we only demonstrated the case where a decorating service does not transf
 response. You can do that as well, of course, using :api:`DecoratingService`:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.common.RpcRequest;
+    import com.linecorp.armeria.common.RpcResponse;
 
     // Transforms a Service<RpcRequest, RpcResponse> into Service<HttpRequest, HttpResponse>.
     public class MyRpcService extends DecoratingService<RpcRequest, RpcResponse,
@@ -126,6 +135,9 @@ a certain type from a server:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.ServerConfig;
+    import java.util.List;
+
     Server server = ...;
     ServerConfig serverConfig = server.config();
     List<ServiceConfig> serviceConfigs = serverConfig.serviceConfigs();
@@ -145,6 +157,11 @@ routes for a single service. It has a method called ``pathMappings()`` which ret
 :apiplural:`PathMapping` so that you do not have to specify path mappings when registering your service:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.server.PathMapping;
+    import com.linecorp.armeria.server.ServiceWithPathMappings;
+    import java.util.HashSet;
+    import java.util.Set;
 
     public class MyServiceWithPathMappings implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
         @Override
@@ -170,6 +187,8 @@ register it without specifying a path mapping explicitly, because a decorated se
 :api:`ServiceWithPathMappings` anymore but just a :api:`Service`:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.server.logging.LoggingService;
 
     ServerBuilder sb = new ServerBuilder();
 
