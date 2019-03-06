@@ -127,6 +127,12 @@ Tokens for the log format are listed in the following table.
 |                           |                   | remote IP address where the channel is connected   |
 |                           |                   | to, which may yield a different value when there   |
 |                           |                   | is an intermediary proxy server.                   |
+|                           |                   | This value relies on the ``clientAddress()`` and   |
+|                           |                   | ``remoteAddress()`` methods of                     |
+|                           |                   | :api:`ServiceRequestContext`, please refer to      |
+|                           |                   | :ref:`client_address` about how to configure the   |
+|                           |                   | :api:`ServerBuilder` to get the client address you |
+|                           |                   | interest.                                          |
 +---------------------------+-------------------+----------------------------------------------------+
 | ``%h``                    | No                | the remote hostname or IP address if DNS           |
 |                           |                   | hostname lookup is not available                   |

@@ -215,6 +215,8 @@ Use ``ServerBuilder.withVirtualHost()`` to configure `a name-based virtual host`
       .tls(...);
     ...
 
+.. _client_address:
+
 Getting an IP address of a client who initiated a request
 ---------------------------------------------------------
 
