@@ -153,41 +153,20 @@ public class DeferredStreamMessageTest {
 
     @Test
     public void testStreaming() {
-        final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final DeferredStreamMessage<String> m = new DeferredStreamMessage<>();
+        final DefaultStreamMessage<String> d = new DefaultStreamMessage<>();
         m.delegate(d);
 
-        final List<Object> streamed = new ArrayList<>();
-        final Subscriber<Object> subscriber = new Subscriber<Object>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                streamed.add("onSubscribe");
-                s.request(1);
-            }
-
-            @Override
-            public void onNext(Object o) {
-                streamed.add(o);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                streamed.add("onError: " + Exceptions.traceText(t));
-            }
-
-            @Override
-            public void onComplete() {
-                streamed.add("onComplete");
-            }
-        };
+        final RecordingSubscriber subscriber = new RecordingSubscriber();
+        final List<String> recording = subscriber.recording;
 
         m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
 
-        assertThat(streamed).containsExactly("onSubscribe");
+        assertThat(recording).containsExactly("onSubscribe");
         d.write("A");
-        assertThat(streamed).containsExactly("onSubscribe", "A");
+        assertThat(recording).containsExactly("onSubscribe", "A");
         d.close();
-        assertThat(streamed).containsExactly("onSubscribe", "A", "onComplete");
+        assertThat(recording).containsExactly("onSubscribe", "A", "onComplete");
 
         assertThat(m.isOpen()).isFalse();
         assertThat(m.isEmpty()).isFalse();
@@ -196,5 +175,58 @@ public class DeferredStreamMessageTest {
         assertThat(d.isOpen()).isFalse();
         assertThat(d.isEmpty()).isFalse();
         assertThat(d.completionFuture()).isCompletedWithValue(null);
+    }
+
+    @Test
+    public void testStreamingError() {
+        final DeferredStreamMessage<String> m = new DeferredStreamMessage<>();
+        final DefaultStreamMessage<String> d = new DefaultStreamMessage<>();
+        m.delegate(d);
+
+        final RecordingSubscriber subscriber = new RecordingSubscriber();
+        final List<String> recording = subscriber.recording;
+
+        m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
+
+        assertThat(recording).containsExactly("onSubscribe");
+        d.write("A");
+        assertThat(recording).containsExactly("onSubscribe", "A");
+        final Exception exception = new Exception();
+        d.close(exception);
+        assertThat(recording).hasSize(3);
+        assertThat(recording.get(2)).startsWith("onError: " + exception);
+
+        assertThat(m.isOpen()).isFalse();
+        assertThat(m.isEmpty()).isFalse();
+        assertThat(m.completionFuture()).hasFailedWithThrowableThat().isSameAs(exception);
+
+        assertThat(d.isOpen()).isFalse();
+        assertThat(d.isEmpty()).isFalse();
+        assertThat(d.completionFuture()).hasFailedWithThrowableThat().isSameAs(exception);
+    }
+
+    private static class RecordingSubscriber implements Subscriber<String> {
+        final List<String> recording = new ArrayList<>();
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            recording.add("onSubscribe");
+            s.request(1);
+        }
+
+        @Override
+        public void onNext(String o) {
+            recording.add(o);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            recording.add("onError: " + Exceptions.traceText(t));
+        }
+
+        @Override
+        public void onComplete() {
+            recording.add("onComplete");
+        }
     }
 }

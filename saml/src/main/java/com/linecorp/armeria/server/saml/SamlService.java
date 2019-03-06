@@ -27,6 +27,9 @@ import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -50,6 +53,8 @@ import io.netty.handler.codec.http.QueryStringDecoder;
  * or handling a logout request from an identity provider.
  */
 final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+
+    private static final Logger logger = LoggerFactory.getLogger(SamlService.class);
 
     private final SamlServiceProvider sp;
     private final SamlPortConfigAutoFiller portConfigHolder;
@@ -132,10 +137,15 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
         }
         return HttpResponse.from(f.handle((msg, cause) -> {
             if (cause != null) {
+                logger.warn("{} Failed to aggregate a SAML request.", ctx, cause);
                 return HttpResponse.of(HttpStatus.BAD_REQUEST);
             }
+
             final SamlPortConfig portConfig = portConfigHolder.config().get();
-            if (portConfig.scheme().isTls() != ctx.sessionProtocol().isTls()) {
+            final boolean isTls = ctx.sessionProtocol().isTls();
+            if (portConfig.scheme().isTls() != isTls) {
+                logger.warn("{} Received a SAML request via a {} connection where a {} connection is expected.",
+                            ctx, isTls ? "TLS" : "cleartext", isTls ? "cleartext" : "TLS");
                 return HttpResponse.of(HttpStatus.BAD_REQUEST);
             }
 
