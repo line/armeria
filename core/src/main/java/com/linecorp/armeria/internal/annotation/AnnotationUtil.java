@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getMethods;
 import static org.reflections.ReflectionUtils.withName;
@@ -22,15 +23,16 @@ import static org.reflections.ReflectionUtils.withParametersCount;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Documented;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Native;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -38,15 +40,20 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 /**
  * A utility class which helps to get annotations from an {@link AnnotatedElement}.
  */
 final class AnnotationUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(AnnotationUtil.class);
+
     /**
      * Options to be used for finding annotations from an {@link AnnotatedElement}.
      */
@@ -70,11 +77,17 @@ final class AnnotationUtil {
     }
 
     /**
-     * Built-in meta annotations defined in {@code java.lang.annotation} package.
+     * A thread-local hash set of annotation classes that contain cyclic references.
      */
-    private static final Set<Class<? extends Annotation>> BUILT_IN_META_ANNOTATIONS =
-            ImmutableSet.of(Documented.class, Inherited.class, Native.class,
-                            Retention.class, Repeatable.class, Target.class);
+    private static final ThreadLocal<Set<Class<? extends Annotation>>> knownCyclicAnnotationTypes =
+            ThreadLocal.withInitial(() -> {
+                final Set<Class<? extends Annotation>> map = Collections.newSetFromMap(new IdentityHashMap<>());
+                // Add well known JDK annotations with cyclic dependencies which will always be blacklisted.
+                map.add(Documented.class);
+                map.add(Retention.class);
+                map.add(Target.class);
+                return map;
+            });
 
     /**
      * Returns an annotation of the {@code annotationType} if it is found from one of the following:
@@ -207,16 +220,36 @@ final class AnnotationUtil {
     private static <T extends Annotation> void findMetaAnnotations(
             Builder<T> builder, Annotation annotation,
             Class<T> annotationType, Class<? extends Annotation> containerType) {
+        findMetaAnnotations(builder, annotation, annotationType, containerType,
+                            knownCyclicAnnotationTypes.get(),
+                            Collections.newSetFromMap(new IdentityHashMap<>()));
+    }
+
+    private static <T extends Annotation> boolean findMetaAnnotations(
+            Builder<T> builder, Annotation annotation,
+            Class<T> annotationType, Class<? extends Annotation> containerType,
+            Set<Class<? extends Annotation>> knownCyclicAnnotationTypes,
+            Set<Class<? extends Annotation>> visitedAnnotationTypes) {
+
+        final Class<? extends Annotation> actualAnnotationType = annotation.getClass();
+        if (knownCyclicAnnotationTypes.contains(actualAnnotationType)) {
+            return false;
+        }
+        if (!visitedAnnotationTypes.add(actualAnnotationType)) {
+            blacklistAnnotation(knownCyclicAnnotationTypes, actualAnnotationType);
+            return false;
+        }
+
         final Annotation[] metaAnnotations = annotation.annotationType().getDeclaredAnnotations();
         for (final Annotation metaAnnotation : metaAnnotations) {
-            // Lookup meta-annotations of a meta-annotation. Do not go into deeper if the metaAnnotation
-            // is one of built-in Java meta-annotations in order to avoid stack overflow.
-            if (!BUILT_IN_META_ANNOTATIONS.contains(metaAnnotation.annotationType())) {
-                findMetaAnnotations(builder, metaAnnotation, annotationType, containerType);
+            if (findMetaAnnotations(builder, metaAnnotation, annotationType, containerType,
+                                    knownCyclicAnnotationTypes, visitedAnnotationTypes)) {
+                collectAnnotations(builder, metaAnnotation, annotationType, containerType);
             }
-
-            collectAnnotations(builder, metaAnnotation, annotationType, containerType);
         }
+
+        visitedAnnotationTypes.remove(actualAnnotationType);
+        return true;
     }
 
     /**
@@ -237,7 +270,7 @@ final class AnnotationUtil {
 
     /**
      * Returns all annotations searching from the specified {@code element}. The search range depends on
-     * the specified {@link FindOption}s and the built-in Java meta-annotations will not be collected.
+     * the specified {@link FindOption}s.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param findOptions the options to be applied when retrieving annotations
@@ -251,16 +284,13 @@ final class AnnotationUtil {
 
     /**
      * Returns all annotations searching from the specified {@code element}. The search range depends on
-     * the specified {@link FindOption}s and the built-in Java meta-annotations will not be collected.
+     * the specified {@link FindOption}s.
      *
      * @param element the {@link AnnotatedElement} to find annotations
      * @param findOptions the options to be applied when retrieving annotations
      */
     static List<Annotation> getAnnotations(AnnotatedElement element, EnumSet<FindOption> findOptions) {
-        // A user may not be interested in the built-in meta annotations, so the default predicate filters out
-        // the default Java meta-annotations.
-        return getAnnotations(element, findOptions,
-                              annotation -> !BUILT_IN_META_ANNOTATIONS.contains(annotation.annotationType()));
+        return getAnnotations(element, findOptions, annotation -> true);
     }
 
     /**
@@ -294,16 +324,54 @@ final class AnnotationUtil {
 
     private static void getMetaAnnotations(Builder<Annotation> builder, Annotation annotation,
                                            Predicate<Annotation> collectingFilter) {
-        final Annotation[] metaAnnotations = annotation.annotationType().getDeclaredAnnotations();
-        for (final Annotation metaAnnotation : metaAnnotations) {
-            // Get meta-annotations of a meta-annotation. Do not go into deeper even if one of the built-in Java
-            // meta-annotations can be accepted by the collectingFilter, in order to avoid stack overflow.
-            if (!BUILT_IN_META_ANNOTATIONS.contains(metaAnnotation.annotationType())) {
-                getMetaAnnotations(builder, metaAnnotation, collectingFilter);
-            }
+        getMetaAnnotations(builder, annotation, collectingFilter,
+                           knownCyclicAnnotationTypes.get(),
+                           Collections.newSetFromMap(new IdentityHashMap<>()));
+    }
 
-            if (collectingFilter.test(metaAnnotation)) {
+    private static boolean getMetaAnnotations(Builder<Annotation> builder, Annotation annotation,
+                                             Predicate<Annotation> collectingFilter,
+                                             Set<Class<? extends Annotation>> knownCyclicAnnotationTypes,
+                                             Set<Class<? extends Annotation>> visitedAnnotationTypes) {
+
+        final Class<? extends Annotation> annotationType = annotation.annotationType();
+
+        if (knownCyclicAnnotationTypes.contains(annotationType)) {
+            return false;
+        }
+        if (!visitedAnnotationTypes.add(annotationType)) {
+            blacklistAnnotation(knownCyclicAnnotationTypes, annotationType);
+            return false;
+        }
+
+        final Annotation[] metaAnnotations = annotationType.getDeclaredAnnotations();
+        for (final Annotation metaAnnotation : metaAnnotations) {
+
+            if (getMetaAnnotations(builder, metaAnnotation, collectingFilter,
+                                   knownCyclicAnnotationTypes, visitedAnnotationTypes) &&
+                collectingFilter.test(metaAnnotation)) {
                 builder.add(metaAnnotation);
+            }
+        }
+
+        visitedAnnotationTypes.remove(annotationType);
+        return true;
+    }
+
+    private static void blacklistAnnotation(Set<Class<? extends Annotation>> knownCyclicAnnotationTypes,
+                                            Class<? extends Annotation> annotationType) {
+        knownCyclicAnnotationTypes.add(annotationType);
+        if (logger.isDebugEnabled()) {
+            final String typeName = annotationType.getName();
+            if (Proxy.class.isAssignableFrom(annotationType) && typeName.contains(".$Proxy")) {
+                final List<String> actualTypeNames = Arrays.stream(annotationType.getInterfaces())
+                                                           .filter(Class::isAnnotation)
+                                                           .map(Class::getName)
+                                                           .collect(toImmutableList());
+                logger.debug("Blacklisting an annotation with a cyclic reference: {}={}",
+                             typeName, actualTypeNames);
+            } else {
+                logger.debug("Blacklisting an annotation with a cyclic reference: {}", typeName);
             }
         }
     }
