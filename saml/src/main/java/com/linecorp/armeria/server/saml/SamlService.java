@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithPathMappings;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
@@ -53,6 +55,18 @@ import io.netty.handler.codec.http.QueryStringDecoder;
  * or handling a logout request from an identity provider.
  */
 final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+
+    private static final HttpData DATA_INCORRECT_PATH =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request with an incorrect path");
+
+    private static final HttpData DATA_AGGREGATION_FAILURE =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request aggregation failure");
+
+    private static final HttpData DATA_NOT_TLS =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request not from a TLS connection");
+
+    private static final HttpData DATA_NOT_CLEARTEXT =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request not from a cleartext connection");
 
     private static final Logger logger = LoggerFactory.getLogger(SamlService.class);
 
@@ -126,7 +140,8 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final SamlServiceFunction func = serviceMap.get(req.path());
         if (func == null) {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST);
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                   DATA_INCORRECT_PATH);
         }
 
         final CompletionStage<AggregatedHttpMessage> f;
@@ -138,15 +153,22 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
         return HttpResponse.from(f.handle((msg, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a SAML request.", ctx, cause);
-                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+                return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                       DATA_AGGREGATION_FAILURE);
             }
 
             final SamlPortConfig portConfig = portConfigHolder.config().get();
             final boolean isTls = ctx.sessionProtocol().isTls();
             if (portConfig.scheme().isTls() != isTls) {
-                logger.warn("{} Received a SAML request via a {} connection where a {} connection is expected.",
-                            ctx, isTls ? "TLS" : "cleartext", isTls ? "cleartext" : "TLS");
-                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+                if (isTls) {
+                    logger.warn("{} Received a SAML request via a TLS connection.", ctx);
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                           DATA_NOT_CLEARTEXT);
+                } else {
+                    logger.warn("{} Received a SAML request via a cleartext connection.", ctx);
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                           DATA_NOT_TLS);
+                }
             }
 
             // Use user-specified hostname if it exists.
