@@ -35,6 +35,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -80,7 +81,7 @@ final class AnnotationUtil {
      */
     private static final ThreadLocal<Set<Class<? extends Annotation>>> knownCyclicAnnotationTypes =
             ThreadLocal.withInitial(() -> {
-                final Set<Class<? extends Annotation>> map = Collections.newSetFromMap(new IdentityHashMap<>());
+                final Set<Class<? extends Annotation>> map = Collections.newSetFromMap(new WeakHashMap<>());
                 // Add well known JDK annotations with cyclic dependencies which will always be blacklisted.
                 map.add(Documented.class);
                 map.add(Retention.class);
