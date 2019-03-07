@@ -28,7 +28,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -363,15 +362,21 @@ final class AnnotationUtil {
         knownCyclicAnnotationTypes.add(annotationType);
         if (logger.isDebugEnabled()) {
             final String typeName = annotationType.getName();
-            if (Proxy.class.isAssignableFrom(annotationType) && typeName.contains(".$Proxy")) {
-                final List<String> actualTypeNames = Arrays.stream(annotationType.getInterfaces())
-                                                           .filter(Class::isAnnotation)
-                                                           .map(Class::getName)
-                                                           .collect(toImmutableList());
-                logger.debug("Blacklisting an annotation with a cyclic reference: {}={}",
-                             typeName, actualTypeNames);
+            final Class<?>[] ifaces = annotationType.getInterfaces();
+            final List<String> ifaceNames;
+            if (ifaces.length != 0) {
+                ifaceNames = Arrays.stream(ifaces)
+                                   .filter(Class::isAnnotation)
+                                   .map(Class::getName)
+                                   .collect(toImmutableList());
             } else {
+                ifaceNames = ImmutableList.of();
+            }
+
+            if (ifaceNames.isEmpty()) {
                 logger.debug("Blacklisting an annotation with a cyclic reference: {}", typeName);
+            } else {
+                logger.debug("Blacklisting an annotation with a cyclic reference: {}{}", typeName, ifaceNames);
             }
         }
     }
