@@ -35,7 +35,6 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.WeakHashMap;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -46,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.MapMaker;
 
 /**
  * A utility class which helps to get annotations from an {@link AnnotatedElement}.
@@ -79,15 +79,15 @@ final class AnnotationUtil {
     /**
      * A thread-local hash set of annotation classes that contain cyclic references.
      */
-    private static final ThreadLocal<Set<Class<? extends Annotation>>> knownCyclicAnnotationTypes =
-            ThreadLocal.withInitial(() -> {
-                final Set<Class<? extends Annotation>> map = Collections.newSetFromMap(new WeakHashMap<>());
-                // Add well known JDK annotations with cyclic dependencies which will always be blacklisted.
-                map.add(Documented.class);
-                map.add(Retention.class);
-                map.add(Target.class);
-                return map;
-            });
+    private static final Set<Class<? extends Annotation>> knownCyclicAnnotationTypes =
+            Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
+
+    static {
+        // Add well known JDK annotations with cyclic dependencies which will always be blacklisted.
+        knownCyclicAnnotationTypes.add(Documented.class);
+        knownCyclicAnnotationTypes.add(Retention.class);
+        knownCyclicAnnotationTypes.add(Target.class);
+    }
 
     /**
      * Returns an annotation of the {@code annotationType} if it is found from one of the following:
@@ -221,14 +221,12 @@ final class AnnotationUtil {
             Builder<T> builder, Annotation annotation,
             Class<T> annotationType, Class<? extends Annotation> containerType) {
         findMetaAnnotations(builder, annotation, annotationType, containerType,
-                            knownCyclicAnnotationTypes.get(),
                             Collections.newSetFromMap(new IdentityHashMap<>()));
     }
 
     private static <T extends Annotation> boolean findMetaAnnotations(
             Builder<T> builder, Annotation annotation,
             Class<T> annotationType, Class<? extends Annotation> containerType,
-            Set<Class<? extends Annotation>> knownCyclicAnnotationTypes,
             Set<Class<? extends Annotation>> visitedAnnotationTypes) {
 
         final Class<? extends Annotation> actualAnnotationType = annotation.getClass();
@@ -236,14 +234,14 @@ final class AnnotationUtil {
             return false;
         }
         if (!visitedAnnotationTypes.add(actualAnnotationType)) {
-            blacklistAnnotation(knownCyclicAnnotationTypes, actualAnnotationType);
+            blacklistAnnotation(actualAnnotationType);
             return false;
         }
 
         final Annotation[] metaAnnotations = annotation.annotationType().getDeclaredAnnotations();
         for (final Annotation metaAnnotation : metaAnnotations) {
             if (findMetaAnnotations(builder, metaAnnotation, annotationType, containerType,
-                                    knownCyclicAnnotationTypes, visitedAnnotationTypes)) {
+                                    visitedAnnotationTypes)) {
                 collectAnnotations(builder, metaAnnotation, annotationType, containerType);
             }
         }
@@ -325,14 +323,12 @@ final class AnnotationUtil {
     private static void getMetaAnnotations(Builder<Annotation> builder, Annotation annotation,
                                            Predicate<Annotation> collectingFilter) {
         getMetaAnnotations(builder, annotation, collectingFilter,
-                           knownCyclicAnnotationTypes.get(),
                            Collections.newSetFromMap(new IdentityHashMap<>()));
     }
 
     private static boolean getMetaAnnotations(Builder<Annotation> builder, Annotation annotation,
-                                             Predicate<Annotation> collectingFilter,
-                                             Set<Class<? extends Annotation>> knownCyclicAnnotationTypes,
-                                             Set<Class<? extends Annotation>> visitedAnnotationTypes) {
+                                              Predicate<Annotation> collectingFilter,
+                                              Set<Class<? extends Annotation>> visitedAnnotationTypes) {
 
         final Class<? extends Annotation> annotationType = annotation.annotationType();
 
@@ -340,7 +336,7 @@ final class AnnotationUtil {
             return false;
         }
         if (!visitedAnnotationTypes.add(annotationType)) {
-            blacklistAnnotation(knownCyclicAnnotationTypes, annotationType);
+            blacklistAnnotation(annotationType);
             return false;
         }
 
@@ -348,7 +344,7 @@ final class AnnotationUtil {
         for (final Annotation metaAnnotation : metaAnnotations) {
 
             if (getMetaAnnotations(builder, metaAnnotation, collectingFilter,
-                                   knownCyclicAnnotationTypes, visitedAnnotationTypes) &&
+                                   visitedAnnotationTypes) &&
                 collectingFilter.test(metaAnnotation)) {
                 builder.add(metaAnnotation);
             }
@@ -358,9 +354,11 @@ final class AnnotationUtil {
         return true;
     }
 
-    private static void blacklistAnnotation(Set<Class<? extends Annotation>> knownCyclicAnnotationTypes,
-                                            Class<? extends Annotation> annotationType) {
-        knownCyclicAnnotationTypes.add(annotationType);
+    private static void blacklistAnnotation(Class<? extends Annotation> annotationType) {
+        if (!knownCyclicAnnotationTypes.add(annotationType)) {
+            return;
+        }
+
         if (logger.isDebugEnabled()) {
             final String typeName = annotationType.getName();
             final Class<?>[] ifaces = annotationType.getInterfaces();
