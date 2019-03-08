@@ -1,5 +1,7 @@
 dependencies {
     compile 'org.springframework.boot:spring-boot-actuator-autoconfigure'
+    compile 'javax.inject:javax.inject'
+    compileOnly 'javax.validation:validation-api'
 
     testCompile 'org.springframework.boot:spring-boot-starter-actuator'
     testCompile 'org.springframework.boot:spring-boot-starter-test'
