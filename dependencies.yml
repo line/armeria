@@ -41,7 +41,7 @@ com.github.ben-manes.caffeine:
       to: com.linecorp.armeria.internal.shaded.caffeine
 
 com.github.jengelman.gradle.plugins:
-  shadow: { version: '4.0.4' }
+  shadow: { version: '5.0.0' }
 
 com.google.api:
   gax-grpc: { version: '1.42.0' }
