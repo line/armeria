@@ -1052,6 +1052,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                       Function<Object, ?> contentSanitizer,
                                       Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+        requireNonNull(headersSanitizer, "headersSanitizer");
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        requireNonNull(trailersSanitizer, "trailersSanitizer");
+
         final int flags = this.flags & 0xFFFF; // Only interested in the bits related with request.
         if (requestStrFlags == flags) {
             return requestStr;
