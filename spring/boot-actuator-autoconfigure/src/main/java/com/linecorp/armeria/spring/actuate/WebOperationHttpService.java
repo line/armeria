@@ -16,31 +16,46 @@
 
 package com.linecorp.armeria.spring.actuate;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+
+import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.ScatteringByteChannel;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.endpoint.InvocationContext;
 import org.springframework.boot.actuate.endpoint.SecurityContext;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
+import org.springframework.core.io.Resource;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
@@ -48,6 +63,10 @@ import io.netty.handler.codec.http.QueryStringDecoder;
  * {@link org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping}.
  */
 final class WebOperationHttpService implements HttpService {
+
+    private static final Pattern FILENAME_BAD_CHARS = Pattern.compile("['/\\\\?%*:|\"<> ]");
+
+    private static final Logger logger = LoggerFactory.getLogger(WebOperationHttpService.class);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> JSON_MAP =
@@ -78,41 +97,21 @@ final class WebOperationHttpService implements HttpService {
     }
 
     private void invoke(ServiceRequestContext ctx,
-                        AggregatedHttpMessage msg,
+                        AggregatedHttpMessage req,
                         CompletableFuture<HttpResponse> resFuture) {
-        final Map<String, Object> arguments = getArguments(ctx, msg);
+        final Map<String, Object> arguments = getArguments(ctx, req);
         final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
 
         try {
-            final HttpResponse res = handleResult(result, msg.method());
+            final HttpResponse res = handleResult(ctx, result, req.method());
             resFuture.complete(res);
         } catch (IOException e) {
             resFuture.completeExceptionally(e);
         }
     }
 
-    private static HttpResponse handleResult(@Nullable Object result, HttpMethod method) throws IOException {
-        if (result == null) {
-            return HttpResponse.of(method != HttpMethod.GET ? HttpStatus.NO_CONTENT : HttpStatus.NOT_FOUND);
-        }
-
-        if (!(result instanceof WebEndpointResponse)) {
-            return HttpResponse.of(HttpStatus.OK,
-                                   MediaType.JSON_UTF_8,
-                                   OBJECT_MAPPER.writeValueAsBytes(result));
-        }
-
-        final WebEndpointResponse<?> response = (WebEndpointResponse<?>) result;
-        return HttpResponse.of(
-                HttpStatus.valueOf(response.getStatus()),
-                MediaType.JSON_UTF_8,
-                OBJECT_MAPPER.writeValueAsBytes(response.getBody())
-        );
-    }
-
     private static Map<String, Object> getArguments(ServiceRequestContext ctx, AggregatedHttpMessage msg) {
-        final Map<String, Object> arguments = new LinkedHashMap<>();
-        arguments.putAll(ctx.pathParams());
+        final Map<String, Object> arguments = new LinkedHashMap<>(ctx.pathParams());
         if (!msg.content().isEmpty()) {
             final Map<String, Object> bodyParams;
             try {
@@ -124,10 +123,159 @@ final class WebOperationHttpService implements HttpService {
         }
         final String query = ctx.query();
         if (query != null) {
-            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(query, false);
+            final QueryStringDecoder queryStringDecoder = new QueryStringDecoder(query, false);
             queryStringDecoder.parameters().forEach(
                     (key, values) -> arguments.put(key, values.size() != 1 ? values : values.get(0)));
         }
         return ImmutableMap.copyOf(arguments);
+    }
+
+    private static HttpResponse handleResult(ServiceRequestContext ctx,
+                                             @Nullable Object result, HttpMethod method) throws IOException {
+        if (result == null) {
+            return HttpResponse.of(method != HttpMethod.GET ? HttpStatus.NO_CONTENT : HttpStatus.NOT_FOUND);
+        }
+
+        final HttpStatus status;
+        final Object body;
+        if (result instanceof WebEndpointResponse) {
+            final WebEndpointResponse<?> webResult = (WebEndpointResponse<?>) result;
+            status = HttpStatus.valueOf(webResult.getStatus());
+            body = webResult.getBody();
+        } else {
+            status = HttpStatus.OK;
+            body = result;
+        }
+
+        final MediaType contentType = firstNonNull(ctx.negotiatedResponseMediaType(), MediaType.JSON_UTF_8);
+        final String contentSubType = contentType.subtype();
+
+        if ("json".equals(contentSubType) || contentSubType.endsWith("+json")) {
+            return HttpResponse.of(status, contentType, OBJECT_MAPPER.writeValueAsBytes(body));
+        }
+
+        if (body instanceof CharSequence) {
+            return HttpResponse.of(status, contentType, (CharSequence) body);
+        }
+
+        if (body instanceof Resource) {
+            final Resource resource = (Resource) body;
+            final String filename = resource.getFilename();
+            final HttpResponseWriter res = HttpResponse.streaming();
+            final long length = resource.contentLength();
+            final HttpHeaders headers =
+                    HttpHeaders.of(status)
+                               .contentType(contentType)
+                               .setLong(HttpHeaderNames.CONTENT_LENGTH, length)
+                               .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, resource.lastModified());
+            if (filename != null) {
+                headers.set(HttpHeaderNames.CONTENT_DISPOSITION,
+                            "attachment;filename=" + FILENAME_BAD_CHARS.matcher(filename).replaceAll("_"));
+            }
+
+            res.write(headers);
+
+            boolean success = false;
+            ReadableByteChannel in = null;
+            try {
+                in = resource.readableChannel();
+                final ReadableByteChannel finalIn = in;
+                ctx.blockingTaskExecutor().execute(() -> streamResource(ctx, res, finalIn, length));
+                success = true;
+                return res;
+            } finally {
+                if (!success && in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
+                        logger.warn("{} Failed to close an actuator resource: {}", ctx, resource, e);
+                    }
+                }
+            }
+        }
+
+        logger.warn("{} Cannot convert an actuator response: {}", ctx, body);
+        return HttpResponse.of(status, contentType, body.toString());
+    }
+
+    // TODO(trustin): A lot of duplication with StreamingHttpFile. Need to add some utility classes for
+    //                streaming a ReadableByteChannel and an InputStream.
+    private static void streamResource(ServiceRequestContext ctx, HttpResponseWriter res,
+                                       ReadableByteChannel in, long remainingBytes) {
+
+        final int chunkSize = (int) Math.min(8192, remainingBytes);
+        final ByteBuf buf = ctx.alloc().buffer(chunkSize);
+        final int readBytes;
+        boolean success = false;
+        try {
+            readBytes = read(in, buf);
+            if (readBytes < 0) {
+                // Should not reach here because we only read up to the end of the stream.
+                // If reached, it may mean the stream has been truncated.
+                throw new EOFException();
+            }
+            success = true;
+        } catch (Exception e) {
+            close(res, in, e);
+            return;
+        } finally {
+            if (!success) {
+                buf.release();
+            }
+        }
+
+        final long nextRemainingBytes = remainingBytes - readBytes;
+        final boolean endOfStream = nextRemainingBytes == 0;
+        if (readBytes > 0) {
+            if (!res.tryWrite(new ByteBufHttpData(buf, endOfStream))) {
+                close(in);
+                return;
+            }
+        } else {
+            buf.release();
+        }
+
+        if (endOfStream) {
+            close(res, in);
+            return;
+        }
+
+        res.onDemand(() -> {
+            try {
+                ctx.blockingTaskExecutor().execute(() -> streamResource(ctx, res, in, nextRemainingBytes));
+            } catch (Exception e) {
+                close(res, in, e);
+            }
+        });
+    }
+
+    private static int read(ReadableByteChannel src, ByteBuf dst) throws IOException {
+        if (src instanceof ScatteringByteChannel) {
+            return dst.writeBytes((ScatteringByteChannel) src, dst.writableBytes());
+        }
+
+        final int readBytes = src.read(dst.nioBuffer(dst.writerIndex(), dst.writableBytes()));
+        if (readBytes > 0) {
+            dst.writerIndex(dst.writerIndex() + readBytes);
+        }
+        return readBytes;
+    }
+
+    private static void close(HttpResponseWriter res, Closeable in) {
+        close(in);
+        res.close();
+    }
+
+    private static void close(HttpResponseWriter res, Closeable in, Exception cause) {
+        close(in);
+        res.close(cause);
+    }
+
+    private static void close(Closeable in) {
+        try {
+            in.close();
+        } catch (Exception e) {
+            logger.warn("Failed to close a stream for: {}", in, e);
+        }
     }
 }

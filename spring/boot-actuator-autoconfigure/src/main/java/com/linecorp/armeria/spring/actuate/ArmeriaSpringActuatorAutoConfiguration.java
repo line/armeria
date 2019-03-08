@@ -122,7 +122,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                         mediaTypes.getProduced()
                 );
                 sb.service(mapping, (ctx, req) -> {
-                    Map<String, Link> links = new EndpointLinksResolver(endpoints).resolveLinks(req.path());
+                    final Map<String, Link> links =
+                            new EndpointLinksResolver(endpoints).resolveLinks(req.path());
                     return HttpResponse.of(
                             HttpStatus.OK,
                             MediaType.JSON,
