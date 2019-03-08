@@ -542,7 +542,10 @@ public interface RequestLog {
     String toStringRequestOnly();
 
     /**
-     * Returns the string representation of the {@link Request}.
+     * Returns the string representation of the {@link Request}. This method is a shortcut of:
+     * <pre>{@code
+     * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+     * }</pre>
      *
      * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
      *                         {@link Function} is what is actually logged as headers.
@@ -572,7 +575,10 @@ public interface RequestLog {
     String toStringResponseOnly();
 
     /**
-     * Returns the string representation of the {@link Response}.
+     * Returns the string representation of the {@link Response}. This method is a shortcut of:
+     * <pre>{@code
+     * toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+     * }</pre>
      *
      * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
      *                         {@link Function} is what is actually logged as headers.

@@ -238,12 +238,13 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                     logBuilder.increaseRequestLength((HttpData) o);
                 }
                 write(o, endOfStream, true);
-                return;
+                break;
             }
             case DONE:
                 // Cancel the subscription if any message comes here after the state has been changed to DONE.
                 cancelSubscription();
                 ReferenceCountUtil.safeRelease(o);
+                break;
         }
     }
 

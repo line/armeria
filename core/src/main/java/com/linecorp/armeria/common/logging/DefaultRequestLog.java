@@ -195,6 +195,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         child.addListener(log -> {
             requestLength(log.requestLength());
             requestContentPreview(log.requestContentPreview());
+            requestTrailers(log.requestTrailers());
             endRequest0(log.requestCause(), log.requestEndTimeNanos());
         }, REQUEST_END);
     }
@@ -1045,7 +1046,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                       Function<Object, ?> contentSanitizer) {
-        return toStringRequestOnly(headersSanitizer, contentSanitizer, Function.identity());
+        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
     }
 
     @Override
@@ -1117,7 +1118,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                        Function<Object, ?> contentSanitizer) {
-        return toStringResponseOnly(headersSanitizer, contentSanitizer, Function.identity());
+        return toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
     }
 
     @Override
