@@ -204,6 +204,11 @@ public interface RequestLogBuilder {
     boolean isRequestContentDeferred();
 
     /**
+     * Sets the {@link RequestLog#requestTrailers()}.
+     */
+    void requestTrailers(HttpHeaders requestTrailers);
+
+    /**
      * Finishes the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#requestEndTimeNanos()}</li>
@@ -330,6 +335,11 @@ public interface RequestLogBuilder {
      * Returns {@code true} if {@link #deferResponseContent()} was ever called.
      */
     boolean isResponseContentDeferred();
+
+    /**
+     * Sets the {@link RequestLog#responseTrailers()}.
+     */
+    void responseTrailers(HttpHeaders responseTrailers);
 
     /**
      * Finishes the collection of the {@link Response} information. If a {@link Throwable} cause has been set

@@ -71,8 +71,11 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final LogLevel failedResponseLogLevel;
     private final Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer;
     private final Function<Object, ?> requestContentSanitizer;
+    private final Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer;
+
     private final Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer;
     private final Function<Object, ?> responseContentSanitizer;
+    private final Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer;
     private final Function<? super Throwable, ? extends Throwable> responseCauseSanitizer;
     private final Sampler sampler;
 
@@ -102,6 +105,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
              Function.identity(),
              Function.identity(),
              Function.identity(),
+             Function.identity(),
+             Function.identity(),
              Sampler.always());
     }
 
@@ -116,8 +121,10 @@ public final class LoggingService<I extends Request, O extends Response> extends
             LogLevel failedResponseLogLevel,
             Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer,
             Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
             Function<? super Throwable, ? extends Throwable> responseCauseSanitizer,
             Sampler sampler) {
         super(requireNonNull(delegate, "delegate"));
@@ -127,8 +134,11 @@ public final class LoggingService<I extends Request, O extends Response> extends
         this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
+        this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
+
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
+        this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         this.sampler = requireNonNull(sampler, "sampler");
     }
@@ -138,14 +148,16 @@ public final class LoggingService<I extends Request, O extends Response> extends
         if (sampler.isSampled()) {
             ctx.log().addListener(log -> logRequest(((ServiceRequestContext) log.context()).logger(),
                                                     log, requestLogLevel, requestHeadersSanitizer,
-                                                    requestContentSanitizer),
+                                                    requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
             ctx.log().addListener(log -> logResponse(((ServiceRequestContext) log.context()).logger(), log,
                                                      requestLogLevel, requestHeadersSanitizer,
                                                      requestContentSanitizer,
+                                                     requestHeadersSanitizer,
                                                      successfulResponseLogLevel, failedResponseLogLevel,
                                                      responseHeadersSanitizer,
                                                      responseContentSanitizer,
+                                                     responseTrailersSanitizer,
                                                      responseCauseSanitizer),
                                   RequestLogAvailability.COMPLETE);
         }

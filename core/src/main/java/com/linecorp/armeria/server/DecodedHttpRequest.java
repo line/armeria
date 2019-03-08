@@ -99,15 +99,16 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     @Override
     public boolean tryWrite(HttpObject obj) {
+        assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
+
         final boolean published;
         if (obj instanceof HttpHeaders) { // HTTP trailers.
+            ctx.logBuilder().requestTrailers((HttpHeaders) obj);
             published = super.tryWrite(obj);
-            // TODO(minwoox) Log HTTP trailers.
             // Close this stream because HTTP trailers is the last element of the request.
             close();
         } else {
             final HttpData httpData = (HttpData) obj;
-            assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
             ctx.logBuilder().increaseRequestLength(httpData);
             published = super.tryWrite(httpData);
             if (published) {

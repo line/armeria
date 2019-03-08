@@ -233,15 +233,18 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                     }
                     // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
+                    logBuilder.requestTrailers(trailingHeaders);
+                } else {
+                    logBuilder.increaseRequestLength((HttpData) o);
                 }
                 write(o, endOfStream, true);
-                return;
+                break;
             }
             case DONE:
                 // Cancel the subscription if any message comes here after the state has been changed to DONE.
                 cancelSubscription();
                 ReferenceCountUtil.safeRelease(o);
-                return;
+                break;
         }
     }
 
@@ -277,15 +280,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void write0(HttpObject o, boolean endOfStream, boolean flush) {
         final ChannelFuture future;
-        if (o instanceof HttpData) {
-            final HttpData data = (HttpData) o;
-            logBuilder.increaseRequestLength(data);
-            future = encoder.writeData(id, streamId(), data, endOfStream);
-        } else if (o instanceof HttpHeaders) {
+        if (o instanceof HttpHeaders) {
             future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream);
         } else {
-            // Should never reach here because we did validation in onNext().
-            throw new Error();
+            future = encoder.writeData(id, streamId(), (HttpData) o, endOfStream);
         }
 
         if (endOfStream) {

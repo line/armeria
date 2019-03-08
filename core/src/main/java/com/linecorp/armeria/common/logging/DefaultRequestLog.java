@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.HttpHeaders.EMPTY_HEADERS;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.COMPLETE;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_CONTENT;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_END;
@@ -129,7 +130,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
 
     private HttpHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
+    private HttpHeaders requestTrailers = EMPTY_HEADERS;
+
     private HttpHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
+    private HttpHeaders responseTrailers = EMPTY_HEADERS;
+
     @Nullable
     private Object requestContent;
     @Nullable
@@ -190,6 +195,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         child.addListener(log -> {
             requestLength(log.requestLength());
             requestContentPreview(log.requestContentPreview());
+            requestTrailers(log.requestTrailers());
             endRequest0(log.requestCause(), log.requestEndTimeNanos());
         }, REQUEST_END);
     }
@@ -222,9 +228,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (lastChild.isAvailable(RESPONSE_END)) {
-            responseLength(lastChild.responseLength());
-            responseContentPreview(lastChild.responseContentPreview());
-            endResponse0(lastChild.responseCause(), lastChild.responseEndTimeNanos());
+            propagateResponseEndData(lastChild);
         }
 
         lastChild.addListener(log -> startResponse0(
@@ -234,11 +238,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
-        lastChild.addListener(log -> {
-            responseLength(log.responseLength());
-            responseContentPreview(log.responseContentPreview());
-            endResponse0(log.responseCause(), log.responseEndTimeNanos());
-        }, RESPONSE_END);
+        lastChild.addListener(this::propagateResponseEndData, RESPONSE_END);
+    }
+
+    private void propagateResponseEndData(RequestLog log) {
+        responseLength(log.responseLength());
+        responseContentPreview(log.responseContentPreview());
+        responseTrailers(log.responseTrailers());
+        endResponse0(log.responseCause(), log.responseEndTimeNanos());
     }
 
     @Override
@@ -601,6 +608,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public HttpHeaders requestTrailers() {
+        ensureAvailability(REQUEST_END);
+        return requestTrailers;
+    }
+
+    @Override
+    public void requestTrailers(HttpHeaders requestTrailers) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_END)) {
+            return;
+        }
+        requireNonNull(requestTrailers, "requestTrailers");
+        if (requestTrailers.isEmpty()) {
+            return;
+        }
+
+        this.requestTrailers = requestTrailers;
+    }
+
+    @Override
     public void endRequest() {
         endRequest0(null);
     }
@@ -853,6 +879,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public HttpHeaders responseTrailers() {
+        ensureAvailability(RESPONSE_END);
+        return responseTrailers;
+    }
+
+    @Override
+    public void responseTrailers(HttpHeaders responseTrailers) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_END)) {
+            return;
+        }
+        requireNonNull(responseTrailers, "responseTrailers");
+        if (responseTrailers.isEmpty()) {
+            return;
+        }
+
+        this.responseTrailers = responseTrailers;
+    }
+
+    @Override
     public void endResponse() {
         endResponse0(responseContent instanceof RpcResponse ? ((RpcResponse) responseContent).cause() : null);
     }
@@ -1001,6 +1046,17 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                       Function<Object, ?> contentSanitizer) {
+        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+    }
+
+    @Override
+    public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                      Function<Object, ?> contentSanitizer,
+                                      Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+        requireNonNull(headersSanitizer, "headersSanitizer");
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        requireNonNull(trailersSanitizer, "trailersSanitizer");
+
         final int flags = this.flags & 0xFFFF; // Only interested in the bits related with request.
         if (requestStrFlags == flags) {
             return requestStr;
@@ -1040,6 +1096,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             } else if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
                 buf.append(", contentPreview=").append(requestContentPreview);
             }
+
+            final HttpHeaders requestTrailers = this.requestTrailers;
+            if (!requestTrailers.isEmpty()) {
+                buf.append(", trailers=").append(trailersSanitizer.apply(requestTrailers));
+            }
         }
         buf.append('}');
 
@@ -1057,6 +1118,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
                                        Function<Object, ?> contentSanitizer) {
+        return toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+    }
+
+    @Override
+    public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                       Function<Object, ?> contentSanitizer,
+                                       Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+        requireNonNull(headersSanitizer, "headersSanitizer");
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        requireNonNull(trailersSanitizer, "trailersSanitizer");
 
         final int flags = this.flags & 0xFFFF0000; // Only interested in the bits related with response.
         if (responseStrFlags == flags) {
@@ -1091,6 +1162,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 buf.append(", content=").append(contentSanitizer.apply(responseContent));
             } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
                 buf.append(", contentPreview=").append(responseContentPreview);
+            }
+
+            final HttpHeaders responseTrailers = this.responseTrailers;
+            if (!responseTrailers.isEmpty()) {
+                buf.append(", trailers=").append(trailersSanitizer.apply(responseTrailers));
             }
         }
         buf.append('}');

@@ -54,9 +54,13 @@ public class LoggingServiceTest {
 
     private static final HttpHeaders REQUEST_HEADERS = HttpHeaders.of(HttpHeaderNames.COOKIE, "armeria");
     private static final Object REQUEST_CONTENT = "request with pii";
+    private static final HttpHeaders REQUEST_TRAILERS = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5,
+                                                                       "barmeria");
 
-    private static final HttpHeaders RESPONSE_HEADERS = HttpHeaders.of(HttpHeaderNames.SET_COOKIE, "barmeria");
+    private static final HttpHeaders RESPONSE_HEADERS = HttpHeaders.of(HttpHeaderNames.SET_COOKIE, "carmeria");
     private static final Object RESPONSE_CONTENT = "response with pii";
+    private static final HttpHeaders RESPONSE_TRAILERS = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5,
+                                                                        "darmeria");
 
     private static final String REQUEST_FORMAT = "Request: {}";
     private static final String RESPONSE_FORMAT = "Response: {}";
@@ -90,19 +94,23 @@ public class LoggingServiceTest {
         }).when(log).addListener(isA(RequestLogListener.class), isA(RequestLogAvailability.class));
         when(ctx.logger()).thenReturn(logger);
 
-        when(log.toStringRequestOnly(any(), any())).thenAnswer(
+        when(log.toStringRequestOnly(any(), any(), any())).thenAnswer(
                 invocation -> {
                     final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
                     final Function<Object, Object> contentSanitizer = invocation.getArgument(1);
+                    final Function<HttpHeaders, HttpHeaders> trailersSanitizer = invocation.getArgument(2);
                     return "headers: " + headersSanitizer.apply(REQUEST_HEADERS) +
-                           ", content: " + contentSanitizer.apply(REQUEST_CONTENT);
+                           ", content: " + contentSanitizer.apply(REQUEST_CONTENT) +
+                           ", trailers: " + trailersSanitizer.apply(REQUEST_TRAILERS);
                 });
-        when(log.toStringResponseOnly(any(), any())).thenAnswer(
+        when(log.toStringResponseOnly(any(), any(), any())).thenAnswer(
                 invocation -> {
                     final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
                     final Function<Object, Object> contentSanitizer = invocation.getArgument(1);
+                    final Function<HttpHeaders, HttpHeaders> trailersSanitizer = invocation.getArgument(2);
                     return "headers: " + headersSanitizer.apply(RESPONSE_HEADERS) +
-                           ", content: " + contentSanitizer.apply(RESPONSE_CONTENT);
+                           ", content: " + contentSanitizer.apply(RESPONSE_CONTENT) +
+                           ", trailers: " + trailersSanitizer.apply(RESPONSE_TRAILERS);
                 });
         when(log.context()).thenReturn(ctx);
     }
@@ -123,9 +131,11 @@ public class LoggingServiceTest {
         when(log.responseCause()).thenReturn(cause);
         service.serve(ctx, REQUEST);
         verify(logger).warn(REQUEST_FORMAT,
-                            "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT);
+                            "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
+                            ", trailers: " + REQUEST_TRAILERS);
         verify(logger).warn(RESPONSE_FORMAT,
-                            "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT,
+                            "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
+                            ", trailers: " + RESPONSE_TRAILERS,
                             cause);
     }
 
@@ -137,9 +147,11 @@ public class LoggingServiceTest {
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
         verify(logger).info(REQUEST_FORMAT,
-                            "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT);
+                            "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
+                            ", trailers: " + REQUEST_TRAILERS);
         verify(logger).info(RESPONSE_FORMAT,
-                            "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT);
+                            "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
+                            ", trailers: " + RESPONSE_TRAILERS);
     }
 
     @Test
@@ -154,6 +166,13 @@ public class LoggingServiceTest {
             assertThat(content).isEqualTo(REQUEST_CONTENT);
             return "clean request";
         };
+        final HttpHeaders sanitizedRequestTrailers =
+                HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, "it's the secret");
+        final Function<HttpHeaders, HttpHeaders> requestTrailersSanitizer = headers -> {
+            assertThat(headers).isEqualTo(REQUEST_TRAILERS);
+            return sanitizedRequestTrailers;
+        };
+
         final HttpHeaders sanitizedResponseHeaders =
                 HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, "where are the cookies?");
         final Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = headers -> {
@@ -164,19 +183,31 @@ public class LoggingServiceTest {
             assertThat(content).isEqualTo(RESPONSE_CONTENT);
             return "clean response";
         };
+        final HttpHeaders sanitizedResponseTrailers =
+                HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, "it's a secret");
+        final Function<HttpHeaders, HttpHeaders> responseTrailersSanitizer = headers -> {
+            assertThat(headers).isEqualTo(RESPONSE_TRAILERS);
+            return sanitizedResponseTrailers;
+        };
+
         final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
                 .requestLogLevel(LogLevel.INFO)
                 .successfulResponseLogLevel(LogLevel.INFO)
                 .requestHeadersSanitizer(requestHeadersSanitizer)
                 .requestContentSanitizer(requestContentSanitizer)
+                .requestTrailersSanitizer(requestTrailersSanitizer)
+                .requestTrailersSanitizer(requestTrailersSanitizer)
                 .responseHeadersSanitizer(responseHeadersSanitizer)
                 .responseContentSanitizer(responseContentSanitizer)
+                .responseTrailersSanitizer(responseTrailersSanitizer)
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
         verify(logger).info(REQUEST_FORMAT,
-                            "headers: " + sanitizedRequestHeaders + ", content: clean request");
+                            "headers: " + sanitizedRequestHeaders + ", content: clean request" +
+                            ", trailers: " + sanitizedRequestTrailers);
         verify(logger).info(RESPONSE_FORMAT,
-                            "headers: " + sanitizedResponseHeaders + ", content: clean response");
+                            "headers: " + sanitizedResponseHeaders + ", content: clean response" +
+                            ", trailers: " + sanitizedResponseTrailers);
     }
 
     @Test
@@ -194,8 +225,12 @@ public class LoggingServiceTest {
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         when(log.responseCause()).thenReturn(dirtyCause);
         service.serve(ctx, REQUEST);
-        verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT);
-        verify(logger).warn(RESPONSE_FORMAT, "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT,
+        verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS +
+                                            ", content: " + REQUEST_CONTENT +
+                                            ", trailers: " + REQUEST_TRAILERS);
+        verify(logger).warn(RESPONSE_FORMAT, "headers: " + RESPONSE_HEADERS +
+                                             ", content: " + RESPONSE_CONTENT +
+                                             ", trailers: " + RESPONSE_TRAILERS,
                             cleanCause);
     }
 
@@ -213,8 +248,10 @@ public class LoggingServiceTest {
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         when(log.responseCause()).thenReturn(dirtyCause);
         service.serve(ctx, REQUEST);
-        verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT);
-        verify(logger).warn(RESPONSE_FORMAT, "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT);
+        verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
+                                            ", trailers: " + REQUEST_TRAILERS);
+        verify(logger).warn(RESPONSE_FORMAT, "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
+                                             ", trailers: " + RESPONSE_TRAILERS);
     }
 
     @Test

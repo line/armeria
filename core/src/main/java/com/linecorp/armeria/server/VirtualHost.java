@@ -345,10 +345,6 @@ public final class VirtualHost {
         return router.find(mappingCtx);
     }
 
-    private Router<ServiceConfig> router() {
-        return router;
-    }
-
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
                                             Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {

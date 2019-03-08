@@ -84,6 +84,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     }
 
     @Override
+    public void requestTrailers(HttpHeaders requestTrailers) {}
+
+    @Override
     public void endRequest() {}
 
     @Override
@@ -132,6 +135,9 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public boolean isResponseContentDeferred() {
         return false;
     }
+
+    @Override
+    public void responseTrailers(HttpHeaders responseTrailers) {}
 
     @Override
     public void endResponse() {}

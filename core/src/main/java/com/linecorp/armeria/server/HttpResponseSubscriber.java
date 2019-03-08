@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
@@ -160,7 +161,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                             " (service: " + service() + ')');
                 }
 
-                final HttpHeaders headers = (HttpHeaders) o;
+                HttpHeaders headers = (HttpHeaders) o;
                 final HttpStatus status = headers.status();
                 if (status == null) {
                     throw newIllegalStateException("published an HttpHeaders without status: " + o +
@@ -173,9 +174,16 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
-                o = fillAdditionalHeaders(headers, additionalHeaders);
+                headers = fillAdditionalHeaders(headers, additionalHeaders);
+                if (headers.contains(HttpHeaderNames.CONTENT_LENGTH) &&
+                    !reqCtx.additionalResponseTrailers().isEmpty()) {
+                    final HttpHeaders mutable = headers.toMutable();
+                    mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
+                    headers = mutable;
+                }
 
                 logBuilder().responseHeaders(headers);
+                o = headers;
 
                 if (req.method() == HttpMethod.HEAD) {
                     // HEAD responses always close the stream with the initial headers, even if not explicitly
@@ -207,7 +215,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                                 " (service: " + service() + ')');
                     }
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-                    o = fillAdditionalHeaders(trailingHeaders, additionalTrailers);
+                    final HttpHeaders addedTrailers = fillAdditionalHeaders(trailingHeaders,
+                                                                            additionalTrailers);
+                    logBuilder().responseTrailers(addedTrailers);
+                    o = addedTrailers;
 
                     // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
