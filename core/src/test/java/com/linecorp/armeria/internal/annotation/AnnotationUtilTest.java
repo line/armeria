@@ -125,24 +125,34 @@ public class AnnotationUtilTest {
     @TestAnnotation("TestChildClassWithIface")
     static class TestChildClassWithIface extends TestClassWithIface implements TestAnotherIface {}
 
+    @CyclicAnnotation
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface CyclicAnnotation {}
+
+    @CyclicAnnotation
+    static class TestClassWithCyclicAnnotation {
+        @CyclicAnnotation
+        public void foo() {}
+    }
+
     @Test
     public void declared() throws NoSuchMethodException {
         List<TestAnnotation> list;
 
         list = findDeclared(TestClass.class.getMethod("directlyPresent"), TestAnnotation.class);
-        assertThat(list.size()).isOne();
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("method-level:directlyPresent");
 
         list = findDeclared(TestClass.class, TestAnnotation.class);
-        assertThat(list.size()).isOne();
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestClass");
 
         list = findDeclared(TestChildClass.class, TestAnnotation.class);
-        assertThat(list.size()).isOne();
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestChildClass");
 
         list = findDeclared(TestGrandChildClass.class, TestAnnotation.class);
-        assertThat(list.size()).isOne();
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestGrandChildClass");
     }
 
@@ -152,19 +162,19 @@ public class AnnotationUtilTest {
 
         list = findDeclared(TestClass.class.getMethod("directlyPresentRepeatableSingle"),
                             TestRepeatable.class);
-        assertThat(list.size()).isOne();
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("method-level:directlyPresentRepeatableSingle");
 
         list = findDeclared(SingleRepeatableTestClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(1);
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("class-level:SingleRepeatableTestClass");
 
         list = findDeclared(SingleRepeatableTestChildClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(1);
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("class-level:SingleRepeatableTestChildClass");
 
         list = findDeclared(SingleRepeatableTestGrandChildClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(1);
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("class-level:SingleRepeatableTestGrandChildClass");
     }
 
@@ -174,23 +184,23 @@ public class AnnotationUtilTest {
 
         list = findDeclared(TestClass.class.getMethod("directlyPresentRepeatableMulti"),
                             TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(3);
+        assertThat(list).hasSize(3);
         assertThat(list.get(0).value()).isEqualTo("method-level:directlyPresentRepeatableMulti:1");
         assertThat(list.get(1).value()).isEqualTo("method-level:directlyPresentRepeatableMulti:2");
         assertThat(list.get(2).value()).isEqualTo("method-level:directlyPresentRepeatableMulti:3");
 
         list = findDeclared(TestClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestClass:Repeatable1");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestClass:Repeatable2");
 
         list = findDeclared(TestChildClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestChildClass:Repeatable1");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestChildClass:Repeatable2");
 
         list = findDeclared(TestGrandChildClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestGrandChildClass:Repeatable1");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestGrandChildClass:Repeatable2");
     }
@@ -200,23 +210,23 @@ public class AnnotationUtilTest {
         List<TestAnnotation> list;
 
         list = findInherited(TestClass.class, TestAnnotation.class);
-        assertThat(list.size()).isOne();
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestClass");
 
         list = findInherited(TestChildClass.class, TestAnnotation.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestChildClass");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestClass");
 
         list = findInherited(TestGrandChildClass.class, TestAnnotation.class);
-        assertThat(list.size()).isEqualTo(3);
+        assertThat(list).hasSize(3);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestGrandChildClass");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestChildClass");
         assertThat(list.get(2).value()).isEqualTo("class-level:TestClass");
 
         list = find(TestGrandChildClass.class, TestAnnotation.class,
                     FindOption.LOOKUP_SUPER_CLASSES, FindOption.COLLECT_SUPER_CLASSES_FIRST);
-        assertThat(list.size()).isEqualTo(3);
+        assertThat(list).hasSize(3);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestClass");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestChildClass");
         assertThat(list.get(2).value()).isEqualTo("class-level:TestGrandChildClass");
@@ -227,23 +237,23 @@ public class AnnotationUtilTest {
         List<TestRepeatable> list;
 
         list = findInherited(SingleRepeatableTestClass.class, TestRepeatable.class);
-        assertThat(list.size()).isOne();
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("class-level:SingleRepeatableTestClass");
 
         list = findInherited(SingleRepeatableTestChildClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0).value()).isEqualTo("class-level:SingleRepeatableTestChildClass");
         assertThat(list.get(1).value()).isEqualTo("class-level:SingleRepeatableTestClass");
 
         list = findInherited(SingleRepeatableTestGrandChildClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(3);
+        assertThat(list).hasSize(3);
         assertThat(list.get(0).value()).isEqualTo("class-level:SingleRepeatableTestGrandChildClass");
         assertThat(list.get(1).value()).isEqualTo("class-level:SingleRepeatableTestChildClass");
         assertThat(list.get(2).value()).isEqualTo("class-level:SingleRepeatableTestClass");
 
         list = find(SingleRepeatableTestGrandChildClass.class, TestRepeatable.class,
                     FindOption.LOOKUP_SUPER_CLASSES, FindOption.COLLECT_SUPER_CLASSES_FIRST);
-        assertThat(list.size()).isEqualTo(3);
+        assertThat(list).hasSize(3);
         assertThat(list.get(0).value()).isEqualTo("class-level:SingleRepeatableTestClass");
         assertThat(list.get(1).value()).isEqualTo("class-level:SingleRepeatableTestChildClass");
         assertThat(list.get(2).value()).isEqualTo("class-level:SingleRepeatableTestGrandChildClass");
@@ -254,19 +264,19 @@ public class AnnotationUtilTest {
         List<TestRepeatable> list;
 
         list = findInherited(TestClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestClass:Repeatable1");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestClass:Repeatable2");
 
         list = findInherited(TestChildClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(4);
+        assertThat(list).hasSize(4);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestChildClass:Repeatable1");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestChildClass:Repeatable2");
         assertThat(list.get(2).value()).isEqualTo("class-level:TestClass:Repeatable1");
         assertThat(list.get(3).value()).isEqualTo("class-level:TestClass:Repeatable2");
 
         list = findInherited(TestGrandChildClass.class, TestRepeatable.class);
-        assertThat(list.size()).isEqualTo(6);
+        assertThat(list).hasSize(6);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestGrandChildClass:Repeatable1");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestGrandChildClass:Repeatable2");
         assertThat(list.get(2).value()).isEqualTo("class-level:TestChildClass:Repeatable1");
@@ -276,7 +286,7 @@ public class AnnotationUtilTest {
 
         list = find(TestGrandChildClass.class, TestRepeatable.class,
                     FindOption.LOOKUP_SUPER_CLASSES, FindOption.COLLECT_SUPER_CLASSES_FIRST);
-        assertThat(list.size()).isEqualTo(6);
+        assertThat(list).hasSize(6);
         assertThat(list.get(0).value()).isEqualTo("class-level:TestClass:Repeatable1");
         assertThat(list.get(1).value()).isEqualTo("class-level:TestClass:Repeatable2");
         assertThat(list.get(2).value()).isEqualTo("class-level:TestChildClass:Repeatable1");
@@ -293,7 +303,7 @@ public class AnnotationUtilTest {
                                                      TestChildClass.class,
                                                      TestGrandChildClass.class)) {
             list = find(clazz, TestMetaAnnotation.class, EnumSet.of(FindOption.LOOKUP_META_ANNOTATIONS));
-            assertThat(list.size()).isEqualTo(2);
+            assertThat(list).hasSize(2);
             assertThat(list.get(0).value()).isEqualTo("TestRepeatables");   // From the container annotation.
             assertThat(list.get(1).value()).isEqualTo("TestAnnotation");
         }
@@ -302,7 +312,7 @@ public class AnnotationUtilTest {
                                                      SingleRepeatableTestChildClass.class,
                                                      SingleRepeatableTestGrandChildClass.class)) {
             list = find(clazz, TestMetaAnnotation.class, EnumSet.of(FindOption.LOOKUP_META_ANNOTATIONS));
-            assertThat(list.size()).isOne();
+            assertThat(list).hasSize(1);
             assertThat(list.get(0).value()).isEqualTo("TestRepeatable");
         }
     }
@@ -312,16 +322,16 @@ public class AnnotationUtilTest {
         List<TestMetaAnnotation> list;
 
         list = findAll(SingleRepeatableTestClass.class, TestMetaAnnotation.class);
-        assertThat(list.size()).isOne();
+        assertThat(list).hasSize(1);
         assertThat(list.get(0).value()).isEqualTo("TestRepeatable");
 
         list = findAll(SingleRepeatableTestChildClass.class, TestMetaAnnotation.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0).value()).isEqualTo("TestRepeatable");
         assertThat(list.get(1).value()).isEqualTo("TestRepeatable");
 
         list = findAll(SingleRepeatableTestGrandChildClass.class, TestMetaAnnotation.class);
-        assertThat(list.size()).isEqualTo(3);
+        assertThat(list).hasSize(3);
         assertThat(list.get(0).value()).isEqualTo("TestRepeatable");
         assertThat(list.get(1).value()).isEqualTo("TestRepeatable");
         assertThat(list.get(2).value()).isEqualTo("TestRepeatable");
@@ -332,19 +342,19 @@ public class AnnotationUtilTest {
         List<TestMetaAnnotation> list;
 
         list = findAll(TestClass.class, TestMetaAnnotation.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0).value()).isEqualTo("TestRepeatables");
         assertThat(list.get(1).value()).isEqualTo("TestAnnotation");
 
         list = findAll(TestChildClass.class, TestMetaAnnotation.class);
-        assertThat(list.size()).isEqualTo(4);
+        assertThat(list).hasSize(4);
         assertThat(list.get(0).value()).isEqualTo("TestRepeatables");
         assertThat(list.get(1).value()).isEqualTo("TestAnnotation");
         assertThat(list.get(2).value()).isEqualTo("TestRepeatables");
         assertThat(list.get(3).value()).isEqualTo("TestAnnotation");
 
         list = findAll(TestGrandChildClass.class, TestMetaAnnotation.class);
-        assertThat(list.size()).isEqualTo(6);
+        assertThat(list).hasSize(6);
         assertThat(list.get(0).value()).isEqualTo("TestRepeatables");
         assertThat(list.get(1).value()).isEqualTo("TestAnnotation");
         assertThat(list.get(2).value()).isEqualTo("TestRepeatables");
@@ -358,13 +368,13 @@ public class AnnotationUtilTest {
         List<TestAnnotation> list;
 
         list = findAll(TestClassWithIface.class, TestAnnotation.class);
-        assertThat(list.size()).isEqualTo(3);
+        assertThat(list).hasSize(3);
         assertThat(list.get(0).value()).isEqualTo("TestClassWithIface");
         assertThat(list.get(1).value()).isEqualTo("TestChildIface");
         assertThat(list.get(2).value()).isEqualTo("TestIface");
 
         list = findAll(TestChildClassWithIface.class, TestAnnotation.class);
-        assertThat(list.size()).isEqualTo(5);
+        assertThat(list).hasSize(5);
         assertThat(list.get(0).value()).isEqualTo("TestChildClassWithIface");
         assertThat(list.get(1).value()).isEqualTo("TestAnotherIface");
         assertThat(list.get(2).value()).isEqualTo("TestClassWithIface");
@@ -387,6 +397,17 @@ public class AnnotationUtilTest {
     }
 
     @Test
+    public void findAll_cyclic() throws Exception {
+        List<CyclicAnnotation> list = findAll(TestClassWithCyclicAnnotation.class, CyclicAnnotation.class);
+        assertThat(list).hasSize(1);
+        assertThat(list.get(0)).isInstanceOf(CyclicAnnotation.class);
+
+        list = findAll(TestClassWithCyclicAnnotation.class.getDeclaredMethod("foo"), CyclicAnnotation.class);
+        assertThat(list).hasSize(1);
+        assertThat(list.get(0)).isInstanceOf(CyclicAnnotation.class);
+    }
+
+    @Test
     public void cglibProxy() {
         final Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(TestGrandChildClass.class);
@@ -400,13 +421,13 @@ public class AnnotationUtilTest {
                         EnumSet.of(FindOption.LOOKUP_META_ANNOTATIONS))).isEmpty();
 
         final List<TestAnnotation> list1 = findAll(proxy.getClass(), TestAnnotation.class);
-        assertThat(list1.size()).isEqualTo(3);
+        assertThat(list1).hasSize(3);
         assertThat(list1.get(0).value()).isEqualTo("class-level:TestGrandChildClass");
         assertThat(list1.get(1).value()).isEqualTo("class-level:TestChildClass");
         assertThat(list1.get(2).value()).isEqualTo("class-level:TestClass");
 
         final List<TestMetaAnnotation> list2 = findAll(proxy.getClass(), TestMetaAnnotation.class);
-        assertThat(list2.size()).isEqualTo(6);
+        assertThat(list2).hasSize(6);
         assertThat(list2.get(0).value()).isEqualTo("TestRepeatables");
         assertThat(list2.get(1).value()).isEqualTo("TestAnnotation");
         assertThat(list2.get(2).value()).isEqualTo("TestRepeatables");
@@ -418,7 +439,7 @@ public class AnnotationUtilTest {
     @Test
     public void getAnnotations_declared() {
         final List<Annotation> list = getAnnotations(TestGrandChildClass.class);
-        assertThat(list.size()).isEqualTo(2);
+        assertThat(list).hasSize(2);
         assertThat(list.get(0)).isInstanceOf(TestRepeatables.class);
         assertThat(list.get(1)).isInstanceOf(TestAnnotation.class);
     }
@@ -427,7 +448,7 @@ public class AnnotationUtilTest {
     public void getAnnotations_inherited() {
         final List<Annotation> list =
                 getAnnotations(TestGrandChildClass.class, FindOption.LOOKUP_SUPER_CLASSES);
-        assertThat(list.size()).isEqualTo(6);
+        assertThat(list).hasSize(6);
         assertThat(list.get(0)).isInstanceOf(TestRepeatables.class);
         assertThat(list.get(1)).isInstanceOf(TestAnnotation.class);
         assertThat(list.get(2)).isInstanceOf(TestRepeatables.class);
@@ -439,16 +460,27 @@ public class AnnotationUtilTest {
     @Test
     public void getAnnotations_all() {
         final List<Annotation> list = getAllAnnotations(TestGrandChildClass.class);
-        assertThat(list.size()).isEqualTo(18);
-        for (int i = 0; i < 3 * 6; i += 6) {
-            assertThat(list.get(i)).isInstanceOf(TestMetaOfMetaAnnotation.class);
-            assertThat(list.get(i + 1)).isInstanceOf(TestMetaAnnotation.class);
-            assertThat(((TestMetaAnnotation) list.get(i + 1)).value()).isEqualTo("TestRepeatables");
-            assertThat(list.get(i + 2)).isInstanceOf(TestRepeatables.class);
-            assertThat(list.get(i + 3)).isInstanceOf(TestMetaOfMetaAnnotation.class);
-            assertThat(list.get(i + 4)).isInstanceOf(TestMetaAnnotation.class);
-            assertThat(((TestMetaAnnotation) list.get(i + 4)).value()).isEqualTo("TestAnnotation");
-            assertThat(list.get(i + 5)).isInstanceOf(TestAnnotation.class);
+        assertThat(list).hasSize(18);
+        for (int i = 0; i < 3 * 6;) {
+            assertThat(list.get(i++)).isInstanceOf(TestMetaOfMetaAnnotation.class);
+            assertThat(list.get(i)).isInstanceOf(TestMetaAnnotation.class);
+            assertThat(((TestMetaAnnotation) list.get(i++)).value()).isEqualTo("TestRepeatables");
+            assertThat(list.get(i++)).isInstanceOf(TestRepeatables.class);
+            assertThat(list.get(i++)).isInstanceOf(TestMetaOfMetaAnnotation.class);
+            assertThat(list.get(i)).isInstanceOf(TestMetaAnnotation.class);
+            assertThat(((TestMetaAnnotation) list.get(i++)).value()).isEqualTo("TestAnnotation");
+            assertThat(list.get(i++)).isInstanceOf(TestAnnotation.class);
         }
+    }
+
+    @Test
+    public void getAnnotations_all_cyclic() throws Exception {
+        List<Annotation> list = getAllAnnotations(TestClassWithCyclicAnnotation.class);
+        assertThat(list).hasSize(1);
+        assertThat(list.get(0)).isInstanceOf(CyclicAnnotation.class);
+
+        list = getAllAnnotations(TestClassWithCyclicAnnotation.class.getDeclaredMethod("foo"));
+        assertThat(list).hasSize(1);
+        assertThat(list.get(0)).isInstanceOf(CyclicAnnotation.class);
     }
 }
