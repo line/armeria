@@ -30,6 +30,9 @@ allprojects {
             }
             </script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/gradle.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/protobuf.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/thrift.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/yaml.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.6.0/highlightjs-line-numbers.min.js"></script>
             <script>
@@ -59,12 +62,6 @@ allprojects {
             }
 
             var hasHljs = typeof hljs !== "undefined";
-            if (hasHljs) {
-              hljs.configure({
-                languages: [ "java", "xml", "json", "yaml", "shell" ]
-              });
-            }
-
             var allPres = document.getElementsByTagName("PRE");
             for (var i in allPres) {
               if (typeof allPres[i].children === "undefined") {
