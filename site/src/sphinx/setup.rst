@@ -51,7 +51,7 @@ Setting up with Gradle
 You might want to use the following ``build.gradle`` as a starting point when you set up a new project:
 
 .. parsed-literal::
-    :class: highlight-groovy
+    :class: highlight-gradle
 
     apply plugin: 'java'
     apply plugin: 'idea'
