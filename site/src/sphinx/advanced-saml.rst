@@ -39,7 +39,7 @@ For Maven:
 For Gradle:
 
 .. parsed-literal::
-    :class: highlight-groovy
+    :class: highlight-gradle
 
     dependencies {
         compile 'com.linecorp.armeria:saml:\ |release|\ '

@@ -1,7 +1,6 @@
 .. _gRPC: https://grpc.io/
 .. _gRPC-Web: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
 .. _gRPC-Web-Client: https://github.com/improbable-eng/grpc-web
-.. _protobuf-gradle-plugin: https://github.com/google/protobuf-gradle-plugin
 .. _Protobuf-JSON: https://developers.google.com/protocol-buffers/docs/proto3#json
 .. _the gRPC-Java README: https://github.com/grpc/grpc-java/blob/master/README.md#download
 

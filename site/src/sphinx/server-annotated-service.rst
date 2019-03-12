@@ -181,7 +181,7 @@ option. In this case the variable name is used as the value.
 
     You can configure your build tool to add ``-parameters`` javac option as follows.
 
-    .. code-block:: groovy
+    .. code-block:: gradle
 
         // Gradle:
         tasks.withType(JavaCompile) {
