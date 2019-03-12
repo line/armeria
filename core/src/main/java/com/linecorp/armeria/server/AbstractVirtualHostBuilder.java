@@ -22,10 +22,7 @@ import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static java.util.Objects.requireNonNull;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
-import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
@@ -48,6 +45,7 @@ import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
@@ -88,45 +86,6 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
             ApplicationProtocolNames.HTTP_2,
             ApplicationProtocolNames.HTTP_1_1);
 
-    private static final String LOCAL_HOSTNAME;
-
-    static {
-        // Try the '/usr/bin/hostname' command first, which is more reliable.
-        Process process = null;
-        String hostname = null;
-        try {
-            process = Runtime.getRuntime().exec("hostname");
-            final String line = new BufferedReader(new InputStreamReader(process.getInputStream())).readLine();
-            if (line == null) {
-                logger.debug("The 'hostname' command returned nothing; " +
-                             "using InetAddress.getLocalHost() instead");
-            } else {
-                hostname = normalizeDefaultHostname(line.trim());
-                logger.info("Hostname: {} (from 'hostname' command)", hostname);
-            }
-        } catch (Exception e) {
-            logger.debug("Failed to get the hostname using the 'hostname' command; " +
-                         "using InetAddress.getLocalHost() instead", e);
-        } finally {
-            if (process != null) {
-                process.destroy();
-            }
-        }
-
-        if (hostname == null) {
-            try {
-                hostname = normalizeDefaultHostname(InetAddress.getLocalHost().getHostName());
-                logger.info("Hostname: {} (from InetAddress.getLocalHost())", hostname);
-            } catch (Exception e) {
-                hostname = "localhost";
-                logger.warn("Failed to get the hostname using InetAddress.getLocalHost(); " +
-                            "using 'localhost' instead", e);
-            }
-        }
-
-        LOCAL_HOSTNAME = hostname;
-    }
-
     private final String defaultHostname;
     private final String hostnamePattern;
     private final List<ServiceConfig> services = new ArrayList<>();
@@ -146,7 +105,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
      */
     AbstractVirtualHostBuilder() {
-        this(LOCAL_HOSTNAME, "*");
+        this(SystemInfo.hostname(), "*");
     }
 
     /**
@@ -156,7 +115,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
 
         if ("*".equals(hostnamePattern)) {
-            defaultHostname = LOCAL_HOSTNAME;
+            defaultHostname = SystemInfo.hostname();
         } else if (hostnamePattern.startsWith("*.")) {
             defaultHostname = hostnamePattern.substring(2);
         } else {
