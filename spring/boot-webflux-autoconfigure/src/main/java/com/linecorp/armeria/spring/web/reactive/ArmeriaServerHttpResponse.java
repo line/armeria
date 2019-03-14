@@ -25,27 +25,35 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.AbstractServerHttpResponse;
+import org.springframework.http.server.reactive.ChannelSendOperator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -97,12 +105,13 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
         return Mono.defer(() -> {
-            final HttpResponse response = HttpResponse.of(
-                    Flux.concat(Mono.just(headers), publisher.map(factoryWrapper::toHttpData))
-                        // Publish the response stream on the event loop in order to avoid the possibility of
-                        // calling subscription.request() from multiple threads while publishing messages
-                        // with onNext signals or starting the subscription with onSubscribe signal.
-                        .publishOn(Schedulers.fromExecutor(ctx.eventLoop())));
+            final HttpResponse response = HttpResponse.of(new HttpResponsePublisher(
+                    headers, publisher.map(factoryWrapper::toHttpData)
+                                      // HttpResponsePublisher is not a thread-safe, so we make the upstream
+                                      // publisher publish objects on the event loop. The downstream subscriber,
+                                      // PublisherBasedHttpResponse, also publishes the objects on the event
+                                      // loop. So it's okay to use event loop from here.
+                                      .publishOn(Schedulers.fromExecutor(ctx.eventLoop()), 1)));
             future.complete(response);
             return Mono.fromFuture(response.completionFuture());
         });
@@ -192,5 +201,158 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
         cookie.setDomain(resCookie.getDomain());
         cookie.setPath(resCookie.getPath());
         return cookie;
+    }
+
+    /**
+     * The {@link ChannelSendOperator.WriteBarrier} caches the first published object but it does nothing
+     * when the object is discarded, which might cause {@link ByteBuf} leak. This {@link Publisher}
+     * and {@link Subscriber} will doing with similar behavior but will release the cached object when
+     * the subscription is completed.
+     */
+    private static final class HttpResponsePublisher implements Publisher<HttpObject> {
+
+        private final HttpHeaders headers;
+        private final Flux<HttpData> upstream;
+
+        HttpResponsePublisher(HttpHeaders headers, Flux<HttpData> upstream) {
+            this.headers = headers;
+            this.upstream = upstream;
+        }
+
+        @Override
+        public void subscribe(Subscriber<? super HttpObject> subscriber) {
+            final ResponseContentSubscriber upstreamSubscriber =
+                    new ResponseContentSubscriber(headers, requireNonNull(subscriber, "subscriber"));
+            upstream.subscribe(upstreamSubscriber);
+        }
+
+        private static final class ResponseContentSubscriber implements Subscriber<HttpData> {
+
+            private enum State {
+                INIT, HEADER_SENT, FIRST_CONTENT_SENT
+            }
+
+            private final HttpHeaders headers;
+            private final Subscriber<? super HttpObject> subscriber;
+            private State state = State.INIT;
+
+            @Nullable
+            private HttpData firstContent;
+            @Nullable
+            private Subscription upstreamSubscription;
+
+            ResponseContentSubscriber(HttpHeaders headers, Subscriber<? super HttpObject> subscriber) {
+                this.headers = headers;
+                this.subscriber = subscriber;
+            }
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                assert upstreamSubscription == null;
+                upstreamSubscription = s;
+                // To get the cached object from the upstream which is ChannelSendOperator#WriteBarrier,
+                // request 1 object to the publisher before finishing subscribing.
+                s.request(1);
+            }
+
+            @Override
+            public void onNext(HttpData o) {
+                if (firstContent == null) {
+                    firstContent = o;
+                    assert upstreamSubscription != null;
+                    finishSubscribing(upstreamSubscription);
+                    return;
+                }
+
+                assert state == State.FIRST_CONTENT_SENT;
+                subscriber.onNext(o);
+            }
+
+            private void finishSubscribing(Subscription s) {
+                assert firstContent != null;
+                subscriber.onSubscribe(new Subscription() {
+                    @Override
+                    public void request(long n) {
+                        if (state == State.FIRST_CONTENT_SENT) {
+                            s.request(n);
+                            return;
+                        }
+
+                        if (state == State.INIT) {
+                            state = State.HEADER_SENT;
+                            subscriber.onNext(headers);
+                            n--;
+                        }
+                        if (state == State.HEADER_SENT && n > 0) {
+                            state = State.FIRST_CONTENT_SENT;
+                            subscriber.onNext(firstContent);
+                            n--;
+                        }
+                        if (n > 0) {
+                            s.request(n);
+                        }
+                    }
+
+                    @Override
+                    public void cancel() {
+                        releaseFirstContent();
+                        s.cancel();
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Throwable cause) {
+                if (firstContent == null) {
+                    finishSubscribingWithCompletedUpstream(cause);
+                } else {
+                    releaseFirstContent();
+                    subscriber.onError(cause);
+                }
+            }
+
+            @Override
+            public void onComplete() {
+                if (firstContent == null) {
+                    finishSubscribingWithCompletedUpstream(null);
+                } else {
+                    releaseFirstContent();
+                    subscriber.onComplete();
+                }
+            }
+
+            private void finishSubscribingWithCompletedUpstream(@Nullable Throwable cause) {
+                subscriber.onSubscribe(new Subscription() {
+                    @Override
+                    public void request(long n) {
+                        if (state == State.INIT) {
+                            state = State.HEADER_SENT;
+                            subscriber.onNext(headers);
+                            n--;
+                        }
+                        if (n > 0) {
+                            if (cause == null) {
+                                subscriber.onComplete();
+                            } else {
+                                subscriber.onError(cause);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void cancel() {
+                        // Do nothing because the upstream has already completed.
+                    }
+                });
+            }
+
+            private void releaseFirstContent() {
+                if (state != State.FIRST_CONTENT_SENT &&
+                    firstContent instanceof ReferenceCounted) {
+                    logger.debug("Release the cached content: {}", firstContent);
+                    ReferenceCountUtil.safeRelease(firstContent);
+                }
+            }
+        }
     }
 }
