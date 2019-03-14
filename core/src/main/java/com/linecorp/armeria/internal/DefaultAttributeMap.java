@@ -59,7 +59,7 @@ import io.netty.util.AttributeMap;
  */
 public class DefaultAttributeMap implements AttributeMap {
 
-    // Forked from Netty at d0912f27091e4548466df81f545c017a25c9d256
+    // Forked from Netty 4.1.34 at 506f0d8f8c10e1b24924f7d992a726d7bdd2e486
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray> updater =

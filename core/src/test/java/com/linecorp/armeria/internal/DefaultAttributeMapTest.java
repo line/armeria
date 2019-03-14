@@ -53,7 +53,7 @@ import io.netty.util.AttributeKey;
 
 public class DefaultAttributeMapTest {
 
-    // Forked from Netty at 2993760e9261f046db88a0e8ccf9edf4e9b0acad
+    // Forked from Netty 4.1.34 at 2993760e9261f046db88a0e8ccf9edf4e9b0acad
 
     private DefaultAttributeMap map;
 

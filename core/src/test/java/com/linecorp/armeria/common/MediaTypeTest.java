@@ -79,7 +79,7 @@ import com.google.common.testing.NullPointerTester;
  */
 public class MediaTypeTest {
 
-    // Forked from Guava at abd0906f6ed288671b75aa6f828a6ba904fe4477 (24.0)
+    // Forked from Guava 27.1 at 7da42d206b81c8fe184f73a9314fd8ffcf565560
 
     @Test // reflection
     public void testParse_useConstants() throws Exception {

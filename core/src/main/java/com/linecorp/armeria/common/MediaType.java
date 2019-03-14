@@ -92,7 +92,7 @@ import com.google.common.collect.Multimaps;
 @JsonDeserialize(using = MediaTypeJsonDeserializer.class)
 public final class MediaType {
 
-    // Forked from Guava at 9704538cd9aa8e4b783b824773cfc76290f572c2 (27.0)
+    // Forked from Guava 27.1 at 8e174e76971449665658a800af6dd350806cc934
 
     private static final String CHARSET_ATTRIBUTE = "charset";
     private static final ImmutableListMultimap<String, String> UTF_8_CONSTANT_PARAMETERS =
@@ -188,6 +188,11 @@ public final class MediaType {
     public static final MediaType TSV_UTF_8 = createConstantUtf8(TEXT_TYPE, "tab-separated-values");
 
     public static final MediaType VCARD_UTF_8 = createConstantUtf8(TEXT_TYPE, "vcard");
+
+    /**
+     * UTF-8 encoded <a href="https://en.wikipedia.org/wiki/Wireless_Markup_Language">Wireless Markup
+     * Language</a>.
+     */
     public static final MediaType WML_UTF_8 = createConstantUtf8(TEXT_TYPE, "vnd.wap.wml");
 
     /**
@@ -203,13 +208,16 @@ public final class MediaType {
      */
     public static final MediaType VTT_UTF_8 = createConstantUtf8(TEXT_TYPE, "vtt");
 
-    /* image types */
+    /**
+     * <a href="https://en.wikipedia.org/wiki/BMP_file_format">Bitmap file format</a> ({@code bmp}
+     * files).
+     */
     public static final MediaType BMP = createConstant(IMAGE_TYPE, "bmp");
 
     /**
-     * The media type for the <a href="http://en.wikipedia.org/wiki/Camera_Image_File_Format">Canon
-     * Image File Format</a> ({@code crw} files), a widely-used "raw image" format for cameras. It is
-     * found in {@code /etc/mime.types}, e.g. in <a href=
+     * The <a href="https://en.wikipedia.org/wiki/Camera_Image_File_Format">Canon Image File
+     * Format</a> ({@code crw} files), a widely-used "raw image" format for cameras. It is found in
+     * {@code /etc/mime.types}, e.g. in <a href=
      * "http://anonscm.debian.org/gitweb/?p=collab-maint/mime-support.git;a=blob;f=mime.types;hb=HEAD"
      * >Debian 3.48-1</a>.
      */
@@ -221,7 +229,7 @@ public final class MediaType {
     public static final MediaType PNG = createConstant(IMAGE_TYPE, "png");
 
     /**
-     * The media type for the Photoshop File Format ({@code psd} files) as defined by <a
+     * The Photoshop File Format ({@code psd} files) as defined by <a
      * href="http://www.iana.org/assignments/media-types/image/vnd.adobe.photoshop">IANA</a>, and
      * found in {@code /etc/mime.types}, e.g. <a
      * href="http://svn.apache.org/repos/asf/httpd/httpd/branches/1.3.x/conf/mime.types"></a> of the
@@ -239,6 +247,10 @@ public final class MediaType {
 
     public static final MediaType SVG_UTF_8 = createConstantUtf8(IMAGE_TYPE, "svg+xml");
     public static final MediaType TIFF = createConstant(IMAGE_TYPE, "tiff");
+
+    /**
+     * <a href="https://en.wikipedia.org/wiki/WebP">WebP image format</a>.
+     */
     public static final MediaType WEBP = createConstant(IMAGE_TYPE, "webp");
 
     /* audio types */
@@ -248,58 +260,54 @@ public final class MediaType {
     public static final MediaType WEBM_AUDIO = createConstant(AUDIO_TYPE, "webm");
 
     /**
-     * Media type for L16 audio, as defined by <a href="https://tools.ietf.org/html/rfc2586">RFC
-     * 2586</a>.
+     * L16 audio, as defined by <a href="https://tools.ietf.org/html/rfc2586">RFC 2586</a>.
      */
     public static final MediaType L16_AUDIO = createConstant(AUDIO_TYPE, "l16");
 
     /**
-     * Media type for L24 audio, as defined by <a href="https://tools.ietf.org/html/rfc3190">RFC
-     * 3190</a>.
+     * L24 audio, as defined by <a href="https://tools.ietf.org/html/rfc3190">RFC 3190</a>.
      */
     public static final MediaType L24_AUDIO = createConstant(AUDIO_TYPE, "l24");
 
     /**
-     * Media type for Basic Audio, as defined by <a
-     * href="http://tools.ietf.org/html/rfc2046#section-4.3">RFC 2046</a>.
+     * Basic Audio, as defined by <a href="http://tools.ietf.org/html/rfc2046#section-4.3">RFC
+     * 2046</a>.
      */
     public static final MediaType BASIC_AUDIO = createConstant(AUDIO_TYPE, "basic");
 
     /**
-     * Media type for Advanced Audio Coding. For more information, see <a
+     * Advanced Audio Coding. For more information, see <a
      * href="https://en.wikipedia.org/wiki/Advanced_Audio_Coding">Advanced Audio Coding</a>.
      */
     public static final MediaType AAC_AUDIO = createConstant(AUDIO_TYPE, "aac");
 
     /**
-     * Media type for Vorbis Audio, as defined by <a href="http://tools.ietf.org/html/rfc5215">RFC
-     * 5215</a>.
+     * Vorbis Audio, as defined by <a href="http://tools.ietf.org/html/rfc5215">RFC 5215</a>.
      */
     public static final MediaType VORBIS_AUDIO = createConstant(AUDIO_TYPE, "vorbis");
 
     /**
-     * Media type for Windows Media Audio. For more information, see <a
+     * Windows Media Audio. For more information, see <a
      * href="https://msdn.microsoft.com/en-us/library/windows/desktop/dd562994(v=vs.85).aspx">file
      * name extensions for Windows Media metafiles</a>.
      */
     public static final MediaType WMA_AUDIO = createConstant(AUDIO_TYPE, "x-ms-wma");
 
     /**
-     * Media type for Windows Media metafiles. For more information, see <a
+     * Windows Media metafiles. For more information, see <a
      * href="https://msdn.microsoft.com/en-us/library/windows/desktop/dd562994(v=vs.85).aspx">file
      * name extensions for Windows Media metafiles</a>.
      */
     public static final MediaType WAX_AUDIO = createConstant(AUDIO_TYPE, "x-ms-wax");
 
     /**
-     * Media type for Real Audio. For more information, see <a
+     * Real Audio. For more information, see <a
      * href="http://service.real.com/help/faq/rp8/configrp8win.html">this link</a>.
      */
     public static final MediaType VND_REAL_AUDIO = createConstant(AUDIO_TYPE, "vnd.rn-realaudio");
 
     /**
-     * Media type for WAVE format, as defined by <a href="https://tools.ietf.org/html/rfc2361">RFC
-     * 2361</a>.
+     * WAVE format, as defined by <a href="https://tools.ietf.org/html/rfc2361">RFC 2361</a>.
      */
     public static final MediaType VND_WAVE_AUDIO = createConstant(AUDIO_TYPE, "vnd.wave");
 
@@ -312,21 +320,21 @@ public final class MediaType {
     public static final MediaType WMV = createConstant(VIDEO_TYPE, "x-ms-wmv");
 
     /**
-     * Media type for Flash video. For more information, see <a href=
+     * Flash video. For more information, see <a href=
      * "http://help.adobe.com/en_US/ActionScript/3.0_ProgrammingAS3/WS5b3ccc516d4fbf351e63e3d118a9b90204-7d48.html"
      * >this link</a>.
      */
     public static final MediaType FLV_VIDEO = createConstant(VIDEO_TYPE, "x-flv");
 
     /**
-     * Media type for the 3GP multimedia container format. For more information, see <a
+     * The 3GP multimedia container format. For more information, see <a
      * href="ftp://www.3gpp.org/tsg_sa/TSG_SA/TSGS_23/Docs/PDF/SP-040065.pdf#page=10">3GPP TS
      * 26.244</a>.
      */
     public static final MediaType THREE_GPP_VIDEO = createConstant(VIDEO_TYPE, "3gpp");
 
     /**
-     * Media type for the 3G2 multimedia container format. For more information, see <a
+     * The 3G2 multimedia container format. For more information, see <a
      * href="http://www.3gpp2.org/Public_html/specs/C.S0050-B_v1.0_070521.pdf#page=16">3GPP2
      * C.S0050-B</a>.
      */
@@ -344,20 +352,19 @@ public final class MediaType {
     public static final MediaType BZIP2 = createConstant(APPLICATION_TYPE, "x-bzip2");
 
     /**
-     * Media type for <a href="https://www.dartlang.org/articles/embedding-in-html/">dart files</a>.
+     * Files in the <a href="https://www.dartlang.org/articles/embedding-in-html/">dart</a>.
      */
     public static final MediaType DART_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "dart");
 
     /**
-     * Media type for <a href="https://goo.gl/2QoMvg">Apple Passbook</a>.
+     * <a href="https://goo.gl/2QoMvg">Apple Passbook</a>.
      */
     public static final MediaType APPLE_PASSBOOK =
             createConstant(APPLICATION_TYPE, "vnd.apple.pkpass");
 
     /**
-     * Media type for <a href="http://en.wikipedia.org/wiki/Embedded_OpenType">Embedded OpenType</a>
-     * fonts. This is <a
-     * href="http://www.iana.org/assignments/media-types/application/vnd.ms-fontobject">registered
+     * <a href="http://en.wikipedia.org/wiki/Embedded_OpenType">Embedded OpenType</a> fonts. This is
+     * <a href="http://www.iana.org/assignments/media-types/application/vnd.ms-fontobject">registered
      * </a> with the IANA.
      */
     public static final MediaType EOT = createConstant(APPLICATION_TYPE, "vnd.ms-fontobject");
@@ -394,8 +401,8 @@ public final class MediaType {
     public static final MediaType GZIP = createConstant(APPLICATION_TYPE, "x-gzip");
 
     /**
-     * Media type for the <a href="https://tools.ietf.org/html/draft-kelly-json-hal-08#section-3">JSON
-     * Hypertext Application Language (HAL) documents</a>.
+     * <a href="https://tools.ietf.org/html/draft-kelly-json-hal-08#section-3">JSON Hypertext
+     * Application Language (HAL) documents</a>.
      */
     public static final MediaType HAL_JSON = createConstant(APPLICATION_TYPE, "hal+json");
 
@@ -406,6 +413,18 @@ public final class MediaType {
      */
     public static final MediaType JAVASCRIPT_UTF_8 =
             createConstantUtf8(APPLICATION_TYPE, "javascript");
+
+    /**
+     * For <a href="https://tools.ietf.org/html/rfc7515">JWS or JWE objects using the Compact
+     * Serialization</a>.
+     */
+    public static final MediaType JOSE = createConstant(APPLICATION_TYPE, "jose");
+
+    /**
+     * For <a href="https://tools.ietf.org/html/rfc7515">JWS or JWE objects using the JSON
+     * Serialization</a>.
+     */
+    public static final MediaType JOSE_JSON = createConstant(APPLICATION_TYPE, "jose+json");
 
     public static final MediaType JSON_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "json");
     public static final MediaType JSON = createConstant(APPLICATION_TYPE, "json");
@@ -424,56 +443,64 @@ public final class MediaType {
     public static final MediaType JSON_SEQ = createConstant(APPLICATION_TYPE, "json-seq");
 
     /**
-     * Media type for the <a href="http://www.w3.org/TR/appmanifest/">Manifest for a web
-     * application</a>.
+     * The <a href="http://www.w3.org/TR/appmanifest/">Manifest for a web application</a>.
      */
     public static final MediaType MANIFEST_JSON_UTF_8 =
             createConstantUtf8(APPLICATION_TYPE, "manifest+json");
 
     /**
-     * Media type for <a href="http://www.opengeospatial.org/standards/kml/">OGC KML (Keyhole Markup
-     * Language)</a>.
+     * <a href="http://www.opengeospatial.org/standards/kml/">OGC KML (Keyhole Markup Language)</a>.
      */
     public static final MediaType KML = createConstant(APPLICATION_TYPE, "vnd.google-earth.kml+xml");
 
     /**
-     * Media type for <a href="http://www.opengeospatial.org/standards/kml/">OGC KML (Keyhole Markup
-     * Language)</a>, compressed using the ZIP format into KMZ archives.
+     * <a href="http://www.opengeospatial.org/standards/kml/">OGC KML (Keyhole Markup Language)</a>,
+     * compressed using the ZIP format into KMZ archives.
      */
     public static final MediaType KMZ = createConstant(APPLICATION_TYPE, "vnd.google-earth.kmz");
 
     /**
-     * Media type for the <a href="https://tools.ietf.org/html/rfc4155">mbox database format</a>.
+     * The <a href="https://tools.ietf.org/html/rfc4155">mbox database format</a>.
      */
     public static final MediaType MBOX = createConstant(APPLICATION_TYPE, "mbox");
 
     /**
-     * Media type for <a href="http://goo.gl/1pGBFm">Apple over-the-air mobile configuration
-     * profiles</a>.
+     * <a href="http://goo.gl/1pGBFm">Apple over-the-air mobile configuration profiles</a>.
      */
     public static final MediaType APPLE_MOBILE_CONFIG =
             createConstant(APPLICATION_TYPE, "x-apple-aspen-config");
 
+    /** <a href="http://goo.gl/XDQ1h2">Microsoft Excel</a> spreadsheets. */
     public static final MediaType MICROSOFT_EXCEL = createConstant(APPLICATION_TYPE, "vnd.ms-excel");
+
+    /**
+     * <a href="http://goo.gl/XrTEqG">Microsoft Outlook</a> items.
+     */
+    public static final MediaType MICROSOFT_OUTLOOK =
+            createConstant(APPLICATION_TYPE, "vnd.ms-outlook");
+
+    /** <a href="http://goo.gl/XDQ1h2">Microsoft Powerpoint</a> presentations. */
     public static final MediaType MICROSOFT_POWERPOINT =
             createConstant(APPLICATION_TYPE, "vnd.ms-powerpoint");
+
+    /** <a href="http://goo.gl/XDQ1h2">Microsoft Word</a> documents. */
     public static final MediaType MICROSOFT_WORD = createConstant(APPLICATION_TYPE, "msword");
 
     /**
-     * Media type for WASM applications. For more information see <a
-     * href="https://webassembly.org/">the Web Assembly overview</a>.
+     * WASM applications. For more information see <a href="https://webassembly.org/">the Web Assembly
+     * overview</a>.
      */
     public static final MediaType WASM_APPLICATION = createConstant(APPLICATION_TYPE, "wasm");
 
     /**
-     * Media type for NaCl applications. For more information see <a
+     * NaCl applications. For more information see <a
      * href="https://developer.chrome.com/native-client/devguide/coding/application-structure">the
      * Developer Guide for Native Client Application Structure</a>.
      */
     public static final MediaType NACL_APPLICATION = createConstant(APPLICATION_TYPE, "x-nacl");
 
     /**
-     * Media type for NaCl portable applications. For more information see <a
+     * NaCl portable applications. For more information see <a
      * href="https://developer.chrome.com/native-client/devguide/coding/application-structure">the
      * Developer Guide for Native Client Application Structure</a>.
      */
@@ -506,11 +533,17 @@ public final class MediaType {
      */
     public static final MediaType PROTOBUF = createConstant(APPLICATION_TYPE, "protobuf");
 
+    /**
+     * <a href="https://en.wikipedia.org/wiki/RDF/XML">RDF/XML</a> documents, which are XML
+     * serializations of <a
+     * href="https://en.wikipedia.org/wiki/Resource_Description_Framework">Resource Description
+     * Framework</a> graphs.
+     */
     public static final MediaType RDF_XML_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "rdf+xml");
+
     public static final MediaType RTF_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "rtf");
     /**
-     * Media type for SFNT fonts (which includes <a
-     * href="http://en.wikipedia.org/wiki/TrueType/">TrueType</a> and <a
+     * SFNT fonts (which includes <a href="http://en.wikipedia.org/wiki/TrueType/">TrueType</a> and <a
      * href="http://en.wikipedia.org/wiki/OpenType/">OpenType</a> fonts). This is <a
      * href="http://www.iana.org/assignments/media-types/application/font-sfnt">registered</a> with
      * the IANA.
@@ -519,6 +552,11 @@ public final class MediaType {
 
     public static final MediaType SHOCKWAVE_FLASH =
             createConstant(APPLICATION_TYPE, "x-shockwave-flash");
+
+    /**
+     * {@code skp} files produced by the 3D Modeling software <a
+     * href="https://www.sketchup.com/">SketchUp</a>.
+     */
     public static final MediaType SKETCHUP = createConstant(APPLICATION_TYPE, "vnd.sketchup.skp");
     /**
      * As described in <a href="http://www.ietf.org/rfc/rfc3902.txt">RFC 3902</a>, this constant
@@ -532,25 +570,28 @@ public final class MediaType {
     public static final MediaType SOAP_XML_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "soap+xml");
 
     public static final MediaType TAR = createConstant(APPLICATION_TYPE, "x-tar");
+
     /**
-     * Media type for the <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font
-     * Format</a> (WOFF) <a href="http://www.w3.org/TR/WOFF/">defined</a> by the W3C. This is <a
+     * <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font Format</a> (WOFF) <a
+     * href="http://www.w3.org/TR/WOFF/">defined</a> by the W3C. This is <a
      * href="http://www.iana.org/assignments/media-types/application/font-woff">registered</a> with
      * the IANA.
      */
     public static final MediaType WOFF = createConstant(APPLICATION_TYPE, "font-woff");
+
     /**
-     * Media type for the <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font
-     * Format</a> (WOFF) version 2 <a href="https://www.w3.org/TR/WOFF2/">defined</a> by the W3C.
+     * <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font Format</a> (WOFF)
+     * version 2 <a href="https://www.w3.org/TR/WOFF2/">defined</a> by the W3C.
      */
     public static final MediaType WOFF2 = createConstant(APPLICATION_TYPE, "font-woff2");
 
     public static final MediaType XHTML_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "xhtml+xml");
+
     /**
-     * Media type for Extensible Resource Descriptors. This is not yet registered with the IANA, but
-     * it is specified by OASIS in the <a
-     * href="http://docs.oasis-open.org/xri/xrd/v1.0/cd02/xrd-1.0-cd02.html">XRD definition</a> and
-     * implemented in projects such as <a href="http://code.google.com/p/webfinger/">WebFinger</a>.
+     * Extensible Resource Descriptors. This is not yet registered with the IANA, but it is specified
+     * by OASIS in the <a href="http://docs.oasis-open.org/xri/xrd/v1.0/cd02/xrd-1.0-cd02.html">XRD
+     * definition</a> and implemented in projects such as <a
+     * href="http://code.google.com/p/webfinger/">WebFinger</a>.
      */
     public static final MediaType XRD_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "xrd+xml");
 
