@@ -280,7 +280,7 @@ If you use :api:`CircuitBreakerBuilder`, you can configure the parameters which 
 
   - The threshold that changes :api:`CircuitBreaker`'s state to ``OPEN`` when the number of failed
     :apiplural:`Request` divided by the number of total :apiplural:`Request` exceeds it.
-    The default value is ``0.2``.
+    The default value is ``0.5``.
 
 - ``minimumRequestThreshold``:
 
