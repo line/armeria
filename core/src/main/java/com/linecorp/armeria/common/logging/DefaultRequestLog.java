@@ -32,8 +32,6 @@ import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONS
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.SCHEME;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -56,10 +54,10 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
-import io.netty.util.internal.PlatformDependent;
 
 /**
  * Default {@link RequestLog} implementation.
@@ -368,7 +366,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void startRequest0(Channel channel, SessionProtocol sessionProtocol,
                                @Nullable SSLSession sslSession, boolean updateAvailability) {
         startRequest0(channel, sessionProtocol, sslSession,
-                      System.nanoTime(), currentTimeMicros(),
+                      System.nanoTime(), SystemInfo.currentTimeMicros(),
                       updateAvailability);
     }
 
@@ -663,7 +661,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
         startRequest0(null, context().sessionProtocol(), null,
-                      requestEndTimeNanos, currentTimeMicros(), false);
+                      requestEndTimeNanos, SystemInfo.currentTimeMicros(), false);
 
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
@@ -681,7 +679,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void startResponse0(boolean updateAvailability) {
-        startResponse0(System.nanoTime(), currentTimeMicros(), updateAvailability);
+        startResponse0(System.nanoTime(), SystemInfo.currentTimeMicros(), updateAvailability);
     }
 
     private void startResponse0(long responseStartTimeNanos, long responseStartTimeMicros,
@@ -933,7 +931,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
         // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
         // totalResponseDuration will be 0
-        startResponse0(responseEndTimeNanos, currentTimeMicros(), false);
+        startResponse0(responseEndTimeNanos, SystemInfo.currentTimeMicros(), false);
 
         this.responseEndTimeNanos = responseEndTimeNanos;
         if (this.responseCause == null) {
@@ -1192,17 +1190,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         ListenerEntry(RequestLogListener listener, int interestedFlags) {
             this.listener = listener;
             this.interestedFlags = interestedFlags;
-        }
-    }
-
-    private static long currentTimeMicros() {
-        if (PlatformDependent.javaVersion() == 8) {
-            return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
-        } else {
-            // Java 9+ support higher precision wall time.
-            final Instant now = Clock.systemUTC().instant();
-            return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
-                    now.getNano());
         }
     }
 }
