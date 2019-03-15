@@ -271,7 +271,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
                 @Override
                 public void request(long n) {
                     if (!isValidDemand(n)) {
-                        releaseFirstContent();
+                        cancel();
                         return;
                     }
                     if (state == State.FIRST_CONTENT_SENT) {
