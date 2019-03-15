@@ -105,9 +105,9 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
         return Mono.defer(() -> {
-            final HttpResponse response = HttpResponse.of(new HttpResponsePublisher(
+            final HttpResponse response = HttpResponse.of(new HttpResponseProcessor(
                     headers, publisher.map(factoryWrapper::toHttpData)
-                                      // HttpResponsePublisher is not thread-safe, so we make the upstream
+                                      // HttpResponseProcessor is not thread-safe, so we make the upstream
                                       // publisher publish objects on the event loop. The downstream subscriber,
                                       // PublisherBasedHttpResponse, also publishes the objects on the event
                                       // loop. So it's okay to use event loop from here.
@@ -205,169 +205,164 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
     /**
      * The {@link ChannelSendOperator.WriteBarrier} caches the first published object but it does nothing
-     * when it is discarded, which might cause {@link ByteBuf} leak. This {@link Publisher} and
-     * {@link Subscriber} behaves similarly but will release the cached object when the subscription is
-     * completed.
+     * when it is discarded, which might cause {@link ByteBuf} leak. This processor behaves similarly
+     * but will release the cached object when the subscription is completed.
      */
-    private static final class HttpResponsePublisher implements Publisher<HttpObject> {
+    private static final class HttpResponseProcessor implements Publisher<HttpObject>, Subscriber<HttpData> {
+
+        private enum State {
+            INIT, HEADER_SENT, FIRST_CONTENT_SENT
+        }
 
         private final HttpHeaders headers;
         private final Flux<HttpData> upstream;
 
-        HttpResponsePublisher(HttpHeaders headers, Flux<HttpData> upstream) {
+        private State state = State.INIT;
+
+        @Nullable
+        private Subscriber<? super HttpObject> subscriber;
+        @Nullable
+        private HttpData firstContent;
+        @Nullable
+        private Subscription upstreamSubscription;
+
+        HttpResponseProcessor(HttpHeaders headers, Flux<HttpData> upstream) {
             this.headers = headers;
             this.upstream = upstream;
         }
 
         @Override
         public void subscribe(Subscriber<? super HttpObject> subscriber) {
-            final ResponseContentSubscriber upstreamSubscriber =
-                    new ResponseContentSubscriber(headers, requireNonNull(subscriber, "subscriber"));
-            upstream.subscribe(upstreamSubscriber);
+            this.subscriber = requireNonNull(subscriber, "subscriber");
+            upstream.subscribe(this);
         }
 
-        private static final class ResponseContentSubscriber implements Subscriber<HttpData> {
+        private Subscriber<? super HttpObject> subscriber() {
+            assert subscriber != null : "Subscriber is null.";
+            return subscriber;
+        }
 
-            private enum State {
-                INIT, HEADER_SENT, FIRST_CONTENT_SENT
+        @Override
+        public void onSubscribe(Subscription s) {
+            assert upstreamSubscription == null;
+            upstreamSubscription = s;
+            // To get the cached object from the upstream which is ChannelSendOperator#WriteBarrier,
+            // request 1 object to the publisher before the subscription is finished.
+            s.request(1);
+        }
+
+        @Override
+        public void onNext(HttpData o) {
+            if (firstContent == null) {
+                firstContent = o;
+                assert upstreamSubscription != null;
+                finishSubscribing(upstreamSubscription);
+                return;
             }
 
-            private final HttpHeaders headers;
-            private final Subscriber<? super HttpObject> subscriber;
-            private State state = State.INIT;
+            assert state == State.FIRST_CONTENT_SENT;
+            subscriber().onNext(o);
+        }
 
-            @Nullable
-            private HttpData firstContent;
-            @Nullable
-            private Subscription upstreamSubscription;
+        private void finishSubscribing(Subscription s) {
+            assert firstContent != null;
+            subscriber().onSubscribe(new Subscription() {
+                @Override
+                public void request(long n) {
+                    if (!isValidDemand(n)) {
+                        return;
+                    }
+                    if (state == State.FIRST_CONTENT_SENT) {
+                        s.request(n);
+                        return;
+                    }
 
-            ResponseContentSubscriber(HttpHeaders headers, Subscriber<? super HttpObject> subscriber) {
-                this.headers = headers;
-                this.subscriber = subscriber;
-            }
-
-            @Override
-            public void onSubscribe(Subscription s) {
-                assert upstreamSubscription == null;
-                upstreamSubscription = s;
-                // To get the cached object from the upstream which is ChannelSendOperator#WriteBarrier,
-                // request 1 object to the publisher before the subscription is finished.
-                s.request(1);
-            }
-
-            @Override
-            public void onNext(HttpData o) {
-                if (firstContent == null) {
-                    firstContent = o;
-                    assert upstreamSubscription != null;
-                    finishSubscribing(upstreamSubscription);
-                    return;
+                    if (state == State.INIT) {
+                        state = State.HEADER_SENT;
+                        subscriber().onNext(headers);
+                        n--;
+                    }
+                    if (state == State.HEADER_SENT && n > 0) {
+                        state = State.FIRST_CONTENT_SENT;
+                        subscriber().onNext(firstContent);
+                        n--;
+                    }
+                    if (n > 0) {
+                        s.request(n);
+                    }
                 }
 
-                assert state == State.FIRST_CONTENT_SENT;
-                subscriber.onNext(o);
-            }
-
-            private void finishSubscribing(Subscription s) {
-                assert firstContent != null;
-                subscriber.onSubscribe(new Subscription() {
-                    @Override
-                    public void request(long n) {
-                        if (!isValidDemand(n)) {
-                            return;
-                        }
-                        if (state == State.FIRST_CONTENT_SENT) {
-                            s.request(n);
-                            return;
-                        }
-
-                        if (state == State.INIT) {
-                            state = State.HEADER_SENT;
-                            subscriber.onNext(headers);
-                            n--;
-                        }
-                        if (state == State.HEADER_SENT && n > 0) {
-                            state = State.FIRST_CONTENT_SENT;
-                            subscriber.onNext(firstContent);
-                            n--;
-                        }
-                        if (n > 0) {
-                            s.request(n);
-                        }
-                    }
-
-                    @Override
-                    public void cancel() {
-                        releaseFirstContent();
-                        s.cancel();
-                    }
-                });
-            }
-
-            @Override
-            public void onError(Throwable cause) {
-                if (firstContent == null) {
-                    finishSubscribingWithCompletedUpstream(cause);
-                } else {
+                @Override
+                public void cancel() {
                     releaseFirstContent();
-                    subscriber.onError(cause);
+                    s.cancel();
                 }
-            }
+            });
+        }
 
-            @Override
-            public void onComplete() {
-                if (firstContent == null) {
-                    finishSubscribingWithCompletedUpstream(null);
-                } else {
-                    releaseFirstContent();
-                    subscriber.onComplete();
-                }
+        @Override
+        public void onError(Throwable cause) {
+            if (firstContent == null) {
+                finishSubscribingWithCompletedUpstream(cause);
+            } else {
+                releaseFirstContent();
+                subscriber().onError(cause);
             }
+        }
 
-            private void finishSubscribingWithCompletedUpstream(@Nullable Throwable cause) {
-                subscriber.onSubscribe(new Subscription() {
-                    @Override
-                    public void request(long n) {
-                        if (!isValidDemand(n)) {
-                            return;
-                        }
-                        if (state == State.INIT) {
-                            state = State.HEADER_SENT;
-                            subscriber.onNext(headers);
-                            n--;
-                        }
-                        if (n > 0) {
-                            if (cause == null) {
-                                subscriber.onComplete();
-                            } else {
-                                subscriber.onError(cause);
-                            }
+        @Override
+        public void onComplete() {
+            if (firstContent == null) {
+                finishSubscribingWithCompletedUpstream(null);
+            } else {
+                releaseFirstContent();
+                subscriber().onComplete();
+            }
+        }
+
+        private void finishSubscribingWithCompletedUpstream(@Nullable Throwable cause) {
+            subscriber().onSubscribe(new Subscription() {
+                @Override
+                public void request(long n) {
+                    if (!isValidDemand(n)) {
+                        return;
+                    }
+                    if (state == State.INIT) {
+                        state = State.HEADER_SENT;
+                        subscriber().onNext(headers);
+                        n--;
+                    }
+                    if (n > 0) {
+                        if (cause == null) {
+                            subscriber().onComplete();
+                        } else {
+                            subscriber().onError(cause);
                         }
                     }
-
-                    @Override
-                    public void cancel() {
-                        // Do nothing because the upstream has already completed.
-                    }
-                });
-            }
-
-            private void releaseFirstContent() {
-                if (state != State.FIRST_CONTENT_SENT &&
-                    firstContent instanceof ReferenceCounted) {
-                    logger.debug("Releasing the first cached content: {}", firstContent);
-                    ReferenceCountUtil.safeRelease(firstContent);
                 }
-            }
 
-            private boolean isValidDemand(long n) {
-                if (n > 0) {
-                    return true;
+                @Override
+                public void cancel() {
+                    // Do nothing because the upstream has already been completed.
                 }
-                subscriber.onError(new IllegalArgumentException(
-                        "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
-                return false;
+            });
+        }
+
+        private void releaseFirstContent() {
+            if (state != State.FIRST_CONTENT_SENT &&
+                firstContent instanceof ReferenceCounted) {
+                logger.debug("Releasing the first cached content: {}", firstContent);
+                ReferenceCountUtil.safeRelease(firstContent);
             }
+        }
+
+        private boolean isValidDemand(long n) {
+            if (n > 0) {
+                return true;
+            }
+            subscriber().onError(new IllegalArgumentException(
+                    "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+            return false;
         }
     }
 }
