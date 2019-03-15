@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -57,7 +58,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * A {@link ServerHttpResponse} implementation for the Armeria HTTP server.
@@ -107,12 +107,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
         return Mono.defer(() -> {
             final HttpResponse response = HttpResponse.of(new HttpResponseProcessor(
-                    headers, publisher.map(factoryWrapper::toHttpData)
-                                      // HttpResponseProcessor is not thread-safe, so we make the upstream
-                                      // publisher publish objects on the event loop. The downstream subscriber,
-                                      // PublisherBasedHttpResponse, also publishes the objects on the event
-                                      // loop. So it's okay to use event loop from here.
-                                      .publishOn(Schedulers.fromExecutor(ctx.eventLoop()), 1)));
+                    ctx.eventLoop(), headers, publisher.map(factoryWrapper::toHttpData)));
             future.complete(response);
             return Mono.fromFuture(response.completionFuture());
         });
@@ -215,19 +210,22 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
             INIT, HEADER_SENT, FIRST_CONTENT_SENT
         }
 
+        private final EventLoop eventLoop;
         private final HttpHeaders headers;
         private final Flux<HttpData> upstream;
 
         private State state = State.INIT;
+        private boolean onCompleteSignalReceived;
 
         @Nullable
         private Subscriber<? super HttpObject> subscriber;
         @Nullable
-        private HttpData firstContent;
+        private HttpObject firstContent;
         @Nullable
         private Subscription upstreamSubscription;
 
-        HttpResponseProcessor(HttpHeaders headers, Flux<HttpData> upstream) {
+        HttpResponseProcessor(EventLoop eventLoop, HttpHeaders headers, Flux<HttpData> upstream) {
+            this.eventLoop = eventLoop;
             this.headers = headers;
             this.upstream = upstream;
         }
@@ -254,15 +252,24 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
         @Override
         public void onNext(HttpData o) {
+            if (eventLoop.inEventLoop()) {
+                onNext0(o);
+            } else {
+                eventLoop.execute(() -> onNext0(o));
+            }
+        }
+
+        private void onNext0(HttpObject o) {
             if (firstContent == null) {
                 firstContent = o;
                 assert upstreamSubscription != null;
                 finishSubscribing(upstreamSubscription);
-                return;
+            } else {
+                // We don't request more demands to the upstream publisher until the first cached content
+                // is published to the subscriber.
+                assert state == State.FIRST_CONTENT_SENT;
+                subscriber().onNext(o);
             }
-
-            assert state == State.FIRST_CONTENT_SENT;
-            subscriber().onNext(o);
         }
 
         private void finishSubscribing(Subscription s) {
@@ -274,23 +281,37 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
                         cancel();
                         return;
                     }
-                    if (state == State.FIRST_CONTENT_SENT) {
-                        s.request(n);
-                        return;
+                    if (eventLoop.inEventLoop()) {
+                        request0(n);
+                    } else {
+                        eventLoop.execute(() -> request0(n));
                     }
+                }
 
-                    if (state == State.INIT) {
-                        state = State.HEADER_SENT;
-                        subscriber().onNext(headers);
-                        n--;
-                    }
-                    if (state == State.HEADER_SENT && n > 0) {
-                        state = State.FIRST_CONTENT_SENT;
-                        subscriber().onNext(firstContent);
-                        n--;
-                    }
-                    if (n > 0) {
-                        s.request(n);
+                private void request0(long n) {
+                    boolean more = true;
+                    while (more) {
+                        switch (state) {
+                            case INIT:
+                                state = State.HEADER_SENT;
+                                subscriber().onNext(headers);
+                                more = --n > 0;
+                                break;
+                            case HEADER_SENT:
+                                state = State.FIRST_CONTENT_SENT;
+                                subscriber().onNext(firstContent);
+                                more = --n > 0;
+                                break;
+                            case FIRST_CONTENT_SENT:
+                                // If we already received onComplete signal, do not request more demands.
+                                if (onCompleteSignalReceived) {
+                                    subscriber().onComplete();
+                                } else {
+                                    s.request(n);
+                                }
+                                more = false;
+                                break;
+                        }
                     }
                 }
 
@@ -304,6 +325,14 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
         @Override
         public void onError(Throwable cause) {
+            if (eventLoop.inEventLoop()) {
+                onError0(cause);
+            } else {
+                eventLoop.execute(() -> onError0(cause));
+            }
+        }
+
+        private void onError0(Throwable cause) {
             if (firstContent == null) {
                 finishSubscribingWithCompletedUpstream(cause);
             } else {
@@ -314,11 +343,26 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
         @Override
         public void onComplete() {
-            if (firstContent == null) {
-                finishSubscribingWithCompletedUpstream(null);
+            if (eventLoop.inEventLoop()) {
+                onComplete0();
             } else {
-                releaseFirstContent();
+                eventLoop.execute(this::onComplete0);
+            }
+        }
+
+        private void onComplete0() {
+            if (firstContent == null) {
+                // onComplete can be invoked immediately in response to the first request if the upstream
+                // publisher has no element to emit.
+                finishSubscribingWithCompletedUpstream(null);
+            } else if (state == State.FIRST_CONTENT_SENT) {
+                // onComplete can be invoked immediately after onNext is invoked, if the upstream publisher
+                // has only one element to emit. In this case, the headers and the first cached content
+                // might not be published to the subscriber. So we keep the onComplete signal and send it later
+                // when the subscriber requests more demands.
                 subscriber().onComplete();
+            } else {
+                onCompleteSignalReceived = true;
             }
         }
 
@@ -329,12 +373,21 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
                     if (!isValidDemand(n)) {
                         return;
                     }
+                    if (eventLoop.inEventLoop()) {
+                        request0(n);
+                    } else {
+                        eventLoop.execute(() -> request0(n));
+                    }
+                }
+
+                private void request0(long n) {
                     if (state == State.INIT) {
                         state = State.HEADER_SENT;
                         subscriber().onNext(headers);
                         n--;
                     }
                     if (n > 0) {
+                        assert firstContent == null;
                         if (cause == null) {
                             subscriber().onComplete();
                         } else {
@@ -362,8 +415,14 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
             if (n > 0) {
                 return true;
             }
-            subscriber().onError(new IllegalArgumentException(
-                    "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+
+            final IllegalArgumentException iae = new IllegalArgumentException(
+                    "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)");
+            if (eventLoop.inEventLoop()) {
+                subscriber().onError(iae);
+            } else {
+                eventLoop.execute(() -> subscriber().onError(iae));
+            }
             return false;
         }
     }
