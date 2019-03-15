@@ -107,7 +107,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
         return Mono.defer(() -> {
             final HttpResponse response = HttpResponse.of(new HttpResponsePublisher(
                     headers, publisher.map(factoryWrapper::toHttpData)
-                                      // HttpResponsePublisher is not a thread-safe, so we make the upstream
+                                      // HttpResponsePublisher is not thread-safe, so we make the upstream
                                       // publisher publish objects on the event loop. The downstream subscriber,
                                       // PublisherBasedHttpResponse, also publishes the objects on the event
                                       // loop. So it's okay to use event loop from here.
@@ -205,9 +205,9 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
     /**
      * The {@link ChannelSendOperator.WriteBarrier} caches the first published object but it does nothing
-     * when the object is discarded, which might cause {@link ByteBuf} leak. This {@link Publisher}
-     * and {@link Subscriber} will doing with similar behavior but will release the cached object when
-     * the subscription is completed.
+     * when it is discarded, which might cause {@link ByteBuf} leak. This {@link Publisher} and
+     * {@link Subscriber} behaves similarly but will release the cached object when the subscription is
+     * completed.
      */
     private static final class HttpResponsePublisher implements Publisher<HttpObject> {
 
@@ -251,7 +251,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
                 assert upstreamSubscription == null;
                 upstreamSubscription = s;
                 // To get the cached object from the upstream which is ChannelSendOperator#WriteBarrier,
-                // request 1 object to the publisher before finishing subscribing.
+                // request 1 object to the publisher before the subscription is finished.
                 s.request(1);
             }
 
@@ -273,6 +273,9 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
                 subscriber.onSubscribe(new Subscription() {
                     @Override
                     public void request(long n) {
+                        if (!isValidDemand(n)) {
+                            return;
+                        }
                         if (state == State.FIRST_CONTENT_SENT) {
                             s.request(n);
                             return;
@@ -325,6 +328,9 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
                 subscriber.onSubscribe(new Subscription() {
                     @Override
                     public void request(long n) {
+                        if (!isValidDemand(n)) {
+                            return;
+                        }
                         if (state == State.INIT) {
                             state = State.HEADER_SENT;
                             subscriber.onNext(headers);
@@ -349,9 +355,18 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
             private void releaseFirstContent() {
                 if (state != State.FIRST_CONTENT_SENT &&
                     firstContent instanceof ReferenceCounted) {
-                    logger.debug("Release the cached content: {}", firstContent);
+                    logger.debug("Releasing the first cached content: {}", firstContent);
                     ReferenceCountUtil.safeRelease(firstContent);
                 }
+            }
+
+            private boolean isValidDemand(long n) {
+                if (n > 0) {
+                    return true;
+                }
+                subscriber.onError(new IllegalArgumentException(
+                        "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+                return false;
             }
         }
     }

@@ -111,7 +111,7 @@ public class ByteBufLeakTest {
                     .isEmpty();
         }
 
-        await().untilAsserted(this::makeSureReleasedAllAllocatedBuffers);
+        ensureAllBuffersAreReleased();
     }
 
     @Test
@@ -140,15 +140,17 @@ public class ByteBufLeakTest {
         // checking the allocated buffers.
         Thread.sleep(3000);
 
-        await().untilAsserted(this::makeSureReleasedAllAllocatedBuffers);
+        ensureAllBuffersAreReleased();
     }
 
-    private void makeSureReleasedAllAllocatedBuffers() {
-        NettyDataBuffer buffer;
-        while ((buffer = allocatedBuffers.peek()) != null) {
-            assertThat(buffer.getNativeBuffer().refCnt()).isZero();
-            allocatedBuffers.poll();
-        }
-        assertThat(allocatedBuffers).isEmpty();
+    private void ensureAllBuffersAreReleased() {
+        await().untilAsserted(() -> {
+            NettyDataBuffer buffer;
+            while ((buffer = allocatedBuffers.peek()) != null) {
+                assertThat(buffer.getNativeBuffer().refCnt()).isZero();
+                allocatedBuffers.poll();
+            }
+            assertThat(allocatedBuffers).isEmpty();
+        });
     }
 }
