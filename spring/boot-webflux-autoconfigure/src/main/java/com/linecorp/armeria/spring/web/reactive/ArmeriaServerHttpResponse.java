@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -208,7 +209,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
      * when it is discarded, which might cause {@link ByteBuf} leak. This processor behaves similarly
      * but will release the cached object when the subscription is completed.
      */
-    private static final class HttpResponseProcessor implements Publisher<HttpObject>, Subscriber<HttpData> {
+    private static final class HttpResponseProcessor implements Processor<HttpData, HttpObject> {
 
         private enum State {
             INIT, HEADER_SENT, FIRST_CONTENT_SENT
