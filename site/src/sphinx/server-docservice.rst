@@ -5,7 +5,7 @@ Browsing and invoking services with ``DocService``
 
 :api:`DocService` is a single-page web application which provides the following useful features:
 
-- Browsing the list of gRPC, Thrift or Annotated services and operations available in the server
+- Browsing the list of gRPC, Thrift or annotated services and their operations available in the server
 - Invoking a service operation from a web form
 - Creating a permalink for the invocation you've made
 
@@ -33,7 +33,7 @@ First, add :api:`DocService` to the :api:`ServerBuilder`:
                                        .enableUnframedRequests(true)
                                        .build());
 
-    // Add an Annotated HTTP service.
+    // Add an annotated HTTP service.
     sb.annotatedService("/service", new MyAnnotatedService());
 
     // Add a DocService which scans all Thrift and gRPC services added to the server.
@@ -44,8 +44,8 @@ First, add :api:`DocService` to the :api:`ServerBuilder`:
 
 .. note::
 
-    :api:`DocService` will scan for the supported services automatically when the :api:`Server` starts up.
-    Please see :ref:`inclusion-rule` for the inclusion rule.
+    :api:`DocService` will scan for all supported services automatically when the :api:`Server` starts up.
+    Please see :ref:`inclusion-rule` to learn how to include or exclude certain services.
 
 Open http://127.0.0.1:8080/docs/ in your web browser and you'll see the following screen:
 
