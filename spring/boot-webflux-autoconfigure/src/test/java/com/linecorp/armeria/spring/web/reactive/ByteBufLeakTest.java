@@ -150,8 +150,7 @@ public class ByteBufLeakTest {
         }
 
         // Wait until all request has been completed.
-        final long timeoutSeconds = System.getenv("CI") != null ? 30 : 10;
-        await().atMost(timeoutSeconds, TimeUnit.SECONDS).until(() -> completed.get() == 2 * 3);
+        await().atMost(30, TimeUnit.SECONDS).until(() -> completed.get() == 2 * 3);
 
         ensureAllBuffersAreReleased();
     }
