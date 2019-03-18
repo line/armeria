@@ -48,7 +48,7 @@ public class DocServiceFilterTest {
         assertThat(filter.test("foo", "bar", "baz")).isTrue();
         assertThat(filter.test("foo", "bar", "baz1")).isFalse();
 
-        filter = DocServiceFilter.pattern("bar#baz");
+        filter = DocServiceFilter.ofRegex("bar#baz");
         assertThat(filter.test("foo", "bar", "baz")).isTrue();
         assertThat(filter.test("foo", "bar1", "baz")).isFalse();
     }

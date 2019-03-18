@@ -86,8 +86,6 @@ import com.linecorp.armeria.server.docs.TypeSignature;
  */
 public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
-    private static final String name = "annotated";
-
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     @VisibleForTesting
@@ -115,7 +113,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     @Override
     public String name() {
-        return name;
+        return "annotated";
     }
 
     @Override
@@ -137,7 +135,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                     httpService -> {
                         final String className = httpService.object().getClass().getName();
                         final String methodName = httpService.method().getName();
-                        if (!filter.test(name, className, methodName)) {
+                        if (!filter.test(name(), className, methodName)) {
                             return;
                         }
                         addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), httpService);

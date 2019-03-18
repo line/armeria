@@ -133,9 +133,23 @@ public interface DocServiceFilter {
      * annotated:com.linecorp.armeria.annotated.BazService#myMethod // Annotated service.
      * }</pre>
      */
-    static DocServiceFilter pattern(String regex) {
+    static DocServiceFilter ofRegex(String regex) {
         requireNonNull(regex, "regex");
-        final Pattern pattern = Pattern.compile(regex);
+        return ofRegex(Pattern.compile(regex));
+    }
+
+    /**
+     * Returns a {@link DocServiceFilter} which returns {@code true} when the concatenated name of the plugin,
+     * service and method matches the specified {@link Pattern}.
+     * The concatenated name will be {@code "pluginName + ':' + serviceName + '#' + methodName"}. For example:
+     * <pre>{@code
+     * grpc:armeria.grpc.FooService#EmptyCall // gRPC.
+     * thrift:com.linecorp.armeria.service.thrift.BarService#myMethod // Thrift.
+     * annotated:com.linecorp.armeria.annotated.BazService#myMethod // Annotated service.
+     * }</pre>
+     */
+    static DocServiceFilter ofRegex(Pattern pattern) {
+        requireNonNull(pattern, "pattern");
         return (plugin, service, method) -> {
             final String concatenatedName = plugin + ':' + service + '#' + method;
             return pattern.matcher(concatenatedName).find();
@@ -149,8 +163,8 @@ public interface DocServiceFilter {
     boolean test(String pluginName, String serviceName, String methodName);
 
     /**
-     * Returns a composed {@link DocServiceFilter} that represents a short-circuiting logical {@code OR} of
-     * this filter and {@code other}. When evaluating the composed filter, if this filter returns {@code true},
+     * Returns a composite {@link DocServiceFilter} that represents a short-circuiting logical {@code OR} of
+     * this filter and {@code other}. When evaluating the composite filter, if this filter returns {@code true},
      * then the {@code other} filter is not evaluated.
      */
     default DocServiceFilter or(DocServiceFilter other) {
@@ -160,8 +174,8 @@ public interface DocServiceFilter {
     }
 
     /**
-     * Returns a composed {@link DocServiceFilter} that represents a short-circuiting logical {@code AND} of
-     * this filter and {@code other}. When evaluating the composed filter, if this filter returns {@code false},
+     * Returns a composite {@link DocServiceFilter} that represents a short-circuiting logical {@code AND} of
+     * this filter and {@code other}. When evaluating the composite filter, if this filter returns {@code false},
      * then the {@code other} filter is not evaluated.
      */
     default DocServiceFilter and(DocServiceFilter other) {

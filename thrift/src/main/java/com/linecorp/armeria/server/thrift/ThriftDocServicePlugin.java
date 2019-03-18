@@ -79,8 +79,6 @@ import com.linecorp.armeria.server.docs.TypeSignature;
  */
 public class ThriftDocServicePlugin implements DocServicePlugin {
 
-    private static final String name = "thrift";
-
     private static final String REQUEST_STRUCT_SUFFIX = "_args";
 
     private static final TypeSignature VOID = TypeSignature.ofBase("void");
@@ -99,7 +97,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
 
     @Override
     public String name() {
-        return name;
+        return "thrift";
     }
 
     @Override
@@ -189,7 +187,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
 
         final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
         final String serviceName = serviceClass.getName();
-        if (!filter.test(name, serviceName, methodName)) {
+        if (!filter.test(name(), serviceName, methodName)) {
             return null;
         }
         final ClassLoader classLoader = serviceClass.getClassLoader();
