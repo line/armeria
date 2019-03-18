@@ -379,18 +379,17 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
                 }
 
                 private void request0(long n) {
-                    boolean more = true;
-                    while (more) {
+                    do {
                         switch (state) {
                             case INIT:
                                 state = PublishingState.HEADER_SENT;
                                 subscriber().onNext(headers);
-                                more = --n > 0;
+                                n--;
                                 break;
                             case HEADER_SENT:
                                 state = PublishingState.FIRST_CONTENT_SENT;
                                 subscriber().onNext(firstContent);
-                                more = --n > 0;
+                                n--;
                                 break;
                             case FIRST_CONTENT_SENT:
                                 // If we already received onComplete signal, do not request more demands.
@@ -399,16 +398,19 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
                                 } else {
                                     s.request(n);
                                 }
-                                more = false;
-                                break;
+                                return;
                         }
-                    }
+                    } while (n > 0);
                 }
 
                 @Override
                 public void cancel() {
-                    releaseFirstContent();
                     s.cancel();
+                    if (eventLoop.inEventLoop()) {
+                        releaseFirstContent();
+                    } else {
+                        eventLoop.execute(HttpResponseProcessor.this::releaseFirstContent);
+                    }
                 }
             });
         }

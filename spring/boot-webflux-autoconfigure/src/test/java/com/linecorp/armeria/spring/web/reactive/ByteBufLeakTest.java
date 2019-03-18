@@ -23,6 +23,7 @@ import java.net.Socket;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,6 +45,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.NetUtil;
@@ -54,6 +57,7 @@ import reactor.core.publisher.Mono;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 public class ByteBufLeakTest {
 
+    private static final AtomicInteger completed = new AtomicInteger();
     private static final Queue<NettyDataBuffer> allocatedBuffers = new ConcurrentLinkedQueue<>();
 
     @SpringBootApplication
@@ -77,17 +81,25 @@ public class ByteBufLeakTest {
         static class TestController {
             @GetMapping("/mono")
             Mono<String> mono() {
+                addListenerForCountingCompletedRequests();
                 return Mono.just("hello, WebFlux!");
             }
 
             @GetMapping("/flux")
             Flux<String> flux() {
+                addListenerForCountingCompletedRequests();
                 return Flux.just("abc", "def", "ghi", "jkl", "mno");
             }
 
             @GetMapping("/empty")
             Mono<String> empty() {
+                addListenerForCountingCompletedRequests();
                 return Mono.empty();
+            }
+
+            private void addListenerForCountingCompletedRequests() {
+                RequestContext.current().log().addListener(
+                        log -> completed.incrementAndGet(), RequestLogAvailability.RESPONSE_END);
             }
         }
     }
@@ -116,6 +128,7 @@ public class ByteBufLeakTest {
 
     @Test
     public void confirmNoBufferLeak_resetConnection() throws Exception {
+        completed.set(0);
         assert allocatedBuffers.isEmpty();
         for (int i = 0; i < 3 * 3; i++) {
             try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
@@ -136,9 +149,8 @@ public class ByteBufLeakTest {
             }
         }
 
-        // The buffer allocation might be done after closing the socket. So waiting for the buffers
-        // allocated by "/mono" and "/flux" requests.
-        await().untilAsserted(() -> assertThat(allocatedBuffers).hasSize(2 * 3));
+        // Wait until all request has been completed.
+        await().until(() -> completed.get() == 3 * 3);
 
         ensureAllBuffersAreReleased();
     }

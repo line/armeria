@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -28,6 +29,8 @@ import org.junit.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.NettyDataBuffer;
+import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 
@@ -39,6 +42,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.core.publisher.Flux;
@@ -243,9 +247,20 @@ public class ArmeriaServerHttpResponseTest {
 
     @Test
     public void requestInvalidDemand() throws Exception {
+        final ConcurrentLinkedQueue<NettyDataBuffer> allocatedBuffers = new ConcurrentLinkedQueue<>();
+        final DataBufferFactoryWrapper<NettyDataBufferFactory> factoryWrapper = new DataBufferFactoryWrapper<>(
+                new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT) {
+                    @Override
+                    public NettyDataBuffer allocateBuffer() {
+                        final NettyDataBuffer buffer = super.allocateBuffer();
+                        allocatedBuffers.offer(buffer);
+                        return buffer;
+                    }
+                });
         final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        final ArmeriaServerHttpResponse response = response(ctx, future);
-        response.writeWith(Mono.just(DataBufferFactoryWrapper.DEFAULT.delegate().wrap("foo".getBytes())))
+        final ArmeriaServerHttpResponse response =
+                new ArmeriaServerHttpResponse(ctx, future, factoryWrapper, null);
+        response.writeWith(Mono.just(factoryWrapper.delegate().allocateBuffer().write("foo".getBytes())))
                 .then(Mono.defer(response::setComplete)).subscribe();
         await().until(future::isDone);
         assertThat(future.isCompletedExceptionally()).isFalse();
@@ -278,5 +293,10 @@ public class ArmeriaServerHttpResponseTest {
         await().untilTrue(completed);
         assertThat(error.get()).isInstanceOf(IllegalArgumentException.class)
                                .hasMessageContaining("Reactive Streams specification rule 3.9");
+        await().untilAsserted(() -> {
+            assertThat(allocatedBuffers).hasSize(1);
+            assertThat(allocatedBuffers.peek().getNativeBuffer().refCnt()).isZero();
+            allocatedBuffers.poll();
+        });
     }
 }
