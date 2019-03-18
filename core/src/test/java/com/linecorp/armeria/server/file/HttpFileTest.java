@@ -50,4 +50,12 @@ public class HttpFileTest {
         assertThat(headers.getAll(HttpHeaderNames.CACHE_CONTROL))
                 .containsExactly(ServerCacheControl.REVALIDATED.asHeaderValue());
     }
+
+    @Test
+    public void leadingSlashInResourcePath() throws Exception {
+        final HttpFile f = HttpFile.ofResource(ClassLoader.getSystemClassLoader(), "/java/lang/Object.class");
+        final HttpFileAttributes attrs = f.readAttributes();
+        assertThat(attrs).isNotNull();
+        assertThat(attrs.length()).isPositive();
+    }
 }

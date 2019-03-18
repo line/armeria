@@ -111,6 +111,13 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
     public static HttpFileBuilder ofResource(ClassLoader classLoader, String path) {
         requireNonNull(classLoader, "classLoader");
         requireNonNull(path, "path");
+
+        // Strip the leading slash.
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        // Retrieve the resource URL.
         final URL url = classLoader.getResource(path);
         if (url == null || url.getPath().endsWith("/")) {
             // Non-existent resource.
