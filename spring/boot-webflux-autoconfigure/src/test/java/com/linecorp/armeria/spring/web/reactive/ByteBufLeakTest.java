@@ -136,9 +136,9 @@ public class ByteBufLeakTest {
             }
         }
 
-        // The buffer allocation might be done after closing the socket. So waiting a little before
-        // checking the allocated buffers.
-        Thread.sleep(3000);
+        // The buffer allocation might be done after closing the socket. So waiting for the buffers
+        // allocated by "/mono" and "/flux" requests.
+        await().untilAsserted(() -> assertThat(allocatedBuffers).hasSize(2 * 3));
 
         ensureAllBuffersAreReleased();
     }

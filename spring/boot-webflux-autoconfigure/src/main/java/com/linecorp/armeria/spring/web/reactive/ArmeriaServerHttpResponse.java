@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -72,17 +72,27 @@ import reactor.core.publisher.Mono;
 final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerHttpResponse.class);
 
-    /**
-     * COMMITTING -> COMMITTED is the period after doCommit is called but before
-     * the response status and headers have been applied to the underlying
-     * response during which time pre-commit actions can still make changes to
-     * the response status and headers.
-     */
     private enum State {
-        NEW, COMMITTING, COMMITTED
+        /**
+         * The initial state.
+         */
+        NEW,
+        /**
+         * Started to prepare an {@link com.linecorp.armeria.common.HttpHeaders} to be emitted.
+         */
+        COMMITTING,
+        /**
+         * The {@link com.linecorp.armeria.common.HttpHeaders} has been ready and not allowed for
+         * modification anymore.
+         */
+        COMMITTED
     }
 
-    private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
+    private static final AtomicReferenceFieldUpdater<ArmeriaServerHttpResponse, State> stateUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(ArmeriaServerHttpResponse.class, State.class, "state");
+
+    private volatile State state = State.NEW;
+
     private final HttpHeaders headers = new HttpHeaders();
     private final MultiValueMap<String, ResponseCookie> cookies = new LinkedMultiValueMap<>();
     private final List<Supplier<? extends Mono<Void>>> commitActions = new ArrayList<>(4);
@@ -108,7 +118,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
 
     @Override
     public boolean setStatusCode(@Nullable HttpStatus status) {
-        if (state.get() != State.COMMITTED) {
+        if (state != State.COMMITTED) {
             if (status != null) {
                 armeriaHeaders.status(status.value());
             }
@@ -126,14 +136,14 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
 
     @Override
     public MultiValueMap<String, ResponseCookie> getCookies() {
-        return state.get() == State.COMMITTED ? CollectionUtils.unmodifiableMultiValueMap(cookies)
-                                              : cookies;
+        return state == State.COMMITTED ? CollectionUtils.unmodifiableMultiValueMap(cookies)
+                                        : cookies;
     }
 
     @Override
     public void addCookie(ResponseCookie cookie) {
         requireNonNull(cookie, "cookie");
-        checkState(state.get() != State.COMMITTED,
+        checkState(state != State.COMMITTED,
                    "Can't add the cookie %s because the HTTP response has already been committed",
                    cookie);
         getCookies().add(cookie.getName(), cookie);
@@ -151,7 +161,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
 
     @Override
     public boolean isCommitted() {
-        return state.get() != State.NEW;
+        return state != State.NEW;
     }
 
     @Override
@@ -176,7 +186,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     }
 
     private Mono<Void> doCommit(@Nullable Supplier<? extends Mono<Void>> writeAction) {
-        if (!state.compareAndSet(State.NEW, State.COMMITTING)) {
+        if (!stateUpdater.compareAndSet(this, State.NEW, State.COMMITTING)) {
             return Mono.empty();
         }
 
@@ -198,7 +208,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
                 armeriaHeaders.add(HttpHeaderNames.SET_COOKIE, cookieValues);
             }
 
-            state.set(State.COMMITTED);
+            stateUpdater.set(this, State.COMMITTED);
         }));
 
         if (writeAction != null) {
@@ -357,7 +367,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
             subscriber().onSubscribe(new Subscription() {
                 @Override
                 public void request(long n) {
-                    if (!isValidDemand(n)) {
+                    if (!validateDemand(n)) {
                         cancel();
                         return;
                     }
@@ -450,7 +460,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
             subscriber().onSubscribe(new Subscription() {
                 @Override
                 public void request(long n) {
-                    if (!isValidDemand(n)) {
+                    if (!validateDemand(n)) {
                         return;
                     }
                     if (eventLoop.inEventLoop()) {
@@ -491,7 +501,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
             }
         }
 
-        private boolean isValidDemand(long n) {
+        private boolean validateDemand(long n) {
             if (n > 0) {
                 return true;
             }
