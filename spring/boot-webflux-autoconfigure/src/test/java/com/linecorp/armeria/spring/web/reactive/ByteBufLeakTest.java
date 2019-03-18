@@ -57,6 +57,8 @@ import reactor.core.publisher.Mono;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 public class ByteBufLeakTest {
 
+    private static final long timeoutSeconds = 60;
+
     private static final AtomicInteger completed = new AtomicInteger();
     private static final Queue<NettyDataBuffer> allocatedBuffers = new ConcurrentLinkedQueue<>();
 
@@ -105,7 +107,7 @@ public class ByteBufLeakTest {
     }
 
     @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(timeoutSeconds, TimeUnit.SECONDS));
 
     @LocalServerPort
     int port;
@@ -150,7 +152,7 @@ public class ByteBufLeakTest {
         }
 
         // Wait until all request has been completed.
-        await().atMost(30, TimeUnit.SECONDS).until(() -> completed.get() == 2 * 3);
+        await().atMost(timeoutSeconds, TimeUnit.SECONDS).until(() -> completed.get() == 2 * 3);
 
         ensureAllBuffersAreReleased();
     }
