@@ -274,7 +274,7 @@ public final class DocServiceBuilder {
      * </ul>
      *
      * <P>Note that this can be called multiple times and the {@link DocServiceFilter}s are composed using
-     * {@link DocServiceFilter#or(DocServiceFilter)}.
+     * {@link DocServiceFilter#or(DocServiceFilter)} and {@link DocServiceFilter#and(DocServiceFilter)}.
      *
      * @see #exclude(DocServiceFilter)
      * @see DocService to find out how DocService generates documentaion
@@ -306,7 +306,7 @@ public final class DocServiceBuilder {
      * </ul>
      *
      * <P>Note that this can be called multiple times and the {@link DocServiceFilter}s are composed using
-     * {@link DocServiceFilter#or(DocServiceFilter)}.
+     * {@link DocServiceFilter#or(DocServiceFilter)} and {@link DocServiceFilter#and(DocServiceFilter)}.
      *
      * @see #exclude(DocServiceFilter)
      * @see DocService to find out how DocService generates documentaion

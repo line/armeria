@@ -33,11 +33,11 @@ import java.util.regex.Pattern;
  * builder.include(filter);
  *
  * // Include only "Foo" service in Thrift.
- * DocServiceFilter filter = DocServiceFilter.ofThrift().and(DocServiceFilter.ofServiceName("Foo"));
+ * DocServiceFilter filter = DocServiceFilter.ofThrift().and(DocServiceFilter.ofServiceName("com.example.Foo"));
  * builder.include(filter);
  *
- * // Include all except annotated service and methods whose name is "Bar".
- * DocServiceFilter filter = DocServiceFilter.ofAnnotated().or(DocServiceFilter.ofMethodName("Bar"));
+ * // Include all except annotated service and methods whose name is "bar".
+ * DocServiceFilter filter = DocServiceFilter.ofAnnotated().or(DocServiceFilter.ofMethodName("bar"));
  * builder.exclude(filter);
  * }</pre>
  */
@@ -128,9 +128,9 @@ public interface DocServiceFilter {
      * service and method matches the specified {@code regex}.
      * The concatenated name will be {@code "pluginName + ':' + serviceName + '#' + methodName"}. For example:
      * <pre>{@code
-     * grpc:armeria.grpc.FooService#EmptyCall // gRPC.
-     * thrift:com.linecorp.armeria.service.thrift.BarService#myMethod // Thrift.
-     * annotated:com.linecorp.armeria.annotated.BazService#myMethod // Annotated service.
+     * grpc:com.example.grpc.FooService#EmptyCall // gRPC.
+     * thrift:com.example.thrift.BarService#myMethod // Thrift.
+     * annotated:com.example.annotated.BazService#myMethod // Annotated service.
      * }</pre>
      */
     static DocServiceFilter ofRegex(String regex) {
@@ -175,8 +175,8 @@ public interface DocServiceFilter {
 
     /**
      * Returns a composite {@link DocServiceFilter} that represents a short-circuiting logical {@code AND} of
-     * this filter and {@code other}. When evaluating the composite filter, if this filter returns {@code false},
-     * then the {@code other} filter is not evaluated.
+     * this filter and {@code other}. When evaluating the composite filter, if this filter returns
+     * {@code false}, then the {@code other} filter is not evaluated.
      */
     default DocServiceFilter and(DocServiceFilter other) {
         requireNonNull(other, "other");
