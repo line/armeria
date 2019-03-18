@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -24,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -40,13 +39,13 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class DocServiceBuilder {
 
-    private static final BiPredicate<String, String> includeAllMethods = (service, method) -> true;
+    static final DocServiceFilter ALL_SERVICES = (plugin, service, method) -> true;
 
-    private static final BiPredicate<String, String> excludeNoMethods = (service, method) -> false;
+    static final DocServiceFilter NO_SERVICE = (plugin, service, method) -> false;
 
-    private BiPredicate<String, String> includeMethodPredicate = includeAllMethods;
+    private DocServiceFilter includeFilter = ALL_SERVICES;
 
-    private BiPredicate<String, String> excludeMethodPredicate = excludeNoMethods;
+    private DocServiceFilter excludeFilter = NO_SERVICE;
 
     // These maps contain the entries whose key is a service name and value is a multimap.
     // The multimap contains the entries whose key is the method name.
@@ -259,77 +258,65 @@ public final class DocServiceBuilder {
     }
 
     /**
-     * Sets the {@link Predicate} that checks whether a service will be <b>included</b> while building
-     * {@link DocService}. The {@link Predicate} will be invoked with the service name.
-     * If this method and {@link #includeMethod(BiPredicate)} is not invoked, {@link DocService} will include
-     * all the services and methods it finds while generating documentation.
+     * Adds the {@link DocServiceFilter} that checks whether a method will be <b>included</b> while building
+     * {@link DocService}. The {@link DocServiceFilter} will be invoked with the plugin, service and
+     * method name. The rule is as follows:
+     * <ul>
+     *   <li>No {@link #include(DocServiceFilter)} and {@link #exclude(DocServiceFilter)} is called -
+     *       include all methods.</li>
+     *   <li>Only {@link #exclude(DocServiceFilter)} is called -
+     *       include all methods except the methods which the exclusion filter returns {@code true}.</li>
+     *   <li>Only {@link #include(DocServiceFilter)} is called -
+     *       include the methods which the inclusion filter returns {@code true}.</li>
+     *   <li>{@link #include(DocServiceFilter)} and {@link #exclude(DocServiceFilter)} is called -
+     *       include the methods which the inclusion filter returns {@code true} and the exclusion filter
+     *       returns {@code false}.</li>
+     * </ul>
      *
-     * <P>Note that this can be called multiple times and the {@link Predicate}s are composed using
-     * {@link Predicate#or(Predicate)}.
+     * <P>Note that this can be called multiple times and the {@link DocServiceFilter}s are composed using
+     * {@link DocServiceFilter#or(DocServiceFilter)}.
      *
-     * @see #includeMethod(BiPredicate)
-     * @see DocService to find out how {@link DocService} generates documentaion
+     * @see #exclude(DocServiceFilter)
+     * @see DocService to find out how DocService generates documentaion
      */
-    public DocServiceBuilder includeService(Predicate<String> predicate) {
-        requireNonNull(predicate, "predicate");
-        includeMethod((service, method) -> predicate.test(service));
-        return this;
-    }
-
-    /**
-     * Sets the {@link BiPredicate} that checks whether a method will be <b>included</b> while building
-     * {@link DocService}. The {@link BiPredicate} will be invoked with the service and method name.
-     * If this method and {@link #includeService(Predicate)} is not invoked, {@link DocService} will include
-     * all the services and methods it finds while generating documentation.
-     *
-     * <P>Note that this can be called multiple times and the {@link BiPredicate}s are composed using
-     * {@link BiPredicate#or(BiPredicate)}.
-     *
-     * @see #includeService(Predicate)
-     * @see DocService to find out how {@link DocService} generates documentaion
-     */
-    public DocServiceBuilder includeMethod(BiPredicate<String, String> predicate) {
-        requireNonNull(predicate, "predicate");
-        if (includeMethodPredicate == includeAllMethods) {
-            includeMethodPredicate = predicate;
+    public DocServiceBuilder include(DocServiceFilter filter) {
+        requireNonNull(filter, "filter");
+        if (includeFilter == ALL_SERVICES) {
+            includeFilter = filter;
         } else {
-            includeMethodPredicate = includeMethodPredicate.or(predicate);
+            includeFilter = includeFilter.or(filter);
         }
         return this;
     }
 
     /**
-     * Sets the {@link Predicate} that checks whether a service will be <b>excluded</b> while building
-     * {@link DocService}. The {@link Predicate} will be invoked with the service name.
+     * Adds the {@link DocServiceFilter} that checks whether a method will be <b>excluded</b> while building
+     * {@link DocService}. The {@link DocServiceFilter} will be invoked with the plugin, service and
+     * method name. The rule is as follows:
+     * <ul>
+     *   <li>No {@link #include(DocServiceFilter)} and {@link #exclude(DocServiceFilter)} is called -
+     *       include all methods.</li>
+     *   <li>Only {@link #exclude(DocServiceFilter)} is called -
+     *       include all methods except the methods which the exclusion filter returns {@code true}.</li>
+     *   <li>Only {@link #include(DocServiceFilter)} is called -
+     *       include the methods which the inclusion filter returns {@code true}.</li>
+     *   <li>{@link #include(DocServiceFilter)} and {@link #exclude(DocServiceFilter)} is called -
+     *       include the methods which the inclusion filter returns {@code true} and the exclusion filter
+     *       returns {@code false}.</li>
+     * </ul>
      *
-     * <P>Note that this can be called multiple times and the {@link Predicate}s are composed using
-     * {@link Predicate#or(Predicate)}.
+     * <P>Note that this can be called multiple times and the {@link DocServiceFilter}s are composed using
+     * {@link DocServiceFilter#or(DocServiceFilter)}.
      *
-     * @see #excludeMethod(BiPredicate)
-     * @see DocService to find out how {@link DocService} generates documentaion
+     * @see #exclude(DocServiceFilter)
+     * @see DocService to find out how DocService generates documentaion
      */
-    public DocServiceBuilder excludeService(Predicate<String> predicate) {
-        requireNonNull(predicate, "predicate");
-        excludeMethod((service, method) -> predicate.test(service));
-        return this;
-    }
-
-    /**
-     * Sets the {@link BiPredicate} that checks whether a method will be <b>excluded</b> while building
-     * {@link DocService}. The {@link BiPredicate} will be invoked with the service and method name.
-     *
-     * <P>Note that this can be called multiple times and the {@link BiPredicate}s are composed using
-     * {@link BiPredicate#or(BiPredicate)}.
-     *
-     * @see #excludeService(Predicate)
-     * @see DocService to find out how {@link DocService} generates documentaion
-     */
-    public DocServiceBuilder excludeMethod(BiPredicate<String, String> predicate) {
-        requireNonNull(predicate, "predicate");
-        if (excludeMethodPredicate == excludeNoMethods) {
-            excludeMethodPredicate = predicate;
+    public DocServiceBuilder exclude(DocServiceFilter filter) {
+        requireNonNull(filter, "filter");
+        if (excludeFilter == NO_SERVICE) {
+            excludeFilter = filter;
         } else {
-            excludeMethodPredicate = excludeMethodPredicate.or(predicate);
+            excludeFilter = excludeFilter.or(filter);
         }
         return this;
     }
@@ -461,7 +448,7 @@ public final class DocServiceBuilder {
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
-        return new DocService(exampleHttpHeaders, exampleRequests, includeMethodPredicate,
-                              excludeMethodPredicate, injectedScriptSuppliers);
+        return new DocService(exampleHttpHeaders, exampleRequests, injectedScriptSuppliers,
+                              unifyFilter(includeFilter, excludeFilter));
     }
 }

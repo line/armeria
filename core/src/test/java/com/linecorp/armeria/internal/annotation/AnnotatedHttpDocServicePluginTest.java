@@ -25,6 +25,9 @@ import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePl
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.VOID;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.endpointInfo;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
+import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.server.docs.DocServiceFilter.allServices;
+import static com.linecorp.armeria.server.docs.DocServiceFilter.noService;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
@@ -36,7 +39,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -60,6 +62,7 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -222,8 +225,7 @@ public class AnnotatedHttpDocServicePluginTest {
 
     @Test
     public void testGenerateSpecification() {
-        final Map<String, ServiceInfo> services = services((service, method) -> true,
-                                                           (service, method) -> false);
+        final Map<String, ServiceInfo> services = services(allServices(), noService());
 
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
         checkFooService(services.get(FOO_NAME));
@@ -232,58 +234,59 @@ public class AnnotatedHttpDocServicePluginTest {
 
     @Test
     public void include() {
-        // Include all services.
-        BiPredicate<String, String> include = allServices();
-        final BiPredicate<String, String> noExclude = (service, method) -> false;
-        Map<String, ServiceInfo> services = services(include, noExclude);
+
+        // 1. Nothing specified: include all methods.
+        // 2. Exclude specified: include all methods except the methods which the exclude filter returns true.
+        // 3. Include specified: include the methods which the include filter returns true.
+        // 4. Include and exclude specified: include the methods which the include filter returns true and
+        //    the exclude filter returns false.
+
+        // 1. Nothing specified.
+        DocServiceFilter include = allServices();
+        DocServiceFilter exclude = noService();
+        Map<String, ServiceInfo> services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
 
-        // Include only FooClass.
-        include = (service, method) -> FOO_NAME.equals(service);
-        services = services(include, noExclude);
+        // 2. Exclude specified.
+        exclude = DocServiceFilter.methodName(FOO_NAME, "fooMethod");
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
+
+        List<String> methods = methods(services);
+        assertThat(methods).containsOnlyOnce("foo2Method");
+
+        // 3-1. Include serviceName specified.
+        include = DocServiceFilter.serviceName(FOO_NAME);
+        // Set the exclude to the default.
+        exclude = noService();
+        services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
-        List<String> methods = services.get(FOO_NAME).methods()
-                                       .stream()
-                                       .map(MethodInfo::name)
-                                       .collect(toImmutableList());
+        methods = methods(services);
         assertThat(methods).containsExactlyInAnyOrder("fooMethod", "foo2Method");
 
-        // Include only fooMethod in FooClass.
-        include = (service, method) -> FOO_NAME.equals(service) && "fooMethod".equals(method);
-        services = services(include, noExclude);
+        // 3-2. Include methodName specified.
+        include = DocServiceFilter.methodName(FOO_NAME, "fooMethod");
+        services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
-        methods = services.get(FOO_NAME).methods()
-                          .stream()
-                          .map(MethodInfo::name)
-                          .collect(toImmutableList());
+        methods = methods(services);
         assertThat(methods).containsOnlyOnce("fooMethod");
-    }
 
-    @Test
-    public void exclude() {
-        // Exclude all services.
-        BiPredicate<String, String> exclude = allServices();
-        final BiPredicate<String, String> includeAll = (service, method) -> true;
-        Map<String, ServiceInfo> services = services(includeAll, exclude);
+        // 4-1. Include and exclude specified.
+        include = DocServiceFilter.serviceName(FOO_NAME);
+        exclude = DocServiceFilter.methodName(FOO_NAME, "fooMethod");
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME);
 
-        assertThat(services.size()).isZero();
-
-        // Exclude fooMethod in FooClass.
-        exclude = (service, method) -> FOO_NAME.equals(service) && "fooMethod".equals(method);
-        services = services(includeAll, exclude);
-        assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
-
-        final List<String> methods = services.get(FOO_NAME).methods()
-                                             .stream()
-                                             .map(MethodInfo::name)
-                                             .collect(toImmutableList());
+        methods = methods(services);
         assertThat(methods).containsOnlyOnce("foo2Method");
-    }
 
-    private static BiPredicate<String, String> allServices() {
-        return (service, method) -> FOO_NAME.equals(service) || BAR_NAME.equals(service);
+        // 4-2. Include and exclude specified.
+        include = DocServiceFilter.methodName(FOO_NAME, "fooMethod");
+        exclude = DocServiceFilter.serviceName(FOO_NAME);
+        services = services(include, exclude);
+        assertThat(services.size()).isZero();
     }
 
     private static void checkFooService(ServiceInfo fooServiceInfo) {
@@ -334,6 +337,21 @@ public class AnnotatedHttpDocServicePluginTest {
         assertFieldInfos(fieldInfos, ImmutableList.of(bar, compositeBean()));
     }
 
+    private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
+        ServiceSpecification specification = plugin.generateSpecification(serviceConfigs(),
+                                                                          unifyFilter(include, exclude));
+        return specification.services()
+                            .stream()
+                            .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
+    }
+
+    private static List<String> methods(Map<String, ServiceInfo> services) {
+        return services.get(FOO_NAME).methods()
+                       .stream()
+                       .map(MethodInfo::name)
+                       .collect(toImmutableList());
+    }
+
     private static Set<ServiceConfig> serviceConfigs() {
         final List<AnnotatedHttpServiceElement> fooElements = AnnotatedHttpServiceFactory.find(
                 "/", new FooClass(), ImmutableList.of());
@@ -346,14 +364,6 @@ public class AnnotatedHttpDocServicePluginTest {
         barElements.forEach(element -> builder.add(
                 new ServiceConfig(virtualHost, element.pathMapping(), element.service(), null)));
         return builder.build();
-    }
-
-    private static Map<String, ServiceInfo> services(BiPredicate<String, String> include,
-                                                     BiPredicate<String, String> exclude) {
-        ServiceSpecification specification = plugin.generateSpecification(serviceConfigs(), include, exclude);
-        return specification.services()
-                            .stream()
-                            .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
     }
 
     static FieldInfo compositeBean() {

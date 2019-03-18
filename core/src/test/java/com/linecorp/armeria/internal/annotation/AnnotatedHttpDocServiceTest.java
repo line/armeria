@@ -76,6 +76,7 @@ import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -111,12 +112,11 @@ public class AnnotatedHttpDocServiceTest {
                     .exampleRequestForMethod(MyService.class, "pathParams",
                                              ImmutableList.of(mapper.readTree(
                                                      "{\"hello\":\"armeria\"}")))
-                    .excludeMethod(
-                            (service, method) -> MyService.class.getName().equals(service) &&
-                                                 ("exclude1".equals(method) || "exclude2".equals(method)))
+                    .exclude(DocServiceFilter.methodName(MyService.class.getName(), "exclude1").or(
+                            DocServiceFilter.methodName(MyService.class.getName(), "exclude2")))
                     .build());
             sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
-                    .excludeService(service -> MyService.class.getName().equals(service))
+                    .exclude(DocServiceFilter.annotatedHttpOnly())
                     .build());
         }
     };

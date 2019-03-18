@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -59,6 +58,7 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
@@ -96,17 +96,20 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     // Methods related with generating a service specification.
 
     @Override
+    public String name() {
+        return getClass().getName();
+    }
+
+    @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
         return ImmutableSet.of(THttpService.class);
     }
 
     @Override
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
-                                                      BiPredicate<String, String> includeMethodPredicate,
-                                                      BiPredicate<String, String> excludeMethodPredicate) {
+                                                      DocServiceFilter filter) {
         requireNonNull(serviceConfigs, "serviceConfigs");
-        requireNonNull(includeMethodPredicate, "includeMethodPredicate");
-        requireNonNull(excludeMethodPredicate, "excludeMethodPredicate");
+        requireNonNull(filter, "filter");
 
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
@@ -136,17 +139,14 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         final List<Entry> entries = map.values().stream()
                                        .map(EntryBuilder::build)
                                        .collect(Collectors.toList());
-        return generate(entries, includeMethodPredicate, excludeMethodPredicate);
+        return generate(entries, filter);
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(List<Entry> entries,
-                                         BiPredicate<String, String> includeMethodPredicate,
-                                         BiPredicate<String, String> excludeMethodPredicate) {
+    ServiceSpecification generate(List<Entry> entries, DocServiceFilter filter) {
         final List<ServiceInfo> services =
                 entries.stream()
-                       .map(e -> newServiceInfo(e.serviceType, e.endpointInfos,
-                                                includeMethodPredicate, excludeMethodPredicate))
+                       .map(e -> newServiceInfo(e.serviceType, e.endpointInfos, filter))
                        .filter(Objects::nonNull)
                        .collect(toImmutableList());
 
@@ -155,9 +155,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     @Nullable
-    static ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
-                                      BiPredicate<String, String> includeMethodPredicate,
-                                      BiPredicate<String, String> excludeMethodPredicate) {
+    ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
+                               DocServiceFilter filter) {
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -172,8 +171,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         final Method[] methods = interfaceClass.getDeclaredMethods();
 
         final List<MethodInfo> methodInfos = Arrays.stream(methods)
-                                                   .map(m -> newMethodInfo(m, endpoints, includeMethodPredicate,
-                                                                           excludeMethodPredicate))
+                                                   .map(m -> newMethodInfo(m, endpoints, filter))
                                                    .filter(Objects::nonNull)
                                                    .collect(toImmutableList());
         if (methodInfos.isEmpty()) {
@@ -183,15 +181,13 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     @Nullable
-    private static MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints,
-                                            BiPredicate<String, String> includeMethodPredicate,
-                                            BiPredicate<String, String> excludeMethodPredicate) {
+    private MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints,
+                                     DocServiceFilter filter) {
         final String methodName = method.getName();
 
         final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
         final String serviceName = serviceClass.getName();
-        if (!includeMethodPredicate.test(serviceName, methodName) ||
-            excludeMethodPredicate.test(serviceName, methodName)) {
+        if (!filter.filter(name(), serviceName, methodName)) {
             return null;
         }
         final ClassLoader classLoader = serviceClass.getClassLoader();

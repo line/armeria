@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
@@ -52,6 +51,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
@@ -111,17 +111,20 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     private final GrpcDocStringExtractor docstringExtractor = new GrpcDocStringExtractor();
 
     @Override
+    public String name() {
+        return getClass().getName();
+    }
+
+    @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
         return ImmutableSet.of(GrpcService.class);
     }
 
     @Override
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
-                                                      BiPredicate<String, String> includeMethodPredicate,
-                                                      BiPredicate<String, String> excludeMethodPredicate) {
+                                                      DocServiceFilter filter) {
         requireNonNull(serviceConfigs, "serviceConfigs");
-        requireNonNull(includeMethodPredicate, "includeMethodPredicate");
-        requireNonNull(excludeMethodPredicate, "excludeMethodPredicate");
+        requireNonNull(filter, "filter");
 
         final Map<String, ServiceEntryBuilder> map = new LinkedHashMap<>();
         for (ServiceConfig serviceConfig : serviceConfigs) {
@@ -177,9 +180,8 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                                 .build());
             }
         }
-        return generate(map.values().stream()
-                           .map(ServiceEntryBuilder::build)
-                           .collect(toImmutableList()), includeMethodPredicate, excludeMethodPredicate);
+        return generate(map.values().stream().map(ServiceEntryBuilder::build).collect(toImmutableList()),
+                        filter);
     }
 
     @Override
@@ -208,12 +210,9 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    ServiceSpecification generate(List<ServiceEntry> entries,
-                                  BiPredicate<String, String> includeMethodPredicate,
-                                  BiPredicate<String, String> excludeMethodPredicate) {
+    ServiceSpecification generate(List<ServiceEntry> entries, DocServiceFilter filter) {
         final List<ServiceInfo> services = entries.stream()
-                                                  .map(entry -> newServiceInfo(entry, includeMethodPredicate,
-                                                                               excludeMethodPredicate))
+                                                  .map(entry -> newServiceInfo(entry, filter))
                                                   .filter(Objects::nonNull)
                                                   .collect(toImmutableList());
 
@@ -231,14 +230,11 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @Nullable
-    static ServiceInfo newServiceInfo(ServiceEntry entry,
-                                      BiPredicate<String, String> includeMethodPredicate,
-                                      BiPredicate<String, String> excludeMethodPredicate) {
+    ServiceInfo newServiceInfo(ServiceEntry entry, DocServiceFilter filter) {
         entry.name();
         final List<MethodInfo> methodInfos =
                 entry.methods().stream()
-                     .filter(m -> includeMethodPredicate.test(entry.name(), m.getName()) &&
-                                  !excludeMethodPredicate.test(entry.name(), m.getName()))
+                     .filter(m -> filter.filter(name(), entry.name(), m.getName()))
                      .map(m -> newMethodInfo(m, entry))
                      .collect(toImmutableList());
         if (methodInfos.isEmpty()) {

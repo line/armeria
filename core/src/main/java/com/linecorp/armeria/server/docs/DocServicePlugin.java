@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.docs;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.BiPredicate;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -31,6 +30,14 @@ import com.linecorp.armeria.server.ServiceConfig;
  * Generates the {@link ServiceSpecification}s of the supported {@link Service}s.
  */
 public interface DocServicePlugin {
+
+    /**
+     * Returns the name of this plugin. This method is a shortcut of:
+     * <pre>{@code
+     * getClass().getName();
+     * }</pre>
+     */
+    String name();
 
     // Methods related with generating a ServiceSpecification.
 
@@ -45,16 +52,10 @@ public interface DocServicePlugin {
      *
      * @param serviceConfigs the {@link ServiceConfig}s of the {@link Service}s that are instances of the
      *                       {@link #supportedServiceTypes()}
-     * @param includeMethodPredicate the {@link BiPredicate} that checks whether a method will be included while
-     *                               building {@link DocService}. The {@link BiPredicate} will be invoked with
-     *                               the service and method name.
-     * @param excludeMethodPredicate the {@link BiPredicate} that checks whether a method will be excluded while
-     *                               building {@link DocService}. The {@link BiPredicate} will be invoked with
-     *                               the service and method name.
+     * @param filter the {@link DocServiceFilter} that checks whether a method will be included while
+     *               building {@link DocService}
      */
-    ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
-                                               BiPredicate<String, String> includeMethodPredicate,
-                                               BiPredicate<String, String> excludeMethodPredicate);
+    ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs, DocServiceFilter filter);
 
     // Methods related with extracting documentation strings.
     // TODO(trustin): Define the docstring format.

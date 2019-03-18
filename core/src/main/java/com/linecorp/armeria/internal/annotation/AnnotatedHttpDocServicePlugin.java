@@ -44,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -66,6 +65,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
@@ -116,17 +116,20 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
+    public String name() {
+        return getClass().getName();
+    }
+
+    @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
         return ImmutableSet.of(AnnotatedHttpService.class);
     }
 
     @Override
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
-                                                      BiPredicate<String, String> includeMethodPredicate,
-                                                      BiPredicate<String, String> excludeMethodPredicate) {
+                                                      DocServiceFilter filter) {
         requireNonNull(serviceConfigs, "serviceConfigs");
-        requireNonNull(includeMethodPredicate, "includeMethodPredicate");
-        requireNonNull(excludeMethodPredicate, "excludeMethodPredicate");
+        requireNonNull(filter, "filter");
 
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, String> serviceDescription = new HashMap<>();
@@ -136,8 +139,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                     httpService -> {
                         final String className = httpService.object().getClass().getName();
                         final String methodName = httpService.method().getName();
-                        if (!includeMethodPredicate.test(className, methodName) ||
-                            excludeMethodPredicate.test(className, methodName)) {
+                        if (!filter.filter(name(), className, methodName)) {
                             return;
                         }
                         addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), httpService);
