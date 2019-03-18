@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
  */
 public enum HttpMethod {
 
-    // Forked from Netty at 93b144b7b4872ea623a378c75b92d33bea28ab51
+    // Forked from Netty 4.1.34 at ff7484864b1785103cbc62845ff3a392c93822b7
 
     /**
      * The OPTIONS method which represents a request for information about the communication options

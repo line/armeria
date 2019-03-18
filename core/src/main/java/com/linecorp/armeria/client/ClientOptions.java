@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.AbstractOptions;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
@@ -51,19 +52,19 @@ public final class ClientOptions extends AbstractOptions {
 
     private static final Long DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS = Duration.ofSeconds(1).toMillis();
 
-    @SuppressWarnings("deprecation")
     private static final Collection<AsciiString> BLACKLISTED_HEADER_NAMES =
             Collections.unmodifiableCollection(Arrays.asList(
                     HttpHeaderNames.CONNECTION,
                     HttpHeaderNames.HOST,
-                    HttpHeaderNames.KEEP_ALIVE,
+                    HttpHeaderNames.HTTP2_SETTINGS,
                     HttpHeaderNames.METHOD,
                     HttpHeaderNames.PATH,
-                    HttpHeaderNames.PROXY_CONNECTION,
                     HttpHeaderNames.SCHEME,
                     HttpHeaderNames.STATUS,
                     HttpHeaderNames.TRANSFER_ENCODING,
                     HttpHeaderNames.UPGRADE,
+                    ArmeriaHttpUtil.HEADER_NAME_KEEP_ALIVE,
+                    ArmeriaHttpUtil.HEADER_NAME_PROXY_CONNECTION,
                     ExtensionHeaderNames.PATH.text(),
                     ExtensionHeaderNames.SCHEME.text(),
                     ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(),

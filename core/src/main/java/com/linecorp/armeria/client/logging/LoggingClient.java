@@ -115,7 +115,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
              Function.identity(),
              Function.identity(),
              Function.identity(),
-             Sampler.always());
+             Sampler.ALWAYS_SAMPLE);
     }
 
     /**

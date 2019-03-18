@@ -94,7 +94,7 @@ import io.netty.util.internal.StringUtil;
  */
 public final class ArmeriaHttpUtil {
 
-    // Forked from Netty at 7d213240ca768d6dd35ef2336b1fda757bd4df3c
+    // Forked from Netty 4.1.34 at 4921f62c8ab8205fd222439dcd1811760b05daf1
 
     /**
      * The default case-insensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
@@ -118,6 +118,16 @@ public final class ArmeriaHttpUtil {
      */
     public static final Charset HTTP_DEFAULT_CONTENT_CHARSET = StandardCharsets.ISO_8859_1;
 
+    /**
+     * The old {@code "keep-alive"} header which has been superceded by {@code "connection"}.
+     */
+    public static final AsciiString HEADER_NAME_KEEP_ALIVE = AsciiString.cached("keep-alive");
+
+    /**
+     * The old {@code "proxy-connection"} header which has been superceded by {@code "connection"}.
+     */
+    public static final AsciiString HEADER_NAME_PROXY_CONNECTION = AsciiString.cached("proxy-connection");
+
     private static final URI ROOT = URI.create("/");
 
     /**
@@ -137,12 +147,8 @@ public final class ArmeriaHttpUtil {
 
     static {
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
-        @SuppressWarnings("deprecation")
-        final AsciiString keepAlive = HttpHeaderNames.KEEP_ALIVE;
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(keepAlive, EMPTY_STRING);
-        @SuppressWarnings("deprecation")
-        final AsciiString proxyConnection = HttpHeaderNames.PROXY_CONNECTION;
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(proxyConnection, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HEADER_NAME_KEEP_ALIVE, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HEADER_NAME_PROXY_CONNECTION, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.HOST, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.UPGRADE, EMPTY_STRING);

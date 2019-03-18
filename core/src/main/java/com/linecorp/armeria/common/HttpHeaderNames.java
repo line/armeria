@@ -14,19 +14,17 @@
  * under the License.
  */
 /*
- * Copyright 2014 The Netty Project
+ * Copyright (C) 2011 The Guava Authors
  *
- * The Netty Project licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
- *   https://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.linecorp.armeria.common;
 
@@ -42,389 +40,503 @@ import com.google.common.collect.ImmutableMap;
 import io.netty.util.AsciiString;
 
 /**
- * Standard HTTP header names.
+ * Contains constant definitions for the HTTP header field names.
  *
- * <p>These are all defined as lowercase to support HTTP/2 requirements while also not
- * violating HTTP/1.x requirements. New header names should always be lowercase.
+ * <p>All header names in this class are defined in lowercase to support HTTP/2 requirements while
+ * also not violating HTTP/1 requirements.</p>
  */
 public final class HttpHeaderNames {
 
-    // Forked from Netty at 4875a2aad4c82204caedb2d121fb5ef03c09fe44
+    // Forked from Guava 27.1 at 8e174e76971449665658a800af6dd350806cc934
+    // Changes:
+    // - Added pseudo headers
+    // - Added Accept-Patch
+    // - Added Content-Base
+    // - Removed the ancient CSP headers
+    //   - X-Content-Security-Policy
+    //   - X-Content-Security-Policy-Report-Only
+    //   - X-WebKit-CSP
+    //   - X-WebKit-CSP-Report-Only
+    // - Removed Sec-Metadata headers (too early to add)
+    //   - Sec-Fetch-Dest
+    //   - Sec-Fetch-Mode
+    //   - Sec-Fetch-Site
+    //   - Sec-Fetch-User
+    //   - Sec-Metadata
 
     // Pseudo-headers
 
     /**
-     * {@code ":method"}.
+     * The HTTP {@code ":method"} pseudo header field name.
      */
-    public static final AsciiString METHOD = AsciiString.cached(":method");
+    public static final AsciiString METHOD = create(":method");
     /**
-     * {@code ":scheme"}.
+     * The HTTP {@code ":scheme"} pseudo header field name.
      */
-    public static final AsciiString SCHEME = AsciiString.cached(":scheme");
+    public static final AsciiString SCHEME = create(":scheme");
     /**
-     * {@code ":authority"}.
+     * The HTTP {@code ":authority"} pseudo header field name.
      */
-    public static final AsciiString AUTHORITY = AsciiString.cached(":authority");
+    public static final AsciiString AUTHORITY = create(":authority");
     /**
-     * {@code ":path"}.
+     * The HTTP {@code ":path"} pseudo header field name.
      */
-    public static final AsciiString PATH = AsciiString.cached(":path");
+    public static final AsciiString PATH = create(":path");
     /**
-     * {@code ":status"}.
+     * The HTTP {@code ":status"} pseudo header field name.
      */
-    public static final AsciiString STATUS = AsciiString.cached(":status");
+    public static final AsciiString STATUS = create(":status");
 
-    // Ordinary headers
+    // HTTP Request and Response header fields
 
     /**
-     * {@code "accept"}.
+     * The HTTP {@code "Cache-Control"} header field name.
      */
-    public static final AsciiString ACCEPT = AsciiString.cached("accept");
+    public static final AsciiString CACHE_CONTROL = create("Cache-Control");
     /**
-     * {@code "accept-charset"}.
+     * The HTTP {@code "Content-Length"} header field name.
      */
-    public static final AsciiString ACCEPT_CHARSET = AsciiString.cached("accept-charset");
+    public static final AsciiString CONTENT_LENGTH = create("Content-Length");
     /**
-     * {@code "accept-encoding"}.
+     * The HTTP {@code "Content-Type"} header field name.
      */
-    public static final AsciiString ACCEPT_ENCODING = AsciiString.cached("accept-encoding");
+    public static final AsciiString CONTENT_TYPE = create("Content-Type");
     /**
-     * {@code "accept-language"}.
+     * The HTTP {@code "Date"} header field name.
      */
-    public static final AsciiString ACCEPT_LANGUAGE = AsciiString.cached("accept-language");
+    public static final AsciiString DATE = create("Date");
     /**
-     * {@code "accept-ranges"}.
+     * The HTTP {@code "Pragma"} header field name.
      */
-    public static final AsciiString ACCEPT_RANGES = AsciiString.cached("accept-ranges");
+    public static final AsciiString PRAGMA = create("Pragma");
     /**
-     * {@code "accept-patch"}.
+     * The HTTP {@code "Via"} header field name.
      */
-    public static final AsciiString ACCEPT_PATCH = AsciiString.cached("accept-patch");
+    public static final AsciiString VIA = create("Via");
     /**
-     * {@code "access-control-allow-credentials"}.
+     * The HTTP {@code "Warning"} header field name.
+     */
+    public static final AsciiString WARNING = create("Warning");
+
+    // HTTP Request header fields
+
+    /**
+     * The HTTP {@code "Accept"} header field name.
+     */
+    public static final AsciiString ACCEPT = create("Accept");
+    /**
+     * The HTTP {@code "Accept-Charset"} header field name.
+     */
+    public static final AsciiString ACCEPT_CHARSET = create("Accept-Charset");
+    /**
+     * The HTTP {@code "Accept-Encoding"} header field name.
+     */
+    public static final AsciiString ACCEPT_ENCODING = create("Accept-Encoding");
+    /**
+     * The HTTP {@code "Accept-Language"} header field name.
+     */
+    public static final AsciiString ACCEPT_LANGUAGE = create("Accept-Language");
+    /**
+     * The HTTP {@code "Access-Control-Request-Headers"} header field name.
+     */
+    public static final AsciiString ACCESS_CONTROL_REQUEST_HEADERS = create("Access-Control-Request-Headers");
+    /**
+     * The HTTP {@code "Access-Control-Request-Method"} header field name.
+     */
+    public static final AsciiString ACCESS_CONTROL_REQUEST_METHOD = create("Access-Control-Request-Method");
+    /**
+     * The HTTP {@code "Authorization"} header field name.
+     */
+    public static final AsciiString AUTHORIZATION = create("Authorization");
+    /**
+     * The HTTP {@code "Connection"} header field name.
+     */
+    public static final AsciiString CONNECTION = create("Connection");
+    /**
+     * The HTTP {@code "Cookie"} header field name.
+     */
+    public static final AsciiString COOKIE = create("Cookie");
+    /**
+     * The HTTP <a href="https://tools.ietf.org/html/rfc8470">{@code "Early-Data"}</a> header field
+     * name.
+     */
+    public static final AsciiString EARLY_DATA = create("Early-Data");
+    /**
+     * The HTTP {@code "Expect"} header field name.
+     */
+    public static final AsciiString EXPECT = create("Expect");
+    /**
+     * The HTTP {@code "From"} header field name.
+     */
+    public static final AsciiString FROM = create("From");
+    /**
+     * The HTTP <a href="https://tools.ietf.org/html/rfc7239">{@code "Forwarded"}</a> header field name.
+     */
+    public static final AsciiString FORWARDED = create("Forwarded");
+    /**
+     * The HTTP {@code "Follow-Only-When-Prerender-Shown"} header field name.
+     */
+    public static final AsciiString FOLLOW_ONLY_WHEN_PRERENDER_SHOWN =
+            create("Follow-Only-When-Prerender-Shown");
+    /**
+     * The HTTP {@code "Host"} header field name.
+     */
+    public static final AsciiString HOST = create("Host");
+    /**
+     * The HTTP <a href="https://tools.ietf.org/html/rfc7540#section-3.2.1">{@code "HTTP2-Settings"}
+     * </a> header field name.
+     */
+    public static final AsciiString HTTP2_SETTINGS = create("HTTP2-Settings");
+    /**
+     * The HTTP {@code "If-Match"} header field name.
+     */
+    public static final AsciiString IF_MATCH = create("If-Match");
+    /**
+     * The HTTP {@code "If-Modified-Since"} header field name.
+     */
+    public static final AsciiString IF_MODIFIED_SINCE = create("If-Modified-Since");
+    /**
+     * The HTTP {@code "If-None-Match"} header field name.
+     */
+    public static final AsciiString IF_NONE_MATCH = create("If-None-Match");
+    /**
+     * The HTTP {@code "If-Range"} header field name.
+     */
+    public static final AsciiString IF_RANGE = create("If-Range");
+    /**
+     * The HTTP {@code "If-Unmodified-Since"} header field name.
+     */
+    public static final AsciiString IF_UNMODIFIED_SINCE = create("If-Unmodified-Since");
+    /**
+     * The HTTP {@code "Last-Event-ID"} header field name.
+     */
+    public static final AsciiString LAST_EVENT_ID = create("Last-Event-ID");
+    /**
+     * The HTTP {@code "Max-Forwards"} header field name.
+     */
+    public static final AsciiString MAX_FORWARDS = create("Max-Forwards");
+    /**
+     * The HTTP {@code "Origin"} header field name.
+     */
+    public static final AsciiString ORIGIN = create("Origin");
+    /**
+     * The HTTP {@code "Proxy-Authorization"} header field name.
+     */
+    public static final AsciiString PROXY_AUTHORIZATION = create("Proxy-Authorization");
+    /**
+     * The HTTP {@code "Range"} header field name.
+     */
+    public static final AsciiString RANGE = create("Range");
+    /**
+     * The HTTP {@code "Referer"} header field name.
+     */
+    public static final AsciiString REFERER = create("Referer");
+    /**
+     * The HTTP <a href="https://www.w3.org/TR/referrer-policy/">{@code "Referrer-Policy"}</a> header
+     * field name.
+     */
+    public static final AsciiString REFERRER_POLICY = create("Referrer-Policy");
+
+    /**
+     * The HTTP <a href="https://www.w3.org/TR/service-workers/#update-algorithm">{@code
+     * Service-Worker}</a> header field name.
+     */
+    public static final AsciiString SERVICE_WORKER = create("Service-Worker");
+    /**
+     * The HTTP {@code "TE"} header field name.
+     */
+    public static final AsciiString TE = create("TE");
+    /**
+     * The HTTP {@code "Upgrade"} header field name.
+     */
+    public static final AsciiString UPGRADE = create("Upgrade");
+    /**
+     * The HTTP {@code "User-Agent"} header field name.
+     */
+    public static final AsciiString USER_AGENT = create("User-Agent");
+
+    // HTTP Response header fields
+
+    /**
+     * The HTTP {@code "Accept-Ranges"} header field name.
+     */
+    public static final AsciiString ACCEPT_RANGES = create("Accept-Ranges");
+    /**
+     * The HTTP {@code "Accept-Patch"} header field name.
+     */
+    public static final AsciiString ACCEPT_PATCH = create("Accept-Patch");
+    /**
+     * The HTTP {@code "Access-Control-Allow-Headers"} header field name.
+     */
+    public static final AsciiString ACCESS_CONTROL_ALLOW_HEADERS = create("Access-Control-Allow-Headers");
+    /**
+     * The HTTP {@code "Access-Control-Allow-Methods"} header field name.
+     */
+    public static final AsciiString ACCESS_CONTROL_ALLOW_METHODS = create("Access-Control-Allow-Methods");
+    /**
+     * The HTTP {@code "Access-Control-Allow-Origin"} header field name.
+     */
+    public static final AsciiString ACCESS_CONTROL_ALLOW_ORIGIN = create("Access-Control-Allow-Origin");
+    /**
+     * The HTTP {@code "Access-Control-Allow-Credentials"} header field name.
      */
     public static final AsciiString ACCESS_CONTROL_ALLOW_CREDENTIALS =
-            AsciiString.cached("access-control-allow-credentials");
+            create("Access-Control-Allow-Credentials");
     /**
-     * {@code "access-control-allow-headers"}.
+     * The HTTP {@code "Access-Control-Expose-Headers"} header field name.
      */
-    public static final AsciiString ACCESS_CONTROL_ALLOW_HEADERS =
-            AsciiString.cached("access-control-allow-headers");
+    public static final AsciiString ACCESS_CONTROL_EXPOSE_HEADERS = create("Access-Control-Expose-Headers");
     /**
-     * {@code "access-control-allow-methods"}.
+     * The HTTP {@code "Access-Control-Max-Age"} header field name.
      */
-    public static final AsciiString ACCESS_CONTROL_ALLOW_METHODS =
-            AsciiString.cached("access-control-allow-methods");
+    public static final AsciiString ACCESS_CONTROL_MAX_AGE = create("Access-Control-Max-Age");
     /**
-     * {@code "access-control-allow-origin"}.
+     * The HTTP {@code "Age"} header field name.
      */
-    public static final AsciiString ACCESS_CONTROL_ALLOW_ORIGIN =
-            AsciiString.cached("access-control-allow-origin");
+    public static final AsciiString AGE = create("Age");
     /**
-     * {@code "access-control-expose-headers"}.
+     * The HTTP {@code "Allow"} header field name.
      */
-    public static final AsciiString ACCESS_CONTROL_EXPOSE_HEADERS =
-            AsciiString.cached("access-control-expose-headers");
+    public static final AsciiString ALLOW = create("Allow");
     /**
-     * {@code "access-control-max-age"}.
+     * The HTTP {@code "Content-Base"} header field name.
      */
-    public static final AsciiString ACCESS_CONTROL_MAX_AGE = AsciiString.cached("access-control-max-age");
+    public static final AsciiString CONTENT_BASE = create("Content-Base");
     /**
-     * {@code "access-control-request-headers"}.
+     * The HTTP {@code "Content-Disposition"} header field name.
      */
-    public static final AsciiString ACCESS_CONTROL_REQUEST_HEADERS =
-            AsciiString.cached("access-control-request-headers");
+    public static final AsciiString CONTENT_DISPOSITION = create("Content-Disposition");
     /**
-     * {@code "access-control-request-method"}.
+     * The HTTP {@code "Content-Encoding"} header field name.
      */
-    public static final AsciiString ACCESS_CONTROL_REQUEST_METHOD =
-            AsciiString.cached("access-control-request-method");
+    public static final AsciiString CONTENT_ENCODING = create("Content-Encoding");
     /**
-     * {@code "age"}.
+     * The HTTP {@code "Content-Language"} header field name.
      */
-    public static final AsciiString AGE = AsciiString.cached("age");
+    public static final AsciiString CONTENT_LANGUAGE = create("Content-Language");
     /**
-     * {@code "allow"}.
+     * The HTTP {@code "Content-Location"} header field name.
      */
-    public static final AsciiString ALLOW = AsciiString.cached("allow");
+    public static final AsciiString CONTENT_LOCATION = create("Content-Location");
     /**
-     * {@code "authorization"}.
+     * The HTTP {@code "Content-MD5"} header field name.
      */
-    public static final AsciiString AUTHORIZATION = AsciiString.cached("authorization");
+    public static final AsciiString CONTENT_MD5 = create("Content-MD5");
     /**
-     * {@code "cache-control"}.
+     * The HTTP {@code "Content-Range"} header field name.
      */
-    public static final AsciiString CACHE_CONTROL = AsciiString.cached("cache-control");
+    public static final AsciiString CONTENT_RANGE = create("Content-Range");
     /**
-     * {@code "connection"}.
+     * The HTTP <a href="https://w3.org/TR/CSP/#content-security-policy-header-field">{@code
+     * Content-Security-Policy}</a> header field name.
      */
-    public static final AsciiString CONNECTION = AsciiString.cached("connection");
+    public static final AsciiString CONTENT_SECURITY_POLICY = create("Content-Security-Policy");
     /**
-     * {@code "content-base"}.
+     * The HTTP <a href="https://w3.org/TR/CSP/#content-security-policy-report-only-header-field">
+     * {@code "Content-Security-Policy-Report-Only"}</a> header field name.
      */
-    public static final AsciiString CONTENT_BASE = AsciiString.cached("content-base");
+    public static final AsciiString CONTENT_SECURITY_POLICY_REPORT_ONLY =
+            create("Content-Security-Policy-Report-Only");
     /**
-     * {@code "content-disposition"}.
+     * The HTTP {@code "ETag"} header field name.
      */
-    public static final AsciiString CONTENT_DISPOSITION = AsciiString.cached("content-disposition");
+    public static final AsciiString ETAG = create("ETag");
     /**
-     * {@code "content-encoding"}.
+     * The HTTP {@code "Expires"} header field name.
      */
-    public static final AsciiString CONTENT_ENCODING = AsciiString.cached("content-encoding");
+    public static final AsciiString EXPIRES = create("Expires");
     /**
-     * {@code "content-language"}.
+     * The HTTP {@code "Last-Modified"} header field name.
      */
-    public static final AsciiString CONTENT_LANGUAGE = AsciiString.cached("content-language");
+    public static final AsciiString LAST_MODIFIED = create("Last-Modified");
     /**
-     * {@code "content-length"}.
+     * The HTTP {@code "Link"} header field name.
      */
-    public static final AsciiString CONTENT_LENGTH = AsciiString.cached("content-length");
+    public static final AsciiString LINK = create("Link");
     /**
-     * {@code "content-location"}.
+     * The HTTP {@code "Location"} header field name.
      */
-    public static final AsciiString CONTENT_LOCATION = AsciiString.cached("content-location");
+    public static final AsciiString LOCATION = create("Location");
     /**
-     * {@code "content-md5"}.
+     * The HTTP <a href="https://googlechrome.github.io/OriginTrials/#header">{@code "Origin-Trial"}</a>
+     * header field name.
      */
-    public static final AsciiString CONTENT_MD5 = AsciiString.cached("content-md5");
+    public static final AsciiString ORIGIN_TRIAL = create("Origin-Trial");
     /**
-     * {@code "content-range"}.
+     * The HTTP {@code "P3P"} header field name. Limited browser support.
      */
-    public static final AsciiString CONTENT_RANGE = AsciiString.cached("content-range");
+    public static final AsciiString P3P = create("P3P");
     /**
-     * {@code "content-security-policy"}.
+     * The HTTP {@code "Proxy-Authenticate"} header field name.
      */
-    public static final AsciiString CONTENT_SECURITY_POLICY = AsciiString.cached("content-security-policy");
+    public static final AsciiString PROXY_AUTHENTICATE = create("Proxy-Authenticate");
     /**
-     * {@code "content-transfer-encoding"}.
+     * The HTTP {@code "Refresh"} header field name. Non-standard header supported by most browsers.
      */
-    public static final AsciiString CONTENT_TRANSFER_ENCODING = AsciiString.cached("content-transfer-encoding");
+    public static final AsciiString REFRESH = create("Refresh");
     /**
-     * {@code "content-type"}.
+     * The HTTP <a href="https://www.w3.org/TR/reporting/">{@code "Report-To"}</a> header field name.
      */
-    public static final AsciiString CONTENT_TYPE = AsciiString.cached("content-type");
+    public static final AsciiString REPORT_TO = create("Report-To");
     /**
-     * {@code "cookie"}.
+     * The HTTP {@code "Retry-After"} header field name.
      */
-    public static final AsciiString COOKIE = AsciiString.cached("cookie");
+    public static final AsciiString RETRY_AFTER = create("Retry-After");
     /**
-     * {@code "date"}.
+     * The HTTP {@code "Server"} header field name.
      */
-    public static final AsciiString DATE = AsciiString.cached("date");
+    public static final AsciiString SERVER = create("Server");
     /**
-     * {@code "etag"}.
+     * The HTTP <a href="https://www.w3.org/TR/server-timing/">{@code "Server-Timing"}</a> header field
+     * name.
      */
-    public static final AsciiString ETAG = AsciiString.cached("etag");
+    public static final AsciiString SERVER_TIMING = create("Server-Timing");
     /**
-     * {@code "expect"}.
+     * The HTTP <a href="https://www.w3.org/TR/service-workers/#update-algorithm">{@code
+     * Service-Worker-Allowed}</a> header field name.
      */
-    public static final AsciiString EXPECT = AsciiString.cached("expect");
+    public static final AsciiString SERVICE_WORKER_ALLOWED = create("Service-Worker-Allowed");
     /**
-     * {@code "expires"}.
+     * The HTTP {@code "Set-Cookie"} header field name.
      */
-    public static final AsciiString EXPIRES = AsciiString.cached("expires");
+    public static final AsciiString SET_COOKIE = create("Set-Cookie");
     /**
-     * {@code "forwarded"}.
+     * The HTTP {@code "Set-Cookie2"} header field name.
      */
-    public static final AsciiString FORWARDED = AsciiString.cached("forwarded");
+    public static final AsciiString SET_COOKIE2 = create("Set-Cookie2");
+
     /**
-     * {@code "from"}.
+     * The HTTP <a href="https://goo.gl/Dxx19N">{@code "SourceMap"}</a> header field name.
      */
-    public static final AsciiString FROM = AsciiString.cached("from");
+    public static final AsciiString SOURCE_MAP = create("SourceMap");
+
     /**
-     * {@code "host"}.
+     * The HTTP <a href="https://tools.ietf.org/html/rfc6797#section-6.1">{@code
+     * Strict-Transport-Security}</a> header field name.
      */
-    public static final AsciiString HOST = AsciiString.cached("host");
+    public static final AsciiString STRICT_TRANSPORT_SECURITY = create("Strict-Transport-Security");
     /**
-     * {@code "if-match"}.
+     * The HTTP <a href="https://www.w3.org/TR/resource-timing/#cross-origin-resources">{@code
+     * Timing-Allow-Origin}</a> header field name.
      */
-    public static final AsciiString IF_MATCH = AsciiString.cached("if-match");
+    public static final AsciiString TIMING_ALLOW_ORIGIN = create("Timing-Allow-Origin");
     /**
-     * {@code "if-modified-since"}.
+     * The HTTP {@code "Trailer"} header field name.
      */
-    public static final AsciiString IF_MODIFIED_SINCE = AsciiString.cached("if-modified-since");
+    public static final AsciiString TRAILER = create("Trailer");
     /**
-     * {@code "if-none-match"}.
+     * The HTTP {@code "Transfer-Encoding"} header field name.
      */
-    public static final AsciiString IF_NONE_MATCH = AsciiString.cached("if-none-match");
+    public static final AsciiString TRANSFER_ENCODING = create("Transfer-Encoding");
     /**
-     * {@code "if-range"}.
+     * The HTTP {@code "Vary"} header field name.
      */
-    public static final AsciiString IF_RANGE = AsciiString.cached("if-range");
+    public static final AsciiString VARY = create("Vary");
     /**
-     * {@code "if-unmodified-since"}.
+     * The HTTP {@code "WWW-Authenticate"} header field name.
      */
-    public static final AsciiString IF_UNMODIFIED_SINCE = AsciiString.cached("if-unmodified-since");
+    public static final AsciiString WWW_AUTHENTICATE = create("WWW-Authenticate");
+
+    // Common, non-standard HTTP header fields
+
     /**
-     * {@code "keep-alive"}.
+     * The HTTP {@code "DNT"} header field name.
+     */
+    public static final AsciiString DNT = create("DNT");
+    /**
+     * The HTTP {@code "X-Content-Type-Options"} header field name.
+     */
+    public static final AsciiString X_CONTENT_TYPE_OPTIONS = create("X-Content-Type-Options");
+    /**
+     * The HTTP {@code "X-Do-Not-Track"} header field name.
+     */
+    public static final AsciiString X_DO_NOT_TRACK = create("X-Do-Not-Track");
+    /**
+     * The HTTP {@code "X-Forwarded-For"} header field name (superseded by {@code "Forwarded"}).
+     */
+    public static final AsciiString X_FORWARDED_FOR = create("X-Forwarded-For");
+    /**
+     * The HTTP {@code "X-Forwarded-Proto"} header field name.
+     */
+    public static final AsciiString X_FORWARDED_PROTO = create("X-Forwarded-Proto");
+    /**
+     * The HTTP <a href="https://goo.gl/lQirAH">{@code "X-Forwarded-Host"}</a> header field name.
+     */
+    public static final AsciiString X_FORWARDED_HOST = create("X-Forwarded-Host");
+    /**
+     * The HTTP <a href="https://goo.gl/YtV2at">{@code "X-Forwarded-Port"}</a> header field name.
+     */
+    public static final AsciiString X_FORWARDED_PORT = create("X-Forwarded-Port");
+    /**
+     * The HTTP {@code "X-Frame-Options"} header field name.
+     */
+    public static final AsciiString X_FRAME_OPTIONS = create("X-Frame-Options");
+    /**
+     * The HTTP {@code "X-Powered-By"} header field name.
+     */
+    public static final AsciiString X_POWERED_BY = create("X-Powered-By");
+    /**
+     * The HTTP <a href="https://tools.ietf.org/html/rfc7469">{@code
+     * Public-Key-Pins}</a> header field name.
+     */
+    public static final AsciiString PUBLIC_KEY_PINS = create("Public-Key-Pins");
+    /**
+     * The HTTP <a href="https://tools.ietf.org/html/rfc7469">{@code
+     * Public-Key-Pins-Report-Only}</a> header field name.
+     */
+    public static final AsciiString PUBLIC_KEY_PINS_REPORT_ONLY = create("Public-Key-Pins-Report-Only");
+    /**
+     * The HTTP {@code "X-Requested-With"} header field name.
+     */
+    public static final AsciiString X_REQUESTED_WITH = create("X-Requested-With");
+    /**
+     * The HTTP {@code "X-User-IP"} header field name.
+     */
+    public static final AsciiString X_USER_IP = create("X-User-IP");
+    /**
+     * The HTTP <a href="https://goo.gl/VKpXxa">{@code "X-Download-Options"}</a> header field name.
      *
-     * @deprecated Use {@link #CONNECTION}.
+     * <p>When the new X-Download-Options header is present with the value {@code "noopen"}, the user is
+     * prevented from opening a file download directly; instead, they must first save the file
+     * locally.
      */
-    @Deprecated
-    public static final AsciiString KEEP_ALIVE = AsciiString.cached("keep-alive");
+    public static final AsciiString X_DOWNLOAD_OPTIONS = create("X-Download-Options");
     /**
-     * {@code "last-event-id"}.
+     * The HTTP {@code "X-XSS-Protection"} header field name.
      */
-    public static final AsciiString LAST_EVENT_ID = AsciiString.cached("last-event-id");
+    public static final AsciiString X_XSS_PROTECTION = create("X-XSS-Protection");
     /**
-     * {@code "last-modified"}.
+     * The HTTP <a
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-DNS-Prefetch-Control">{@code
+     * X-DNS-Prefetch-Control}</a> header controls DNS prefetch behavior. Value can be "on" or "off".
+     * By default, DNS prefetching is "on" for HTTP pages and "off" for HTTPS pages.
      */
-    public static final AsciiString LAST_MODIFIED = AsciiString.cached("last-modified");
+    public static final AsciiString X_DNS_PREFETCH_CONTROL = create("X-DNS-Prefetch-Control");
     /**
-     * {@code "link"}.
+     * The HTTP <a href="https://html.spec.whatwg.org/multipage/semantics.html#hyperlink-auditing">
+     * {@code "Ping-From"}</a> header field name.
      */
-    public static final AsciiString LINK = AsciiString.cached("link");
+    public static final AsciiString PING_FROM = create("Ping-From");
     /**
-     * {@code "location"}.
+     * The HTTP <a href="https://html.spec.whatwg.org/multipage/semantics.html#hyperlink-auditing">
+     * {@code "Ping-To"}</a> header field name.
      */
-    public static final AsciiString LOCATION = AsciiString.cached("location");
+    public static final AsciiString PING_TO = create("Ping-To");
     /**
-     * {@code "max-forwards"}.
+     * The HTTP <a href="https://tools.ietf.org/html/rfc8473">{@code
+     * Sec-Token-Binding}</a> header field name.
      */
-    public static final AsciiString MAX_FORWARDS = AsciiString.cached("max-forwards");
+    public static final AsciiString SEC_TOKEN_BINDING = create("Sec-Token-Binding");
     /**
-     * {@code "origin"}.
+     * The HTTP <a href="https://tools.ietf.org/html/draft-ietf-tokbind-ttrp">{@code
+     * Sec-Provided-Token-Binding-ID}</a> header field name.
      */
-    public static final AsciiString ORIGIN = AsciiString.cached("origin");
+    public static final AsciiString SEC_PROVIDED_TOKEN_BINDING_ID = create("Sec-Provided-Token-Binding-ID");
     /**
-     * {@code "pragma"}.
+     * The HTTP <a href="https://tools.ietf.org/html/draft-ietf-tokbind-ttrp">{@code
+     * Sec-Referred-Token-Binding-ID}</a> header field name.
      */
-    public static final AsciiString PRAGMA = AsciiString.cached("pragma");
-    /**
-     * {@code "prefer"}.
-     */
-    public static final AsciiString PREFER = AsciiString.cached("prefer");
-    /**
-     * {@code "proxy-authenticate"}.
-     */
-    public static final AsciiString PROXY_AUTHENTICATE = AsciiString.cached("proxy-authenticate");
-    /**
-     * {@code "proxy-authorization"}.
-     */
-    public static final AsciiString PROXY_AUTHORIZATION = AsciiString.cached("proxy-authorization");
-    /**
-     * {@code "proxy-connection"}.
-     *
-     * @deprecated Use {@link #CONNECTION}.
-     */
-    @Deprecated
-    public static final AsciiString PROXY_CONNECTION = AsciiString.cached("proxy-connection");
-    /**
-     * {@code "range"}.
-     */
-    public static final AsciiString RANGE = AsciiString.cached("range");
-    /**
-     * {@code "referer"}.
-     */
-    public static final AsciiString REFERER = AsciiString.cached("referer");
-    /**
-     * {@code "retry-after"}.
-     */
-    public static final AsciiString RETRY_AFTER = AsciiString.cached("retry-after");
-    /**
-     * {@code "sec-websocket-key1"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_KEY1 = AsciiString.cached("sec-websocket-key1");
-    /**
-     * {@code "sec-websocket-key2"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_KEY2 = AsciiString.cached("sec-websocket-key2");
-    /**
-     * {@code "sec-websocket-location"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_LOCATION = AsciiString.cached("sec-websocket-location");
-    /**
-     * {@code "sec-websocket-origin"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_ORIGIN = AsciiString.cached("sec-websocket-origin");
-    /**
-     * {@code "sec-websocket-protocol"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_PROTOCOL = AsciiString.cached("sec-websocket-protocol");
-    /**
-     * {@code "sec-websocket-version"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_VERSION = AsciiString.cached("sec-websocket-version");
-    /**
-     * {@code "sec-websocket-key"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_KEY = AsciiString.cached("sec-websocket-key");
-    /**
-     * {@code "sec-websocket-accept"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_ACCEPT = AsciiString.cached("sec-websocket-accept");
-    /**
-     * {@code "sec-websocket-protocol"}.
-     */
-    public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = AsciiString.cached("sec-websocket-extensions");
-    /**
-     * {@code "server"}.
-     */
-    public static final AsciiString SERVER = AsciiString.cached("server");
-    /**
-     * {@code "set-cookie"}.
-     */
-    public static final AsciiString SET_COOKIE = AsciiString.cached("set-cookie");
-    /**
-     * {@code "set-cookie2"}.
-     */
-    public static final AsciiString SET_COOKIE2 = AsciiString.cached("set-cookie2");
-    /**
-     * {@code "te"}.
-     */
-    public static final AsciiString TE = AsciiString.cached("te");
-    /**
-     * {@code "trailer"}.
-     */
-    public static final AsciiString TRAILER = AsciiString.cached("trailer");
-    /**
-     * {@code "transfer-encoding"}.
-     */
-    public static final AsciiString TRANSFER_ENCODING = AsciiString.cached("transfer-encoding");
-    /**
-     * {@code "upgrade"}.
-     */
-    public static final AsciiString UPGRADE = AsciiString.cached("upgrade");
-    /**
-     * {@code "user-agent"}.
-     */
-    public static final AsciiString USER_AGENT = AsciiString.cached("user-agent");
-    /**
-     * {@code "vary"}.
-     */
-    public static final AsciiString VARY = AsciiString.cached("vary");
-    /**
-     * {@code "via"}.
-     */
-    public static final AsciiString VIA = AsciiString.cached("via");
-    /**
-     * {@code "warning"}.
-     */
-    public static final AsciiString WARNING = AsciiString.cached("warning");
-    /**
-     * {@code "websocket-location"}.
-     */
-    public static final AsciiString WEBSOCKET_LOCATION = AsciiString.cached("websocket-location");
-    /**
-     * {@code "websocket-origin"}.
-     */
-    public static final AsciiString WEBSOCKET_ORIGIN = AsciiString.cached("websocket-origin");
-    /**
-     * {@code "websocket-protocol"}.
-     */
-    public static final AsciiString WEBSOCKET_PROTOCOL = AsciiString.cached("websocket-protocol");
-    /**
-     * {@code "www-authenticate"}.
-     */
-    public static final AsciiString WWW_AUTHENTICATE = AsciiString.cached("www-authenticate");
-    /**
-     * {@code "x-forwarded-for"}.
-     */
-    public static final AsciiString X_FORWARDED_FOR = AsciiString.cached("x-forwarded-for");
-    /**
-     * {@code "x-frame-options"}.
-     */
-    public static final AsciiString X_FRAME_OPTIONS = AsciiString.cached("x-frame-options");
+    public static final AsciiString SEC_REFERRED_TOKEN_BINDING_ID = create("Sec-Referred-Token-Binding-ID");
 
     private static final Map<CharSequence, AsciiString> map;
 
@@ -448,7 +560,7 @@ public final class HttpHeaderNames {
     }
 
     /**
-     * Lower-cases and converts the specified header name into an {@link AsciiString}. If {@code name} is
+     * Lower-cases and converts the specified header name into an {@link AsciiString}. If {@code "name"} is
      * a known header name, this method will return a pre-instantiated {@link AsciiString} to reduce
      * the allocation rate of {@link AsciiString}.
      */
@@ -463,7 +575,7 @@ public final class HttpHeaderNames {
     }
 
     /**
-     * Lower-cases and converts the specified header name into an {@link AsciiString}. If {@code name} is
+     * Lower-cases and converts the specified header name into an {@link AsciiString}. If {@code "name"} is
      * a known header name, this method will return a pre-instantiated {@link AsciiString} to reduce
      * the allocation rate of {@link AsciiString}.
      */
@@ -471,6 +583,10 @@ public final class HttpHeaderNames {
         final AsciiString lowerCased = name.toLowerCase();
         final AsciiString cached = map.get(lowerCased);
         return cached != null ? cached : lowerCased;
+    }
+
+    private static AsciiString create(String name) {
+        return AsciiString.cached(Ascii.toLowerCase(name));
     }
 
     private HttpHeaderNames() {}
