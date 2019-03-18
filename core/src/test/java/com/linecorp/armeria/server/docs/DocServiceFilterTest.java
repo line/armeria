@@ -23,37 +23,33 @@ import org.junit.Test;
 public class DocServiceFilterTest {
 
     @Test
-    public void filter() {
-        DocServiceFilter filter = DocServiceFilter.pluginName("foo");
-        assertThat(filter.filter("foo", "bar", "baz")).isTrue();
-        assertThat(filter.filter("foo1", "bar", "baz")).isFalse();
+    public void test() {
+        DocServiceFilter filter = DocServiceFilter.ofPluginName("foo");
+        assertThat(filter.test("foo", "bar", "baz")).isTrue();
+        assertThat(filter.test("foo1", "bar", "baz")).isFalse();
 
-        filter = DocServiceFilter.serviceName("foo", "bar");
-        assertThat(filter.filter("foo", "bar", "baz")).isTrue();
-        assertThat(filter.filter("foo1", "bar", "baz")).isFalse();
+        filter = DocServiceFilter.ofServiceName("foo", "bar");
+        assertThat(filter.test("foo", "bar", "baz")).isTrue();
+        assertThat(filter.test("foo1", "bar", "baz")).isFalse();
 
-        filter = DocServiceFilter.serviceName("bar");
-        assertThat(filter.filter("foo", "bar", "baz")).isTrue();
-        assertThat(filter.filter("foo", "bar1", "baz")).isFalse();
+        filter = DocServiceFilter.ofServiceName("bar");
+        assertThat(filter.test("foo", "bar", "baz")).isTrue();
+        assertThat(filter.test("foo", "bar1", "baz")).isFalse();
 
-        filter = DocServiceFilter.methodName("foo", "bar", "baz");
-        assertThat(filter.filter("foo", "bar", "baz")).isTrue();
-        assertThat(filter.filter("foo", "bar1", "baz")).isFalse();
+        filter = DocServiceFilter.ofMethodName("foo", "bar", "baz");
+        assertThat(filter.test("foo", "bar", "baz")).isTrue();
+        assertThat(filter.test("foo", "bar1", "baz")).isFalse();
 
-        filter = DocServiceFilter.methodName("bar", "baz");
-        assertThat(filter.filter("foo", "bar", "baz")).isTrue();
-        assertThat(filter.filter("foo", "bar1", "baz")).isFalse();
+        filter = DocServiceFilter.ofMethodName("bar", "baz");
+        assertThat(filter.test("foo", "bar", "baz")).isTrue();
+        assertThat(filter.test("foo", "bar1", "baz")).isFalse();
 
-        filter = DocServiceFilter.methodName("baz");
-        assertThat(filter.filter("foo", "bar", "baz")).isTrue();
-        assertThat(filter.filter("foo", "bar", "baz1")).isFalse();
+        filter = DocServiceFilter.ofMethodName("baz");
+        assertThat(filter.test("foo", "bar", "baz")).isTrue();
+        assertThat(filter.test("foo", "bar", "baz1")).isFalse();
 
-        filter = DocServiceFilter.servicePattern("^b.+r$");
-        assertThat(filter.filter("foo", "bar", "baz")).isTrue();
-        assertThat(filter.filter("foo", "bar1", "baz")).isFalse();
-
-        filter = DocServiceFilter.methodPattern("^b.+z$");
-        assertThat(filter.filter("foo", "bar", "baz")).isTrue();
-        assertThat(filter.filter("foo", "bar", "baz1")).isFalse();
+        filter = DocServiceFilter.pattern("bar#baz");
+        assertThat(filter.test("foo", "bar", "baz")).isTrue();
+        assertThat(filter.test("foo", "bar1", "baz")).isFalse();
     }
 }

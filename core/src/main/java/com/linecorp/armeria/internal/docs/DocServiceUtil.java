@@ -26,8 +26,8 @@ public final class DocServiceUtil {
 
     public static DocServiceFilter unifyFilter(DocServiceFilter includeFilter, DocServiceFilter excludeFilter) {
         return (pluginName, serviceName, methodName) ->
-                includeFilter.filter(pluginName, serviceName, methodName) &&
-                !excludeFilter.filter(pluginName, serviceName, methodName);
+                includeFilter.test(pluginName, serviceName, methodName) &&
+                !excludeFilter.test(pluginName, serviceName, methodName);
     }
 
     private DocServiceUtil() {}

@@ -16,68 +16,64 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static com.linecorp.armeria.server.docs.DocServiceBuilder.ALL_SERVICES;
-import static com.linecorp.armeria.server.docs.DocServiceBuilder.NO_SERVICE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.regex.Pattern;
 
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin;
-
 /**
- * A filter which is used when building a {@link DocService}.
+ * A filter which includes or excludes service methods when building a {@link DocService}.
+ * You can compose as many filters as you want to include or exclude service methods using
+ * {@link DocServiceBuilder#include(DocServiceFilter)} and {@link DocServiceBuilder#exclude(DocServiceFilter)}.
+ * For example:
  *
- * @see DocServiceBuilder#include(DocServiceFilter)
- * @see DocServiceBuilder#exclude(DocServiceFilter)
+ * <pre>{@code
+ * // Include Thrift and gRPC only.
+ * DocServiceBuilder builder = new DocServiceBuilder();
+ * DocServiceFilter filter = DocServiceFilter.ofThrift().or(DocServiceFilter.ofGrpc());
+ * builder.include(filter);
+ *
+ * // Include only "Foo" service in Thrift.
+ * DocServiceFilter filter = DocServiceFilter.ofThrift().and(DocServiceFilter.ofServiceName("Foo"));
+ * builder.include(filter);
+ *
+ * // Include all except annotated service and methods whose name is "Bar".
+ * DocServiceFilter filter = DocServiceFilter.ofAnnotated().or(DocServiceFilter.ofMethodName("Bar"));
+ * builder.exclude(filter);
+ * }</pre>
  */
 @FunctionalInterface
 public interface DocServiceFilter {
 
     /**
-     * Returns a {@link DocServiceFilter} which always returns {@code true}.
+     * Returns a {@link DocServiceFilter} which returns {@code true} only for the services detected by the
+     * Thrift plugin.
      */
-    static DocServiceFilter allServices() {
-        return ALL_SERVICES;
+    static DocServiceFilter ofThrift() {
+        return ofPluginName("thrift");
     }
 
     /**
-     * Returns a {@link DocServiceFilter} which always returns {@code false}.
+     * Returns a {@link DocServiceFilter} which returns {@code true} only for the services detected by the
+     * gRPC plugin.
      */
-    static DocServiceFilter noService() {
-        return NO_SERVICE;
+    static DocServiceFilter ofGrpc() {
+        return ofPluginName("grpc");
     }
 
     /**
-     * Returns a {@link DocServiceFilter} which returns {@code true} when the filter is invoked in the Thrift
-     * plugin.
+     * Returns a {@link DocServiceFilter} which returns {@code true} only for the services detected by the
+     * annotated service plugin.
      */
-    static DocServiceFilter thriftOnly() {
-        // Hardcode the class name because this does not have Thrift dependency.
-        return pluginName("com.linecorp.armeria.server.thrift.ThriftDocServicePlugin");
-    }
-
-    /**
-     * Returns a {@link DocServiceFilter} which returns {@code true} when the filter is invoked in the gRPC
-     * plugin.
-     */
-    static DocServiceFilter grpcOnly() {
-        // Hardcode the class name because this does not have gRPC dependency.
-        return pluginName("com.linecorp.armeria.server.grpc.GrpcDocServicePlugin");
-    }
-
-    /**
-     * Returns a {@link DocServiceFilter} which returns {@code true} when the filter is invoked in the annotated
-     * HTTP plugin.
-     */
-    static DocServiceFilter annotatedHttpOnly() {
-        return pluginName(AnnotatedHttpDocServicePlugin.class.getName());
+    static DocServiceFilter ofAnnotated() {
+        return ofPluginName("annotated");
     }
 
     /**
      * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the plugin matches the
-     * specified {@code pluginName}.
+     * specified {@code pluginName}. For Thrift, gRPC and Annotated service, use {@link #ofThrift()},
+     * {@link #ofGrpc()} and {@link #ofAnnotated()}, respectively.
      */
-    static DocServiceFilter pluginName(String pluginName) {
+    static DocServiceFilter ofPluginName(String pluginName) {
         requireNonNull(pluginName, "pluginName");
         return (plugin, service, method) -> pluginName.equals(plugin);
     }
@@ -86,7 +82,7 @@ public interface DocServiceFilter {
      * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the service matches the
      * specified {@code serviceName}.
      */
-    static DocServiceFilter serviceName(String serviceName) {
+    static DocServiceFilter ofServiceName(String serviceName) {
         requireNonNull(serviceName, "serviceName");
         return (plugin, service, method) -> serviceName.equals(service);
     }
@@ -95,7 +91,7 @@ public interface DocServiceFilter {
      * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the plugin and service
      * matches the specified {@code pluginName} and {@code serviceName}.
      */
-    static DocServiceFilter serviceName(String pluginName, String serviceName) {
+    static DocServiceFilter ofServiceName(String pluginName, String serviceName) {
         requireNonNull(pluginName, "pluginName");
         requireNonNull(serviceName, "serviceName");
         return (plugin, service, method) -> pluginName.equals(plugin) && serviceName.equals(service);
@@ -105,7 +101,7 @@ public interface DocServiceFilter {
      * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the method matches the
      * specified {@code methodName}.
      */
-    static DocServiceFilter methodName(String methodName) {
+    static DocServiceFilter ofMethodName(String methodName) {
         requireNonNull(methodName, "methodName");
         return (plugin, service, method) -> methodName.equals(method);
     }
@@ -114,7 +110,7 @@ public interface DocServiceFilter {
      * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the service and method
      * matches the specified {@code serviceName} and {@code methodName}.
      */
-    static DocServiceFilter methodName(String serviceName, String methodName) {
+    static DocServiceFilter ofMethodName(String serviceName, String methodName) {
         return (plugin, service, method) -> serviceName.equals(service) && methodName.equals(method);
     }
 
@@ -122,36 +118,35 @@ public interface DocServiceFilter {
      * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the plugin, service and
      * method matches the specified {@code pluginName}, {@code serviceName} and {@code methodName}.
      */
-    static DocServiceFilter methodName(String pluginName, String serviceName, String methodName) {
+    static DocServiceFilter ofMethodName(String pluginName, String serviceName, String methodName) {
         return (plugin, service, method) -> pluginName.equals(plugin) && serviceName.equals(service) &&
                                             methodName.equals(method);
     }
 
     /**
-     * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the service matches the
-     * specified {@code regex}.
+     * Returns a {@link DocServiceFilter} which returns {@code true} when the concatenated name of the plugin,
+     * service and method matches the specified {@code regex}.
+     * The concatenated name will be {@code "pluginName + ':' + serviceName + '#' + methodName"}. For example:
+     * <pre>{@code
+     * grpc:armeria.grpc.FooService#EmptyCall // gRPC.
+     * thrift:com.linecorp.armeria.service.thrift.BarService#myMethod // Thrift.
+     * annotated:com.linecorp.armeria.annotated.BazService#myMethod // Annotated service.
+     * }</pre>
      */
-    static DocServiceFilter servicePattern(String regex) {
+    static DocServiceFilter pattern(String regex) {
         requireNonNull(regex, "regex");
         final Pattern pattern = Pattern.compile(regex);
-        return (plugin, service, method) -> pattern.matcher(service).matches();
-    }
-
-    /**
-     * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the method matches the
-     * specified {@code regex}.
-     */
-    static DocServiceFilter methodPattern(String regex) {
-        requireNonNull(regex, "regex");
-        final Pattern pattern = Pattern.compile(regex);
-        return (plugin, service, method) -> pattern.matcher(method).matches();
+        return (plugin, service, method) -> {
+            final String concatenatedName = plugin + ':' + service + '#' + method;
+            return pattern.matcher(concatenatedName).find();
+        };
     }
 
     /**
      * Evaluates this {@link DocServiceFilter} on the specified {@code pluginName}, {@code serviceName} and
      * {@code methodName}.
      */
-    boolean filter(String pluginName, String className, String methodName);
+    boolean test(String pluginName, String serviceName, String methodName);
 
     /**
      * Returns a composed {@link DocServiceFilter} that represents a short-circuiting logical {@code OR} of
@@ -160,8 +155,8 @@ public interface DocServiceFilter {
      */
     default DocServiceFilter or(DocServiceFilter other) {
         requireNonNull(other, "other");
-        return (pluginName, className, methodName) -> filter(pluginName, className, methodName) ||
-                                                      other.filter(pluginName, className, methodName);
+        return (pluginName, serviceName, methodName) -> test(pluginName, serviceName, methodName) ||
+                                                        other.test(pluginName, serviceName, methodName);
     }
 
     /**
@@ -171,7 +166,7 @@ public interface DocServiceFilter {
      */
     default DocServiceFilter and(DocServiceFilter other) {
         requireNonNull(other, "other");
-        return (pluginName, className, methodName) -> filter(pluginName, className, methodName) &&
-                                                      other.filter(pluginName, className, methodName);
+        return (pluginName, serviceName, methodName) -> test(pluginName, serviceName, methodName) &&
+                                                        other.test(pluginName, serviceName, methodName);
     }
 }

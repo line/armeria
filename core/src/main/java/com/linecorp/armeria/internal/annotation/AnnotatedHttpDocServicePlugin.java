@@ -86,12 +86,16 @@ import com.linecorp.armeria.server.docs.TypeSignature;
  */
 public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
-    // The formats defined by OpenAPI Specification
-    // (https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#dataTypes):
+    private static final String name = "annotated";
+
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     @VisibleForTesting
     static final TypeSignature BOOLEAN = TypeSignature.ofBase("boolean");
+    @VisibleForTesting
+    static final TypeSignature BYTE = TypeSignature.ofBase("byte");
+    @VisibleForTesting
+    static final TypeSignature SHORT = TypeSignature.ofBase("short");
     @VisibleForTesting
     static final TypeSignature INT = TypeSignature.ofBase("int");
     @VisibleForTesting
@@ -104,12 +108,6 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     static final TypeSignature STRING = TypeSignature.ofBase("string");
     @VisibleForTesting
     static final TypeSignature BINARY = TypeSignature.ofBase("binary");
-
-    // Not defined in the spec.
-    @VisibleForTesting
-    static final TypeSignature BYTE = TypeSignature.ofBase("byte");
-    @VisibleForTesting
-    static final TypeSignature SHORT = TypeSignature.ofBase("short");
     @VisibleForTesting
     static final TypeSignature BEAN = TypeSignature.ofBase("bean");
 
@@ -117,7 +115,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     @Override
     public String name() {
-        return getClass().getName();
+        return name;
     }
 
     @Override
@@ -139,7 +137,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                     httpService -> {
                         final String className = httpService.object().getClass().getName();
                         final String methodName = httpService.method().getName();
-                        if (!filter.filter(name(), className, methodName)) {
+                        if (!filter.test(name, className, methodName)) {
                             return;
                         }
                         addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), httpService);

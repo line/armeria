@@ -26,8 +26,6 @@ import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePl
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.endpointInfo;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.toTypeSignature;
 import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
-import static com.linecorp.armeria.server.docs.DocServiceFilter.allServices;
-import static com.linecorp.armeria.server.docs.DocServiceFilter.noService;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
@@ -225,7 +223,8 @@ public class AnnotatedHttpDocServicePluginTest {
 
     @Test
     public void testGenerateSpecification() {
-        final Map<String, ServiceInfo> services = services(allServices(), noService());
+        final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
+                                                           (plugin, service, method) -> false);
 
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
         checkFooService(services.get(FOO_NAME));
@@ -242,13 +241,13 @@ public class AnnotatedHttpDocServicePluginTest {
         //    the exclude filter returns false.
 
         // 1. Nothing specified.
-        DocServiceFilter include = allServices();
-        DocServiceFilter exclude = noService();
+        DocServiceFilter include = (plugin, service, method) -> true;
+        DocServiceFilter exclude = (plugin, service, method) -> false;
         Map<String, ServiceInfo> services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
 
         // 2. Exclude specified.
-        exclude = DocServiceFilter.methodName(FOO_NAME, "fooMethod");
+        exclude = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
 
@@ -256,9 +255,9 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(methods).containsOnlyOnce("foo2Method");
 
         // 3-1. Include serviceName specified.
-        include = DocServiceFilter.serviceName(FOO_NAME);
+        include = DocServiceFilter.ofServiceName(FOO_NAME);
         // Set the exclude to the default.
-        exclude = noService();
+        exclude = (plugin, service, method) -> false;
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
@@ -266,7 +265,7 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(methods).containsExactlyInAnyOrder("fooMethod", "foo2Method");
 
         // 3-2. Include methodName specified.
-        include = DocServiceFilter.methodName(FOO_NAME, "fooMethod");
+        include = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
@@ -274,8 +273,8 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(methods).containsOnlyOnce("fooMethod");
 
         // 4-1. Include and exclude specified.
-        include = DocServiceFilter.serviceName(FOO_NAME);
-        exclude = DocServiceFilter.methodName(FOO_NAME, "fooMethod");
+        include = DocServiceFilter.ofServiceName(FOO_NAME);
+        exclude = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
@@ -283,8 +282,8 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(methods).containsOnlyOnce("foo2Method");
 
         // 4-2. Include and exclude specified.
-        include = DocServiceFilter.methodName(FOO_NAME, "fooMethod");
-        exclude = DocServiceFilter.serviceName(FOO_NAME);
+        include = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
+        exclude = DocServiceFilter.ofServiceName(FOO_NAME);
         services = services(include, exclude);
         assertThat(services.size()).isZero();
     }

@@ -19,8 +19,6 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
-import static com.linecorp.armeria.server.docs.DocServiceFilter.allServices;
-import static com.linecorp.armeria.server.docs.DocServiceFilter.noService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -79,7 +77,8 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void servicesTest() throws Exception {
-        final Map<String, ServiceInfo> services = services(allServices(), noService());
+        final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
+                                                           (plugin, service, method) -> false);
 
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
                                               UnitTestServiceGrpc.SERVICE_NAME,
@@ -107,15 +106,15 @@ public class GrpcDocServicePluginTest {
         //    the exclude filter returns false.
 
         // 1. Nothing specified.
-        DocServiceFilter include = allServices();
-        DocServiceFilter exclude = noService();
+        DocServiceFilter include = (plugin, service, method) -> true;
+        DocServiceFilter exclude = (plugin, service, method) -> false;
         Map<String, ServiceInfo> services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME);
 
         // 2. Exclude specified.
-        exclude = DocServiceFilter.methodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
-                DocServiceFilter.methodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
+        exclude = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
+                DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME);
@@ -129,9 +128,9 @@ public class GrpcDocServicePluginTest {
                                                       "UnimplementedCall");
 
         // 3-1. Include serviceName specified.
-        include = DocServiceFilter.serviceName(TestServiceGrpc.SERVICE_NAME);
+        include = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
         // Set the exclude to the default.
-        exclude = noService();
+        exclude = (plugin, service, method) -> false;
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
 
@@ -146,7 +145,7 @@ public class GrpcDocServicePluginTest {
                                                       "UnimplementedCall");
 
         // 3-2. Include methodName specified.
-        include = DocServiceFilter.methodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall");
+        include = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall");
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
 
@@ -154,9 +153,9 @@ public class GrpcDocServicePluginTest {
         assertThat(methods).containsOnlyOnce("EmptyCall");
 
         // 4-1. Include and exclude specified.
-        include = DocServiceFilter.serviceName(TestServiceGrpc.SERVICE_NAME);
-        exclude = DocServiceFilter.methodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
-                DocServiceFilter.methodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
+        include = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
+        exclude = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
+                DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
 
@@ -169,8 +168,8 @@ public class GrpcDocServicePluginTest {
                                                       "UnimplementedCall");
 
         // 4-2. Include and exclude specified.
-        include = DocServiceFilter.methodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall");
-        exclude = DocServiceFilter.serviceName(TestServiceGrpc.SERVICE_NAME);
+        include = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall");
+        exclude = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
         services = services(include, exclude);
         assertThat(services.size()).isZero();
     }
@@ -284,7 +283,7 @@ public class GrpcDocServicePluginTest {
                                 new EndpointInfoBuilder("*", "/debug/foo")
                                         .fragment("b").availableFormats(GrpcSerializationFormats.JSON)
                                         .build())),
-                allServices());
+                (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> functions = service
                 .methods()

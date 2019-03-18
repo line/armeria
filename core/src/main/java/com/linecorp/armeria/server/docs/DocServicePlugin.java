@@ -32,10 +32,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 public interface DocServicePlugin {
 
     /**
-     * Returns the name of this plugin. This method is a shortcut of:
-     * <pre>{@code
-     * getClass().getName();
-     * }</pre>
+     * Returns the name of this plugin.
      */
     String name();
 

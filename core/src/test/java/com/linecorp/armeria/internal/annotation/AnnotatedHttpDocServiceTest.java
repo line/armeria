@@ -112,11 +112,11 @@ public class AnnotatedHttpDocServiceTest {
                     .exampleRequestForMethod(MyService.class, "pathParams",
                                              ImmutableList.of(mapper.readTree(
                                                      "{\"hello\":\"armeria\"}")))
-                    .exclude(DocServiceFilter.methodName(MyService.class.getName(), "exclude1").or(
-                            DocServiceFilter.methodName(MyService.class.getName(), "exclude2")))
+                    .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude1").or(
+                            DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
                     .build());
             sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
-                    .exclude(DocServiceFilter.annotatedHttpOnly())
+                    .exclude(DocServiceFilter.ofAnnotated())
                     .build());
         }
     };

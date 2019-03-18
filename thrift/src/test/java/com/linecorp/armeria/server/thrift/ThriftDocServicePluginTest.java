@@ -19,8 +19,6 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
-import static com.linecorp.armeria.server.docs.DocServiceFilter.allServices;
-import static com.linecorp.armeria.server.docs.DocServiceFilter.noService;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newExceptionInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newFieldInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newStructInfo;
@@ -78,7 +76,8 @@ public class ThriftDocServicePluginTest {
 
     @Test
     public void servicesTest() {
-        final Map<String, ServiceInfo> services = services(allServices(), noService());
+        final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
+                                                           (plugin, service, method) -> false);
 
         assertThat(services).containsOnlyKeys(HELLO_NAME, FOO_NAME);
 
@@ -112,13 +111,13 @@ public class ThriftDocServicePluginTest {
         //    the exclude filter returns false.
 
         // 1. Nothing specified.
-        DocServiceFilter include = allServices();
-        DocServiceFilter exclude = noService();
+        DocServiceFilter include = (plugin, service, method) -> true;
+        DocServiceFilter exclude = (plugin, service, method) -> false;
         Map<String, ServiceInfo> services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME, HELLO_NAME);
 
         // 2. Exclude specified.
-        exclude = DocServiceFilter.methodName(FOO_NAME, "bar2");
+        exclude = DocServiceFilter.ofMethodName(FOO_NAME, "bar2");
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME, HELLO_NAME);
         List<String> methods = methods(services);
@@ -126,9 +125,9 @@ public class ThriftDocServicePluginTest {
         assertThat(methods).containsExactlyInAnyOrder("bar1", "bar3", "bar4", "bar5", "bar6");
 
         // 3-1. Include serviceName specified.
-        include = DocServiceFilter.serviceName(FOO_NAME);
+        include = DocServiceFilter.ofServiceName(FOO_NAME);
         // Set the exclude to the default.
-        exclude = noService();
+        exclude = (plugin, service, method) -> false;
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
@@ -136,7 +135,7 @@ public class ThriftDocServicePluginTest {
         assertThat(methods).containsExactlyInAnyOrder("bar1", "bar2", "bar3", "bar4", "bar5", "bar6");
 
         // 3-2. Include methodName specified.
-        include = DocServiceFilter.methodName(FOO_NAME, "bar2");
+        include = DocServiceFilter.ofMethodName(FOO_NAME, "bar2");
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
@@ -144,8 +143,8 @@ public class ThriftDocServicePluginTest {
         assertThat(methods).containsOnlyOnce("bar2");
 
         // 4-1. Include and exclude specified.
-        include = DocServiceFilter.serviceName(FOO_NAME);
-        exclude = DocServiceFilter.methodName(FOO_NAME, "bar2").or(DocServiceFilter.methodName("bar3"));
+        include = DocServiceFilter.ofServiceName(FOO_NAME);
+        exclude = DocServiceFilter.ofMethodName(FOO_NAME, "bar2").or(DocServiceFilter.ofMethodName("bar3"));
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
@@ -153,8 +152,8 @@ public class ThriftDocServicePluginTest {
         assertThat(methods).containsExactlyInAnyOrder("bar1", "bar4", "bar5", "bar6");
 
         // 4-2. Include and exclude specified.
-        include = DocServiceFilter.methodName(FOO_NAME, "bar2");
-        exclude = DocServiceFilter.serviceName(FOO_NAME);
+        include = DocServiceFilter.ofMethodName(FOO_NAME, "bar2");
+        exclude = DocServiceFilter.ofServiceName(FOO_NAME);
         services = services(include, exclude);
         assertThat(services.size()).isZero();
     }
@@ -220,7 +219,7 @@ public class ThriftDocServicePluginTest {
                                  new EndpointInfoBuilder("*", "/debug/foo")
                                          .fragment("b").defaultFormat(ThriftSerializationFormats.TEXT)
                                          .build()),
-                allServices());
+                (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> methods =
                 service.methods().stream().collect(toImmutableMap(MethodInfo::name, Function.identity()));

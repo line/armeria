@@ -75,6 +75,8 @@ import io.grpc.protobuf.ProtoFileDescriptorSupplier;
  */
 public class GrpcDocServicePlugin implements DocServicePlugin {
 
+    private static final String name = "grpc";
+
     @VisibleForTesting
     static final TypeSignature BOOL = TypeSignature.ofBase("bool");
     @VisibleForTesting
@@ -112,7 +114,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
 
     @Override
     public String name() {
-        return getClass().getName();
+        return name;
     }
 
     @Override
@@ -234,7 +236,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         entry.name();
         final List<MethodInfo> methodInfos =
                 entry.methods().stream()
-                     .filter(m -> filter.filter(name(), entry.name(), m.getName()))
+                     .filter(m -> filter.test(name, entry.name(), m.getName()))
                      .map(m -> newMethodInfo(m, entry))
                      .collect(toImmutableList());
         if (methodInfos.isEmpty()) {
