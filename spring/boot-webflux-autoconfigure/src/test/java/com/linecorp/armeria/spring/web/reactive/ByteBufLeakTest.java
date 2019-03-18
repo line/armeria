@@ -99,7 +99,7 @@ public class ByteBufLeakTest {
 
             private void addListenerForCountingCompletedRequests() {
                 RequestContext.current().log().addListener(
-                        log -> completed.incrementAndGet(), RequestLogAvailability.RESPONSE_END);
+                        log -> completed.incrementAndGet(), RequestLogAvailability.COMPLETE);
             }
         }
     }
@@ -114,7 +114,7 @@ public class ByteBufLeakTest {
     public void confirmNoBufferLeak() throws Exception {
         assert allocatedBuffers.isEmpty();
         final HttpClient client = HttpClient.of("http://127.0.0.1:" + port);
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 2; i++) {
             assertThat(client.get("/mono").aggregate().join().contentUtf8())
                     .isEqualTo("hello, WebFlux!");
             assertThat(client.get("/flux").aggregate().join().contentUtf8())
@@ -130,7 +130,7 @@ public class ByteBufLeakTest {
     public void confirmNoBufferLeak_resetConnection() throws Exception {
         completed.set(0);
         assert allocatedBuffers.isEmpty();
-        for (int i = 0; i < 3 * 3; i++) {
+        for (int i = 0; i < 2 * 3; i++) {
             try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
                 s.setSoLinger(true, 0);
                 final PrintWriter outWriter = new PrintWriter(s.getOutputStream(), false);
@@ -150,7 +150,8 @@ public class ByteBufLeakTest {
         }
 
         // Wait until all request has been completed.
-        await().until(() -> completed.get() == 3 * 3);
+        final long timeoutSeconds = System.getenv("CI") != null ? 30 : 10;
+        await().atMost(timeoutSeconds, TimeUnit.SECONDS).until(() -> completed.get() == 2 * 3);
 
         ensureAllBuffersAreReleased();
     }

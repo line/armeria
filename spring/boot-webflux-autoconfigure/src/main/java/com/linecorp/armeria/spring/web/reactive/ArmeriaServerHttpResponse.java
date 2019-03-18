@@ -208,7 +208,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
                 armeriaHeaders.add(HttpHeaderNames.SET_COOKIE, cookieValues);
             }
 
-            stateUpdater.set(this, State.COMMITTED);
+            state = State.COMMITTED;
         }));
 
         if (writeAction != null) {
