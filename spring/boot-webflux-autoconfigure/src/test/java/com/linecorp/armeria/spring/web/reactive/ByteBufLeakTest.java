@@ -23,6 +23,7 @@ import java.net.Socket;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Rule;
@@ -57,10 +58,10 @@ import reactor.core.publisher.Mono;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 public class ByteBufLeakTest {
 
-    private static final long timeoutSeconds = 60;
-
     private static final AtomicInteger completed = new AtomicInteger();
     private static final Queue<NettyDataBuffer> allocatedBuffers = new ConcurrentLinkedQueue<>();
+
+    private static final AtomicBoolean requestReceived = new AtomicBoolean();
 
     @SpringBootApplication
     @Configuration
@@ -102,12 +103,13 @@ public class ByteBufLeakTest {
             private void addListenerForCountingCompletedRequests() {
                 RequestContext.current().log().addListener(
                         log -> completed.incrementAndGet(), RequestLogAvailability.COMPLETE);
+                requestReceived.set(true);
             }
         }
     }
 
     @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(timeoutSeconds, TimeUnit.SECONDS));
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @LocalServerPort
     int port;
@@ -132,8 +134,10 @@ public class ByteBufLeakTest {
     public void confirmNoBufferLeak_resetConnection() throws Exception {
         completed.set(0);
         assert allocatedBuffers.isEmpty();
+
         for (int i = 0; i < 2 * 3; i++) {
             try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
+                requestReceived.set(false);
                 s.setSoLinger(true, 0);
                 final PrintWriter outWriter = new PrintWriter(s.getOutputStream(), false);
                 switch (i % 3) {
@@ -148,11 +152,13 @@ public class ByteBufLeakTest {
                         break;
                 }
                 outWriter.flush();
+
+                await().untilTrue(requestReceived);
             }
         }
 
         // Wait until all request has been completed.
-        await().atMost(timeoutSeconds, TimeUnit.SECONDS).until(() -> completed.get() == 2 * 3);
+        await().until(() -> completed.get() == 2 * 3);
 
         ensureAllBuffersAreReleased();
     }
