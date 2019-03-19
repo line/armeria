@@ -5,13 +5,19 @@ Browsing and invoking services with ``DocService``
 
 :api:`DocService` is a single-page web application which provides the following useful features:
 
-- Browsing the list of gRPC or Thrift services and operations available in the server
+- Browsing the list of gRPC, Thrift or annotated services and their operations available in the server
 - Invoking a service operation from a web form
 - Creating a permalink for the invocation you've made
 
 First, add :api:`DocService` to the :api:`ServerBuilder`:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+    import com.linecorp.armeria.server.docs.DocService;
+    import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.thrift.THttpService;
 
     ServerBuilder sb = new ServerBuilder();
     sb.http(8080);
@@ -27,13 +33,20 @@ First, add :api:`DocService` to the :api:`ServerBuilder`:
                                        .enableUnframedRequests(true)
                                        .build());
 
+    // Add an annotated HTTP service.
+    sb.annotatedService("/service", new MyAnnotatedService());
+
     // Add a DocService which scans all Thrift and gRPC services added to the server.
     sb.serviceUnder("/docs", new DocService());
 
     Server server = sb.build();
     server.start().join();
 
-:api:`DocService` will scan for the supported services when the :api:`Server` starts up.
+.. note::
+
+    :api:`DocService` will scan for all supported services automatically when the :api:`Server` starts up.
+    Please see :ref:`inclusion-rule` to learn how to include or exclude certain services.
+
 Open http://127.0.0.1:8080/docs/ in your web browser and you'll see the following screen:
 
 .. image:: _images/docservice_1.png
@@ -86,11 +99,41 @@ text area which allows you to specify the HTTP headers you want to add:
 .. image:: _images/docservice_5.png
    :scale: 30 %
 
+.. _inclusion-rule:
+
+Including and excluding service methods
+---------------------------------------
+
+You can include or exclude service methods using :api:`DocServiceFilter` when building a :api:`DocService`
+with a :api:`DocServiceBuilder`:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.docs.DocServiceBuilder;
+    import com.linecorp.armeria.server.docs.DocServiceFilter;
+
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    sb.serviceUnder("/docs", new DocServiceBuilder()
+            // Include Thrift services and Annotated services.
+            .include(DocServiceFilter.ofThrift().or(DocServiceFilter.ofAnnotated()))
+            // Exclude the method whose name is "foo" in Thrift services.
+            .exclude(DocServiceFilter.ofThrift().and(DocServiceFilter.ofMethodName("foo")))
+            .build());
+    ...
+
+The inclusion rule is as follows:
+
+- No ``include(DocServiceFilter)`` and ``exclude(DocServiceFilter)`` is called: include all methods.
+- Only ``exclude(DocServiceFilter)`` is called: include all methods except the methods which the exclusion filter returns ``true``.
+- Only ``include(DocServiceFilter)`` is called: include the methods which the inclusion filter returns ``true``.
+- ``include(DocServiceFilter)`` and ``exclude(DocServiceFilter)`` is called: include the methods which the inclusion filter returns ``true`` and the exclusion filter returns ``false``.
+
 Example requests and headers
 ----------------------------
 
 You can specify the example requests and HTTP headers which will be used as the default value of the debug form
-when building a :api:`DocService` with a :api:`DocServiceBuilder`:
+with a :api:`DocServiceBuilder`:
 
 .. code-block:: java
 

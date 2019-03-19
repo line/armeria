@@ -16,29 +16,32 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -49,7 +52,9 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
+import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -57,6 +62,8 @@ import com.linecorp.armeria.testing.server.ServerRule;
 import io.grpc.stub.StreamObserver;
 
 public class GrpcDocServiceTest {
+
+    private static final boolean DEMO_MODE = false;
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
@@ -74,6 +81,8 @@ public class GrpcDocServiceTest {
 
     private static final String INJECTED_HEADER_PROVIDER3 =
             "armeria.registerHeaderProvider(function() { return Promise.resolve({ 'moo': 'cow' }); });";
+
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     private static class TestService extends TestServiceImplBase {
 
@@ -93,6 +102,9 @@ public class GrpcDocServiceTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            if (DEMO_MODE) {
+                sb.http(8080);
+            }
             sb.serviceUnder("/test", new GrpcServiceBuilder()
                     .addService(new TestService())
                     .supportedSerializationFormats(GrpcSerializationFormats.values())
@@ -111,8 +123,12 @@ public class GrpcDocServiceTest {
                                                  .build())
                             .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
                             .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
+                            .exclude(DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall"))
                             .build()
                             .decorate(LoggingService.newDecorator()));
+            sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
+                    .exclude(DocServiceFilter.ofGrpc())
+                    .build());
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(mock(ReconnectServiceImplBase.class))
                     .build());
@@ -121,6 +137,9 @@ public class GrpcDocServiceTest {
 
     @Test
     public void testOk() throws Exception {
+        if (DEMO_MODE) {
+            Thread.sleep(Long.MAX_VALUE);
+        }
         final List<ServiceEntry> entries = ImmutableList.of(
                 new ServiceEntry(TEST_SERVICE_DESCRIPTOR, ImmutableList.of(
                         new EndpointInfoBuilder("*", "/test/armeria.grpc.testing.TestService/")
@@ -136,47 +155,52 @@ public class GrpcDocServiceTest {
                                 .availableFormats(GrpcSerializationFormats.PROTO,
                                                   GrpcSerializationFormats.PROTO_WEB)
                                 .build())));
-        final ObjectMapper mapper = new ObjectMapper();
-
-        final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(entries));
+        final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(
+                entries, unifyFilter((plugin, service, method) -> true,
+                                     DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME,
+                                                                   "EmptyCall"))));
 
         // The specification generated by GrpcDocServicePlugin does not include the examples specified
         // when building a DocService, so we add them manually here.
         addExamples(expectedJson);
 
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet req = new HttpGet(specificationUri());
+        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AggregatedHttpMessage message = client.get("/docs/specification.json").aggregate().join();
+        assertThat(message.status()).isSameAs(HttpStatus.OK);
 
-            try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
-                final JsonNode actualJson = mapper.readTree(EntityUtils.toString(res.getEntity()));
+        final JsonNode actualJson = mapper.readTree(message.contentUtf8());
 
-                // The specification generated by ThriftDocServicePlugin does not include the docstrings
-                // because it's injected by the DocService, so we remove them here for easier comparison.
-                removeDocStrings(actualJson);
+        // The specification generated by ThriftDocServicePlugin does not include the docstrings
+        // because it's injected by the DocService, so we remove them here for easier comparison.
+        removeDocStrings(actualJson);
+        assertThatJson(actualJson).isEqualTo(expectedJson);
 
-                // Convert to the prettified strings for human-readable comparison.
-                final ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
-                final String actualJsonString = writer.writeValueAsString(actualJson);
-                final String expectedJsonString = writer.writeValueAsString(expectedJson);
-                assertThat(actualJsonString).isEqualTo(expectedJsonString);
-            }
+        final AggregatedHttpMessage injected = client.get("/docs/injected.js").aggregate().join();
 
-            final HttpGet injectedJsReq = new HttpGet(server.uri("/docs/injected.js"));
-            try (CloseableHttpResponse res = hc.execute(injectedJsReq)) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
-                assertThat(EntityUtils.toString(res.getEntity()))
-                        .isEqualTo(INJECTED_HEADER_PROVIDER1 + '\n' +
-                                   INJECTED_HEADER_PROVIDER2 + '\n' +
-                                   INJECTED_HEADER_PROVIDER3);
-            }
-        }
+        assertThat(injected.status()).isSameAs(HttpStatus.OK);
+        assertThat(injected.contentUtf8()).isEqualTo(INJECTED_HEADER_PROVIDER1 + '\n' +
+                                                     INJECTED_HEADER_PROVIDER2 + '\n' +
+                                                     INJECTED_HEADER_PROVIDER3);
+    }
+
+    @Test
+    public void excludeAllServices() throws IOException {
+        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AggregatedHttpMessage message = client.get("/excludeAll/specification.json").aggregate().join();
+        assertThat(message.status()).isEqualTo(HttpStatus.OK);
+        final JsonNode actualJson = mapper.readTree(message.contentUtf8());
+        final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of()));
+        assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 
     @Test
     public void testMethodNotAllowed() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(specificationUri());
+            final HttpPost req = new HttpPost(server.uri("/docs/specification.json"));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 405 Method Not Allowed");
@@ -211,9 +235,5 @@ public class GrpcDocServiceTest {
         if (json.isObject() || json.isArray()) {
             json.forEach(GrpcDocServiceTest::removeDocStrings);
         }
-    }
-
-    private static String specificationUri() {
-        return server.uri("/docs/specification.json");
     }
 }

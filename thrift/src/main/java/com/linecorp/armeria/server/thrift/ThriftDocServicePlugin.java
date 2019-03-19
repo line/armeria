@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -57,6 +58,7 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
@@ -94,12 +96,20 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     // Methods related with generating a service specification.
 
     @Override
+    public String name() {
+        return "thrift";
+    }
+
+    @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
         return ImmutableSet.of(THttpService.class);
     }
 
     @Override
-    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs) {
+    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
+                                                      DocServiceFilter filter) {
+        requireNonNull(serviceConfigs, "serviceConfigs");
+        requireNonNull(filter, "filter");
 
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
@@ -129,20 +139,24 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         final List<Entry> entries = map.values().stream()
                                        .map(EntryBuilder::build)
                                        .collect(Collectors.toList());
-        return generate(entries);
+        return generate(entries, filter);
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(List<Entry> entries) {
-        final List<ServiceInfo> services = entries.stream()
-                                                  .map(e -> newServiceInfo(e.serviceType, e.endpointInfos))
-                                                  .collect(toImmutableList());
+    ServiceSpecification generate(List<Entry> entries, DocServiceFilter filter) {
+        final List<ServiceInfo> services =
+                entries.stream()
+                       .map(e -> newServiceInfo(e.serviceType, e.endpointInfos, filter))
+                       .filter(Objects::nonNull)
+                       .collect(toImmutableList());
 
         return ServiceSpecification.generate(services, ThriftDocServicePlugin::newNamedTypeInfo);
     }
 
     @VisibleForTesting
-    static ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints) {
+    @Nullable
+    ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
+                               DocServiceFilter filter) {
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -156,16 +170,26 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         }
         final Method[] methods = interfaceClass.getDeclaredMethods();
 
-        return new ServiceInfo(name, Arrays.stream(methods).map(m -> newMethodInfo(m, endpoints))::iterator);
+        final List<MethodInfo> methodInfos = Arrays.stream(methods)
+                                                   .map(m -> newMethodInfo(m, endpoints, filter))
+                                                   .filter(Objects::nonNull)
+                                                   .collect(toImmutableList());
+        if (methodInfos.isEmpty()) {
+            return null;
+        }
+        return new ServiceInfo(name, methodInfos);
     }
 
-    private static MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints) {
-        requireNonNull(method, "method");
-
+    @Nullable
+    private MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints,
+                                     DocServiceFilter filter) {
         final String methodName = method.getName();
 
         final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
         final String serviceName = serviceClass.getName();
+        if (!filter.test(name(), serviceName, methodName)) {
+            return null;
+        }
         final ClassLoader classLoader = serviceClass.getClassLoader();
 
         final String argsClassName = serviceName + '$' + methodName + "_args";

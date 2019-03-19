@@ -65,6 +65,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
@@ -85,12 +86,14 @@ import com.linecorp.armeria.server.docs.TypeSignature;
  */
 public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
-    // The formats defined by OpenAPI Specification
-    // (https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#dataTypes):
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     @VisibleForTesting
     static final TypeSignature BOOLEAN = TypeSignature.ofBase("boolean");
+    @VisibleForTesting
+    static final TypeSignature BYTE = TypeSignature.ofBase("byte");
+    @VisibleForTesting
+    static final TypeSignature SHORT = TypeSignature.ofBase("short");
     @VisibleForTesting
     static final TypeSignature INT = TypeSignature.ofBase("int");
     @VisibleForTesting
@@ -103,16 +106,15 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     static final TypeSignature STRING = TypeSignature.ofBase("string");
     @VisibleForTesting
     static final TypeSignature BINARY = TypeSignature.ofBase("binary");
-
-    // Not defined in the spec.
-    @VisibleForTesting
-    static final TypeSignature BYTE = TypeSignature.ofBase("byte");
-    @VisibleForTesting
-    static final TypeSignature SHORT = TypeSignature.ofBase("short");
     @VisibleForTesting
     static final TypeSignature BEAN = TypeSignature.ofBase("bean");
 
     private static final ObjectMapper mapper = new ObjectMapper();
+
+    @Override
+    public String name() {
+        return "annotated";
+    }
 
     @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
@@ -120,14 +122,22 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     }
 
     @Override
-    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs) {
+    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
+                                                      DocServiceFilter filter) {
         requireNonNull(serviceConfigs, "serviceConfigs");
+        requireNonNull(filter, "filter");
+
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, String> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
             final Optional<AnnotatedHttpService> service = sc.service().as(AnnotatedHttpService.class);
             service.ifPresent(
                     httpService -> {
+                        final String className = httpService.object().getClass().getName();
+                        final String methodName = httpService.method().getName();
+                        if (!filter.test(name(), className, methodName)) {
+                            return;
+                        }
                         addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), httpService);
                         addServiceDescription(serviceDescription, httpService);
                     });

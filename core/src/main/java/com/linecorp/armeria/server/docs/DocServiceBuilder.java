@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -37,6 +38,14 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Builds a new {@link DocService}.
  */
 public final class DocServiceBuilder {
+
+    static final DocServiceFilter ALL_SERVICES = (plugin, service, method) -> true;
+
+    static final DocServiceFilter NO_SERVICE = (plugin, service, method) -> false;
+
+    private DocServiceFilter includeFilter = ALL_SERVICES;
+
+    private DocServiceFilter excludeFilter = NO_SERVICE;
 
     // These maps contain the entries whose key is a service name and value is a multimap.
     // The multimap contains the entries whose key is the method name.
@@ -249,6 +258,70 @@ public final class DocServiceBuilder {
     }
 
     /**
+     * Adds the {@link DocServiceFilter} that checks whether a method will be <b>included</b> while building
+     * {@link DocService}. The {@link DocServiceFilter} will be invoked with the plugin, service and
+     * method name. The rule is as follows:
+     * <ul>
+     *   <li>No {@link #include(DocServiceFilter)} and {@link #exclude(DocServiceFilter)} is called -
+     *       include all methods.</li>
+     *   <li>Only {@link #exclude(DocServiceFilter)} is called -
+     *       include all methods except the methods which the exclusion filter returns {@code true}.</li>
+     *   <li>Only {@link #include(DocServiceFilter)} is called -
+     *       include the methods which the inclusion filter returns {@code true}.</li>
+     *   <li>{@link #include(DocServiceFilter)} and {@link #exclude(DocServiceFilter)} is called -
+     *       include the methods which the inclusion filter returns {@code true} and the exclusion filter
+     *       returns {@code false}.</li>
+     * </ul>
+     *
+     * <P>Note that this can be called multiple times and the {@link DocServiceFilter}s are composed using
+     * {@link DocServiceFilter#or(DocServiceFilter)} and {@link DocServiceFilter#and(DocServiceFilter)}.
+     *
+     * @see #exclude(DocServiceFilter)
+     * @see DocService to find out how DocService generates documentaion
+     */
+    public DocServiceBuilder include(DocServiceFilter filter) {
+        requireNonNull(filter, "filter");
+        if (includeFilter == ALL_SERVICES) {
+            includeFilter = filter;
+        } else {
+            includeFilter = includeFilter.or(filter);
+        }
+        return this;
+    }
+
+    /**
+     * Adds the {@link DocServiceFilter} that checks whether a method will be <b>excluded</b> while building
+     * {@link DocService}. The {@link DocServiceFilter} will be invoked with the plugin, service and
+     * method name. The rule is as follows:
+     * <ul>
+     *   <li>No {@link #include(DocServiceFilter)} and {@link #exclude(DocServiceFilter)} is called -
+     *       include all methods.</li>
+     *   <li>Only {@link #exclude(DocServiceFilter)} is called -
+     *       include all methods except the methods which the exclusion filter returns {@code true}.</li>
+     *   <li>Only {@link #include(DocServiceFilter)} is called -
+     *       include the methods which the inclusion filter returns {@code true}.</li>
+     *   <li>{@link #include(DocServiceFilter)} and {@link #exclude(DocServiceFilter)} is called -
+     *       include the methods which the inclusion filter returns {@code true} and the exclusion filter
+     *       returns {@code false}.</li>
+     * </ul>
+     *
+     * <P>Note that this can be called multiple times and the {@link DocServiceFilter}s are composed using
+     * {@link DocServiceFilter#or(DocServiceFilter)} and {@link DocServiceFilter#and(DocServiceFilter)}.
+     *
+     * @see #exclude(DocServiceFilter)
+     * @see DocService to find out how DocService generates documentaion
+     */
+    public DocServiceBuilder exclude(DocServiceFilter filter) {
+        requireNonNull(filter, "filter");
+        if (excludeFilter == NO_SERVICE) {
+            excludeFilter = filter;
+        } else {
+            excludeFilter = excludeFilter.or(filter);
+        }
+        return this;
+    }
+
+    /**
      * Adds Javascript scripts to inject into the {@code <head />} of the debug page HTML. This can be used to
      * customize the debug page (e.g., to provide a HeaderProvider for enabling authentication based on local
      * storage). All scripts are concatenated into the content of a single script tag.
@@ -375,6 +448,7 @@ public final class DocServiceBuilder {
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
-        return new DocService(exampleHttpHeaders, exampleRequests,  injectedScriptSuppliers);
+        return new DocService(exampleHttpHeaders, exampleRequests, injectedScriptSuppliers,
+                              unifyFilter(includeFilter, excludeFilter));
     }
 }

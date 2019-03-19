@@ -28,6 +28,7 @@ import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -75,12 +76,14 @@ import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -109,6 +112,11 @@ public class AnnotatedHttpDocServiceTest {
                     .exampleRequestForMethod(MyService.class, "pathParams",
                                              ImmutableList.of(mapper.readTree(
                                                      "{\"hello\":\"armeria\"}")))
+                    .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude1").or(
+                            DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
+                    .build());
+            sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
+                    .exclude(DocServiceFilter.ofAnnotated())
                     .build());
         }
     };
@@ -266,6 +274,20 @@ public class AnnotatedHttpDocServiceTest {
         });
     }
 
+    @Test
+    public void excludeAllServices() throws IOException {
+        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AggregatedHttpMessage message = client.get("/excludeAll/specification.json").aggregate().join();
+        assertThat(message.status()).isEqualTo(HttpStatus.OK);
+        final JsonNode actualJson = mapper.readTree(message.contentUtf8());
+        final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of()));
+        assertThatJson(actualJson).isEqualTo(expectedJson);
+    }
+
     @Description("My service class")
     @ResponseConverter(UnformattedStringConverterFunction.class)
     private static class MyService {
@@ -338,6 +360,16 @@ public class AnnotatedHttpDocServiceTest {
         public HttpResponse bean(CompositeBean compositeBean) throws JsonProcessingException {
             final ObjectMapper mapper = new ObjectMapper();
             return HttpResponse.of(mapper.writeValueAsString(compositeBean));
+        }
+
+        @Get("/exclude1")
+        public HttpResponse exclude1() {
+            return HttpResponse.of(200);
+        }
+
+        @Get("/exclude2")
+        public HttpResponse exclude2() {
+            return HttpResponse.of(200);
         }
     }
 

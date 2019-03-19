@@ -73,6 +73,9 @@ import com.linecorp.armeria.server.file.HttpFileService;
  * <p>{@link DocService} looks up the {@link DocServicePlugin}s available in the current JVM
  * using Java SPI (Service Provider Interface). The {@link DocServicePlugin} implementations will
  * generate {@link ServiceSpecification}s for the {@link Service}s they support.
+ *
+ * @see DocServiceBuilder#include(DocServiceFilter)
+ * @see DocServiceBuilder#exclude(DocServiceFilter)
  */
 public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
@@ -86,6 +89,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders;
     private final Map<String, ListMultimap<String, String>> exampleRequests;
+    private final DocServiceFilter filter;
 
     @Nullable
     private Server server;
@@ -94,7 +98,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      * Creates a new instance.
      */
     public DocService() {
-        this(ImmutableMap.of(), ImmutableMap.of(), ImmutableList.of());
+        this(ImmutableMap.of(), ImmutableMap.of(), ImmutableList.of(), DocServiceBuilder.ALL_SERVICES);
     }
 
     /**
@@ -102,7 +106,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      */
     DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders,
                Map<String, ListMultimap<String, String>> exampleRequests,
-               List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers) {
+               List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
+               DocServiceFilter filter) {
 
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofExact("/injected.js",
@@ -114,6 +119,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                                                       "com/linecorp/armeria/server/docs")));
         this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
+        this.filter = requireNonNull(filter, "filter");
     }
 
     private static <T> Map<String, ListMultimap<String, T>> immutableCopyOf(
@@ -150,7 +156,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
 
-                ServiceSpecification spec = generate(services);
+                ServiceSpecification spec = generate(services, filter);
 
                 spec = addDocStrings(spec, services);
                 spec = addExamples(spec);
@@ -161,11 +167,11 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         });
     }
 
-    private static ServiceSpecification generate(List<ServiceConfig> services) {
+    private static ServiceSpecification generate(List<ServiceConfig> services, DocServiceFilter filter) {
         return ServiceSpecification.merge(
                 plugins.stream()
                        .map(plugin -> plugin.generateSpecification(
-                               findSupportedServices(plugin, services)))
+                               findSupportedServices(plugin, services), filter))
                        .collect(toImmutableList()));
     }
 

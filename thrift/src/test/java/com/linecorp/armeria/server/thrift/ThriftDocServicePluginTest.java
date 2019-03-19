@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newExceptionInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newFieldInfo;
-import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newServiceInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newStructInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +46,7 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHostBuilder;
-import com.linecorp.armeria.server.docs.DocServicePlugin;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
@@ -64,40 +65,27 @@ import com.linecorp.armeria.service.test.thrift.main.FooServiceException;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 import com.linecorp.armeria.service.test.thrift.main.FooUnion;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 
 public class ThriftDocServicePluginTest {
 
-    private final DocServicePlugin generator = new ThriftDocServicePlugin();
+    private static final String HELLO_NAME = HelloService.class.getName();
+
+    private static final String FOO_NAME = FooService.class.getName();
+
+    private static final ThriftDocServicePlugin generator = new ThriftDocServicePlugin();
 
     @Test
     public void servicesTest() {
-        final ServiceConfig helloService = new ServiceConfig(
-                new VirtualHostBuilder().build(),
-                PathMapping.ofExact("/hello"),
-                THttpService.of(mock(AsyncIface.class)));
+        final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
+                                                           (plugin, service, method) -> false);
 
-        final ServiceConfig fooService = new ServiceConfig(
-                new VirtualHostBuilder().build(),
-                PathMapping.ofExact("/foo"),
-                THttpService.ofFormats(mock(FooService.AsyncIface.class), ThriftSerializationFormats.COMPACT));
-
-        // Generate the specification with the ServiceConfigs.
-        final ServiceSpecification specification =
-                generator.generateSpecification(ImmutableSet.of(helloService, fooService));
-
-        // Ensure the specification contains all services.
-        final Map<String, ServiceInfo> services =
-                specification.services().stream()
-                             .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
-
-        assertThat(services).containsOnlyKeys(HelloService.class.getName(), FooService.class.getName());
+        assertThat(services).containsOnlyKeys(HELLO_NAME, FOO_NAME);
 
         // Ensure each service contains the endpoint and does not have example HTTP headers.
-        final ServiceInfo helloServiceInfo = services.get(HelloService.class.getName());
+        final ServiceInfo helloServiceInfo = services.get(HELLO_NAME);
         assertThat(helloServiceInfo.exampleHttpHeaders()).isEmpty();
 
-        final ServiceInfo fooServiceInfo = services.get(FooService.class.getName());
+        final ServiceInfo fooServiceInfo = services.get(FOO_NAME);
         assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
 
         // Ensure the example request is empty as well.
@@ -111,6 +99,92 @@ public class ThriftDocServicePluginTest {
         assertThat(bar4.endpoints())
                 .containsExactly(new EndpointInfoBuilder("*", "/foo")
                                          .defaultFormat(ThriftSerializationFormats.COMPACT).build());
+    }
+
+    @Test
+    public void include() {
+
+        // 1. Nothing specified: include all.
+        // 2. Exclude specified: include all except the methods which the exclude filter returns true.
+        // 3. Include specified: include the methods which the include filter returns true.
+        // 4. Include and exclude specified: include the methods which the include filter returns true and
+        //    the exclude filter returns false.
+
+        // 1. Nothing specified.
+        DocServiceFilter include = (plugin, service, method) -> true;
+        DocServiceFilter exclude = (plugin, service, method) -> false;
+        Map<String, ServiceInfo> services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME, HELLO_NAME);
+
+        // 2. Exclude specified.
+        exclude = DocServiceFilter.ofMethodName(FOO_NAME, "bar2");
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME, HELLO_NAME);
+        List<String> methods = methods(services);
+
+        assertThat(methods).containsExactlyInAnyOrder("bar1", "bar3", "bar4", "bar5", "bar6");
+
+        // 3-1. Include serviceName specified.
+        include = DocServiceFilter.ofServiceName(FOO_NAME);
+        // Set the exclude to the default.
+        exclude = (plugin, service, method) -> false;
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsExactlyInAnyOrder("bar1", "bar2", "bar3", "bar4", "bar5", "bar6");
+
+        // 3-2. Include methodName specified.
+        include = DocServiceFilter.ofMethodName(FOO_NAME, "bar2");
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsOnlyOnce("bar2");
+
+        // 4-1. Include and exclude specified.
+        include = DocServiceFilter.ofServiceName(FOO_NAME);
+        exclude = DocServiceFilter.ofMethodName(FOO_NAME, "bar2").or(DocServiceFilter.ofMethodName("bar3"));
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(FOO_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsExactlyInAnyOrder("bar1", "bar4", "bar5", "bar6");
+
+        // 4-2. Include and exclude specified.
+        include = DocServiceFilter.ofMethodName(FOO_NAME, "bar2");
+        exclude = DocServiceFilter.ofServiceName(FOO_NAME);
+        services = services(include, exclude);
+        assertThat(services.size()).isZero();
+    }
+
+    private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
+        final ServiceConfig helloService = new ServiceConfig(
+                new VirtualHostBuilder().build(),
+                PathMapping.ofExact("/hello"),
+                THttpService.of(mock(HelloService.AsyncIface.class)));
+
+        final ServiceConfig fooService = new ServiceConfig(
+                new VirtualHostBuilder().build(),
+                PathMapping.ofExact("/foo"),
+                THttpService.ofFormats(mock(FooService.AsyncIface.class), ThriftSerializationFormats.COMPACT));
+
+        // Generate the specification with the ServiceConfigs.
+        final ServiceSpecification specification =
+                generator.generateSpecification(ImmutableSet.of(helloService, fooService),
+                                                unifyFilter(include, exclude));
+
+        // Ensure the specification contains all services.
+        return specification.services()
+                            .stream()
+                            .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
+    }
+
+    private static List<String> methods(Map<String, ServiceInfo> services) {
+        return services.get(FOO_NAME).methods()
+                       .stream()
+                       .map(MethodInfo::name)
+                       .collect(toImmutableList());
     }
 
     @Test
@@ -137,16 +211,15 @@ public class ThriftDocServicePluginTest {
 
     @Test
     public void testNewServiceInfo() {
-        final ServiceInfo service =
-                newServiceInfo(FooService.class, ImmutableList.of(
-                        new EndpointInfoBuilder("*", "/foo")
-                                .fragment("a")
-                                .defaultFormat(ThriftSerializationFormats.BINARY)
-                                .build(),
-                        new EndpointInfoBuilder("*", "/debug/foo")
-                                .fragment("b")
-                                .defaultFormat(ThriftSerializationFormats.TEXT)
-                                .build()));
+        final ServiceInfo service = generator.newServiceInfo(
+                FooService.class,
+                ImmutableList.of(new EndpointInfoBuilder("*", "/foo")
+                                         .fragment("a").defaultFormat(ThriftSerializationFormats.BINARY)
+                                         .build(),
+                                 new EndpointInfoBuilder("*", "/debug/foo")
+                                         .fragment("b").defaultFormat(ThriftSerializationFormats.TEXT)
+                                         .build()),
+                (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> methods =
                 service.methods().stream().collect(toImmutableMap(MethodInfo::name, Function.identity()));

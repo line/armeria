@@ -29,6 +29,7 @@ import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -39,6 +40,10 @@ import com.linecorp.armeria.server.Service;
  * {@link NamedTypeInfo}s.
  */
 public final class ServiceSpecification {
+
+    private static ServiceSpecification emptyServiceSpecification =
+            new ServiceSpecification(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                     ImmutableList.of(), ImmutableList.of());
 
     /**
      * Merges the specified {@link ServiceSpecification}s into one.
@@ -59,6 +64,9 @@ public final class ServiceSpecification {
     public static ServiceSpecification generate(
             Iterable<ServiceInfo> services,
             Function<TypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory) {
+        if (Iterables.isEmpty(services)) {
+            return emptyServiceSpecification;
+        }
 
         // Collect all named types referred by the services.
         final Set<TypeSignature> namedTypes =

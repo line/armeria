@@ -41,7 +41,6 @@ There are 4 elements involved in client-side load balancing in Armeria:
 
 .. _creating-endpoint-group:
 
-
 Creating an ``EndpointGroup``
 -----------------------------
 There are various :api:`EndpointGroup` implementations provided out of the box, but let's start simple with

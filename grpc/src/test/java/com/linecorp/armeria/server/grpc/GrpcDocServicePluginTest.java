@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -51,6 +54,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceWithPathMappings;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
@@ -69,10 +73,108 @@ public class GrpcDocServicePluginTest {
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
                                                   .findServiceByName("TestService");
 
-    private final GrpcDocServicePlugin generator = new GrpcDocServicePlugin();
+    private static final GrpcDocServicePlugin generator = new GrpcDocServicePlugin();
 
     @Test
-    public void services() throws Exception {
+    public void servicesTest() throws Exception {
+        final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
+                                                           (plugin, service, method) -> false);
+
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
+                                              UnitTestServiceGrpc.SERVICE_NAME,
+                                              ReconnectServiceGrpc.SERVICE_NAME);
+
+        services.get(TestServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
+            assertThat(e.pathMapping()).isEqualTo("/armeria.grpc.testing.TestService/" + m.name());
+        }));
+        services.get(UnitTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
+            assertThat(e.pathMapping()).isEqualTo("/test/armeria.grpc.testing.UnitTestService/" + m.name());
+        }));
+        services.get(ReconnectServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
+            assertThat(e.pathMapping()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" +
+                                                  m.name());
+        }));
+    }
+
+    @Test
+    public void include() {
+
+        // 1. Nothing specified: include all.
+        // 2. Exclude specified: include all except the methods which the exclude filter returns true.
+        // 3. Include specified: include the methods which the include filter returns true.
+        // 4. Include and exclude specified: include the methods which the include filter returns true and
+        //    the exclude filter returns false.
+
+        // 1. Nothing specified.
+        DocServiceFilter include = (plugin, service, method) -> true;
+        DocServiceFilter exclude = (plugin, service, method) -> false;
+        Map<String, ServiceInfo> services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
+                                              ReconnectServiceGrpc.SERVICE_NAME);
+
+        // 2. Exclude specified.
+        exclude = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
+                DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
+                                              ReconnectServiceGrpc.SERVICE_NAME);
+
+        List<String> methods = methods(services);
+        assertThat(methods).containsExactlyInAnyOrder("FullDuplexCall",
+                                                      "StreamingInputCall",
+                                                      "StreamingOutputCall",
+                                                      "UnaryCall",
+                                                      "UnaryCall2",
+                                                      "UnimplementedCall");
+
+        // 3-1. Include serviceName specified.
+        include = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
+        // Set the exclude to the default.
+        exclude = (plugin, service, method) -> false;
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsExactlyInAnyOrder("EmptyCall",
+                                                      "FullDuplexCall",
+                                                      "HalfDuplexCall",
+                                                      "StreamingInputCall",
+                                                      "StreamingOutputCall",
+                                                      "UnaryCall",
+                                                      "UnaryCall2",
+                                                      "UnimplementedCall");
+
+        // 3-2. Include methodName specified.
+        include = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall");
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsOnlyOnce("EmptyCall");
+
+        // 4-1. Include and exclude specified.
+        include = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
+        exclude = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
+                DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsExactlyInAnyOrder("FullDuplexCall",
+                                                      "StreamingInputCall",
+                                                      "StreamingOutputCall",
+                                                      "UnaryCall",
+                                                      "UnaryCall2",
+                                                      "UnimplementedCall");
+
+        // 4-2. Include and exclude specified.
+        include = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall");
+        exclude = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
+        services = services(include, exclude);
+        assertThat(services.size()).isZero();
+    }
+
+    private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
         final VirtualHost vhost = new VirtualHostBuilder().build();
         final Set<ServiceConfig> serviceCfgs = new HashSet<>();
 
@@ -95,25 +197,19 @@ public class GrpcDocServicePluginTest {
                 new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build()));
 
         // Make sure all services and their endpoints exist in the specification.
-        final ServiceSpecification specification = generator.generateSpecification(serviceCfgs);
-        final Map<String, ServiceInfo> services = specification
+        final ServiceSpecification specification = generator.generateSpecification(
+                serviceCfgs, unifyFilter(include, exclude));
+        return specification
                 .services()
                 .stream()
                 .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
-        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
-                                              UnitTestServiceGrpc.SERVICE_NAME,
-                                              ReconnectServiceGrpc.SERVICE_NAME);
+    }
 
-        services.get(TestServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
-            assertThat(e.pathMapping()).isEqualTo("/armeria.grpc.testing.TestService/" + m.name());
-        }));
-        services.get(UnitTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
-            assertThat(e.pathMapping()).isEqualTo("/test/armeria.grpc.testing.UnitTestService/" + m.name());
-        }));
-        services.get(ReconnectServiceGrpc.SERVICE_NAME).methods().forEach(m -> m.endpoints().forEach(e -> {
-            assertThat(e.pathMapping()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" +
-                                                  m.name());
-        }));
+    private static List<String> methods(Map<String, ServiceInfo> services) {
+        return services.get(TestServiceGrpc.SERVICE_NAME).methods()
+                       .stream()
+                       .map(MethodInfo::name)
+                       .collect(toImmutableList());
     }
 
     @Test
@@ -177,7 +273,7 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void newServiceInfo() throws Exception {
-        final ServiceInfo service = GrpcDocServicePlugin.newServiceInfo(
+        final ServiceInfo service = generator.newServiceInfo(
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
                         ImmutableList.of(
@@ -186,7 +282,8 @@ public class GrpcDocServicePluginTest {
                                         .build(),
                                 new EndpointInfoBuilder("*", "/debug/foo")
                                         .fragment("b").availableFormats(GrpcSerializationFormats.JSON)
-                                        .build())));
+                                        .build())),
+                (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> functions = service
                 .methods()

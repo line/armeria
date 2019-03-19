@@ -26,8 +26,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -48,6 +51,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
@@ -107,12 +111,21 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     private final GrpcDocStringExtractor docstringExtractor = new GrpcDocStringExtractor();
 
     @Override
+    public String name() {
+        return "grpc";
+    }
+
+    @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
         return ImmutableSet.of(GrpcService.class);
     }
 
     @Override
-    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs) {
+    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
+                                                      DocServiceFilter filter) {
+        requireNonNull(serviceConfigs, "serviceConfigs");
+        requireNonNull(filter, "filter");
+
         final Map<String, ServiceEntryBuilder> map = new LinkedHashMap<>();
         for (ServiceConfig serviceConfig : serviceConfigs) {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class).get();
@@ -133,15 +146,16 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
             }
             final Set<MediaType> supportedMediaTypes = supportedMediaTypesBuilder.build();
             for (ServerServiceDefinition service : grpcService.services()) {
+                final String serviceName = service.getServiceDescriptor().getName();
                 map.computeIfAbsent(
-                        service.getServiceDescriptor().getName(),
+                        serviceName,
                         s -> {
                             final FileDescriptor fileDescriptor = ((ProtoFileDescriptorSupplier)
                                     service.getServiceDescriptor().getSchemaDescriptor()).getFileDescriptor();
                             final ServiceDescriptor serviceDescriptor =
                                     fileDescriptor.getServices().stream()
                                                   .filter(sd -> sd.getFullName().equals(
-                                                          service.getServiceDescriptor().getName()))
+                                                          serviceName))
                                                   .findFirst()
                                                   .orElseThrow(IllegalStateException::new);
                             return new ServiceEntryBuilder(serviceDescriptor);
@@ -166,9 +180,8 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                                 .build());
             }
         }
-        return generate(map.values().stream()
-                           .map(ServiceEntryBuilder::build)
-                           .collect(toImmutableList()));
+        return generate(map.values().stream().map(ServiceEntryBuilder::build).collect(toImmutableList()),
+                        filter);
     }
 
     @Override
@@ -197,10 +210,12 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    ServiceSpecification generate(List<ServiceEntry> entries) {
+    ServiceSpecification generate(List<ServiceEntry> entries, DocServiceFilter filter) {
         final List<ServiceInfo> services = entries.stream()
-                                                  .map(GrpcDocServicePlugin::newServiceInfo)
+                                                  .map(entry -> newServiceInfo(entry, filter))
+                                                  .filter(Objects::nonNull)
                                                   .collect(toImmutableList());
+
         return ServiceSpecification.generate(services, this::newNamedTypeInfo);
     }
 
@@ -214,11 +229,18 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         return newEnumInfo((EnumDescriptor) descriptor);
     }
 
-    static ServiceInfo newServiceInfo(ServiceEntry entry) {
-        final List<MethodInfo> functions = entry.methods().stream()
-                                                .map(m -> newMethodInfo(m, entry))
-                                                .collect(toImmutableList());
-        return new ServiceInfo(entry.name(), functions);
+    @Nullable
+    ServiceInfo newServiceInfo(ServiceEntry entry, DocServiceFilter filter) {
+        entry.name();
+        final List<MethodInfo> methodInfos =
+                entry.methods().stream()
+                     .filter(m -> filter.test(name(), entry.name(), m.getName()))
+                     .map(m -> newMethodInfo(m, entry))
+                     .collect(toImmutableList());
+        if (methodInfos.isEmpty()) {
+            return null;
+        }
+        return new ServiceInfo(entry.name(), methodInfos);
     }
 
     @VisibleForTesting
