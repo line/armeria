@@ -4,6 +4,10 @@
   - Learn how to write an HTTP service using annotations.
   - See [Annotated services](https://line.github.io/armeria/server-annotated-service.html).
 
+- `grpc-service`
+  - Learn how to write a gRPC service with Armeria gRPC module.
+  - See [GrpcService](https://line.github.io/armeria/server-grpc.html).
+
 - `saml-service-provider`
   - Learn how to authenticate users using SAML.
   - See [SAML Single Sign-on](https://line.github.io/armeria/advanced-saml.html).
