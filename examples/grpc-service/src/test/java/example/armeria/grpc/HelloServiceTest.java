@@ -11,6 +11,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -77,6 +78,15 @@ public class HelloServiceTest {
         }, MoreExecutors.directExecutor());
 
         await().atLeast(3, TimeUnit.SECONDS).untilTrue(completed);
+    }
+
+    @Test
+    public void getReplyFromServerSideBlockingCall() {
+        final HelloServiceBlockingStub helloService = Clients.newClient(uri(), HelloServiceBlockingStub.class);
+        final Stopwatch watch = Stopwatch.createStarted();
+        assertThat(helloService.blockingHello(HelloRequest.newBuilder().setName("Armeria").build())
+                               .getMessage()).isEqualTo("Hello, Armeria!");
+        assertThat(watch.elapsed(TimeUnit.SECONDS)).isGreaterThanOrEqualTo(3);
     }
 
     @Test

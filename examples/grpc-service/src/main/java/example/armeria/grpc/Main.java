@@ -38,6 +38,9 @@ public final class Main {
                                  .addService(ProtoReflectionService.newInstance())
                                  .supportedSerializationFormats(GrpcSerializationFormats.values())
                                  .enableUnframedRequests(true)
+                                 // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
+                                 // methods in the blockingTaskExecutor thread pool.
+                                 // .useBlockingTaskExecutor(true)
                                  .build())
                 // You can access the documentation service at http://127.0.0.1:8080/docs.
                 // See https://line.github.io/armeria/server-docservice.html for more information.

@@ -2,13 +2,16 @@ package example.armeria.grpc;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import example.armeria.grpc.Hello.HelloReply;
 import example.armeria.grpc.Hello.HelloRequest;
 import example.armeria.grpc.HelloServiceGrpc.HelloServiceImplBase;
 import io.grpc.stub.StreamObserver;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 public class HelloServiceImpl extends HelloServiceImplBase {
 
@@ -26,9 +29,41 @@ public class HelloServiceImpl extends HelloServiceImplBase {
      */
     @Override
     public void lazyHello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
-        Mono.delay(Duration.ofSeconds(3))
-            .subscribe(unused -> responseObserver.onNext(buildReply(toMessage(request.getName()))),
-                       responseObserver::onError, responseObserver::onCompleted);
+        // You can use the event loop for scheduling.
+        RequestContext.current().contextAwareEventLoop().schedule(() -> {
+            responseObserver.onNext(buildReply(toMessage(request.getName())));
+            responseObserver.onCompleted();
+        }, 3, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Sends an {@link HelloReply} using {@code blockingTaskExecutor}.
+     *
+     * @see <a href="https://line.github.io/armeria/server-grpc.html#blocking-service-implementation">
+     *      Blocking service implementation</a>
+     */
+    @Override
+    public void blockingHello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
+        // Unlike upstream gRPC-java, Armeria does not run service logic in a separate thread pool by default.
+        // Thus this method will run in the event loop, which means that you can suffer the performance
+        // degradation if you call a blocking API in this method. In this case, you have the following options:
+        //
+        // 1. Call a blocking API in the blockingTaskExecutor provided by Armeria.
+        // 2. Set GrpcServiceBuilder.useBlockingTaskExecutor(true) when building your GrpcService.
+        // 3. Call a blocking API in the separate thread pool you managed.
+        //
+        // You can see the option 1 in this example.
+        final ServiceRequestContext ctx = RequestContext.current();
+        ctx.blockingTaskExecutor().submit(() -> {
+            try {
+                // Simulate a blocking API call.
+                Thread.sleep(3000);
+            } catch (Exception ignored) {
+                // Do nothing.
+            }
+            responseObserver.onNext(buildReply(toMessage(request.getName())));
+            responseObserver.onCompleted();
+        });
     }
 
     /**
@@ -36,6 +71,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
      */
     @Override
     public void lotsOfReplies(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
+        // You can also write this code without Reactor like 'lazyHello' example.
         Flux.interval(Duration.ofSeconds(1))
             .take(5)
             .map(index -> "Hello, " + request.getName() + "! (sequence: " + (index + 1) + ')')
