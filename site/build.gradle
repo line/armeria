@@ -81,7 +81,7 @@ task test(group: 'Verification',
                 'nested.classes.inherited.from.class.'
         ]
         def whitelistedPrefixes = ['java.', 'javax.']
-        def blacklistedPrefixes = [ 'com.linecorp.armeria.internal.' ] +
+        def blacklistedPrefixes = [ 'com.linecorp.armeria.internal.', 'reactor.core.scheduler.' ] +
                                   rootProject.ext.relocations.collect { it[1] + '.' }
         def errors = []
 
