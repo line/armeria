@@ -71,8 +71,8 @@ public class HelloServiceTest {
 
             @Override
             public void onFailure(Throwable t) {
-                // Always failure.
-                assertThat(t).isNull();
+                // Should never reach here.
+                throw new Error(t);
             }
         }, MoreExecutors.directExecutor());
 
@@ -95,8 +95,8 @@ public class HelloServiceTest {
 
                     @Override
                     public void onError(Throwable t) {
-                        // Always failure.
-                        assertThat(t).isNull();
+                        // Should never reach here.
+                        throw new Error(t);
                     }
 
                     @Override
@@ -127,7 +127,7 @@ public class HelloServiceTest {
                     @Override
                     public void onError(Throwable t) {
                         // Should never reach here.
-                        assertThat(t).isNull();
+                        throw new Error(t);
                     }
 
                     @Override
@@ -161,7 +161,7 @@ public class HelloServiceTest {
                     @Override
                     public void onError(Throwable t) {
                         // Should never reach here.
-                        assertThat(t).isNull();
+                        throw new Error(t);
                     }
 
                     @Override
