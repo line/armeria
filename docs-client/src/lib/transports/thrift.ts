@@ -31,14 +31,14 @@ export default class ThriftTransport extends Transport {
     bodyJson?: string,
   ): Promise<string> {
     if (!bodyJson) {
-      throw new Error('Thrift request should have body');
+      throw new Error('A Thrift request must have body.');
     }
 
     const endpoint = method.endpoints.find((ep) =>
       ep.availableMimeTypes.includes(TTEXT_MIME_TYPE),
     );
     if (!endpoint) {
-      throw new Error('Endpoint does not support Thrift debug transport');
+      throw new Error('Endpoint does not support Thrift debug transport.');
     }
 
     const thriftMethod = endpoint.fragment

@@ -37,7 +37,7 @@ export default class AnnotatedHttpTransport extends Transport {
     );
     if (!endpoint) {
       throw new Error(
-        'Endpoint does not support annotated HTTP debug transport',
+        'Endpoint does not support annotated HTTP debug transport.',
       );
     }
 
