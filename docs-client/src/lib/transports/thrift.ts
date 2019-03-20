@@ -27,9 +27,13 @@ export default class ThriftTransport extends Transport {
 
   protected async doSend(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
   ): Promise<string> {
+    if (!bodyJson) {
+      throw new Error('Thrift request should have body');
+    }
+
     const endpoint = method.endpoints.find((ep) =>
       ep.availableMimeTypes.includes(TTEXT_MIME_TYPE),
     );

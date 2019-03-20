@@ -79,10 +79,15 @@ public class ThriftDocServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    private static final boolean DEMO_MODE = false;
+
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            if (DEMO_MODE) {
+                sb.http(8080);
+            }
             final THttpService helloAndSleepService = THttpService.of(ImmutableMap.of(
                     "hello", HELLO_SERVICE_HANDLER,
                     "sleep", SLEEP_SERVICE_HANDLER));
@@ -121,6 +126,9 @@ public class ThriftDocServiceTest {
 
     @Test
     public void testOk() throws Exception {
+        if (DEMO_MODE) {
+            Thread.sleep(Long.MAX_VALUE);
+        }
         final Set<SerializationFormat> allThriftFormats = ThriftSerializationFormats.values();
         final List<Entry> entries = ImmutableList.of(
                 new EntryBuilder(HelloService.class)

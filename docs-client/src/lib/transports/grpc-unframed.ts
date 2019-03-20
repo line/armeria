@@ -28,9 +28,13 @@ export default class GrpcUnframedTransport extends Transport {
 
   protected async doSend(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
   ): Promise<string> {
+    if (!bodyJson) {
+      throw new Error('gRPC request should have body');
+    }
+
     const endpoint = method.endpoints.find((ep) =>
       ep.availableMimeTypes.includes(GRPC_UNFRAMED_MIME_TYPE),
     );
