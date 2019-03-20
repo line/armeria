@@ -22,11 +22,10 @@ public class HelloServiceImpl extends HelloServiceImplBase {
     }
 
     /**
-     * Sends an {@link HelloReply} 3 seconds later after receiving a request.
+     * Sends an {@link HelloReply} 3 seconds after receiving a request.
      */
     @Override
     public void lazyHello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
-        // Respond 3 seconds later.
         Mono.delay(Duration.ofSeconds(3))
             .subscribe(unused -> responseObserver.onNext(buildReply(toMessage(request.getName()))),
                        responseObserver::onError, responseObserver::onCompleted);
