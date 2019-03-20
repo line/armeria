@@ -40,7 +40,7 @@ import org.mockito.junit.MockitoRule;
 
 import com.google.common.base.Ticker;
 
-import io.netty.util.concurrent.DefaultThreadFactory;
+import com.linecorp.armeria.common.util.EventLoopThreadFactory;
 
 public class GracefulShutdownSupportTest {
 
@@ -59,7 +59,7 @@ public class GracefulShutdownSupportTest {
     public void setUp() {
         executor = new ThreadPoolExecutor(
                 0, 1, 1, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-                new DefaultThreadFactory(GracefulShutdownSupportTest.class, true));
+                new EventLoopThreadFactory("graceful-shutdown-test", true));
 
         support = GracefulShutdownSupport.create(Duration.ofNanos(QUIET_PERIOD_NANOS), executor, ticker);
     }
