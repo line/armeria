@@ -39,7 +39,7 @@ public final class Main {
                                  .supportedSerializationFormats(GrpcSerializationFormats.values())
                                  .enableUnframedRequests(true)
                                  .build())
-                // You can access the documentation service on http://127.0.0.1:8080/docs.
+                // You can access the documentation service at http://127.0.0.1:8080/docs.
                 // See https://line.github.io/armeria/server-docservice.html for more information.
                 .serviceUnder("/docs", new DocService())
                 .build();

@@ -6,7 +6,7 @@
 
 - `grpc-service`
   - Learn how to write a gRPC service with Armeria gRPC module.
-  - See [GrpcService](https://line.github.io/armeria/server-grpc.html).
+  - See [Running a gRPC service](https://line.github.io/armeria/server-grpc.html).
 
 - `saml-service-provider`
   - Learn how to authenticate users using SAML.
