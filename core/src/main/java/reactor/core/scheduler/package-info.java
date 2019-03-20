@@ -13,9 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package reactor.core.scheduler;
 
 /**
- * A dummy interface that makes Project Reactor recognize Armeria's event loop threads as non-blocking.
+ * Provides a dummy interface that makes Project Reactor recognize Armeria's event loop threads as non-blocking.
  */
-public interface NonBlocking {}
+@NonNullByDefault
+package reactor.core.scheduler;
+
+import com.linecorp.armeria.common.util.NonNullByDefault;
