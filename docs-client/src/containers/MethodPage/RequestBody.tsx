@@ -33,6 +33,7 @@ interface Props {
 const RequestBody: React.SFC<Props> = (props) => {
   return (
     <>
+      <Typography variant="body1" paragraph />
       <Button color="secondary" onClick={props.onEditRequestBodyClick}>
         Request body
       </Button>

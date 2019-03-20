@@ -130,7 +130,6 @@ class DebugPage extends React.PureComponent<Props, State> {
                   onEndpointPathChange={this.onEndpointPathChange}
                 />
               ))}
-            <Typography variant="body1" paragraph />
             <HttpHeaders
               exampleHeaders={this.props.exampleHeaders}
               additionalHeadersOpen={this.state.additionalHeadersOpen}
@@ -143,7 +142,6 @@ class DebugPage extends React.PureComponent<Props, State> {
             />
             {this.props.useRequestBody && (
               <>
-                <Typography variant="body1" paragraph />
                 <RequestBody
                   requestBodyOpen={this.state.requestBodyOpen}
                   requestBody={this.state.requestBody}

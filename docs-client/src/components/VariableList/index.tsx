@@ -180,14 +180,11 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
                     {FieldInfos.indentString(this.props.indent, variable.name)}
                   </code>
                 </TableCell>
-                {this.props.hasLocation &&
-                  variable.location && (
-                    <TableCell>
-                      <code>
-                        {FieldInfos.formatLocation(variable.location)}
-                      </code>
-                    </TableCell>
-                  )}
+                {this.props.hasLocation && variable.location && (
+                  <TableCell>
+                    <code>{FieldInfos.formatLocation(variable.location)}</code>
+                  </TableCell>
+                )}
                 <TableCell>
                   <code>
                     {FieldInfos.formatRequirement(variable.requirement)}

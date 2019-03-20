@@ -40,6 +40,7 @@ interface Props {
 const HttpHeaders: React.SFC<Props> = (props) => {
   return (
     <>
+      <Typography variant="body1" paragraph />
       <Button color="secondary" onClick={props.onEditHttpHeadersClick}>
         HTTP headers
       </Button>
