@@ -3,6 +3,7 @@ dependencies {
     compile project(':grpc')
     compile 'io.projectreactor:reactor-core'
     compileOnly 'jakarta.annotation:jakarta.annotation-api'
+    runtime 'org.slf4j:slf4j-simple'
 
     testCompile 'jakarta.annotation:jakarta.annotation-api'
     testCompile 'junit:junit'
