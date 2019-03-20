@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.EventLoopThreadFactory;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -67,7 +68,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 
@@ -345,7 +345,7 @@ public class ServerTest {
     public void customStartStopExecutor() {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
-        final ExecutorService executor = Executors.newSingleThreadExecutor(new DefaultThreadFactory(prefix));
+        final ExecutorService executor = Executors.newSingleThreadExecutor(new EventLoopThreadFactory(prefix));
         final Server server = new ServerBuilder()
                 .startStopExecutor(executor)
                 .service("/", (ctx, req) -> HttpResponse.of(200))

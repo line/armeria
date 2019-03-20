@@ -34,11 +34,12 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 
 /**
  * Provides methods that are useful for creating an {@link EventLoopGroup}.
+ *
+ * @see EventLoopThreadFactory
  */
 public final class EventLoopGroups {
 
@@ -88,7 +89,7 @@ public final class EventLoopGroups {
 
         final TransportType type = TransportType.detectTransportType();
         final String prefix = threadNamePrefix + '-' + type.lowerCasedName();
-        return newEventLoopGroup(numThreads, new DefaultThreadFactory(prefix, useDaemonThreads));
+        return newEventLoopGroup(numThreads, new EventLoopThreadFactory(prefix, useDaemonThreads));
     }
 
     /**
