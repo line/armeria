@@ -6,7 +6,7 @@ option java_package = "example.armeria.grpc";
 service HelloService {
   rpc Hello (HelloRequest) returns (HelloReply) {}
   rpc LazyHello (HelloRequest) returns (HelloReply) {}
-  rpc blockingHello (HelloRequest) returns (HelloReply) {}
+  rpc BlockingHello (HelloRequest) returns (HelloReply) {}
   rpc LotsOfReplies (HelloRequest) returns (stream HelloReply) {}
   rpc LotsOfGreetings (stream HelloRequest) returns (HelloReply) {}
   rpc BidiHello (stream HelloRequest) returns (stream HelloReply) {}

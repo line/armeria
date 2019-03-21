@@ -12,6 +12,7 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
+import example.armeria.grpc.Hello.HelloRequest;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
 
@@ -36,6 +37,7 @@ public final class Main {
     }
 
     static Server newServer(int httpPort, int httpsPort) throws Exception {
+        final HelloRequest exampleRequest = HelloRequest.newBuilder().setName("Armeria").build();
         return new ServerBuilder()
                 .http(httpPort)
                 .https(httpsPort)
@@ -53,8 +55,12 @@ public final class Main {
                 // You can access the documentation service at http://127.0.0.1:8080/docs.
                 // See https://line.github.io/armeria/server-docservice.html for more information.
                 .serviceUnder("/docs", new DocServiceBuilder()
-                        // TODO(hyangtack) Add an example request if GrpcDocServicePlugin supports it.
-                        // .exampleRequest(HelloRequest.newBuilder().setName("Armeria").build())
+                        .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
+                                                 "Hello", exampleRequest)
+                        .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
+                                                 "LazyHello", exampleRequest)
+                        .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
+                                                 "BlockingHello", exampleRequest)
                         .exclude(DocServiceFilter.ofServiceName(ServerReflectionGrpc.SERVICE_NAME))
                         .build())
                 .build();
