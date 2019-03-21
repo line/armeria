@@ -81,17 +81,17 @@ public class HelloServiceImpl extends HelloServiceImplBase {
             // You can make your Flux/Mono publish the signals in the RequestContext-aware executor.
             .publishOn(Schedulers.fromExecutor(RequestContext.current().contextAwareExecutor()))
             .subscribe(message -> {
-                           // Ensure this callback is executed in the RequestContext-aware executor.
+                           // Confirm this callback is being executed on the RequestContext-aware executor.
                            final ServiceRequestContext ctx = RequestContext.current();
                            responseObserver.onNext(buildReply(message));
                        },
                        cause -> {
-                           // Ensure this callback is executed in the RequestContext-aware executor.
+                           // Confirm this callback is being executed on the RequestContext-aware executor.
                            final ServiceRequestContext ctx = RequestContext.current();
                            responseObserver.onError(cause);
                        },
                        () -> {
-                           // Ensure this callback is executed in the RequestContext-aware executor.
+                           // Confirm this callback is being executed on the RequestContext-aware executor.
                            final ServiceRequestContext ctx = RequestContext.current();
                            responseObserver.onCompleted();
                        });
