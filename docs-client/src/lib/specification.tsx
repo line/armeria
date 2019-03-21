@@ -102,36 +102,6 @@ export function packageName(fullName: string): string {
   return lastDotIdx >= 0 ? fullName.substring(0, lastDotIdx) : fullName;
 }
 
-export function methodKey(
-  serviceName: string,
-  methodName: string,
-  httpMethod: string,
-): string {
-  if (httpMethod) {
-    return `${serviceName}/${methodName}/${httpMethod}`;
-  }
-  return `${serviceName}/${methodName}`;
-}
-
-export function endpointPathString(endpoint: Endpoint): string {
-  if (endpoint.regexPathPrefix) {
-    return `${endpoint.regexPathPrefix} ${endpoint.pathMapping}`;
-  }
-  return endpoint.pathMapping;
-}
-
-export function isExactPathMapping(method: Method): boolean {
-  const endpoints = method.endpoints;
-  if (endpoints.length !== 1) {
-    throw new Error(`
-    Endpoints size should be 1 to determine prefix or regex. size: ${
-      endpoints.length
-    }`);
-  }
-  const endpoint = endpoints[0];
-  return endpoint.pathMapping.startsWith('exact:');
-}
-
 interface NamedObject {
   name: string;
 }
@@ -211,7 +181,11 @@ export class Specification {
   }
 
   private getTypeLink(name: string, type: 'enum' | 'struct') {
-    return <Link to={`/${type}s/${name}`}>{simpleName(name)}</Link>;
+    return (
+      <Link key={`/${type}s/${name}`} to={`/${type}s/${name}`}>
+        {simpleName(name)}
+      </Link>
+    );
   }
 
   private updateDocStrings() {

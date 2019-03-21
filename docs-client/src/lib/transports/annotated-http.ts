@@ -27,8 +27,8 @@ export default class AnnotatedHttpTransport extends Transport {
 
   protected async doSend(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
     endpointPath?: string,
     queries?: string,
   ): Promise<string> {
@@ -37,7 +37,7 @@ export default class AnnotatedHttpTransport extends Transport {
     );
     if (!endpoint) {
       throw new Error(
-        'Endpoint does not support annotated HTTP debug transport',
+        'Endpoint does not support annotated HTTP debug transport.',
       );
     }
 
@@ -60,14 +60,10 @@ export default class AnnotatedHttpTransport extends Transport {
         }
       }
     }
-    const sendBody =
-      method.httpMethod === 'GET' || method.httpMethod === 'HEAD'
-        ? null
-        : bodyJson;
     const httpResponse = await fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
-      body: sendBody,
+      body: bodyJson,
     });
     const response = await httpResponse.text();
     return response.length > 0 ? response : '&lt;zero-length response&gt;';

@@ -21,8 +21,8 @@ import { Method } from '../specification';
 export default abstract class Transport {
   public async send(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
     endpointPath?: string,
     queries?: string,
   ): Promise<string> {
@@ -44,15 +44,15 @@ export default abstract class Transport {
       ...filledHeaders,
       ...headers,
     };
-    return this.doSend(method, bodyJson, filledHeaders, endpointPath, queries);
+    return this.doSend(method, filledHeaders, bodyJson, endpointPath, queries);
   }
 
   public abstract supportsMimeType(mimeType: string): boolean;
 
   protected abstract doSend(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
     endpointPath?: string,
     queries?: string,
   ): Promise<string>;
