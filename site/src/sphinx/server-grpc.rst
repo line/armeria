@@ -9,6 +9,10 @@
 Running a gRPC service
 ======================
 
+.. note::
+
+    Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find a fully working example.
+
 Let's assume we have the following gRPC_ service definition:
 
 .. code-block:: protobuf
