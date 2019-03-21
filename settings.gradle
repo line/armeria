@@ -47,6 +47,7 @@ includeWithFlags ':site'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service', 'java'
+includeWithFlags ':examples:grpc-service',           'java'
 includeWithFlags ':examples:saml-service-provider',  'java'
 includeWithFlags ':examples:server-sent-events',     'java'
 includeWithFlags ':examples:spring-boot-minimal',    'java'
