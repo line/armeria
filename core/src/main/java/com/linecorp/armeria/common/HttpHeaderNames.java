@@ -52,6 +52,7 @@ public final class HttpHeaderNames {
     // - Added pseudo headers
     // - Added Accept-Patch
     // - Added Content-Base
+    // - Added Prefer
     // - Removed the ancient CSP headers
     //   - X-Content-Security-Policy
     //   - X-Content-Security-Policy-Report-Only
@@ -219,6 +220,10 @@ public final class HttpHeaderNames {
      * The HTTP {@code "Origin"} header field name.
      */
     public static final AsciiString ORIGIN = create("Origin");
+    /**
+     * The HTTP {@code "Prefer"} header field name.
+     */
+    public static final AsciiString PREFER = create("Prefer");
     /**
      * The HTTP {@code "Proxy-Authorization"} header field name.
      */
