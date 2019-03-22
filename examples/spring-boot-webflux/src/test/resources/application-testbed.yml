@@ -1,0 +1,9 @@
+# Use a random port to avoid a potential port conflict.
+server:
+  port: 0
+  ssl:
+    enabled: false
+
+# Disable all other ports which were defined in src/main/resources/application.yml.
+armeria:
+  ports:
