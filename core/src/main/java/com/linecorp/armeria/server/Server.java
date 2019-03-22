@@ -87,7 +87,7 @@ public final class Server implements AutoCloseable {
     @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
 
-    private final StartStopSupport<Void, ServerListener> startStop;
+    private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<Channel> serverChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
@@ -263,7 +263,7 @@ public final class Server implements AutoCloseable {
                           .toString();
     }
 
-    private final class ServerStartStopSupport extends StartStopSupport<Void, ServerListener> {
+    private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
 
         @Nullable
         private volatile GracefulShutdownSupport gracefulShutdownSupport;
@@ -273,7 +273,7 @@ public final class Server implements AutoCloseable {
         }
 
         @Override
-        protected CompletionStage<Void> doStart() {
+        protected CompletionStage<Void> doStart(@Nullable Void arg) {
             if (config().gracefulShutdownQuietPeriod().isZero()) {
                 gracefulShutdownSupport = GracefulShutdownSupport.createDisabled();
             } else {
@@ -352,7 +352,7 @@ public final class Server implements AutoCloseable {
         }
 
         @Override
-        protected CompletionStage<Void> doStop() {
+        protected CompletionStage<Void> doStop(@Nullable Void arg) {
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             if (gracefulShutdownSupport == null ||
@@ -426,7 +426,7 @@ public final class Server implements AutoCloseable {
                     workerShutdownFuture.addListener(unused5 -> {
                         // If starts to shutdown before initializing serverChannels, completes the future
                         // immediately.
-                        if (serverChannels.size() == 0) {
+                        if (serverChannels.isEmpty()) {
                             finishDoStop(future);
                             return;
                         }
@@ -469,22 +469,23 @@ public final class Server implements AutoCloseable {
         }
 
         @Override
-        protected void notifyStarting(ServerListener listener) throws Exception {
+        protected void notifyStarting(ServerListener listener, @Nullable Void arg) throws Exception {
             listener.serverStarting(Server.this);
         }
 
         @Override
-        protected void notifyStarted(ServerListener listener, @Nullable Void value) throws Exception {
+        protected void notifyStarted(ServerListener listener, @Nullable Void arg,
+                                     @Nullable Void result) throws Exception {
             listener.serverStarted(Server.this);
         }
 
         @Override
-        protected void notifyStopping(ServerListener listener) throws Exception {
+        protected void notifyStopping(ServerListener listener, @Nullable Void arg) throws Exception {
             listener.serverStopping(Server.this);
         }
 
         @Override
-        protected void notifyStopped(ServerListener listener) throws Exception {
+        protected void notifyStopped(ServerListener listener, @Nullable Void arg) throws Exception {
             listener.serverStopped(Server.this);
         }
 

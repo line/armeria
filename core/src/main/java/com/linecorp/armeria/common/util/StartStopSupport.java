@@ -35,10 +35,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Provides asynchronous start-stop life cycle support.
  *
+ * @param <T> the type of the startup argument. Use {@link Void} if unused.
+ * @param <U> the type of the shutdown argument. Use {@link Void} if unused.
  * @param <V> the type of the startup result. Use {@link Void} if unused.
  * @param <L> the type of the life cycle event listener. Use {@link Void} if unused.
  */
-public abstract class StartStopSupport<V, L> implements AutoCloseable {
+public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(StartStopSupport.class);
 
@@ -53,7 +55,7 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
     private final List<L> listeners = new CopyOnWriteArrayList<>();
     private volatile State state = State.STOPPED;
     /**
-     * The value is {@code V}-typed when STARTING/STARTED and {@link Void}-typed when STOPPING/STOPPED.
+     * This future is {@code V}-typed when STARTING/STARTED and {@link Void}-typed when STOPPING/STOPPED.
      */
     private CompletableFuture<?> future = completedFuture(null);
 
@@ -62,8 +64,8 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
      *
      * @param executor the {@link Executor} which will be used for invoking the extension points of this class:
      *                 <ul>
-     *                   <li>{@link #doStart()}</li>
-     *                   <li>{@link #doStop()}</li>
+     *                   <li>{@link #doStart(Object)}</li>
+     *                   <li>{@link #doStop(Object)}</li>
      *                   <li>{@link #rollbackFailed(Throwable)}</li>
      *                   <li>{@link #notificationFailed(Object, Throwable)}</li>
      *                   <li>All listener notifications</li>
@@ -90,16 +92,55 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
     }
 
     /**
-     * Begins the startup procedure by calling {@link #doStart()}, ensuring that neither {@link #doStart()}
-     * nor {@link #doStop()} is invoked concurrently. When the startup fails, {@link #stop()} will be
-     * invoked automatically to roll back the side effect caused by {@link #start(boolean)} and any exceptions
-     * that occurred during the rollback will be reported to {@link #rollbackFailed(Throwable)}.
+     * Begins the startup procedure without an argument by calling {@link #doStart(Object)}, ensuring that
+     * neither {@link #doStart(Object)} nor {@link #doStop(Object)} is invoked concurrently. When the startup
+     * fails, {@link #stop()} will be invoked automatically to roll back the side effect caused by this method
+     * and any exceptions that occurred during the rollback will be reported to
+     * {@link #rollbackFailed(Throwable)}. This method is a shortcut of
+     * {@code start(null, null, failIfStarted)}.
      *
      * @param failIfStarted whether to fail the returned {@link CompletableFuture} with
      *                      an {@link IllegalStateException} when the startup procedure is already
      *                      in progress or done
      */
-    public final synchronized CompletableFuture<V> start(boolean failIfStarted) {
+    public final CompletableFuture<V> start(boolean failIfStarted) {
+        return start(null, null, failIfStarted);
+    }
+
+    /**
+     * Begins the startup procedure without an argument by calling {@link #doStart(Object)}, ensuring that
+     * neither {@link #doStart(Object)} nor {@link #doStop(Object)} is invoked concurrently. When the startup
+     * fails, {@link #stop()} will be invoked automatically to roll back the side effect caused by this method
+     * and any exceptions that occurred during the rollback will be reported to
+     * {@link #rollbackFailed(Throwable)}. This method is a shortcut of
+     * {@code start(arg, null, failIfStarted)}.
+     *
+     * @param arg           the argument to pass to {@link #doStart(Object)},
+     *                      or {@code null} to pass no argument.
+     * @param failIfStarted whether to fail the returned {@link CompletableFuture} with
+     *                      an {@link IllegalStateException} when the startup procedure is already
+     *                      in progress or done
+     */
+    public final CompletableFuture<V> start(@Nullable T arg, boolean failIfStarted) {
+        return start(arg, null, failIfStarted);
+    }
+
+    /**
+     * Begins the startup procedure by calling {@link #doStart(Object)}, ensuring that neither
+     * {@link #doStart(Object)} nor {@link #doStop(Object)} is invoked concurrently. When the startup fails,
+     * {@link #stop(Object)} will be invoked with the specified {@code rollbackArg} automatically to roll back
+     * the side effect caused by this method and any exceptions that occurred during the rollback will be
+     * reported to {@link #rollbackFailed(Throwable)}.
+     *
+     * @param arg           the argument to pass to {@link #doStart(Object)},
+     *                      or {@code null} to pass no argument.
+     * @param rollbackArg   the argument to pass to {@link #doStop(Object)} when rolling back.
+     * @param failIfStarted whether to fail the returned {@link CompletableFuture} with
+     *                      an {@link IllegalStateException} when the startup procedure is already
+     *                      in progress or done
+     */
+    public final synchronized CompletableFuture<V> start(@Nullable T arg, @Nullable U rollbackArg,
+                                                         boolean failIfStarted) {
         switch (state) {
             case STARTING:
             case STARTED:
@@ -115,7 +156,7 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
                 // A user called start() to restart, but not stopped completely yet.
                 // Try again once stopped.
                 return future.exceptionally(unused -> null)
-                             .thenComposeAsync(unused -> start(failIfStarted), executor);
+                             .thenComposeAsync(unused -> start(arg, failIfStarted), executor);
         }
 
         assert state == State.STOPPED : "state: " + state;
@@ -127,8 +168,8 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
         try {
             executor.execute(() -> {
                 try {
-                    notifyListeners(State.STARTING, null);
-                    final CompletionStage<V> f = doStart();
+                    notifyListeners(State.STARTING, arg, null, null);
+                    final CompletionStage<V> f = doStart(arg);
                     if (f == null) {
                         throw new IllegalStateException("doStart() returned null.");
                     }
@@ -157,14 +198,15 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
         final CompletableFuture<V> future = startFuture.handleAsync((result, cause) -> {
             if (cause != null) {
                 // Failed to start. Stop and complete with the start failure cause.
-                final CompletableFuture<Void> rollbackFuture = stop(true).exceptionally(stopCause -> {
-                    rollbackFailed(Exceptions.peel(stopCause));
-                    return null;
-                });
+                final CompletableFuture<Void> rollbackFuture =
+                        stop(rollbackArg, true).exceptionally(stopCause -> {
+                            rollbackFailed(Exceptions.peel(stopCause));
+                            return null;
+                        });
 
                 return rollbackFuture.<V>thenCompose(unused -> exceptionallyCompletedFuture(cause));
             } else {
-                enter(State.STARTED, result);
+                enter(State.STARTED, arg, null, result);
                 return completedFuture(result);
             }
         }, executor).thenCompose(Function.identity());
@@ -174,20 +216,31 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
     }
 
     /**
-     * Begins the shutdown procedure by calling {@link #doStop()}, ensuring that neither {@link #doStart()} nor
-     * {@link #doStop()} is invoked concurrently.
+     * Begins the shutdown procedure without an argument by calling {@link #doStop(Object)}, ensuring that
+     * neither {@link #doStart(Object)} nor {@link #doStop(Object)} is invoked concurrently. This method is
+     * a shortcut of {@code stop(null)}.
      */
     public final CompletableFuture<Void> stop() {
-        return stop(false);
+        return stop(null);
     }
 
-    private synchronized CompletableFuture<Void> stop(boolean rollback) {
+    /**
+     * Begins the shutdown procedure by calling {@link #doStop(Object)}, ensuring that neither
+     * {@link #doStart(Object)} nor {@link #doStop(Object)} is invoked concurrently.
+     *
+     * @param arg the argument to pass to {@link #doStop(Object)}, or {@code null} to pass no argument.
+     */
+    public final CompletableFuture<Void> stop(@Nullable U arg) {
+        return stop(arg, false);
+    }
+
+    private synchronized CompletableFuture<Void> stop(@Nullable U arg, boolean rollback) {
         switch (state) {
             case STARTING:
                 if (!rollback) {
                     // Try again once started.
                     return future.exceptionally(unused -> null) // Ignore the exception.
-                                 .thenComposeAsync(unused -> stop(), executor);
+                                 .thenComposeAsync(unused -> stop(arg), executor);
                 } else {
                     break;
                 }
@@ -207,8 +260,8 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
         try {
             executor.execute(() -> {
                 try {
-                    notifyListeners(State.STOPPING, null);
-                    final CompletionStage<Void> f = doStop();
+                    notifyListeners(State.STOPPING, null, arg, null);
+                    final CompletionStage<Void> f = doStop(arg);
                     if (f == null) {
                         throw new IllegalStateException("doStop() returned null.");
                     }
@@ -235,14 +288,14 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
         }
 
         final CompletableFuture<Void> future = stopFuture.whenCompleteAsync(
-                (unused1, cause) -> enter(State.STOPPED, null), executor);
+                (unused1, cause) -> enter(State.STOPPED, null, arg, null), executor);
         this.future = future;
         return future;
     }
 
     /**
-     * A synchronous version of {@link #stop()}. Exceptions occurred during shutdown are reported to
-     * {@link #closeFailed(Throwable)}.
+     * A synchronous version of {@link #stop(Object)}. Exceptions occurred during shutdown are reported to
+     * {@link #closeFailed(Throwable)}. No argument (i.e. {@code null}) is passed.
      */
     @Override
     public final void close() {
@@ -251,7 +304,7 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
             if (state == State.STOPPED) {
                 return;
             }
-            f = stop();
+            f = stop(null);
         }
 
         boolean interrupted = false;
@@ -272,29 +325,30 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
         }
     }
 
-    private void enter(State state, @Nullable V value) {
+    private void enter(State state, @Nullable T startArg, @Nullable U stopArg, @Nullable V startResult) {
         synchronized (this) {
             assert this.state != state : "transition to the same state: " + state;
             this.state = state;
         }
-        notifyListeners(state, value);
+        notifyListeners(state, startArg, stopArg, startResult);
     }
 
-    private void notifyListeners(State state, @Nullable V value) {
+    private void notifyListeners(State state, @Nullable T startArg, @Nullable U stopArg,
+                                 @Nullable V startResult) {
         for (L l : listeners) {
             try {
                 switch (state) {
                     case STARTING:
-                        notifyStarting(l);
+                        notifyStarting(l, startArg);
                         break;
                     case STARTED:
-                        notifyStarted(l, value);
+                        notifyStarted(l, startArg, startResult);
                         break;
                     case STOPPING:
-                        notifyStopping(l);
+                        notifyStopping(l, stopArg);
                         break;
                     case STOPPED:
-                        notifyStopped(l);
+                        notifyStopped(l, stopArg);
                         break;
                     default:
                         throw new Error("unknown state: " + state);
@@ -306,43 +360,58 @@ public abstract class StartStopSupport<V, L> implements AutoCloseable {
     }
 
     /**
-     * Invoked by {@link #start(boolean)} to perform the actual startup.
+     * Invoked by {@link #start(Object, boolean)} to perform the actual startup.
+     *
+     * @param arg the argument passed from {@link #start(Object, boolean)},
+     *            or {@code null} if no argument was specified.
      */
-    protected abstract CompletionStage<V> doStart() throws Exception;
+    protected abstract CompletionStage<V> doStart(@Nullable T arg) throws Exception;
 
     /**
-     * Invoked by {@link #stop()} to perform the actual startup, or indirectly by {@link #start(boolean)} when
-     * startup failed.
+     * Invoked by {@link #stop(Object)} to perform the actual startup, or indirectly by
+     * {@link #start(Object, boolean)} when startup failed.
+     *
+     * @param arg the argument passed from {@link #stop(Object)},
+     *            or {@code null} if no argument was specified.
      */
-    protected abstract CompletionStage<Void> doStop() throws Exception;
+    protected abstract CompletionStage<Void> doStop(@Nullable U arg) throws Exception;
 
     /**
      * Invoked when the startup procedure begins.
      *
      * @param listener the listener
+     * @param arg      the argument passed from {@link #start(Object, boolean)},
+     *                 or {@code null} if no argument was specified.
      */
-    protected void notifyStarting(L listener) throws Exception {}
+    protected void notifyStarting(L listener, @Nullable T arg) throws Exception {}
 
     /**
      * Invoked when the startup procedure is finished.
      *
      * @param listener the listener
+     * @param arg      the argument passed from {@link #start(Object, boolean)},
+     *                 or {@code null} if no argument was specified.
+     * @param result   the value of the {@link CompletionStage} returned by {@link #doStart(Object)}.
      */
-    protected void notifyStarted(L listener, @Nullable V value) throws Exception {}
+    protected void notifyStarted(L listener, @Nullable T arg, @Nullable V result) throws Exception {}
 
     /**
      * Invoked when the shutdown procedure begins.
      *
      * @param listener the listener
+     * @param arg      the argument passed from {@link #stop(Object)},
+     *                 or {@code null} if no argument was specified.
      */
-    protected void notifyStopping(L listener) throws Exception {}
+    protected void notifyStopping(L listener, @Nullable U arg) throws Exception {}
 
     /**
      * Invoked when the shutdown procedure is finished.
      *
      * @param listener the listener
+     * @param arg      the argument passed from {@link #stop(Object)},
+     *                 or {@code null} if no argument was specified.
      */
-    protected void notifyStopped(L listener) throws Exception {}
+    protected void notifyStopped(L listener, @Nullable U arg) throws Exception {}
 
     /**
      * Invoked when failed to stop during the rollback after startup failure.
