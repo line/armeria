@@ -1,7 +1,6 @@
 package example.armeria.proxy;
 
 import java.net.InetSocketAddress;
-import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +20,11 @@ public final class Main {
         final Server backend1 = newBackendServer(8081, 500);
         final Server backend2 = newBackendServer(8082, 250);
         final Server backend3 = newBackendServer(8083, 100);
+        // You can also remove the delay between frame`s completely like:
+        // final Server backend = new BackendServer(8083, 0);
+        // The proxy server will handle backpressure perfectly fine
+        // even if your browser cannot receive fast enough.
+
         backend1.start().join();
         backend2.start().join();
         backend3.start().join();
@@ -44,17 +48,17 @@ public final class Main {
                     isLocalAddress ? "127.0.0.1" : localAddress.getHostString(), localAddress.getPort());
     }
 
-    static Server newBackendServer(int port, int pendulumDuration) throws Exception {
+    static Server newBackendServer(int port, int frameIntervalMillis) throws Exception {
         return new ServerBuilder()
                 .http(port)
-                // Increase timeout to serve long streaming response.
-                .defaultRequestTimeout(Duration.ofHours(1))
+                // Disable timeout to serve infinite streaming response.
+                .defaultRequestTimeoutMillis(0)
                 // Serve /index.html file.
                 .service("/", HttpFileBuilder.ofResource(Main.class.getClassLoader(), "index.html")
-                                             .cacheControl(ServerCacheControl.DISABLED)
+                                             .cacheControl(ServerCacheControl.REVALIDATED)
                                              .build()
                                              .asService())
-                .service("/animation", new AnimationService(pendulumDuration))
+                .service("/animation", new AnimationService(frameIntervalMillis))
                 // Serve health check.
                 .service("/internal/l7check", new HttpHealthCheckService())
                 .build();
@@ -65,8 +69,8 @@ public final class Main {
                 .http(httpPort)
                 .https(httpsPort)
                 .tlsSelfSigned()
-                // Increase timeout to serve long streaming response.
-                .defaultRequestTimeout(Duration.ofHours(1))
+                // Disable timeout to serve infinite streaming response.
+                .defaultRequestTimeoutMillis(0)
                 .serviceUnder("/", new ProxyService())
                 .decorator(LoggingService.newDecorator())
                 .build();

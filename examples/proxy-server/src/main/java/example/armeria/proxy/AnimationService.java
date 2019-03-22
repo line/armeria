@@ -48,10 +48,14 @@ public final class AnimationService extends AbstractHttpService {
             "</pre>"
     );
 
-    private final int pendulumDuration;
+    private final int frameIntervalMillis;
 
-    public AnimationService(int pendulumDuration) {
-        this.pendulumDuration = pendulumDuration;
+    public AnimationService(int frameIntervalMillis) {
+        if (frameIntervalMillis < 0) {
+            throw new IllegalArgumentException("frameIntervalMillis: " + frameIntervalMillis +
+                                               ", (expected >= 0)");
+        }
+        this.frameIntervalMillis = frameIntervalMillis;
     }
 
     @Override
@@ -64,10 +68,10 @@ public final class AnimationService extends AbstractHttpService {
         return res;
     }
 
-    private void streamData(EventLoop executor, HttpResponseWriter writer,
-                                   int frameIndex) {
-        writer.write(HttpData.ofUtf8(frames.get(frameIndex % 4)));
-        writer.onDemand(() -> executor.schedule(() -> streamData(executor, writer, frameIndex + 1),
-                                                pendulumDuration, TimeUnit.MILLISECONDS));
+    private void streamData(EventLoop executor, HttpResponseWriter writer, int frameIndex) {
+        final int index = frameIndex % frames.size();
+        writer.write(HttpData.ofUtf8(frames.get(index)));
+        writer.onDemand(() -> executor.schedule(() -> streamData(executor, writer, index + 1),
+                                                frameIntervalMillis, TimeUnit.MILLISECONDS));
     }
 }
