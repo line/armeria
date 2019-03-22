@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -32,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,10 +44,8 @@ import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -80,9 +79,6 @@ import io.netty.util.concurrent.Promise;
 
 public class RequestContextTest {
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
-
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
@@ -92,21 +88,18 @@ public class RequestContextTest {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
+    @Rule
+    public final EventLoopRule eventLoop = new EventLoopRule();
+
     @Mock
     private Channel channel;
 
     @Nullable
-    private List<RequestContext> ctxStack;
+    private Deque<RequestContext> ctxStack;
 
     @Before
     public void setContextStack() {
-        ctxStack = new ArrayList<>();
-    }
-
-    @After
-    public void clearContextStack() {
-        assertThat(ctxStack).isEmpty();
-        ctxStack = null;
+        ctxStack = new LinkedBlockingDeque<>();
     }
 
     @Test
@@ -270,7 +263,7 @@ public class RequestContextTest {
             latch.countDown();
             resultFuture.get(); // this will wait and propagate assertions.
         } finally {
-            executor.shutdown();
+            shutdownAndAwaitTermination(executor);
         }
     }
 
@@ -309,7 +302,7 @@ public class RequestContextTest {
 
             future2.get(); // this will propagate assertions in callbacks if it failed.
         } finally {
-            executor.shutdown();
+            shutdownAndAwaitTermination(executor);
         }
     }
 
@@ -416,6 +409,10 @@ public class RequestContextTest {
         assertThat(ctx).isSameAs(context);
     }
 
+    private static void shutdownAndAwaitTermination(ExecutorService executor) {
+        assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
+    }
+
     private NonWrappingRequestContext createContext() {
         return createContext(true);
     }
@@ -423,18 +420,19 @@ public class RequestContextTest {
     private NonWrappingRequestContext createContext(boolean addContextAwareHandler) {
         final NonWrappingRequestContext ctx = new DummyRequestContext();
         if (addContextAwareHandler) {
-            AtomicReference<Thread> thread = new AtomicReference<>();
-            AtomicInteger ctxStackSize = new AtomicInteger();
+            final AtomicReference<Thread> thread = new AtomicReference<>();
+            final AtomicInteger ctxStackSize = new AtomicInteger();
             ctx.onEnter(myCtx -> {
                 thread.set(Thread.currentThread());
-                ctxStack.add(myCtx);
+                assertThat(ctxStack).isNotNull();
+                ctxStack.addLast(myCtx);
                 ctxStackSize.set(ctxStack.size());
                 assertThat(myCtx).isSameAs(ctx);
             });
             ctx.onExit(myCtx -> {
                 assertThat(Thread.currentThread()).isSameAs(thread.get());
                 assertThat(ctxStack).hasSize(ctxStackSize.get());
-                assertThat(ctxStack.remove(ctxStack.size() - 1)).isSameAs(myCtx);
+                assertThat(ctxStack.removeLast()).isSameAs(myCtx);
                 assertThat(myCtx).isSameAs(ctx);
             });
         }
