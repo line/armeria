@@ -122,6 +122,7 @@ allprojects {
             exclude '**/Tomcat*ProtocolHandler.java'
             exclude '**/internal/**'
             exclude '**/thrift/v1/**'
+            exclude '**/reactor/core/scheduler/**'
         }
     }
 }
