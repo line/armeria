@@ -10,7 +10,7 @@
     [Calling a gRPC service](https://line.github.io/armeria/client-grpc.html).
 
 - `proxy-server`
-  - Learn how to make a proxy server using client side load balancing.
+  - Learn how to make a proxy server which leverages client side load balancing.
   - See [Client-side load balancing](https://line.github.io/armeria/client-service-discovery.html)
 
 - `saml-service-provider`

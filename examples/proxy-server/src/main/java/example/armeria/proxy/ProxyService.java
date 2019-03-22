@@ -33,20 +33,20 @@ public final class ProxyService extends AbstractHttpService {
      * with ZooKeeper</a> and <a href="https://line.github.io/centraldogma">Central Dogma</a>.
      */
     private static final EndpointGroup animationGroup = new StaticEndpointGroup(
-            Endpoint.of("localhost", 8081),
-            Endpoint.of("localhost", 8082),
-            Endpoint.of("localhost", 8083));
+            Endpoint.of("127.0.0.1", 8081),
+            Endpoint.of("127.0.0.1", 8082),
+            Endpoint.of("127.0.0.1", 8083));
 
     private final HttpClient loadBalancingClient;
 
     private final boolean filterHeaders;
 
     public ProxyService() throws InterruptedException {
-        loadBalancingClient = initLbClient();
+        loadBalancingClient = newLoadBalancingClient();
         filterHeaders = false;
     }
 
-    private static HttpClient initLbClient() throws InterruptedException {
+    private static HttpClient newLoadBalancingClient() throws InterruptedException {
         // Send HTTP health check requests to '/internal/l7check' every 10 seconds.
         final HttpHealthCheckedEndpointGroup healthCheckedGroup =
                 new HttpHealthCheckedEndpointGroupBuilder(animationGroup, "/internal/l7check")

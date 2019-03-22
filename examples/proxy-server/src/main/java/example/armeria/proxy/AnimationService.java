@@ -2,6 +2,7 @@ package example.armeria.proxy;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -12,6 +13,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+
+import io.netty.channel.EventLoop;
 
 public final class AnimationService extends AbstractHttpService {
 
@@ -57,19 +60,14 @@ public final class AnimationService extends AbstractHttpService {
         final HttpResponseWriter res = HttpResponse.streaming();
         res.write(HttpHeaders.of(HttpStatus.OK)
                              .contentType(MediaType.PLAIN_TEXT_UTF_8));
-
-        ctx.blockingTaskExecutor().submit(() -> {
-            for (int i = 0; i < 1000; i++) {
-                try {
-                    Thread.sleep(pendulumDuration);
-                } catch (Exception e) {
-                    res.close(e);
-                    return;
-                }
-                res.write(HttpData.ofUtf8(frames.get(i % 4)));
-            }
-            res.close();
-        });
+        res.onDemand(() -> streamData(ctx.eventLoop(), res, 0));
         return res;
+    }
+
+    private void streamData(EventLoop executor, HttpResponseWriter writer,
+                                   int frameIndex) {
+        writer.write(HttpData.ofUtf8(frames.get(frameIndex % 4)));
+        writer.onDemand(() -> executor.schedule(() -> streamData(executor, writer, frameIndex + 1),
+                                                pendulumDuration, TimeUnit.MILLISECONDS));
     }
 }
