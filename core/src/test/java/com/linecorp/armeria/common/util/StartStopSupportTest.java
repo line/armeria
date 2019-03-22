@@ -246,10 +246,10 @@ public class StartStopSupportTest {
             throw exception;
         }, stopTask);
 
-        assertThatThrownBy(() -> startStop.start(true).join())
+        assertThatThrownBy(() -> startStop.start(null, 1L, true).join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(exception);
-        verify(stopTask, times(1)).run(null);
+        verify(stopTask, times(1)).run(1L);
     }
 
     @Test
