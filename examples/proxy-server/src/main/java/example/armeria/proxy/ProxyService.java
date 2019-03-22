@@ -9,6 +9,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
+import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HttpHealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HttpHealthCheckedEndpointGroupBuilder;
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -23,15 +24,18 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 public final class ProxyService extends AbstractHttpService {
 
+    /**
+     * We used hardcoded backend address. But we can use service discovery mechanism to configure backends
+     * dynamically using {@link DnsServiceEndpointGroup}, ZooKeeper or Central Dogma.
+     *
+     * See <a href="https://line.github.io/armeria/client-service-discovery.html">service discovery</a>,
+     * <a href="https://line.github.io/armeria/advanced-zookeeper.html#advanced-zookeeper">Service discovery
+     * with ZooKeeper</a> and <a href="https://line.github.io/centraldogma">Central Dogma</a>.
+     */
     private static final EndpointGroup animationGroup = new StaticEndpointGroup(
             Endpoint.of("localhost", 8081),
             Endpoint.of("localhost", 8082),
             Endpoint.of("localhost", 8083));
-    // We used hardcoded backend address. But we can use service discovery mechanism to configure backends
-    // dynamically using DnsEndpointGroup, Zookeeper or Central Dogma.
-    // See https://line.github.io/armeria/client-service-discovery.html,
-    // https://line.github.io/armeria/advanced-zookeeper.html#advanced-zookeeper and
-    // https://line.github.io/centraldogma.
 
     private final HttpClient loadBalancingClient;
 
@@ -43,7 +47,7 @@ public final class ProxyService extends AbstractHttpService {
     }
 
     private static HttpClient initLbClient() throws InterruptedException {
-        // Sends HTTP health check requests to '/internal/l7check' every 10 seconds.
+        // Send HTTP health check requests to '/internal/l7check' every 10 seconds.
         final HttpHealthCheckedEndpointGroup healthCheckedGroup =
                 new HttpHealthCheckedEndpointGroupBuilder(animationGroup, "/internal/l7check")
                         .protocol(SessionProtocol.HTTP)
@@ -81,7 +85,7 @@ public final class ProxyService extends AbstractHttpService {
             protected HttpObject filter(HttpObject obj) {
                 if (obj instanceof HttpHeaders) {
                     final HttpHeaders resHeaders = ((HttpHeaders) obj).toMutable();
-                    // You can remove or add headers.
+                    // Remove a header.
                     resHeaders.remove(HttpHeaderNames.of("my-sensitive-header"));
                     return resHeaders;
                 }

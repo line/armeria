@@ -1,5 +1,6 @@
 package example.armeria.proxy;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 
 import org.slf4j.Logger;
@@ -36,7 +37,11 @@ public final class Main {
         }));
 
         proxyServer.start().join();
-        logger.info("The proxy server has been started.");
+        final InetSocketAddress localAddress = proxyServer.activePort().get().localAddress();
+        final boolean isLocalAddress = localAddress.getAddress().isAnyLocalAddress() ||
+                                       localAddress.getAddress().isLoopbackAddress();
+        logger.info("The proxy server has been started. Connect at http://{}:{}/",
+                    isLocalAddress ? "127.0.0.1" : localAddress.getHostString(), localAddress.getPort());
     }
 
     static Server newBackendServer(int port, int pendulumDuration) throws Exception {
@@ -52,7 +57,6 @@ public final class Main {
                 .service("/animation", new AnimationService(pendulumDuration))
                 // Serve health check.
                 .service("/internal/l7check", new HttpHealthCheckService())
-                .decorator(LoggingService.newDecorator())
                 .build();
     }
 
