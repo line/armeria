@@ -33,6 +33,7 @@ task copyFiles(type: Copy) {
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
     include '**/MeterIdPrefixFunctionFactory.java'
+    include '**/Ssl.java'
     include '**/ThriftServiceUtils.java'
 }
 

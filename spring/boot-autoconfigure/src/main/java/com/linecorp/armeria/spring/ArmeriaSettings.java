@@ -42,7 +42,7 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
  *     - port: 8443
  *       protocol: HTTPS
  *   ssl:
- *   - key-alias: "host.name.com"
+ *     key-alias: "host.name.com"
  *     key-store: "keystore.jks"
  *     key-store-password: "changeme"
  *     trust-store: "truststore.jks"
