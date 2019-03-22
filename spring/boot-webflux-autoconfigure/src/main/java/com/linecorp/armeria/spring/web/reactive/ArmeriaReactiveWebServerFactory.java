@@ -92,7 +92,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         this.beanFactory = requireNonNull(beanFactory, "beanFactory");
     }
 
-    private ArmeriaSettings.Ssl toArmeriaSslConfiguration(Ssl ssl) {
+    private com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
         ClientAuth clientAuth = null;
         if (ssl.getClientAuth() != null) {
             switch (ssl.getClientAuth()) {
@@ -104,7 +104,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                     break;
             }
         }
-        return new ArmeriaSettings.Ssl()
+        return new com.linecorp.armeria.spring.Ssl()
                 .setClientAuth(clientAuth)
                 .setCiphers(ImmutableList.copyOf(ssl.getCiphers()))
                 .setEnabledProtocols(ImmutableList.copyOf(ssl.getEnabledProtocols()))

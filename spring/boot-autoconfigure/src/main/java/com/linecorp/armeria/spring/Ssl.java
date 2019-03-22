@@ -78,8 +78,9 @@ public class Ssl {
         return this.clientAuth;
     }
 
-    public void setClientAuth(ClientAuth clientAuth) {
+    public Ssl setClientAuth(ClientAuth clientAuth) {
         this.clientAuth = clientAuth;
+        return this;
     }
 
     /**
@@ -90,8 +91,9 @@ public class Ssl {
         return this.ciphers;
     }
 
-    public void setCiphers(List<String> ciphers) {
+    public Ssl setCiphers(List<String> ciphers) {
         this.ciphers = ciphers;
+        return this;
     }
 
     /**
@@ -102,8 +104,9 @@ public class Ssl {
         return this.enabledProtocols;
     }
 
-    public void setEnabledProtocols(List<String> enabledProtocols) {
+    public Ssl setEnabledProtocols(List<String> enabledProtocols) {
         this.enabledProtocols = enabledProtocols;
+        return this;
     }
 
     /**
@@ -114,8 +117,9 @@ public class Ssl {
         return this.keyAlias;
     }
 
-    public void setKeyAlias(String keyAlias) {
+    public Ssl setKeyAlias(String keyAlias) {
         this.keyAlias = keyAlias;
+        return this;
     }
 
     /**
@@ -126,8 +130,9 @@ public class Ssl {
         return this.keyPassword;
     }
 
-    public void setKeyPassword(String keyPassword) {
+    public Ssl setKeyPassword(String keyPassword) {
         this.keyPassword = keyPassword;
+        return this;
     }
 
     /**
@@ -139,8 +144,9 @@ public class Ssl {
         return this.keyStore;
     }
 
-    public void setKeyStore(String keyStore) {
+    public Ssl setKeyStore(String keyStore) {
         this.keyStore = keyStore;
+        return this;
     }
 
     /**
@@ -151,8 +157,9 @@ public class Ssl {
         return this.keyStorePassword;
     }
 
-    public void setKeyStorePassword(String keyStorePassword) {
+    public Ssl setKeyStorePassword(String keyStorePassword) {
         this.keyStorePassword = keyStorePassword;
+        return this;
     }
 
     /**
@@ -163,8 +170,9 @@ public class Ssl {
         return this.keyStoreType;
     }
 
-    public void setKeyStoreType(String keyStoreType) {
+    public Ssl setKeyStoreType(String keyStoreType) {
         this.keyStoreType = keyStoreType;
+        return this;
     }
 
     /**
@@ -175,8 +183,9 @@ public class Ssl {
         return this.keyStoreProvider;
     }
 
-    public void setKeyStoreProvider(String keyStoreProvider) {
+    public Ssl setKeyStoreProvider(String keyStoreProvider) {
         this.keyStoreProvider = keyStoreProvider;
+        return this;
     }
 
     /**
@@ -187,8 +196,9 @@ public class Ssl {
         return this.trustStore;
     }
 
-    public void setTrustStore(String trustStore) {
+    public Ssl setTrustStore(String trustStore) {
         this.trustStore = trustStore;
+        return this;
     }
 
     /**
@@ -199,8 +209,9 @@ public class Ssl {
         return this.trustStorePassword;
     }
 
-    public void setTrustStorePassword(String trustStorePassword) {
+    public Ssl setTrustStorePassword(String trustStorePassword) {
         this.trustStorePassword = trustStorePassword;
+        return this;
     }
 
     /**
@@ -211,8 +222,9 @@ public class Ssl {
         return this.trustStoreType;
     }
 
-    public void setTrustStoreType(String trustStoreType) {
+    public Ssl setTrustStoreType(String trustStoreType) {
         this.trustStoreType = trustStoreType;
+        return this;
     }
 
     /**
@@ -223,7 +235,8 @@ public class Ssl {
         return this.trustStoreProvider;
     }
 
-    public void setTrustStoreProvider(String trustStoreProvider) {
+    public Ssl setTrustStoreProvider(String trustStoreProvider) {
         this.trustStoreProvider = trustStoreProvider;
+        return this;
     }
 }

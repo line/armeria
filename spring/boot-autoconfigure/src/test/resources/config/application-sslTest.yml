@@ -1,0 +1,8 @@
+armeria:
+  ports:
+    - port: 0
+      protocol: HTTP
+    - port: 0
+      protocol: HTTPS
+  ssl:
+    use-self-signed-certification: true

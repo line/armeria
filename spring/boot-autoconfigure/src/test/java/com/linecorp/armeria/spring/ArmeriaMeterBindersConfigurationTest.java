@@ -34,6 +34,7 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -58,21 +59,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 public class ArmeriaMeterBindersConfigurationTest {
 
     @SpringBootApplication
+    @Import(ArmeriaOkServiceConfiguration.class)
     public static class TestConfiguration {
-
-        @Bean
-        public HttpServiceRegistrationBean okService() {
-            return new HttpServiceRegistrationBean()
-                    .setServiceName("okService")
-                    .setService(new AbstractHttpService() {
-                        @Override
-                        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
-                        }
-                    })
-                    .setPathMapping(PathMapping.ofExact("/ok"))
-                    .setDecorators(LoggingService.newDecorator());
-        }
     }
 
     @Rule
