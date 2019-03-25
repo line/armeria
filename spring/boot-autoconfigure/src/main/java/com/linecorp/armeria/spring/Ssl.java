@@ -43,6 +43,8 @@ import io.netty.handler.ssl.ClientAuth;
  * @author Stephane Nicoll
  */
 public class Ssl {
+    private boolean enabled = true;
+
     private ClientAuth clientAuth;
 
     private List<String> ciphers;
@@ -68,6 +70,19 @@ public class Ssl {
     private String trustStoreType;
 
     private String trustStoreProvider;
+
+	/**
+	 * Return whether to enable SSL support.
+	 * @return whether to enable SSL support
+	 */
+	public boolean isEnabled() {
+		return this.enabled;
+	}
+
+	public Ssl setEnabled(boolean enabled) {
+		this.enabled = enabled;
+		return this;
+	}
 
     /**
      * Return Whether client authentication is not wanted ("none"), wanted ("want") or

@@ -105,6 +105,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             }
         }
         return new com.linecorp.armeria.spring.Ssl()
+                .setEnabled(ssl.isEnabled())
                 .setClientAuth(clientAuth)
                 .setCiphers(ImmutableList.copyOf(ssl.getCiphers()))
                 .setEnabledProtocols(ImmutableList.copyOf(ssl.getEnabledProtocols()))
