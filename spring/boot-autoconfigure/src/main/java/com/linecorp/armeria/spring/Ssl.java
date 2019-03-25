@@ -71,21 +71,24 @@ public class Ssl {
 
     private String trustStoreProvider;
 
-	/**
-	 * Return whether to enable SSL support.
-	 * @return whether to enable SSL support
-	 */
-	public boolean isEnabled() {
-		return this.enabled;
-	}
-
-	public Ssl setEnabled(boolean enabled) {
-		this.enabled = enabled;
-		return this;
-	}
+    /**
+     * Returns whether to enable SSL support.
+     * @return whether to enable SSL support
+     */
+    public boolean isEnabled() {
+        return this.enabled;
+    }
 
     /**
-     * Return Whether client authentication is not wanted ("none"), wanted ("want") or
+     * Enables (or disables) SSL support.
+     */
+    public Ssl setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        return this;
+    }
+
+    /**
+     * Returns whether client authentication is not wanted ("none"), wanted ("want") or
      * needed ("need"). Requires a trust store.
      * @return the {@link ClientAuth} to use
      */
@@ -93,65 +96,81 @@ public class Ssl {
         return this.clientAuth;
     }
 
+    /**
+     * Sets whether the client authentication is not none ({@link ClientAuth#NONE}), optional
+     * ({@link ClientAuth#OPTIONAL}) or required ({@link ClientAuth#REQUIRE}).
+     */
     public Ssl setClientAuth(ClientAuth clientAuth) {
         this.clientAuth = clientAuth;
         return this;
     }
 
     /**
-     * Return the supported SSL ciphers.
+     * Returns the supported SSL ciphers.
      * @return the supported SSL ciphers
      */
     public List<String> getCiphers() {
         return this.ciphers;
     }
 
+    /**
+     * Sets the supported SSL ciphers.
+     */
     public Ssl setCiphers(List<String> ciphers) {
         this.ciphers = ciphers;
         return this;
     }
 
     /**
-     * Return the enabled SSL protocols.
+     * Returns the enabled SSL protocols.
      * @return the enabled SSL protocols.
      */
     public List<String> getEnabledProtocols() {
         return this.enabledProtocols;
     }
 
+    /**
+     * Sets the enabled SSL protocols.
+     */
     public Ssl setEnabledProtocols(List<String> enabledProtocols) {
         this.enabledProtocols = enabledProtocols;
         return this;
     }
 
     /**
-     * Return the alias that identifies the key in the key store.
+     * Returns the alias that identifies the key in the key store.
      * @return the key alias
      */
     public String getKeyAlias() {
         return this.keyAlias;
     }
 
+    /**
+     * Sets the alias  that identifies the key in the key store.
+     */
     public Ssl setKeyAlias(String keyAlias) {
         this.keyAlias = keyAlias;
         return this;
     }
 
     /**
-     * Return the password used to access the key in the key store.
+     * Returns the password used to access the key in the key store.
      * @return the key password
      */
     public String getKeyPassword() {
         return this.keyPassword;
     }
 
+    /**
+     * Sets the password used to access the key in the key store.
+     */
     public Ssl setKeyPassword(String keyPassword) {
         this.keyPassword = keyPassword;
         return this;
     }
 
     /**
-     * Return the path to the key store that holds the SSL certificate (typically a jks
+     * Returns the path to the key store that holds the SSL certificate (typically a jks
      * file).
      * @return the path to the key store
      */
@@ -159,97 +178,121 @@ public class Ssl {
         return this.keyStore;
     }
 
+    /**
+     * Sets the path to the key store that holds the SSL certificate (typically a jks file).
+     */
     public Ssl setKeyStore(String keyStore) {
         this.keyStore = keyStore;
         return this;
     }
 
     /**
-     * Return the password used to access the key store.
+     * Returns the password used to access the key store.
      * @return the key store password
      */
     public String getKeyStorePassword() {
         return this.keyStorePassword;
     }
 
+    /**
+     * Sets the password used to access the key store.
+     */
     public Ssl setKeyStorePassword(String keyStorePassword) {
         this.keyStorePassword = keyStorePassword;
         return this;
     }
 
     /**
-     * Return the type of the key store.
+     * Returns the type of the key store.
      * @return the key store type
      */
     public String getKeyStoreType() {
         return this.keyStoreType;
     }
 
+    /**
+     * Sets the type of the key store.
+     */
     public Ssl setKeyStoreType(String keyStoreType) {
         this.keyStoreType = keyStoreType;
         return this;
     }
 
     /**
-     * Return the provider for the key store.
+     * Returns the provider for the key store.
      * @return the key store provider
      */
     public String getKeyStoreProvider() {
         return this.keyStoreProvider;
     }
 
+    /**
+     * Sets the provider for the key store.
+     */
     public Ssl setKeyStoreProvider(String keyStoreProvider) {
         this.keyStoreProvider = keyStoreProvider;
         return this;
     }
 
     /**
-     * Return the trust store that holds SSL certificates.
+     * Returns the trust store that holds SSL certificates.
      * @return the trust store
      */
     public String getTrustStore() {
         return this.trustStore;
     }
 
+    /**
+     * Sets the trust store that holds SSL certificates.
+     */
     public Ssl setTrustStore(String trustStore) {
         this.trustStore = trustStore;
         return this;
     }
 
     /**
-     * Return the password used to access the trust store.
+     * Returns the password used to access the trust store.
      * @return the trust store password
      */
     public String getTrustStorePassword() {
         return this.trustStorePassword;
     }
 
+    /**
+     * Sets the password used to access the trust store.
+     */
     public Ssl setTrustStorePassword(String trustStorePassword) {
         this.trustStorePassword = trustStorePassword;
         return this;
     }
 
     /**
-     * Return the type of the trust store.
+     * Returns the type of the trust store.
      * @return the trust store type
      */
     public String getTrustStoreType() {
         return this.trustStoreType;
     }
 
+    /**
+     * Sets the type of the trust store.
+     */
     public Ssl setTrustStoreType(String trustStoreType) {
         this.trustStoreType = trustStoreType;
         return this;
     }
 
     /**
-     * Return the provider for the trust store.
+     * Returns the provider for the trust store.
      * @return the trust store provider
      */
     public String getTrustStoreProvider() {
         return this.trustStoreProvider;
     }
 
+    /**
+     * Sets the provider for the trust store.
+     */
     public Ssl setTrustStoreProvider(String trustStoreProvider) {
         this.trustStoreProvider = trustStoreProvider;
         return this;

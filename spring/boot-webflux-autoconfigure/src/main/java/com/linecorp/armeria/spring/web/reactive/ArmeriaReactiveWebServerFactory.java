@@ -129,7 +129,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         final Ssl ssl = getSsl();
         if (ssl != null) {
             if (ssl.isEnabled()) {
-                SslStoreProvider provider = getSslStoreProvider();
+                final SslStoreProvider provider = getSslStoreProvider();
                 configureTls(sb, toArmeriaSslConfiguration(ssl),
                              () -> {
                                  try {

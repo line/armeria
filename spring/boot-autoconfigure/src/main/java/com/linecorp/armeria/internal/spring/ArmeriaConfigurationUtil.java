@@ -349,6 +349,9 @@ public final class ArmeriaConfigurationUtil {
     public static void configureTls(ServerBuilder sb, Ssl ssl,
                                     @Nullable Supplier<KeyStore> keyStoreSupplier,
                                     @Nullable Supplier<KeyStore> trustStoreSupplier) {
+        if (!ssl.isEnabled()) {
+            return;
+        }
         try {
             if (keyStoreSupplier == null && trustStoreSupplier == null &&
                 ssl.getKeyStore() == null && ssl.getTrustStore() == null) {
