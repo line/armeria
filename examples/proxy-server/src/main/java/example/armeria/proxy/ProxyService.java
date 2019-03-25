@@ -73,25 +73,30 @@ public final class ProxyService extends AbstractHttpService {
         // to the browser. You don't have to implement your own backpressure control because Armeria handles
         // it by nature. Let's take a look at how a response is sending to describe it.
         // This is the flow:
-        //                         -------------------------------------------
+        //                         +-----------------------------------------+
         //               streaming |                            Proxy server |   streaming
         //   Browser <-------------|(socket1)     HttpResponse      (socket2)|<------------ (socket3) Backend
         //                         |             internal queue              |
         //                         |   <-  (((((((...data...((((((((() <-    |
         //                         |                                         |
-        //                         -------------------------------------------
+        //                         +-----------------------------------------+
         //
-        // A streaming data is read from the socket2 which is connected to the backend and stored into the
-        // internal queue in the HttpResponse. Then, the first streaming data is written to the socket1 which is
-        // connected to the browser. If it succeeds, the proxy server fetches one more data from the internal
-        // queue and writes it to the socket1 again. So the proxy server pulls the data from the internal queue
-        // only when it can write to the socket1.
-        // That means if the brower cannot receive the data fast enough, which makes the socket1 full,
-        // the proxy server does not forward data and just stores data in the queue in the HttpResponse.
-        // Someone might think, at this point, that makes the internal queue full. That is not true. The proxy
-        // server reads the data from the backend automatically until the amount of the data in the queue is
-        // under certain threshold. If the amount passes the threshold, the proxy server stops reading from
-        // socket2. So the socket3 is full as well and the backend can pause to produce streaming data.
+        // 1. A streaming data is read from the socket2 which is connected to the backend.
+        // 2. The data is stored into the internal queue in the HttpResponse.
+        // 3. The first streaming data in the queue is written to the socket1 which is connected to the browser.
+        // 4. If it succeeds, the proxy server fetches one more data from the internal queue and writes it to
+        //    the socket1 again. (The proxy server does not pull the data from the internal queue
+        //    until the previous write succeeds.)
+        // 5. If the browser cannot receive the data fast enough, the socket1 is going to be full due to the
+        //    flow control of TCP (or HTTP/2 if you are using).
+        // 6. The proxy server does not write data to socket1 but just stores data in the queue.
+        // 7. If the amount of the data in the queue passes a certain threshold, the proxy server pauses to read
+        //    data automatically from socket2. (This prevents the queue growing infinitely.)
+        // 8. If the amount of the data in the queue reduces by sending data to the browser again, the proxy
+        //    server resumes reading data automatically from socket2.
+        // 9. If the socket2 is full, then socket3 is going to be full as well. So the backend can pause to
+        //    produce streaming data.
+        //
         // This applies to the request in the same way.
         final HttpResponse res = loadBalancingClient.execute(req);
         if (filterHeaders) {
