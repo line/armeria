@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedHttpServices;
@@ -82,6 +83,7 @@ import reactor.core.Disposable;
  */
 public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaReactiveWebServerFactory.class);
+    private static final String[] EMPTY = new String[0];
 
     private final ConfigurableListableBeanFactory beanFactory;
 
@@ -104,11 +106,14 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                     break;
             }
         }
+        if (!ssl.isEnabled()) {
+            return new com.linecorp.armeria.spring.Ssl();
+        }
         return new com.linecorp.armeria.spring.Ssl()
                 .setEnabled(ssl.isEnabled())
                 .setClientAuth(clientAuth)
-                .setCiphers(ImmutableList.copyOf(ssl.getCiphers()))
-                .setEnabledProtocols(ImmutableList.copyOf(ssl.getEnabledProtocols()))
+                .setCiphers(ImmutableList.copyOf(firstNonNull(ssl.getCiphers(), EMPTY)))
+                .setEnabledProtocols(ImmutableList.copyOf(firstNonNull(ssl.getEnabledProtocols(), EMPTY)))
                 .setKeyAlias(ssl.getKeyAlias())
                 .setKeyPassword(ssl.getKeyPassword())
                 .setKeyStore(ssl.getKeyStore())
@@ -133,14 +138,14 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 configureTls(sb, toArmeriaSslConfiguration(ssl),
                              () -> {
                                  try {
-                                     return provider.getKeyStore();
+                                     return provider != null ? provider.getKeyStore() : null;
                                  } catch (Exception e) {
                                      throw new IllegalStateException(e);
                                  }
                              },
                              () -> {
                                  try {
-                                     return provider.getTrustStore();
+                                     return provider != null ? provider.getTrustStore() : null;
                                  } catch (Exception e) {
                                      throw new IllegalStateException(e);
                                  }

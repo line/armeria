@@ -367,7 +367,7 @@ public final class ArmeriaConfigurationUtil {
 
             final List<String> enabledProtocols = ssl.getEnabledProtocols();
             if (enabledProtocols != null) {
-                sslBuilder.protocols((String[]) enabledProtocols.toArray());
+                sslBuilder.protocols(enabledProtocols.toArray(new String[enabledProtocols.size()]));
             }
 
             final List<String> ciphers = ssl.getCiphers();
