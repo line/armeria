@@ -108,9 +108,7 @@ public class ArmeriaSslConfigurationTest {
 
     @Test
     public void https() {
-        final HttpClient client = HttpClient.of(newUrl("https"));
-
-        final HttpResponse response = client.get("/ok");
+        final HttpResponse response = HttpClient.of(newUrl("https")).get("/ok");
 
         final AggregatedHttpMessage msg = response.aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);

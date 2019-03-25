@@ -379,7 +379,7 @@ public final class ArmeriaConfigurationUtil {
 
             sb.tls(sslBuilder.build());
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to configure TLS: " + e);
+            throw new IllegalStateException("Failed to configure TLS: " + e, e);
         }
     }
 
