@@ -254,7 +254,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         configureServerWithArmeriaSettings(sb, settings,
                                            findBean(MeterRegistry.class).orElse(Metrics.globalRegistry),
                                            findBeans(HealthChecker.class));
-        configureTls(sb, settings.getSsl());
+        if (settings.getSsl() != null) {
+            configureTls(sb, settings.getSsl());
+        }
     }
 
     private <T> Optional<T> findBean(Class<T> clazz) {
