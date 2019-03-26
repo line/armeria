@@ -1,5 +1,6 @@
 package example.armeria.proxy;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -12,6 +13,7 @@ import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HttpHealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HttpHealthCheckedEndpointGroupBuilder;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -23,6 +25,8 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 public final class ProxyService extends AbstractHttpService {
+
+    private static final String viaHeaderValue = " HTTP/2.0 Armeria proxy"; // The pseudonym is Armeria proxy.
 
     /**
      * We used hardcoded backend addresses. But you can use other service discovery mechanisms to configure
@@ -38,11 +42,13 @@ public final class ProxyService extends AbstractHttpService {
 
     private final HttpClient loadBalancingClient;
 
-    private final boolean filterHeaders;
+    private final boolean addForwardedToRequestHeaders;
+    private final boolean addViaToResponseHeaders;
 
     public ProxyService() throws InterruptedException {
         loadBalancingClient = newLoadBalancingClient();
-        filterHeaders = false;
+        addForwardedToRequestHeaders = true;
+        addViaToResponseHeaders = true;
     }
 
     private static HttpClient newLoadBalancingClient() throws InterruptedException {
@@ -64,15 +70,20 @@ public final class ProxyService extends AbstractHttpService {
         return new HttpClientBuilder("http://group:animation_apis")
                 // Disable timeout to serve infinite streaming response.
                 .defaultResponseTimeoutMillis(0)
+                .decorator(LoggingClient.newDecorator())
                 .build();
     }
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (addForwardedToRequestHeaders) {
+            addForwarded(ctx, req);
+        }
+
         // We can just send the request from a browser to a backend and the response from the backend
         // to the browser. You don't have to implement your own backpressure control because Armeria handles
-        // it by nature. Let's take a look at how a response is sending to describe it.
-        // This is the flow:
+        // it by nature. Let's take a look at how a response is transferring from the backend to the browser:
+        //
         //                         +-----------------------------------------+
         //               streaming |                            Proxy server |   streaming
         //   Browser <-------------|(socket1)     HttpResponse      (socket2)|<------------ (socket3) Backend
@@ -87,34 +98,44 @@ public final class ProxyService extends AbstractHttpService {
         // 4. If it succeeds, the proxy server fetches one more data from the internal queue and writes it to
         //    the socket1 again. (The proxy server does not pull the data from the internal queue
         //    until the previous write succeeds.)
-        // 5. If the browser cannot receive the data fast enough, the socket1 is going to be full due to the
-        //    flow control of TCP (or HTTP/2 if you are using).
+        // 5. If the browser cannot receive the data fast enough, the send buffer of socket1 is going to be
+        //    full due to the flow control of TCP (or HTTP/2 if you are using).
         // 6. The proxy server does not write data to socket1 but just stores data in the queue.
-        // 7. If the amount of the data in the queue passes a certain threshold, the proxy server pauses to read
-        //    data automatically from socket2. (This prevents the queue growing infinitely.)
+        // 7. If the amount of the data in the queue exceeds a certain threshold, the proxy server pauses to
+        //    read data automatically from socket2. (This prevents the queue growing infinitely.)
         // 8. If the amount of the data in the queue reduces by sending data to the browser again, the proxy
         //    server resumes reading data automatically from socket2.
-        // 9. If the socket2 is full, then socket3 is going to be full as well. So the backend can pause to
-        //    produce streaming data.
+        // 9. If the receive buffer of socket2 is full, then send buffer of socket3 is going to be full as well.
+        //    So the backend can pause to produce streaming data.
         //
         // This applies to the request in the same way.
         final HttpResponse res = loadBalancingClient.execute(req);
-        if (filterHeaders) {
-            // You can remove or add specific headers to a response.
-            return filteredResponse(res);
+        if (addViaToResponseHeaders) {
+            return addViaHeader(res);
         }
-
         return res;
     }
 
-    private static HttpResponse filteredResponse(HttpResponse res) {
+    private static void addForwarded(ServiceRequestContext ctx, HttpRequest req) {
+        // This is a simplified example. Please refer to https://tools.ietf.org/html/rfc7239
+        // for more information about Forwarded header.
+        final StringBuilder sb = new StringBuilder();
+        sb.append(" for: ").append(ctx.<InetSocketAddress>remoteAddress().getAddress().getHostAddress());
+        sb.append(", host: ").append(req.authority());
+        sb.append(", proto: ").append(ctx.sessionProtocol());
+        req.headers().add(HttpHeaderNames.FORWARDED, sb.toString());
+    }
+
+    private static HttpResponse addViaHeader(HttpResponse res) {
         return new FilteredHttpResponse(res) {
             @Override
             protected HttpObject filter(HttpObject obj) {
+                // You can remove or add specific headers to a response.
                 if (obj instanceof HttpHeaders) {
                     final HttpHeaders resHeaders = ((HttpHeaders) obj).toMutable();
-                    // Remove a header.
-                    resHeaders.remove(HttpHeaderNames.of("my-sensitive-header"));
+                    // This is a simplified example. Please refer to
+                    // https://tools.ietf.org/html/rfc7230#section-5.7.1 for more information about Via header.
+                    resHeaders.add(HttpHeaderNames.VIA, viaHeaderValue);
                     return resHeaders;
                 }
                 return obj;
