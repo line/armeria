@@ -7,12 +7,14 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import com.linecorp.armeria.spring.web.reactive.ArmeriaClientHttpConnector;
 
 @RunWith(SpringRunner.class)
+@ActiveProfiles("testbed")
 @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
 public class HelloApplicationIntegrationTest {
 

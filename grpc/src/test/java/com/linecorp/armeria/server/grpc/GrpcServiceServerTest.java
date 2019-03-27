@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -407,7 +408,12 @@ public class GrpcServiceServerTest {
         streamingClient = UnitTestServiceGrpc.newStub(useBlockingExecutor ? blockingChannel : channel);
 
         PathAndQuery.clearCachedPaths();
-        requestLogQueue.clear();
+    }
+
+    @After
+    public void tearDown() {
+        // Make sure all RequestLogs are consumed by the test.
+        assertThat(requestLogQueue).isEmpty();
     }
 
     @Test
@@ -849,6 +855,7 @@ public class GrpcServiceServerTest {
                 GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
         assertThat(response.headers()).contains(entry(GrpcHeaderNames.GRPC_STATUS, "10"),
                                                 entry(GrpcHeaderNames.GRPC_MESSAGE, "aborted call"));
+        requestLogQueue.take();
     }
 
     @Test
@@ -877,41 +884,43 @@ public class GrpcServiceServerTest {
     }
 
     @Test
-    public void noMaxMessageSize() {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1",
-                                                                  serverWithNoMaxMessageSize.httpPort())
-                                                      .usePlaintext()
-                                                      .build();
+    public void noMaxMessageSize() throws Exception {
+        final ManagedChannel channel =
+                ManagedChannelBuilder.forAddress("127.0.0.1", serverWithNoMaxMessageSize.httpPort())
+                                     .usePlaintext()
+                                     .build();
 
         try {
-            UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
+            final UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
             assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
         } finally {
             channel.shutdownNow();
+            requestLogQueue.take();
         }
     }
 
     @Test
-    public void longMaxRequestLimit() {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1",
-                                                                  serverWithLongMaxRequestLimit.httpPort())
-                                                      .usePlaintext()
-                                                      .build();
+    public void longMaxRequestLimit() throws Exception {
+        final ManagedChannel channel =
+                ManagedChannelBuilder.forAddress("127.0.0.1", serverWithLongMaxRequestLimit.httpPort())
+                                     .usePlaintext()
+                                     .build();
         try {
-            UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
+            final UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
             assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
         } finally {
             channel.shutdownNow();
+            requestLogQueue.take();
         }
     }
 
     @Test
-    public void reflectionService() {
-        ServerReflectionStub stub = ServerReflectionGrpc.newStub(channel);
+    public void reflectionService() throws Exception {
+        final ServerReflectionStub stub = ServerReflectionGrpc.newStub(channel);
 
-        AtomicReference<ServerReflectionResponse> response = new AtomicReference<>();
+        final AtomicReference<ServerReflectionResponse> response = new AtomicReference<>();
 
-        StreamObserver<ServerReflectionRequest> request = stub.serverReflectionInfo(
+        final StreamObserver<ServerReflectionRequest> request = stub.serverReflectionInfo(
                 new StreamObserver<ServerReflectionResponse>() {
                     @Override
                     public void onNext(ServerReflectionResponse value) {
@@ -919,12 +928,10 @@ public class GrpcServiceServerTest {
                     }
 
                     @Override
-                    public void onError(Throwable t) {
-                    }
+                    public void onError(Throwable t) {}
 
                     @Override
-                    public void onCompleted() {
-                    }
+                    public void onCompleted() {}
                 });
         request.onNext(ServerReflectionRequest.newBuilder()
                                               .setListServices("")

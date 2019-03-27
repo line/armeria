@@ -18,10 +18,11 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -31,8 +32,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -42,10 +45,13 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.junit.Assert;
-import org.junit.ClassRule;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -73,8 +79,8 @@ import io.netty.util.concurrent.Promise;
 
 public class RequestContextTest {
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
@@ -82,10 +88,19 @@ public class RequestContextTest {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
+    @Rule
+    public final EventLoopRule eventLoop = new EventLoopRule();
+
     @Mock
     private Channel channel;
 
-    private final List<RequestContext> ctxStack = new ArrayList<>();
+    @Nullable
+    private Deque<RequestContext> ctxStack;
+
+    @Before
+    public void setContextStack() {
+        ctxStack = new LinkedBlockingDeque<>();
+    }
 
     @Test
     public void contextAwareEventExecutor() throws Exception {
@@ -125,8 +140,11 @@ public class RequestContextTest {
         progressivePromise.addListener(f -> checkCallback(18, context, callbacksCalled, latch));
         progressivePromise.setSuccess("success");
         latch.await();
-        eventLoop.get().shutdownGracefully().sync();
-        assertThat(callbacksCalled).containsExactlyElementsOf(IntStream.rangeClosed(1, 18).boxed()::iterator);
+        eventLoop.get().shutdownGracefully();
+        await().untilAsserted(() -> {
+            assertThat(callbacksCalled).containsExactlyElementsOf(IntStream.rangeClosed(1, 18)
+                                                                           .boxed()::iterator);
+        });
     }
 
     @Test
@@ -245,7 +263,7 @@ public class RequestContextTest {
             latch.countDown();
             resultFuture.get(); // this will wait and propagate assertions.
         } finally {
-            executor.shutdown();
+            shutdownAndAwaitTermination(executor);
         }
     }
 
@@ -284,7 +302,7 @@ public class RequestContextTest {
 
             future2.get(); // this will propagate assertions in callbacks if it failed.
         } finally {
-            executor.shutdown();
+            shutdownAndAwaitTermination(executor);
         }
     }
 
@@ -391,6 +409,10 @@ public class RequestContextTest {
         assertThat(ctx).isSameAs(context);
     }
 
+    private static void shutdownAndAwaitTermination(ExecutorService executor) {
+        assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
+    }
+
     private NonWrappingRequestContext createContext() {
         return createContext(true);
     }
@@ -398,12 +420,19 @@ public class RequestContextTest {
     private NonWrappingRequestContext createContext(boolean addContextAwareHandler) {
         final NonWrappingRequestContext ctx = new DummyRequestContext();
         if (addContextAwareHandler) {
+            final AtomicReference<Thread> thread = new AtomicReference<>();
+            final AtomicInteger ctxStackSize = new AtomicInteger();
             ctx.onEnter(myCtx -> {
-                ctxStack.add(myCtx);
+                thread.set(Thread.currentThread());
+                assertThat(ctxStack).isNotNull();
+                ctxStack.addLast(myCtx);
+                ctxStackSize.set(ctxStack.size());
                 assertThat(myCtx).isSameAs(ctx);
             });
             ctx.onExit(myCtx -> {
-                assertThat(ctxStack.remove(ctxStack.size() - 1)).isSameAs(myCtx);
+                assertThat(Thread.currentThread()).isSameAs(thread.get());
+                assertThat(ctxStack).hasSize(ctxStackSize.get());
+                assertThat(ctxStack.removeLast()).isSameAs(myCtx);
                 assertThat(myCtx).isSameAs(ctx);
             });
         }
