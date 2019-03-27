@@ -5,14 +5,14 @@ A proxy server that balances individual requests across the healthy backends usi
 
 ## Demo
 
-To startup the server, use Gradle: 
+To start up the server, use Gradle:
 
 ```bash
 $ ./gradlew run --no-daemon
 ```
 
 This will start up the proxy server and three backend servers which send streaming responses.
-Each backend server generates streaming data of ASCII art at different interval.
+Each backend server streams ASCII animation to the proxy server at different interval.
 
 To see the streaming data, open up your browser and connect to the proxy server at
 [`http://127.0.0.1:8080/`](http://127.0.0.1:8080/). You will see the perpetual pendulum.

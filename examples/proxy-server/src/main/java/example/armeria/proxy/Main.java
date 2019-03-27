@@ -20,8 +20,10 @@ public final class Main {
         final Server backend1 = newBackendServer(8081, 500);
         final Server backend2 = newBackendServer(8082, 250);
         final Server backend3 = newBackendServer(8083, 100);
-        // You can also remove the delay between frame`s completely like:
-        // final Server backend = new BackendServer(8083, 0);
+        // You can also remove the delay between frames completely as:
+        //
+        //   final Server backend = new BackendServer(8083, 0);
+        //
         // The proxy server will handle backpressure perfectly fine
         // even if your browser cannot receive fast enough.
 
@@ -41,6 +43,7 @@ public final class Main {
         }));
 
         proxyServer.start().join();
+
         final InetSocketAddress localAddress = proxyServer.activePort().get().localAddress();
         final boolean isLocalAddress = localAddress.getAddress().isAnyLocalAddress() ||
                                        localAddress.getAddress().isLoopbackAddress();
