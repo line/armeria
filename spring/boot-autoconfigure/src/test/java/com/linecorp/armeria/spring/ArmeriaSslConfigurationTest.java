@@ -86,6 +86,12 @@ public class ArmeriaSslConfigurationTest {
         }
     }
 
+    private static final ClientFactory clientFactory =
+            new ClientFactoryBuilder()
+                    .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                    .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
+                    .build();
+
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
@@ -101,7 +107,7 @@ public class ArmeriaSslConfigurationTest {
     }
 
     private void verify(SessionProtocol protocol) {
-        final HttpResponse response = HttpClient.of(newUrl(protocol)).get("/ok");
+        final HttpResponse response = HttpClient.of(clientFactory, newUrl(protocol)).get("/ok");
 
         final AggregatedHttpMessage msg = response.aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
