@@ -17,6 +17,7 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -36,18 +37,24 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
+import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
+
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
@@ -85,17 +92,29 @@ public class ArmeriaSslConfigurationTest {
     @Inject
     private Server server;
 
-    private String newUrl(String scheme) {
-        final int port = server.activePort().get().localAddress().getPort();
-        return scheme + "://127.0.0.1:" + port;
+    private String newUrl(SessionProtocol protocol) {
+        final int port = server.activePorts().values().stream()
+                               .filter(p1 -> p1.hasProtocol(protocol)).findAny()
+                               .flatMap(p -> Optional.of(p.localAddress().getPort()))
+                               .orElseThrow(() -> new IllegalStateException(protocol + " port not open"));
+        return protocol.uriText() + "://127.0.0.1:" + port;
     }
 
-    @Test
-    public void https() {
-        final HttpResponse response = HttpClient.of(newUrl("https")).get("/ok");
+    private void verify(SessionProtocol protocol) {
+        final HttpResponse response = HttpClient.of(newUrl(protocol)).get("/ok");
 
         final AggregatedHttpMessage msg = response.aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.contentUtf8()).isEqualTo("ok");
+    }
+
+    @Test
+    public void https() {
+        verify(SessionProtocol.HTTPS);
+    }
+
+    @Test
+    public void http() {
+        verify(SessionProtocol.HTTP);
     }
 }

@@ -146,7 +146,7 @@ public class Ssl {
     }
 
     /**
-     * Sets the alias  that identifies the key in the key store.
+     * Sets the alias that identifies the key in the key store.
      */
     public Ssl setKeyAlias(String keyAlias) {
         this.keyAlias = keyAlias;

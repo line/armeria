@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedHttpServices;
@@ -29,12 +28,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -95,6 +96,10 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     }
 
     private com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
+        if (!ssl.isEnabled()) {
+            return new com.linecorp.armeria.spring.Ssl();
+        }
+
         ClientAuth clientAuth = null;
         if (ssl.getClientAuth() != null) {
             switch (ssl.getClientAuth()) {
@@ -106,14 +111,12 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                     break;
             }
         }
-        if (!ssl.isEnabled()) {
-            return new com.linecorp.armeria.spring.Ssl();
-        }
         return new com.linecorp.armeria.spring.Ssl()
                 .setEnabled(ssl.isEnabled())
                 .setClientAuth(clientAuth)
-                .setCiphers(ImmutableList.copyOf(firstNonNull(ssl.getCiphers(), EMPTY)))
-                .setEnabledProtocols(ImmutableList.copyOf(firstNonNull(ssl.getEnabledProtocols(), EMPTY)))
+                .setCiphers(ssl.getCiphers() != null ? ImmutableList.copyOf(ssl.getCiphers()) : null)
+                .setEnabledProtocols(ssl.getEnabledProtocols() != null ? ImmutableList.copyOf(
+                        ssl.getEnabledProtocols()) : null)
                 .setKeyAlias(ssl.getKeyAlias())
                 .setKeyPassword(ssl.getKeyPassword())
                 .setKeyStore(ssl.getKeyStore())
@@ -135,21 +138,28 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         if (ssl != null) {
             if (ssl.isEnabled()) {
                 final SslStoreProvider provider = getSslStoreProvider();
-                configureTls(sb, toArmeriaSslConfiguration(ssl),
-                             () -> {
-                                 try {
-                                     return provider != null ? provider.getKeyStore() : null;
-                                 } catch (Exception e) {
-                                     throw new IllegalStateException(e);
-                                 }
-                             },
-                             () -> {
-                                 try {
-                                     return provider != null ? provider.getTrustStore() : null;
-                                 } catch (Exception e) {
-                                     throw new IllegalStateException(e);
-                                 }
-                             });
+                final Supplier<KeyStore> keyStoreSupplier;
+                final Supplier<KeyStore> trustStoreSupplier;
+                if (provider != null) {
+                    keyStoreSupplier = () -> {
+                        try {
+                            return provider.getKeyStore();
+                        } catch (Exception e) {
+                            throw new IllegalStateException(e);
+                        }
+                    };
+                    trustStoreSupplier = () -> {
+                        try {
+                            return provider.getTrustStore();
+                        } catch (Exception e) {
+                            throw new IllegalStateException(e);
+                        }
+                    };
+                } else {
+                    keyStoreSupplier = null;
+                    trustStoreSupplier = null;
+                }
+                configureTls(sb, toArmeriaSslConfiguration(ssl), keyStoreSupplier, trustStoreSupplier);
                 protocol = SessionProtocol.HTTPS;
             } else {
                 logger.warn("TLS configuration exists but it is disabled by 'enabled' property.");

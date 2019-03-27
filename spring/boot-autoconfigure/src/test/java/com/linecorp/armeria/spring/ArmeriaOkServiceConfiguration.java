@@ -23,8 +23,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -44,7 +42,7 @@ class ArmeriaOkServiceConfiguration {
     public static class OkService extends AbstractHttpService {
         @Override
         protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
+            return HttpResponse.of("ok");
         }
     }
 }
