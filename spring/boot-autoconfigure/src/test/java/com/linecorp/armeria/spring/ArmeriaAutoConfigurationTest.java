@@ -34,6 +34,7 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -50,8 +51,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -76,17 +75,8 @@ import com.linecorp.armeria.spring.test.thrift.main.HelloService.hello_args;
 public class ArmeriaAutoConfigurationTest {
 
     @SpringBootApplication
+    @Import(ArmeriaOkServiceConfiguration.class)
     public static class TestConfiguration {
-
-        @Bean
-        public HttpServiceRegistrationBean okService() {
-            return new HttpServiceRegistrationBean()
-                    .setServiceName("okService")
-                    .setService(new OkService())
-                    .setPathMapping(PathMapping.ofExact("/ok"))
-                    .setDecorators(ImmutableList.of(LoggingService.newDecorator()));
-        }
-
         @Bean
         public AnnotatedServiceRegistrationBean annotatedService() {
             return new AnnotatedServiceRegistrationBean()
@@ -109,13 +99,6 @@ public class ArmeriaAutoConfigurationTest {
                     .setExampleRequests(Collections.singleton(new hello_args("nameVal")))
                     .setExampleHeaders(Collections.singleton(HttpHeaders.of(
                             HttpHeaderNames.of("x-additional-header"), "headerVal")));
-        }
-    }
-
-    public static class OkService extends AbstractHttpService {
-        @Override
-        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
         }
     }
 

@@ -1,0 +1,8 @@
+armeria:
+  ports:
+    - port: 0
+      protocol: HTTP
+    - port: 0
+      protocol: HTTPS
+  ssl:
+    enabled: true # Use self-signed certificate because no key-store configuration is specified.

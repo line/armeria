@@ -88,6 +88,11 @@ This product contains a modified part of Netty, distributed by Netty.io:
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
   * Homepage: https://netty.io/
 
+This product contains a modified part of Spring Boot, distributed by Pivotal Software, Inc:
+
+  * License: licenses/LICENSE.spring.al20.txt (Apache License v2.0)
+  * Homepage: https://spring.io/
+
 This product contains a modified part of Twitter Commons, distributed by Twitter, Inc:
 
   * License: license/LICENSE.twitter.al20.txt (Apache License v2.0)

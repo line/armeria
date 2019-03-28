@@ -39,8 +39,16 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
  *     - ip: 127.0.0.1
  *       port: 8081
  *       protocol:HTTP
+ *     - port: 8443
+ *       protocol: HTTPS
+ *   ssl:
+ *     key-alias: "host.name.com"
+ *     key-store: "keystore.jks"
+ *     key-store-password: "changeme"
+ *     trust-store: "truststore.jks"
+ *     trust-store-password: "changeme"
  * }</pre>
- * TODO(ide) Adds SSL and virtualhost settings
+ * TODO(ide) Adds virtualhost settings
  */
 @ConfigurationProperties(prefix = "armeria")
 @Validated
@@ -195,6 +203,12 @@ public class ArmeriaSettings {
      */
     private boolean enableMetrics = true;
 
+    /**
+     * SSL configuration that the {@link Server} uses.
+     */
+    @Nullable
+    private Ssl ssl;
+
     public List<Port> getPorts() {
         return ports;
     }
@@ -252,5 +266,20 @@ public class ArmeriaSettings {
 
     public void setEnableMetrics(boolean enableMetrics) {
         this.enableMetrics = enableMetrics;
+    }
+
+    /**
+     * Returns the SSL that the {@link Server} uses.
+     */
+    @Nullable
+    public Ssl getSsl() {
+        return ssl;
+    }
+
+    /**
+     * Registers a {@link Ssl} that the {@link Server} uses.
+     */
+    public void setSsl(Ssl ssl) {
+        this.ssl = ssl;
     }
 }

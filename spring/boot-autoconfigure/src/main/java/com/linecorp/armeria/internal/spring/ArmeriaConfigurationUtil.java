@@ -15,13 +15,18 @@
  */
 package com.linecorp.armeria.internal.spring;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URL;
 import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -32,12 +37,16 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.thrift.TBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.ResourceUtils;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.json.MetricsModule;
@@ -68,12 +77,15 @@ import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
+import com.linecorp.armeria.spring.Ssl;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.NetUtil;
 import io.prometheus.client.CollectorRegistry;
 
@@ -145,6 +157,10 @@ public final class ArmeriaConfigurationUtil {
                             }
                         });
             }
+        }
+
+        if (settings.getSsl() != null) {
+            configureTls(server, settings.getSsl());
         }
     }
 
@@ -318,6 +334,108 @@ public final class ArmeriaConfigurationUtil {
 
         final CollectorRegistry prometheusRegistry = registry.getPrometheusRegistry();
         server.service(metricsPath, new PrometheusExpositionService(prometheusRegistry));
+    }
+
+    /**
+     * Adds SSL/TLS context to the specified {@link ServerBuilder}.
+     */
+    public static void configureTls(ServerBuilder sb, Ssl ssl) {
+        configureTls(sb, ssl, null, null);
+    }
+
+    /**
+     * Adds SSL/TLS context to the specified {@link ServerBuilder}.
+     */
+    public static void configureTls(ServerBuilder sb, Ssl ssl,
+                                    @Nullable Supplier<KeyStore> keyStoreSupplier,
+                                    @Nullable Supplier<KeyStore> trustStoreSupplier) {
+        if (!ssl.isEnabled()) {
+            return;
+        }
+        try {
+            if (keyStoreSupplier == null && trustStoreSupplier == null &&
+                ssl.getKeyStore() == null && ssl.getTrustStore() == null) {
+                logger.warn("Configuring TLS with a self-signed certificate " +
+                            "because no key or trust store was specified");
+                sb.tlsSelfSigned();
+                return;
+            }
+
+            final SslContextBuilder sslBuilder = SslContextBuilder
+                    .forServer(getKeyManagerFactory(ssl, keyStoreSupplier))
+                    .trustManager(getTrustManagerFactory(ssl, trustStoreSupplier));
+
+            final List<String> enabledProtocols = ssl.getEnabledProtocols();
+            if (enabledProtocols != null) {
+                sslBuilder.protocols(enabledProtocols.toArray(new String[enabledProtocols.size()]));
+            }
+
+            final List<String> ciphers = ssl.getCiphers();
+            if (ciphers != null) {
+                sslBuilder.ciphers(ImmutableList.copyOf(ciphers));
+            }
+
+            final ClientAuth clientAuth = ssl.getClientAuth();
+            if (clientAuth != null) {
+                sslBuilder.clientAuth(clientAuth);
+            }
+
+            sb.tls(sslBuilder.build());
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to configure TLS: " + e, e);
+        }
+    }
+
+    private static KeyManagerFactory getKeyManagerFactory(
+            Ssl ssl, @Nullable Supplier<KeyStore> sslStoreProvider) throws Exception {
+        final KeyStore store;
+        if (sslStoreProvider != null) {
+            store = sslStoreProvider.get();
+        } else {
+            store = loadKeyStore(ssl.getKeyStoreType(), ssl.getKeyStore(), ssl.getKeyStorePassword());
+        }
+
+        final KeyManagerFactory keyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+
+        String keyPassword = ssl.getKeyPassword();
+        if (keyPassword == null) {
+            keyPassword = ssl.getKeyStorePassword();
+        }
+
+        keyManagerFactory.init(store, keyPassword != null ? keyPassword.toCharArray()
+                                                          : null);
+        return keyManagerFactory;
+    }
+
+    private static TrustManagerFactory getTrustManagerFactory(
+            Ssl ssl, @Nullable Supplier<KeyStore> sslStoreProvider) throws Exception {
+        final KeyStore store;
+        if (sslStoreProvider != null) {
+            store = sslStoreProvider.get();
+        } else {
+            store = loadKeyStore(ssl.getTrustStoreType(), ssl.getTrustStore(), ssl.getTrustStorePassword());
+        }
+
+        final TrustManagerFactory trustManagerFactory =
+                TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(store);
+        return trustManagerFactory;
+    }
+
+    @Nullable
+    private static KeyStore loadKeyStore(
+            @Nullable String type,
+            @Nullable String resource,
+            @Nullable String password) throws IOException, GeneralSecurityException {
+        if (resource == null) {
+            return null;
+        }
+        final KeyStore store = KeyStore.getInstance(firstNonNull(type, "JKS"));
+        final URL url = ResourceUtils.getURL(resource);
+        store.load(url.openStream(), password != null ? password.toCharArray()
+                                                      : null);
+        return store;
     }
 
     private ArmeriaConfigurationUtil() {}
