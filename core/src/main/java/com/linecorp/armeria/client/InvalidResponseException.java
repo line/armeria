@@ -18,7 +18,7 @@ package com.linecorp.armeria.client;
 import javax.annotation.Nullable;
 
 /**
- * A {@link RuntimeException} raised when the client received a response with an unexpected status code.
+ * A {@link RuntimeException} raised when a client received an invalid response.
  */
 public class InvalidResponseException extends RuntimeException {
     private static final long serialVersionUID = 7789160689214376205L;

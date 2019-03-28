@@ -41,7 +41,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.InvalidResponseException;
+import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -133,7 +133,8 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
                 final HttpStatus status = res.status();
                 if (status.code() != HttpStatus.OK.code()) {
-                    handlePreDecodeException(ctx, reply, func, new InvalidResponseException(status.toString()));
+                    handlePreDecodeException(ctx, reply, func,
+                                             new InvalidResponseHeadersException(res.headers()));
                     return null;
                 }
 
