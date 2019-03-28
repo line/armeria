@@ -26,7 +26,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 public final class ProxyService extends AbstractHttpService {
 
-    private static final String viaHeaderValue = " HTTP/2.0 Armeria proxy"; // The pseudonym is Armeria proxy.
+    // This is a simplified example. Please refer to
+    // https://tools.ietf.org/html/rfc7230#section-5.7.1 for more information about Via header.
+    private static final String viaHeaderValue = "HTTP/2.0 Armeria proxy"; // The pseudonym is Armeria proxy.
 
     /**
      * We used hardcoded backend addresses. But you can use other service discovery mechanisms to configure
@@ -120,7 +122,7 @@ public final class ProxyService extends AbstractHttpService {
         // This is a simplified example. Please refer to https://tools.ietf.org/html/rfc7239
         // for more information about Forwarded header.
         final StringBuilder sb = new StringBuilder();
-        sb.append(" for: ").append(ctx.<InetSocketAddress>remoteAddress().getAddress().getHostAddress());
+        sb.append("for: ").append(ctx.<InetSocketAddress>remoteAddress().getAddress().getHostAddress());
         sb.append(", host: ").append(req.authority());
         sb.append(", proto: ").append(ctx.sessionProtocol());
         req.headers().add(HttpHeaderNames.FORWARDED, sb.toString());
@@ -133,8 +135,6 @@ public final class ProxyService extends AbstractHttpService {
                 // You can remove or add specific headers to a response.
                 if (obj instanceof HttpHeaders) {
                     final HttpHeaders resHeaders = ((HttpHeaders) obj).toMutable();
-                    // This is a simplified example. Please refer to
-                    // https://tools.ietf.org/html/rfc7230#section-5.7.1 for more information about Via header.
                     resHeaders.add(HttpHeaderNames.VIA, viaHeaderValue);
                     return resHeaders;
                 }
