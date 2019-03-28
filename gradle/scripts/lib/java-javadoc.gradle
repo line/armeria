@@ -174,6 +174,34 @@ allprojects {
                 return success
             }
 
+            def addJdk11OfflineLink = { name, url, elementListFile ->
+                def modulePrefix = 'module:';
+                def currentModule = ''
+                List<String> lines = []
+                elementListFile.eachLine { line ->
+                    if (line.startsWith(modulePrefix)) {
+                        if (!lines.isEmpty()) {
+                            def javadocUrl = "${url}${currentModule}/"
+                            def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
+                            def listFileDir = new File(javadocCacheDir, "${name}/${currentModule}/${javadocUrlSha1}")
+                            def moduleElementListFile = new File(listFileDir, 'element-list')
+                            moduleElementListFile.parentFile.mkdirs()
+                            moduleElementListFile.withWriter { out ->
+                                lines.each {
+                                    out.println it
+                                }
+                            }
+
+                            linksOffline javadocUrl, "${listFileDir}"
+                            lines.clear()
+                        }
+                        currentModule = line.substring(modulePrefix.length())
+                    } else {
+                        lines += line
+                    }
+                }
+            }
+
             def addOfflineLink = { name, url ->
                 if (offlineJavadoc) {
                     return
@@ -230,7 +258,12 @@ allprojects {
                 }
 
                 if (success) {
-                    linksOffline javadocUrl, "${listFileDir}"
+                    if ('java11' == name) {
+                        // From Java 11+ API docs, we have to add the module name to URLs.
+                        addJdk11OfflineLink(name, url, elementListFile)
+                    } else {
+                        linksOffline javadocUrl, "${listFileDir}"
+                    }
                 }
             }
 
