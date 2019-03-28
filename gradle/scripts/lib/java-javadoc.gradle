@@ -174,34 +174,6 @@ allprojects {
                 return success
             }
 
-            def addJdk11OfflineLink = { name, url, elementListFile ->
-                def modulePrefix = 'module:';
-                def currentModule = ''
-                List<String> lines = []
-                elementListFile.eachLine { line ->
-                    if (line.startsWith(modulePrefix)) {
-                        if (!lines.isEmpty()) {
-                            def javadocUrl = "${url}${currentModule}/"
-                            def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
-                            def listFileDir = new File(javadocCacheDir, "${name}/${currentModule}/${javadocUrlSha1}")
-                            def moduleElementListFile = new File(listFileDir, 'element-list')
-                            moduleElementListFile.parentFile.mkdirs()
-                            moduleElementListFile.withWriter { out ->
-                                lines.each {
-                                    out.println it
-                                }
-                            }
-
-                            linksOffline javadocUrl, "${listFileDir}"
-                            lines.clear()
-                        }
-                        currentModule = line.substring(modulePrefix.length())
-                    } else {
-                        lines += line
-                    }
-                }
-            }
-
             def addOfflineLink = { name, url ->
                 if (offlineJavadoc) {
                     return
@@ -258,19 +230,16 @@ allprojects {
                 }
 
                 if (success) {
-                    if ('java11' == name) {
-                        // From Java 11+ API docs, we have to add the module name to URLs.
-                        addJdk11OfflineLink(name, url, elementListFile)
-                    } else {
-                        linksOffline javadocUrl, "${listFileDir}"
-                    }
+                    linksOffline javadocUrl, "${listFileDir}"
                 }
             }
 
             if (JavaVersion.current() >= JavaVersion.VERSION_11) {
                 // Javadoc in Java 11+ has more strict checks related with module system,
                 // so we have to use Java 11+ API docs.
-                addOfflineLink('java11', 'https://docs.oracle.com/en/java/javase/11/docs/api/')
+                // However, due to the bug in OpenJDK 11.0.2, we cannot use linksOffline. Just use links.
+                // See https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8212233 for more information
+                links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
             } else {
                 // Javadoc in pre-Java 11 generates a broken link for Java 11+ API docs,
                 // so we have to use Java 10 (or less) API docs.
