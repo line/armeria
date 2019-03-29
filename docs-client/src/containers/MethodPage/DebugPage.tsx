@@ -91,15 +91,11 @@ class DebugPage extends React.PureComponent<Props, State> {
 
   public componentDidMount() {
     this.initializeState();
-    this.executeRequest();
   }
 
   public componentDidUpdate(prevProps: Props) {
     if (this.props.match.params !== prevProps.match.params) {
       this.initializeState();
-    }
-    if (this.props.location.search !== prevProps.location.search) {
-      this.executeRequest();
     }
   }
 
@@ -258,6 +254,10 @@ class DebugPage extends React.PureComponent<Props, State> {
   };
 
   private onSubmit = () => {
+    this.setState({
+      debugResponse: '',
+    });
+
     const requestBody = this.state.requestBody;
     const endpointPath = this.state.endpointPath;
     const queries = this.state.additionalQueries;
@@ -317,8 +317,8 @@ class DebugPage extends React.PureComponent<Props, State> {
       this.props.history.push(
         `${this.props.location.pathname}${serializedParams}`,
       );
-      this.executeRequest();
     }
+    this.executeRequest(params);
   };
 
   private validateEndpointPath(endpointPath: string) {
@@ -411,12 +411,7 @@ class DebugPage extends React.PureComponent<Props, State> {
     });
   }
 
-  private async executeRequest() {
-    if (!this.props.location.search) {
-      return;
-    }
-    const params = new URLSearchParams(this.props.location.search);
-
+  private async executeRequest(params: URLSearchParams) {
     let requestBody;
     if (this.props.useRequestBody) {
       requestBody = params.get('request_body');

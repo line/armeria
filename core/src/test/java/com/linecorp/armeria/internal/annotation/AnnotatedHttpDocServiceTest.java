@@ -336,7 +336,9 @@ public class AnnotatedHttpDocServiceTest {
         }
 
         @Get("prefix:/prefix")
-        public String prefix(ServiceRequestContext ctx) {
+        public String prefix(ServiceRequestContext ctx) throws InterruptedException {
+            // Added to check delayed response in browser.
+            Thread.sleep(500);
             return "prefix";
         }
 
