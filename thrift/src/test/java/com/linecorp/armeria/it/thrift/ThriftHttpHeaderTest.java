@@ -55,7 +55,7 @@ public class ThriftHttpHeaderTest {
     private static final String SECRET = "QWxhZGRpbjpPcGVuU2VzYW1l";
 
     private static final HelloService.AsyncIface helloService = (name, resultHandler) -> {
-        final ServiceRequestContext ctx = (ServiceRequestContext) RequestContext.current();
+        final ServiceRequestContext ctx = RequestContext.current();
         final HttpRequest httpReq = ctx.request();
         final HttpHeaders headers = httpReq.headers();
         if (headers.contains(AUTHORIZATION, SECRET)) {
@@ -175,6 +175,7 @@ public class ThriftHttpHeaderTest {
         } else {
             expectedMessage = "not authorized due to missing credential";
         }
+
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOf(TException.class)
                 .hasMessageContaining(expectedMessage);

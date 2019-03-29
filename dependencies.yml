@@ -44,7 +44,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.0.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.42.0' }
+  gax-grpc: { version: '1.43.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -91,7 +91,7 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.8' }
 
 com.moowork.gradle:
-  gradle-node-plugin: { version: '1.2.0' }
+  gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
   checkstyle: { version: '8.18' }
@@ -182,11 +182,11 @@ io.netty:
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.22.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.23.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.6.RELEASE'
+    version: &REACTOR_VERSION '3.2.8.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -199,7 +199,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.7'
+    version: '2.2.8'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -244,7 +244,7 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.8' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.5.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.5.1' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -293,7 +293,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.16'
+    version: &TOMCAT_VERSION '9.0.17'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -350,7 +350,7 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.15.Final' }
+  hibernate-validator: { version: '6.0.16.Final' }
 
 org.jctools:
   jctools-core:
@@ -422,7 +422,7 @@ org.springframework.boot:
   spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }
 
 pl.project13.scala:
-  sbt-jmh-extras: { version: 0.3.4 }
+  sbt-jmh-extras: { version: 0.3.6 }
 
 # Needed to work around the problem with Gradle not supporting POM relocation correctly.
 xml-apis:
