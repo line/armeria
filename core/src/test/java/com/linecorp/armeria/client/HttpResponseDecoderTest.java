@@ -86,18 +86,12 @@ public class HttpResponseDecoderTest {
                 // which means that we have more chance to reproduce the bug if two threads are racing
                 // for notifying RESPONSE_END to listeners.
                 .contentPreview(100)
-                // In order to use a different thread to send a request.
+                // In order to use a different thread to to subscribe to the response.
                 .decorator(new RetryingHttpClientBuilder(strategy).maxTotalAttempts(2).newDecorator())
                 .decorator((delegate, ctx, req) -> {
                     final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
                     ctx.log().addListener(log -> {
                         responseStartedThread.set(Thread.currentThread());
-                        if (!ctx.eventLoop().inEventLoop()) {
-                            // Actually we don't expect this situation, but it is prepared for the case.
-                            logger.error("{} Response started in another thread: {} != {}",
-                                         ctx, ctx.eventLoop(), Thread.currentThread());
-                            failed.set(true);
-                        }
                     }, RequestLogAvailability.RESPONSE_START);
                     ctx.log().addListener(log -> {
                         final Thread thread = responseStartedThread.get();
