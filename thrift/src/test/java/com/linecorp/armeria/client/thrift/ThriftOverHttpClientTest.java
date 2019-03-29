@@ -47,12 +47,14 @@ import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
+import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -200,6 +202,8 @@ public class ThriftOverHttpClientTest {
                     sb.service(h.path(defaultSerializationFormat), service);
                 }
             }
+
+            sb.service("/500", (ctx, req) -> HttpResponse.of(500));
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -306,7 +310,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testHelloServiceSync() throws Exception {
 
-        final HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
+        final HelloService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.HELLO),
                                                             Handlers.HELLO.iface(), clientOptions);
         assertThat(client.hello("kukuman")).isEqualTo("Hello, kukuman!");
         assertThat(client.hello(null)).isEqualTo("Hello, null!");
@@ -319,7 +323,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testHelloServiceAsync() throws Exception {
         final HelloService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.HELLO), Handlers.HELLO.asyncIface(),
+                Clients.newClient(clientFactory(), uri(Handlers.HELLO), Handlers.HELLO.asyncIface(),
                                   clientOptions);
 
         final int testCount = 10;
@@ -348,7 +352,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testOnewayHelloServiceSync() throws Exception {
         final OnewayHelloService.Iface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.ONEWAYHELLO),
+                Clients.newClient(clientFactory(), uri(Handlers.ONEWAYHELLO),
                                   Handlers.ONEWAYHELLO.iface(), clientOptions);
         client.hello("kukuman");
         client.hello("kukuman2");
@@ -359,7 +363,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testOnewayHelloServiceAsync() throws Exception {
         final OnewayHelloService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.ONEWAYHELLO),
+                Clients.newClient(clientFactory(), uri(Handlers.ONEWAYHELLO),
                                   Handlers.ONEWAYHELLO.asyncIface(), clientOptions);
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -380,7 +384,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testExceptionThrowingOnewayServiceSync() throws Exception {
         final OnewayHelloService.Iface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.EXCEPTION_ONEWAY),
+                Clients.newClient(clientFactory(), uri(Handlers.EXCEPTION_ONEWAY),
                                   Handlers.EXCEPTION_ONEWAY.iface(), clientOptions);
         client.hello("kukuman");
         client.hello("kukuman2");
@@ -391,7 +395,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testExceptionThrowingOnewayServiceAsync() throws Exception {
         final OnewayHelloService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.EXCEPTION_ONEWAY),
+                Clients.newClient(clientFactory(), uri(Handlers.EXCEPTION_ONEWAY),
                                   Handlers.EXCEPTION_ONEWAY.asyncIface(), clientOptions);
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -412,7 +416,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testDevNullServiceSync() throws Exception {
         final DevNullService.Iface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.DEVNULL), Handlers.DEVNULL.iface(),
+                Clients.newClient(clientFactory(), uri(Handlers.DEVNULL), Handlers.DEVNULL.iface(),
                                   clientOptions);
         client.consume("kukuman");
         client.consume("kukuman2");
@@ -423,7 +427,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testDevNullServiceAsync() throws Exception {
         final DevNullService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.DEVNULL),
+                Clients.newClient(clientFactory(), uri(Handlers.DEVNULL),
                                   Handlers.DEVNULL.asyncIface(), clientOptions);
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -444,7 +448,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testBinaryServiceSync() throws Exception {
         final BinaryService.Iface client = Clients.newClient(clientFactory(),
-                                                             getURI(Handlers.BINARY), Handlers.BINARY.iface(),
+                                                             uri(Handlers.BINARY), Handlers.BINARY.iface(),
                                                              clientOptions);
 
         final ByteBuffer result = client.process(ByteBuffer.wrap(new byte[] { 1, 2 }));
@@ -458,7 +462,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testTimeServiceSync() throws Exception {
         final TimeService.Iface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.TIME), Handlers.TIME.iface(),
+                Clients.newClient(clientFactory(), uri(Handlers.TIME), Handlers.TIME.iface(),
                                   clientOptions);
 
         final long serverTime = client.getServerTime();
@@ -468,7 +472,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testTimeServiceAsync() throws Exception {
         final TimeService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.TIME), Handlers.TIME.asyncIface(),
+                Clients.newClient(clientFactory(), uri(Handlers.TIME), Handlers.TIME.asyncIface(),
                                   clientOptions);
 
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -482,7 +486,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000, expected = FileServiceException.class)
     public void testFileServiceSync() throws Exception {
         final FileService.Iface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.FILE), Handlers.FILE.iface(),
+                Clients.newClient(clientFactory(), uri(Handlers.FILE), Handlers.FILE.iface(),
                                   clientOptions);
 
         client.create("test");
@@ -491,7 +495,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testFileServiceAsync() throws Exception {
         final FileService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.FILE), Handlers.FILE.asyncIface(),
+                Clients.newClient(clientFactory(), uri(Handlers.FILE), Handlers.FILE.asyncIface(),
                                   clientOptions);
 
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -507,7 +511,7 @@ public class ThriftOverHttpClientTest {
         final String TOKEN_A = "token 1234";
         final String TOKEN_B = "token 5678";
 
-        final HeaderService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HEADER),
+        final HeaderService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.HEADER),
                                                              Handlers.HEADER.iface(), clientOptions);
 
         assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
@@ -529,7 +533,7 @@ public class ThriftOverHttpClientTest {
 
     @Test(timeout = 10000)
     public void testMessageLogsForCall() throws Exception {
-        final HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
+        final HelloService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.HELLO),
                                                             Handlers.HELLO.iface(), clientOptions);
         recordMessageLogs = true;
         client.hello("trustin");
@@ -568,7 +572,7 @@ public class ThriftOverHttpClientTest {
 
     @Test(timeout = 10000)
     public void testMessageLogsForOneWay() throws Exception {
-        final OnewayHelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
+        final OnewayHelloService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.HELLO),
                                                                   Handlers.ONEWAYHELLO.iface(), clientOptions);
         recordMessageLogs = true;
         client.hello("trustin");
@@ -600,7 +604,7 @@ public class ThriftOverHttpClientTest {
 
     @Test(timeout = 10000)
     public void testMessageLogsForException() throws Exception {
-        final HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.EXCEPTION),
+        final HelloService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.EXCEPTION),
                                                             Handlers.EXCEPTION.iface(), clientOptions);
         recordMessageLogs = true;
 
@@ -636,14 +640,28 @@ public class ThriftOverHttpClientTest {
         assertThat(rawResponse.exception()).isNotNull();
     }
 
+    @Test
+    public void testBadStatus() throws Exception {
+        final HelloService.Iface client = Clients.newClient(clientFactory(), uri("/500"),
+                                                            Handlers.HELLO.iface(), clientOptions);
+        assertThatThrownBy(() -> client.hello(""))
+                .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
+                    assertThat(cause.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+                })
+                .hasMessageContaining(":status=500");
+    }
+
     private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(AsciiString name, String value) {
         return ClientOption.HTTP_HEADERS.newValue(HttpHeaders.of(name, value));
     }
 
-    private String getURI(Handlers handler) {
+    private String uri(Handlers handler) {
+        return uri(handler.path(serializationFormat));
+    }
+
+    private String uri(String path) {
         final int port = useTls ? httpsPort : httpPort;
-        return serializationFormat.uriText() + '+' + httpProtocol + "://127.0.0.1:" + port + handler.path(
-                serializationFormat);
+        return serializationFormat.uriText() + '+' + httpProtocol + "://127.0.0.1:" + port + path;
     }
 
     @SuppressWarnings("rawtypes")

@@ -37,7 +37,7 @@ import org.junit.rules.ExpectedException;
 
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.InvalidResponseException;
+import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -122,8 +122,8 @@ public class ThriftSerializationFormatsTest {
     public void notAllowed() throws Exception {
         final HelloService.Iface client =
                 Clients.newClient(server.uri(TEXT, "/hellobinaryonly"), HelloService.Iface.class);
-        thrown.expect(InvalidResponseException.class);
-        thrown.expectMessage("415 Unsupported Media Type");
+        thrown.expect(InvalidResponseHeadersException.class);
+        thrown.expectMessage(":status=415");
         client.hello("Trustin");
     }
 
@@ -147,8 +147,8 @@ public class ThriftSerializationFormatsTest {
                 Clients.newClient(server.uri(TEXT, "/hello"),
                                   HelloService.Iface.class,
                                   ClientOption.HTTP_HEADERS.newValue(headers));
-        thrown.expect(InvalidResponseException.class);
-        thrown.expectMessage("406 Not Acceptable");
+        thrown.expect(InvalidResponseHeadersException.class);
+        thrown.expectMessage(":status=406");
         client.hello("Trustin");
     }
 
