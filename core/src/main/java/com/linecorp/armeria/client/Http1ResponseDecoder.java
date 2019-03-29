@@ -34,6 +34,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -74,19 +75,27 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
-            // Cancel timeout future and abort the request if it exists.
-            resWrapper.onSubscriptionCancelled();
-
-            if (cause != null) {
-                // Disconnect when the response has been closed with an exception because there's no way
-                // to recover from it in HTTP/1.
-                channel().close();
+            final EventLoop eventLoop = channel().eventLoop();
+            if (eventLoop.inEventLoop()) {
+                onWrapperCompleted(resWrapper, cause);
+            } else {
+                eventLoop.execute(() -> onWrapperCompleted(resWrapper, cause));
             }
-
             return null;
         });
 
         return resWrapper;
+    }
+
+    private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
+        // Cancel timeout future and abort the request if it exists.
+        resWrapper.onSubscriptionCancelled();
+
+        if (cause != null) {
+            // Disconnect when the response has been closed with an exception because there's no way
+            // to recover from it in HTTP/1.
+            channel().close();
+        }
     }
 
     @Override
