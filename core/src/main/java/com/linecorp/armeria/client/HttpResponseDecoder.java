@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -71,8 +70,8 @@ abstract class HttpResponseDecoder {
             int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
             long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpResponseWrapper newRes = new HttpResponseWrapper(channel.eventLoop(), req, res, logBuilder,
-                                                                   responseTimeoutMillis, maxContentLength);
+        final HttpResponseWrapper newRes =
+                new HttpResponseWrapper(req, res, logBuilder, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
@@ -134,7 +133,6 @@ abstract class HttpResponseDecoder {
             DONE
         }
 
-        private final EventLoop eventLoop;
         @Nullable
         private final HttpRequest request;
         private final DecodedHttpResponse delegate;
@@ -148,9 +146,8 @@ abstract class HttpResponseDecoder {
 
         private State state = State.WAIT_NON_INFORMATIONAL;
 
-        HttpResponseWrapper(EventLoop eventLoop, @Nullable HttpRequest request, DecodedHttpResponse delegate,
+        HttpResponseWrapper(@Nullable HttpRequest request, DecodedHttpResponse delegate,
                             RequestLogBuilder logBuilder, long responseTimeoutMillis, long maxContentLength) {
-            this.eventLoop = eventLoop;
             this.request = request;
             this.delegate = delegate;
             this.logBuilder = logBuilder;
@@ -257,19 +254,8 @@ abstract class HttpResponseDecoder {
             return delegate.onDemand(task);
         }
 
-        /**
-         * Note that this method can be called from outside of the event loop because it will be called
-         * by the {@link CompletableFuture#handle(BiFunction)} method when the future of
-         * the delegate (i.e. {@link DecodedHttpResponse}) is completed. Please refer to
-         * {@link Http1ResponseDecoder#addResponse} and {@link Http2ResponseDecoder#addResponse}
-         * where calling this method.
-         */
         void onSubscriptionCancelled() {
-            if (eventLoop.inEventLoop()) {
-                close(null, this::cancelAction);
-            } else {
-                eventLoop.execute(() -> close(null, this::cancelAction));
-            }
+            close(null, this::cancelAction);
         }
 
         @Override

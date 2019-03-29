@@ -15,9 +15,12 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.channels.Channel;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -26,8 +29,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -36,10 +44,12 @@ import com.linecorp.armeria.client.retry.RetryingHttpClientBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
 
+@RunWith(Parameterized.class)
 public class HttpResponseDecoderTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseDecoderTest.class);
 
@@ -51,6 +61,17 @@ public class HttpResponseDecoderTest {
         }
     };
 
+    @Parameters(name = "{index}: protocol={0}")
+    public static Collection<SessionProtocol> protocols() {
+        return ImmutableList.of(H1C, H2C);
+    }
+
+    private final SessionProtocol protocol;
+
+    public HttpResponseDecoderTest(SessionProtocol protocol) {
+        this.protocol = protocol;
+    }
+
     /**
      * This test would be passed because the {@code cancelAction} method of the {@link HttpResponseWrapper} is
      * invoked in the event loop of the {@link Channel}.
@@ -58,9 +79,9 @@ public class HttpResponseDecoderTest {
     @Test
     public void confirmResponseStartAndEndInTheSameThread() throws InterruptedException {
         final AtomicBoolean failed = new AtomicBoolean();
-        final Backoff backoff = Backoff.exponential(200, 1000).withJitter(0.2);
-        final RetryStrategy strategy = (ctx, cause) -> CompletableFuture.completedFuture(backoff);
-        final HttpClient client = new HttpClientBuilder("h1c://127.0.0.1:" + rule.httpPort())
+        final RetryStrategy strategy =
+                (ctx, cause) -> CompletableFuture.completedFuture(Backoff.withoutDelay());
+        final HttpClient client = new HttpClientBuilder(protocol.uriText() + "://127.0.0.1:" + rule.httpPort())
                 // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
                 // which means that we have more chance to reproduce the bug if two threads are racing
                 // for notifying RESPONSE_END to listeners.

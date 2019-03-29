@@ -38,6 +38,7 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
@@ -73,33 +74,41 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         final HttpResponseWrapper resWrapper =
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
-        resWrapper.completionFuture().handleAsync((unused, cause) -> {
-            // Cancel timeout future and abort the request if it exists.
-            resWrapper.onSubscriptionCancelled();
+        resWrapper.completionFuture().handle((unused, cause) -> {
+            final EventLoop eventLoop = channel().eventLoop();
+            if (eventLoop.inEventLoop()) {
+                onWrapperCompleted(resWrapper, id, cause);
+            } else {
+                eventLoop.execute(() -> onWrapperCompleted(resWrapper, id, cause));
+            }
+            return null;
+        });
+        return resWrapper;
+    }
 
-            if (cause != null) {
-                // We are not closing the connection but just send a RST_STREAM,
-                // so we have to remove the response manually.
-                removeResponse(id);
+    private void onWrapperCompleted(HttpResponseWrapper resWrapper, int id, @Nullable Throwable cause) {
+        // Cancel timeout future and abort the request if it exists.
+        resWrapper.onSubscriptionCancelled();
 
-                // Reset the stream.
-                final int streamId = idToStreamId(id);
-                final int lastStreamId = conn.local().lastStreamKnownByPeer();
-                if (lastStreamId < 0 || // Did not receive a GOAWAY yet or
-                    streamId <= lastStreamId) { // received a GOAWAY and the request's streamId <= lastStreamId
-                    final ChannelHandlerContext ctx = channel().pipeline().lastContext();
-                    if (ctx != null) {
-                        encoder.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.newPromise());
-                        ctx.flush();
-                    } else {
-                        // The pipeline has been cleaned up due to disconnection.
-                    }
+        if (cause != null) {
+            // We are not closing the connection but just send a RST_STREAM,
+            // so we have to remove the response manually.
+            removeResponse(id);
+
+            // Reset the stream.
+            final int streamId = idToStreamId(id);
+            final int lastStreamId = conn.local().lastStreamKnownByPeer();
+            if (lastStreamId < 0 || // Did not receive a GOAWAY yet or
+                streamId <= lastStreamId) { // received a GOAWAY and the request's streamId <= lastStreamId
+                final ChannelHandlerContext ctx = channel().pipeline().lastContext();
+                if (ctx != null) {
+                    encoder.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.newPromise());
+                    ctx.flush();
+                } else {
+                    // The pipeline has been cleaned up due to disconnection.
                 }
             }
-
-            return null;
-        }, channel().eventLoop());
-        return resWrapper;
+        }
     }
 
     Http2GoAwayHandler goAwayHandler() {
