@@ -46,6 +46,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.channel.Channel;
+import io.netty.util.AttributeMap;
 
 /**
  * A set of informational properties collected while processing a {@link Request} and its {@link Response}.
@@ -59,7 +60,7 @@ import io.netty.channel.Channel;
  * @see RequestLogAvailability
  * @see RequestLogListener
  */
-public interface RequestLog {
+public interface RequestLog extends AttributeMap {
 
     /**
      * Returns the list of child {@link RequestLog}s, ordered by the time it was added.

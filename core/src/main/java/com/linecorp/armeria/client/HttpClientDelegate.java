@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.netty.channel.Channel;
@@ -62,9 +63,12 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         final EventLoop eventLoop = ctx.eventLoop();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
+        final ClientConnectionTimingsBuilder timingsBuilder =
+                new ClientConnectionTimingsBuilder(SystemInfo.currentTimeMicros(), System.nanoTime());
+
         if (endpoint.hasIpAddr()) {
             // IP address has been resolved already.
-            acquireConnectionAndExecute(ctx, endpoint, endpoint.ipAddr(), req, res);
+            acquireConnectionAndExecute(ctx, endpoint, endpoint.ipAddr(), req, res, timingsBuilder);
         } else {
             // IP address has not been resolved yet.
             final Future<InetSocketAddress> resolveFuture =
@@ -72,11 +76,11 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                                         .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
                                                                                     endpoint.port()));
             if (resolveFuture.isDone()) {
-                finishResolve(ctx, endpoint, resolveFuture, req, res);
+                finishResolve(ctx, endpoint, resolveFuture, req, res, timingsBuilder);
             } else {
                 resolveFuture.addListener(
                         (FutureListener<InetSocketAddress>) future ->
-                                finishResolve(ctx, endpoint, future, req, res));
+                                finishResolve(ctx, endpoint, future, req, res, timingsBuilder));
             }
         }
 
@@ -85,11 +89,13 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     private void finishResolve(ClientRequestContext ctx, Endpoint endpoint,
                                Future<InetSocketAddress> resolveFuture, HttpRequest req,
-                               DecodedHttpResponse res) {
+                               DecodedHttpResponse res, ClientConnectionTimingsBuilder timingsBuilder) {
+        timingsBuilder.dnsResolutionEndNanos(System.nanoTime());
         if (resolveFuture.isSuccess()) {
             final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
-            acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res);
+            acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res, timingsBuilder);
         } else {
+            ctx.attr(ClientConnectionTimings.TIMINGS).set(timingsBuilder.build(System.nanoTime()));
             final Throwable cause = resolveFuture.cause();
             handleEarlyRequestException(ctx, req, cause);
             res.close(cause);
@@ -97,10 +103,12 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     }
 
     private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
-                                             HttpRequest req, DecodedHttpResponse res) {
+                                             HttpRequest req, DecodedHttpResponse res,
+                                             ClientConnectionTimingsBuilder timingsBuilder) {
         final EventLoop eventLoop = ctx.eventLoop();
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res));
+            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpoint, ipAddr,
+                                                                req, res, timingsBuilder));
             return;
         }
 
@@ -114,7 +122,9 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         if (pooledChannel != null) {
             doExecute(pooledChannel, ctx, req, res);
         } else {
-            pool.acquireLater(protocol, key).handle((newPooledChannel, cause) -> {
+            pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {
+                ctx.attr(ClientConnectionTimings.TIMINGS).set(timingsBuilder.build(System.nanoTime()));
+
                 if (cause == null) {
                     doExecute(newPooledChannel, ctx, req, res);
                 } else {

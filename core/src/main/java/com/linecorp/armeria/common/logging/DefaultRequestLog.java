@@ -45,6 +45,7 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -58,6 +59,8 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 /**
  * Default {@link RequestLog} implementation.
@@ -169,6 +172,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public <T> Attribute<T> attr(AttributeKey<T> key) {
+        return ctx.attr(key);
+    }
+
+    @Override
+    public <T> boolean hasAttr(AttributeKey<T> key) {
+        return ctx.hasAttr(key);
+    }
+
+    @Override
     public void addChild(RequestLog child) {
         checkState(!hasLastChild, "last child is already added");
         requireNonNull(child, "child");
@@ -181,8 +194,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateRequestSideLog(RequestLog child) {
-        child.addListener(log -> startRequest0(log.channel(), log.sessionProtocol(), null,
-                                               log.requestStartTimeNanos(), log.requestStartTimeMicros(), true),
+        child.addListener(log -> {
+                              if (log.hasAttr(ClientConnectionTimings.TIMINGS)) {
+                                  attr(ClientConnectionTimings.TIMINGS)
+                                          .set(log.attr(ClientConnectionTimings.TIMINGS).get());
+                              }
+                              startRequest0(log.channel(), log.sessionProtocol(), null,
+                                            log.requestStartTimeNanos(), log.requestStartTimeMicros(), true);
+                          },
                           REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
         child.addListener(log -> requestFirstBytesTransferred(log.requestFirstBytesTransferredTimeNanos()),

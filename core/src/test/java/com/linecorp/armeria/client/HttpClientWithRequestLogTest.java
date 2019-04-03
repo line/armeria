@@ -93,10 +93,28 @@ public class HttpClientWithRequestLogTest {
 
     @Test
     public void unresolvedUri() {
-        final HttpClient client = new HttpClientBuilder("http://unresolved.armeria.com").decorator(
-                new ExceptionHoldingDecorator()).build();
+        final AtomicReference<ClientConnectionTimings> ref = new AtomicReference<>();
+
+        final HttpClient client = new HttpClientBuilder("http://unresolved.armeria.com")
+                .decorator(new ExceptionHoldingDecorator())
+                .decorator((delegate, ctx, req) -> {
+                    ctx.log().addListener(log -> ref.set(connectionTimings(log)),
+                                          RequestLogAvailability.REQUEST_START);
+                    return delegate.execute(ctx, req);
+                })
+                .build();
+
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get()).isInstanceOf(Exception.class);
+
+        await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
+        final ClientConnectionTimings timings = ref.get();
+        assertThat(timings.acquiringConnectionStartMicros()).isGreaterThan(0);
+
+        final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
+        assertThat(dnsResolutionDurationNanos).isGreaterThan(0);
+        assertThat(timings.acquiringConnectionDurationNanos())
+                .isGreaterThanOrEqualTo(dnsResolutionDurationNanos);
 
         await().untilAsserted(() -> assertThat(requestCauseHolder.get()).isNotNull());
         await().untilAsserted(() -> assertThat(responseCauseHolder.get()).isNotNull());
@@ -105,18 +123,38 @@ public class HttpClientWithRequestLogTest {
 
     @Test
     public void connectionError() {
+        final AtomicReference<ClientConnectionTimings> ref = new AtomicReference<>();
+
         // According to rfc7805, TCP port number 1 is not used so a connection error always happens.
         final HttpClient client = new HttpClientBuilder("http://127.0.0.1:1")
-                .decorator(new ExceptionHoldingDecorator()).build();
+                .decorator(new ExceptionHoldingDecorator())
+                .decorator((delegate, ctx, req) -> {
+                    ctx.log().addListener(log -> ref.set(connectionTimings(log)),
+                                          RequestLogAvailability.REQUEST_START);
+                    return delegate.execute(ctx, req);
+                })
+                .build();
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
                 .hasCauseInstanceOf(ConnectException.class);
+
+        await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
+        final ClientConnectionTimings timings = ref.get();
+        assertThat(timings.acquiringConnectionStartMicros()).isGreaterThan(0);
+
+        final long connectDurationNanos = timings.socketConnectDurationNanos();
+        assertThat(connectDurationNanos).isGreaterThan(0);
+        assertThat(timings.acquiringConnectionDurationNanos()).isGreaterThanOrEqualTo(connectDurationNanos);
 
         await().untilAsserted(() -> assertThat(
                 requestCauseHolder.get()).hasCauseInstanceOf(ConnectException.class));
         await().untilAsserted(() -> assertThat(
                 responseCauseHolder.get()).hasCauseInstanceOf(ConnectException.class));
         await().untilAsserted(() -> assertThat(req.isComplete()).isTrue());
+    }
+
+    private static ClientConnectionTimings connectionTimings(RequestLog log) {
+        return log.attr(ClientConnectionTimings.TIMINGS).get();
     }
 
     private static class ExceptionHoldingDecorator

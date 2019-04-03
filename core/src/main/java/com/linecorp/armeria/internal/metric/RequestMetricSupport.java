@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.RequestContext;
@@ -101,6 +102,11 @@ public final class RequestMetricSupport {
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
         updateMetrics(log, metrics);
+        if (log.hasAttr(ClientConnectionTimings.TIMINGS)) {
+            metrics.acquiringConnectionDuration().record(
+                    log.attr(ClientConnectionTimings.TIMINGS).get().acquiringConnectionDurationNanos(),
+                    TimeUnit.NANOSECONDS);
+        }
         if (log.requestCause() != null) {
             if (log.requestCause() instanceof WriteTimeoutException) {
                 metrics.writeTimeouts().increment();
@@ -176,6 +182,8 @@ public final class RequestMetricSupport {
 
     private interface ClientRequestMetrics extends RequestMetrics {
         Counter actualRequests();
+
+        Timer acquiringConnectionDuration();
 
         Counter writeTimeouts();
 
@@ -261,6 +269,7 @@ public final class RequestMetricSupport {
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
 
+        private final Timer acquiringConnectionDuration;
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
 
@@ -271,6 +280,10 @@ public final class RequestMetricSupport {
             super(parent, idPrefix);
             this.parent = parent;
             this.idPrefix = idPrefix;
+
+            acquiringConnectionDuration = newTimer(
+                    parent, idPrefix.name("acquiringConnectionDuration"), idPrefix.tags());
+
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
@@ -288,6 +301,11 @@ public final class RequestMetricSupport {
                 return counter;
             }
             return this.actualRequests;
+        }
+
+        @Override
+        public Timer acquiringConnectionDuration() {
+            return acquiringConnectionDuration;
         }
 
         @Override
