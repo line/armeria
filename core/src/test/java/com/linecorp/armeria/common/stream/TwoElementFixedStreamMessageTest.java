@@ -25,6 +25,8 @@ import org.junit.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.util.EventLoopGroups;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
@@ -37,7 +39,7 @@ public class TwoElementFixedStreamMessageTest {
         final ByteBuf obj2 = newBuffer("obj2");
         final TwoElementFixedStreamMessage<ByteBuf> streamMessage =
                 new TwoElementFixedStreamMessage<>(obj1, obj2);
-        streamMessage.subscribe(new CancelSubscriber(1), true);
+        streamMessage.subscribe(new CancelSubscriber(1), EventLoopGroups.directEventLoop(), true);
 
         await().untilAsserted(() -> assertThat(obj1.refCnt()).isZero());
         await().untilAsserted(() -> assertThat(obj2.refCnt()).isZero());
@@ -49,7 +51,7 @@ public class TwoElementFixedStreamMessageTest {
         final ByteBuf obj2 = newBuffer("obj2");
         final TwoElementFixedStreamMessage<ByteBuf> streamMessage =
                 new TwoElementFixedStreamMessage<>(obj1, obj2);
-        streamMessage.subscribe(new CancelSubscriber(2), true);
+        streamMessage.subscribe(new CancelSubscriber(2), EventLoopGroups.directEventLoop(), true);
 
         await().untilAsserted(() -> assertThat(obj1.refCnt()).isZero());
         await().untilAsserted(() -> assertThat(obj2.refCnt()).isZero());
