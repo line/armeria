@@ -98,19 +98,15 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
         // Demand is always positive, so no need to check it.
         if (obj1 != null) {
-            try {
-                doNotifyObject(subscription, obj1);
-            } finally {
-                obj1 = null;
-            }
+            final T obj1 = this.obj1;
+            this.obj1 = null;
+            doNotifyObject(subscription, obj1);
         }
 
         if (requested() >= 2 && obj2 != null) {
-            try {
-                doNotifyObject(subscription, obj2);
-            } finally {
-                obj2 = null;
-            }
+            final T obj2 = this.obj2;
+            this.obj2 = null;
+            doNotifyObject(subscription, obj2);
             notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
         }
     }
