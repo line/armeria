@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import javax.annotation.Nullable;
 
@@ -41,8 +40,8 @@ public class TwoElementFixedStreamMessageTest {
                 new TwoElementFixedStreamMessage<>(obj1, obj2);
         streamMessage.subscribe(new CancelSubscriber(1), EventLoopGroups.directEventLoop(), true);
 
-        await().untilAsserted(() -> assertThat(obj1.refCnt()).isZero());
-        await().untilAsserted(() -> assertThat(obj2.refCnt()).isZero());
+        assertThat(obj1.refCnt()).isZero();
+        assertThat(obj2.refCnt()).isZero();
     }
 
     @Test
@@ -53,8 +52,8 @@ public class TwoElementFixedStreamMessageTest {
                 new TwoElementFixedStreamMessage<>(obj1, obj2);
         streamMessage.subscribe(new CancelSubscriber(2), EventLoopGroups.directEventLoop(), true);
 
-        await().untilAsserted(() -> assertThat(obj1.refCnt()).isZero());
-        await().untilAsserted(() -> assertThat(obj2.refCnt()).isZero());
+        assertThat(obj1.refCnt()).isZero();
+        assertThat(obj2.refCnt()).isZero();
     }
 
     private static ByteBuf newBuffer(String content) {
