@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 
-import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 
 /**
@@ -151,7 +150,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the duration which was taken to connect a {@link Channel} to a remote peer, in nanoseconds.
+     * Returns the duration which was taken to connect to a remote peer, in nanoseconds.
      *
      * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
      */
@@ -160,7 +159,8 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when connecting to a remote peer started, in microseconds since the epoch.
+     * Returns the time when waiting the completion of an ongoing connecting attempt started,
+     * in microseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
      */
@@ -169,7 +169,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the duration which was taken to wait an ongoing connecting attempt is completed in order to
+     * Returns the duration which was taken to wait the completion of an ongoing connecting attempt in order to
      * use one connection for HTTP/2.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.

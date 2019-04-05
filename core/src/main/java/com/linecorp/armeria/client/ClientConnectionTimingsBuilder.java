@@ -28,14 +28,17 @@ public final class ClientConnectionTimingsBuilder {
     private final long acquiringConnectionStartMicros;
     private final long acquiringConnectionStartNanos;
     private long dnsResolutionEndNanos;
+    private boolean dnsResolutionEndSet;
 
     private long socketConnectStartMicros;
     private long socketConnectStartNanos;
     private long socketConnectEndNanos;
+    private boolean socketConnectEndSet;
 
     private long pendingAcquisitionStartMicros;
     private long pendingAcquisitionStartNanos;
     private long pendingAcquisitionEndNanos;
+    private boolean pendingAcquisitionEndSet;
 
     /**
      * Creates a new instance.
@@ -50,9 +53,9 @@ public final class ClientConnectionTimingsBuilder {
      * {@link ClientConnectionTimingsBuilder} is considered as the start time of resolving a domain name.
      */
     public ClientConnectionTimingsBuilder dnsResolutionEnd() {
-        // The start time of dnsResolution is acquiringConnectionStartMicros and acquiringConnectionStartNanos.
-        // So we don't have to call checkState() here.
+        checkState(!dnsResolutionEndSet, "dnsResolutionEnd() is already called.");
         dnsResolutionEndNanos = System.nanoTime();
+        dnsResolutionEndSet = true;
         return this;
     }
 
@@ -71,13 +74,15 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #socketConnectStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder socketConnectEnd() {
-        checkState(socketConnectStartMicros >= 0, "socketConnectStart is not called yet.");
+        checkState(socketConnectStartMicros >= 0, "socketConnectStart() is not called yet.");
+        checkState(!socketConnectEndSet, "socketConnectEnd() is already called.");
         socketConnectEndNanos = System.nanoTime();
+        socketConnectEndSet = true;
         return this;
     }
 
     /**
-     * Sets the time when waiting an ongoing connecting attempt started in order to use one connection
+     * Sets the time when waiting the completion of an ongoing connecting attempt in order to use one connection
      * for HTTP/2.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionStart() {
@@ -93,8 +98,10 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionEnd() {
-        checkState(pendingAcquisitionStartMicros >= 0, "pendingAcquisitionStart is not called yet.");
+        checkState(pendingAcquisitionStartMicros >= 0, "pendingAcquisitionStart() is not called yet.");
+        checkState(!pendingAcquisitionEndSet, "pendingAcquisitionEnd() is already called.");
         pendingAcquisitionEndNanos = System.nanoTime();
+        pendingAcquisitionEndSet = true;
         return this;
     }
 
@@ -105,12 +112,11 @@ public final class ClientConnectionTimingsBuilder {
         return new ClientConnectionTimings(
                 acquiringConnectionStartMicros,
                 System.nanoTime() - acquiringConnectionStartNanos,
-                dnsResolutionEndNanos == 0 ? -1 : acquiringConnectionStartMicros,
-                dnsResolutionEndNanos == 0 ? -1 : dnsResolutionEndNanos - acquiringConnectionStartNanos,
-                socketConnectStartMicros == 0 ? -1 : socketConnectStartMicros,
-                socketConnectEndNanos == 0 ? -1 : socketConnectEndNanos - socketConnectStartNanos,
-                pendingAcquisitionStartMicros == 0 ? -1 : pendingAcquisitionStartMicros,
-                pendingAcquisitionEndNanos == 0 ? -1 : pendingAcquisitionEndNanos -
-                                                       pendingAcquisitionStartNanos);
+                dnsResolutionEndSet ? acquiringConnectionStartMicros : -1,
+                dnsResolutionEndSet ? dnsResolutionEndNanos - acquiringConnectionStartNanos : -1,
+                socketConnectEndSet ? socketConnectStartMicros : -1,
+                socketConnectEndSet ? socketConnectEndNanos - socketConnectStartNanos : -1,
+                pendingAcquisitionEndSet ? pendingAcquisitionStartMicros : -1,
+                pendingAcquisitionEndSet ? pendingAcquisitionEndNanos - pendingAcquisitionStartNanos : -1);
     }
 }

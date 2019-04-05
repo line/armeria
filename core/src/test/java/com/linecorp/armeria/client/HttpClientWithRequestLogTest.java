@@ -109,10 +109,10 @@ public class HttpClientWithRequestLogTest {
 
         await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
         final ClientConnectionTimings timings = ref.get();
-        assertThat(timings.acquiringConnectionStartMicros()).isGreaterThan(0);
+        assertThat(timings.acquiringConnectionStartMicros()).isPositive();
 
         final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
-        assertThat(dnsResolutionDurationNanos).isGreaterThan(0);
+        assertThat(dnsResolutionDurationNanos).isPositive();
         assertThat(timings.acquiringConnectionDurationNanos())
                 .isGreaterThanOrEqualTo(dnsResolutionDurationNanos);
 
@@ -140,10 +140,10 @@ public class HttpClientWithRequestLogTest {
 
         await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
         final ClientConnectionTimings timings = ref.get();
-        assertThat(timings.acquiringConnectionStartMicros()).isGreaterThan(0);
+        assertThat(timings.acquiringConnectionStartMicros()).isPositive();
 
         final long connectDurationNanos = timings.socketConnectDurationNanos();
-        assertThat(connectDurationNanos).isGreaterThan(0);
+        assertThat(connectDurationNanos).isPositive();
         assertThat(timings.acquiringConnectionDurationNanos()).isGreaterThanOrEqualTo(connectDurationNanos);
 
         await().untilAsserted(() -> assertThat(
