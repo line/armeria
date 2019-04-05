@@ -16,10 +16,16 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
@@ -30,28 +36,79 @@ import io.netty.util.AttributeKey;
  */
 public final class ClientConnectionTimings {
 
-    public static final AttributeKey<ClientConnectionTimings> TIMINGS =
+    private static final AttributeKey<ClientConnectionTimings> TIMINGS =
             AttributeKey.valueOf(ClientConnectionTimings.class, "TIMINGS");
 
     private final long acquiringConnectionStartMicros;
     private final long acquiringConnectionDurationNanos;
 
+    private final long dnsResolutionStartMicros;
     private final long dnsResolutionDurationNanos;
+    private final long socketConnectStartMicros;
     private final long socketConnectDurationNanos;
+    private final long pendingAcquisitionStartMicros;
     private final long pendingAcquisitionDurationNanos;
 
+    /**
+     * Returns {@link ClientConnectionTimings} from the specified {@link RequestContext} if exists.
+     * You can set a timings using {@link #setTo(RequestContext)}.
+     */
+    @Nullable
+    public static ClientConnectionTimings get(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        if (ctx.hasAttr(TIMINGS)) {
+            return ctx.attr(TIMINGS).get();
+        }
+        return null;
+    }
+
+    /**
+     * Returns {@link ClientConnectionTimings} from the specified {@link RequestLog} if exists.
+     * You can set a timings using {@link #setTo(RequestLog)}.
+     */
+    @Nullable
+    public static ClientConnectionTimings get(RequestLog log) {
+        requireNonNull(log, "log");
+        if (log.hasAttr(TIMINGS)) {
+            return log.attr(TIMINGS).get();
+        }
+        return null;
+    }
+
     ClientConnectionTimings(long acquiringConnectionStartMicros, long acquiringConnectionDurationNanos,
-                            long dnsResolutionDurationNanos, long socketConnectDurationNanos,
-                            long pendingAcquisitionDurationNanos) {
+                            long dnsResolutionStartMicros, long dnsResolutionDurationNanos,
+                            long socketConnectStartMicros, long socketConnectDurationNanos,
+                            long pendingAcquisitionStartMicros, long pendingAcquisitionDurationNanos) {
         this.acquiringConnectionStartMicros = acquiringConnectionStartMicros;
         this.acquiringConnectionDurationNanos = acquiringConnectionDurationNanos;
+        this.dnsResolutionStartMicros = dnsResolutionStartMicros;
         this.dnsResolutionDurationNanos = dnsResolutionDurationNanos;
+        this.socketConnectStartMicros = socketConnectStartMicros;
         this.socketConnectDurationNanos = socketConnectDurationNanos;
+        this.pendingAcquisitionStartMicros = pendingAcquisitionStartMicros;
         this.pendingAcquisitionDurationNanos = pendingAcquisitionDurationNanos;
     }
 
     /**
-     * Returns the time when acquiring a connection started, in micros since the epoch.
+     * Sets this {@link ClientConnectionTimings} to the specified {@link RequestContext}.
+     * You can bring it back using {@link #get(RequestContext)}.
+     */
+    public void setTo(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        ctx.attr(TIMINGS).set(this);
+    }
+
+    /**
+     * Sets this {@link ClientConnectionTimings} to the specified {@link RequestContext}.
+     * You can bring it back using {@link #get(RequestLog)}.
+     */
+    public void setTo(RequestLog log) {
+        requireNonNull(log, "log");
+        log.attr(TIMINGS).set(this);
+    }
+
+    /**
+     * Returns the time when acquiring a connection started, in microseconds since the epoch.
      */
     public long acquiringConnectionStartMicros() {
         return acquiringConnectionStartMicros;
@@ -67,26 +124,53 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the duration which was taken to resolve a DNS address, in nanoseconds.
+     * Returns the time when resolving a domain name started, in microseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to resolve DNS address.
+     * @return the duration, or {@code -1} if there was no action to resolve a domain name.
+     */
+    public long dnsResolutionStartMicros() {
+        return dnsResolutionStartMicros;
+    }
+
+    /**
+     * Returns the duration which was taken to resolve a domain name, in nanoseconds.
+     *
+     * @return the duration, or {@code -1} if there was no action to resolve a domain name.
      */
     public long dnsResolutionDurationNanos() {
         return dnsResolutionDurationNanos;
     }
 
     /**
-     * Returns the duration which was taken to connect a {@link Channel} to the remote peer, in nanoseconds.
+     * Returns the time when connecting to a remote peer started, in microseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to connect to the remote peer.
+     * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
+     */
+    public long socketConnectStartMicros() {
+        return socketConnectStartMicros;
+    }
+
+    /**
+     * Returns the duration which was taken to connect a {@link Channel} to a remote peer, in nanoseconds.
+     *
+     * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
      */
     public long socketConnectDurationNanos() {
         return socketConnectDurationNanos;
     }
 
     /**
-     * Returns the duration which was taken to get a pending connection, in nanoseconds. This applies
-     * only for HTTP/2.
+     * Returns the time when connecting to a remote peer started, in microseconds since the epoch.
+     *
+     * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
+     */
+    public long pendingAcquisitionStartMicros() {
+        return pendingAcquisitionStartMicros;
+    }
+
+    /**
+     * Returns the duration which was taken to wait an ongoing connecting attempt is completed in order to
+     * use one connection for HTTP/2.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.
      */
@@ -100,13 +184,16 @@ public final class ClientConnectionTimings {
                 MoreObjects.toStringHelper(this)
                            .add("acquiringConnectionStartMicros", acquiringConnectionStartMicros)
                            .add("acquiringConnectionDurationNanos", acquiringConnectionDurationNanos);
-        if (dnsResolutionDurationNanos != -1) {
+        if (dnsResolutionDurationNanos >= 0) {
+            toStringHelper.add("dnsResolutionStartMicros", dnsResolutionStartMicros);
             toStringHelper.add("dnsResolutionDurationNanos", dnsResolutionDurationNanos);
         }
-        if (socketConnectDurationNanos != -1) {
+        if (socketConnectDurationNanos >= 0) {
+            toStringHelper.add("socketConnectStartMicros", socketConnectStartMicros);
             toStringHelper.add("socketConnectDurationNanos", socketConnectDurationNanos);
         }
-        if (pendingAcquisitionDurationNanos != -1) {
+        if (pendingAcquisitionDurationNanos >= 0) {
+            toStringHelper.add("pendingAcquisitionStartMicros", pendingAcquisitionStartMicros);
             toStringHelper.add("pendingAcquisitionDurationNanos", pendingAcquisitionDurationNanos);
         }
 

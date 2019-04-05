@@ -98,7 +98,7 @@ public class HttpClientWithRequestLogTest {
         final HttpClient client = new HttpClientBuilder("http://unresolved.armeria.com")
                 .decorator(new ExceptionHoldingDecorator())
                 .decorator((delegate, ctx, req) -> {
-                    ctx.log().addListener(log -> ref.set(connectionTimings(log)),
+                    ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
                                           RequestLogAvailability.REQUEST_START);
                     return delegate.execute(ctx, req);
                 })
@@ -129,7 +129,7 @@ public class HttpClientWithRequestLogTest {
         final HttpClient client = new HttpClientBuilder("http://127.0.0.1:1")
                 .decorator(new ExceptionHoldingDecorator())
                 .decorator((delegate, ctx, req) -> {
-                    ctx.log().addListener(log -> ref.set(connectionTimings(log)),
+                    ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
                                           RequestLogAvailability.REQUEST_START);
                     return delegate.execute(ctx, req);
                 })
@@ -151,10 +151,6 @@ public class HttpClientWithRequestLogTest {
         await().untilAsserted(() -> assertThat(
                 responseCauseHolder.get()).hasCauseInstanceOf(ConnectException.class));
         await().untilAsserted(() -> assertThat(req.isComplete()).isTrue());
-    }
-
-    private static ClientConnectionTimings connectionTimings(RequestLog log) {
-        return log.attr(ClientConnectionTimings.TIMINGS).get();
     }
 
     private static class ExceptionHoldingDecorator

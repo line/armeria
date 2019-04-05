@@ -16,63 +16,100 @@
 
 package com.linecorp.armeria.client;
 
-import com.google.common.annotations.VisibleForTesting;
+import static com.google.common.base.Preconditions.checkState;
+
+import com.linecorp.armeria.common.util.SystemInfo;
 
 /**
  * Builds a new {@link ClientConnectionTimings}.
  */
-@VisibleForTesting
-public class ClientConnectionTimingsBuilder {
+public final class ClientConnectionTimingsBuilder {
 
     private final long acquiringConnectionStartMicros;
     private final long acquiringConnectionStartNanos;
-
     private long dnsResolutionEndNanos;
+
+    private long socketConnectStartMicros;
     private long socketConnectStartNanos;
     private long socketConnectEndNanos;
+
+    private long pendingAcquisitionStartMicros;
     private long pendingAcquisitionStartNanos;
     private long pendingAcquisitionEndNanos;
 
     /**
      * Creates a new instance.
      */
-    @VisibleForTesting
-    public ClientConnectionTimingsBuilder(long acquiringConnectionStartMicros,
-                                          long acquiringConnectionStartNanos) {
-        this.acquiringConnectionStartMicros = acquiringConnectionStartMicros;
-        this.acquiringConnectionStartNanos = acquiringConnectionStartNanos;
+    public ClientConnectionTimingsBuilder() {
+        acquiringConnectionStartMicros = SystemInfo.currentTimeMicros();
+        acquiringConnectionStartNanos = System.nanoTime();
     }
 
-    void dnsResolutionEndNanos(long dnsResolutionEndNanos) {
-        this.dnsResolutionEndNanos = dnsResolutionEndNanos;
+    /**
+     * Sets the time when resolving a domain name ends. If this method is invoked, the creation time of this
+     * {@link ClientConnectionTimingsBuilder} is considered as the start time of resolving a domain name.
+     */
+    public ClientConnectionTimingsBuilder dnsResolutionEnd() {
+        // The start time of dnsResolution is acquiringConnectionStartMicros and acquiringConnectionStartNanos.
+        // So we don't have to call checkState() here.
+        dnsResolutionEndNanos = System.nanoTime();
+        return this;
     }
 
-    void socketConnectStartNanos(long socketConnectStartNanos) {
-        this.socketConnectStartNanos = socketConnectStartNanos;
+    /**
+     * Sets the time when connecting to a remote peer started.
+     */
+    public ClientConnectionTimingsBuilder socketConnectStart() {
+        socketConnectStartMicros = SystemInfo.currentTimeMicros();
+        socketConnectStartNanos = System.nanoTime();
+        return this;
     }
 
-    void socketConnectEndNanos(long socketConnectEndNanos) {
-        this.socketConnectEndNanos = socketConnectEndNanos;
+    /**
+     * Sets the time when connecting to a remote peer ends.
+     *
+     * @throws IllegalStateException if {@link #socketConnectStart()} is not invoked before calling this.
+     */
+    public ClientConnectionTimingsBuilder socketConnectEnd() {
+        checkState(socketConnectStartMicros >= 0, "socketConnectStart is not called yet.");
+        socketConnectEndNanos = System.nanoTime();
+        return this;
     }
 
-    void pendingAcquisitionStartNanos(long pendingAcquisitionStartNanos) {
-        this.pendingAcquisitionStartNanos = pendingAcquisitionStartNanos;
+    /**
+     * Sets the time when waiting an ongoing connecting attempt started in order to use one connection
+     * for HTTP/2.
+     */
+    public ClientConnectionTimingsBuilder pendingAcquisitionStart() {
+        pendingAcquisitionStartMicros = SystemInfo.currentTimeMicros();
+        pendingAcquisitionStartNanos = System.nanoTime();
+        return this;
     }
 
-    void pendingAcquisitionEndNanos(long pendingAcquisitionEndNanos) {
-        this.pendingAcquisitionEndNanos = pendingAcquisitionEndNanos;
+    /**
+     * Sets the time when waiting an ongoing connecting attempt ends in order to use one connection
+     * for HTTP/2.
+     *
+     * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
+     */
+    public ClientConnectionTimingsBuilder pendingAcquisitionEnd() {
+        checkState(pendingAcquisitionStartMicros >= 0, "pendingAcquisitionStart is not called yet.");
+        pendingAcquisitionEndNanos = System.nanoTime();
+        return this;
     }
 
     /**
      * Returns a newly-created {@link ClientConnectionTimings} instance.
      */
-    @VisibleForTesting
-    public ClientConnectionTimings build(long acquiringConnectionEndNanos) {
+    public ClientConnectionTimings build() {
         return new ClientConnectionTimings(
                 acquiringConnectionStartMicros,
-                acquiringConnectionEndNanos - acquiringConnectionStartNanos,
+                System.nanoTime() - acquiringConnectionStartNanos,
+                dnsResolutionEndNanos == 0 ? -1 : acquiringConnectionStartMicros,
                 dnsResolutionEndNanos == 0 ? -1 : dnsResolutionEndNanos - acquiringConnectionStartNanos,
+                socketConnectStartMicros == 0 ? -1 : socketConnectStartMicros,
                 socketConnectEndNanos == 0 ? -1 : socketConnectEndNanos - socketConnectStartNanos,
+                pendingAcquisitionStartMicros == 0 ? -1 : pendingAcquisitionStartMicros,
                 pendingAcquisitionEndNanos == 0 ? -1 : pendingAcquisitionEndNanos -
                                                        pendingAcquisitionStartNanos);
     }

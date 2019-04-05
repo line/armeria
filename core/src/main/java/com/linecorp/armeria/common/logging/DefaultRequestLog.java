@@ -182,6 +182,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public Iterator<Attribute<?>> attrs() {
+        return ctx.attrs();
+    }
+
+    @Override
     public void addChild(RequestLog child) {
         checkState(!hasLastChild, "last child is already added");
         requireNonNull(child, "child");
@@ -195,9 +200,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void propagateRequestSideLog(RequestLog child) {
         child.addListener(log -> {
-                              if (log.hasAttr(ClientConnectionTimings.TIMINGS)) {
-                                  attr(ClientConnectionTimings.TIMINGS)
-                                          .set(log.attr(ClientConnectionTimings.TIMINGS).get());
+                              final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
+                              if (timings != null) {
+                                  timings.setTo(this);
                               }
                               startRequest0(log.channel(), log.sessionProtocol(), null,
                                             log.requestStartTimeNanos(), log.requestStartTimeMicros(), true);

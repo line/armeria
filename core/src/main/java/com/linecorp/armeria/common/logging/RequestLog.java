@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.channel.Channel;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeMap;
 
 /**
@@ -61,6 +63,11 @@ import io.netty.util.AttributeMap;
  * @see RequestLogListener
  */
 public interface RequestLog extends AttributeMap {
+
+    /**
+     * Returns all {@link Attribute}s set in this log.
+     */
+    Iterator<Attribute<?>> attrs();
 
     /**
      * Returns the list of child {@link RequestLog}s, ordered by the time it was added.
@@ -198,14 +205,14 @@ public interface RequestLog extends AttributeMap {
     }
 
     /**
-     * Returns the time when the processing of the request started, in micros since the epoch.
+     * Returns the time when the processing of the request started, in microseconds since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     long requestStartTimeMicros();
 
     /**
-     * Returns the time when the processing of the request started, in millis since the epoch.
+     * Returns the time when the processing of the request started, in milliseconds since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
@@ -259,14 +266,14 @@ public interface RequestLog extends AttributeMap {
     Throwable requestCause();
 
     /**
-     * Returns the time when the processing of the response started, in micros since the epoch.
+     * Returns the time when the processing of the response started, in microseconds since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     long responseStartTimeMicros();
 
     /**
-     * Returns the time when the processing of the response started, in millis since the epoch.
+     * Returns the time when the processing of the response started, in milliseconds since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */

@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.netty.channel.Channel;
@@ -63,8 +62,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         final EventLoop eventLoop = ctx.eventLoop();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
-        final ClientConnectionTimingsBuilder timingsBuilder =
-                new ClientConnectionTimingsBuilder(SystemInfo.currentTimeMicros(), System.nanoTime());
+        final ClientConnectionTimingsBuilder timingsBuilder = new ClientConnectionTimingsBuilder();
 
         if (endpoint.hasIpAddr()) {
             // IP address has been resolved already.
@@ -90,12 +88,12 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     private void finishResolve(ClientRequestContext ctx, Endpoint endpoint,
                                Future<InetSocketAddress> resolveFuture, HttpRequest req,
                                DecodedHttpResponse res, ClientConnectionTimingsBuilder timingsBuilder) {
-        timingsBuilder.dnsResolutionEndNanos(System.nanoTime());
+        timingsBuilder.dnsResolutionEnd();
         if (resolveFuture.isSuccess()) {
             final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
             acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res, timingsBuilder);
         } else {
-            ctx.attr(ClientConnectionTimings.TIMINGS).set(timingsBuilder.build(System.nanoTime()));
+            timingsBuilder.build().setTo(ctx);
             final Throwable cause = resolveFuture.cause();
             handleEarlyRequestException(ctx, req, cause);
             res.close(cause);
@@ -123,7 +121,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             doExecute(pooledChannel, ctx, req, res);
         } else {
             pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {
-                ctx.attr(ClientConnectionTimings.TIMINGS).set(timingsBuilder.build(System.nanoTime()));
+                timingsBuilder.build().setTo(ctx);
 
                 if (cause == null) {
                     doExecute(newPooledChannel, ctx, req, res);

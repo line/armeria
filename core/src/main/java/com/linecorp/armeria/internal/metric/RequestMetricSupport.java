@@ -102,10 +102,24 @@ public final class RequestMetricSupport {
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
         updateMetrics(log, metrics);
-        if (log.hasAttr(ClientConnectionTimings.TIMINGS)) {
+        final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
+        if (timings != null) {
             metrics.acquiringConnectionDuration().record(
-                    log.attr(ClientConnectionTimings.TIMINGS).get().acquiringConnectionDurationNanos(),
+                    timings.acquiringConnectionDurationNanos(),
                     TimeUnit.NANOSECONDS);
+            final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
+            if (dnsResolutionDurationNanos >= 0) {
+                metrics.dnsResolutionDuration().record(dnsResolutionDurationNanos, TimeUnit.NANOSECONDS);
+            }
+            final long socketConnectDurationNanos = timings.socketConnectDurationNanos();
+            if (socketConnectDurationNanos >= 0) {
+                metrics.socketConnectDuration().record(socketConnectDurationNanos, TimeUnit.NANOSECONDS);
+            }
+            final long pendingAcquisitionDurationNanos = timings.pendingAcquisitionDurationNanos();
+            if (pendingAcquisitionDurationNanos >= 0) {
+                metrics.pendingAcquisitionDuration().record(pendingAcquisitionDurationNanos,
+                                                            TimeUnit.NANOSECONDS);
+            }
         }
         if (log.requestCause() != null) {
             if (log.requestCause() instanceof WriteTimeoutException) {
@@ -184,6 +198,12 @@ public final class RequestMetricSupport {
         Counter actualRequests();
 
         Timer acquiringConnectionDuration();
+
+        Timer dnsResolutionDuration();
+
+        Timer socketConnectDuration();
+
+        Timer pendingAcquisitionDuration();
 
         Counter writeTimeouts();
 
@@ -270,6 +290,10 @@ public final class RequestMetricSupport {
         private final MeterIdPrefix idPrefix;
 
         private final Timer acquiringConnectionDuration;
+        private final Timer dnsResolutionDuration;
+        private final Timer socketConnectDuration;
+        private final Timer pendingAcquisitionDuration;
+
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
 
@@ -283,6 +307,10 @@ public final class RequestMetricSupport {
 
             acquiringConnectionDuration = newTimer(
                     parent, idPrefix.name("acquiringConnectionDuration"), idPrefix.tags());
+            dnsResolutionDuration = newTimer(parent, idPrefix.name("dnsResolutionDuration"), idPrefix.tags());
+            socketConnectDuration = newTimer(parent, idPrefix.name("socketConnectDuration"), idPrefix.tags());
+            pendingAcquisitionDuration = newTimer(
+                    parent, idPrefix.name("pendingAcquisitionDuration"), idPrefix.tags());
 
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
@@ -306,6 +334,21 @@ public final class RequestMetricSupport {
         @Override
         public Timer acquiringConnectionDuration() {
             return acquiringConnectionDuration;
+        }
+
+        @Override
+        public Timer dnsResolutionDuration() {
+            return dnsResolutionDuration;
+        }
+
+        @Override
+        public Timer socketConnectDuration() {
+            return socketConnectDuration;
+        }
+
+        @Override
+        public Timer pendingAcquisitionDuration() {
+            return pendingAcquisitionDuration;
         }
 
         @Override

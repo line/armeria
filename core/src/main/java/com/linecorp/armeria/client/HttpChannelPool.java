@@ -265,9 +265,9 @@ final class HttpChannelPool implements AutoCloseable {
             return false;
         }
 
-        timingsBuilder.pendingAcquisitionStartNanos(System.nanoTime());
+        timingsBuilder.pendingAcquisitionStart();
         pendingAcquisition.handle((pch, cause) -> {
-            timingsBuilder.pendingAcquisitionEndNanos(System.nanoTime());
+            timingsBuilder.pendingAcquisitionEnd();
 
             if (cause == null) {
                 final SessionProtocol actualProtocol = pch.protocol();
@@ -299,8 +299,7 @@ final class HttpChannelPool implements AutoCloseable {
                          ClientConnectionTimingsBuilder timingsBuilder) {
 
         setPendingAcquisition(desiredProtocol, key, promise);
-
-        timingsBuilder.socketConnectStartNanos(System.nanoTime());
+        timingsBuilder.socketConnectStart();
 
         final InetSocketAddress remoteAddress;
         try {
@@ -385,7 +384,7 @@ final class HttpChannelPool implements AutoCloseable {
         assert future.isDone();
         removePendingAcquisition(desiredProtocol, key);
 
-        timingsBuilder.socketConnectEndNanos(System.nanoTime());
+        timingsBuilder.socketConnectEnd();
         try {
             if (future.isSuccess()) {
                 final Channel channel = future.getNow();
