@@ -20,10 +20,9 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -34,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -70,8 +70,7 @@ public final class CorsServiceBuilder {
      * Creates a new builder with the specified origin.
      */
     public static CorsServiceBuilder forOrigin(String origin) {
-        requireNonNull(origin, "origin");
-        return forOrigins(origin);
+        return forOrigins(requireNonNull(origin, "origin"));
     }
 
     /**
@@ -92,8 +91,7 @@ public final class CorsServiceBuilder {
 
     final boolean anyOriginSupported;
     final ChainedCorsPolicyBuilder firstPolicyBuilder;
-    final Set<CorsPolicy> policies;
-    final Set<ChainedCorsPolicyBuilder> policyBuilders;
+    final List<CorsPolicy> policies = new ArrayList<>();
 
     boolean shortCircuit;
 
@@ -103,9 +101,7 @@ public final class CorsServiceBuilder {
      */
     CorsServiceBuilder(String... origins) {
         anyOriginSupported = false;
-        policies = new HashSet<>();
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, origins);
-        policyBuilders = new HashSet<>();
     }
 
     /**
@@ -113,9 +109,7 @@ public final class CorsServiceBuilder {
      */
     CorsServiceBuilder() {
         anyOriginSupported = true;
-        policies = Collections.emptySet();
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this);
-        policyBuilders = Collections.emptySet();
     }
 
     private void ensureForNewPolicy() {
@@ -124,11 +118,27 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Add a {@link CorsPolicy} instance in the service.
+     * Adds a {@link CorsPolicy} instance in the service.
      */
     public CorsServiceBuilder addPolicy(CorsPolicy policy) {
         ensureForNewPolicy();
         policies.add(policy);
+        return this;
+    }
+
+    /**
+     * Adds a path pattern that this policy is supposed to be applied to.
+     */
+    public CorsServiceBuilder pathMapping(String pathPattern) {
+        firstPolicyBuilder.pathMapping(pathPattern);
+        return this;
+    }
+
+    /**
+     * Adds a {@link PathMapping} that this policy is supposed to be applied to.
+     */
+    public CorsServiceBuilder pathMapping(PathMapping pathMapping) {
+        firstPolicyBuilder.pathMapping(pathMapping);
         return this;
     }
 
@@ -356,9 +366,7 @@ public final class CorsServiceBuilder {
      */
     public ChainedCorsPolicyBuilder andForOrigins(String... origins) {
         ensureForNewPolicy();
-        final ChainedCorsPolicyBuilder builder = new ChainedCorsPolicyBuilder(this, origins);
-        policyBuilders.add(builder);
-        return builder;
+        return new ChainedCorsPolicyBuilder(this, origins);
     }
 
     /**

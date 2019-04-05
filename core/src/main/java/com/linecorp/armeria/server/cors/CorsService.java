@@ -76,7 +76,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
                 return handleCorsPreflight(ctx, req);
             }
             if (config.isShortCircuit() &&
-                config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN)) == null) {
+                config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.pathMappingContext()) == null) {
                 return forbidden();
             }
         }
@@ -159,10 +159,11 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
 
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin != null) {
-            final CorsPolicy policy = config.getPolicy(origin);
+            final CorsPolicy policy = config.getPolicy(origin, ctx.pathMappingContext());
             if (policy == null) {
                 logger.debug(
-                        "{} There is no CORS policy configured for the request origin '{}'.", ctx, origin);
+                        "{} There is no CORS policy configured for the request origin '{}' and the path '{}'.",
+                        ctx, origin, ctx.path());
                 return null;
             }
             if (NULL_ORIGIN.equals(origin)) {
