@@ -109,11 +109,11 @@ public class HttpClientWithRequestLogTest {
 
         await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
         final ClientConnectionTimings timings = ref.get();
-        assertThat(timings.acquiringConnectionStartMicros()).isPositive();
+        assertThat(timings.connectionAcquisitionStartTimeMicros()).isPositive();
 
         final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
         assertThat(dnsResolutionDurationNanos).isPositive();
-        assertThat(timings.acquiringConnectionDurationNanos())
+        assertThat(timings.connectionAcquisitionDurationNanos())
                 .isGreaterThanOrEqualTo(dnsResolutionDurationNanos);
 
         await().untilAsserted(() -> assertThat(requestCauseHolder.get()).isNotNull());
@@ -140,11 +140,11 @@ public class HttpClientWithRequestLogTest {
 
         await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
         final ClientConnectionTimings timings = ref.get();
-        assertThat(timings.acquiringConnectionStartMicros()).isPositive();
+        assertThat(timings.connectionAcquisitionStartTimeMicros()).isPositive();
 
         final long connectDurationNanos = timings.socketConnectDurationNanos();
         assertThat(connectDurationNanos).isPositive();
-        assertThat(timings.acquiringConnectionDurationNanos()).isGreaterThanOrEqualTo(connectDurationNanos);
+        assertThat(timings.connectionAcquisitionDurationNanos()).isGreaterThanOrEqualTo(connectDurationNanos);
 
         await().untilAsserted(() -> assertThat(
                 requestCauseHolder.get()).hasCauseInstanceOf(ConnectException.class));

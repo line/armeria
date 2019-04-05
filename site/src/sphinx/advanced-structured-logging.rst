@@ -8,12 +8,12 @@ retrieving the information collected during request life cycle in a machine-frie
 
 What properties can be retrieved?
 ---------------------------------
-:api:`RequestLog` provides all the properties you can retrieve:
+:api:`RequestLog` provides the properties you can retrieve:
 
 +----------------------------------------------------------------------------------------------------+
 | Request properties                                                                                 |
 +=============================+======================================================================+
-| ``requestStartTimeMillis``  | when the request processing started                                  |
+| ``requestStartTimeMicros``  | when the request processing started                                  |
 +-----------------------------+----------------------------------------------------------------------+
 | ``requestDurationNanos``    | the duration took to process the request completely                  |
 +-----------------------------+----------------------------------------------------------------------+
@@ -38,10 +38,10 @@ What properties can be retrieved?
 | ``requestContentPreview``   | the preview of the request content                                   |
 +-----------------------------+----------------------------------------------------------------------+
 
-+-----------------------------+----------------------------------------------------------------------+
++----------------------------------------------------------------------------------------------------+
 | Response properties                                                                                |
 +=============================+======================================================================+
-| ``responseStartTimeMillis`` | when the response processing started                                 |
+| ``responseStartTimeMicros`` | when the response processing started                                 |
 +-----------------------------+----------------------------------------------------------------------+
 | ``responseDurationNanos``   | the duration took to process the response completely                 |
 +-----------------------------+----------------------------------------------------------------------+
@@ -60,6 +60,31 @@ What properties can be retrieved?
 +-----------------------------+----------------------------------------------------------------------+
 | ``responseContentPreview``  | the preview of the response content                                  |
 +-----------------------------+----------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------------------------------------+
+| Connection properties (Client side only)                                                                     |
++==========================================+===================================================================+
+| ``dnsResolutionStartTimeMicros``         | when resolving a domain name started                              |
++------------------------------------------+-------------------------------------------------------------------+
+| ``dnsResolutionDurationNanos``           | the duration took to resolve a domain name                        |
++------------------------------------------+-------------------------------------------------------------------+
+| ``socketConnectStartTimeMicros``         | when connecting to a remote peer started                          |
++------------------------------------------+-------------------------------------------------------------------+
+| ``socketConnectDurationNanos``           | the duration took to connect to a remote peer                     |
++------------------------------------------+-------------------------------------------------------------------+
+| ``pendingAcquisitionStartTimeMicros``    | when waiting the completion of an ongoing connecting attempt      |
+|                                          | started                                                           |
++------------------------------------------+-------------------------------------------------------------------+
+| ``pendingAcquisitionDurationNanos``      | the duration took to wait the completion of an ongoing connecting |
+|                                          | attempt                                                           |
++------------------------------------------+-------------------------------------------------------------------+
+| ``connectionAcquisitionStartTimeMicros`` | when acquiring a connection started                               |
++------------------------------------------+-------------------------------------------------------------------+
+| ``connectionAcquisitionDurationNanos``   | the duration took to get a connection. This value is greater than |
+|                                          | or equal to the sum of ``dnsResolutionDurationNanos``,            |
+|                                          | ``socketConnectDurationNanos`` and                                |
+|                                          | ``pendingAcquisitionDurationNanos``                               |
++------------------------------------------+-------------------------------------------------------------------+
 
 Availability of properties
 --------------------------
@@ -96,6 +121,34 @@ To get notified when a certain set of properties are available, you can add a li
 Note that :api:`RequestLogAvailability` is specified when adding a listener.
 :api:`RequestLogAvailability` is an enum that is used to express which :api:`RequestLog` properties
 you are interested in. ``COMPLETE`` will make your listener invoked when all properties are available.
+
+On the client side, you can get the start time and duration information about a connection. Unlike
+request and response properties, you need a different way to get the properties. You should call the static
+method of :api:`ClientConnectionTimings` as follows:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.ClientConnectionTimings;
+    import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.HttpClientBuilder;
+
+    final HttpClient client = new HttpClientBuilder("http://armeria.com")
+            .decorator((delegate, ctx, req) -> {
+                ctx.log().addListener(
+                        log -> {
+                            final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
+                            if (timings != null) {
+                                System.err.println("Duration: " + timings.connectionAcquisitionDurationNanos());
+                            }
+                        }, RequestLogAvailability.REQUEST_START); // Can get after a request is started.
+                return delegate.execute(ctx, req);
+            })
+            .build();
+
+.. note::
+
+    The reason why we used the static method is that the :api:`ClientConnectionTimings` is stored using
+    the attribute. If you want to know more about it, please refer to :ref:`advanced-custom-attribute`.
 
 Set ``serializationFormat`` and ``requestContent`` early if possible
 --------------------------------------------------------------------

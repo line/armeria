@@ -25,17 +25,17 @@ import com.linecorp.armeria.common.util.SystemInfo;
  */
 public final class ClientConnectionTimingsBuilder {
 
-    private final long acquiringConnectionStartMicros;
-    private final long acquiringConnectionStartNanos;
+    private final long connectionAcquisitionStartTimeMicros;
+    private final long connectionAcquisitionStartNanos;
     private long dnsResolutionEndNanos;
     private boolean dnsResolutionEndSet;
 
-    private long socketConnectStartMicros;
+    private long socketConnectStartTimeMicros;
     private long socketConnectStartNanos;
     private long socketConnectEndNanos;
     private boolean socketConnectEndSet;
 
-    private long pendingAcquisitionStartMicros;
+    private long pendingAcquisitionStartTimeMicros;
     private long pendingAcquisitionStartNanos;
     private long pendingAcquisitionEndNanos;
     private boolean pendingAcquisitionEndSet;
@@ -44,8 +44,8 @@ public final class ClientConnectionTimingsBuilder {
      * Creates a new instance.
      */
     public ClientConnectionTimingsBuilder() {
-        acquiringConnectionStartMicros = SystemInfo.currentTimeMicros();
-        acquiringConnectionStartNanos = System.nanoTime();
+        connectionAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
+        connectionAcquisitionStartNanos = System.nanoTime();
     }
 
     /**
@@ -63,7 +63,7 @@ public final class ClientConnectionTimingsBuilder {
      * Sets the time when connecting to a remote peer started.
      */
     public ClientConnectionTimingsBuilder socketConnectStart() {
-        socketConnectStartMicros = SystemInfo.currentTimeMicros();
+        socketConnectStartTimeMicros = SystemInfo.currentTimeMicros();
         socketConnectStartNanos = System.nanoTime();
         return this;
     }
@@ -74,7 +74,7 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #socketConnectStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder socketConnectEnd() {
-        checkState(socketConnectStartMicros >= 0, "socketConnectStart() is not called yet.");
+        checkState(socketConnectStartTimeMicros >= 0, "socketConnectStart() is not called yet.");
         checkState(!socketConnectEndSet, "socketConnectEnd() is already called.");
         socketConnectEndNanos = System.nanoTime();
         socketConnectEndSet = true;
@@ -86,7 +86,7 @@ public final class ClientConnectionTimingsBuilder {
      * for HTTP/2.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionStart() {
-        pendingAcquisitionStartMicros = SystemInfo.currentTimeMicros();
+        pendingAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
         pendingAcquisitionStartNanos = System.nanoTime();
         return this;
     }
@@ -98,7 +98,7 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionEnd() {
-        checkState(pendingAcquisitionStartMicros >= 0, "pendingAcquisitionStart() is not called yet.");
+        checkState(pendingAcquisitionStartTimeMicros >= 0, "pendingAcquisitionStart() is not called yet.");
         checkState(!pendingAcquisitionEndSet, "pendingAcquisitionEnd() is already called.");
         pendingAcquisitionEndNanos = System.nanoTime();
         pendingAcquisitionEndSet = true;
@@ -110,13 +110,13 @@ public final class ClientConnectionTimingsBuilder {
      */
     public ClientConnectionTimings build() {
         return new ClientConnectionTimings(
-                acquiringConnectionStartMicros,
-                System.nanoTime() - acquiringConnectionStartNanos,
-                dnsResolutionEndSet ? acquiringConnectionStartMicros : -1,
-                dnsResolutionEndSet ? dnsResolutionEndNanos - acquiringConnectionStartNanos : -1,
-                socketConnectEndSet ? socketConnectStartMicros : -1,
+                connectionAcquisitionStartTimeMicros,
+                System.nanoTime() - connectionAcquisitionStartNanos,
+                dnsResolutionEndSet ? connectionAcquisitionStartTimeMicros : -1,
+                dnsResolutionEndSet ? dnsResolutionEndNanos - connectionAcquisitionStartNanos : -1,
+                socketConnectEndSet ? socketConnectStartTimeMicros : -1,
                 socketConnectEndSet ? socketConnectEndNanos - socketConnectStartNanos : -1,
-                pendingAcquisitionEndSet ? pendingAcquisitionStartMicros : -1,
+                pendingAcquisitionEndSet ? pendingAcquisitionStartTimeMicros : -1,
                 pendingAcquisitionEndSet ? pendingAcquisitionEndNanos - pendingAcquisitionStartNanos : -1);
     }
 }

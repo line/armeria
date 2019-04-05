@@ -104,8 +104,8 @@ public final class RequestMetricSupport {
         updateMetrics(log, metrics);
         final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
         if (timings != null) {
-            metrics.acquiringConnectionDuration().record(
-                    timings.acquiringConnectionDurationNanos(),
+            metrics.connectionAcquisitionDuration().record(
+                    timings.connectionAcquisitionDurationNanos(),
                     TimeUnit.NANOSECONDS);
             final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
             if (dnsResolutionDurationNanos >= 0) {
@@ -197,7 +197,7 @@ public final class RequestMetricSupport {
     private interface ClientRequestMetrics extends RequestMetrics {
         Counter actualRequests();
 
-        Timer acquiringConnectionDuration();
+        Timer connectionAcquisitionDuration();
 
         Timer dnsResolutionDuration();
 
@@ -289,7 +289,7 @@ public final class RequestMetricSupport {
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
 
-        private final Timer acquiringConnectionDuration;
+        private final Timer connectionAcquisitionDuration;
         private final Timer dnsResolutionDuration;
         private final Timer socketConnectDuration;
         private final Timer pendingAcquisitionDuration;
@@ -305,8 +305,8 @@ public final class RequestMetricSupport {
             this.parent = parent;
             this.idPrefix = idPrefix;
 
-            acquiringConnectionDuration = newTimer(
-                    parent, idPrefix.name("acquiringConnectionDuration"), idPrefix.tags());
+            connectionAcquisitionDuration = newTimer(
+                    parent, idPrefix.name("connectionAcquisitionDuration"), idPrefix.tags());
             dnsResolutionDuration = newTimer(parent, idPrefix.name("dnsResolutionDuration"), idPrefix.tags());
             socketConnectDuration = newTimer(parent, idPrefix.name("socketConnectDuration"), idPrefix.tags());
             pendingAcquisitionDuration = newTimer(
@@ -332,8 +332,8 @@ public final class RequestMetricSupport {
         }
 
         @Override
-        public Timer acquiringConnectionDuration() {
-            return acquiringConnectionDuration;
+        public Timer connectionAcquisitionDuration() {
+            return connectionAcquisitionDuration;
         }
 
         @Override

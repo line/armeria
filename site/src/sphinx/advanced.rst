@@ -8,6 +8,7 @@ Advanced topics
 
     advanced-logging
     advanced-structured-logging
+    advanced-custom-attributes
     advanced-structured-logging-kafka
     advanced-unit-testing
     advanced-production-checklist

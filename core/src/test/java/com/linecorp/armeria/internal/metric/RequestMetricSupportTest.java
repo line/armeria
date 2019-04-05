@@ -72,7 +72,7 @@ public class RequestMetricSupportTest {
                                                1.0)
                                 .containsEntry("foo.requests#count{httpStatus=200,method=POST,result=failure}",
                                                0.0)
-                                .containsEntry("foo.acquiringConnectionDuration#count{httpStatus=200," +
+                                .containsEntry("foo.connectionAcquisitionDuration#count{httpStatus=200," +
                                                "method=POST}", 1.0)
                                 .containsEntry("foo.dnsResolutionDuration#count{httpStatus=200," +
                                                "method=POST}", 1.0)
@@ -148,7 +148,7 @@ public class RequestMetricSupportTest {
                                                1.0)
                                 .containsEntry("foo.actualRequests#count{httpStatus=500,method=POST}",
                                                2.0)
-                                .containsEntry("foo.acquiringConnectionDuration#count{httpStatus=500," +
+                                .containsEntry("foo.connectionAcquisitionDuration#count{httpStatus=500," +
                                                "method=POST}", 1.0)
                                 .containsEntry("foo.dnsResolutionDuration#count{httpStatus=500," +
                                                "method=POST}", 1.0)

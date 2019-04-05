@@ -221,3 +221,4 @@ See also
 --------
 
 - :ref:`client-decorator`
+- :ref:`advanced-custom-attribute`

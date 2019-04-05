@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
@@ -38,14 +40,14 @@ public final class ClientConnectionTimings {
     private static final AttributeKey<ClientConnectionTimings> TIMINGS =
             AttributeKey.valueOf(ClientConnectionTimings.class, "TIMINGS");
 
-    private final long acquiringConnectionStartMicros;
-    private final long acquiringConnectionDurationNanos;
+    private final long connectionAcquisitionStartTimeMicros;
+    private final long connectionAcquisitionDurationNanos;
 
-    private final long dnsResolutionStartMicros;
+    private final long dnsResolutionStartTimeMicros;
     private final long dnsResolutionDurationNanos;
-    private final long socketConnectStartMicros;
+    private final long socketConnectStartTimeMicros;
     private final long socketConnectDurationNanos;
-    private final long pendingAcquisitionStartMicros;
+    private final long pendingAcquisitionStartTimeMicros;
     private final long pendingAcquisitionDurationNanos;
 
     /**
@@ -74,17 +76,17 @@ public final class ClientConnectionTimings {
         return null;
     }
 
-    ClientConnectionTimings(long acquiringConnectionStartMicros, long acquiringConnectionDurationNanos,
-                            long dnsResolutionStartMicros, long dnsResolutionDurationNanos,
-                            long socketConnectStartMicros, long socketConnectDurationNanos,
-                            long pendingAcquisitionStartMicros, long pendingAcquisitionDurationNanos) {
-        this.acquiringConnectionStartMicros = acquiringConnectionStartMicros;
-        this.acquiringConnectionDurationNanos = acquiringConnectionDurationNanos;
-        this.dnsResolutionStartMicros = dnsResolutionStartMicros;
+    ClientConnectionTimings(long connectionAcquisitionStartTimeMicros, long connectionAcquisitionDurationNanos,
+                            long dnsResolutionStartTimeMicros, long dnsResolutionDurationNanos,
+                            long socketConnectStartTimeMicros, long socketConnectDurationNanos,
+                            long pendingAcquisitionStartTimeMicros, long pendingAcquisitionDurationNanos) {
+        this.connectionAcquisitionStartTimeMicros = connectionAcquisitionStartTimeMicros;
+        this.connectionAcquisitionDurationNanos = connectionAcquisitionDurationNanos;
+        this.dnsResolutionStartTimeMicros = dnsResolutionStartTimeMicros;
         this.dnsResolutionDurationNanos = dnsResolutionDurationNanos;
-        this.socketConnectStartMicros = socketConnectStartMicros;
+        this.socketConnectStartTimeMicros = socketConnectStartTimeMicros;
         this.socketConnectDurationNanos = socketConnectDurationNanos;
-        this.pendingAcquisitionStartMicros = pendingAcquisitionStartMicros;
+        this.pendingAcquisitionStartTimeMicros = pendingAcquisitionStartTimeMicros;
         this.pendingAcquisitionDurationNanos = pendingAcquisitionDurationNanos;
     }
 
@@ -109,8 +111,15 @@ public final class ClientConnectionTimings {
     /**
      * Returns the time when acquiring a connection started, in microseconds since the epoch.
      */
-    public long acquiringConnectionStartMicros() {
-        return acquiringConnectionStartMicros;
+    public long connectionAcquisitionStartTimeMicros() {
+        return connectionAcquisitionStartTimeMicros;
+    }
+
+    /**
+     * Returns the time when acquiring a connection started, in milliseconds since the epoch.
+     */
+    public long connectionAcquisitionStartTimeMillis() {
+        return TimeUnit.MICROSECONDS.toMillis(connectionAcquisitionStartTimeMicros);
     }
 
     /**
@@ -118,8 +127,8 @@ public final class ClientConnectionTimings {
      * equal to the sum of {@link #dnsResolutionDurationNanos()}, {@link #socketConnectDurationNanos()} and
      * {@link #pendingAcquisitionDurationNanos()}.
      */
-    public long acquiringConnectionDurationNanos() {
-        return acquiringConnectionDurationNanos;
+    public long connectionAcquisitionDurationNanos() {
+        return connectionAcquisitionDurationNanos;
     }
 
     /**
@@ -127,8 +136,20 @@ public final class ClientConnectionTimings {
      *
      * @return the duration, or {@code -1} if there was no action to resolve a domain name.
      */
-    public long dnsResolutionStartMicros() {
-        return dnsResolutionStartMicros;
+    public long dnsResolutionStartTimeMicros() {
+        return dnsResolutionStartTimeMicros;
+    }
+
+    /**
+     * Returns the time when resolving a domain name started, in milliseconds since the epoch.
+     *
+     * @return the duration, or {@code -1} if there was no action to resolve a domain name.
+     */
+    public long dnsResolutionStartTimeMillis() {
+        if (dnsResolutionStartTimeMicros >= 0) {
+            return TimeUnit.MICROSECONDS.toMillis(dnsResolutionStartTimeMicros);
+        }
+        return -1;
     }
 
     /**
@@ -145,8 +166,20 @@ public final class ClientConnectionTimings {
      *
      * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
      */
-    public long socketConnectStartMicros() {
-        return socketConnectStartMicros;
+    public long socketConnectStartTimeMicros() {
+        return socketConnectStartTimeMicros;
+    }
+
+    /**
+     * Returns the time when connecting to a remote peer started, in milliseconds since the epoch.
+     *
+     * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
+     */
+    public long socketConnectStartTimeMillis() {
+        if (socketConnectStartTimeMicros >= 0) {
+            return TimeUnit.MICROSECONDS.toMillis(socketConnectStartTimeMicros);
+        }
+        return -1;
     }
 
     /**
@@ -162,10 +195,23 @@ public final class ClientConnectionTimings {
      * Returns the time when waiting the completion of an ongoing connecting attempt started,
      * in microseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
+     * @return the duration, or {@code -1} if there was no action to get a pending connection.
      */
-    public long pendingAcquisitionStartMicros() {
-        return pendingAcquisitionStartMicros;
+    public long pendingAcquisitionStartTimeMicros() {
+        return pendingAcquisitionStartTimeMicros;
+    }
+
+    /**
+     * Returns the time when waiting the completion of an ongoing connecting attempt started,
+     * in milliseconds since the epoch.
+     *
+     * @return the duration, or {@code -1} if there was no action to get a pending connection.
+     */
+    public long pendingAcquisitionStartTimeMillis() {
+        if (pendingAcquisitionStartTimeMicros >= 0) {
+            return TimeUnit.MICROSECONDS.toMillis(pendingAcquisitionStartTimeMicros);
+        }
+        return -1;
     }
 
     /**
@@ -182,18 +228,18 @@ public final class ClientConnectionTimings {
     public String toString() {
         final ToStringHelper toStringHelper =
                 MoreObjects.toStringHelper(this)
-                           .add("acquiringConnectionStartMicros", acquiringConnectionStartMicros)
-                           .add("acquiringConnectionDurationNanos", acquiringConnectionDurationNanos);
+                           .add("connectionAcquisitionStartTimeMicros", connectionAcquisitionStartTimeMicros)
+                           .add("connectionAcquisitionDurationNanos", connectionAcquisitionDurationNanos);
         if (dnsResolutionDurationNanos >= 0) {
-            toStringHelper.add("dnsResolutionStartMicros", dnsResolutionStartMicros);
+            toStringHelper.add("dnsResolutionStartTimeMicros", dnsResolutionStartTimeMicros);
             toStringHelper.add("dnsResolutionDurationNanos", dnsResolutionDurationNanos);
         }
         if (socketConnectDurationNanos >= 0) {
-            toStringHelper.add("socketConnectStartMicros", socketConnectStartMicros);
+            toStringHelper.add("socketConnectStartTimeMicros", socketConnectStartTimeMicros);
             toStringHelper.add("socketConnectDurationNanos", socketConnectDurationNanos);
         }
         if (pendingAcquisitionDurationNanos >= 0) {
-            toStringHelper.add("pendingAcquisitionStartMicros", pendingAcquisitionStartMicros);
+            toStringHelper.add("pendingAcquisitionStartTimeMicros", pendingAcquisitionStartTimeMicros);
             toStringHelper.add("pendingAcquisitionDurationNanos", pendingAcquisitionDurationNanos);
         }
 
