@@ -95,6 +95,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop)
                 .channelType(TransportType.datagramChannelType(eventLoop.parent()))
                 .ttl(minTtl, maxTtl)
+                .traceEnabled(true)
                 .nameServerProvider(serverAddressStreamProvider);
 
         resolverConfigurator.accept(resolverBuilder);
@@ -133,7 +134,6 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         } else {
             // Multiple queries
             logger.debug("{} Sending DNS queries", logPrefix);
-            @SuppressWarnings("unchecked")
             final Promise<List<DnsRecord>> aggregatedPromise = eventLoop.newPromise();
             final FutureListener<List<DnsRecord>> listener = new FutureListener<List<DnsRecord>>() {
                 private final List<DnsRecord> records = new ArrayList<>();

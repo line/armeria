@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.CommonPools;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -60,7 +59,7 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
                             DnsServerAddressStreamProvider serverAddressStreamProvider,
                             Backoff backoff, String hostname) {
         super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
-              ImmutableList.of(new DefaultDnsQuestion(hostname, DnsRecordType.SRV)),
+              ImmutableList.of(new DnsQuestionWithoutTrailingDot(hostname, DnsRecordType.SRV)),
               unused -> {});
         start();
     }
