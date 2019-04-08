@@ -138,8 +138,8 @@ public final class TextFormatter {
      * @return the human readable string representation of the given epoch time
      */
     public static StringBuilder epoch(long timeMillis) {
-        // 24 (human readable part) + 3 (parens) + 19 (max digits of a long integer)
-        final StringBuilder buf = new StringBuilder(46);
+        // 24 (human readable part) + 2 (parens) + 19 (max digits of a long integer)
+        final StringBuilder buf = new StringBuilder(45);
         appendEpoch(buf, timeMillis);
         return buf;
     }
@@ -164,8 +164,8 @@ public final class TextFormatter {
      * @return the human readable string representation of the given epoch time
      */
     public static StringBuilder epochMicro(long timeMicros) {
-        // 24 (human readable part) + 3 (parens) + 19 (max digits of a long integer)
-        final StringBuilder buf = new StringBuilder(46);
+        // 24 (human readable part) + 2 (parens) + 19 (max digits of a long integer)
+        final StringBuilder buf = new StringBuilder(45);
         appendEpochMicros(buf, timeMicros);
         return buf;
     }

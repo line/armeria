@@ -224,8 +224,8 @@ public final class ClientConnectionTimings {
 
     @Override
     public String toString() {
-        // 1 + 37 + 37 + 31 + 29 + 31 + 29 + 36 + 34 + 46 * 4 + 16 * 4 + 1 = 514
-        final StringBuilder buf = new StringBuilder(514);
+        // 1 + 37 + 37 + 31 + 29 + 31 + 29 + 36 + 34 + 45 * 4 + 16 * 4 + 1 = 510
+        final StringBuilder buf = new StringBuilder(510);
         buf.append('{');
         buf.append("connectionAcquisitionStartTimeMicros=");
         TextFormatter.appendEpochMicros(buf, connectionAcquisitionStartTimeMicros);

@@ -96,10 +96,7 @@ Client connection timing
 
 The total duration is the sum of ``dnsResolutionDurationNanos``, ``socketConnectDurationNanos`` and
 ``pendingAcquisitionDurationNanos``. They may or may not occur depending on circumstances.
-For example, if you specify an IP address while creating a client, ``dnsResolutionDurationNanos`` is ``-1``
-since the client doesn't have to resolve a domain name. Likewise, ``socketConnectDurationNanos`` is ``-1``
-if the client reuses the connection which was established before. These are some of the scenarios how
-``connectionAcquisitionDurationNanos`` is composed of:
+These are some of the scenarios how the total duration is composed of:
 
     1. Resolving a domain name and connecting to the remote peer.
 
@@ -116,20 +113,21 @@ if the client reuses the connection which was established before. These are some
                                            +-------------------------------+
            @endditaa
 
-    2. Resolving a domain name and waiting, since there's existing connection attempt with same IP address,
-    to use one connection in HTTP/2.
+    2. Waiting for the connection to be established, since there's an existing connection attempt, to use one
+    connection in HTTP/2. (Note that, if you create a client with an IP address, ``dnsResolution`` did not
+    occur. Also note that, there's no ``socketConnect`` because the client just wait for the connection and
+    use it.)
 
        .. uml::
 
            @startditaa(--no-separation, --no-shadows)
 
-           +----------------------------------------------------------+                                    #2
-           :<---------------------connectionAcquisition-------------->|
-           +----------------------------------------------------------+
-           :<--------dnsResolution-------->|
-           +-------------------------------+--------------------------+
-                                           :<---pendingAcquisition--->|
-                                           +--------------------------+
+           +-----------------------------+                                                                 #2
+           :<---connectionAcquisition--->|
+           +-----------------------------+
+           :<-----pendingAcquisition---->|
+           +-----------------------------+
+
            @enduml
 
     3. Connecting to the remote peer with the resolved IP address after the existing connection attempt is
