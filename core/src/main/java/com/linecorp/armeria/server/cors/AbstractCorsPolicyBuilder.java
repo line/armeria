@@ -131,7 +131,9 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      *
      * @param pathMapping the {@link PathMapping} that this policy is supposed to be applied to
      * @return {@code this} to support method chaining.
-     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern
+     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
+     *                                  i.e. the {@link PathMapping} created by
+     *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
      */
     public B pathMapping(PathMapping pathMapping) {
         requireNonNull(pathMapping, "pathMapping");

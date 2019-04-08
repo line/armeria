@@ -144,7 +144,7 @@ public interface PathMapping {
      */
     static PathMapping ofPrefix(String pathPrefix, boolean stripPrefix) {
         requireNonNull(pathPrefix, "pathPrefix");
-        if ("/" .equals(pathPrefix)) {
+        if ("/".equals(pathPrefix)) {
             // Every path starts with '/'.
             return ofCatchAll();
         }

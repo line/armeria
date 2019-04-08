@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -141,7 +142,9 @@ public final class CorsServiceBuilder {
      * Adds a {@link PathMapping} that this policy is supposed to be applied to.
      *
      * @param pathMapping the {@link PathMapping} that this policy is supposed to be applied to
-     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern
+     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
+     *                                  i.e. the {@link PathMapping} created by
+     *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
      */
     public CorsServiceBuilder pathMapping(PathMapping pathMapping) {
         firstPolicyBuilder.pathMapping(pathMapping);
