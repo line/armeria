@@ -121,8 +121,8 @@ public final class TextFormatter {
                                           .withZone(ZoneId.of("GMT"));
 
     /**
-     * Formats the given epoch time to typical human-readable format "yyyy-MM-dd'T'HH_mm:ss.SSSX" and appends
-     * it to the specified {@link StringBuilder}.
+     * Formats the given epoch time in milliseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH_mm:ss.SSSZ" and appends it to the specified {@link StringBuilder}.
      */
     public static void appendEpoch(StringBuilder buf, long timeMillis) {
         buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(timeMillis)))
@@ -130,9 +130,10 @@ public final class TextFormatter {
     }
 
     /**
-     * Formats the given epoch time to typical human-readable format "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+     * Formats the given epoch time in milliseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH:mm:ss.SSSZ".
      *
-     * @param timeMillis epoch time in ms
+     * @param timeMillis epoch time in milliseconds
      *
      * @return the human readable string representation of the given epoch time
      */
@@ -140,6 +141,32 @@ public final class TextFormatter {
         // 24 (human readable part) + 3 (parens) + 19 (max digits of a long integer)
         final StringBuilder buf = new StringBuilder(46);
         appendEpoch(buf, timeMillis);
+        return buf;
+    }
+
+    /**
+     * Formats the given epoch time in microseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH_mm:ss.SSSZ" and appends it to the specified {@link StringBuilder}.
+     */
+    public static void appendEpochMicros(StringBuilder buf, long timeMicros) {
+        final long secs = Math.floorDiv(timeMicros, 1_000_000);
+        final long nanos = Math.floorMod(timeMicros, 1_000_000) * 1000;
+        buf.append(dateTimeFormatter.format(Instant.ofEpochSecond(secs, nanos)))
+           .append('(').append(timeMicros).append(')');
+    }
+
+    /**
+     * Formats the given epoch time in microseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH:mm:ss.SSSZ".
+     *
+     * @param timeMicros epoch time in microseconds
+     *
+     * @return the human readable string representation of the given epoch time
+     */
+    public static StringBuilder epochMicro(long timeMicros) {
+        // 24 (human readable part) + 3 (parens) + 19 (max digits of a long integer)
+        final StringBuilder buf = new StringBuilder(46);
+        appendEpochMicros(buf, timeMicros);
         return buf;
     }
 }

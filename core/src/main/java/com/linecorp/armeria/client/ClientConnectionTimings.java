@@ -22,12 +22,10 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.util.AttributeKey;
 
@@ -192,7 +190,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when waiting the completion of an existing connection attempt started,
+     * Returns the time when waiting for the completion of an existing connection attempt started,
      * in microseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.
@@ -202,7 +200,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when waiting the completion of an existing connection attempt started,
+     * Returns the time when waiting for the completion of an existing connection attempt started,
      * in milliseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.
@@ -215,8 +213,8 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the duration which was taken to wait the completion of an existing connection attempt in order to
-     * use one connection for HTTP/2.
+     * Returns the duration which was taken to wait for the completion of an existing connection attempt
+     * in order to use one connection for HTTP/2.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.
      */
@@ -226,23 +224,34 @@ public final class ClientConnectionTimings {
 
     @Override
     public String toString() {
-        final ToStringHelper toStringHelper =
-                MoreObjects.toStringHelper(this)
-                           .add("connectionAcquisitionStartTimeMicros", connectionAcquisitionStartTimeMicros)
-                           .add("connectionAcquisitionDurationNanos", connectionAcquisitionDurationNanos);
+        // 1 + 37 + 37 + 31 + 29 + 31 + 29 + 36 + 34 + 46 * 4 + 16 * 4 + 1 = 514
+        final StringBuilder buf = new StringBuilder(514);
+        buf.append('{');
+        buf.append("connectionAcquisitionStartTimeMicros=");
+        TextFormatter.appendEpochMicros(buf, connectionAcquisitionStartTimeMicros);
+        buf.append(", connectionAcquisitionDurationNanos=");
+        TextFormatter.appendElapsed(buf, connectionAcquisitionDurationNanos);
+
         if (dnsResolutionDurationNanos >= 0) {
-            toStringHelper.add("dnsResolutionStartTimeMicros", dnsResolutionStartTimeMicros);
-            toStringHelper.add("dnsResolutionDurationNanos", dnsResolutionDurationNanos);
-        }
-        if (socketConnectDurationNanos >= 0) {
-            toStringHelper.add("socketConnectStartTimeMicros", socketConnectStartTimeMicros);
-            toStringHelper.add("socketConnectDurationNanos", socketConnectDurationNanos);
-        }
-        if (pendingAcquisitionDurationNanos >= 0) {
-            toStringHelper.add("pendingAcquisitionStartTimeMicros", pendingAcquisitionStartTimeMicros);
-            toStringHelper.add("pendingAcquisitionDurationNanos", pendingAcquisitionDurationNanos);
+            buf.append(", dnsResolutionStartTimeMicros=");
+            TextFormatter.appendEpochMicros(buf, dnsResolutionStartTimeMicros);
+            buf.append(", dnsResolutionDurationNanos=");
+            TextFormatter.appendElapsed(buf, dnsResolutionDurationNanos);
         }
 
-        return toStringHelper.toString();
+        if (socketConnectDurationNanos >= 0) {
+            buf.append(", socketConnectStartTimeMicros=");
+            TextFormatter.appendEpochMicros(buf, socketConnectStartTimeMicros);
+            buf.append(", socketConnectDurationNanos=");
+            TextFormatter.appendElapsed(buf, socketConnectDurationNanos);
+        }
+        if (pendingAcquisitionDurationNanos >= 0) {
+            buf.append(", pendingAcquisitionStartTimeMicros=");
+            TextFormatter.appendEpochMicros(buf, pendingAcquisitionStartTimeMicros);
+            buf.append(", pendingAcquisitionDurationNanos=");
+            TextFormatter.appendElapsed(buf, pendingAcquisitionDurationNanos);
+        }
+        buf.append('}');
+        return buf.toString();
     }
 }

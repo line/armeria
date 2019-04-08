@@ -8,7 +8,7 @@ retrieving the information collected during request life cycle in a machine-frie
 
 What properties can be retrieved?
 ---------------------------------
-:api:`RequestLog` provides the properties you can retrieve:
+:api:`RequestLog` provides various properties recorded while handling a request:
 
 +----------------------------------------------------------------------------------------------------+
 | Request properties                                                                                 |
@@ -63,91 +63,92 @@ What properties can be retrieved?
 | ``responseContentPreview``  | the preview of the response content                                  |
 +-----------------------------+----------------------------------------------------------------------+
 
+Client connection timing
+^^^^^^^^^^^^^^^^^^^^^^^^
+
 +--------------------------------------------------------------------------------------------------------------+
 | Client connection timing properties                                                                          |
 +==========================================+===================================================================+
 | ``dnsResolutionStartTimeMicros``         | when resolving a domain name started, in microseconds since the   |
 |                                          | epoch (01-Jan-1970 00:00:00 UTC)                                  |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``dnsResolutionDurationNanos``           | the duration took to resolve a domain name                        |
+| ``dnsResolutionDurationNanos``           | the duration took to resolve a domain name, ``-1`` if DNS lookup  |
+|                                          | did not occur                                                     |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``socketConnectStartTimeMicros``         | when connecting to a remote peer started, in microseconds since   |
 |                                          | the epoch (01-Jan-1970 00:00:00 UTC)                              |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``socketConnectDurationNanos``           | the duration took to connect to a remote peer                     |
+| ``socketConnectDurationNanos``           | the duration took to connect to a remote peer, ``-1`` if socket   |
+|                                          | connection attempt did not occur                                  |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``pendingAcquisitionStartTimeMicros``    | when waiting the completion of an existing connection attempt     |
-|                                          | started, in microseconds since the epoch                          |
-|                                          | (01-Jan-1970 00:00:00 UTC)                                        |
+| ``pendingAcquisitionStartTimeMicros``    | when waiting for the completion of an existing connection attempt |
+|                                          | the epoch (01-Jan-1970 00:00:00 UTC)                              |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``pendingAcquisitionDurationNanos``      | the duration took to wait the completion of an existing connection|
-|                                          | attempt to use one connection in HTTP/2                           |
+| ``pendingAcquisitionDurationNanos``      | the duration took to wait for the completion of an existing       |
+|                                          | connection attempt to use one connection in HTTP/2, ``-1`` if     |
+|                                          | waiting did not occur                                             |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``connectionAcquisitionStartTimeMicros`` | when acquiring a connection started, in microseconds since the    |
 |                                          | epoch (01-Jan-1970 00:00:00 UTC)                                  |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``connectionAcquisitionDurationNanos``   | the duration took to get a connection                             |
+| ``connectionAcquisitionDurationNanos``   | the duration took to get a connection (i.e. the total duration)   |
 +------------------------------------------+-------------------------------------------------------------------+
 
-Client connection timing properties
------------------------------------
-
-There are four properties in client connection timings. ``connectionAcquisitionDurationNanos`` is the sum of
-rest of the events which are represented by ``dnsResolutionDurationNanos``, ``socketConnectDurationNanos`` and
-``pendingAcquisitionDurationNanos``. Each event will or won't be occurred depending on the circumstance.
-For example, if you specify an IP address while creating a client, ``dnsResolutionDurationNanos`` is ``0``
-since the client doesn't have to resolve a domain name. Likewise, ``socketConnectDurationNanos`` is ``0``
+The total duration is the sum of ``dnsResolutionDurationNanos``, ``socketConnectDurationNanos`` and
+``pendingAcquisitionDurationNanos``. They may or may not occur depending on circumstances.
+For example, if you specify an IP address while creating a client, ``dnsResolutionDurationNanos`` is ``-1``
+since the client doesn't have to resolve a domain name. Likewise, ``socketConnectDurationNanos`` is ``-1``
 if the client reuses the connection which was established before. These are some of the scenarios how
 ``connectionAcquisitionDurationNanos`` is composed of:
 
     1. Resolving a domain name and connecting to the remote peer.
 
-    .. uml::
+       .. uml::
 
-        @startditaa(--no-separation, --no-shadows)
+           @startditaa(--no-separation, --no-shadows)
 
-        +---------------------------------------------------------------+                               #1
-        :<---------------------connectionAcquisition------------------->|
-        +---------------------------------------------------------------+
-        :<--------dnsResolution-------->|
-        +-------------------------------+-------------------------------+
-                                        :<--------socketConnect-------->|
-                                        +-------------------------------+
-        @endditaa
+           +---------------------------------------------------------------+                               #1
+           :<---------------------connectionAcquisition------------------->|
+           +---------------------------------------------------------------+
+           :<--------dnsResolution-------->|
+           +-------------------------------+-------------------------------+
+                                           :<--------socketConnect-------->|
+                                           +-------------------------------+
+           @endditaa
 
     2. Resolving a domain name and waiting, since there's existing connection attempt with same IP address,
     to use one connection in HTTP/2.
 
-    .. uml::
+       .. uml::
 
-        @startditaa(--no-separation, --no-shadows)
+           @startditaa(--no-separation, --no-shadows)
 
-        +----------------------------------------------------------+                                    #2
-        :<---------------------connectionAcquisition-------------->|
-        +----------------------------------------------------------+
-        :<--------dnsResolution-------->|
-        +-------------------------------+--------------------------+
-                                        :<---pendingAcquisition--->|
-                                        +--------------------------+
-        @enduml
+           +----------------------------------------------------------+                                    #2
+           :<---------------------connectionAcquisition-------------->|
+           +----------------------------------------------------------+
+           :<--------dnsResolution-------->|
+           +-------------------------------+--------------------------+
+                                           :<---pendingAcquisition--->|
+                                           +--------------------------+
+           @enduml
 
     3. Connecting to the remote peer with the resolved IP address after the existing connection attempt is
     failed.
 
-    .. uml::
+       .. uml::
 
-        @startditaa(--no-separation, --no-shadows)
+           @startditaa(--no-separation, --no-shadows)
 
-        +------------------------------------------------------------------------------------------+    #3
-        :<-----------------------------------connectionAcquisition-------------------------------->|
-        +------------------------------------------------------------------------------------------+
-        :<--------dnsResolution-------->|
-        +-------------------------------+--------------------------+
-                                        :<---pendingAcquisition--->|
-                                        +--------------------------+-------------------------------+
-                                                                   :<--------socketConnect-------->|
-                                                                   +-------------------------------+
-        @endditaa
+           +------------------------------------------------------------------------------------------+    #3
+           :<-----------------------------------connectionAcquisition-------------------------------->|
+           +------------------------------------------------------------------------------------------+
+           :<--------dnsResolution-------->|
+           +-------------------------------+--------------------------+
+                                           :<---pendingAcquisition--->|
+                                           +--------------------------+-------------------------------+
+                                                                      :<--------socketConnect-------->|
+                                                                      +-------------------------------+
+           @endditaa
 
 Availability of properties
 --------------------------
@@ -184,6 +185,9 @@ To get notified when a certain set of properties are available, you can add a li
 Note that :api:`RequestLogAvailability` is specified when adding a listener.
 :api:`RequestLogAvailability` is an enum that is used to express which :api:`RequestLog` properties
 you are interested in. ``COMPLETE`` will make your listener invoked when all properties are available.
+
+Availability of client timing properties
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 On the client side, you can also get the timing information about the related connection attempt. Unlike
 request and response properties, you need to use :api:`ClientConnectionTimings` as follows:

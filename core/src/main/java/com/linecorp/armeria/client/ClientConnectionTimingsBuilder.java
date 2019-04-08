@@ -18,12 +18,17 @@ package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.util.SystemInfo;
 
 /**
  * Builds a new {@link ClientConnectionTimings}.
  */
 public final class ClientConnectionTimingsBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClientConnectionTimingsBuilder.class);
 
     private final long connectionAcquisitionStartTimeMicros;
     private final long connectionAcquisitionStartNanos;
@@ -49,7 +54,7 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when resolving a domain name ends. If this method is invoked, the creation time of this
+     * Sets the time when resolving a domain name ended. If this method is invoked, the creation time of this
      * {@link ClientConnectionTimingsBuilder} is considered as the start time of resolving a domain name.
      */
     public ClientConnectionTimingsBuilder dnsResolutionEnd() {
@@ -69,7 +74,7 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when connecting to a remote peer ends.
+     * Sets the time when connecting to a remote peer ended.
      *
      * @throws IllegalStateException if {@link #socketConnectStart()} is not invoked before calling this.
      */
@@ -82,8 +87,8 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when waiting the completion of an existing connection attempt in order to use one
-     * connection for HTTP/2.
+     * Sets the time when waiting for the completion of an existing connection attempt started in order to
+     * use one connection for HTTP/2.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionStart() {
         pendingAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
@@ -92,7 +97,7 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when waiting an existing connection attempt ends in order to use one connection
+     * Sets the time when waiting for an existing connection attempt ended in order to use one connection
      * for HTTP/2.
      *
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
@@ -109,6 +114,13 @@ public final class ClientConnectionTimingsBuilder {
      * Returns a newly-created {@link ClientConnectionTimings} instance.
      */
     public ClientConnectionTimings build() {
+        if (socketConnectStartTimeMicros > 0 && !socketConnectEndSet) {
+            logger.warn("Should call socketConnectEnd() if socketConnectStart() was invoked.");
+        }
+        if (pendingAcquisitionStartTimeMicros > 0 && !pendingAcquisitionEndSet) {
+            logger.warn("Should call pendingAcquisitionEnd() if pendingAcquisitionStart() was invoked.");
+        }
+
         return new ClientConnectionTimings(
                 connectionAcquisitionStartTimeMicros,
                 System.nanoTime() - connectionAcquisitionStartNanos,
