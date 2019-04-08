@@ -270,8 +270,9 @@ public interface PathMapping {
 
     /**
      * Returns {@code true} if this {@link PathMapping} has only the path patterns as its condition.
+     * For example, the {@link PathMapping} created by {@link #withHttpHeaderInfo(Set, List, List)} has
+     * more conditions for mapping a path, such as HTTP methods, consumable types and producible types.
+     * In that case, {@code false} must be returned.
      */
-    default boolean hasPathPatternOnly() {
-        return false;
-    }
+    boolean hasPathPatternOnly();
 }
