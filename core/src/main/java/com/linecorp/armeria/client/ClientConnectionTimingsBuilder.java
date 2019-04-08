@@ -82,8 +82,8 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when waiting the completion of an ongoing connecting attempt in order to use one connection
-     * for HTTP/2.
+     * Sets the time when waiting the completion of an existing connection attempt in order to use one
+     * connection for HTTP/2.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionStart() {
         pendingAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
@@ -92,7 +92,7 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when waiting an ongoing connecting attempt ends in order to use one connection
+     * Sets the time when waiting an existing connection attempt ends in order to use one connection
      * for HTTP/2.
      *
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.

@@ -13,7 +13,8 @@ What properties can be retrieved?
 +----------------------------------------------------------------------------------------------------+
 | Request properties                                                                                 |
 +=============================+======================================================================+
-| ``requestStartTimeMicros``  | when the request processing started                                  |
+| ``requestStartTimeMicros``  | when the request processing started, in microseconds since the       |
+|                             | epoch (01-Jan-1970 00:00:00 UTC)                                     |
 +-----------------------------+----------------------------------------------------------------------+
 | ``requestDurationNanos``    | the duration took to process the request completely                  |
 +-----------------------------+----------------------------------------------------------------------+
@@ -41,7 +42,8 @@ What properties can be retrieved?
 +----------------------------------------------------------------------------------------------------+
 | Response properties                                                                                |
 +=============================+======================================================================+
-| ``responseStartTimeMicros`` | when the response processing started                                 |
+| ``responseStartTimeMicros`` | when the response processing started, in microseconds since the      |
+|                             | epoch (01-Jan-1970 00:00:00 UTC)                                     |
 +-----------------------------+----------------------------------------------------------------------+
 | ``responseDurationNanos``   | the duration took to process the response completely                 |
 +-----------------------------+----------------------------------------------------------------------+
@@ -62,29 +64,90 @@ What properties can be retrieved?
 +-----------------------------+----------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------------+
-| Connection properties (Client side only)                                                                     |
+| Client connection timing properties                                                                          |
 +==========================================+===================================================================+
-| ``dnsResolutionStartTimeMicros``         | when resolving a domain name started                              |
+| ``dnsResolutionStartTimeMicros``         | when resolving a domain name started, in microseconds since the   |
+|                                          | epoch (01-Jan-1970 00:00:00 UTC)                                  |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``dnsResolutionDurationNanos``           | the duration took to resolve a domain name                        |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``socketConnectStartTimeMicros``         | when connecting to a remote peer started                          |
+| ``socketConnectStartTimeMicros``         | when connecting to a remote peer started, in microseconds since   |
+|                                          | the epoch (01-Jan-1970 00:00:00 UTC)                              |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``socketConnectDurationNanos``           | the duration took to connect to a remote peer                     |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``pendingAcquisitionStartTimeMicros``    | when waiting the completion of an ongoing connecting attempt      |
-|                                          | started                                                           |
+| ``pendingAcquisitionStartTimeMicros``    | when waiting the completion of an existing connection attempt     |
+|                                          | started, in microseconds since the epoch                          |
+|                                          | (01-Jan-1970 00:00:00 UTC)                                        |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``pendingAcquisitionDurationNanos``      | the duration took to wait the completion of an ongoing connecting |
-|                                          | attempt                                                           |
+| ``pendingAcquisitionDurationNanos``      | the duration took to wait the completion of an existing connection|
+|                                          | attempt to use one connection in HTTP/2                           |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``connectionAcquisitionStartTimeMicros`` | when acquiring a connection started                               |
+| ``connectionAcquisitionStartTimeMicros`` | when acquiring a connection started, in microseconds since the    |
+|                                          | epoch (01-Jan-1970 00:00:00 UTC)                                  |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``connectionAcquisitionDurationNanos``   | the duration took to get a connection. This value is greater than |
-|                                          | or equal to the sum of ``dnsResolutionDurationNanos``,            |
-|                                          | ``socketConnectDurationNanos`` and                                |
-|                                          | ``pendingAcquisitionDurationNanos``                               |
+| ``connectionAcquisitionDurationNanos``   | the duration took to get a connection                             |
 +------------------------------------------+-------------------------------------------------------------------+
+
+Client connection timing properties
+-----------------------------------
+
+There are four properties in client connection timings. ``connectionAcquisitionDurationNanos`` is the sum of
+rest of the events which are represented by ``dnsResolutionDurationNanos``, ``socketConnectDurationNanos`` and
+``pendingAcquisitionDurationNanos``. Each event will or won't be occurred depending on the circumstance.
+For example, if you specify an IP address while creating a client, ``dnsResolutionDurationNanos`` is ``0``
+since the client doesn't have to resolve a domain name. Likewise, ``socketConnectDurationNanos`` is ``0``
+if the client reuses the connection which was established before. These are some of the scenarios how
+``connectionAcquisitionDurationNanos`` is composed of:
+
+    1. Resolving a domain name and connecting to the remote peer.
+
+    .. uml::
+
+        @startditaa(--no-separation, --no-shadows)
+
+        +---------------------------------------------------------------+                               #1
+        :<---------------------connectionAcquisition------------------->|
+        +---------------------------------------------------------------+
+        :<--------dnsResolution-------->|
+        +-------------------------------+-------------------------------+
+                                        :<--------socketConnect-------->|
+                                        +-------------------------------+
+        @endditaa
+
+    2. Resolving a domain name and waiting, since there's existing connection attempt with same IP address,
+    to use one connection in HTTP/2.
+
+    .. uml::
+
+        @startditaa(--no-separation, --no-shadows)
+
+        +----------------------------------------------------------+                                    #2
+        :<---------------------connectionAcquisition-------------->|
+        +----------------------------------------------------------+
+        :<--------dnsResolution-------->|
+        +-------------------------------+--------------------------+
+                                        :<---pendingAcquisition--->|
+                                        +--------------------------+
+        @enduml
+
+    3. Connecting to the remote peer with the resolved IP address after the existing connection attempt is
+    failed.
+
+    .. uml::
+
+        @startditaa(--no-separation, --no-shadows)
+
+        +------------------------------------------------------------------------------------------+    #3
+        :<-----------------------------------connectionAcquisition-------------------------------->|
+        +------------------------------------------------------------------------------------------+
+        :<--------dnsResolution-------->|
+        +-------------------------------+--------------------------+
+                                        :<---pendingAcquisition--->|
+                                        +--------------------------+-------------------------------+
+                                                                   :<--------socketConnect-------->|
+                                                                   +-------------------------------+
+        @endditaa
 
 Availability of properties
 --------------------------
@@ -122,9 +185,8 @@ Note that :api:`RequestLogAvailability` is specified when adding a listener.
 :api:`RequestLogAvailability` is an enum that is used to express which :api:`RequestLog` properties
 you are interested in. ``COMPLETE`` will make your listener invoked when all properties are available.
 
-On the client side, you can get the start time and duration information about a connection. Unlike
-request and response properties, you need a different way to get the properties. You should call the static
-method of :api:`ClientConnectionTimings` as follows:
+On the client side, you can also get the timing information about the related connection attempt. Unlike
+request and response properties, you need to use :api:`ClientConnectionTimings` as follows:
 
 .. code-block:: java
 
@@ -138,7 +200,8 @@ method of :api:`ClientConnectionTimings` as follows:
                         log -> {
                             final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
                             if (timings != null) {
-                                System.err.println("Duration: " + timings.connectionAcquisitionDurationNanos());
+                                System.err.println("Connection acquisition duration: " +
+                                                   timings.connectionAcquisitionDurationNanos());
                             }
                         }, RequestLogAvailability.REQUEST_START); // Can get after a request is started.
                 return delegate.execute(ctx, req);
@@ -148,7 +211,7 @@ method of :api:`ClientConnectionTimings` as follows:
 .. note::
 
     The reason why we used the static method is that the :api:`ClientConnectionTimings` is stored using
-    the attribute. If you want to know more about it, please refer to :ref:`advanced-custom-attribute`.
+    the attribute. See :ref:`advanced-custom-attribute` for more information.
 
 Set ``serializationFormat`` and ``requestContent`` early if possible
 --------------------------------------------------------------------

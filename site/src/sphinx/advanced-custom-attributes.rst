@@ -4,8 +4,8 @@ RequestContext custom attributes
 ================================
 
 When you are using multiple decorators, you might want to pass some value to the next decorator.
-You can do this by attaching attributes to a :api:`RequestContext`. To attach attributes,
-you need to define attributeKey first:
+You can do this by attaching attributes to a :api:`RequestContext`. To attach an attribute,
+you need to define ``AttributeKey`` first:
 
 .. code-block:: java
 

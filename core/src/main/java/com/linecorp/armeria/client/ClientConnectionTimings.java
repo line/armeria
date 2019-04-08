@@ -32,8 +32,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import io.netty.util.AttributeKey;
 
 /**
- * A holder class which has the start time and duration information about acquiring a connection
- * before a client sends a {@link Request}.
+ * A holder class which has the timing information about a connection attempts before a client
+ * sends a {@link Request}.
  */
 public final class ClientConnectionTimings {
 
@@ -192,7 +192,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when waiting the completion of an ongoing connecting attempt started,
+     * Returns the time when waiting the completion of an existing connection attempt started,
      * in microseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.
@@ -202,7 +202,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when waiting the completion of an ongoing connecting attempt started,
+     * Returns the time when waiting the completion of an existing connection attempt started,
      * in milliseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.
@@ -215,7 +215,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the duration which was taken to wait the completion of an ongoing connecting attempt in order to
+     * Returns the duration which was taken to wait the completion of an existing connection attempt in order to
      * use one connection for HTTP/2.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.

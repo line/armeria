@@ -104,9 +104,8 @@ public final class RequestMetricSupport {
         updateMetrics(log, metrics);
         final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
         if (timings != null) {
-            metrics.connectionAcquisitionDuration().record(
-                    timings.connectionAcquisitionDurationNanos(),
-                    TimeUnit.NANOSECONDS);
+            metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
+                                                           TimeUnit.NANOSECONDS);
             final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
             if (dnsResolutionDurationNanos >= 0) {
                 metrics.dnsResolutionDuration().record(dnsResolutionDurationNanos, TimeUnit.NANOSECONDS);
