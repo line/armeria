@@ -86,9 +86,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     B setConfig(CorsDecorator corsDecorator) {
-        if (corsDecorator.pathPatterns().length > 0) {
-            Arrays.stream(corsDecorator.pathPatterns()).forEach(this::pathMapping);
-        }
+        Arrays.stream(corsDecorator.pathPatterns()).forEach(this::pathMapping);
+
         if (corsDecorator.credentialsAllowed()) {
             allowCredentials();
         }

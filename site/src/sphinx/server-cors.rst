@@ -119,7 +119,7 @@ a policy is applied to, e.g.
 
 .. note::
 
-    Please refer to the :api:`PathMapping` in order to learn how to specify a path pattern you interest.
+    Please refer to the :api:`PathMapping` in order to learn how to specify a path pattern.
 
 Configuring CORS via annotation
 -------------------------------
