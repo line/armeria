@@ -21,11 +21,13 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -37,6 +39,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
@@ -52,6 +55,7 @@ import io.netty.util.AsciiString;
 @SuppressWarnings("rawtypes")
 abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     private final Set<String> origins;
+    private final List<PathMapping> pathMappings = new ArrayList<>();
     private boolean credentialsAllowed;
     private boolean nullOriginAllowed;
     private long maxAge;
@@ -82,6 +86,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     B setConfig(CorsDecorator corsDecorator) {
+        Arrays.stream(corsDecorator.pathPatterns()).forEach(this::pathMapping);
+
         if (corsDecorator.credentialsAllowed()) {
             allowCredentials();
         }
@@ -106,6 +112,36 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
         if (corsDecorator.maxAge() > 0) {
             maxAge(corsDecorator.maxAge());
         }
+        return self();
+    }
+
+    /**
+     * Adds a path pattern that this policy is supposed to be applied to.
+     *
+     * @param pathPattern the path pattern that this policy is supposed to be applied to
+     * @return {@code this} to support method chaining.
+     * @throws IllegalArgumentException if the path pattern is not valid
+     */
+    public B pathMapping(String pathPattern) {
+        return pathMapping(PathMapping.of(pathPattern));
+    }
+
+    /**
+     * Adds a {@link PathMapping} that this policy is supposed to be applied to.
+     *
+     * @param pathMapping the {@link PathMapping} that this policy is supposed to be applied to
+     * @return {@code this} to support method chaining.
+     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
+     *                                  i.e. the {@link PathMapping} created by
+     *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
+     */
+    public B pathMapping(PathMapping pathMapping) {
+        requireNonNull(pathMapping, "pathMapping");
+        checkArgument(pathMapping.hasPathPatternOnly(),
+                      "pathMapping: %s " +
+                      "(expected: the path mapping which has only the path patterns as its condition)",
+                      pathMapping.getClass().getSimpleName());
+        pathMappings.add(pathMapping);
         return self();
     }
 
@@ -232,7 +268,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B allowRequestHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
-        checkArgument(headers.length > 0,"headers should not be empty.");
+        checkArgument(headers.length > 0, "headers should not be empty.");
         for (int i = 0; i < headers.length; i++) {
             if (headers[i] == null) {
                 throw new NullPointerException("headers[" + i + ']');
@@ -255,7 +291,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     public B preflightResponseHeader(CharSequence name, Object... values) {
         requireNonNull(name, "name");
         requireNonNull(values, "values");
-        checkArgument(values.length > 0,"values should not be empty.");
+        checkArgument(values.length > 0, "values should not be empty.");
         for (int i = 0; i < values.length; i++) {
             if (values[i] == null) {
                 throw new NullPointerException("values[" + i + ']');
@@ -328,14 +364,15 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
     CorsPolicy build() {
-        return new CorsPolicy(origins, credentialsAllowed, maxAge, nullOriginAllowed,
+        return new CorsPolicy(origins, pathMappings, credentialsAllowed, maxAge, nullOriginAllowed,
                               exposedHeaders, allowedRequestHeaders, allowedRequestMethods,
                               preflightResponseHeadersDisabled, preflightResponseHeaders);
     }
 
     @Override
     public String toString() {
-        return CorsPolicy.toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge, exposedHeaders,
+        return CorsPolicy.toString(this, origins, pathMappings,
+                                   nullOriginAllowed, credentialsAllowed, maxAge, exposedHeaders,
                                    allowedRequestMethods, allowedRequestHeaders, preflightResponseHeaders);
     }
 }

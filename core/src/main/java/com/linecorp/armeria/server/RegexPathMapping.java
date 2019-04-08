@@ -113,6 +113,11 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public boolean hasPathPatternOnly() {
+        return true;
+    }
+
+    @Override
     public int hashCode() {
         return meterTag.hashCode();
     }

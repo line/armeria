@@ -182,6 +182,11 @@ final class DefaultPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public boolean hasPathPatternOnly() {
+        return true;
+    }
+
+    @Override
     protected PathMappingResult doApply(PathMappingContext mappingCtx) {
         final Matcher matcher = pattern.matcher(mappingCtx.path());
         if (!matcher.matches()) {

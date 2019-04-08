@@ -43,6 +43,12 @@ public @interface CorsDecorator {
     String[] origins();
 
     /**
+     * The path patterns that this policy is supposed to be applied to. If unspecified, all paths would be
+     * accepted.
+     */
+    String[] pathPatterns() default {};
+
+    /**
      * The allowed HTTP request methods that should be returned in the
      * CORS {@code "Access-Control-Allow-Methods"} response header.
      *

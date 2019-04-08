@@ -63,6 +63,11 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public boolean hasPathPatternOnly() {
+        return true;
+    }
+
+    @Override
     public String toString() {
         return "catchAll";
     }

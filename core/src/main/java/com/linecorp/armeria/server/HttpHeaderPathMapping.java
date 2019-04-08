@@ -202,6 +202,11 @@ final class HttpHeaderPathMapping implements PathMapping {
     }
 
     @Override
+    public boolean hasPathPatternOnly() {
+        return false;
+    }
+
+    @Override
     public String toString() {
         final StringBuilder buf = new StringBuilder();
         buf.append('[');

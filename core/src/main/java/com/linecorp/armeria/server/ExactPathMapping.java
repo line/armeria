@@ -71,6 +71,11 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public boolean hasPathPatternOnly() {
+        return true;
+    }
+
+    @Override
     public int hashCode() {
         return meterTag.hashCode();
     }

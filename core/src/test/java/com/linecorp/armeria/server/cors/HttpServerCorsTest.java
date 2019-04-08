@@ -26,6 +26,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.HttpClient;
@@ -38,11 +39,13 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
@@ -66,6 +69,19 @@ public class HttpServerCorsTest {
         @StatusCode(200)
         @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2")
         public void duptest() {}
+    }
+
+    @CorsDecorator(
+            origins = "http://example.com",
+            pathPatterns = "glob:/**/configured",
+            allowedRequestMethods = HttpMethod.GET
+    )
+    private static class MyAnnotatedService2 {
+        @Get("/configured")
+        public void configured() {}
+
+        @Get("/not_configured")
+        public void notConfigured() {}
     }
 
     @ClassRule
@@ -192,6 +208,51 @@ public class HttpServerCorsTest {
             });
 
             sb.annotatedService("/cors7", new MyAnnotatedService());
+
+            sb.annotatedService("/cors8", new Object() {
+                @Get("/movies")
+                public void titles() {}
+
+                @Post("/movies/{title}")
+                public void addMovie(@Param String title) {}
+
+                @Get("/movies/{title}/actors")
+                public void actors(@Param String title) {}
+            }, CorsServiceBuilder.forOrigin("http://example.com")
+                                 // Note that configuring mappings for specific paths first because the
+                                 // policies will be visited in the configured order.
+                                 .pathMapping(PathMapping.of("glob:/**/actors"))
+                                 .allowRequestMethods(HttpMethod.GET, HttpMethod.POST)
+                                 .andForOrigin("http://example.com")
+                                 .pathMapping(PathMapping.of("/cors8/movies/{title}"))
+                                 .allowRequestMethods(HttpMethod.POST)
+                                 .andForOrigin("http://example.com")
+                                 .pathMapping(PathMapping.of("prefix:/cors8"))
+                                 .allowRequestMethods(HttpMethod.GET)
+                                 .and()
+                                 .newDecorator());
+
+            sb.annotatedService("/cors9", new Object() {
+                @Get("/movies")
+                public void titles() {}
+
+                @Post("/movies/{title}")
+                public void addMovie(@Param String title) {}
+
+                @Get("/movies/{title}/actors")
+                public void actors(@Param String title) {}
+            }, CorsServiceBuilder.forOrigin("http://example.com")
+                                 // Note that this prefix path mapping is configured first, so all preflight
+                                 // requests with a path starting with "/cors9/" will be matched.
+                                 .pathMapping(PathMapping.of("prefix:/cors9"))
+                                 .allowRequestMethods(HttpMethod.GET)
+                                 .andForOrigin("http://example.com")
+                                 .pathMapping(PathMapping.of("/cors9/movies/{title}"))
+                                 .allowRequestMethods(HttpMethod.POST)
+                                 .and()
+                                 .newDecorator());
+
+            sb.annotatedService("/cors10", new MyAnnotatedService2());
         }
     };
 
@@ -428,5 +489,67 @@ public class HttpServerCorsTest {
         final AggregatedHttpMessage response = preflightRequest(client, "/cors5/options", "http://example.com",
                                                                 "POST");
         assertEquals(HttpStatus.OK, response.status());
+    }
+
+    @Test
+    public void testPathMapping() {
+        final HttpClient client = client();
+        AggregatedHttpMessage msg;
+
+        msg = preflightRequest(client, "/cors8/movies", "http://example.com", "GET");
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+
+        msg = preflightRequest(client, "/cors8/movies/InfinityWar", "http://example.com", "POST");
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("POST");
+
+        msg = preflightRequest(client, "/cors8/movies/InfinityWar/actors", "http://example.com", "GET");
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET,POST");
+    }
+
+    @Test
+    public void testPathMapping_order() {
+        final HttpClient client = client();
+        AggregatedHttpMessage msg;
+
+        msg = preflightRequest(client, "/cors9/movies", "http://example.com", "GET");
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+
+        msg = preflightRequest(client, "/cors9/movies/InfinityWar", "http://example.com", "POST");
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+
+        msg = preflightRequest(client, "/cors9/movies/InfinityWar/actors", "http://example.com", "GET");
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+    }
+
+    @Test
+    public void testPathMapping_annotated() {
+        final HttpClient client = client();
+        AggregatedHttpMessage msg;
+
+        msg = preflightRequest(client, "/cors10/configured", "http://example.com", "GET");
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+
+        msg = preflightRequest(client, "/cors10/not_configured", "http://example.com", "GET");
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isNull();
+    }
+
+    @Test
+    public void notAllowedPathMapping() {
+        final CorsServiceBuilder builder = CorsServiceBuilder.forAnyOrigin();
+        assertThatThrownBy(() -> {
+            builder.pathMapping(PathMapping.of("/exact").withHttpHeaderInfo(ImmutableSet.of(HttpMethod.GET),
+                                                                            ImmutableList.of(),
+                                                                            ImmutableList.of()));
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining(
+                  "(expected: the path mapping which has only the path patterns as its condition)");
     }
 }

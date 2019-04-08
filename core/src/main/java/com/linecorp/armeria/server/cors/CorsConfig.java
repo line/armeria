@@ -19,17 +19,19 @@ package com.linecorp.armeria.server.cors;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Set;
+import java.util.List;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
+
+import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.PathMappingContext;
 
 /**
  * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
@@ -48,25 +50,23 @@ public final class CorsConfig {
     private final boolean enabled;
     private final boolean anyOriginSupported;
     private final boolean shortCircuit;
-    private final Set<CorsPolicy> policies;
+    private final List<CorsPolicy> policies;
 
     CorsConfig() {
         enabled = false;
         shortCircuit = false;
         anyOriginSupported = false;
-        policies = Collections.emptySet();
+        policies = ImmutableList.of();
     }
 
     CorsConfig(CorsServiceBuilder builder) {
         enabled = true;
         anyOriginSupported = builder.anyOriginSupported;
         shortCircuit = builder.shortCircuit;
-        policies = new ImmutableSet.Builder<CorsPolicy>()
-                                   .add(builder.firstPolicyBuilder.build())
-                                   .addAll(builder.policies)
-                                   .addAll(builder.policyBuilders.stream().map(AbstractCorsPolicyBuilder::build)
-                                                                 .collect(Collectors.toSet()))
-                                   .build();
+        policies = new Builder<CorsPolicy>()
+                .add(builder.firstPolicyBuilder.build())
+                .addAll(builder.policies)
+                .build();
     }
 
     /**
@@ -109,7 +109,7 @@ public final class CorsConfig {
      *
      * @throws IllegalStateException if CORS support is not enabled.
      */
-    public Set<CorsPolicy> policies() {
+    public List<CorsPolicy> policies() {
         ensureEnabled();
         return policies;
     }
@@ -121,21 +121,31 @@ public final class CorsConfig {
      *         {@code null} if the {@code origin} is not allowed in any policy.
      */
     @Nullable
-    public CorsPolicy getPolicy(String origin) {
+    public CorsPolicy getPolicy(String origin, PathMappingContext pathMappingContext) {
         requireNonNull(origin, "origin");
         if (isAnyOriginSupported()) {
             return Iterables.getFirst(policies, null);
         }
         final String lowerCaseOrigin = Ascii.toLowerCase(origin);
         final boolean isNullOrigin = CorsService.NULL_ORIGIN.equals(lowerCaseOrigin);
-        for (CorsPolicy policy : policies) {
-            if (isNullOrigin && policy.isNullOriginAllowed()) {
+        for (final CorsPolicy policy : policies) {
+            if (isNullOrigin && policy.isNullOriginAllowed() &&
+                isPathMatched(policy, pathMappingContext)) {
                 return policy;
-            } else if (!isNullOrigin && policy.origins().contains(lowerCaseOrigin)) {
+            } else if (!isNullOrigin && policy.origins().contains(lowerCaseOrigin) &&
+                       isPathMatched(policy, pathMappingContext)) {
                 return policy;
             }
         }
         return null;
+    }
+
+    private static boolean isPathMatched(CorsPolicy policy, PathMappingContext pathMappingContext) {
+        final List<PathMapping> mappings = policy.pathMappings();
+        // We do not consider the score of the mapping result for simplicity. It'd be enough to find
+        // whether the path is matched or not.
+        return mappings.isEmpty() ||
+               mappings.stream().anyMatch(mapping -> mapping.apply(pathMappingContext).isPresent());
     }
 
     private void ensureEnabled() {
@@ -150,12 +160,13 @@ public final class CorsConfig {
     }
 
     static String toString(Object obj, boolean enabled, boolean anyOriginSupported, boolean shortCircuit,
-                           Set<CorsPolicy> policies) {
+                           List<CorsPolicy> policies) {
         if (enabled) {
             return MoreObjects.toStringHelper(obj)
                               .add("policies", policies)
                               .add("shortCircuit", shortCircuit)
-                              .add("anyOriginSupported", anyOriginSupported).toString();
+                              .add("anyOriginSupported", anyOriginSupported)
+                              .toString();
         } else {
             return obj.getClass().getSimpleName() + "{disabled}";
         }

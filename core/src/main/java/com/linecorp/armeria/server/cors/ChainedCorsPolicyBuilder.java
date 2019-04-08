@@ -44,7 +44,7 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
      * Returns the parent {@link CorsServiceBuilder}.
      */
     public CorsServiceBuilder and() {
-        return serviceBuilder;
+        return serviceBuilder.addPolicy(build());
     }
 
     /**

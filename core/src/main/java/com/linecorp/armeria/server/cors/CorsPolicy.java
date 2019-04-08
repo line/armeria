@@ -20,6 +20,7 @@ import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
 
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 import com.linecorp.armeria.server.cors.CorsConfig.InstantValueSupplier;
 
@@ -50,6 +53,7 @@ public final class CorsPolicy {
     private static final String DELIMITER = ",";
     private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
     private final Set<String> origins;
+    private final List<PathMapping> pathMappings;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
     private final long maxAge;
@@ -61,12 +65,13 @@ public final class CorsPolicy {
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(Set<String> origins, boolean credentialsAllowed, long maxAge,
+    CorsPolicy(Set<String> origins, List<PathMapping> pathMappings, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
                Set<AsciiString> allowedRequestHeaders, EnumSet<HttpMethod> allowedRequestMethods,
                boolean preflightResponseHeadersDisabled,
                Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         this.origins = ImmutableSet.copyOf(origins);
+        this.pathMappings = ImmutableList.copyOf(pathMappings);
         this.credentialsAllowed = credentialsAllowed;
         this.maxAge = maxAge;
         this.nullOriginAllowed = nullOriginAllowed;
@@ -103,6 +108,13 @@ public final class CorsPolicy {
      */
     public Set<String> origins() {
         return origins;
+    }
+
+    /**
+     * Returns the list of {@link PathMapping}s that this policy is supposed to be applied to.
+     */
+    public List<PathMapping> pathMappings() {
+        return pathMappings;
     }
 
     /**
@@ -258,11 +270,11 @@ public final class CorsPolicy {
 
     @Override
     public String toString() {
-        return toString(this, origins, nullOriginAllowed, credentialsAllowed, maxAge,
+        return toString(this, origins, pathMappings, nullOriginAllowed, credentialsAllowed, maxAge,
                         exposedHeaders, allowedRequestMethods, allowedRequestHeaders, preflightResponseHeaders);
     }
 
-    static String toString(Object obj, @Nullable Set<String> origins,
+    static String toString(Object obj, @Nullable Set<String> origins, List<PathMapping> pathMappings,
                            boolean nullOriginAllowed, boolean credentialsAllowed,
                            long maxAge, @Nullable Set<AsciiString> exposedHeaders,
                            @Nullable Set<HttpMethod> allowedRequestMethods,
@@ -271,6 +283,7 @@ public final class CorsPolicy {
         return MoreObjects.toStringHelper(obj)
                           .omitNullValues()
                           .add("origins", origins)
+                          .add("pathMappings", pathMappings)
                           .add("nullOriginAllowed", nullOriginAllowed)
                           .add("credentialsAllowed", credentialsAllowed)
                           .add("maxAge", maxAge)
