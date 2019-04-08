@@ -118,6 +118,11 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public boolean hasPathPatternOnly() {
+        return true;
+    }
+
+    @Override
     public int hashCode() {
         return strVal.hashCode();
     }

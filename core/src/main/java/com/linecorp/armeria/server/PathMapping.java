@@ -144,7 +144,7 @@ public interface PathMapping {
      */
     static PathMapping ofPrefix(String pathPrefix, boolean stripPrefix) {
         requireNonNull(pathPrefix, "pathPrefix");
-        if ("/".equals(pathPrefix)) {
+        if ("/" .equals(pathPrefix)) {
             // Every path starts with '/'.
             return ofCatchAll();
         }
@@ -266,5 +266,12 @@ public interface PathMapping {
     default PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods,
                                            List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         return new HttpHeaderPathMapping(this, supportedMethods, consumeTypes, produceTypes);
+    }
+
+    /**
+     * Returns {@code true} if this {@link PathMapping} has only the path patterns as its condition.
+     */
+    default boolean hasPathPatternOnly() {
+        return false;
     }
 }

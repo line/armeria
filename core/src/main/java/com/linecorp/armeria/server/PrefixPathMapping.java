@@ -80,6 +80,11 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public boolean hasPathPatternOnly() {
+        return true;
+    }
+
+    @Override
     public int hashCode() {
         return stripPrefix ? prefix.hashCode() : -prefix.hashCode();
     }

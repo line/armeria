@@ -120,6 +120,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      *
      * @param pathPattern the path pattern that this policy is supposed to be applied to
      * @return {@code this} to support method chaining.
+     * @throws IllegalArgumentException if the path pattern is not valid
      */
     public B pathMapping(String pathPattern) {
         return pathMapping(PathMapping.of(pathPattern));
@@ -130,9 +131,15 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      *
      * @param pathMapping the {@link PathMapping} that this policy is supposed to be applied to
      * @return {@code this} to support method chaining.
+     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern
      */
     public B pathMapping(PathMapping pathMapping) {
-        pathMappings.add(requireNonNull(pathMapping, "pathMapping"));
+        requireNonNull(pathMapping, "pathMapping");
+        checkArgument(pathMapping.hasPathPatternOnly(),
+                      "pathMapping: %s " +
+                      "(expected: the path mapping which has only the path patterns as its condition)",
+                      pathMapping.getClass().getSimpleName());
+        pathMappings.add(pathMapping);
         return self();
     }
 

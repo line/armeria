@@ -128,6 +128,9 @@ public final class CorsServiceBuilder {
 
     /**
      * Adds a path pattern that this policy is supposed to be applied to.
+     *
+     * @param pathPattern the path pattern that this policy is supposed to be applied to
+     * @throws IllegalArgumentException if the path pattern is not valid
      */
     public CorsServiceBuilder pathMapping(String pathPattern) {
         firstPolicyBuilder.pathMapping(pathPattern);
@@ -136,6 +139,9 @@ public final class CorsServiceBuilder {
 
     /**
      * Adds a {@link PathMapping} that this policy is supposed to be applied to.
+     *
+     * @param pathMapping the {@link PathMapping} that this policy is supposed to be applied to
+     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern
      */
     public CorsServiceBuilder pathMapping(PathMapping pathMapping) {
         firstPolicyBuilder.pathMapping(pathMapping);

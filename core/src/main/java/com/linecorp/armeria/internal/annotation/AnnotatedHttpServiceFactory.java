@@ -873,6 +873,11 @@ public final class AnnotatedHttpServiceFactory {
         }
 
         @Override
+        public boolean hasPathPatternOnly() {
+            return mapping.hasPathPatternOnly();
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (this == o) {
                 return true;

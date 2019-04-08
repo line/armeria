@@ -26,6 +26,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.HttpClient;
@@ -538,5 +539,17 @@ public class HttpServerCorsTest {
         msg = preflightRequest(client, "/cors10/not_configured", "http://example.com", "GET");
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isNull();
+    }
+
+    @Test
+    public void notAllowedPathMapping() {
+        final CorsServiceBuilder builder = CorsServiceBuilder.forAnyOrigin();
+        assertThatThrownBy(() -> {
+            builder.pathMapping(PathMapping.of("/exact").withHttpHeaderInfo(ImmutableSet.of(HttpMethod.GET),
+                                                                            ImmutableList.of(),
+                                                                            ImmutableList.of()));
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining(
+                  "(expected: the path mapping which has only the path patterns as its condition)");
     }
 }
