@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import io.netty.util.AttributeKey;
 
 /**
- * A holder class which has the timing information about a connection attempts before a client
+ * A holder class which has the timing information about a connection attempt before a client
  * sends a {@link Request}.
  */
 public final class ClientConnectionTimings {
@@ -50,7 +50,8 @@ public final class ClientConnectionTimings {
 
     /**
      * Returns {@link ClientConnectionTimings} from the specified {@link RequestContext} if exists.
-     * You can set a timings using {@link #setTo(RequestContext)}.
+     *
+     * @see #setTo(RequestContext)
      */
     @Nullable
     public static ClientConnectionTimings get(RequestContext ctx) {
@@ -63,7 +64,8 @@ public final class ClientConnectionTimings {
 
     /**
      * Returns {@link ClientConnectionTimings} from the specified {@link RequestLog} if exists.
-     * You can set a timings using {@link #setTo(RequestLog)}.
+     *
+     * @see #setTo(RequestLog)
      */
     @Nullable
     public static ClientConnectionTimings get(RequestLog log) {
@@ -90,7 +92,9 @@ public final class ClientConnectionTimings {
 
     /**
      * Sets this {@link ClientConnectionTimings} to the specified {@link RequestContext}.
-     * You can bring it back using {@link #get(RequestContext)}.
+     * Note that this method is intended for internal use. Do not use unless you really need to.
+     *
+     * @see #get(RequestContext)
      */
     public void setTo(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
@@ -98,8 +102,10 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Sets this {@link ClientConnectionTimings} to the specified {@link RequestContext}.
-     * You can bring it back using {@link #get(RequestLog)}.
+     * Sets this {@link ClientConnectionTimings} to the specified {@link RequestLog}.
+     * Note that this method is intended for internal use. Do not use unless you really need to.
+     *
+     * @see #get(RequestLog)
      */
     public void setTo(RequestLog log) {
         requireNonNull(log, "log");
@@ -107,14 +113,14 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when acquiring a connection started, in microseconds since the epoch.
+     * Returns the time when the client started to acquire a connection, in microseconds since the epoch.
      */
     public long connectionAcquisitionStartTimeMicros() {
         return connectionAcquisitionStartTimeMicros;
     }
 
     /**
-     * Returns the time when acquiring a connection started, in milliseconds since the epoch.
+     * Returns the time when the client started to acquire a connection, in milliseconds since the epoch.
      */
     public long connectionAcquisitionStartTimeMillis() {
         return TimeUnit.MICROSECONDS.toMillis(connectionAcquisitionStartTimeMicros);
@@ -130,7 +136,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when resolving a domain name started, in microseconds since the epoch.
+     * Returns the time when the client started to resolve a domain name, in microseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to resolve a domain name.
      */
@@ -139,7 +145,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when resolving a domain name started, in milliseconds since the epoch.
+     * Returns the time when the client started to resolve a domain name, in milliseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to resolve a domain name.
      */
@@ -160,7 +166,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when connecting to a remote peer started, in microseconds since the epoch.
+     * Returns the time when the client started to connect to a remote peer, in microseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
      */
@@ -169,7 +175,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when connecting to a remote peer started, in milliseconds since the epoch.
+     * Returns the time when the client started to connect to a remote peer, in milliseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
      */
@@ -190,7 +196,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when waiting for the completion of an existing connection attempt started,
+     * Returns the time when the client started to wait for the completion of an existing connection attempt,
      * in microseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.
@@ -200,7 +206,7 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when waiting for the completion of an existing connection attempt started,
+     * Returns the time when the client started to wait for the completion of an existing connection attempt,
      * in milliseconds since the epoch.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.

@@ -54,8 +54,9 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when resolving a domain name ended. If this method is invoked, the creation time of this
-     * {@link ClientConnectionTimingsBuilder} is considered as the start time of resolving a domain name.
+     * Sets the time when the client ended to resolve a domain name. If this method is invoked, the creation
+     * time of this {@link ClientConnectionTimingsBuilder} is considered as the start time of
+     * resolving a domain name.
      */
     public ClientConnectionTimingsBuilder dnsResolutionEnd() {
         checkState(!dnsResolutionEndSet, "dnsResolutionEnd() is already called.");
@@ -65,7 +66,7 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when connecting to a remote peer started.
+     * Sets the time when the client started to connect to a remote peer.
      */
     public ClientConnectionTimingsBuilder socketConnectStart() {
         socketConnectStartTimeMicros = SystemInfo.currentTimeMicros();
@@ -74,7 +75,7 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when connecting to a remote peer ended.
+     * Sets the time when the client ended to connect to a remote peer.
      *
      * @throws IllegalStateException if {@link #socketConnectStart()} is not invoked before calling this.
      */
@@ -87,8 +88,8 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when waiting for the completion of an existing connection attempt started in order to
-     * use one connection for HTTP/2.
+     * Sets the time when the client started to wait for the completion of an existing connection attempt
+     * in order to use one connection for HTTP/2.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionStart() {
         pendingAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
@@ -97,8 +98,8 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
-     * Sets the time when waiting for an existing connection attempt ended in order to use one connection
-     * for HTTP/2.
+     * Sets the time when the client ended to wait for an existing connection attempt in order to use
+     * one connection for HTTP/2.
      *
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
      */

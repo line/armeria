@@ -69,27 +69,28 @@ Client connection timing
 +--------------------------------------------------------------------------------------------------------------+
 | Client connection timing properties                                                                          |
 +==========================================+===================================================================+
-| ``dnsResolutionStartTimeMicros``         | when resolving a domain name started, in microseconds since the   |
-|                                          | epoch (01-Jan-1970 00:00:00 UTC)                                  |
+| ``dnsResolutionStartTimeMicros``         | when the client started to resolve a domain name, in microseconds |
+|                                          | since the epoch (01-Jan-1970 00:00:00 UTC)                        |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``dnsResolutionDurationNanos``           | the duration took to resolve a domain name, ``-1`` if DNS lookup  |
 |                                          | did not occur                                                     |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``socketConnectStartTimeMicros``         | when connecting to a remote peer started, in microseconds since   |
-|                                          | the epoch (01-Jan-1970 00:00:00 UTC)                              |
+| ``socketConnectStartTimeMicros``         | when the client started to connect to a remote peer, in           |
+|                                          | microseconds since the epoch (01-Jan-1970 00:00:00 UTC)           |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``socketConnectDurationNanos``           | the duration took to connect to a remote peer, ``-1`` if socket   |
 |                                          | connection attempt did not occur                                  |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``pendingAcquisitionStartTimeMicros``    | when waiting for the completion of an existing connection attempt |
-|                                          | the epoch (01-Jan-1970 00:00:00 UTC)                              |
+| ``pendingAcquisitionStartTimeMicros``    | when the client started to wait for the completion of an existing |
+|                                          | connection attempt, in microseconds since the                     |
+|                                          | epoch (01-Jan-1970 00:00:00 UTC)                                  |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``pendingAcquisitionDurationNanos``      | the duration took to wait for the completion of an existing       |
 |                                          | connection attempt to use one connection in HTTP/2, ``-1`` if     |
 |                                          | waiting did not occur                                             |
 +------------------------------------------+-------------------------------------------------------------------+
-| ``connectionAcquisitionStartTimeMicros`` | when acquiring a connection started, in microseconds since the    |
-|                                          | epoch (01-Jan-1970 00:00:00 UTC)                                  |
+| ``connectionAcquisitionStartTimeMicros`` | when the client started to acquire a connection, in microseconds  |
+|                                          | since the epoch (01-Jan-1970 00:00:00 UTC)                        |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``connectionAcquisitionDurationNanos``   | the duration took to get a connection (i.e. the total duration)   |
 +------------------------------------------+-------------------------------------------------------------------+
@@ -115,8 +116,8 @@ These are some of the scenarios how the total duration is composed of:
 
     2. Waiting for the connection to be established, since there's an existing connection attempt, to use one
     connection in HTTP/2. (Note that, if you create a client with an IP address, ``dnsResolution`` did not
-    occur. Also note that, there's no ``socketConnect`` because the client just wait for the connection and
-    use it.)
+    occur. Also note that, there's no ``socketConnect`` because the client just waits for the connection and
+    uses it.)
 
        .. uml::
 
