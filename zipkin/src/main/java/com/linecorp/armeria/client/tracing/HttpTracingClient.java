@@ -25,8 +25,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Strings;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
@@ -125,7 +123,6 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     }
 
     private void setRemoteEndpoint(Span span, RequestLog log) {
-
         final SocketAddress remoteAddress = log.context().remoteAddress();
         final InetAddress address;
         final int port;
@@ -137,22 +134,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
             address = null;
             port = 0;
         }
-
-        final String remoteServiceName;
-        if (this.remoteServiceName != null) {
-            remoteServiceName = this.remoteServiceName;
-        } else {
-            final String authority = log.requestHeaders().authority();
-            if (!"?".equals(authority)) {
-                remoteServiceName = authority;
-            } else if (address != null) {
-                remoteServiceName = String.valueOf(remoteAddress);
-            } else {
-                remoteServiceName = null;
-            }
-        }
-
-        if (!Strings.isNullOrEmpty(remoteServiceName)) {
+        if (remoteServiceName != null) {
             span.remoteServiceName(remoteServiceName);
         }
         if (address != null) {
