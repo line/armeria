@@ -513,7 +513,7 @@ export default class MethodPage extends React.PureComponent<Props, State> {
     if (headers) {
       try {
         const parsedHeaders = JSON.parse(headers);
-        if (typeof params !== 'object') {
+        if (typeof parsedHeaders !== 'object') {
           this.setState({
             debugResponse: `HTTP headers must be a JSON object.\nYou entered: ${typeof parsedHeaders}`,
           });
