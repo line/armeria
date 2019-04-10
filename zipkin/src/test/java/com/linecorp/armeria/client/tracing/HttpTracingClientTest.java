@@ -115,7 +115,7 @@ public class HttpTracingClientTest {
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
 
         // check remote service name
-        assertThat(span.remoteServiceName()).isEqualTo("foo.com");
+        assertThat(span.remoteServiceName()).isEqualTo(null);
     }
 
     @Test(timeout = 20000)
