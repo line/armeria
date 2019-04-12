@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -37,6 +39,9 @@ public final class ClientConnectionTimings {
 
     private static final AttributeKey<ClientConnectionTimings> TIMINGS =
             AttributeKey.valueOf(ClientConnectionTimings.class, "TIMINGS");
+
+    @VisibleForTesting
+    static final int TO_STRING_BUILDER_CAPACITY = 466;
 
     private final long connectionAcquisitionStartTimeMicros;
     private final long connectionAcquisitionDurationNanos;
@@ -231,7 +236,7 @@ public final class ClientConnectionTimings {
     @Override
     public String toString() {
         // 33 + 31 + 26 + 23 + 26 + 23 + 31 + 28 + 45 * 4 + 16 * 4 + 1 = 466
-        final StringBuilder buf = new StringBuilder(466);
+        final StringBuilder buf = new StringBuilder(TO_STRING_BUILDER_CAPACITY);
         buf.append("{connectionAcquisitionStartTime=");
         TextFormatter.appendEpochMicros(buf, connectionAcquisitionStartTimeMicros);
         buf.append(", connectionAcquisitionDuration=");
