@@ -178,6 +178,30 @@ using :api:`RetryingHttpClientBuilder`:
 
     final AggregatedHttpMessage res = client.execute(...).aggregate().join();
 
+.. tip::
+
+    You might find the ``peel()`` method in :api:`Exceptions` useful when the exception you are trying to
+    handle is wrapped by exceptions like ``CompletionException`` and ``ExecutionException``:
+
+    .. code-block:: java
+
+        import com.linecorp.armeria.common.Exceptions;
+
+        @Override
+        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+            if (cause != null) {
+                if (cause instanceof ResponseTimeoutException ||
+                    cause instanceof UnprocessedRequestException) {
+                    // The response timed out or the request has not been handled by the server.
+                    return CompletableFuture.completedFuture(backoff);
+                }
+
+                Throwable peeled = Exceptions.peel(cause);
+                if (peeled instanceof MyException) { ... }
+            }
+            ...
+        }
+
 ``Backoff``
 -----------
 
