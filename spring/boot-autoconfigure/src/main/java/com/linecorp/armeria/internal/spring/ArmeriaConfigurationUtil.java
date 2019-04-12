@@ -16,6 +16,8 @@
 package com.linecorp.armeria.internal.spring;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -28,6 +30,7 @@ import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -37,7 +40,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
@@ -52,10 +58,13 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.json.MetricsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -68,6 +77,7 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
+import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -101,6 +111,11 @@ public final class ArmeriaConfigurationUtil {
     private static final HealthChecker[] EMPTY_HEALTH_CHECKERS = new HealthChecker[0];
 
     private static final String METER_TYPE = "server";
+
+    /**
+     * The pattern for data size text.
+     */
+    private static final Pattern DATA_SIZE_PATTERN = Pattern.compile("^([+]?\\d+)([a-zA-Z]{0,2})$");
 
     /**
      * Sets graceful shutdown timeout, health check services and {@link MeterRegistry} for the specified
@@ -163,6 +178,13 @@ public final class ArmeriaConfigurationUtil {
 
         if (settings.getSsl() != null) {
             configureTls(server, settings.getSsl());
+        }
+
+        final ArmeriaSettings.Compression compression = settings.getCompression();
+        if (compression != null && compression.isEnabled()) {
+            server.decorator(contentEncodingDecorator(compression.getMimeTypes(),
+                                                      compression.getExcludedUserAgents(),
+                                                      parseDataSize(compression.getMinResponseSize())));
         }
     }
 
@@ -367,10 +389,10 @@ public final class ArmeriaConfigurationUtil {
                     .forServer(getKeyManagerFactory(ssl, keyStoreSupplier))
                     .trustManager(getTrustManagerFactory(ssl, trustStoreSupplier));
             final SslProvider sslProvider = ssl.getProvider() == null ?
-                    Flags.useOpenSsl() ?
-                            SslProvider.OPENSSL
-                            : SslProvider.JDK
-                    : ssl.getProvider();
+                                            Flags.useOpenSsl() ?
+                                            SslProvider.OPENSSL
+                                                               : SslProvider.JDK
+                                                                      : ssl.getProvider();
             sslBuilder.sslProvider(sslProvider);
             final List<String> enabledProtocols = ssl.getEnabledProtocols();
             if (enabledProtocols != null) {
@@ -443,6 +465,90 @@ public final class ArmeriaConfigurationUtil {
         store.load(url.openStream(), password != null ? password.toCharArray()
                                                       : null);
         return store;
+    }
+
+    /**
+     * Configures a decorator for encoding the content of the HTTP responses sent from the server.
+     */
+    public static Function<Service<HttpRequest, HttpResponse>,
+            HttpEncodingService> contentEncodingDecorator(@Nullable String[] mimeTypes,
+                                                          @Nullable String[] excludedUserAgents,
+                                                          long minBytesToForceChunkedAndEncoding) {
+        final Predicate<MediaType> encodableContentTypePredicate;
+        if (mimeTypes == null || mimeTypes.length == 0) {
+            encodableContentTypePredicate = contentType -> true;
+        } else {
+            final List<MediaType> encodableContentTypes =
+                    Arrays.stream(mimeTypes).map(MediaType::parse).collect(toImmutableList());
+            encodableContentTypePredicate = contentType ->
+                    encodableContentTypes.stream().anyMatch(contentType::is);
+        }
+
+        final Predicate<HttpHeaders> encodableRequestHeadersPredicate;
+        if (excludedUserAgents == null || excludedUserAgents.length == 0) {
+            encodableRequestHeadersPredicate = headers -> true;
+        } else {
+            final List<Pattern> patterns =
+                    Arrays.stream(excludedUserAgents).map(Pattern::compile).collect(toImmutableList());
+            encodableRequestHeadersPredicate = headers -> {
+                // No User-Agent header will be converted to an empty string.
+                final String userAgent = headers.get(HttpHeaderNames.USER_AGENT, "");
+                return patterns.stream().noneMatch(pattern -> pattern.matcher(userAgent).matches());
+            };
+        }
+
+        return delegate -> new HttpEncodingService(delegate,
+                                                   encodableContentTypePredicate,
+                                                   encodableRequestHeadersPredicate,
+                                                   minBytesToForceChunkedAndEncoding);
+    }
+
+    /**
+     * Parses the data size text as a decimal {@code long}.
+     *
+     * @param dataSizeText the data size text, i.e. {@code 1}, {@code 1B}, {@code 1KB}, {@code 1MB},
+     *                     {@code 1GB} or {@code 1TB}
+     */
+    public static long parseDataSize(String dataSizeText) {
+        requireNonNull(dataSizeText, "text");
+        final Matcher matcher = DATA_SIZE_PATTERN.matcher(dataSizeText);
+        checkArgument(matcher.matches(),
+                      "Invalid data size text: %s (expected: %s)",
+                      dataSizeText, DATA_SIZE_PATTERN);
+
+        final long unit;
+        final String unitText = matcher.group(2);
+        if (Strings.isNullOrEmpty(unitText)) {
+            unit = 1L;
+        } else {
+            switch (Ascii.toLowerCase(unitText)) {
+                case "b":
+                    unit = 1L;
+                    break;
+                case "kb":
+                    unit = 1024L;
+                    break;
+                case "mb":
+                    unit = 1024L * 1024L;
+                    break;
+                case "gb":
+                    unit = 1024L * 1024L * 1024L;
+                    break;
+                case "tb":
+                    unit = 1024L * 1024L * 1024L * 1024L;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid data size text: " + dataSizeText +
+                                                       " (expected: " + DATA_SIZE_PATTERN + ')');
+            }
+        }
+        try {
+            final long amount = Long.parseLong(matcher.group(1));
+            return LongMath.checkedMultiply(amount, unit);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid data size text: " + dataSizeText +
+                                               " (expected: " + DATA_SIZE_PATTERN + ')', e);
+        }
     }
 
     private ArmeriaConfigurationUtil() {}

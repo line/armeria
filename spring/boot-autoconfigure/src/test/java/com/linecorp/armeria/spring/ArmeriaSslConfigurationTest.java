@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.junit.Rule;
@@ -58,7 +59,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
- * application-sslTest.yml will be loaded with minimal settings to make it work.
+ * {@code application-sslTest.yml} will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
@@ -96,9 +97,11 @@ public class ArmeriaSslConfigurationTest {
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Inject
+    @Nullable
     private Server server;
 
     private String newUrl(SessionProtocol protocol) {
+        assert server != null;
         final int port = server.activePorts().values().stream()
                                .filter(p1 -> p1.hasProtocol(protocol)).findAny()
                                .flatMap(p -> Optional.of(p.localAddress().getPort()))
