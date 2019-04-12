@@ -10,8 +10,11 @@ What properties can be retrieved?
 ---------------------------------
 :api:`RequestLog` provides various properties recorded while handling a request:
 
-+----------------------------------------------------------------------------------------------------+
-| Request properties                                                                                 |
+Request properties
+^^^^^^^^^^^^^^^^^^
+
++-----------------------------+----------------------------------------------------------------------+
+| Property                    | Description                                                          |
 +=============================+======================================================================+
 | ``requestStartTimeMicros``  | when the request processing started, in microseconds since the       |
 |                             | epoch (01-Jan-1970 00:00:00 UTC)                                     |
@@ -39,8 +42,11 @@ What properties can be retrieved?
 | ``requestContentPreview``   | the preview of the request content                                   |
 +-----------------------------+----------------------------------------------------------------------+
 
-+----------------------------------------------------------------------------------------------------+
-| Response properties                                                                                |
+Response properties
+^^^^^^^^^^^^^^^^^^^
+
++-----------------------------+----------------------------------------------------------------------+
+| Property                    | Description                                                          |
 +=============================+======================================================================+
 | ``responseStartTimeMicros`` | when the response processing started, in microseconds since the      |
 |                             | epoch (01-Jan-1970 00:00:00 UTC)                                     |
@@ -63,36 +69,38 @@ What properties can be retrieved?
 | ``responseContentPreview``  | the preview of the response content                                  |
 +-----------------------------+----------------------------------------------------------------------+
 
-Client connection timing
-^^^^^^^^^^^^^^^^^^^^^^^^
+Client connection timing properties
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+--------------------------------------------------------------------------------------------------------------+
-| Client connection timing properties                                                                          |
++------------------------------------------+-------------------------------------------------------------------+
+| Property                                 | Description                                                       |
 +==========================================+===================================================================+
-| ``dnsResolutionStartTimeMicros``         | when the client started to resolve a domain name, in microseconds |
+| ``connectionAcquisitionStartTimeMicros`` | when the client started to acquire a connection, in microseconds  |
 |                                          | since the epoch (01-Jan-1970 00:00:00 UTC)                        |
++------------------------------------------+-------------------------------------------------------------------+
+| ``connectionAcquisitionDurationNanos``   | the duration took to get a connection (i.e. the total duration)   |
++------------------------------------------+-------------------------------------------------------------------+
+| ``dnsResolutionStartTimeMicros``         | when the client started to resolve a domain name, in microseconds |
+|                                          | since the epoch (01-Jan-1970 00:00:00 UTC), ``-1`` if DNS lookup  |
+|                                          | did not occur                                                     |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``dnsResolutionDurationNanos``           | the duration took to resolve a domain name, ``-1`` if DNS lookup  |
 |                                          | did not occur                                                     |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``socketConnectStartTimeMicros``         | when the client started to connect to a remote peer, in           |
-|                                          | microseconds since the epoch (01-Jan-1970 00:00:00 UTC)           |
+|                                          | microseconds since the epoch (01-Jan-1970 00:00:00 UTC), ``-1``   |
+|                                          | if socket connection attempt did not occur                        |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``socketConnectDurationNanos``           | the duration took to connect to a remote peer, ``-1`` if socket   |
 |                                          | connection attempt did not occur                                  |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``pendingAcquisitionStartTimeMicros``    | when the client started to wait for the completion of an existing |
 |                                          | connection attempt, in microseconds since the                     |
-|                                          | epoch (01-Jan-1970 00:00:00 UTC)                                  |
+|                                          | epoch (01-Jan-1970 00:00:00 UTC), ``-1`` if waiting did not occur |
 +------------------------------------------+-------------------------------------------------------------------+
 | ``pendingAcquisitionDurationNanos``      | the duration took to wait for the completion of an existing       |
 |                                          | connection attempt to use one connection in HTTP/2, ``-1`` if     |
 |                                          | waiting did not occur                                             |
-+------------------------------------------+-------------------------------------------------------------------+
-| ``connectionAcquisitionStartTimeMicros`` | when the client started to acquire a connection, in microseconds  |
-|                                          | since the epoch (01-Jan-1970 00:00:00 UTC)                        |
-+------------------------------------------+-------------------------------------------------------------------+
-| ``connectionAcquisitionDurationNanos``   | the duration took to get a connection (i.e. the total duration)   |
 +------------------------------------------+-------------------------------------------------------------------+
 
 The total duration is the sum of ``dnsResolutionDurationNanos``, ``socketConnectDurationNanos`` and
@@ -104,7 +112,6 @@ These are some of the scenarios how the total duration is composed of:
        .. uml::
 
            @startditaa(--no-separation, --no-shadows)
-
            +---------------------------------------------------------------+                               #1
            :<---------------------connectionAcquisition------------------->|
            +---------------------------------------------------------------+
@@ -122,13 +129,11 @@ These are some of the scenarios how the total duration is composed of:
        .. uml::
 
            @startditaa(--no-separation, --no-shadows)
-
            +-----------------------------+                                                                 #2
            :<---connectionAcquisition--->|
            +-----------------------------+
            :<-----pendingAcquisition---->|
            +-----------------------------+
-
            @enduml
 
     3. Connecting to the remote peer with the resolved IP address after the existing connection attempt is
@@ -137,7 +142,6 @@ These are some of the scenarios how the total duration is composed of:
        .. uml::
 
            @startditaa(--no-separation, --no-shadows)
-
            +------------------------------------------------------------------------------------------+    #3
            :<-----------------------------------connectionAcquisition-------------------------------->|
            +------------------------------------------------------------------------------------------+

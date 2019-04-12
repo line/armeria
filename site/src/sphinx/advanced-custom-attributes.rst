@@ -1,7 +1,7 @@
 .. _advanced-custom-attribute:
 
-RequestContext custom attributes
-================================
+``RequestContext`` custom attributes
+====================================
 
 When you are using multiple decorators, you might want to pass some value to the next decorator.
 You can do this by attaching attributes to a :api:`RequestContext`. To attach an attribute,

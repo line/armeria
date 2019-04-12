@@ -138,7 +138,7 @@ public final class ClientConnectionTimings {
     /**
      * Returns the time when the client started to resolve a domain name, in microseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to resolve a domain name.
+     * @return the start time, or {@code -1} if there was no action to resolve a domain name.
      */
     public long dnsResolutionStartTimeMicros() {
         return dnsResolutionStartTimeMicros;
@@ -147,7 +147,7 @@ public final class ClientConnectionTimings {
     /**
      * Returns the time when the client started to resolve a domain name, in milliseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to resolve a domain name.
+     * @return the start time, or {@code -1} if there was no action to resolve a domain name.
      */
     public long dnsResolutionStartTimeMillis() {
         if (dnsResolutionStartTimeMicros >= 0) {
@@ -168,7 +168,7 @@ public final class ClientConnectionTimings {
     /**
      * Returns the time when the client started to connect to a remote peer, in microseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
+     * @return the start time, or {@code -1} if there was no action to connect to a remote peer.
      */
     public long socketConnectStartTimeMicros() {
         return socketConnectStartTimeMicros;
@@ -177,7 +177,7 @@ public final class ClientConnectionTimings {
     /**
      * Returns the time when the client started to connect to a remote peer, in milliseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
+     * @return the start time, or {@code -1} if there was no action to connect to a remote peer.
      */
     public long socketConnectStartTimeMillis() {
         if (socketConnectStartTimeMicros >= 0) {
@@ -199,7 +199,7 @@ public final class ClientConnectionTimings {
      * Returns the time when the client started to wait for the completion of an existing connection attempt,
      * in microseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to get a pending connection.
+     * @return the start time, or {@code -1} if there was no action to get a pending connection.
      */
     public long pendingAcquisitionStartTimeMicros() {
         return pendingAcquisitionStartTimeMicros;
@@ -209,7 +209,7 @@ public final class ClientConnectionTimings {
      * Returns the time when the client started to wait for the completion of an existing connection attempt,
      * in milliseconds since the epoch.
      *
-     * @return the duration, or {@code -1} if there was no action to get a pending connection.
+     * @return the start time, or {@code -1} if there was no action to get a pending connection.
      */
     public long pendingAcquisitionStartTimeMillis() {
         if (pendingAcquisitionStartTimeMicros >= 0) {
@@ -230,31 +230,30 @@ public final class ClientConnectionTimings {
 
     @Override
     public String toString() {
-        // 1 + 37 + 37 + 31 + 29 + 31 + 29 + 36 + 34 + 45 * 4 + 16 * 4 + 1 = 510
-        final StringBuilder buf = new StringBuilder(510);
-        buf.append('{');
-        buf.append("connectionAcquisitionStartTimeMicros=");
+        // 33 + 31 + 26 + 23 + 26 + 23 + 31 + 28 + 45 * 4 + 16 * 4 + 1 = 466
+        final StringBuilder buf = new StringBuilder(466);
+        buf.append("{connectionAcquisitionStartTime=");
         TextFormatter.appendEpochMicros(buf, connectionAcquisitionStartTimeMicros);
-        buf.append(", connectionAcquisitionDurationNanos=");
+        buf.append(", connectionAcquisitionDuration=");
         TextFormatter.appendElapsed(buf, connectionAcquisitionDurationNanos);
 
         if (dnsResolutionDurationNanos >= 0) {
-            buf.append(", dnsResolutionStartTimeMicros=");
+            buf.append(", dnsResolutionStartTime=");
             TextFormatter.appendEpochMicros(buf, dnsResolutionStartTimeMicros);
-            buf.append(", dnsResolutionDurationNanos=");
+            buf.append(", dnsResolutionDuration=");
             TextFormatter.appendElapsed(buf, dnsResolutionDurationNanos);
         }
 
         if (socketConnectDurationNanos >= 0) {
-            buf.append(", socketConnectStartTimeMicros=");
+            buf.append(", socketConnectStartTime=");
             TextFormatter.appendEpochMicros(buf, socketConnectStartTimeMicros);
-            buf.append(", socketConnectDurationNanos=");
+            buf.append(", socketConnectDuration=");
             TextFormatter.appendElapsed(buf, socketConnectDurationNanos);
         }
         if (pendingAcquisitionDurationNanos >= 0) {
-            buf.append(", pendingAcquisitionStartTimeMicros=");
+            buf.append(", pendingAcquisitionStartTime=");
             TextFormatter.appendEpochMicros(buf, pendingAcquisitionStartTimeMicros);
-            buf.append(", pendingAcquisitionDurationNanos=");
+            buf.append(", pendingAcquisitionDuration=");
             TextFormatter.appendElapsed(buf, pendingAcquisitionDurationNanos);
         }
         buf.append('}');
