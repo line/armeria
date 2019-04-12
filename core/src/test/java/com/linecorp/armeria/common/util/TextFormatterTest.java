@@ -49,7 +49,9 @@ public class TextFormatterTest {
 
     @Test
     public void testFormatEpoch() throws Exception {
-        assertThat(TextFormatter.epoch(1478601399123L).toString())
+        assertThat(TextFormatter.epochMillis(1478601399123L).toString())
                 .isEqualTo("2016-11-08T10:36:39.123Z(1478601399123)");
+        assertThat(TextFormatter.epochMicro(1478601399123235L).toString())
+                .isEqualTo("2016-11-08T10:36:39.123Z(1478601399123235)");
     }
 }

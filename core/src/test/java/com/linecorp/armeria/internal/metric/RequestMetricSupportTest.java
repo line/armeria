@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.client.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
@@ -50,6 +51,7 @@ public class RequestMetricSupportTest {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
+        setConnectionTimings(ctx);
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(null, null);
@@ -70,6 +72,14 @@ public class RequestMetricSupportTest {
                                                1.0)
                                 .containsEntry("foo.requests#count{httpStatus=200,method=POST,result=failure}",
                                                0.0)
+                                .containsEntry("foo.connectionAcquisitionDuration#count{httpStatus=200," +
+                                               "method=POST}", 1.0)
+                                .containsEntry("foo.dnsResolutionDuration#count{httpStatus=200," +
+                                               "method=POST}", 1.0)
+                                .containsEntry("foo.socketConnectDuration#count{httpStatus=200," +
+                                               "method=POST}", 1.0)
+                                .containsEntry("foo.pendingAcquisitionDuration#count{httpStatus=200," +
+                                               "method=POST}", 1.0)
                                 .containsEntry("foo.requestLength#count{httpStatus=200,method=POST}", 1.0)
                                 .containsEntry("foo.requestLength#total{httpStatus=200,method=POST}", 123.0)
                                 .containsEntry("foo.responseDuration#count{httpStatus=200,method=POST}", 1.0)
@@ -78,6 +88,16 @@ public class RequestMetricSupportTest {
                                 .containsEntry("foo.totalDuration#count{httpStatus=200,method=POST}", 1.0)
                                 // This metric is inserted only when RetryingClient is Used.
                                 .doesNotContainKey("foo.actualRequests#count{httpStatus=200,method=POST}");
+    }
+
+    private static void setConnectionTimings(ClientRequestContext ctx) {
+        new ClientConnectionTimingsBuilder().dnsResolutionEnd()
+                                            .socketConnectStart()
+                                            .socketConnectEnd()
+                                            .pendingAcquisitionStart()
+                                            .pendingAcquisitionEnd()
+                                            .build()
+                                            .setTo(ctx);
     }
 
     @Test
@@ -128,6 +148,14 @@ public class RequestMetricSupportTest {
                                                1.0)
                                 .containsEntry("foo.actualRequests#count{httpStatus=500,method=POST}",
                                                2.0)
+                                .containsEntry("foo.connectionAcquisitionDuration#count{httpStatus=500," +
+                                               "method=POST}", 1.0)
+                                .containsEntry("foo.dnsResolutionDuration#count{httpStatus=500," +
+                                               "method=POST}", 1.0)
+                                .containsEntry("foo.socketConnectDuration#count{httpStatus=500," +
+                                               "method=POST}", 1.0)
+                                .containsEntry("foo.pendingAcquisitionDuration#count{httpStatus=500," +
+                                               "method=POST}", 1.0)
                                 .containsEntry("foo.requestLength#count{httpStatus=500,method=POST}", 1.0)
                                 .containsEntry("foo.requestLength#total{httpStatus=500,method=POST}", 123.0)
                                 .containsEntry("foo.responseDuration#count{httpStatus=500,method=POST}", 1.0)
@@ -202,6 +230,7 @@ public class RequestMetricSupportTest {
         final ClientRequestContext derivedCtx = ctx.newDerivedContext();
         ctx.logBuilder().addChild(derivedCtx.log());
 
+        setConnectionTimings(derivedCtx);
         derivedCtx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
         derivedCtx.logBuilder().requestFirstBytesTransferred();
         derivedCtx.logBuilder().requestContent(null, null);

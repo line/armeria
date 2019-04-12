@@ -43,8 +43,10 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -58,6 +60,8 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 /**
  * Default {@link RequestLog} implementation.
@@ -72,7 +76,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private static final int FLAGS_RESPONSE_END_WITHOUT_CONTENT =
             RESPONSE_END.setterFlags() & ~RESPONSE_CONTENT.setterFlags();
 
-    private static final int STRING_BUILDER_CAPACITY = 512;
+    @VisibleForTesting
+    static final int REQUEST_STRING_BUILDER_CAPACITY = 190;
+
+    @VisibleForTesting
+    static final int RESPONSE_STRING_BUILDER_CAPACITY = 203;
 
     private static final HttpHeaders DUMMY_REQUEST_HEADERS_HTTP =
             HttpHeaders.of().scheme("http").authority("?").method(HttpMethod.UNKNOWN).path("?").asImmutable();
@@ -169,6 +177,21 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public <T> Attribute<T> attr(AttributeKey<T> key) {
+        return ctx.attr(key);
+    }
+
+    @Override
+    public <T> boolean hasAttr(AttributeKey<T> key) {
+        return ctx.hasAttr(key);
+    }
+
+    @Override
+    public Iterator<Attribute<?>> attrs() {
+        return ctx.attrs();
+    }
+
+    @Override
     public void addChild(RequestLog child) {
         checkState(!hasLastChild, "last child is already added");
         requireNonNull(child, "child");
@@ -181,8 +204,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateRequestSideLog(RequestLog child) {
-        child.addListener(log -> startRequest0(log.channel(), log.sessionProtocol(), null,
-                                               log.requestStartTimeNanos(), log.requestStartTimeMicros(), true),
+        child.addListener(log -> {
+                              final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
+                              if (timings != null) {
+                                  timings.setTo(this);
+                              }
+                              startRequest0(log.channel(), log.sessionProtocol(), null,
+                                            log.requestStartTimeNanos(), log.requestStartTimeMicros(), true);
+                          },
                           REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
         child.addListener(log -> requestFirstBytesTransferred(log.requestFirstBytesTransferredTimeNanos()),
@@ -1060,47 +1089,86 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return requestStr;
         }
 
-        final StringBuilder buf = new StringBuilder(STRING_BUILDER_CAPACITY);
-        buf.append('{');
-        if (isAvailable(flags, REQUEST_START)) {
-            buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, requestStartTimeMillis());
+        if (!isAvailable(flags, REQUEST_START)) {
+            requestStr = "{}";
+            requestStrFlags = flags;
+            return requestStr;
+        }
 
-            if (isAvailable(flags, REQUEST_END)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, requestLength);
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, requestDurationNanos());
-                if (requestCause != null) {
-                    buf.append(", cause=").append(requestCause);
-                }
-            }
+        int additionalCapacity = 0;
 
-            buf.append(", scheme=");
-            if (isAvailable(flags, SCHEME)) {
-                buf.append(scheme().uriText());
-            } else {
-                buf.append(SerializationFormat.UNKNOWN.uriText())
-                   .append('+')
-                   .append(sessionProtocol.uriText());
-            }
+        final String requestCauseString;
+        if (isAvailable(flags, REQUEST_END) && requestCause != null) {
+            requestCauseString = String.valueOf(requestCause);
+            additionalCapacity += requestCauseString.length();
+        } else {
+            requestCauseString = null;
+        }
 
-            if (isAvailable(flags, REQUEST_HEADERS)) {
-                buf.append(", headers=").append(headersSanitizer.apply(requestHeaders));
-            }
+        final String sanitizedHeaders;
+        if (isAvailable(flags, REQUEST_HEADERS)) {
+            sanitizedHeaders = String.valueOf(headersSanitizer.apply(requestHeaders));
+            additionalCapacity += sanitizedHeaders.length();
+        } else {
+            sanitizedHeaders = null;
+        }
 
-            if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
-                buf.append(", content=").append(contentSanitizer.apply(requestContent));
-            } else if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
-                buf.append(", contentPreview=").append(requestContentPreview);
-            }
-
-            final HttpHeaders requestTrailers = this.requestTrailers;
-            if (!requestTrailers.isEmpty()) {
-                buf.append(", trailers=").append(trailersSanitizer.apply(requestTrailers));
+        final String sanitizedContent;
+        if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
+            sanitizedContent = String.valueOf(contentSanitizer.apply(requestContent));
+            additionalCapacity += sanitizedContent.length();
+        } else {
+            sanitizedContent = null;
+            if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
+                additionalCapacity += requestContentPreview.length();
             }
         }
-        buf.append('}');
+
+        final String sanitizedTrailers;
+        if (!requestTrailers.isEmpty()) {
+            sanitizedTrailers = String.valueOf(trailersSanitizer.apply(requestTrailers));
+            additionalCapacity += sanitizedTrailers.length();
+        } else {
+            sanitizedTrailers = null;
+        }
+
+        final StringBuilder buf = new StringBuilder(REQUEST_STRING_BUILDER_CAPACITY + additionalCapacity);
+        buf.append("{startTime=");                                            // 11
+        TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());       // 45
+
+        if (isAvailable(flags, REQUEST_END)) {
+            buf.append(", length=");                                          // 9
+            TextFormatter.appendSize(buf, requestLength);                     // 20 (When it's under 10GiB)
+            buf.append(", duration=");                                        // 11
+            TextFormatter.appendElapsed(buf, requestDurationNanos());         // 22 (When it's under 30 minutes)
+            if (requestCauseString != null) {
+                buf.append(", cause=").append(requestCauseString);            // 8
+            }
+        }
+
+        buf.append(", scheme=");                                              // 9
+        if (isAvailable(flags, SCHEME)) {
+            buf.append(scheme().uriText());                                   // 16 (ex. gproto-web+https)
+        } else {
+            buf.append(SerializationFormat.UNKNOWN.uriText())
+               .append('+')
+               .append(sessionProtocol.uriText());
+        }
+
+        if (isAvailable(flags, REQUEST_HEADERS)) {
+            buf.append(", headers=").append(sanitizedHeaders);                // 10
+        }
+
+        if (sanitizedContent != null) {                                       // 17
+            buf.append(", content=").append(sanitizedContent);
+        } else if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
+            buf.append(", contentPreview=").append(requestContentPreview);
+        }
+
+        if (sanitizedTrailers != null) {
+            buf.append(", trailers=").append(sanitizedTrailers);              // 11
+        }
+        buf.append('}');                                                      // 1
 
         requestStr = buf.toString();
         requestStrFlags = flags;
@@ -1132,44 +1200,87 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return responseStr;
         }
 
-        final StringBuilder buf = new StringBuilder(STRING_BUILDER_CAPACITY);
-        buf.append('{');
-        if (isAvailable(flags, RESPONSE_START)) {
-            buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, responseStartTimeMillis());
+        if (!isAvailable(flags, RESPONSE_START)) {
+            responseStr = "{}";
+            responseStrFlags = flags;
+            return responseStr;
+        }
 
-            if (isAvailable(flags, RESPONSE_END)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, responseLength);
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, responseDurationNanos());
-                if (isAvailable(flags, REQUEST_START)) {
-                    buf.append(", totalDuration=");
-                    TextFormatter.appendElapsed(buf, totalDurationNanos());
-                }
-                if (responseCause != null) {
-                    buf.append(", cause=").append(responseCause);
-                }
-            }
+        int additionalCapacity = 0;
 
-            if (isAvailable(flags, RESPONSE_HEADERS)) {
-                buf.append(", headers=").append(headersSanitizer.apply(responseHeaders));
-            }
+        final String responseCauseString;
+        if (isAvailable(flags, RESPONSE_END) && responseCause != null) {
+            responseCauseString = String.valueOf(responseCause);
+            additionalCapacity += responseCauseString.length();
+        } else {
+            responseCauseString = null;
+        }
 
-            if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
-                buf.append(", content=").append(contentSanitizer.apply(responseContent));
-            } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
-                buf.append(", contentPreview=").append(responseContentPreview);
-            }
+        final String sanitizedHeaders;
+        if (isAvailable(flags, RESPONSE_HEADERS)) {
+            sanitizedHeaders = String.valueOf(headersSanitizer.apply(responseHeaders));
+            additionalCapacity += sanitizedHeaders.length();
+        } else {
+            sanitizedHeaders = null;
+        }
 
-            final HttpHeaders responseTrailers = this.responseTrailers;
-            if (!responseTrailers.isEmpty()) {
-                buf.append(", trailers=").append(trailersSanitizer.apply(responseTrailers));
+        final String sanitizedContent;
+        if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
+            sanitizedContent = String.valueOf(contentSanitizer.apply(responseContent));
+            additionalCapacity += sanitizedContent.length();
+        } else {
+            sanitizedContent = null;
+            if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
+                additionalCapacity += responseContentPreview.length();
             }
         }
-        buf.append('}');
+
+        final String sanitizedTrailers;
+        if (!responseTrailers.isEmpty()) {
+            sanitizedTrailers = String.valueOf(trailersSanitizer.apply(responseTrailers));
+            additionalCapacity += sanitizedTrailers.length();
+        } else {
+            sanitizedTrailers = null;
+        }
 
         final int numChildren = children != null ? children.size() : 0;
+        if (numChildren > 1) {
+            additionalCapacity += 21;
+        }
+
+        final StringBuilder buf = new StringBuilder(RESPONSE_STRING_BUILDER_CAPACITY + additionalCapacity);
+        buf.append("{startTime=");                                            // 11
+        TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());      // 45
+
+        if (isAvailable(flags, RESPONSE_END)) {
+            buf.append(", length=");                                          // 9
+            TextFormatter.appendSize(buf, responseLength);                    // 20 (When it's under 10GiB)
+            buf.append(", duration=");                                        // 11
+            TextFormatter.appendElapsed(buf, responseDurationNanos());        // 22 (When it's under 30 minutes)
+            if (isAvailable(flags, REQUEST_START)) {
+                buf.append(", totalDuration=");                               // 16
+                TextFormatter.appendElapsed(buf, totalDurationNanos());       // 22 (When it's under 30 minutes)
+            }
+            if (responseCauseString != null) {
+                buf.append(", cause=").append(responseCauseString);           // 8
+            }
+        }
+
+        if (sanitizedHeaders != null) {
+            buf.append(", headers=").append(sanitizedHeaders);                // 10
+        }
+
+        if (sanitizedContent != null) {                                       // 17
+            buf.append(", content=").append(contentSanitizer.apply(responseContent));
+        } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
+            buf.append(", contentPreview=").append(responseContentPreview);
+        }
+
+        if (sanitizedTrailers != null) {
+            buf.append(", trailers=").append(sanitizedTrailers);              // 11
+        }
+        buf.append('}');                                                      // 1
+
         if (numChildren > 1) {
             // Append only when there were retries which the numChildren is greater than 1.
             buf.append(", {totalAttempts=");

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.linecorp.armeria.common.logging.DefaultRequestLog.REQUEST_STRING_BUILDER_CAPACITY;
+import static com.linecorp.armeria.common.logging.DefaultRequestLog.RESPONSE_STRING_BUILDER_CAPACITY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
@@ -27,9 +29,14 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
@@ -40,6 +47,13 @@ import com.linecorp.armeria.testing.internal.AnticipatedException;
 import io.netty.channel.Channel;
 
 public class DefaultRequestLogTest {
+
+    private static final String VERY_LONG_STRING =
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut " +
+            "labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco " +
+            "laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in " +
+            "voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat " +
+            "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
@@ -178,5 +192,59 @@ public class DefaultRequestLogTest {
         child.endResponse(new AnticipatedException("Oops!"));
         assertThat(log.responseDurationNanos()).isEqualTo(child.responseDurationNanos());
         assertThat(log.totalDurationNanos()).isEqualTo(child.totalDurationNanos());
+    }
+
+    @Test
+    public void toStringRequestBuilderCapacity() {
+        final HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.GET, "/armeria/awesome");
+        final HttpRequest req = HttpRequest.of(
+                AggregatedHttpMessage.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
+        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.requestLength(1000000000);
+        logBuilder.requestContentPreview(VERY_LONG_STRING);
+
+        final HttpHeaders requestTrailers = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, VERY_LONG_STRING);
+        logBuilder.requestTrailers(requestTrailers);
+
+        final IllegalArgumentException cause = new IllegalArgumentException(VERY_LONG_STRING);
+        logBuilder.endRequest(cause);
+
+        assertThat(ctx.log().toStringRequestOnly().length()).isLessThanOrEqualTo(
+                REQUEST_STRING_BUILDER_CAPACITY +
+                reqHeaders.toString().length() +
+                VERY_LONG_STRING.length() +
+                requestTrailers.toString().length() +
+                cause.toString().length());
+    }
+
+    @Test
+    public void toStringResponseBuilderCapacity() {
+        final HttpRequest req = HttpRequest.of(
+                AggregatedHttpMessage.of(HttpHeaders.of(HttpMethod.GET, "/armeria/awesome"),
+                                         HttpData.ofUtf8(VERY_LONG_STRING)));
+        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.endRequest();
+
+        final HttpHeaders resHeaders = HttpHeaders.of(200);
+        logBuilder.responseHeaders(resHeaders);
+
+        logBuilder.responseLength(1000000000);
+        logBuilder.responseContentPreview(VERY_LONG_STRING);
+
+        final HttpHeaders responseTrailers = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, VERY_LONG_STRING);
+        logBuilder.responseTrailers(responseTrailers);
+
+        final IllegalArgumentException cause = new IllegalArgumentException(VERY_LONG_STRING);
+        logBuilder.endResponse(cause);
+
+        assertThat(ctx.log().toStringResponseOnly().length()).isLessThanOrEqualTo(
+                RESPONSE_STRING_BUILDER_CAPACITY +
+                resHeaders.toString().length() +
+                VERY_LONG_STRING.length() +
+                responseTrailers.toString().length() +
+                cause.toString().length());
     }
 }

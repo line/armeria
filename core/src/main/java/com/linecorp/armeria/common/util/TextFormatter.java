@@ -20,6 +20,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A utility class to format things as a {@link String} with ease.
@@ -121,25 +122,80 @@ public final class TextFormatter {
                                           .withZone(ZoneId.of("GMT"));
 
     /**
-     * Formats the given epoch time to typical human-readable format "yyyy-MM-dd'T'HH_mm:ss.SSSX" and appends
-     * it to the specified {@link StringBuilder}.
+     * Formats the given epoch time in milliseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH:mm:ss.SSSX".
+     *
+     * @deprecated Use {@link #epochMillis(long)}.
+     *
+     * @param timeMillis epoch time in milliseconds
+     *
+     * @return the human readable string representation of the given epoch time
      */
+    @Deprecated
+    public static StringBuilder epoch(long timeMillis) {
+        // 24 (human readable part) + 2 (parens) + 19 (max digits of a long integer)
+        final StringBuilder buf = new StringBuilder(45);
+        appendEpochMillis(buf, timeMillis);
+        return buf;
+    }
+
+    /**
+     * Formats the given epoch time in milliseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH_mm:ss.SSSX" and appends it to the specified {@link StringBuilder}.
+     *
+     * @deprecated Use {@link #appendEpochMillis(StringBuilder, long)}.
+     */
+    @Deprecated
     public static void appendEpoch(StringBuilder buf, long timeMillis) {
         buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(timeMillis)))
            .append('(').append(timeMillis).append(')');
     }
 
     /**
-     * Formats the given epoch time to typical human-readable format "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+     * Formats the given epoch time in milliseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH:mm:ss.SSSX".
      *
-     * @param timeMillis epoch time in ms
+     * @param timeMillis epoch time in milliseconds
      *
      * @return the human readable string representation of the given epoch time
      */
-    public static StringBuilder epoch(long timeMillis) {
-        // 24 (human readable part) + 3 (parens) + 19 (max digits of a long integer)
-        final StringBuilder buf = new StringBuilder(46);
-        appendEpoch(buf, timeMillis);
+    public static StringBuilder epochMillis(long timeMillis) {
+        // 24 (human readable part) + 2 (parens) + 19 (max digits of a long integer)
+        final StringBuilder buf = new StringBuilder(45);
+        appendEpochMillis(buf, timeMillis);
         return buf;
+    }
+
+    /**
+     * Formats the given epoch time in milliseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH_mm:ss.SSSX" and appends it to the specified {@link StringBuilder}.
+     */
+    public static void appendEpochMillis(StringBuilder buf, long timeMillis) {
+        buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(timeMillis)))
+           .append('(').append(timeMillis).append(')');
+    }
+
+    /**
+     * Formats the given epoch time in microseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH:mm:ss.SSSX".
+     *
+     * @param timeMicros epoch time in microseconds
+     *
+     * @return the human readable string representation of the given epoch time
+     */
+    public static StringBuilder epochMicro(long timeMicros) {
+        // 24 (human readable part) + 2 (parens) + 19 (max digits of a long integer)
+        final StringBuilder buf = new StringBuilder(45);
+        appendEpochMicros(buf, timeMicros);
+        return buf;
+    }
+
+    /**
+     * Formats the given epoch time in microseconds to typical human-readable format
+     * "yyyy-MM-dd'T'HH_mm:ss.SSSX" and appends it to the specified {@link StringBuilder}.
+     */
+    public static void appendEpochMicros(StringBuilder buf, long timeMicros) {
+        buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(TimeUnit.MICROSECONDS.toMillis(timeMicros))))
+           .append('(').append(timeMicros).append(')');
     }
 }

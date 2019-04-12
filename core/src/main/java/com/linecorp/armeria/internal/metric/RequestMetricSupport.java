@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.RequestContext;
@@ -101,6 +102,24 @@ public final class RequestMetricSupport {
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
         updateMetrics(log, metrics);
+        final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
+        if (timings != null) {
+            metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
+                                                           TimeUnit.NANOSECONDS);
+            final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
+            if (dnsResolutionDurationNanos >= 0) {
+                metrics.dnsResolutionDuration().record(dnsResolutionDurationNanos, TimeUnit.NANOSECONDS);
+            }
+            final long socketConnectDurationNanos = timings.socketConnectDurationNanos();
+            if (socketConnectDurationNanos >= 0) {
+                metrics.socketConnectDuration().record(socketConnectDurationNanos, TimeUnit.NANOSECONDS);
+            }
+            final long pendingAcquisitionDurationNanos = timings.pendingAcquisitionDurationNanos();
+            if (pendingAcquisitionDurationNanos >= 0) {
+                metrics.pendingAcquisitionDuration().record(pendingAcquisitionDurationNanos,
+                                                            TimeUnit.NANOSECONDS);
+            }
+        }
         if (log.requestCause() != null) {
             if (log.requestCause() instanceof WriteTimeoutException) {
                 metrics.writeTimeouts().increment();
@@ -176,6 +195,14 @@ public final class RequestMetricSupport {
 
     private interface ClientRequestMetrics extends RequestMetrics {
         Counter actualRequests();
+
+        Timer connectionAcquisitionDuration();
+
+        Timer dnsResolutionDuration();
+
+        Timer socketConnectDuration();
+
+        Timer pendingAcquisitionDuration();
 
         Counter writeTimeouts();
 
@@ -261,6 +288,11 @@ public final class RequestMetricSupport {
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
 
+        private final Timer connectionAcquisitionDuration;
+        private final Timer dnsResolutionDuration;
+        private final Timer socketConnectDuration;
+        private final Timer pendingAcquisitionDuration;
+
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
 
@@ -271,6 +303,14 @@ public final class RequestMetricSupport {
             super(parent, idPrefix);
             this.parent = parent;
             this.idPrefix = idPrefix;
+
+            connectionAcquisitionDuration = newTimer(
+                    parent, idPrefix.name("connectionAcquisitionDuration"), idPrefix.tags());
+            dnsResolutionDuration = newTimer(parent, idPrefix.name("dnsResolutionDuration"), idPrefix.tags());
+            socketConnectDuration = newTimer(parent, idPrefix.name("socketConnectDuration"), idPrefix.tags());
+            pendingAcquisitionDuration = newTimer(
+                    parent, idPrefix.name("pendingAcquisitionDuration"), idPrefix.tags());
+
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
@@ -288,6 +328,26 @@ public final class RequestMetricSupport {
                 return counter;
             }
             return this.actualRequests;
+        }
+
+        @Override
+        public Timer connectionAcquisitionDuration() {
+            return connectionAcquisitionDuration;
+        }
+
+        @Override
+        public Timer dnsResolutionDuration() {
+            return dnsResolutionDuration;
+        }
+
+        @Override
+        public Timer socketConnectDuration() {
+            return socketConnectDuration;
+        }
+
+        @Override
+        public Timer pendingAcquisitionDuration() {
+            return pendingAcquisitionDuration;
         }
 
         @Override
