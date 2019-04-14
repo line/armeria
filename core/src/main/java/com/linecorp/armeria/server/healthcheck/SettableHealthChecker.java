@@ -35,8 +35,9 @@ public final class SettableHealthChecker implements HealthChecker {
     /**
      * Sets if the {@link Server} is healthy or not.
      */
-    public void setHealthy(boolean isHealthy) {
+    public SettableHealthChecker setHealthy(boolean isHealthy) {
         this.isHealthy = isHealthy;
+        return this;
     }
 
     @Override
