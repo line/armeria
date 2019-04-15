@@ -145,22 +145,27 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                 }
             }
             final Set<MediaType> supportedMediaTypes = supportedMediaTypesBuilder.build();
-            for (ServerServiceDefinition service : grpcService.services()) {
-                final String serviceName = service.getServiceDescriptor().getName();
-                map.computeIfAbsent(
-                        serviceName,
-                        s -> {
-                            final FileDescriptor fileDescriptor = ((ProtoFileDescriptorSupplier)
-                                    service.getServiceDescriptor().getSchemaDescriptor()).getFileDescriptor();
-                            final ServiceDescriptor serviceDescriptor =
-                                    fileDescriptor.getServices().stream()
-                                                  .filter(sd -> sd.getFullName().equals(
-                                                          serviceName))
-                                                  .findFirst()
-                                                  .orElseThrow(IllegalStateException::new);
-                            return new ServiceEntryBuilder(serviceDescriptor);
-                        });
-            }
+
+            // Find the ServiceDescriptors of all services and put them all into the 'map'
+            // after wrapping with ServiceEntryBuilder.
+            grpcService.services().stream()
+                       .map(ServerServiceDefinition::getServiceDescriptor)
+                       .filter(Objects::nonNull)
+                       .filter(desc -> desc.getSchemaDescriptor() instanceof ProtoFileDescriptorSupplier)
+                       .forEach(desc -> {
+                           final String serviceName = desc.getName();
+                           map.computeIfAbsent(serviceName, s -> {
+                               final ProtoFileDescriptorSupplier fileDescSupplier =
+                                       (ProtoFileDescriptorSupplier) desc.getSchemaDescriptor();
+                               final FileDescriptor fileDesc = fileDescSupplier.getFileDescriptor();
+                               final ServiceDescriptor serviceDesc =
+                                       fileDesc.getServices().stream()
+                                               .filter(sd -> sd.getFullName().equals(serviceName))
+                                               .findFirst()
+                                               .orElseThrow(IllegalStateException::new);
+                               return new ServiceEntryBuilder(serviceDesc);
+                           });
+                       });
 
             final String pathPrefix;
             if (serviceConfig.pathMapping().prefix().isPresent()) {
