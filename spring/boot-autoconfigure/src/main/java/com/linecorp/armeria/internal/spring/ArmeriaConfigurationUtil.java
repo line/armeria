@@ -55,6 +55,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -86,6 +87,7 @@ import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.util.NetUtil;
 import io.prometheus.client.CollectorRegistry;
 
@@ -364,7 +366,12 @@ public final class ArmeriaConfigurationUtil {
             final SslContextBuilder sslBuilder = SslContextBuilder
                     .forServer(getKeyManagerFactory(ssl, keyStoreSupplier))
                     .trustManager(getTrustManagerFactory(ssl, trustStoreSupplier));
-
+            final SslProvider sslProvider = ssl.getProvider() == null ?
+                    Flags.useOpenSsl() ?
+                            SslProvider.OPENSSL
+                            : SslProvider.JDK
+                    : ssl.getProvider();
+            sslBuilder.sslProvider(sslProvider);
             final List<String> enabledProtocols = ssl.getEnabledProtocols();
             if (enabledProtocols != null) {
                 sslBuilder.protocols(enabledProtocols.toArray(new String[enabledProtocols.size()]));

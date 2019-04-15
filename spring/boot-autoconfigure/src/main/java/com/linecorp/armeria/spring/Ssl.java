@@ -34,6 +34,7 @@ package com.linecorp.armeria.spring;
 import java.util.List;
 
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslProvider;
 
 /**
  * Simple server-independent abstraction for SSL configuration.
@@ -44,6 +45,8 @@ import io.netty.handler.ssl.ClientAuth;
  */
 public class Ssl {
     private boolean enabled = true;
+
+    private SslProvider provider;
 
     private ClientAuth clientAuth;
 
@@ -85,6 +88,22 @@ public class Ssl {
     public Ssl setEnabled(boolean enabled) {
         this.enabled = enabled;
         return this;
+    }
+
+    /**
+     * Returns Netty SSL Provider.
+     * @return Netty SSL Provider
+     */
+    public SslProvider getProvider() {
+        return provider;
+    }
+
+    /**
+     * Sets Netty SSL Provider namely JDK or OPENSSL  {@link io.netty.handler.ssl.SslProvider}.
+     * @param provider Netty SSL Provider
+     */
+    public void setProvider(SslProvider provider) {
+        this.provider = provider;
     }
 
     /**
