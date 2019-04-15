@@ -27,9 +27,12 @@ import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -153,7 +156,17 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * and cleartext {@code keyFile}.
      */
     public B tls(File keyCertChainFile, File keyFile) throws SSLException {
-        tls(keyCertChainFile, keyFile, null);
+        tls(keyCertChainFile, keyFile, null, sslContextBuilder -> { /* noop */ });
+        return self();
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
+     * cleartext {@code keyFile} and {@code tlsCustomizer}.
+     */
+    public B tls(File keyCertChainFile, File keyFile, Consumer<SslContextBuilder> tlsCustomizer)
+            throws SSLException {
+        tls(keyCertChainFile, keyFile, null, tlsCustomizer);
         return self();
     }
 
@@ -162,6 +175,20 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * {@code keyFile} and {@code keyPassword}.
      */
     public B tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
+        tls(keyCertChainFile, keyFile, keyPassword, sslContextBuilder -> { /* noop */ });
+        return self();
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
+     * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
+     */
+    public B tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword,
+                 Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+        requireNonNull(keyCertChainFile, "keyCertChainFile");
+        requireNonNull(keyFile, "keyFile");
+        requireNonNull(tlsCustomizer, "tlsCustomizer");
+
         if (!keyCertChainFile.exists()) {
             throw new SSLException("non-existent certificate chain file: " + keyCertChainFile);
         }
@@ -175,26 +202,21 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
             throw new SSLException("cannot read key file: " + keyFile);
         }
 
-        final SslContext sslCtx;
+        tls(buildSslContext(() -> SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword),
+                            tlsCustomizer));
+        return self();
+    }
 
-        try {
-            sslCtx = BouncyCastleKeyFactoryProvider.call(() -> {
-                final SslContextBuilder builder =
-                        SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword);
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyManagerFactory}
+     * and {@code tlsCustomizer}.
+     */
+    public B tls(KeyManagerFactory keyManagerFactory,
+                 Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+        requireNonNull(keyManagerFactory, "keyManagerFactory");
+        requireNonNull(tlsCustomizer, "tlsCustomizer");
 
-                builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
-                builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
-                builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
-
-                return builder.build();
-            });
-        } catch (RuntimeException | SSLException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new SSLException("failed to configure TLS: " + e, e);
-        }
-
-        tls(sslCtx);
+        tls(buildSslContext(() -> SslContextBuilder.forServer(keyManagerFactory), tlsCustomizer));
         return self();
     }
 
@@ -207,6 +229,28 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     public B tlsSelfSigned() throws SSLException, CertificateException {
         final SelfSignedCertificate ssc = new SelfSignedCertificate(defaultHostname);
         return tls(ssc.certificate(), ssc.privateKey());
+    }
+
+    private static SslContext buildSslContext(
+            Supplier<SslContextBuilder> builderSupplier,
+            Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+        try {
+            return BouncyCastleKeyFactoryProvider.call(() -> {
+                final SslContextBuilder builder = builderSupplier.get();
+
+                builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
+                builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+                builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
+
+                tlsCustomizer.accept(builder);
+
+                return builder.build();
+            });
+        } catch (RuntimeException | SSLException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SSLException("failed to configure TLS: " + e, e);
+        }
     }
 
     /**
@@ -316,14 +360,14 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      */
     public B service(ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
                      Iterable<Function<? super Service<HttpRequest, HttpResponse>,
-                                       ? extends Service<HttpRequest, HttpResponse>>> decorators) {
+                             ? extends Service<HttpRequest, HttpResponse>>> decorators) {
         requireNonNull(serviceWithPathMappings, "serviceWithPathMappings");
         requireNonNull(serviceWithPathMappings.pathMappings(), "serviceWithPathMappings.pathMappings()");
         requireNonNull(decorators, "decorators");
 
         Service<HttpRequest, HttpResponse> decorated = serviceWithPathMappings;
         for (Function<? super Service<HttpRequest, HttpResponse>,
-                      ? extends Service<HttpRequest, HttpResponse>> d : decorators) {
+                ? extends Service<HttpRequest, HttpResponse>> d : decorators) {
             checkNotNull(d, "decorators contains null: %s", decorators);
             decorated = d.apply(decorated);
             checkNotNull(decorated, "A decorator returned null: %s", d);
@@ -344,7 +388,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     @SafeVarargs
     public final B service(ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
                            Function<? super Service<HttpRequest, HttpResponse>,
-                                    ? extends Service<HttpRequest, HttpResponse>>... decorators) {
+                                   ? extends Service<HttpRequest, HttpResponse>>... decorators) {
         return service(serviceWithPathMappings, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 

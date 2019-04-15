@@ -41,11 +41,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -76,6 +78,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -731,6 +734,20 @@ public final class ServerBuilder {
 
     /**
      * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
+     * cleartext {@code keyFile} and {@code tlsCustomizer}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder tls(File keyCertChainFile, File keyFile,
+                             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
@@ -738,9 +755,38 @@ public final class ServerBuilder {
      */
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
-
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, keyPassword);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
+     * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder tls(
+            File keyCertChainFile, File keyFile, @Nullable String keyPassword,
+            Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, keyPassword, tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyManagerFactory}
+     * and {@code tlsCustomizer}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder tls(KeyManagerFactory keyManagerFactory,
+                             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.tls(keyManagerFactory, tlsCustomizer);
         return this;
     }
 
@@ -895,7 +941,7 @@ public final class ServerBuilder {
     public ServerBuilder service(
             ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
             Iterable<Function<? super Service<HttpRequest, HttpResponse>,
-                              ? extends Service<HttpRequest, HttpResponse>>> decorators) {
+                    ? extends Service<HttpRequest, HttpResponse>>> decorators) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(serviceWithPathMappings, decorators);
         return this;
@@ -914,7 +960,7 @@ public final class ServerBuilder {
     public final ServerBuilder service(
             ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
             Function<? super Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>>... decorators) {
+                    ? extends Service<HttpRequest, HttpResponse>>... decorators) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(serviceWithPathMappings, decorators);
         return this;
