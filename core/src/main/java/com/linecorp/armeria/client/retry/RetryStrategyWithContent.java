@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.retry;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Response;
 
@@ -33,18 +32,12 @@ import com.linecorp.armeria.common.Response;
 public interface RetryStrategyWithContent<T extends Response> {
 
     /**
-     * Returns a {@link CompletionStage} that contains {@link Backoff} which will be used for retry.
-     * If the condition does not match, this will return {@code null} to stop retry attempt.
-     * Note that {@link ResponseTimeoutException} is not retriable for the whole retry,
-     * but only for each attempt.
+     * Tells whether the request sent with the specified {@link ClientRequestContext} requires a retry or not.
+     * Implement this method to return a {@link CompletionStage} and to complete it with a desired
+     * {@link Backoff}. To stop trying further, complete it with {@code null}.
      *
      * @param ctx the {@link ClientRequestContext} of this request
      * @param response the {@link Response} from the server
-     *
-     * @see RetryingClientBuilder#responseTimeoutMillisForEachAttempt(long)
-     *
-     * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
-     *      timeout</a>
      */
     CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, T response);
 }
