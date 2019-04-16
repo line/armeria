@@ -235,7 +235,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
 
         final ArmeriaSettings.Compression compression = settings.getCompression();
-        if (compression != null && compression.getEnabled()) {
+        if (compression != null && compression.isEnabled()) {
             sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                   compression.getExcludedUserAgents(),
                                                   parseDataSize(compression.getMinResponseSize())));
